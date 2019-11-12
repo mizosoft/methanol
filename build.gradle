@@ -1,0 +1,26 @@
+buildscript {
+  ext.versions = [
+      'junit5'      : '5.5.2',
+  ]
+
+  ext.deps = [
+      'junit5Api'   : "org.junit.jupiter:junit-jupiter-api:${versions.junit5}",
+      'junit5Engine': "org.junit.jupiter:junit-jupiter-engine:${versions.junit5}",
+  ]
+}
+
+subprojects {
+  apply plugin: 'java'
+
+  group = 'com.github.mizosoft.methanol'
+  version = '1.0-SNAPSHOT'
+
+  sourceCompatibility = JavaVersion.VERSION_11
+
+  repositories {
+    jcenter()
+  }
+
+  dependencies {
+  }
+}
