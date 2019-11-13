@@ -26,6 +26,7 @@ package com.github.mizosoft.methanol;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.dec.DecoderFactoryFinder;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.List;
 import java.util.Map;
@@ -120,7 +121,7 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
      *                                             factories
      */
     static List<Factory> installedFactories() {
-      throw new UnsupportedOperationException("Not implemented");
+      return DecoderFactoryFinder.findInstalledFactories();
     }
 
     /**
@@ -130,7 +131,7 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
      * overridable.
      */
     static Map<String, Factory> installedBindings() {
-      throw new UnsupportedOperationException("Not implemented");
+      return DecoderFactoryFinder.getInstalledBindings();
     }
 
     /**
