@@ -24,8 +24,15 @@
 
 package com.github.mizosoft.methanol;
 
+import static java.util.Objects.requireNonNull;
+
+import com.github.mizosoft.methanol.internal.extensions.BasicResponseInfo;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.util.Optional;
 import java.util.concurrent.Executor;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Provides additional {@link java.net.http.HttpResponse.BodyHandler} implementations.
@@ -49,7 +56,8 @@ public class MoreBodyHandlers {
    * @param <T>               the subscriber's body type
    */
   public static <T> BodyHandler<T> decoding(BodyHandler<T> downstreamHandler) {
-    throw new UnsupportedOperationException("Not implemented");
+    requireNonNull(downstreamHandler);
+    return decodingInternal(downstreamHandler, null);
   }
 
   /**
@@ -67,6 +75,27 @@ public class MoreBodyHandlers {
    * @param <T>               the subscriber's body type
    */
   public static <T> BodyHandler<T> decoding(BodyHandler<T> downstreamHandler, Executor executor) {
-    throw new UnsupportedOperationException("Not implemented");
+    requireNonNull(downstreamHandler, "downstreamHandler");
+    requireNonNull(executor, "executor");
+    return decodingInternal(downstreamHandler, executor);
+  }
+
+  private static <T> BodyHandler<T> decodingInternal(
+      BodyHandler<T> downstreamHandler, @Nullable Executor executor) {
+    return info -> {
+      Optional<String> encHeader = info.headers().firstValue("Content-Encoding");
+      if (encHeader.isEmpty()) {
+        return downstreamHandler.apply(info); // No decompression needed
+      }
+      String enc = encHeader.get();
+      BodyDecoder.Factory factory = BodyDecoder.Factory.getFactory(enc)
+          .orElseThrow(() -> new UnsupportedOperationException("Unsupported encoding: " + enc));
+      HttpHeaders headersCopy = HttpHeaders.of(info.headers().map(),
+          (n, v) -> !"Content-Encoding".equalsIgnoreCase(n)
+              && !"Content-Length".equalsIgnoreCase(n));
+      BodySubscriber<T> downstream = downstreamHandler.apply(
+          new BasicResponseInfo(info.statusCode(), headersCopy, info.version()));
+      return executor != null ? factory.create(downstream, executor) : factory.create(downstream);
+    };
   }
 }
