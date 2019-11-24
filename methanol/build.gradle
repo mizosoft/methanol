@@ -1,0 +1,5 @@
+description 'core methanol module'
+
+task tckTest(type: Test) {
+  useTestNG()
+}
