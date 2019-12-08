@@ -24,16 +24,24 @@
 
 package com.github.mizosoft.methanol.internal;
 
+import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.function.Supplier;
 
-/**
- * Miscellaneous utilities.
- */
+/** Miscellaneous utilities. */
 public class Utils {
 
   private Utils() { // Not instantiable
+  }
+
+  public static int copyRemaining(ByteBuffer src, ByteBuffer dst) {
+    int toCopy = Math.min(src.remaining(), dst.remaining());
+    int srcLimit = src.limit();
+    src.limit(src.position() + toCopy);
+    dst.put(src);
+    src.limit(srcLimit);
+    return toCopy;
   }
 
   public static int getIntProperty(String name, int defaultValue) {
