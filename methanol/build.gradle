@@ -1,5 +1,6 @@
 description 'core methanol module'
 
 task tckTest(type: Test) {
+  include("**/tck/**")
   useTestNG()
 }

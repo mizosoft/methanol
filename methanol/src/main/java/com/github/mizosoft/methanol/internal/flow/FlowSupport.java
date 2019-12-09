@@ -90,7 +90,7 @@ public final class FlowSupport {
    * number of items.
    */
   public static IllegalArgumentException illegalRequest() {
-    return new IllegalArgumentException("non-positive request");
+    return new IllegalArgumentException("non-positive subscription request");
   }
 
   /**
