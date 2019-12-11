@@ -24,12 +24,17 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-
-import static java.nio.charset.StandardCharsets.US_ASCII;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.InflaterInputStream;
 
 public class TestUtils {
 
@@ -51,6 +56,22 @@ public class TestUtils {
   public static void shutdown(Executor executor) {
     if (executor instanceof ExecutorService) {
       ((ExecutorService) executor).shutdown();
+    }
+  }
+
+  public static byte[] gunzip(byte[] data) {
+    try {
+      return new GZIPInputStream(new ByteArrayInputStream(data)).readAllBytes();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  public static byte[] inflate(byte[] data) {
+    try {
+      return new InflaterInputStream(new ByteArrayInputStream(data)).readAllBytes();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 }
