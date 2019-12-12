@@ -19,7 +19,7 @@ abstract class ZLibDecoderTest {
   private static final int BUFFER_SIZE = 64;
   private static final int SOURCE_INCREMENT_SCALE = 3;
 
-  private static final Base64.Decoder BASE65_DECODER = Base64.getDecoder();
+  static final Base64.Decoder BASE64 = Base64.getDecoder();
 
   abstract String good();
 
@@ -40,7 +40,7 @@ abstract class ZLibDecoderTest {
 
   @Test
   void decodesGoodStream() throws IOException {
-    byte[] goodStream = BASE65_DECODER.decode(good());
+    byte[] goodStream = BASE64.decode(good());
     for (var so : BuffSizeOption.values()) {
       byte[] decoded = decode(goodStream, so);
       assertArrayEquals(nativeDecode(goodStream), decoded);
@@ -49,7 +49,7 @@ abstract class ZLibDecoderTest {
 
   @Test
   void throwsOnBadStream() {
-    byte[] badStream = BASE65_DECODER.decode(bad());
+    byte[] badStream = BASE64.decode(bad());
     for (var so : BuffSizeOption.values()) {
       assertThrows(ZipException.class, () -> decode(badStream, so));
     }
@@ -57,7 +57,7 @@ abstract class ZLibDecoderTest {
 
   @Test
   void throwsOnOverflow() {
-    byte[] goodStream = BASE65_DECODER.decode(good());
+    byte[] goodStream = BASE64.decode(good());
     byte[] overflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length + 2);
     for (var so : BuffSizeOption.values()) {
       var t = assertThrows(IOException.class, () -> decode(overflowedStream, so));
@@ -67,7 +67,7 @@ abstract class ZLibDecoderTest {
 
   @Test
   void throwsOnUnderflow() {
-    byte[] goodStream = BASE65_DECODER.decode(good());
+    byte[] goodStream = BASE64.decode(good());
     byte[] underflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length - 2);
     for (var so : BuffSizeOption.values()) {
       assertThrows(EOFException.class, () -> decode(underflowedStream, so));
@@ -101,6 +101,10 @@ abstract class ZLibDecoderTest {
     BuffSizeOption(int inSize, int outSize) {
       this.inSize = inSize;
       this.outSize = outSize;
+    }
+
+    static BuffSizeOption[] inOptions() {
+      return new BuffSizeOption[] {IN_MANY_OUT_MANY, IN_ONE_OUT_MANY};
     }
   }
 
