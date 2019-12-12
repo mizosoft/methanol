@@ -22,18 +22,17 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.dec;
+
+import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyDecoder;
+import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSink;
+import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSource;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.dec.AsyncDecoder.ByteSink;
-import com.github.mizosoft.methanol.internal.dec.AsyncDecoder.ByteSource;
 import com.github.mizosoft.methanol.internal.flow.Demand;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.SchedulableSubscription;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
@@ -45,8 +44,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static java.util.Objects.requireNonNull;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * An implementation of {@link BodyDecoder} that uses an {@link AsyncDecoder} for decompression. The
@@ -56,7 +55,6 @@ import static java.util.Objects.requireNonNull;
  *
  * @param <T> the body type
  */
-// TODO consider making this API public (if native brotli decoder is to be added)
 public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
   private static final String BUFFER_SIZE_PROP = "com.github.mizosoft.methanol.dec.bufferSize";

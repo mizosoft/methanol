@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.dec;
 
 import com.github.mizosoft.methanol.internal.Utils;
 
@@ -34,7 +34,6 @@ import java.nio.ByteBuffer;
  * manner. An {@code AsyncDecoder} can be used with a {@link AsyncBodyDecoder} to craft an
  * implementation of the {@link com.github.mizosoft.methanol.BodyDecoder} interface.
  */
-// TODO consider making this API public (if native brotli decoder is to be added)
 public interface AsyncDecoder extends AutoCloseable {
 
   /**

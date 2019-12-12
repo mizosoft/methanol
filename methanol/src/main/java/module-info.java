@@ -3,6 +3,7 @@ module methanol {
   requires org.checkerframework.checker.qual;
 
   exports com.github.mizosoft.methanol;
+  exports com.github.mizosoft.methanol.dec;
 
   uses com.github.mizosoft.methanol.BodyDecoder.Factory;
 

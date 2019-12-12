@@ -25,6 +25,7 @@
 package com.github.mizosoft.methanol.internal.dec;
 
 import com.github.mizosoft.methanol.BodyDecoder;
+import com.github.mizosoft.methanol.dec.AsyncBodyDecoder;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.concurrent.Executor;
 

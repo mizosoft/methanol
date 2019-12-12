@@ -26,6 +26,7 @@ package com.github.mizosoft.methanol.internal.dec;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.dec.AsyncDecoder;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.zip.DataFormatException;

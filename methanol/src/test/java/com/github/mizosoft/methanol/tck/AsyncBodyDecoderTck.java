@@ -24,22 +24,16 @@
 
 package com.github.mizosoft.methanol.tck;
 
+import static com.github.mizosoft.methanol.testing.TestUtils.encodeAscii;
+import static java.util.Objects.requireNonNull;
+
+import com.github.mizosoft.methanol.dec.AsyncBodyDecoder;
+import com.github.mizosoft.methanol.dec.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.dec.AsyncBodyDecoder;
-import com.github.mizosoft.methanol.internal.dec.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Schedulable;
 import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTck.BufferListHandle;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.reactivestreams.tck.TestEnvironment;
-import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
-import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
-
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -56,9 +50,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.github.mizosoft.methanol.testing.TestUtils.encodeAscii;
-import static java.util.Objects.requireNonNull;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.reactivestreams.tck.TestEnvironment;
+import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
+import org.testng.SkipException;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
 
 @Test
 public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<BufferListHandle> {
