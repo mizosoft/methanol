@@ -39,13 +39,13 @@ class DeflateDecoder extends ZLibDecoder {
   @Override
   public void decode(ByteSource source, ByteSink sink) throws IOException {
     inflateSource(source, sink);
-    boolean finished = inflater.finished();
-    if (source.finalSource()) {
-      if (!finished) {
-        throw new EOFException("Unexpected end of deflate stream");
+    if (inflater.finished()) {
+      if (source.hasRemaining()) {
+        throw new IOException("Deflate stream finished prematurely");
       }
-    } else if (finished && source.hasRemaining()) {
-      throw new IOException("Deflate stream finished prematurely");
+    } else if (source.finalSource()) {
+      assert !source.hasRemaining();
+      throw new EOFException("Unexpected end of deflate stream");
     }
   }
 }
