@@ -54,7 +54,6 @@ subprojects {
     // IllegalAccessError when org.junit.platform.launcher is implied as unnamed which
     // prevents tests from running in the module path
     testRuntimeOnly deps.junitPlatformLauncher
-    testImplementation deps.reactiveStreamsTckFlow
   }
 
   checkerFramework {
