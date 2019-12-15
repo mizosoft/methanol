@@ -2,6 +2,7 @@ package com.github.mizosoft.methanol.internal.dec;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -83,7 +84,8 @@ abstract class ZLibDecoderTest {
         source.increment();
         decoder.decode(source, sink);
       } while (!source.finalSource());
-    }
+      assertFalse(source.hasRemaining(), "Source not exhausted after being final");
+    };
     return sink.toByteArray();
   }
 
