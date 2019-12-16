@@ -12,27 +12,27 @@ import java.nio.ByteBuffer;
 /**
  * JNI wrapper for brotli decoder.
  */
-public class DecoderJNI {
+class DecoderJNI {
   private static native ByteBuffer nativeCreate(long[] context);
   private static native void nativePush(long[] context, int length);
   private static native ByteBuffer nativePull(long[] context);
   private static native void nativeDestroy(long[] context);
 
-  public enum Status {
+  enum Status {
     ERROR,
     DONE,
     NEEDS_MORE_INPUT,
     NEEDS_MORE_OUTPUT,
     OK
-  };
+  }
 
-  public static class Wrapper {
+  static class Wrapper {
     private final long[] context = new long[3];
     private final ByteBuffer inputBuffer;
     private Status lastStatus = Status.NEEDS_MORE_INPUT;
     private boolean fresh = true;
 
-    public Wrapper(int inputBufferSize) throws IOException {
+    Wrapper(int inputBufferSize) throws IOException {
       this.context[1] = inputBufferSize;
       this.inputBuffer = nativeCreate(this.context);
       if (this.context[0] == 0) {
@@ -40,7 +40,7 @@ public class DecoderJNI {
       }
     }
 
-    public void push(int length) {
+    void push(int length) {
       if (length < 0) {
         throw new IllegalArgumentException("negative block length");
       }
@@ -58,7 +58,7 @@ public class DecoderJNI {
       parseStatus();
     }
 
-    private void parseStatus() {
+    void parseStatus() {
       long status = context[1];
       if (status == 1) {
         lastStatus = Status.DONE;
@@ -73,19 +73,19 @@ public class DecoderJNI {
       }
     }
 
-    public Status getStatus() {
+    Status getStatus() {
       return lastStatus;
     }
 
-    public ByteBuffer getInputBuffer() {
+    ByteBuffer getInputBuffer() {
       return inputBuffer;
     }
 
-    public boolean hasOutput() {
+    boolean hasOutput() {
       return context[2] != 0;
     }
 
-    public ByteBuffer pull() {
+    ByteBuffer pull() {
       if (context[0] == 0) {
         throw new IllegalStateException("brotli decoder is already destroyed");
       }
@@ -101,7 +101,7 @@ public class DecoderJNI {
     /**
      * Releases native resources.
      */
-    public void destroy() {
+    void destroy() {
       if (context[0] == 0) {
         throw new IllegalStateException("brotli decoder is already destroyed");
       }
