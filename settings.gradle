@@ -2,3 +2,4 @@ rootProject.name = 'methanol'
 
 include 'methanol'
 include 'methanol-brotli'
+include 'methanol-brotli:brotli-dec'

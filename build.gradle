@@ -31,6 +31,10 @@ plugins {
 }
 
 subprojects {
+  if (it.name.startsWith('brotli-dec')) {
+    return
+  }
+
   apply plugin: 'java'
   apply plugin: 'org.checkerframework'
   apply plugin: 'org.javamodularity.moduleplugin'
