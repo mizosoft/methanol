@@ -1,0 +1,5 @@
+description = 'provides brotli decompression for methanol'
+
+dependencies {
+  implementation project(':methanol')
+}

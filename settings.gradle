@@ -1,3 +1,4 @@
 rootProject.name = 'methanol'
 
 include 'methanol'
+include 'methanol-brotli'
