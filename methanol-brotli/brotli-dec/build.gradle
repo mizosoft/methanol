@@ -1,3 +1,62 @@
 plugins {
   id 'cpp-library'
 }
+
+def BROTLI_INCLUDE = 'src/include'
+def BROTLI_COMMON = 'src/common'
+def BROTLI_DEC = 'src/dec'
+
+library {
+  baseName = 'brotlidec'
+  /*TODO: use shared linkage for brotlidec instead of statically linking it with brotlidecjni
+      and search on user's path first before loading the jar-bundled lib*/
+  linkage = [Linkage.STATIC]
+
+  publicHeaders.from BROTLI_INCLUDE
+  privateHeaders.from BROTLI_COMMON, BROTLI_DEC
+
+  binaries.configureEach(CppStaticLibrary) {
+    def compileTask = compileTask.get()
+
+    // Had to define sources here as it doesn't work via the library DSL for some reason
+    compileTask.source.from fileTree(dir: BROTLI_COMMON, include: '**/*.c')
+    compileTask.source.from fileTree(dir: BROTLI_DEC, include: '**/*.c')
+
+    def compilerArgs = it.compileTask.get().compilerArgs
+
+    // Compile for C explicitly as gradle doesn't currently have a "c-library" plugin
+    if (toolChain in Gcc || toolChain in Clang) {
+      compilerArgs.addAll '-x', 'c'
+    } else {
+      compilerArgs.add '\\TC'
+    }
+
+    // Set strict warning options (these are enabled in the main brotli repo)
+    if (toolChain in Gcc || toolChain in Clang) {
+      compilerArgs.addAll([
+          '--pedantic-errors',
+          '-Wall',
+          '-Wconversion',
+          '-Werror',
+          '-Wextra',
+          '-Wlong-long',
+          '-Wmissing-declarations',
+          '-Wmissing-prototypes',
+          '-Wno-strict-aliasing',
+          '-Wshadow',
+          '-Wsign-compare'
+      ])
+    } else if (toolChain in VisualCpp) {
+      // This is not a 1:1 mapping but '\Wall' is as strict as it gets on msvc
+      // These are not enabled in the main repo though
+      compilerArgs.add '\\Wall'
+      compilerArgs.add '\\WX'
+    }
+  }
+
+  targetMachines = [
+      machines.linux.x86, machines.linux.x86_64,
+      machines.windows.x86, machines.windows.x86_64,
+      machines.macOS.x86, machines.macOS.x86_64,
+  ]
+}

@@ -1,3 +1,44 @@
 plugins {
   id 'cpp-library'
 }
+
+library {
+  baseName = 'brotlidecjni'
+  linkage = [Linkage.SHARED]
+
+  source.from 'src/jni'
+
+  // Add jni include pathes
+  binaries.configureEach(CppSharedLibrary) {
+    def javaHome = System.getenv().JAVA_HOME
+    if (!javaHome) {
+      throw new GradleException('JAVA_HOME not found')
+    }
+    if (!javaHome.endsWith('/')) {
+      javaHome += '/'
+    }
+
+    def includes = compileTask.get().includes
+    includes.from javaHome + 'include'
+    def os = machines.host().operatingSystemFamily
+    if (os.isLinux()) {
+      includes.from javaHome + 'include/linux'
+    } else if (os.isWindows()) {
+      includes.from javaHome + 'include/win32'
+    } else if (os.isMacOs()) {
+      includes.from javaHome + 'include/darwin'
+    } else {
+      throw new GradleException('Unsupported OS: ' + os)
+    }
+  }
+
+  targetMachines = [
+      machines.windows.x86, machines.windows.x86_64,
+      machines.linux.x86, machines.linux.x86_64,
+      machines.macOS.x86, machines.macOS.x86_64,
+  ]
+
+  dependencies {
+    implementation project(':methanol-brotli:brotli-dec')
+  }
+}
