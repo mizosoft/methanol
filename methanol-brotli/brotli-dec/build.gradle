@@ -4,8 +4,6 @@ def BROTLI_DEC = 'src/dec'
 
 library {
   baseName = 'brotlidec'
-  /*TODO: use shared linkage for brotlidec instead of statically linking it with brotlidecjni
-      and search on user's path first before loading the jar-bundled lib*/
   linkage = [Linkage.STATIC]
 
   publicHeaders.from BROTLI_INCLUDE
