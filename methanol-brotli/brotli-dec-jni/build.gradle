@@ -1,7 +1,3 @@
-plugins {
-  id 'cpp-library'
-}
-
 library {
   baseName = 'brotlidecjni'
   linkage = [Linkage.SHARED]
@@ -31,12 +27,6 @@ library {
       throw new GradleException('Unsupported OS: ' + os)
     }
   }
-
-  targetMachines = [
-      machines.windows.x86, machines.windows.x86_64,
-      machines.linux.x86, machines.linux.x86_64,
-      machines.macOS.x86, machines.macOS.x86_64,
-  ]
 
   dependencies {
     implementation project(':methanol-brotli:brotli-dec')
