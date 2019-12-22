@@ -43,8 +43,7 @@ library {
     } else if (toolChain in VisualCpp) {
       // This is not a 1:1 mapping but '\Wall' is as strict as it gets on msvc
       // These are not enabled in the main repo though
-      compilerArgs.add '\\Wall'
-      compilerArgs.add '\\WX'
+      compilerArgs.addAll '\\Wall', '\\WX'
     }
   }
 }
