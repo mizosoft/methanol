@@ -45,5 +45,7 @@ library {
       // These are not enabled in the main repo though
       compilerArgs.addAll '\\Wall', '\\WX'
     }
+
+    compileTask.positionIndependentCode true
   }
 }
