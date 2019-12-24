@@ -1,9 +1,5 @@
 description = 'provides brotli decompression for methanol'
 
-dependencies {
-  implementation project(':methanol')
-}
-
 subprojects {
   apply plugin: 'cpp-library'
 
@@ -14,4 +10,17 @@ subprojects {
         machines.macOS.x86, machines.macOS.x86_64,
     ]
   }
+}
+
+configurations.create('jniResources') {
+  canBeResolved true
+  canBeConsumed false
+  attributes {
+    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, 'jni-runtime-resources'))
+  }
+}
+
+dependencies {
+  implementation project(':methanol')
+  jniResources project('brotli-dec-jni')
 }
