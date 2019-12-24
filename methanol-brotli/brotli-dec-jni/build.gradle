@@ -32,3 +32,19 @@ library {
     implementation project(':methanol-brotli:brotli-dec')
   }
 }
+
+configurations.create('jniRuntimeElements') {
+  canBeResolved false
+  canBeConsumed true
+  attributes {
+    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, 'jni-runtime-resources'))
+  }
+}
+
+artifacts {
+  jniRuntimeElements file("$buildDir/lib/main/release"), {
+    builtBy {
+      tasks.findAll { task -> task.name.startsWith('assembleRelease') }
+    }
+  }
+}
