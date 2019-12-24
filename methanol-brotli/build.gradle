@@ -23,6 +23,8 @@ configurations.create('jniResources') {
 dependencies {
   implementation project(':methanol')
   jniResources project('brotli-dec-jni')
+
+  testImplementation deps.brotliDec
 }
 
 def LIB_ROOT = 'native'
