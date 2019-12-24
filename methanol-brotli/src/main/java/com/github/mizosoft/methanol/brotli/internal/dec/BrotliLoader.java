@@ -19,9 +19,10 @@ class BrotliLoader {
   private static final String MAC_OS = "mac";
   private static final String UNKNOWN = "unknown";
 
-  private static final Map<String, Set<String>> ARCH_ALIASES = Map.of(
+  // Maps arch path in jar to os.arch aliases
+  private static final Map<String, Set<String>> ARCH_PATHES = Map.of(
       "x86", Set.of("x86", "i386", "i486", "i586", "i686"),
-      "x86_64", Set.of("x86_64", "amd64")
+      "x86-64" /* '-' and not '_' is used in arch path */ , Set.of("x86_64", "amd64")
   );
 
   private static final String LIB_NAME = "brotlidecjni";
@@ -96,7 +97,7 @@ class BrotliLoader {
   }
 
   private static String normalizeArch(String arch) {
-    return ARCH_ALIASES.entrySet()
+    return ARCH_PATHES.entrySet()
         .stream()
         .filter(e -> e.getValue().contains(arch))
         .findFirst()
