@@ -24,3 +24,23 @@ dependencies {
   implementation project(':methanol')
   jniResources project('brotli-dec-jni')
 }
+
+def LIB_ROOT = 'native'
+
+task buildBrotli(type: Copy) {
+  from configurations.jniResources {
+    include '**/*.so'
+    eachFile { fileInfo ->
+      // Only include os/arch segments
+      def normalizedSegments = fileInfo.relativePath.segments.toList() - ['release', 'debug', 'shared', 'stripped']
+      fileInfo.relativePath = new RelativePath(true, normalizedSegments.toArray() as String[])
+    }
+    includeEmptyDirs = false
+  }
+  into "src/main/resources/$LIB_ROOT"
+}
+
+// Ensure jni resources are copied first if buildBrotli ran with some build task
+processResources {
+  mustRunAfter buildBrotli
+}
