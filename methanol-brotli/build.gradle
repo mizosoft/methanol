@@ -29,10 +29,10 @@ def LIB_ROOT = 'native'
 
 task buildBrotli(type: Copy) {
   from configurations.jniResources {
-    include '**/*.so'
+    include '**/stripped/*.so'
     eachFile { fileInfo ->
       // Only include os/arch segments
-      def normalizedSegments = fileInfo.relativePath.segments.toList() - ['release', 'debug', 'shared', 'stripped']
+      def normalizedSegments = fileInfo.relativePath.segments.toList() - ['shared', 'stripped']
       fileInfo.relativePath = new RelativePath(true, normalizedSegments.toArray() as String[])
     }
     includeEmptyDirs = false
