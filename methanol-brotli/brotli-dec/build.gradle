@@ -24,10 +24,10 @@ library {
     if (toolChain in Gcc || toolChain in Clang) {
       compilerArgs.addAll '-x', 'c'
     } else {
-      compilerArgs.add '\\TC'
+      compilerArgs.add '/TC'
     }
 
-    // Set strict warning options (these are enabled in the main brotli repo)
+    // Set strict warning options for gcc (these are enabled in the main brotli repo)
     if (toolChain in Gcc || toolChain in Clang) {
       compilerArgs.addAll([
           '--pedantic-errors',
@@ -42,10 +42,6 @@ library {
           '-Wshadow',
           '-Wsign-compare'
       ])
-    } else if (toolChain in VisualCpp) {
-      // This is not a 1:1 mapping but '\Wall' is as strict as it gets on msvc
-      // These are not enabled in the main repo though
-      compilerArgs.addAll '\\Wall', '\\WX'
     }
 
     compileTask.positionIndependentCode = true
