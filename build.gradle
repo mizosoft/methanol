@@ -71,7 +71,7 @@ subprojects {
   tasks.withType(Test) {
     exclude("**/testing/***")
     testLogging {
-      events = ['skipped', 'failed']
+      events 'skipped', 'failed' //, 'passed'
       showStandardStreams = true
       exceptionFormat = "full"
     }

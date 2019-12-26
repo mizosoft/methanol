@@ -46,7 +46,9 @@ class BrotliLoader {
 
   static void loadBrotli() throws IOException {
     Path libPathInJar = getLibPathInJar();
-    InputStream libIn = BrotliLoader.class.getResourceAsStream(libPathInJar.toString());
+    // getResourceAsStream requires '/' separators which is not Path::toString's case on windows
+    String normalizedPath =  libPathInJar.toString().replace('\\', '/');
+    InputStream libIn = BrotliLoader.class.getResourceAsStream(normalizedPath);
     if (libIn == null) {
       throw new IOException("Couldn't find jar-bundled library: " + libPathInJar);
     }
