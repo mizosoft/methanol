@@ -1,48 +1,82 @@
+import org.gradle.nativeplatform.internal.DefaultTargetMachineFactory
+
 description = 'provides brotli decompression for methanol'
+
+ext {
+  libRoot = 'native'
+
+  def targetFactory = new DefaultTargetMachineFactory(objects)
+  targets = [
+      targetFactory.linux.x86, targetFactory.linux.x86_64,
+      targetFactory.windows.x86, targetFactory.windows.x86_64,
+      // targetFactory.macOS.x86, targetFactory.macOS.x86_64
+  ]
+
+  optimizedAttribute = Attribute.of('org.gradle.native.optimized', Boolean.class)
+  osAttribute = Attribute.of('org.gradle.native.operatingSystem', OperatingSystemFamily.class)
+  archAttribute = Attribute.of('org.gradle.native.architecture', MachineArchitecture.class)
+
+  def jniConfigPrefix = 'jniRuntime'
+  getJniConfigName = { target ->
+    jniConfigPrefix + target.operatingSystemFamily.toString().capitalize() +
+        target.architecture.toString().capitalize()
+  }
+  getJniConfigs = { configs ->
+    configs.findAll { config -> config.name.startsWith(jniConfigPrefix) }
+  }
+}
 
 subprojects {
   apply plugin: 'cpp-library'
 
   library {
-    targetMachines = [
-        machines.windows.x86, machines.windows.x86_64,
-        machines.linux.x86, machines.linux.x86_64,
-        machines.macOS.x86, machines.macOS.x86_64,
-    ]
+    targetMachines = targets
   }
 }
 
-configurations.create('jniResources') {
-  canBeResolved true
-  canBeConsumed false
-  attributes {
-    attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, 'jni-runtime-resources'))
+// Create consumer configuration for each target variant
+targets.each { target ->
+  configurations.create(getJniConfigName(target)) {
+    canBeResolved = true
+    canBeConsumed = false
+    attributes {
+      attribute optimizedAttribute, true // Use optimized version, normally the 'release' variant
+      attribute osAttribute, target.operatingSystemFamily
+      attribute archAttribute, target.architecture
+      attribute Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, Usage.NATIVE_RUNTIME)
+    }
   }
 }
 
 dependencies {
   implementation project(':methanol')
-  jniResources project('brotli-dec-jni')
+  getJniConfigs(configurations).each { config ->
+    add(config.name, project('brotli-dec-jni'))
+  }
 
   testImplementation deps.brotliDec
 }
 
-def LIB_ROOT = 'native'
-
-task buildBrotli(type: Copy) {
-  from configurations.jniResources {
-    include '**/stripped/*.so'
-    eachFile { fileInfo ->
-      // Only include os/arch segments
-      def normalizedSegments = fileInfo.relativePath.segments.toList() - ['shared', 'stripped']
-      fileInfo.relativePath = new RelativePath(true, normalizedSegments.toArray() as String[])
+task installBrotli(type: Copy) {
+  description = 'Builds and copies brotli jni natives to the resources directory'
+  getJniConfigs(configurations).each { config ->
+    if (!config.resolvedConfiguration.hasError()) {
+      from(config) {
+        // Attach os/arch path segments to copied artifacts
+        eachFile { fileInfo ->
+          fileInfo.relativePath = fileInfo.relativePath.prepend(
+              config.attributes.getAttribute(osAttribute).toString().toLowerCase(),
+              config.attributes.getAttribute(archAttribute).toString().toLowerCase()
+          )
+        }
+      }
+      into "src/main/resources/$libRoot"
+      includeEmptyDirs = false
     }
-    includeEmptyDirs = false
   }
-  into "src/main/resources/$LIB_ROOT"
 }
 
-// Ensure jni resources are copied first if buildBrotli ran with some build task
+// Ensure jni resources are copied first if installBrotli ran with some build task
 processResources {
-  mustRunAfter buildBrotli
+  mustRunAfter installBrotli
 }

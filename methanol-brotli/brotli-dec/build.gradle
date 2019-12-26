@@ -1,22 +1,24 @@
-def BROTLI_INCLUDE = 'src/include'
-def BROTLI_COMMON = 'src/common'
-def BROTLI_DEC = 'src/dec'
+ext {
+  brotliInclude = 'src/include'
+  brotliCommon = 'src/common'
+  brotliDec = 'src/dec'
+}
 
 library {
   baseName = 'brotlidec'
   linkage = [Linkage.STATIC]
 
-  publicHeaders.from BROTLI_INCLUDE
-  privateHeaders.from BROTLI_COMMON, BROTLI_DEC
+  publicHeaders.from brotliInclude
+  privateHeaders.from brotliCommon, brotliDec
 
   binaries.configureEach(CppStaticLibrary) {
     def compileTask = compileTask.get()
 
     // Had to define sources here as it doesn't work via the library DSL for some reason
-    compileTask.source.from fileTree(dir: BROTLI_COMMON, include: '**/*.c')
-    compileTask.source.from fileTree(dir: BROTLI_DEC, include: '**/*.c')
+    compileTask.source.from fileTree(dir: brotliCommon, include: '**/*.c')
+    compileTask.source.from fileTree(dir: brotliDec, include: '**/*.c')
 
-    def compilerArgs = it.compileTask.get().compilerArgs
+    def compilerArgs = compileTask.compilerArgs
 
     // Compile for C explicitly as gradle doesn't currently have a "c-library" plugin
     if (toolChain in Gcc || toolChain in Clang) {
@@ -46,6 +48,6 @@ library {
       compilerArgs.addAll '\\Wall', '\\WX'
     }
 
-    compileTask.positionIndependentCode true
+    compileTask.positionIndependentCode = true
   }
 }
