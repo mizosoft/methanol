@@ -113,7 +113,7 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
     sink = new StackByteSink();
     decodedBuffers = new ConcurrentLinkedQueue<>();
     prefetch = FlowSupport.prefetch();
-    prefetchThreshold = prefetch * FlowSupport.prefetchFactor();
+    prefetchThreshold = FlowSupport.prefetchThreshold();
   }
 
   @Override

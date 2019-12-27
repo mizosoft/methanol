@@ -44,13 +44,8 @@ public final class FlowSupport {
   // Request more when half consumed
   private static final int DEFAULT_PREFETCH_FACTOR = 50;
 
-  private static final int PREFETCH;
-  private static final int PREFETCH_FACTOR;
-
-  static {
-    PREFETCH = loadPrefetch();
-    PREFETCH_FACTOR = loadPrefetchFactor();
-  }
+  private static final int PREFETCH = loadPrefetch();
+  private static final int PREFETCH_THRESHOLD = (int) (PREFETCH * (loadPrefetchFactor() / 100f));
 
   // A subscription that does nothing
   public static final Flow.Subscription NOOP_SUBSCRIPTION = new Flow.Subscription() {
@@ -94,18 +89,17 @@ public final class FlowSupport {
   }
 
   /**
-   * Returns the prefetch property or a default of {@value DEFAULT_PREFETCH} if no such property
-   * exists or if the value is invalid.
+   * Returns the prefetch property or a default of {@value DEFAULT_PREFETCH}.
    */
   public static int prefetch() {
     return PREFETCH;
   }
 
   /**
-   * Returns the prefetch factor property or a default of {@value DEFAULT_PREFETCH_FACTOR} if no
-   * such property exists or if the value is invalid.
+   * Returns the prefetch threshold according to the prefetch factor property or a default of
+   * {@value DEFAULT_PREFETCH_FACTOR / 2}.
    */
-  public static int prefetchFactor() {
-    return PREFETCH_FACTOR;
+  public static int prefetchThreshold() {
+    return PREFETCH_THRESHOLD;
   }
 }
