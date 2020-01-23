@@ -24,6 +24,8 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -41,9 +43,7 @@ public class Demand {
   }
 
   private long getAndDemand(long n) {
-    if (n <= 0) {
-      throw new IllegalArgumentException("non-positive demand: " + n);
-    }
+    requireArgument(n > 0, "non-positive demand: %d", n);
     return demand.getAndAccumulate(n, (x, y) -> {
       long r = x + y;
       if (r < 0) { // Overflow
@@ -60,9 +60,7 @@ public class Demand {
    * @throws IllegalArgumentException if {@code n} is negative
    */
   public long decreaseAndGet(long n) {
-    if (n < 0) {
-      throw new IllegalArgumentException("Negative subtraction: " + n);
-    }
+    requireArgument(n >= 0, "non-positive subtraction: %d", n);
     return demand.accumulateAndGet(n, (x, y) -> x > y ? x - y : 0);
   }
 

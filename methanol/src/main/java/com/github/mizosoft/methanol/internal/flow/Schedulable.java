@@ -24,6 +24,7 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Executor;
@@ -54,10 +55,8 @@ public abstract class Schedulable {
    * @throws IllegalArgumentException if {@code maxSchedules} is negative
    */
   protected Schedulable(Executor executor, int maxSchedules) {
+    requireArgument(maxSchedules >= 0, "maxSchedules must be non-negative: %d", maxSchedules);
     this.executor = requireNonNull(executor);
-    if (maxSchedules < 0) {
-      throw new IllegalArgumentException("maxSchedules must be non-negative: " + maxSchedules);
-    }
     this.maxSchedules = maxSchedules;
     state = new AtomicInteger();
   }

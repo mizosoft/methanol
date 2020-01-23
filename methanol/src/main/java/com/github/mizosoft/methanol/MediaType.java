@@ -24,6 +24,8 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.alphaNum;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.closedRange;
@@ -31,7 +33,6 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.text.CharMatcher;
-import java.nio.BufferUnderflowException;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
@@ -313,11 +314,10 @@ public class MediaType {
     requireNonNull(type, "type");
     requireNonNull(subtype, "subtype");
     requireNonNull(parameters, "parameters");
+    requireArgument(!WILDCARD.equals(type) || WILDCARD.equals(subtype),
+        "cannot have a wildcard type with a concrete subtype");
     String normalizedType = normalizeToken(type);
     String normalizedSubtype = normalizeToken(subtype);
-    if (WILDCARD.equals(normalizedType) && !WILDCARD.equals(normalizedSubtype)) {
-      throw new IllegalArgumentException("Cannot have a wildcard type with a concrete subtype");
-    }
     for (var entry : parameters.entrySet()) {
       String normalizedAttribute = normalizeToken(entry.getKey());
       String normalizedValue;
@@ -325,9 +325,8 @@ public class MediaType {
         normalizedValue = normalizeToken(entry.getValue());
       } else {
         normalizedValue = entry.getValue();
-        if (!QUOTED_PAIR_MATCHER.allMatch(normalizedValue)) {
-          throw new IllegalArgumentException("Illegal value: '" + normalizedValue + "'");
-        }
+        requireArgument(QUOTED_PAIR_MATCHER.allMatch(normalizedValue),
+            "illegal value: %s", normalizedAttribute);
       }
       newParameters.put(normalizedAttribute, normalizedValue);
     }
@@ -381,9 +380,7 @@ public class MediaType {
   }
 
   private static String normalizeToken(String token) {
-    if (!TOKEN_MATCHER.allMatch(token) || token.isEmpty()) {
-      throw new IllegalArgumentException("Illegal token: '" + token + "'");
-    }
+    requireArgument(TOKEN_MATCHER.allMatch(token) && !token.isEmpty(), "illegal token: %s", token);
     return toAsciiLowerCase(token);
   }
 
@@ -411,7 +408,7 @@ public class MediaType {
 
       @Override
       Component next(CharBuffer buff) {
-        requireLastChar(buff, '/');
+        requireCharacter(buff, '/');
         return SUBTYPE;
       }
     },
@@ -436,7 +433,7 @@ public class MediaType {
 
       @Override
       Component next(CharBuffer buff) {
-        requireLastChar(buff, '=');
+        requireCharacter(buff, '=');
         return VALUE;
       }
     },
@@ -448,16 +445,12 @@ public class MediaType {
           StringBuilder unescaped = new StringBuilder();
           while (!consumeCharIfPresent(buff, '"')) {
             char c = getCharacter(buff);
-            if (!QUOTED_TEXT_MATCHER.matches(c)) {
-              if (c != '\\') {
-                throw new IllegalArgumentException(
-                    format("Illegal char %#x in a quoted-string", (int) c));
-              }
+            requireArgument(QUOTED_TEXT_MATCHER.matches(c) || c == '\\',
+                "illegal char %#x in a quoted-string", (int) c);
+            if (c == '\\') { // quoted-pair
               c = getCharacter(buff);
-              if (!QUOTED_PAIR_MATCHER.matches(c)) {
-                throw new IllegalArgumentException(
-                    format("Illegal char %#x in a quoted-pair", (int) c));
-              }
+              requireArgument(QUOTED_PAIR_MATCHER.matches(c),
+                  "illegal char %#x in a quoted-pair", (int) c);
             }
             unescaped.append(c);
           }
@@ -477,27 +470,19 @@ public class MediaType {
     abstract @Nullable Component next(CharBuffer buff);
 
     char getCharacter(CharBuffer buff) {
-      try {
-        return buff.get();
-      } catch (BufferUnderflowException e) {
-        throw new IllegalStateException("Expected more: " + toString());
-      }
+      requireState(buff.hasRemaining(), "expected more: %s", toString());
+      return buff.get();
     }
 
-    void requireLastChar(CharBuffer buff, char c) {
-      if (getCharacter(buff) != c) {
-        throw new IllegalStateException("Expected a '" + c + "' after: " + toString());
-      }
+    void requireCharacter(CharBuffer buff, char c) {
+      requireState(getCharacter(buff) == c, "expected a %c after: %s", c, toString());
     }
 
     String readToken(CharBuffer buff) {
       int begin = buff.position();
       consumeIfPresent(buff, TOKEN_MATCHER);
       int end = buff.position();
-      if (begin >= end) {
-        // Tokens cannot be empty
-        throw new IllegalStateException("Expected a token for: " + toString());
-      }
+      requireState(end > begin, "expected a token after: %s", toString());
       int originalPos = buff.position();
       CharBuffer subSequence = buff.position(begin).subSequence(0, end - begin);
       buff.position(originalPos);
@@ -508,7 +493,7 @@ public class MediaType {
       // 1*( OWS ";" OWS )
       if (buff.hasRemaining()) {
         consumeIfPresent(buff, OWS_MATCHER);
-        requireLastChar(buff, ';'); // First delimiter must exist
+        requireCharacter(buff, ';'); // First delimiter must exist
         // Ignore dangling semicolons, see https://github.com/google/guava/issues/1726
         do {
           consumeIfPresent(buff, OWS_MATCHER);

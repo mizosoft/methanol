@@ -22,46 +22,36 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.text;
+package com.github.mizosoft.methanol.internal;
 
-import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static java.lang.String.format;
 
-/**
- * Simple char matching API to use internally.
- */
-public interface CharMatcher {
+public class Validate {
 
-  boolean matches(char c);
-
-  default boolean allMatch(String s) {
-    return s.chars().allMatch(i -> matches((char) i));
+  private Validate() { // non-instantiable
   }
 
-  default CharMatcher or(CharMatcher other) {
-    return c -> matches(c) || other.matches(c);
+  public static void requireArgument(boolean argIsValid, String msg) {
+    if (!argIsValid) {
+      throw new IllegalArgumentException(msg);
+    }
   }
 
-  static CharMatcher alpha() {
-    return c -> {
-      char lower = Character.toLowerCase(c);
-      return lower >= 'a' && lower <= 'z';
-    };
+  public static void requireArgument(boolean argIsValid, String msgFormat, Object... args) {
+    if (!argIsValid) {
+      throw new IllegalArgumentException(format(msgFormat, args));
+    }
   }
 
-  static CharMatcher num() {
-    return c -> c >= '0' && c <= '9';
+  public static void requireState(boolean stateIsValid, String msg) {
+    if (!stateIsValid) {
+      throw new IllegalStateException(msg);
+    }
   }
 
-  static CharMatcher alphaNum() {
-    return alpha().or(num());
-  }
-
-  static CharMatcher chars(String chars) {
-    return c -> chars.indexOf(c) >= 0;
-  }
-
-  static CharMatcher closedRange(int c1, int c2) {
-    requireArgument((c1 | c2 | (c2 - c1)) >= 0, "illegal range[%d, %d]", c1, c2);
-    return c -> c >= c1 && c <= c2;
+  public static void requireState(boolean stateIsValid, String msgFormat, Object... args) {
+    if (!stateIsValid) {
+      throw new IllegalStateException(format(msgFormat, args));
+    }
   }
 }

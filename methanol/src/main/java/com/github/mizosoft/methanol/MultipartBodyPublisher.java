@@ -24,6 +24,8 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.alphaNum;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -200,14 +202,12 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     private static void validateHeaderNames(Set<String> names, BodyPublisher publisher) {
-      if (names.contains("Content-Type") && publisher instanceof MimeBodyPublisher) {
-        throw new IllegalArgumentException("Unexpected header: Content-Type");
+      requireArgument(!(names.contains("Content-Type") && publisher instanceof MimeBodyPublisher),
+          "unexpected Content-Type header");
+      for (String name : names) {
+        requireArgument(TOKEN_MATCHER.allMatch(name) && !name.isEmpty(),
+            "illegal header name: %s", name);
       }
-      names.forEach(n -> {
-        if (!TOKEN_MATCHER.allMatch(n) || n.isEmpty()) {
-          throw new IllegalArgumentException("Illegal header name: '" + n + "'");
-        }
-      });
     }
   }
 
@@ -251,7 +251,7 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
      */
     public Builder boundary(String boundary) {
       requireNonNull(boundary);
-      mediaType = mediaType.withParameter(BOUNDARY_ATTRIBUTE, checkBoundary(boundary));
+      mediaType = mediaType.withParameter(BOUNDARY_ATTRIBUTE, validateBoundary(boundary));
       return this;
     }
 
@@ -378,9 +378,7 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
      */
     public MultipartBodyPublisher build() {
       List<Part> parts = List.copyOf(this.parts);
-      if (parts.isEmpty()) {
-        throw new IllegalStateException("At least one part should be added");
-      }
+      requireState(!parts.isEmpty(), "at least one part should be added");
       MediaType mediaType = this.mediaType;
       if (!mediaType.parameters().containsKey(BOUNDARY_ATTRIBUTE)) {
         mediaType = mediaType.withParameter(BOUNDARY_ATTRIBUTE, UUID.randomUUID().toString());
@@ -388,23 +386,20 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
       return new MultipartBodyPublisher(parts, mediaType);
     }
 
-    private static String checkBoundary(String boundary) {
-      if (boundary.length() > MAX_BOUNDARY_LENGTH || boundary.isEmpty()) {
-        throw new IllegalArgumentException("Illegal boundary length: " + boundary.length());
-      }
-      if (!BOUNDARY_MATCHER.allMatch(boundary) || boundary.endsWith(" ")) {
-        throw new IllegalArgumentException("Illegal boundary: '" + boundary + "'");
-      }
+    private static String validateBoundary(String boundary) {
+      requireArgument(boundary.length() <= MAX_BOUNDARY_LENGTH && !boundary.isEmpty(),
+          "illegal boundary length: %s", boundary.length());
+      requireArgument(BOUNDARY_MATCHER.allMatch(boundary) && !boundary.endsWith(" "),
+          "illegal boundary: %s", boundary);
       return boundary;
     }
 
     private static MediaType checkMediaType(MediaType mediaType) {
-      if (!MULTIPART_TYPE.equals(mediaType.type())) {
-        throw new IllegalArgumentException("Not a multipart type: " + mediaType);
-      }
+      requireArgument(MULTIPART_TYPE.equals(mediaType.type()),
+          "not a multipart type: %s", mediaType.type());
       String boundary = mediaType.parameters().get(BOUNDARY_ATTRIBUTE);
       if (boundary != null) {
-        checkBoundary(boundary);
+        validateBoundary(boundary);
       }
       return mediaType;
     }
