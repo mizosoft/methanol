@@ -27,9 +27,13 @@ package com.github.mizosoft.methanol;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.extensions.BasicResponseInfo;
+import java.io.Reader;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -40,6 +44,37 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class MoreBodyHandlers {
 
   private MoreBodyHandlers() { // non-instantiable
+  }
+
+  /**
+   * Returns a {@code BodyHandler} of {@code ReadableByteChannel} as specified by {@link
+   * MoreBodySubscribers#ofByteChannel()}. A response with such a handler is completed after the
+   * response headers are received.
+   */
+  public static BodyHandler<ReadableByteChannel> ofByteChannel() {
+    return info -> MoreBodySubscribers.ofByteChannel();
+  }
+
+  /**
+   * Returns a {@code BodyHandler} of {@code Reader} as specified by {@link
+   * MoreBodySubscribers#ofReader(Charset)} using the charset specified by the {@code Content-Type}
+   * response header for decoding the response. A response with such a handler is completed after
+   * the response headers are received.
+   */
+  public static BodyHandler<Reader> ofReader() {
+    return info -> MoreBodySubscribers.ofReader(getCharsetOrUtf8(info.headers()));
+  }
+
+  /**
+   * Returns a {@code BodyHandler} of {@code Reader} as specified by {@link
+   * MoreBodySubscribers#ofReader(Charset)} using the given charset for decoding the response. A
+   * response with such a subscriber is completed after the response headers are received.
+   *
+   * @param charset the charset used for decoding the response
+   */
+  public static BodyHandler<Reader> ofReader(Charset charset) {
+    requireNonNull(charset);
+    return info -> MoreBodySubscribers.ofReader(charset);
   }
 
   /**
@@ -97,5 +132,11 @@ public class MoreBodyHandlers {
           new BasicResponseInfo(info.statusCode(), headersCopy, info.version()));
       return executor != null ? factory.create(downstream, executor) : factory.create(downstream);
     };
+  }
+
+  private static Charset getCharsetOrUtf8(HttpHeaders headers) {
+    return headers.firstValue("Content-Type")
+        .map(s -> MediaType.parse(s).charsetOrDefault(StandardCharsets.UTF_8))
+        .orElse(StandardCharsets.UTF_8);
   }
 }

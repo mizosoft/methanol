@@ -42,7 +42,7 @@ public class TestUtils {
     return US_ASCII.encode(s);
   }
 
-  public static void awaitUninterruptibly(CountDownLatch latch) {
+  public static void awaitUninterruptedly(CountDownLatch latch) {
     while (true) {
       try {
         latch.await();
