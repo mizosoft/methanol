@@ -29,7 +29,10 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.http.HttpHeaders;
 import java.nio.ByteBuffer;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -73,5 +76,13 @@ public class TestUtils {
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  public static HttpHeaders headers(String... pairs) {
+    var headers = new LinkedHashMap<String, List<String>>();
+    for (int i = 0, len = pairs.length; i < len; i += 2) {
+      headers.put(pairs[i], List.of(pairs[i + 1]));
+    }
+    return HttpHeaders.of(headers, (n, v) -> true);
   }
 }
