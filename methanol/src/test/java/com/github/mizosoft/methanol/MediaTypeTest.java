@@ -24,11 +24,14 @@
 
 package com.github.mizosoft.methanol;
 
+import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.Charset;
 import java.util.LinkedHashMap;
@@ -249,6 +252,29 @@ class MediaTypeTest {
   }
 
   @Test
+  void hasWildcard() {
+    assertTrue(MediaType.parse("*/*").hasWildcard());
+    assertTrue(MediaType.parse("text/*").hasWildcard());
+    assertFalse(MediaType.parse("text/plain").hasWildcard());
+  }
+
+  @Test
+  void includes_isCompatibleWith() {
+    assertInclusion(MediaType.parse("*/*"), MediaType.parse("*/*"));
+    assertInclusion(MediaType.parse("*/*; foo=bar"), MediaType.parse("text/*; foo=bar"));
+    assertInclusion(MediaType.parse("*/*"), MediaType.parse("text/plain"));
+    assertInclusion(MediaType.parse("text/*"), MediaType.parse("text/*; foo=bar"));
+    assertInclusion(MediaType.parse("text/*"), MediaType.parse("text/plain"));
+    assertInclusion(MediaType.parse("text/*; foo=bar; foo=bar_again"),
+        MediaType.parse("text/plain; foo=bar; foo=bar_again; foo_again=bar_again_again"));
+    assertInclusion(MediaType.parse("text/plain"), MediaType.parse("text/plain; foo=bar"));
+    assertFalse(MediaType.parse("*/*; foo=bar").includes(MediaType.parse("*/*")));
+    assertFalse(MediaType.parse("text/*").includes(MediaType.parse("audio/*")));
+    assertFalse(MediaType.parse("text/plain; foo=bar").includes(MediaType.parse("text/plain")));
+    assertFalse(MediaType.parse("text/plain").includes(MediaType.parse("text/*")));
+  }
+
+  @Test
   void equals_hashCode() {
     var type1 = MediaType.parse("text/plain; charset=utf-8; foo=bar");
     var type2 = MediaType.of("text", "plain", Map.of(
@@ -298,6 +324,12 @@ class MediaTypeTest {
   }
 
   @Test
+  void parse_wildcardTypeWithConcreteSubtype() {
+    assertIllegalArg(() -> MediaType.parse("*/plain; "));
+    assertIllegalArg(() -> MediaType.parse("*/plain; charset=utf-8"));
+  }
+
+  @Test
   void of_invalidType() {
     assertIllegalArg(() -> MediaType.of("text", "pl@in"));
     assertIllegalArg(() -> MediaType.of("t@xt", "plain"));
@@ -315,10 +347,21 @@ class MediaTypeTest {
     assertIllegalArg(() -> MediaType.of("text", "plain", invalidValueParams));
   }
 
+  @Test
+  void of_wildcardTypeWithConcreteSubtype() {
+    assertIllegalArg(() -> MediaType.of("*", "plain"));
+    assertIllegalArg(() -> MediaType.of("*", "plain", Map.of()));
+  }
+
   private static void assertHasCharset(MediaType type, Charset charset) {
     assertEquals(Optional.of(charset), type.charset());
     assertEquals(charset.name().toLowerCase(),
         type.parameters().get("charset"));
+  }
+
+  private static void assertInclusion(MediaType range, MediaType type) {
+    assertTrue(range.includes(type), format("<%s> not including <%s>", range, type));
+    assertTrue(range.isCompatibleWith(type) && type.isCompatibleWith(range));
   }
 
   private static void assertInvalidParse(String value) {

@@ -52,6 +52,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * type</a>. The {@linkplain #toString() text representation} of this class can be used as the value
  * of the {@code Content-Type} HTTP header.
  *
+ * <p>A {@code MediaType} also defines a <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">
+ * media range</a>. A media range has either both wildcard type and subtype, both concrete type and
+ * subtype, or a concrete type and a wildcard subtype (but not a wildcard type and a concrete
+ * subtype), with the character {@code *} denoting a wildcard. Inclusion in media ranges can be
+ * tested using any of {@link #includes(MediaType)} or {@link #isCompatibleWith(MediaType)}, with
+ * the later being symmetric among operands.
+ *
  * <p>Case insensitive attributes such as the type, subtype, parameter names or the value of the
  * charset parameter are converted into lower-case.
  */
@@ -87,6 +94,7 @@ public class MediaType {
   private static final CharMatcher OWS_MATCHER = chars("\t ");
 
   private static final String CHARSET_ATTRIBUTE = "charset";
+  private static final String WILDCARD = "*";
 
   private final String type;
   private final String subtype;
@@ -154,6 +162,41 @@ public class MediaType {
     } catch (UnsupportedCharsetException ignored) {
       return defaultCharset;
     }
+  }
+
+  /**
+   * Return {@code true} if this media type is {@code *}{@code /*} or if it has a wildcard subtype.
+   */
+  public boolean hasWildcard() {
+    return WILDCARD.equals(type) || WILDCARD.equals(subtype);
+  }
+
+  /**
+   * Returns whether this media type includes the given one. A media type includes the other if the
+   * former's parameters is a subset of the later's and either the former is a {@link #hasWildcard()
+   * wildcard type} that includes the later or both have equal concrete type and subtype.
+   *
+   * @param other the other media type
+   */
+  public boolean includes(MediaType other) {
+    requireNonNull(other);
+    return includesType(other.type, other.subtype)
+        && other.parameters.entrySet().containsAll(parameters.entrySet());
+  }
+
+  private boolean includesType(String otherType, String otherSubtype) {
+    return WILDCARD.equals(type)
+        || (type.equals(otherType) && (WILDCARD.equals(subtype) || subtype.equals(otherSubtype)));
+  }
+
+  /**
+   * Returns whether this media type is compatible with the given one. Two media types are
+   * compatible if either of them {@link #includes(MediaType) includes} the other.
+   *
+   * @param other the other media type
+   */
+  public boolean isCompatibleWith(MediaType other) {
+    return this.includes(other) || other.includes(this);
   }
 
   /**
@@ -272,6 +315,9 @@ public class MediaType {
     requireNonNull(parameters, "parameters");
     String normalizedType = normalizeToken(type);
     String normalizedSubtype = normalizeToken(subtype);
+    if (WILDCARD.equals(normalizedType) && !WILDCARD.equals(normalizedSubtype)) {
+      throw new IllegalArgumentException("Cannot have a wildcard type with a concrete subtype");
+    }
     for (var entry : parameters.entrySet()) {
       String normalizedAttribute = normalizeToken(entry.getKey());
       String normalizedValue;
