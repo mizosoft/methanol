@@ -24,16 +24,20 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.MoreBodySubscribers.fromAsyncSubscriber;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofByteChannel;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofReader;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptedly;
 import static com.github.mizosoft.methanol.testing.TestUtils.encodeAscii;
+import static java.net.http.HttpResponse.BodySubscribers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.BuffListIterator;
@@ -48,8 +52,10 @@ import java.nio.channels.InterruptibleChannel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
@@ -208,6 +214,81 @@ class MoreBodySubscribersTest {
     assertEquals(str, read);
   }
 
+  @Test
+  void fromAsyncSubscriber_completionDependsOnGivenFinisher() {
+    var completedSubscriber = ofByteChannel();
+    var subscriber1 = fromAsyncSubscriber(completedSubscriber,
+        s -> new CompletableFuture<>()); // Finisher doesn't complete
+    assertNull(toFuture(subscriber1).getNow(null));
+    var uncompletedSubscriber = ofString(US_ASCII);
+    var subscriber2 = fromAsyncSubscriber(uncompletedSubscriber,
+        s -> CompletableFuture.completedFuture("Baby yoda")); // Finisher completes
+    assertNotNull(toFuture(subscriber2).getNow(null));
+  }
+
+  @Test
+  void fromAsyncSubscriber_forwardsBodyToDownstream() {
+    int buffSize = 100;
+    int buffsPerList = 5;
+    int listCount = 10;
+    var str = rndAlpha(buffSize * buffsPerList * listCount);
+    var publisher = asciiPublisherOf(str, buffSize, buffsPerList);
+    var subscriber = fromAsyncSubscriber(ofString(US_ASCII), MoreBodySubscribersTest::toFuture);
+    publisher.subscribe(subscriber);
+    assertEquals(str, getBody(subscriber));
+  }
+
+  @Test
+  void fromAsyncSubscriber_downstreamErrorsAreRelayed() {
+    var subscription = new ToBeCancelledSubscription();
+    var badDownstream = new ToBeOnErroredSubscriber() {
+      @Override public void onNext(List<ByteBuffer> item) {
+        throw new TestException();
+      }
+    };
+    var subscriber = fromAsyncSubscriber(badDownstream, s -> s.completion);
+    subscriber.onSubscribe(subscription);
+    subscriber.onNext(List.of(ByteBuffer.wrap(new byte[]{'a'})));
+    subscriber.onComplete(); // Shouldn't be normally completed
+    subscription.assertCancelled();
+    badDownstream.assertOnErrored(TestException.class);
+  }
+
+  @Test
+  void fromAsyncSubscriber_deferredCancellationAfterDownstreamError() {
+    var badDownstream = new ToBeOnErroredSubscriber() {
+      @Override public void onSubscribe(Subscription subscription) {
+        subscription.request(5); // Trigger onNext
+      }
+      @Override public void onNext(List<ByteBuffer> item) {
+        throw new TestException();
+      }
+    };
+    // Doesn't detect cancellation promptly
+    var laggySubscription = new ToBeCancelledSubscription() {
+      Subscriber<List<ByteBuffer>> subscriber;
+      void apply(Subscriber<List<ByteBuffer>> subscriber) {
+        this.subscriber = subscriber;
+        subscriber.onSubscribe(this);
+      }
+      @Override public void request(long n) {
+        // produce n elements only once
+        var s = subscriber;
+        subscriber = null;
+        if (s != null) {
+          for (int i = 0; i < n; i++) {
+            s.onNext(List.of(ByteBuffer.wrap(new byte[]{'a'})));
+          }
+          s.onComplete();
+        }
+      }
+    };
+    var subscriber = fromAsyncSubscriber(badDownstream, s -> s.completion);
+    laggySubscription.apply(subscriber);
+    laggySubscription.assertCancelled();
+    badDownstream.assertOnErrored(TestException.class);
+  }
+
   private static <T> CompletableFuture<T> toFuture(BodySubscriber<T> s) {
     return s.getBody().toCompletableFuture();
   }
@@ -257,6 +338,41 @@ class MoreBodySubscribersTest {
 
     void assertCancelled() {
       assertTrue(cancelled.get(), "Subscription not cancelled");
+    }
+  }
+
+  private static class ToBeOnErroredSubscriber implements Subscriber<List<ByteBuffer>> {
+
+    final CompletableFuture<Void> completion;
+
+    ToBeOnErroredSubscriber() {
+      completion = new CompletableFuture<>();
+    }
+
+    @Override
+    public void onSubscribe(Subscription subscription) {
+    }
+
+    @Override
+    public void onNext(List<ByteBuffer> item) {
+    }
+
+    @Override
+    public void onError(Throwable throwable) {
+      if (!completion.completeExceptionally(throwable)) {
+        fail("Multiple error completions");
+      }
+    }
+
+    @Override
+    public void onComplete() {
+      fail("Being completed normally");
+    }
+
+    void assertOnErrored(Class<? extends Throwable> clz) {
+      CompletionException e = assertThrows(CompletionException.class,
+          () -> completion.getNow(null));
+      assertEquals(clz, e.getCause().getClass());
     }
   }
 }

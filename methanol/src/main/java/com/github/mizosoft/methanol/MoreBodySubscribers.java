@@ -26,14 +26,20 @@ package com.github.mizosoft.methanol;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.extensions.AsyncSubscriberAdapter;
 import com.github.mizosoft.methanol.internal.extensions.ByteChannelSubscriber;
 import java.io.Reader;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.InterruptibleChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
+import java.util.List;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Flow.Subscriber;
+import java.util.function.Function;
 
 /**
  * Provides additional {@link BodySubscriber} implementations.
@@ -67,5 +73,24 @@ public class MoreBodySubscribers {
   public static BodySubscriber<Reader> ofReader(Charset charset) {
     requireNonNull(charset);
     return BodySubscribers.mapping(ofByteChannel(), ch -> Channels.newReader(ch, charset));
+  }
+
+  /**
+   * Returns a {@code BodySubscriber} that forwards the response body to the given downstream. The
+   * body's completion depends on the completion of the {@code CompletionStage} returned by the
+   * given function. Unlike {@link BodySubscribers#fromSubscriber(Subscriber, Function)}, the given
+   * subscriber's {@code onComplete} or {@code onError} need not be called for the body to
+   * complete.
+   *
+   * @param downstream    the receiver of the response body
+   * @param asyncFinisher a function that maps the subscriber to an async task upon which the body
+   *                      completion is dependant
+   * @param <T>           the type of the body
+   * @param <S>           the type of the subscriber
+   */
+  public static <T, S extends Subscriber<? super List<ByteBuffer>>> BodySubscriber<T>
+  fromAsyncSubscriber(
+      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
+    return new AsyncSubscriberAdapter<>(downstream, asyncFinisher);
   }
 }

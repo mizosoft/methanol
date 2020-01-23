@@ -31,11 +31,16 @@ import java.io.Reader;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
+import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Flow.Subscriber;
+import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -113,6 +118,24 @@ public class MoreBodyHandlers {
     requireNonNull(downstreamHandler, "downstreamHandler");
     requireNonNull(executor, "executor");
     return decodingInternal(downstreamHandler, executor);
+  }
+
+  /**
+   * Returns a {@code BodyHandler} that returns the subscriber specified by {@link
+   * MoreBodySubscribers#fromAsyncSubscriber(Subscriber, Function)}.
+   *
+   * @param downstream    the receiver of the response body
+   * @param asyncFinisher a function that maps the subscriber to an async task upon which the body
+   *                      completion is dependant
+   * @param <T>           the type of the body
+   * @param <S>           the type of the subscriber
+   */
+  public static <T, S extends Subscriber<? super List<ByteBuffer>>> BodyHandler<T>
+  fromAsyncSubscriber(
+      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
+    requireNonNull(downstream, "downstream");
+    requireNonNull(asyncFinisher, "asyncFinisher");
+    return info -> MoreBodySubscribers.fromAsyncSubscriber(downstream, asyncFinisher);
   }
 
   private static <T> BodyHandler<T> decodingInternal(
