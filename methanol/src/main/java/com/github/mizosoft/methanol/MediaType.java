@@ -106,7 +106,6 @@ public class MediaType {
     this.type = type;
     this.subtype = subtype;
     this.parameters = parameters;
-    parsedCharset = parameters.containsKey(CHARSET_ATTRIBUTE) ? null : Optional.empty();
   }
 
   /**
