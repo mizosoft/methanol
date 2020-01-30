@@ -31,7 +31,7 @@ plugins {
 }
 
 subprojects {
-  apply plugin: 'java'
+  apply plugin: 'java-library'
   apply plugin: 'org.checkerframework'
   apply plugin: 'org.javamodularity.moduleplugin'
 
