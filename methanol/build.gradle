@@ -4,7 +4,19 @@ dependencies {
   testImplementation deps.reactiveStreamsTckFlow
 }
 
-task tckTest(type: Test) {
-  include("**/tck/**")
+task testNG(type: Test) {
   useTestNG()
+
+  include '**/tck/**'
+  scanForTestClasses = false
+}
+
+test {
+  exclude '**/testing/**'
+  exclude '**/tck/**'
+
+  // MultipartBodyPublisherTest uses a META-INF/services provider so run on cp
+  moduleOptions {
+    runOnClasspath = true
+  }
 }

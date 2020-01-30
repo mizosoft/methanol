@@ -1,18 +1,20 @@
 buildscript {
   ext.versions = [
       'junit'           : '5.5.2',
+      'junitPlatform'   : '1.3.1',
+      'reactiveStreams' : '1.0.3',
       'checkerFramework': '3.0.0',
-      'modulePlugin'    : '1.6.0',
-      'reactiveStreams' : '1.0.3'
+      'modulePlugin'    : '1.6.0'
   ]
 
   ext.deps = [
       'junitApi'              : "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
       'junitEngine'           : "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+      'junitPlatformLauncher' : "org.junit.platform:junit-platform-launcher:${versions.junitPlatform}",
+      'reactiveStreamsTckFlow': "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
       'checkerFramework'      : "org.checkerframework:checker:${versions.checkerFramework}",
       'checkerFrameworkQual'  : "org.checkerframework:checker-qual:${versions.checkerFramework}",
-      'modulePlugin'          : "org.javamodularity:moduleplugin:${versions.modulePlugin}",
-      'reactiveStreamsTckFlow': "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}"
+      'modulePlugin'          : "org.javamodularity:moduleplugin:${versions.modulePlugin}"
   ]
 
   repositories {
@@ -48,6 +50,10 @@ subprojects {
 
     testImplementation deps.junitApi
     testRuntimeOnly deps.junitEngine
+    // Gradle already has the launcher, but the explicit dependency avoids a weird
+    // IllegalAccessError when org.junit.platform.launcher is implied as unnamed which
+    // prevents tests from running in the module path
+    testRuntimeOnly deps.junitPlatformLauncher
   }
 
   checkerFramework {
@@ -57,18 +63,14 @@ subprojects {
   }
 
   tasks.withType(Test) {
-    exclude("**/testing/***")
     testLogging {
       events = ['skipped', 'failed']
       showStandardStreams = true
-      exceptionFormat = "full"
+      exceptionFormat = 'full'
     }
   }
 
   test {
     useJUnitPlatform()
-    moduleOptions {
-      runOnClasspath = true
-    }
   }
 }
