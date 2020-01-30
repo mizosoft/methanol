@@ -24,6 +24,7 @@
 
 package com.github.mizosoft.methanol;
 
+import com.github.mizosoft.methanol.internal.spi.ConverterFinder;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -85,7 +86,7 @@ public interface Converter {
      * Returns an immutable list containing the installed {@code OfRequest} converters.
      */
     static List<OfRequest> installed() {
-      throw new UnsupportedOperationException("not implemented");
+      return ConverterFinder.findInstalledRequestConverters();
     }
 
     /**
@@ -160,7 +161,7 @@ public interface Converter {
      * Returns an immutable list containing the installed {@code OfResponse} converters.
      */
     static List<OfResponse> installed() {
-      throw new UnsupportedOperationException("not implemented");
+      return ConverterFinder.findInstalledResponseConverters();
     }
 
     /**
