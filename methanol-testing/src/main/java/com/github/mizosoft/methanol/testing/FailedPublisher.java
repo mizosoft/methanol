@@ -20,53 +20,37 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 package com.github.mizosoft.methanol.testing;
 
 import static java.util.Objects.requireNonNull;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscriber;
+import java.util.function.Supplier;
 
-public class BuffListIterator implements Iterator<List<ByteBuffer>> {
+/**
+ * A publisher that fails immediately with an error.
+ */
+public class FailedPublisher<T> implements Publisher<T> {
 
-  private final BuffIterator itr;
-  private final int buffsPerList;
-  private @Nullable List<ByteBuffer> next;
+  private final Supplier<Throwable> errorSupplier;
 
-  public BuffListIterator(ByteBuffer buffer, int buffSize, int buffsPerList) {
-    this.itr = new BuffIterator(buffer, buffSize);
-    this.buffsPerList = buffsPerList;
+  public FailedPublisher(Supplier<Throwable> errorSupplier) {
+    this.errorSupplier = errorSupplier;
   }
 
   @Override
-  public boolean hasNext() {
-    List<ByteBuffer> n = next;
-    if (n == null) {
-      for (int i = 0; itr.hasNext() && i < buffsPerList; i++) {
-        if (n == null) {
-          n = new ArrayList<>();
-          next = n;
-        }
-        n.add(itr.next());
-      }
+  public void subscribe(Subscriber<? super T> subscriber) {
+    requireNonNull(subscriber);
+    Throwable error = errorSupplier.get();
+    try {
+      subscriber.onSubscribe(TestUtils.NOOP_SUBSCRIPTION);
+    } catch (Throwable t) {
+      error.addSuppressed(t);
+    } finally {
+      subscriber.onError(error);
     }
-    return n != null;
-  }
-
-  @Override
-  public List<ByteBuffer> next() {
-    if (!hasNext()) {
-      throw new NoSuchElementException();
-    }
-    List<ByteBuffer> l = List.copyOf(requireNonNull(next));
-    next = null;
-    return l;
   }
 }

@@ -26,32 +26,42 @@ package com.github.mizosoft.methanol.testing;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import java.util.concurrent.Flow.Publisher;
-import java.util.concurrent.Flow.Subscriber;
-import java.util.function.Supplier;
+import java.nio.ByteBuffer;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * A publisher that fails immediately with an error.
- */
-public class FailedPublisher<T> implements Publisher<T> {
+public class BuffIterator implements Iterator<ByteBuffer> {
 
-  private final Supplier<Throwable> errorSupplier;
+  private final ByteBuffer buffer;
+  private final int buffSize;
+  private @Nullable ByteBuffer next;
 
-  public FailedPublisher(Supplier<Throwable> errorSupplier) {
-    this.errorSupplier = errorSupplier;
+  public BuffIterator(ByteBuffer buffer, int buffSize) {
+    this.buffer = buffer;
+    this.buffSize = buffSize;
   }
 
   @Override
-  public void subscribe(Subscriber<? super T> subscriber) {
-    requireNonNull(subscriber);
-    Throwable error = errorSupplier.get();
-    try {
-      subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    } catch (Throwable t) {
-      error.addSuppressed(t);
-    } finally {
-      subscriber.onError(error);
+  @EnsuresNonNullIf(expression = "this.next", result = true)
+  public boolean hasNext() {
+    ByteBuffer n = next;
+    if (n == null && buffer.hasRemaining()) {
+      n = ByteBuffer.allocate(Math.min(buffSize, buffer.remaining()));
+      TestUtils.copyRemaining(buffer, n);
+      next = n.flip();
     }
+    return n != null;
+  }
+
+  @Override
+  public ByteBuffer next() {
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
+    ByteBuffer n = requireNonNull(next); // Make IDEA happy
+    next = null;
+    return n;
   }
 }

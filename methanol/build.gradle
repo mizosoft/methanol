@@ -2,7 +2,11 @@ description 'core methanol module'
 
 dependencies {
   testImplementation deps.reactiveStreamsTckFlow
+  testImplementation project(':methanol-testing')
 }
+
+// compileTestJava still compiles from the module path
+rootProject.addReads(compileTestJava, 'methanol', 'methanol.testing')
 
 task testNG(type: Test) {
   useTestNG()
@@ -12,7 +16,6 @@ task testNG(type: Test) {
 }
 
 test {
-  exclude '**/testing/**'
   exclude '**/tck/**'
 
   // MultipartBodyPublisherTest uses a META-INF/services provider so run on cp

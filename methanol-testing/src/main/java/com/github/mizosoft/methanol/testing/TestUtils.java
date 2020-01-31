@@ -24,8 +24,6 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -36,14 +34,16 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Flow.Subscription;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 
 public class TestUtils {
 
-  public static ByteBuffer encodeAscii(String s) {
-    return US_ASCII.encode(s);
-  }
+  public static final Subscription NOOP_SUBSCRIPTION = new Subscription() {
+    @Override public void request(long n) { }
+    @Override public void cancel() { }
+  };
 
   public static void awaitUninterruptedly(CountDownLatch latch) {
     while (true) {
@@ -84,5 +84,14 @@ public class TestUtils {
       headers.put(pairs[i], List.of(pairs[i + 1]));
     }
     return HttpHeaders.of(headers, (n, v) -> true);
+  }
+
+  public static int copyRemaining(ByteBuffer src, ByteBuffer dst) {
+    int toCopy = Math.min(src.remaining(), dst.remaining());
+    int srcLimit = src.limit();
+    src.limit(src.position() + toCopy);
+    dst.put(src);
+    src.limit(srcLimit);
+    return toCopy;
   }
 }

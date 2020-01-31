@@ -1,3 +1,4 @@
-rootProject.name = 'methanol'
+rootProject.name = 'methanol-parent'
 
 include 'methanol'
+include 'methanol-testing'

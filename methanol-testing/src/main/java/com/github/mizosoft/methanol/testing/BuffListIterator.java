@@ -26,35 +26,46 @@ package com.github.mizosoft.methanol.testing;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import java.util.concurrent.Flow.Publisher;
-import java.util.concurrent.Flow.Subscriber;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * A publisher that completes subscribers immediately.
- */
-public final class EmptyPublisher<T> implements Publisher<T> {
+public class BuffListIterator implements Iterator<List<ByteBuffer>> {
 
-  // Use same setup as Collections.emptyXXXX() as the type doesn't matter anyways
-  private static EmptyPublisher<?> INSTANCE = new EmptyPublisher<>();
+  private final BuffIterator itr;
+  private final int buffsPerList;
+  private @Nullable List<ByteBuffer> next;
 
-  private EmptyPublisher() { // Singleton
+  public BuffListIterator(ByteBuffer buffer, int buffSize, int buffsPerList) {
+    this.itr = new BuffIterator(buffer, buffSize);
+    this.buffsPerList = buffsPerList;
   }
 
   @Override
-  public void subscribe(Subscriber<? super T> subscriber) {
-    requireNonNull(subscriber);
-    try {
-      subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    } catch (Throwable t) {
-      subscriber.onError(t);
-      return;
+  public boolean hasNext() {
+    List<ByteBuffer> n = next;
+    if (n == null) {
+      for (int i = 0; itr.hasNext() && i < buffsPerList; i++) {
+        if (n == null) {
+          n = new ArrayList<>();
+          next = n;
+        }
+        n.add(itr.next());
+      }
     }
-    subscriber.onComplete();
+    return n != null;
   }
 
-  @SuppressWarnings("unchecked")
-  public static <T> EmptyPublisher<T> instance() {
-    return (EmptyPublisher<T>) INSTANCE;
+  @Override
+  public List<ByteBuffer> next() {
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
+    List<ByteBuffer> l = List.copyOf(requireNonNull(next));
+    next = null;
+    return l;
   }
 }

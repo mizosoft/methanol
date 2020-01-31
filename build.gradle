@@ -17,6 +17,18 @@ buildscript {
       'modulePlugin'          : "org.javamodularity:moduleplugin:${versions.modulePlugin}"
   ]
 
+  // Make consumerModule read producerModule for given task
+  ext.addReads = { task, consumerModule, producerModule ->
+    configure(task) {
+      moduleOptions {
+        addModules = [consumerModule, producerModule]
+        addReads = [
+            (consumerModule): producerModule
+        ]
+      }
+    }
+  }
+
   repositories {
     gradlePluginPortal()
   }

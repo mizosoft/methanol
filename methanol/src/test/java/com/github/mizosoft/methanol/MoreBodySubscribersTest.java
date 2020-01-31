@@ -28,7 +28,6 @@ import static com.github.mizosoft.methanol.MoreBodySubscribers.fromAsyncSubscrib
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofByteChannel;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofReader;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptedly;
-import static com.github.mizosoft.methanol.testing.TestUtils.encodeAscii;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -170,7 +169,7 @@ class MoreBodySubscribersTest {
   void ofByteChannel_throwsUpstreamErrorsEvenIfThereIsData() {
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    subscriber.onNext(List.of(encodeAscii("Minecraft")));
+    subscriber.onNext(List.of(US_ASCII.encode("Minecraft")));
     subscriber.onError(new TestException());
     var channel = getBody(subscriber);
     var ex = assertThrows(IOException.class, () -> channel.read(ByteBuffer.allocate(1)));
@@ -188,7 +187,7 @@ class MoreBodySubscribersTest {
     };
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(subscription);
-    ByteBuffer data = encodeAscii("Such wow");
+    ByteBuffer data = US_ASCII.encode("Such wow");
     LongStream.rangeClosed(1, demand.incrementAndGet()) // Add 1 more
         .forEach(i -> subscriber.onNext(List.of(data.duplicate())));
     subscription.assertCancelled();
@@ -308,7 +307,7 @@ class MoreBodySubscribersTest {
   private static Publisher<List<ByteBuffer>> asciiPublisherOf(
       String str, int buffSize, int buffsPerList) {
     return FlowAdapters.toFlowPublisher(new AsyncIterablePublisher<>(
-        iterableOf(encodeAscii(str), buffSize, buffsPerList), ForkJoinPool.commonPool()));
+        iterableOf(US_ASCII.encode(str), buffSize, buffsPerList), ForkJoinPool.commonPool()));
   }
 
   private static Iterable<List<ByteBuffer>> iterableOf(

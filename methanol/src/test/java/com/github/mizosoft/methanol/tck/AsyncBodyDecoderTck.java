@@ -24,6 +24,9 @@
 
 package com.github.mizosoft.methanol.tck;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.dec.AsyncBodyDecoder;
 import com.github.mizosoft.methanol.internal.dec.AsyncDecoder;
@@ -31,15 +34,6 @@ import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Schedulable;
 import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTck.BufferListHandle;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.reactivestreams.tck.TestEnvironment;
-import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
-import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
-
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -56,9 +50,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static com.github.mizosoft.methanol.testing.TestUtils.encodeAscii;
-import static java.util.Objects.requireNonNull;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.reactivestreams.tck.TestEnvironment;
+import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
+import org.testng.SkipException;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
 
 @Test
 public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<BufferListHandle> {
@@ -98,7 +97,7 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
   protected Publisher<BufferListHandle> createFailedFlowPublisher() {
     var processor = new AsyncBodyDecoderProcessorView(BadDecoder.INSTANCE, decoderExecutor());
     processor.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    processor.onNext(new BufferListHandle(List.of(encodeAscii("Test buffer"))));
+    processor.onNext(new BufferListHandle(List.of(US_ASCII.encode("Test buffer"))));
     processor.onComplete();
     return processor;
   }
@@ -117,7 +116,7 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
   @Override
   public BufferListHandle createElement(int element) {
     var batch = ByteBuffer.allocate(BUFFER_SIZE);
-    var hint = encodeAscii(Integer.toHexString(element));
+    var hint = US_ASCII.encode(Integer.toHexString(element));
     while (batch.hasRemaining()) {
       Utils.copyRemaining(hint.rewind(), batch);
     }

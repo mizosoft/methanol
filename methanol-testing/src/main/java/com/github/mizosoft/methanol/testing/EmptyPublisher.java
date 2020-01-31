@@ -20,50 +20,40 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 package com.github.mizosoft.methanol.testing;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.Utils;
-import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscriber;
 
-public class BuffIterator implements Iterator<ByteBuffer> {
+/**
+ * A publisher that completes subscribers immediately.
+ */
+public final class EmptyPublisher<T> implements Publisher<T> {
 
-  private final ByteBuffer buffer;
-  private final int buffSize;
-  private @Nullable ByteBuffer next;
+  // Use same setup as Collections.emptyXXXX() as the type doesn't matter anyways
+  private static EmptyPublisher<?> INSTANCE = new EmptyPublisher<>();
 
-  public BuffIterator(ByteBuffer buffer, int buffSize) {
-    this.buffer = buffer;
-    this.buffSize = buffSize;
+  private EmptyPublisher() { // Singleton
   }
 
   @Override
-  @EnsuresNonNullIf(expression = "this.next", result = true)
-  public boolean hasNext() {
-    ByteBuffer n = next;
-    if (n == null && buffer.hasRemaining()) {
-      n = ByteBuffer.allocate(Math.min(buffSize, buffer.remaining()));
-      Utils.copyRemaining(buffer, n);
-      next = n.flip();
+  public void subscribe(Subscriber<? super T> subscriber) {
+    requireNonNull(subscriber);
+    try {
+      subscriber.onSubscribe(TestUtils.NOOP_SUBSCRIPTION);
+    } catch (Throwable t) {
+      subscriber.onError(t);
+      return;
     }
-    return n != null;
+    subscriber.onComplete();
   }
 
-  @Override
-  public ByteBuffer next() {
-    if (!hasNext()) {
-      throw new NoSuchElementException();
-    }
-    ByteBuffer n = requireNonNull(next); // Make IDEA happy
-    next = null;
-    return n;
+  @SuppressWarnings("unchecked")
+  public static <T> EmptyPublisher<T> instance() {
+    return (EmptyPublisher<T>) INSTANCE;
   }
 }
