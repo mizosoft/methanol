@@ -41,6 +41,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -49,6 +50,24 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class MoreBodyHandlers {
 
   private MoreBodyHandlers() { // non-instantiable
+  }
+
+  /**
+   * Returns a {@code BodyHandler} that returns the subscriber specified by {@link
+   * MoreBodySubscribers#fromAsyncSubscriber(Subscriber, Function)}.
+   *
+   * @param downstream    the receiver of the response body
+   * @param asyncFinisher a function that maps the subscriber to an async task upon which the body
+   *                      completion is dependant
+   * @param <T>           the type of the body
+   * @param <S>           the type of the subscriber
+   */
+  public static <T, S extends Subscriber<? super List<ByteBuffer>>> BodyHandler<T>
+  fromAsyncSubscriber(
+      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
+    requireNonNull(downstream, "downstream");
+    requireNonNull(asyncFinisher, "asyncFinisher");
+    return info -> MoreBodySubscribers.fromAsyncSubscriber(downstream, asyncFinisher);
   }
 
   /**
@@ -80,6 +99,64 @@ public class MoreBodyHandlers {
   public static BodyHandler<Reader> ofReader(Charset charset) {
     requireNonNull(charset);
     return info -> MoreBodySubscribers.ofReader(charset);
+  }
+
+  /**
+   * Returns a {@code BodyHandler} of {@code T} as specified by {@link
+   * MoreBodySubscribers#ofObject(TypeReference, MediaType)}. The media type will inferred from the
+   * {@code Content-Type} response header.
+   *
+   * @param type the raw type of {@code T}
+   * @param <T>  the response body type
+   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
+   *                                       given type is installed
+   */
+  public static <T> BodyHandler<T> ofObject(Class<T> type) {
+    return ofObject(TypeReference.from(type));
+  }
+
+  /**
+   * Returns a {@code BodyHandler} of {@code T} as specified by {@link
+   * MoreBodySubscribers#ofObject(TypeReference, MediaType)}. The media type will inferred from the
+   * {@code Content-Type} response header.
+   *
+   * @param type a {@code TypeReference} representing {@code T}
+   * @param <T>  the response body type
+   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
+   *                                       given type is installed
+   */
+  public static <T> BodyHandler<T> ofObject(TypeReference<T> type) {
+    requireSupport(type);
+    return info -> MoreBodySubscribers.ofObject(type, mediaTypeOrNull(info.headers()));
+  }
+
+  /**
+   * Returns a {@code BodyHandler} of {@code Supplier<T>} as specified by {@link
+   * MoreBodySubscribers#ofDeferredObject(TypeReference, MediaType)}. The media type will inferred
+   * from the {@code Content-Type} response header.
+   *
+   * @param type the raw type of {@code T}
+   * @param <T>  the response body type
+   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
+   *                                       given type is installed
+   */
+  public static <T> BodyHandler<Supplier<T>> ofDeferredObject(Class<T> type) {
+    return ofDeferredObject(TypeReference.from(type));
+  }
+
+  /**
+   * Returns a {@code BodyHandler} of {@code Supplier<T>} as specified by {@link
+   * MoreBodySubscribers#ofDeferredObject(TypeReference, MediaType)}. The media type will inferred
+   * from the {@code Content-Type} response header.
+   *
+   * @param type a {@code TypeReference} representing {@code T}
+   * @param <T>  the response body type
+   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
+   *                                       given type is installed
+   */
+  public static <T> BodyHandler<Supplier<T>> ofDeferredObject(TypeReference<T> type) {
+    requireSupport(type);
+    return info -> MoreBodySubscribers.ofDeferredObject(type, mediaTypeOrNull(info.headers()));
   }
 
   /**
@@ -120,24 +197,6 @@ public class MoreBodyHandlers {
     return decodingInternal(downstreamHandler, executor);
   }
 
-  /**
-   * Returns a {@code BodyHandler} that returns the subscriber specified by {@link
-   * MoreBodySubscribers#fromAsyncSubscriber(Subscriber, Function)}.
-   *
-   * @param downstream    the receiver of the response body
-   * @param asyncFinisher a function that maps the subscriber to an async task upon which the body
-   *                      completion is dependant
-   * @param <T>           the type of the body
-   * @param <S>           the type of the subscriber
-   */
-  public static <T, S extends Subscriber<? super List<ByteBuffer>>> BodyHandler<T>
-  fromAsyncSubscriber(
-      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
-    requireNonNull(downstream, "downstream");
-    requireNonNull(asyncFinisher, "asyncFinisher");
-    return info -> MoreBodySubscribers.fromAsyncSubscriber(downstream, asyncFinisher);
-  }
-
   private static <T> BodyHandler<T> decodingInternal(
       BodyHandler<T> downstreamHandler, @Nullable Executor executor) {
     return info -> {
@@ -161,5 +220,19 @@ public class MoreBodyHandlers {
     return headers.firstValue("Content-Type")
         .map(s -> MediaType.parse(s).charsetOrDefault(StandardCharsets.UTF_8))
         .orElse(StandardCharsets.UTF_8);
+  }
+
+  // Require that at least a converter exists for the given type
+  // (the media type cannot be known until the headers arrive)
+  private static void requireSupport(TypeReference<?> type) {
+    Converter.OfResponse.getConverter(type, null)
+        .orElseThrow(() -> new UnsupportedOperationException(
+            "unsupported conversion to an object of type <" + type + ">"));
+  }
+
+  private static @Nullable MediaType mediaTypeOrNull(HttpHeaders headers) {
+    return headers.firstValue("Content-Type")
+        .map(MediaType::parse)
+        .orElse(null);
   }
 }

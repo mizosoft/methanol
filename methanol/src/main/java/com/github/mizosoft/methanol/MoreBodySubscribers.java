@@ -40,11 +40,32 @@ import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Provides additional {@link BodySubscriber} implementations.
  */
 public class MoreBodySubscribers {
+
+  /**
+   * Returns a {@code BodySubscriber} that forwards the response body to the given downstream. The
+   * body's completion depends on the completion of the {@code CompletionStage} returned by the
+   * given function. Unlike {@link BodySubscribers#fromSubscriber(Subscriber, Function)}, the given
+   * subscriber's {@code onComplete} or {@code onError} need not be called for the body to
+   * complete.
+   *
+   * @param downstream    the receiver of the response body
+   * @param asyncFinisher a function that maps the subscriber to an async task upon which the body
+   *                      completion is dependant
+   * @param <T>           the type of the body
+   * @param <S>           the type of the subscriber
+   */
+  public static <T, S extends Subscriber<? super List<ByteBuffer>>> BodySubscriber<T>
+  fromAsyncSubscriber(
+      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
+    return new AsyncSubscriberAdapter<>(downstream, asyncFinisher);
+  }
 
   /**
    * Returns a completed {@code BodySubscriber} of {@link ReadableByteChannel} that reads the
@@ -76,21 +97,47 @@ public class MoreBodySubscribers {
   }
 
   /**
-   * Returns a {@code BodySubscriber} that forwards the response body to the given downstream. The
-   * body's completion depends on the completion of the {@code CompletionStage} returned by the
-   * given function. Unlike {@link BodySubscribers#fromSubscriber(Subscriber, Function)}, the given
-   * subscriber's {@code onComplete} or {@code onError} need not be called for the body to
-   * complete.
+   * Returns a {@code BodySubscriber} of {@code T} as specified by {@link
+   * Converter.OfResponse#toObject(TypeReference, MediaType)} using an installed converter.
    *
-   * @param downstream    the receiver of the response body
-   * @param asyncFinisher a function that maps the subscriber to an async task upon which the body
-   *                      completion is dependant
-   * @param <T>           the type of the body
-   * @param <S>           the type of the subscriber
+   * @param type      a {@code TypeReference} representing {@code T}
+   * @param mediaType the media type
+   * @param <T>       the response body type
+   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
+   *                                       given type or media type is installed
    */
-  public static <T, S extends Subscriber<? super List<ByteBuffer>>> BodySubscriber<T>
-  fromAsyncSubscriber(
-      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
-    return new AsyncSubscriberAdapter<>(downstream, asyncFinisher);
+  public static <T> BodySubscriber<T> ofObject(
+      TypeReference<T> type, @Nullable MediaType mediaType) {
+    return requireConverter(type, mediaType).toObject(type, mediaType);
+  }
+
+  /**
+   * Returns a {@code BodySubscriber} of {@code Supplier<T>} as specified by {@link
+   * Converter.OfResponse#toDeferredObject(TypeReference, MediaType)} using an installed converter.
+   *
+   * @param type      a {@code TypeReference} representing {@code T}
+   * @param mediaType the media type
+   * @param <T>       the response body type
+   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
+   *                                       given type  or media type is installed
+   */
+  public static <T> BodySubscriber<Supplier<T>> ofDeferredObject(
+      TypeReference<T> type, @Nullable MediaType mediaType) {
+    return requireConverter(type, mediaType).toDeferredObject(type, mediaType);
+  }
+
+  private static Converter.OfResponse requireConverter(
+      TypeReference<?> type, @Nullable MediaType mediaType) {
+    return Converter.OfResponse.getConverter(type, mediaType)
+        .orElseThrow(() -> unsupportedConversion(type, mediaType));
+  }
+
+  private static UnsupportedOperationException unsupportedConversion(
+      TypeReference<?> type, @Nullable MediaType mediaType) {
+    String message = "unsupported conversion to an object of type <" + type + ">";
+    if (mediaType != null) {
+      message += " with media type <" + mediaType + ">";
+    }
+    return new UnsupportedOperationException(message);
   }
 }
