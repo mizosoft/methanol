@@ -6,7 +6,9 @@ buildscript {
       'checkerFramework': '3.0.0',
       'modulePlugin'    : '1.6.0',
       'gson'            : '2.8.6',
-      'jackson'         : '2.10.2'
+      'jackson'         : '2.10.2',
+      'protobuf'        : '3.11.3',
+      'protobufPlugin'  : '0.8.11'
   ]
 
   ext.deps = [
@@ -18,7 +20,10 @@ buildscript {
       'checkerFrameworkQual'  : "org.checkerframework:checker-qual:${versions.checkerFramework}",
       'modulePlugin'          : "org.javamodularity:moduleplugin:${versions.modulePlugin}",
       'gson'                  : "com.google.code.gson:gson:${versions.gson}",
-      'jacksonDatabind'       : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}"
+      'jacksonDatabind'       : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
+      'protobufJava'          : "com.google.protobuf:protobuf-java:${versions.protobuf}",
+      'protobufCompiler'      : "com.google.protobuf:protoc:${versions.protobuf}",
+      'protobufPlugin'        : "com.google.protobuf:protobuf-gradle-plugin:${versions.protobufPlugin}"
   ]
 
   // Make consumerModule read producerModule for given task
@@ -50,6 +55,7 @@ subprojects {
   apply plugin: 'java-library'
   apply plugin: 'org.checkerframework'
   apply plugin: 'org.javamodularity.moduleplugin'
+  apply plugin: 'idea'
 
   group = 'com.github.mizosoft.methanol'
   version = '1.0-SNAPSHOT'

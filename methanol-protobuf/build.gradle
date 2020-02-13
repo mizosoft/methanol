@@ -1,0 +1,26 @@
+buildscript {
+  repositories {
+    gradlePluginPortal()
+  }
+
+  dependencies {
+    classpath deps.protobufPlugin
+  }
+}
+
+apply plugin: 'com.google.protobuf'
+
+dependencies {
+  api project(':methanol')
+  api deps.protobufJava
+
+  testImplementation project(':methanol-testing')
+}
+
+rootProject.addReads([compileTestJava, test], 'methanol.testing')
+
+protobuf {
+  protoc {
+    artifact = deps.protobufCompiler
+  }
+}

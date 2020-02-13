@@ -1,0 +1,22 @@
+syntax = "proto2";
+
+package mizosoft.methanol.convert.protobuf;
+
+option java_package = "com.github.mizosoft.methanol.convert.protobuf";
+
+message AwesomePerson {
+  optional string firstName = 1;
+  optional string lastName = 2;
+  optional int32 age = 3;
+
+  extensions 4;
+}
+
+enum Awesomeness {
+  AWESOME = 0;
+  SUPER_AWESOME = 1;
+}
+
+extend AwesomePerson {
+  optional Awesomeness awesomeness = 4;
+}
