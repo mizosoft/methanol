@@ -1,0 +1,7 @@
+dependencies {
+  api deps.jacksonDatabind
+
+  testImplementation project(':methanol-testing')
+}
+
+rootProject.addReads([compileTestJava, test], 'methanol.testing')

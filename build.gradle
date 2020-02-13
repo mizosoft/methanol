@@ -5,7 +5,8 @@ buildscript {
       'reactiveStreams' : '1.0.3',
       'checkerFramework': '3.0.0',
       'modulePlugin'    : '1.6.0',
-      'gson'            : '2.8.6'
+      'gson'            : '2.8.6',
+      'jackson'         : '2.10.2'
   ]
 
   ext.deps = [
@@ -16,7 +17,8 @@ buildscript {
       'checkerFramework'      : "org.checkerframework:checker:${versions.checkerFramework}",
       'checkerFrameworkQual'  : "org.checkerframework:checker-qual:${versions.checkerFramework}",
       'modulePlugin'          : "org.javamodularity:moduleplugin:${versions.modulePlugin}",
-      'gson'                  : "com.google.code.gson:gson:${versions.gson}"
+      'gson'                  : "com.google.code.gson:gson:${versions.gson}",
+      'jacksonDatabind'       : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}"
   ]
 
   // Make consumerModule read producerModule for given task
