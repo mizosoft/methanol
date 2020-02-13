@@ -48,7 +48,7 @@ public abstract class AbstractConverter implements Converter {
    */
   protected void requireSupport(TypeReference<?> type) {
     if (!supportsType(type)) {
-      throw new UnsupportedOperationException("unsupported type: " + type);
+      throw new UnsupportedOperationException("type not supported by converter: " + type);
     }
   }
 

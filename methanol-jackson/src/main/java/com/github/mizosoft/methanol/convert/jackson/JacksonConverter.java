@@ -14,6 +14,7 @@ import com.github.mizosoft.methanol.Converter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.convert.AbstractConverter;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -38,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-abstract class JacksonConverter implements Converter {
+abstract class JacksonConverter extends AbstractConverter {
 
   public static final MediaType APPLICATION_JSON = MediaType.of("application", "json");
   public static final Charset DEFAULT_ENCODING = StandardCharsets.UTF_8;
@@ -46,28 +47,8 @@ abstract class JacksonConverter implements Converter {
   final ObjectMapper mapper;
 
   JacksonConverter(ObjectMapper mapper) {
+    super(APPLICATION_JSON);
     this.mapper = requireNonNull(mapper);
-  }
-
-  @Override
-  public boolean isCompatibleWith(MediaType mediaType) {
-    return APPLICATION_JSON.isCompatibleWith(mediaType);
-  }
-
-  void requireCompatibleOrNull(@Nullable MediaType mediaType) {
-    if (mediaType != null && !isCompatibleWith(mediaType)) {
-      throw new UnsupportedOperationException("media type not compatible with JSON: " + mediaType);
-    }
-  }
-
-  void requireSupport(TypeReference<?> type) {
-    if (!supportsType(type)) {
-      throw new UnsupportedOperationException("type not supported by jackson: " + type);
-    }
-  }
-
-  static Charset charsetOrDefault(@Nullable MediaType mediaType) {
-    return mediaType != null ? mediaType.charsetOrDefault(DEFAULT_ENCODING) : DEFAULT_ENCODING;
   }
 
   static final class OfRequest extends JacksonConverter implements Converter.OfRequest {
@@ -89,7 +70,8 @@ abstract class JacksonConverter implements Converter {
       requireCompatibleOrNull(mediaType);
       ObjectWriter objWriter = mapper.writerFor(object.getClass());
       ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
-      try (Writer writer = new OutputStreamWriter(outBuffer, charsetOrDefault(mediaType))) {
+      try (Writer writer = new OutputStreamWriter(
+          outBuffer, charsetOrDefault(mediaType, DEFAULT_ENCODING))) {
         objWriter.writeValue(writer, object);
       } catch (JsonProcessingException e) {
         throw new UncheckedIOException(e);
@@ -117,7 +99,7 @@ abstract class JacksonConverter implements Converter {
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
       ObjectReader objReader = mapper.readerFor(mapper.constructType(type.type()));
-      Charset charset = charsetOrDefault(mediaType);
+      Charset charset = charsetOrDefault(mediaType, DEFAULT_ENCODING);
       // The non-blocking parser only works with UTF-8 and ASCII
       // https://github.com/FasterXML/jackson-core/issues/596
       if (charset.equals(StandardCharsets.UTF_8)
@@ -143,7 +125,7 @@ abstract class JacksonConverter implements Converter {
       requireCompatibleOrNull(mediaType);
       ObjectReader objReader = mapper.readerFor(mapper.constructType(type.type()));
       return BodySubscribers.mapping(
-          MoreBodySubscribers.ofReader(charsetOrDefault(mediaType)),
+          MoreBodySubscribers.ofReader(charsetOrDefault(mediaType, DEFAULT_ENCODING)),
           reader -> () -> readValueUnchecked(objReader, reader));
     }
 

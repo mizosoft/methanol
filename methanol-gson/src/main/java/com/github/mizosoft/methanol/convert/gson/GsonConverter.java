@@ -30,6 +30,7 @@ import com.github.mizosoft.methanol.Converter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.convert.AbstractConverter;
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
 import com.google.gson.reflect.TypeToken;
@@ -50,53 +51,32 @@ import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-abstract class GsonConverter implements Converter {
+abstract class GsonConverter extends AbstractConverter {
 
   private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
   private static final MediaType APPLICATION_JSON = MediaType.of("application", "json");
 
   final Gson gson;
 
-  private GsonConverter(Gson gson) {
+  GsonConverter(Gson gson) {
+    super(APPLICATION_JSON);
     this.gson = requireNonNull(gson);
   }
 
   @Override
-  public boolean isCompatibleWith(MediaType mediaType) {
-    return APPLICATION_JSON.isCompatibleWith(mediaType);
-  }
-
-  @Override
   public boolean supportsType(TypeReference<?> type) {
-    return getAdapter(type) != null;
-  }
-
-  <T> @Nullable TypeAdapter<T> getAdapter(TypeReference<T> type) {
-    @SuppressWarnings("unchecked")
-    TypeToken<T> gsonType = (TypeToken<T>) TypeToken.get(type.type());
     try {
-      return gson.getAdapter(gsonType);
-    } catch (IllegalArgumentException ignored) {
-      return null;
+      TypeAdapter<?> unused = getAdapter(type);
+      return true;
+    } catch (IllegalArgumentException e) {
+      // Gson::getAdapter throws IAE if it can't de/serialize the type
+      return false;
     }
   }
 
-  <T> TypeAdapter<T> requireAdapter(TypeReference<T> type) {
-    TypeAdapter<T> adapter = getAdapter(type);
-    if (adapter == null) {
-      throw new UnsupportedOperationException("type not supported by gson: " + type);
-    }
-    return adapter;
-  }
-
-  void requireCompatibleOrNull(@Nullable MediaType mediaType) {
-    if (mediaType != null && !isCompatibleWith(mediaType)) {
-      throw new UnsupportedOperationException("media type not compatible with JSON: " + mediaType);
-    }
-  }
-
-  static Charset charsetOrDefault(@Nullable MediaType mediaType) {
-    return mediaType != null ? mediaType.charsetOrDefault(DEFAULT_CHARSET) : DEFAULT_CHARSET;
+  @SuppressWarnings("unchecked")
+  <T> TypeAdapter<T> getAdapter(TypeReference<T> type) {
+    return (TypeAdapter<T>) gson.getAdapter(TypeToken.get(type.type()));
   }
 
   static final class OfRequest extends GsonConverter implements Converter.OfRequest {
@@ -108,13 +88,14 @@ abstract class GsonConverter implements Converter {
     @Override
     public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
       requireNonNull(object);
+      TypeReference<?> runtimeType = TypeReference.from(object.getClass());
+      requireSupport(runtimeType);
       requireCompatibleOrNull(mediaType);
       @SuppressWarnings("unchecked")
-      TypeAdapter<Object> adapter =
-          (TypeAdapter<Object>) requireAdapter(TypeReference.from(object.getClass()));
+      TypeAdapter<Object> adapter = (TypeAdapter<Object>) getAdapter(runtimeType);
       ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
       try (JsonWriter writer = gson.newJsonWriter(
-          new OutputStreamWriter(outBuffer, charsetOrDefault(mediaType)))) {
+          new OutputStreamWriter(outBuffer, charsetOrDefault(mediaType, DEFAULT_CHARSET)))) {
         adapter.write(writer, object);
       } catch (IOException ioe) {
         throw new AssertionError(ioe); // writing to a memory buffer
@@ -132,23 +113,25 @@ abstract class GsonConverter implements Converter {
     @Override
     public <T> BodySubscriber<T> toObject(TypeReference<T> type, @Nullable MediaType mediaType) {
       requireNonNull(type);
+      requireSupport(type);
       requireCompatibleOrNull(mediaType);
-      TypeAdapter<T> adapter = requireAdapter(type);
+      TypeAdapter<T> adapter = getAdapter(type);
+      Charset charset = charsetOrDefault(mediaType, DEFAULT_CHARSET);
       return BodySubscribers.mapping(
           BodySubscribers.ofByteArray(),
           bytes -> toJsonUnchecked(
-              new InputStreamReader(
-                  new ByteArrayInputStream(bytes), charsetOrDefault(mediaType)), adapter));
+              new InputStreamReader(new ByteArrayInputStream(bytes), charset), adapter));
     }
 
     @Override
     public <T> BodySubscriber<Supplier<T>> toDeferredObject(
         TypeReference<T> type, @Nullable MediaType mediaType) {
       requireNonNull(type);
+      requireSupport(type);
       requireCompatibleOrNull(mediaType);
-      TypeAdapter<T> adapter = requireAdapter(type);
+      TypeAdapter<T> adapter = getAdapter(type);
       return BodySubscribers.mapping(
-          MoreBodySubscribers.ofReader(charsetOrDefault(mediaType)),
+          MoreBodySubscribers.ofReader(charsetOrDefault(mediaType, DEFAULT_CHARSET)),
           in -> () -> toJsonUnchecked(in, adapter));
     }
 
