@@ -76,6 +76,10 @@ subprojects {
     ]
   }
 
+  tasks.withType(JavaCompile) {
+    options.encoding = 'utf-8'
+  }
+
   tasks.withType(Test) {
     testLogging {
       events = ['skipped', 'failed']
