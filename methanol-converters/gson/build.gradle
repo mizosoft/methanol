@@ -4,5 +4,4 @@ dependencies {
   testImplementation project(':methanol-testing')
 }
 
-rootProject.addReads(compileTestJava, 'methanol.testing')
-rootProject.addReads(test, 'methanol.testing')
+rootProject.addReads([compileTestJava, test], 'methanol.testing')

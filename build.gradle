@@ -20,8 +20,8 @@ buildscript {
   ]
 
   // Make consumerModule read producerModule for given task
-  ext.addReads = { task, readModuleName ->
-    configure(task as Task) {
+  ext.addReads = { Iterable<?> tasks , String readModuleName ->
+    configure(tasks) {
       moduleOptions {
         addModules = ["$project.moduleName", readModuleName]
         addReads = [
