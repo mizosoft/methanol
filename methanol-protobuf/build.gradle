@@ -1,14 +1,6 @@
-buildscript {
-  repositories {
-    gradlePluginPortal()
-  }
-
-  dependencies {
-    classpath deps.protobufPlugin
-  }
+plugins {
+  id 'com.google.protobuf' version '0.8.11'
 }
-
-apply plugin: 'com.google.protobuf'
 
 dependencies {
   api project(':methanol')

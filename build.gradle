@@ -1,54 +1,41 @@
-buildscript {
-  ext.versions = [
-      'junit'           : '5.5.2',
-      'junitPlatform'   : '1.3.1',
-      'reactiveStreams' : '1.0.3',
-      'checkerFramework': '3.0.0',
-      'modulePlugin'    : '1.6.0',
-      'gson'            : '2.8.6',
-      'jackson'         : '2.10.2',
-      'protobuf'        : '3.11.3',
-      'protobufPlugin'  : '0.8.11'
-  ]
-
-  ext.deps = [
-      'junitApi'              : "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
-      'junitEngine'           : "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
-      'junitPlatformLauncher' : "org.junit.platform:junit-platform-launcher:${versions.junitPlatform}",
-      'reactiveStreamsTckFlow': "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
-      'checkerFramework'      : "org.checkerframework:checker:${versions.checkerFramework}",
-      'checkerFrameworkQual'  : "org.checkerframework:checker-qual:${versions.checkerFramework}",
-      'modulePlugin'          : "org.javamodularity:moduleplugin:${versions.modulePlugin}",
-      'gson'                  : "com.google.code.gson:gson:${versions.gson}",
-      'jacksonDatabind'       : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
-      'protobufJava'          : "com.google.protobuf:protobuf-java:${versions.protobuf}",
-      'protobufCompiler'      : "com.google.protobuf:protoc:${versions.protobuf}",
-      'protobufPlugin'        : "com.google.protobuf:protobuf-gradle-plugin:${versions.protobufPlugin}"
-  ]
-
-  // Make consumerModule read producerModule for given task
-  ext.addReads = { Iterable<?> tasks , String readModuleName ->
-    configure(tasks) {
-      moduleOptions {
-        addModules = ["$project.moduleName", readModuleName]
-        addReads = [
-            ("$project.moduleName" as String): readModuleName
-        ]
-      }
-    }
-  }
-
-  repositories {
-    gradlePluginPortal()
-  }
-
-  dependencies {
-    classpath deps.modulePlugin
-  }
+plugins {
+  id 'org.checkerframework' version '0.4.12' apply false
+  id 'org.javamodularity.moduleplugin' version '1.6.0' apply false
 }
 
-plugins {
-  id 'org.checkerframework' version '0.4.9' apply false
+ext.versions = [
+    'junit'           : '5.5.2',
+    'junitPlatform'   : '1.3.1',
+    'reactiveStreams' : '1.0.3',
+    'checkerFramework': '3.0.0',
+    'gson'            : '2.8.6',
+    'jackson'         : '2.10.2',
+    'protobuf'        : '3.11.3',
+]
+
+ext.deps = [
+    'junitApi'              : "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
+    'junitEngine'           : "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
+    'junitPlatformLauncher' : "org.junit.platform:junit-platform-launcher:${versions.junitPlatform}",
+    'reactiveStreamsTckFlow': "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
+    'checkerFramework'      : "org.checkerframework:checker:${versions.checkerFramework}",
+    'checkerFrameworkQual'  : "org.checkerframework:checker-qual:${versions.checkerFramework}",
+    'gson'                  : "com.google.code.gson:gson:${versions.gson}",
+    'jacksonDatabind'       : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
+    'protobufJava'          : "com.google.protobuf:protobuf-java:${versions.protobuf}",
+    'protobufCompiler'      : "com.google.protobuf:protoc:${versions.protobuf}",
+]
+
+// Make consumerModule read producerModule for given task
+ext.addReads = { Iterable<?> tasks , String readModuleName ->
+  configure(tasks) {
+    moduleOptions {
+      addModules = ["$project.moduleName", readModuleName]
+      addReads = [
+          ("$project.moduleName" as String): readModuleName
+      ]
+    }
+  }
 }
 
 subprojects {
