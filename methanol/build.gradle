@@ -8,6 +8,12 @@ dependencies {
 // compileTestJava still compiles from the module path
 rootProject.addReads([compileTestJava], 'methanol.testing')
 
+compileJava {
+  // methanol exports a package to methanol.convert.jackson but the compiler won't be able
+  // to resolve methanol.convert.jackson as it's not a dependency so it issues a warning
+  options.compilerArgs += '-Xlint:-module'
+}
+
 task testNG(type: Test) {
   useTestNG()
 
