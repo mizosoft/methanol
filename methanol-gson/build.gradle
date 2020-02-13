@@ -6,3 +6,10 @@ dependencies {
 }
 
 rootProject.addReads([compileTestJava, test], 'methanol.testing')
+
+test {
+  moduleOptions {
+    def pkg ='com.github.mizosoft.methanol.convert.gson'
+    addOpens = [("$moduleName/$pkg" as String): 'com.google.gson']
+  }
+}
