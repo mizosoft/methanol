@@ -3,6 +3,7 @@ module methanol {
   requires static org.checkerframework.checker.qual;
 
   exports com.github.mizosoft.methanol;
+  exports com.github.mizosoft.methanol.convert;
   exports com.github.mizosoft.methanol.internal.flow to
       methanol.convert.jackson;
 
