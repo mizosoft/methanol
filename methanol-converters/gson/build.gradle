@@ -4,5 +4,5 @@ dependencies {
   testImplementation project(':methanol-testing')
 }
 
-rootProject.addReads(compileTestJava, 'methanol.convert.gson', 'methanol.testing')
-rootProject.addReads(test, 'methanol.convert.gson', 'methanol.testing')
+rootProject.addReads(compileTestJava, 'methanol.testing')
+rootProject.addReads(test, 'methanol.testing')

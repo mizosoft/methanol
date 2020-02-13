@@ -6,7 +6,7 @@ dependencies {
 }
 
 // compileTestJava still compiles from the module path
-rootProject.addReads(compileTestJava, 'methanol', 'methanol.testing')
+rootProject.addReads(compileTestJava, 'methanol.testing')
 
 task testNG(type: Test) {
   useTestNG()
