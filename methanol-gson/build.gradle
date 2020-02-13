@@ -1,5 +1,6 @@
 dependencies {
-  api deps.jacksonDatabind
+  api project(':methanol')
+  api deps.gson
 
   testImplementation project(':methanol-testing')
 }
