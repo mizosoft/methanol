@@ -2,3 +2,5 @@ rootProject.name = 'methanol-parent'
 
 include 'methanol'
 include 'methanol-testing'
+include 'methanol-converters'
+include 'methanol-converters:gson'
