@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -218,6 +219,15 @@ class JacksonConverterTest {
     assertTrue(JsonProcessingException.class.isAssignableFrom(cause.getClass()));
   }
 
+  @Test
+  void deserializeJson_fromDeserializerThatNeedsParserCodec() {
+    var mapper = new ObjectMapper()
+        .registerModule(new SimpleModule().addDeserializer(Bean.class, new BeanNodeDeserializer()));
+    var subscriber = createOfResponse(mapper).toObject(TypeReference.from(Bean.class), null);
+    var bean = publishUtf8(subscriber, "{\"value\": \"beans are boring\"}");
+    assertEquals("beans are boring", bean.value);
+  }
+
   private static String toUtf8(BodyPublisher publisher) {
     return toString(publisher, UTF_8);
   }
@@ -331,6 +341,20 @@ class JacksonConverterTest {
       var point = new Point(p.nextIntValue(-1), p.nextIntValue(-1));
       p.nextToken();
       return point;
+    }
+  }
+
+  // Reads Bean from JsonNode that needs JsonParser to be have an ObjectCodec
+  private static final class BeanNodeDeserializer extends StdDeserializer<Bean> {
+
+    BeanNodeDeserializer() {
+      super(Bean.class);
+    }
+
+    @Override
+    public Bean deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+      JsonNode node = p.readValueAsTree();
+      return new Bean(node.get("value").textValue());
     }
   }
 }

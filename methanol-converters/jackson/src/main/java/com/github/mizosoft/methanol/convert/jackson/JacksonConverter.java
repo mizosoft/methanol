@@ -123,7 +123,7 @@ abstract class JacksonConverter implements Converter {
       // https://github.com/FasterXML/jackson-core/issues/596
       if (charset.equals(DEFAULT_ENCODING)) {
         try {
-          return new JacksonSubscriber<>(objReader,
+          return new JacksonSubscriber<>(mapper, type,
               mapper.getFactory().createNonBlockingByteArrayParser());
         } catch (IOException | UnsupportedOperationException ignored) {
           // Fallback to de-serializing from byte array
@@ -157,6 +157,7 @@ abstract class JacksonConverter implements Converter {
 
     private static final class JacksonSubscriber<T> implements BodySubscriber<T> {
 
+      private final ObjectMapper mapper;
       private final ObjectReader objReader;
       private final JsonParser parser;
       private final ByteArrayFeeder feeder;
@@ -167,8 +168,9 @@ abstract class JacksonConverter implements Converter {
       private final int prefetchThreshold;
       private int upstreamWindow;
 
-      JacksonSubscriber(ObjectReader objReader, JsonParser parser) {
-        this.objReader = objReader;
+      JacksonSubscriber(ObjectMapper mapper, TypeReference<T> type, JsonParser parser) {
+        this.mapper = mapper;
+        this.objReader = mapper.readerFor(mapper.constructType(type.type()));
         this.parser = parser;
         feeder = (ByteArrayFeeder) parser.getNonBlockingInputFeeder();
         jsonBuffer = new TokenBuffer(this.parser);
@@ -245,7 +247,7 @@ abstract class JacksonConverter implements Converter {
           feeder.endOfInput();
           try {
             flushParser(); // Flush parser after endOfInput even
-            valueFuture.complete(objReader.readValue(jsonBuffer.asParser()));
+            valueFuture.complete(objReader.readValue(jsonBuffer.asParser(mapper)));
           } catch (Throwable ioe) {
             valueFuture.completeExceptionally(ioe);
           }
