@@ -118,10 +118,10 @@ abstract class JacksonConverter implements Converter {
       requireCompatibleOrNull(mediaType);
       ObjectReader objReader = mapper.readerFor(mapper.constructType(type.type()));
       Charset charset = charsetOrDefault(mediaType);
-      // Currently there is no way of setting a different encoding
-      // other than the default (utf-8) for the non-blocking parser
+      // The non-blocking parser only works with UTF-8 and ASCII
       // https://github.com/FasterXML/jackson-core/issues/596
-      if (charset.equals(DEFAULT_ENCODING)) {
+      if (charset.equals(StandardCharsets.UTF_8)
+          || charset.equals(StandardCharsets.US_ASCII)) {
         try {
           return new JacksonSubscriber<>(mapper, type,
               mapper.getFactory().createNonBlockingByteArrayParser());
