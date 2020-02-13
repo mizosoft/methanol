@@ -61,9 +61,10 @@ subprojects {
   }
 
   dependencies {
-    implementation deps.checkerFrameworkQual
+    compileOnly deps.checkerFrameworkQual
     checkerFramework deps.checkerFramework
 
+    testCompileOnly deps.checkerFrameworkQual
     testImplementation deps.junitApi
     testRuntimeOnly deps.junitEngine
     // Gradle already has the launcher, but the explicit dependency avoids a weird

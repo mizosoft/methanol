@@ -1,6 +1,6 @@
 module methanol {
   requires transitive java.net.http;
-  requires org.checkerframework.checker.qual;
+  requires static org.checkerframework.checker.qual;
 
   exports com.github.mizosoft.methanol;
   exports com.github.mizosoft.methanol.internal.flow to
