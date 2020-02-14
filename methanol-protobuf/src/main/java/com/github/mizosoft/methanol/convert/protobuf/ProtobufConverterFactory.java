@@ -10,7 +10,7 @@ import com.google.protobuf.ExtensionRegistryLite;
  */
 public class ProtobufConverterFactory {
 
-  private ProtobufConverterFactory() {
+  private ProtobufConverterFactory() { // non-instantiable
   }
 
   /**

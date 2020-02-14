@@ -11,6 +11,9 @@ import com.github.mizosoft.methanol.convert.jackson.JacksonConverter.OfResponse;
  */
 public class JacksonConverterFactory {
 
+  private JacksonConverterFactory() { // non-instantiable
+  }
+
   /**
    * Returns a {@code Converter.OfRequest} that uses a default {@code ObjectMapper} instance.
    */

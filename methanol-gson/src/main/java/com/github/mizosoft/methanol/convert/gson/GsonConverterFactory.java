@@ -34,6 +34,9 @@ import com.google.gson.Gson;
  */
 public class GsonConverterFactory {
 
+  private GsonConverterFactory() { // non-instantiable
+  }
+
   /**
    * Returns a {@code Converter.OfRequest} that uses a default {@code Gson} instance.
    */
