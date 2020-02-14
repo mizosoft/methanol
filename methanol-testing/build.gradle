@@ -1,3 +1,8 @@
 dependencies {
   api project(':methanol')
 }
+
+// Skip style checks for ths module
+tasks.withType(Checkstyle) {
+  enabled = false
+}

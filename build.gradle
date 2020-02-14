@@ -11,6 +11,7 @@ ext.versions = [
     'gson'            : '2.8.6',
     'jackson'         : '2.10.2',
     'protobuf'        : '3.11.3',
+    'checkstyle'      : '8.29'
 ]
 
 ext.deps = [
@@ -24,10 +25,11 @@ ext.deps = [
     'jacksonDatabind'       : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
     'protobufJava'          : "com.google.protobuf:protobuf-java:${versions.protobuf}",
     'protobufCompiler'      : "com.google.protobuf:protoc:${versions.protobuf}",
+    'checkstyle'            : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}"
 ]
 
-// Make consumerModule read producerModule for given task
-ext.addReads = { Iterable<?> tasks , String readModuleName ->
+// Make current module read given module for the given tasks
+ext.addReads = { Iterable<?> tasks, String readModuleName ->
   configure(tasks) {
     moduleOptions {
       addModules = ["$project.moduleName", readModuleName]
@@ -42,6 +44,7 @@ subprojects {
   apply plugin: 'java-library'
   apply plugin: 'org.checkerframework'
   apply plugin: 'org.javamodularity.moduleplugin'
+  apply plugin: 'checkstyle'
   apply plugin: 'idea'
 
   group = 'com.github.mizosoft.methanol'
@@ -53,9 +56,16 @@ subprojects {
     jcenter()
   }
 
+  configurations {
+    checkstyleConfig
+  }
+
   dependencies {
     compileOnly deps.checkerFrameworkQual
     checkerFramework deps.checkerFramework
+    checkstyleConfig dependencies.create(deps.checkstyle) {
+      transitive = false
+    }
 
     testCompileOnly deps.checkerFrameworkQual
     testImplementation deps.junitApi
@@ -64,6 +74,20 @@ subprojects {
     // IllegalAccessError when org.junit.platform.launcher is implied as unnamed which
     // prevents tests from running in the module path
     testRuntimeOnly deps.junitPlatformLauncher
+  }
+
+  checkstyle {
+    toolVersion = versions.checkstyle
+    config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
+    sourceSets = [project.sourceSets.main]
+  }
+
+  tasks.withType(Checkstyle) {
+    enabled = System.properties.containsKey('checkstyle')
+    reports {
+      xml.enabled = false
+      html.enabled = true
+    }
   }
 
   checkerFramework {
