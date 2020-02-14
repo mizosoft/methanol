@@ -9,7 +9,7 @@ import com.github.mizosoft.methanol.convert.jackson.JacksonConverter.OfResponse;
 /**
  * Provides {@link Converter} implementations for the JSON format using Jackson.
  */
-public class JacksonConverters {
+public class JacksonConverterFactory {
 
   /**
    * Returns a {@code Converter.OfRequest} that uses a default {@code ObjectMapper} instance.

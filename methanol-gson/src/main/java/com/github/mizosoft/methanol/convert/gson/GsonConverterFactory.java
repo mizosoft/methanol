@@ -32,7 +32,7 @@ import com.google.gson.Gson;
 /**
  * Provides {@link Converter} implementations for the JSON format using Gson.
  */
-public class GsonConverters {
+public class GsonConverterFactory {
 
   /**
    * Returns a {@code Converter.OfRequest} that uses a default {@code Gson} instance.

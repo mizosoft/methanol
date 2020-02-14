@@ -24,8 +24,8 @@
 
 package com.github.mizosoft.methanol.convert.gson;
 
-import static com.github.mizosoft.methanol.convert.gson.GsonConverters.createOfRequest;
-import static com.github.mizosoft.methanol.convert.gson.GsonConverters.createOfResponse;
+import static com.github.mizosoft.methanol.convert.gson.GsonConverterFactory.createOfRequest;
+import static com.github.mizosoft.methanol.convert.gson.GsonConverterFactory.createOfResponse;
 import static com.github.mizosoft.methanol.testing.TestUtils.NOOP_SUBSCRIPTION;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -54,7 +54,7 @@ class GsonConverterTest {
 
   @Test
   void isCompatibleWith_anyApplicationJson() {
-    for (var c : List.of(GsonConverters.createOfRequest(), GsonConverters.createOfResponse())) {
+    for (var c : List.of(GsonConverterFactory.createOfRequest(), GsonConverterFactory.createOfResponse())) {
       assertTrue(c.isCompatibleWith(MediaType.of("application", "json")));
       assertTrue(c.isCompatibleWith(MediaType.of("application", "json").withCharset(UTF_8)));
       assertTrue(c.isCompatibleWith(MediaType.of("application", "*")));
@@ -65,14 +65,14 @@ class GsonConverterTest {
 
   @Test
   void unsupportedConversion_ofRequest() {
-    var ofReq = GsonConverters.createOfRequest();
+    var ofReq = GsonConverterFactory.createOfRequest();
     assertThrows(UnsupportedOperationException.class,
         () -> ofReq.toBody(new Point(1, 2), MediaType.of("text", "plain")));
   }
 
   @Test
   void unsupportedConversion_ofResponse() {
-    var ofRes = GsonConverters.createOfResponse();
+    var ofRes = GsonConverterFactory.createOfResponse();
     var textPlain = MediaType.of("text", "plain");
     assertThrows(UnsupportedOperationException.class,
         () -> ofRes.toObject(new TypeReference<Point>() {}, textPlain));
@@ -83,7 +83,7 @@ class GsonConverterTest {
   @Test
   void serializeJson() {
     var obama = new AwesomePerson("Barack", "Obama", 58);
-    var body = GsonConverters.createOfRequest().toBody(obama, null);
+    var body = GsonConverterFactory.createOfRequest().toBody(obama, null);
     var expected = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
     assertEquals(expected, toUtf8(body));
   }
@@ -91,7 +91,7 @@ class GsonConverterTest {
   @Test
   void serializeJson_utf16() {
     var obama = new AwesomePerson("Barack", "Obama", 58);
-    var body = GsonConverters.createOfRequest().toBody(obama, MediaType.parse("application/json; charset=utf-16"));
+    var body = GsonConverterFactory.createOfRequest().toBody(obama, MediaType.parse("application/json; charset=utf-16"));
     var expected = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
     assertEquals(expected, toString(body, UTF_16));
   }
@@ -136,7 +136,8 @@ class GsonConverterTest {
   @Test
   void deserializeJson() {
     var json = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
-    var subscriber = GsonConverters.createOfResponse().toObject(new TypeReference<AwesomePerson>() {}, null);
+    var subscriber = GsonConverterFactory
+        .createOfResponse().toObject(new TypeReference<AwesomePerson>() {}, null);
     var obama = publishUtf8(subscriber, json);
     assertEquals(obama.firstName, "Barack");
     assertEquals(obama.lastName, "Obama");
@@ -146,7 +147,7 @@ class GsonConverterTest {
   @Test
   void deserializeJson_utf16() {
     var json = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
-    var subscriber = GsonConverters.createOfResponse().toObject(
+    var subscriber = GsonConverterFactory.createOfResponse().toObject(
         new TypeReference<AwesomePerson>() {}, MediaType.parse("application/json; charset=utf-16"));
     var obama = publish(subscriber, json, UTF_16);
     assertEquals(obama.firstName, "Barack");
@@ -197,7 +198,7 @@ class GsonConverterTest {
   @Test
   void deserializeJson_deferred() {
     var json = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
-    var subscriber = GsonConverters.createOfResponse()
+    var subscriber = GsonConverterFactory.createOfResponse()
         .toDeferredObject(new TypeReference<AwesomePerson>() {}, null);
     var userSupplier = subscriber.getBody().toCompletableFuture().getNow(null);
     assertNotNull(userSupplier);
@@ -214,7 +215,7 @@ class GsonConverterTest {
 
   @Test
   void deserializeJson_deferredWithError() {
-    var subscriber = GsonConverters
+    var subscriber = GsonConverterFactory
         .createOfResponse().toDeferredObject(new TypeReference<AwesomePerson>() {}, null);
     var userSupplier = subscriber.getBody().toCompletableFuture().getNow(null);
     assertNotNull(userSupplier);

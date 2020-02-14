@@ -8,9 +8,9 @@ import com.google.protobuf.ExtensionRegistryLite;
  * protocol buffers</a> format. The converters support any subtype of {@link
  * com.google.protobuf.MessageLite}.
  */
-public class ProtobufConverters {
+public class ProtobufConverterFactory {
 
-  private ProtobufConverters() {
+  private ProtobufConverterFactory() {
   }
 
   /**

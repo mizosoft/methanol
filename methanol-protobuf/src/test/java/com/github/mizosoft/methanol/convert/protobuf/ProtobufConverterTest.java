@@ -1,7 +1,7 @@
 package com.github.mizosoft.methanol.convert.protobuf;
 
-import static com.github.mizosoft.methanol.convert.protobuf.ProtobufConverters.createOfRequest;
-import static com.github.mizosoft.methanol.convert.protobuf.ProtobufConverters.createOfResponse;
+import static com.github.mizosoft.methanol.convert.protobuf.ProtobufConverterFactory.createOfRequest;
+import static com.github.mizosoft.methanol.convert.protobuf.ProtobufConverterFactory.createOfResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

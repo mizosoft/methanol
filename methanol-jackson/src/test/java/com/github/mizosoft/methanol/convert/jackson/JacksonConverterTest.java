@@ -1,7 +1,7 @@
 package com.github.mizosoft.methanol.convert.jackson;
 
-import static com.github.mizosoft.methanol.convert.jackson.JacksonConverters.createOfRequest;
-import static com.github.mizosoft.methanol.convert.jackson.JacksonConverters.createOfResponse;
+import static com.github.mizosoft.methanol.convert.jackson.JacksonConverterFactory.createOfRequest;
+import static com.github.mizosoft.methanol.convert.jackson.JacksonConverterFactory.createOfResponse;
 import static com.github.mizosoft.methanol.testing.TestUtils.NOOP_SUBSCRIPTION;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -154,7 +154,7 @@ class JacksonConverterTest {
   void deserializeJson_typeWithGenerics() {
     var mapper = new JsonMapper()
         .registerModule(new SimpleModule().addDeserializer(Point.class, new PointDeserializer()));
-    var subscriber = JacksonConverters.createOfResponse(mapper)
+    var subscriber = JacksonConverterFactory.createOfResponse(mapper)
         .toObject(new TypeReference<List<Point>>() {}, null);
     var pointList = publishUtf8(subscriber, "[[1,2],[2,1],[0,0]]");
     var expected = List.of(new Point(1, 2), new Point(2, 1), new Point(0, 0));
@@ -182,7 +182,7 @@ class JacksonConverterTest {
 
   @Test
   void deserializeJson_deferred() {
-    var subscriber = JacksonConverters.createOfResponse()
+    var subscriber = JacksonConverterFactory.createOfResponse()
         .toDeferredObject(new TypeReference<Bean>() {}, null);
     var beanSupplier = subscriber.getBody().toCompletableFuture().getNow(null);
     assertNotNull(beanSupplier);
@@ -198,7 +198,7 @@ class JacksonConverterTest {
 
   @Test
   void deserializeJson_deferredWithError() {
-    var subscriber = JacksonConverters.createOfResponse()
+    var subscriber = JacksonConverterFactory.createOfResponse()
         .toDeferredObject(new TypeReference<Bean>() {}, null);
     var beanSupplier = subscriber.getBody().toCompletableFuture().getNow(null);
     assertNotNull(beanSupplier);
