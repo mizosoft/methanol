@@ -1,17 +1,19 @@
 plugins {
   id 'org.checkerframework' version '0.4.12' apply false
   id 'org.javamodularity.moduleplugin' version '1.6.0' apply false
+  id 'net.ltgt.errorprone' version '1.1.1' apply false
 }
 
 ext.versions = [
     'junit'           : '5.5.2',
     'junitPlatform'   : '1.3.1',
     'reactiveStreams' : '1.0.3',
-    'checkerFramework': '3.0.0',
+    'checkerFramework': '3.1.1',
     'gson'            : '2.8.6',
     'jackson'         : '2.10.2',
     'protobuf'        : '3.11.3',
-    'checkstyle'      : '8.29'
+    'checkstyle'      : '8.29',
+    'errorprone'      : '2.3.4'
 ]
 
 ext.deps = [
@@ -25,7 +27,9 @@ ext.deps = [
     'jacksonDatabind'       : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
     'protobufJava'          : "com.google.protobuf:protobuf-java:${versions.protobuf}",
     'protobufCompiler'      : "com.google.protobuf:protoc:${versions.protobuf}",
-    'checkstyle'            : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}"
+    'checkstyle'            : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}",
+    "errorprone"            : "com.google.errorprone:error_prone_core:${versions.errorprone}",
+    "errorproneAnnotations" : "com.google.errorprone:error_prone_annotations:${versions.errorprone}"
 ]
 
 // Make current module read given module for the given tasks
@@ -45,6 +49,7 @@ subprojects {
   apply plugin: 'org.checkerframework'
   apply plugin: 'org.javamodularity.moduleplugin'
   apply plugin: 'checkstyle'
+  apply plugin: 'net.ltgt.errorprone'
   apply plugin: 'idea'
 
   group = 'com.github.mizosoft.methanol'
@@ -62,18 +67,30 @@ subprojects {
 
   dependencies {
     compileOnly deps.checkerFrameworkQual
+    compileOnly deps.errorproneAnnotations
     checkerFramework deps.checkerFramework
+    errorprone deps.errorprone
     checkstyleConfig dependencies.create(deps.checkstyle) {
       transitive = false
     }
 
     testCompileOnly deps.checkerFrameworkQual
+    testCompileOnly deps.errorproneAnnotations
     testImplementation deps.junitApi
     testRuntimeOnly deps.junitEngine
     // Gradle already has the launcher, but the explicit dependency avoids a weird
     // IllegalAccessError when org.junit.platform.launcher is implied as unnamed which
     // prevents tests from running in the module path
     testRuntimeOnly deps.junitPlatformLauncher
+  }
+
+  checkerFramework {
+    excludeTests = true
+    if (System.properties.containsKey('checkerframework')) {
+      checkers = [
+          // 'org.checkerframework.checker.nullness.NullnessChecker'
+      ]
+    }
   }
 
   checkstyle {
@@ -90,14 +107,16 @@ subprojects {
     }
   }
 
-  checkerFramework {
-    checkers = [
-        // 'org.checkerframework.checker.nullness.NullnessChecker'
-    ]
-  }
-
   tasks.withType(JavaCompile) {
     options.encoding = 'utf-8'
+    options.errorprone {
+      enabled = System.properties.containsKey('errorprone')
+      disable('FutureReturnValueIgnored') // https://github.com/google/error-prone/issues/1157
+    }
+  }
+
+  compileTestJava {
+    options.errorprone.enabled = false
   }
 
   tasks.withType(Test) {

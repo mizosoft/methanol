@@ -8,6 +8,12 @@ dependencies {
 // compileTestJava still compiles from the module path
 rootProject.addReads([compileTestJava], 'methanol.testing')
 
+tasks.withType(JavaCompile) {
+  options.errorprone {
+    disable('ReferenceEquality') // For use of sentinel values, which require ref equality
+  }
+}
+
 compileJava {
   // methanol exports a package to methanol.convert.jackson but the compiler won't be able
   // to resolve methanol.convert.jackson as it's not a dependency so it issues a warning
