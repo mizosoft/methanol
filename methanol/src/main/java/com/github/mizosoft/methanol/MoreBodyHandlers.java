@@ -44,27 +44,24 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * Provides additional {@link java.net.http.HttpResponse.BodyHandler} implementations.
- */
+/** Provides additional {@link java.net.http.HttpResponse.BodyHandler} implementations. */
 public class MoreBodyHandlers {
 
-  private MoreBodyHandlers() { // non-instantiable
-  }
+  private MoreBodyHandlers() {} // non-instantiable
 
   /**
    * Returns a {@code BodyHandler} that returns the subscriber specified by {@link
    * MoreBodySubscribers#fromAsyncSubscriber(Subscriber, Function)}.
    *
-   * @param downstream    the receiver of the response body
+   * @param downstream the receiver of the response body
    * @param asyncFinisher a function that maps the subscriber to an async task upon which the body
-   *                      completion is dependant
-   * @param <T>           the type of the body
-   * @param <S>           the type of the subscriber
+   *     completion is dependant
+   * @param <T> the type of the body
+   * @param <S> the type of the subscriber
    */
-  public static <T, S extends Subscriber<? super List<ByteBuffer>>> BodyHandler<T>
-  fromAsyncSubscriber(
-      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
+  public static <T, S extends Subscriber<? super List<ByteBuffer>>>
+      BodyHandler<T> fromAsyncSubscriber(
+          S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
     requireNonNull(downstream, "downstream");
     requireNonNull(asyncFinisher, "asyncFinisher");
     return info -> MoreBodySubscribers.fromAsyncSubscriber(downstream, asyncFinisher);
@@ -107,9 +104,9 @@ public class MoreBodyHandlers {
    * {@code Content-Type} response header.
    *
    * @param type the raw type of {@code T}
-   * @param <T>  the response body type
+   * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *                                       given type is installed
+   *     given type is installed
    */
   public static <T> BodyHandler<T> ofObject(Class<T> type) {
     return ofObject(TypeReference.from(type));
@@ -121,9 +118,9 @@ public class MoreBodyHandlers {
    * {@code Content-Type} response header.
    *
    * @param type a {@code TypeReference} representing {@code T}
-   * @param <T>  the response body type
+   * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *                                       given type is installed
+   *     given type is installed
    */
   public static <T> BodyHandler<T> ofObject(TypeReference<T> type) {
     requireSupport(type);
@@ -136,9 +133,9 @@ public class MoreBodyHandlers {
    * from the {@code Content-Type} response header.
    *
    * @param type the raw type of {@code T}
-   * @param <T>  the response body type
+   * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *                                       given type is installed
+   *     given type is installed
    */
   public static <T> BodyHandler<Supplier<T>> ofDeferredObject(Class<T> type) {
     return ofDeferredObject(TypeReference.from(type));
@@ -150,9 +147,9 @@ public class MoreBodyHandlers {
    * from the {@code Content-Type} response header.
    *
    * @param type a {@code TypeReference} representing {@code T}
-   * @param <T>  the response body type
+   * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *                                       given type is installed
+   *     given type is installed
    */
   public static <T> BodyHandler<Supplier<T>> ofDeferredObject(TypeReference<T> type) {
     requireSupport(type);
@@ -170,7 +167,7 @@ public class MoreBodyHandlers {
    * the given handler to avoid recursive decompression attempts or using the wrong body length.
    *
    * @param downstreamHandler the handler returning the downstream
-   * @param <T>               the subscriber's body type
+   * @param <T> the subscriber's body type
    */
   public static <T> BodyHandler<T> decoding(BodyHandler<T> downstreamHandler) {
     requireNonNull(downstreamHandler);
@@ -188,8 +185,8 @@ public class MoreBodyHandlers {
    * the given handler to avoid recursive decompression attempts or using the wrong body length.
    *
    * @param downstreamHandler the handler returning the downstream
-   * @param executor          the executor used to supply downstream items
-   * @param <T>               the subscriber's body type
+   * @param executor the executor used to supply downstream items
+   * @param <T> the subscriber's body type
    */
   public static <T> BodyHandler<T> decoding(BodyHandler<T> downstreamHandler, Executor executor) {
     requireNonNull(downstreamHandler, "downstreamHandler");
@@ -205,19 +202,24 @@ public class MoreBodyHandlers {
         return downstreamHandler.apply(info); // No decompression needed
       }
       String enc = encHeader.get();
-      BodyDecoder.Factory factory = BodyDecoder.Factory.getFactory(enc)
-          .orElseThrow(() -> new UnsupportedOperationException("Unsupported encoding: " + enc));
-      HttpHeaders headersCopy = HttpHeaders.of(info.headers().map(),
-          (n, v) -> !"Content-Encoding".equalsIgnoreCase(n)
-              && !"Content-Length".equalsIgnoreCase(n));
-      BodySubscriber<T> downstream = downstreamHandler.apply(
-          new BasicResponseInfo(info.statusCode(), headersCopy, info.version()));
+      BodyDecoder.Factory factory =
+          BodyDecoder.Factory.getFactory(enc)
+              .orElseThrow(() -> new UnsupportedOperationException("unsupported encoding: " + enc));
+      HttpHeaders headersCopy =
+          HttpHeaders.of(
+              info.headers().map(),
+              (n, v) ->
+                  !"Content-Encoding".equalsIgnoreCase(n) && !"Content-Length".equalsIgnoreCase(n));
+      BodySubscriber<T> downstream =
+          downstreamHandler.apply(
+              new BasicResponseInfo(info.statusCode(), headersCopy, info.version()));
       return executor != null ? factory.create(downstream, executor) : factory.create(downstream);
     };
   }
 
   private static Charset getCharsetOrUtf8(HttpHeaders headers) {
-    return headers.firstValue("Content-Type")
+    return headers
+        .firstValue("Content-Type")
         .map(s -> MediaType.parse(s).charsetOrDefault(StandardCharsets.UTF_8))
         .orElse(StandardCharsets.UTF_8);
   }
@@ -226,13 +228,13 @@ public class MoreBodyHandlers {
   // (the media type cannot be known until the headers arrive)
   private static void requireSupport(TypeReference<?> type) {
     Converter.OfResponse.getConverter(type, null)
-        .orElseThrow(() -> new UnsupportedOperationException(
-            "unsupported conversion to an object of type <" + type + ">"));
+        .orElseThrow(
+            () ->
+                new UnsupportedOperationException(
+                    "unsupported conversion to an object of type <" + type + ">"));
   }
 
   private static @Nullable MediaType mediaTypeOrNull(HttpHeaders headers) {
-    return headers.firstValue("Content-Type")
-        .map(MediaType::parse)
-        .orElse(null);
+    return headers.firstValue("Content-Type").map(MediaType::parse).orElse(null);
   }
 }

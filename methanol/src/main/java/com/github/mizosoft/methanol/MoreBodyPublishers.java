@@ -28,20 +28,17 @@ import com.github.mizosoft.methanol.internal.extensions.ForwardingMimeBodyPublis
 import java.net.http.HttpRequest.BodyPublisher;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * Provides additional {@link BodyPublisher} implementations.
- */
+/** Provides additional {@link BodyPublisher} implementations. */
 public class MoreBodyPublishers {
 
-  private MoreBodyPublishers() { // non-instantiable
-  }
+  private MoreBodyPublishers() {} // non-instantiable
 
   /**
    * Adapts the given {@code BodyPublisher} into a {@link MimeBodyPublisher} with the given media
    * type.
    *
    * @param bodyPublisher the publisher
-   * @param mediaType     the body's media type
+   * @param mediaType the body's media type
    */
   public static MimeBodyPublisher ofMediaType(BodyPublisher bodyPublisher, MediaType mediaType) {
     return new ForwardingMimeBodyPublisher(bodyPublisher, mediaType);
@@ -51,16 +48,16 @@ public class MoreBodyPublishers {
    * Returns a {@code BodyPublisher} as specified by {@link Converter.OfRequest#toBody(Object,
    * MediaType)} using an installed converter.
    *
-   * @param object    the object
+   * @param object the object
    * @param mediaType the media type
    * @throws UnsupportedOperationException if no {@code Converter.OfRequest} that supports the
-   *                                       runtime type of the given object or the given media type
-   *                                       is installed
+   *     runtime type of the given object or the given media type is installed
    */
   public static BodyPublisher ofObject(Object object, @Nullable MediaType mediaType) {
     TypeReference<?> runtimeType = TypeReference.from(object.getClass());
-    Converter.OfRequest converter = Converter.OfRequest.getConverter(runtimeType, mediaType)
-        .orElseThrow(() -> unsupportedConversion(runtimeType, mediaType));
+    Converter.OfRequest converter =
+        Converter.OfRequest.getConverter(runtimeType, mediaType)
+            .orElseThrow(() -> unsupportedConversion(runtimeType, mediaType));
     return converter.toBody(runtimeType, mediaType);
   }
 

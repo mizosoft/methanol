@@ -120,7 +120,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
     byte[] appended = Arrays.copyOfRange(gzipped, 0, gzipped.length + 10);
     for (var so : BuffSizeOption.values()) {
       var t = assertThrows(IOException.class, () -> decode(appended, so));
-      assertEquals("Gzip stream finished prematurely", t.getMessage());
+      assertEquals("gzip stream finished prematurely", t.getMessage());
     }
   }
 
@@ -130,7 +130,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
     byte[] appended = Arrays.copyOfRange(gzipped, 0, gzipped.length + 30);
     for (var so : BuffSizeOption.values()) {
       var t = assertThrows(IOException.class, () -> decode(appended, so));
-      assertEquals("Gzip stream finished prematurely", t.getMessage());
+      assertEquals("gzip stream finished prematurely", t.getMessage());
     }
   }
 
@@ -163,7 +163,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
         .build();
     for (var so : BuffSizeOption.inOptions()) {
       var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
-      assertEquals("Not in gzip format; expected: 0x8b1f, found: 0xabcd", t.getMessage());
+      assertEquals("not in gzip format; expected: 0x8b1f, found: 0xabcd", t.getMessage());
     }
   }
 
@@ -174,7 +174,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
         .build();
     for (var so : BuffSizeOption.inOptions()) {
       var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
-      assertEquals("Unsupported compression method; expected: 0x8, found: 0x7", t.getMessage());
+      assertEquals("unsupported compression method; expected: 0x8, found: 0x7", t.getMessage());
     }
   }
 
@@ -185,7 +185,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
         .build();
     for (var so : BuffSizeOption.inOptions()) {
       var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
-      assertEquals("Unsupported flags: 0xe0", t.getMessage());
+      assertEquals("unsupported flags: 0xe0", t.getMessage());
     }
   }
 
@@ -200,7 +200,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
         .build();
     for (var so : BuffSizeOption.inOptions()) {
       var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
-      var msg = format("Corrupt gzip stream (CRC32); expected: %#x, found: %#x", goodVal, badVal);
+      var msg = format("corrupt gzip stream (CRC32); expected: %#x, found: %#x", goodVal, badVal);
       assertEquals(msg, t.getMessage());
     }
   }
@@ -214,7 +214,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
         .build();
     for (var so : BuffSizeOption.inOptions()) {
       var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
-      var msg = format("Corrupt gzip stream (ISIZE); expected: %#x, found: %#x", goodVal, badVal);
+      var msg = format("corrupt gzip stream (ISIZE); expected: %#x, found: %#x", goodVal, badVal);
       assertEquals(msg, t.getMessage());
     }
   }

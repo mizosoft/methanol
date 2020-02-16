@@ -28,13 +28,10 @@ import com.github.mizosoft.methanol.BodyDecoder;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.concurrent.Executor;
 
-/**
- * Convenient base class for deflate and gzip {@code BodyDecoder.Factory} providers.
- */
+/** Convenient base class for deflate and gzip {@code BodyDecoder.Factory} providers. */
 abstract class ZLibBodyDecoderFactory implements BodyDecoder.Factory {
 
-  ZLibBodyDecoderFactory() {
-  }
+  ZLibBodyDecoderFactory() {}
 
   abstract ZLibDecoder newDecoder();
 

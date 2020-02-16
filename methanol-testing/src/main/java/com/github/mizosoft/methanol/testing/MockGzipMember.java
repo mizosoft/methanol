@@ -50,9 +50,7 @@ import java.util.zip.Deflater;
 import java.util.zip.DeflaterInputStream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * A mock gzip member with configurable FLG related data and corruption modes.
- */
+/** A mock gzip member with configurable FLG related data and corruption modes. */
 public final class MockGzipMember {
 
   private static final int GZIP_MAGIC = 0x8B1F;
@@ -67,36 +65,45 @@ public final class MockGzipMember {
   private final byte[] data;
   private final Map<CorruptionMode, Integer> corruptions;
 
-  private enum FLG {
-    FTEXT(1),
-    FHCRC(2),
-    FEXTRA(4),
-    FNAME(8),
-    FCOMMENT(16);
+  private InputStream openStream() {
+    CRC32 dataCrc = new CRC32();
+    Deflater def = new Deflater(Deflater.DEFAULT_COMPRESSION, true); // no deflate-wrapping
+    Iterator<InputStream> ins =
+        Stream.<Supplier<InputStream>>builder()
+            .add(() -> new ByteArrayInputStream(getHeader()))
+            .add(
+                () ->
+                    new DeflaterInputStream(
+                        new CheckedInputStream(new ByteArrayInputStream(data), dataCrc), def))
+            .add(
+                () ->
+                    new ByteArrayInputStream(
+                        getTrailer(dataCrc.getValue(), def.getBytesRead() & INT_MASK)))
+            .build()
+            .map(Supplier::get) // Will be lazily evaluated
+            .iterator();
+    return new SequenceInputStream(
+        new Enumeration<>() {
+          @Override
+          public boolean hasMoreElements() {
+            return ins.hasNext();
+          }
 
-    int value;
-
-    FLG(int value) {
-      this.value = value;
-    }
-
-    static int toFlgByte(Set<FLG> flags) {
-      return flags.stream()
-          .mapToInt(f -> f.value)
-          .reduce((f, v) -> f | v)
-          .orElse(0) & BYTE_MASK;
-    }
+          @Override
+          public InputStream nextElement() {
+            return ins.next();
+          }
+        });
   }
 
-  /**
-   * Modes to corrupt the gzip stream.
-   */
-  public enum CorruptionMode {
-    MAGIC,
-    CM,
-    FLG,
-    CRC32,
-    ISIZE
+  private byte[] getTrailer(long crc32, long isize) {
+    var corr = corruptions;
+    var outBuff = new ByteArrayOutputStream(TRAILER_SIZE);
+    writeInt(outBuff, corr.getOrDefault(CorruptionMode.CRC32, (int) crc32) & INT_MASK);
+    writeInt(
+        outBuff,
+        corr.getOrDefault(CorruptionMode.ISIZE, (int) isize) & INT_MASK); // long size % 2^32
+    return outBuff.toByteArray();
   }
 
   private MockGzipMember(Builder builder) {
@@ -114,29 +121,14 @@ public final class MockGzipMember {
     }
   }
 
-  private InputStream openStream() {
-    CRC32 dataCrc = new CRC32();
-    Deflater def = new Deflater(Deflater.DEFAULT_COMPRESSION, true); // no deflate-wrapping
-    Iterator<InputStream> ins = Stream.<Supplier<InputStream>>builder()
-        .add(() -> new ByteArrayInputStream(getHeader()))
-        .add(() -> new DeflaterInputStream(new CheckedInputStream(
-            new ByteArrayInputStream(data), dataCrc), def))
-        .add(() -> new ByteArrayInputStream(
-            getTrailer(dataCrc.getValue(), def.getBytesRead() & INT_MASK)))
-        .build()
-        .map(Supplier::get) // Will be lazily evaluated
-        .iterator();
-    return new SequenceInputStream(new Enumeration<>() {
-      @Override
-      public boolean hasMoreElements() {
-        return ins.hasNext();
-      }
-
-      @Override
-      public InputStream nextElement() {
-        return ins.next();
-      }
-    });
+  private static byte[] rndAscii(int len) {
+    byte[] ascii =
+        ThreadLocalRandom.current()
+            .ints(len, 0x21, 0x7F) // 0x21 to 0x7E
+            .collect(StringBuilder::new, (sb, ic) -> sb.append((char) ic), StringBuilder::append)
+            .toString()
+            .getBytes(US_ASCII);
+    return Arrays.copyOf(ascii, ascii.length + 1); // Zero terminated
   }
 
   private byte[] getHeader() {
@@ -192,12 +184,22 @@ public final class MockGzipMember {
     }
   }
 
-  private byte[] getTrailer(long crc32, long isize) {
-    var corr = corruptions;
-    var outBuff = new ByteArrayOutputStream(TRAILER_SIZE);
-    writeInt(outBuff, corr.getOrDefault(CorruptionMode.CRC32, (int) crc32) & INT_MASK);
-    writeInt(outBuff, corr.getOrDefault(CorruptionMode.ISIZE, (int) isize) & INT_MASK); // long size % 2^32
-    return outBuff.toByteArray();
+  private enum FLG {
+    FTEXT(1),
+    FHCRC(2),
+    FEXTRA(4),
+    FNAME(8),
+    FCOMMENT(16);
+
+    int value;
+
+    FLG(int value) {
+      this.value = value;
+    }
+
+    static int toFlgByte(Set<FLG> flags) {
+      return flags.stream().mapToInt(f -> f.value).reduce((f, v) -> f | v).orElse(0) & BYTE_MASK;
+    }
   }
 
   public static final class Builder {
@@ -276,12 +278,12 @@ public final class MockGzipMember {
     writeShort(out, (val >> Short.SIZE) & SHORT_MASK);
   }
 
-  private static byte[] rndAscii(int len) {
-    byte[] ascii = ThreadLocalRandom.current()
-        .ints(len, 0x21, 0x7F) // 0x21 to 0x7E
-        .collect(StringBuilder::new, (sb, ic) -> sb.append((char) ic), StringBuilder::append)
-        .toString()
-        .getBytes(US_ASCII);
-    return Arrays.copyOf(ascii, ascii.length + 1); // Zero terminated
+  /** Modes to corrupt the gzip stream. */
+  public enum CorruptionMode {
+    MAGIC,
+    CM,
+    FLG,
+    CRC32,
+    ISIZE
   }
 }

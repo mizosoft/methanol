@@ -67,16 +67,12 @@ public abstract class TypeReference<T> {
     rawType = (Class<? super T>) findRawType(type);
   }
 
-  /**
-   * Returns the underlying java {@link Type}.
-   */
+  /** Returns the underlying java {@link Type}. */
   public final Type type() {
     return type;
   }
 
-  /**
-   * Returns the {@code Class} object that represents the raw type of {@code T}.
-   */
+  /** Returns the {@code Class} object that represents the raw type of {@code T}. */
   @SuppressWarnings("unchecked")
   public final Class<? super T> rawType() {
     Class<? super T> clz = rawType;
@@ -115,9 +111,7 @@ public abstract class TypeReference<T> {
     return 31 * type.hashCode();
   }
 
-  /**
-   * Returns a string representation for the type.
-   */
+  /** Returns a string representation for the type. */
   @Override
   public String toString() {
     return type.getTypeName();
@@ -129,8 +123,11 @@ public abstract class TypeReference<T> {
     }
     if (type instanceof ParameterizedType) {
       Type rawType = ((ParameterizedType) type).getRawType();
-      requireArgument(rawType instanceof Class,
-          "ParameterizedType::getRawType of %s returned a non-raw type: %s", type, rawType);
+      requireArgument(
+          rawType instanceof Class,
+          "ParameterizedType::getRawType of %s returned a non-raw type: %s",
+          type,
+          rawType);
       return (Class<?>) rawType;
     }
     if (type instanceof GenericArrayType) {
@@ -157,7 +154,7 @@ public abstract class TypeReference<T> {
    *
    * @param type the type
    * @throws IllegalArgumentException if the given type is not a standard specialization of a java
-   *                                  {@code Type}
+   *     {@code Type}
    */
   public static TypeReference<?> from(Type type) {
     return new ExplicitTypeReference<>(type);
@@ -167,7 +164,7 @@ public abstract class TypeReference<T> {
    * Creates a new {@code TypeReference} from the given class.
    *
    * @param rawType the class
-   * @param <U>     the raw type that the given class represents
+   * @param <U> the raw type that the given class represents
    */
   public static <U> TypeReference<U> from(Class<U> rawType) {
     return new ExplicitTypeReference<>(rawType);

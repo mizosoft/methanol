@@ -24,16 +24,11 @@
 
 package com.github.mizosoft.methanol.internal.dec;
 
-/**
- * {@code BodyDecoder.Factory} for "gzip".
- */
+/** {@code BodyDecoder.Factory} for "gzip". */
 public class GzipBodyDecoderFactory extends ZLibBodyDecoderFactory {
 
-  /**
-   * Creates a new {@code GzipBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}.
-   */
-  public GzipBodyDecoderFactory() {
-  }
+  /** Creates a new {@code GzipBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}. */
+  public GzipBodyDecoderFactory() {}
 
   @Override
   public String encoding() {

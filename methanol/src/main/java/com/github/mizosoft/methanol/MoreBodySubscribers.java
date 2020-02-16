@@ -43,27 +43,26 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * Provides additional {@link BodySubscriber} implementations.
- */
+/** Provides additional {@link BodySubscriber} implementations. */
 public class MoreBodySubscribers {
+
+  private MoreBodySubscribers() {} // non-instantiable
 
   /**
    * Returns a {@code BodySubscriber} that forwards the response body to the given downstream. The
    * body's completion depends on the completion of the {@code CompletionStage} returned by the
    * given function. Unlike {@link BodySubscribers#fromSubscriber(Subscriber, Function)}, the given
-   * subscriber's {@code onComplete} or {@code onError} need not be called for the body to
-   * complete.
+   * subscriber's {@code onComplete} or {@code onError} need not be called for the body to complete.
    *
-   * @param downstream    the receiver of the response body
+   * @param downstream the receiver of the response body
    * @param asyncFinisher a function that maps the subscriber to an async task upon which the body
-   *                      completion is dependant
-   * @param <T>           the type of the body
-   * @param <S>           the type of the subscriber
+   *     completion is dependant
+   * @param <T> the type of the body
+   * @param <S> the type of the subscriber
    */
-  public static <T, S extends Subscriber<? super List<ByteBuffer>>> BodySubscriber<T>
-  fromAsyncSubscriber(
-      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
+  public static <T, S extends Subscriber<? super List<ByteBuffer>>>
+      BodySubscriber<T> fromAsyncSubscriber(
+          S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
     return new AsyncSubscriberAdapter<>(downstream, asyncFinisher);
   }
 
@@ -100,11 +99,11 @@ public class MoreBodySubscribers {
    * Returns a {@code BodySubscriber} of {@code T} as specified by {@link
    * Converter.OfResponse#toObject(TypeReference, MediaType)} using an installed converter.
    *
-   * @param type      a {@code TypeReference} representing {@code T}
+   * @param type a {@code TypeReference} representing {@code T}
    * @param mediaType the media type
-   * @param <T>       the response body type
+   * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *                                       given type or media type is installed
+   *     given type or media type is installed
    */
   public static <T> BodySubscriber<T> ofObject(
       TypeReference<T> type, @Nullable MediaType mediaType) {
@@ -115,11 +114,11 @@ public class MoreBodySubscribers {
    * Returns a {@code BodySubscriber} of {@code Supplier<T>} as specified by {@link
    * Converter.OfResponse#toDeferredObject(TypeReference, MediaType)} using an installed converter.
    *
-   * @param type      a {@code TypeReference} representing {@code T}
+   * @param type a {@code TypeReference} representing {@code T}
    * @param mediaType the media type
-   * @param <T>       the response body type
+   * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *                                       given type  or media type is installed
+   *     given type or media type is installed
    */
   public static <T> BodySubscriber<Supplier<T>> ofDeferredObject(
       TypeReference<T> type, @Nullable MediaType mediaType) {

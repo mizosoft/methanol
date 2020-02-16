@@ -29,9 +29,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 
-/**
- * A publisher that completes subscribers immediately.
- */
+/** A publisher that completes subscribers immediately. */
 public final class EmptyPublisher<T> implements Publisher<T> {
 
   // Use same setup as Collections.emptyXXXX() as the type doesn't matter anyways

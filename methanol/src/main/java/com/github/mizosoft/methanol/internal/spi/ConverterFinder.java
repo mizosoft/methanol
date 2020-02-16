@@ -27,9 +27,7 @@ package com.github.mizosoft.methanol.internal.spi;
 import com.github.mizosoft.methanol.Converter;
 import java.util.List;
 
-/**
- * Utility class for loading/caching {@code OfRequest/OfResponse} providers.
- */
+/** Utility class for loading/caching {@code OfRequest/OfResponse} providers. */
 public class ConverterFinder {
 
   private static final ServiceCache<Converter.OfRequest> REQUEST_SERVICE =
@@ -37,8 +35,7 @@ public class ConverterFinder {
   private static final ServiceCache<Converter.OfResponse> RESPONSE_SERVICE =
       new ServiceCache<>(Converter.OfResponse.class);
 
-  private ConverterFinder() {
-  }
+  private ConverterFinder() {} // non-instantiable
 
   public static List<Converter.OfRequest> findInstalledRequestConverters() {
     return REQUEST_SERVICE.getProviders();

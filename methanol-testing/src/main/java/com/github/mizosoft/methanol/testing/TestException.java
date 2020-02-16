@@ -26,6 +26,5 @@ package com.github.mizosoft.methanol.testing;
 
 public class TestException extends RuntimeException {
 
-  public TestException() {
-  }
+  public TestException() {}
 }

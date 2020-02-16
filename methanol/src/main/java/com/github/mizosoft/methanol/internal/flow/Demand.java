@@ -28,29 +28,27 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Represents a subscriber's demand for items.
- */
+/** Represents a subscriber's demand for items. */
 public class Demand {
 
   private final AtomicLong demand;
 
-  /**
-   * Creates zero demand.
-   */
+  /** Creates zero demand. */
   public Demand() {
     demand = new AtomicLong();
   }
 
   private long getAndDemand(long n) {
     requireArgument(n > 0, "non-positive demand: %d", n);
-    return demand.getAndAccumulate(n, (x, y) -> {
-      long r = x + y;
-      if (r < 0) { // Overflow
-        r = Long.MAX_VALUE;
-      }
-      return r;
-    });
+    return demand.getAndAccumulate(
+        n,
+        (x, y) -> {
+          long r = x + y;
+          if (r < 0) { // Overflow
+            r = Long.MAX_VALUE;
+          }
+          return r;
+        });
   }
 
   /**
@@ -74,9 +72,7 @@ public class Demand {
     return getAndDemand(n) == 0;
   }
 
-  /**
-   * Returns the current demand.
-   */
+  /** Returns the current demand. */
   public long current() {
     return demand.get();
   }

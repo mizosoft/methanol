@@ -94,8 +94,9 @@ abstract class GsonConverter extends AbstractConverter {
       @SuppressWarnings("unchecked")
       TypeAdapter<Object> adapter = (TypeAdapter<Object>) getAdapter(runtimeType);
       ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
-      try (JsonWriter writer = gson.newJsonWriter(
-          new OutputStreamWriter(outBuffer, charsetOrDefault(mediaType, DEFAULT_CHARSET)))) {
+      try (JsonWriter writer =
+          gson.newJsonWriter(
+              new OutputStreamWriter(outBuffer, charsetOrDefault(mediaType, DEFAULT_CHARSET)))) {
         adapter.write(writer, object);
       } catch (IOException ioe) {
         throw new AssertionError(ioe); // writing to a memory buffer
@@ -119,8 +120,9 @@ abstract class GsonConverter extends AbstractConverter {
       Charset charset = charsetOrDefault(mediaType, DEFAULT_CHARSET);
       return BodySubscribers.mapping(
           BodySubscribers.ofByteArray(),
-          bytes -> toJsonUnchecked(
-              new InputStreamReader(new ByteArrayInputStream(bytes), charset), adapter));
+          bytes ->
+              toJsonUnchecked(
+                  new InputStreamReader(new ByteArrayInputStream(bytes), charset), adapter));
     }
 
     @Override

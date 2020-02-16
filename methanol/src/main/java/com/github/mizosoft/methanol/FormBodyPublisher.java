@@ -60,9 +60,7 @@ public class FormBodyPublisher implements MimeBodyPublisher {
     this.queries = queries;
   }
 
-  /**
-   * Returns the url-encoded string of this body's queries.
-   */
+  /** Returns the url-encoded string of this body's queries. */
   public String encodedString() {
     String result = encodedString;
     if (result == null) {
@@ -103,9 +101,7 @@ public class FormBodyPublisher implements MimeBodyPublisher {
     return values.isEmpty() ? Optional.empty() : Optional.of(values.get(values.size() - 1));
   }
 
-  /**
-   * Returns this body's queries.
-   */
+  /** Returns this body's queries. */
   public Map<String, List<String>> queries() {
     return queries;
   }
@@ -127,16 +123,12 @@ public class FormBodyPublisher implements MimeBodyPublisher {
     BodyPublishers.ofString(encodedString(), US_ASCII).subscribe(subscriber);
   }
 
-  /**
-   * Returns a new {@code FormBodyPublisher.Builder}.
-   */
+  /** Returns a new {@code FormBodyPublisher.Builder}. */
   public static Builder newBuilder() {
     return new Builder();
   }
 
-  /**
-   * A builder of {@code FormBodyPublisher} instances.
-   */
+  /** A builder of {@code FormBodyPublisher} instances. */
   public static final class Builder {
 
     private final Map<String, List<String>> queries;
@@ -148,7 +140,7 @@ public class FormBodyPublisher implements MimeBodyPublisher {
     /**
      * Adds the query specified by the given name and value.
      *
-     * @param name  the query's name
+     * @param name the query's name
      * @param value the query's value
      */
     public Builder query(String name, String value) {
@@ -156,9 +148,7 @@ public class FormBodyPublisher implements MimeBodyPublisher {
       return this;
     }
 
-    /**
-     * Returns a new {@code FormBodyPublisher} with the added queries.
-     */
+    /** Returns a new {@code FormBodyPublisher} with the added queries. */
     public FormBodyPublisher build() {
       if (queries.isEmpty()) {
         return new FormBodyPublisher(Map.of());

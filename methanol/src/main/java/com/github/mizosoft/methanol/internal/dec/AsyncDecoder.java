@@ -25,7 +25,6 @@
 package com.github.mizosoft.methanol.internal.dec;
 
 import com.github.mizosoft.methanol.internal.Utils;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -37,9 +36,7 @@ import java.nio.ByteBuffer;
 // TODO consider making this API public (if native brotli decoder is to be added)
 public interface AsyncDecoder extends AutoCloseable {
 
-  /**
-   * Returns this decoder's encoding.
-   */
+  /** Returns this decoder's encoding. */
   String encoding();
 
   /**
@@ -47,7 +44,7 @@ public interface AsyncDecoder extends AutoCloseable {
    * given sink.
    *
    * @param source the source of compressed bytes
-   * @param sink   the sink of decompressed bytes
+   * @param sink the sink of decompressed bytes
    * @throws IOException if an error occurs while decoding
    */
   void decode(ByteSource source, ByteSink sink) throws IOException;
@@ -81,14 +78,10 @@ public interface AsyncDecoder extends AutoCloseable {
       }
     }
 
-    /**
-     * Returns total remaining bytes from this source.
-     */
+    /** Returns total remaining bytes from this source. */
     long remaining();
 
-    /**
-     * Returns {@code true} if this source has remaining bytes.
-     */
+    /** Returns {@code true} if this source has remaining bytes. */
     default boolean hasRemaining() {
       return remaining() > 0;
     }

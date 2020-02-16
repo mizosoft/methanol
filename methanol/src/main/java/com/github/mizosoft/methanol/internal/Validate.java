@@ -28,8 +28,7 @@ import static java.lang.String.format;
 
 public class Validate {
 
-  private Validate() { // non-instantiable
-  }
+  private Validate() {} // non-instantiable
 
   public static void requireArgument(boolean argIsValid, String msg) {
     if (!argIsValid) {

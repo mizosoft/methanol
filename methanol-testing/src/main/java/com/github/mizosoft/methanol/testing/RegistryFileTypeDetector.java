@@ -32,9 +32,7 @@ import java.nio.file.spi.FileTypeDetector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-/**
- * {@link FileTypeDetector} that pulls media type from registered entries.
- */
+/** {@link FileTypeDetector} that pulls media type from registered entries. */
 public class RegistryFileTypeDetector extends FileTypeDetector {
 
   private static final ConcurrentMap<String, MediaType> REGISTRY = new ConcurrentHashMap<>();

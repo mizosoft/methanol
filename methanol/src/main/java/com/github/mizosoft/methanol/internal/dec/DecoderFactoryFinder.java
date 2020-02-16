@@ -34,15 +34,14 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-/**
- * Utility class for finding decoder factories.
- */
+/** Utility class for finding decoder factories. */
 public class DecoderFactoryFinder {
 
-  private static final ServiceCache<Factory> CACHE =
-      new ServiceCache<>(BodyDecoder.Factory.class);
+  private static final ServiceCache<Factory> CACHE = new ServiceCache<>(BodyDecoder.Factory.class);
 
   private static volatile @MonotonicNonNull Map<String, BodyDecoder.Factory> bindings;
+
+  private DecoderFactoryFinder() {} // non-instantiable
 
   public static List<BodyDecoder.Factory> findInstalledFactories() {
     return CACHE.getProviders();
@@ -63,8 +62,8 @@ public class DecoderFactoryFinder {
     for (BodyDecoder.Factory f : findInstalledFactories()) {
       String enc = f.encoding();
       // Only override if default
-      bindings.merge(enc, f,
-          (f1, f2) -> f1.getClass().isAnnotationPresent(DefaultProvider.class) ? f2 : f1);
+      bindings.merge(
+          enc, f, (f1, f2) -> f1.getClass().isAnnotationPresent(DefaultProvider.class) ? f2 : f1);
     }
     return Collections.unmodifiableMap(bindings);
   }

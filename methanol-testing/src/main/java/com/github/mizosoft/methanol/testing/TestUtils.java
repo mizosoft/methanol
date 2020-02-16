@@ -40,10 +40,14 @@ import java.util.zip.InflaterInputStream;
 
 public class TestUtils {
 
-  public static final Subscription NOOP_SUBSCRIPTION = new Subscription() {
-    @Override public void request(long n) { }
-    @Override public void cancel() { }
-  };
+  public static final Subscription NOOP_SUBSCRIPTION =
+      new Subscription() {
+        @Override
+        public void request(long n) {}
+
+        @Override
+        public void cancel() {}
+      };
 
   public static void awaitUninterruptedly(CountDownLatch latch) {
     while (true) {

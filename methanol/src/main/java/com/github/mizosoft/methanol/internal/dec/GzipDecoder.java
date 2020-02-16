@@ -34,9 +34,7 @@ import java.util.function.Consumer;
 import java.util.zip.CRC32;
 import java.util.zip.ZipException;
 
-/**
- * {@code AsyncDecoder} for gzip.
- */
+/** {@code AsyncDecoder} for gzip. */
 class GzipDecoder extends ZLibDecoder {
 
   private static final int GZIP_MAGIC = 0x8B1F; // ID1 and ID2 as a little-endian ordered short
@@ -62,8 +60,9 @@ class GzipDecoder extends ZLibDecoder {
 
   GzipDecoder() {
     super(WrapMode.GZIP);
-    tempBuffer = ByteBuffer.allocate(TEMP_BUFFER_SIZE)
-        .order(ByteOrder.LITTLE_ENDIAN); // Multi-byte gzip values are little-endian/unsigned
+    tempBuffer =
+        ByteBuffer.allocate(TEMP_BUFFER_SIZE)
+            .order(ByteOrder.LITTLE_ENDIAN); // Multi-byte gzip values are little-endian/unsigned
     crc = new CRC32();
     state = State.BEGIN;
   }
@@ -75,7 +74,7 @@ class GzipDecoder extends ZLibDecoder {
       switch (state) {
         case BEGIN:
           state = State.HEADER.prepare(this);
-          // Fallthrough
+          // fallthrough
 
         case HEADER:
           if (source.remaining() < HEADER_SIZE) {
@@ -94,7 +93,7 @@ class GzipDecoder extends ZLibDecoder {
           }
           fieldLength = getUShort(source);
           state = State.FLG_EXTRA_DATA.prepare(this);
-          // Fallthrough
+          // fallthrough
 
         case FLG_EXTRA_DATA:
           if (!trySkipExtraField(source)) {
@@ -115,9 +114,9 @@ class GzipDecoder extends ZLibDecoder {
             break outerLoop;
           }
           long crc16 = crc.getValue() & SHORT_MASK; // Mask to get lower 16 bits
-          checkValue(crc16, getUShort(source), "Corrupt gzip header");
+          checkValue(crc16, getUShort(source), "corrupt gzip header");
           state = State.DEFLATED.prepare(this);
-          // Fallthrough
+          // fallthrough
 
         case DEFLATED:
           inflateSource(source, sink);
@@ -125,7 +124,7 @@ class GzipDecoder extends ZLibDecoder {
             break outerLoop;
           }
           state = State.TRAILER.prepare(this);
-          // Fallthrough
+          // fallthrough
 
         case TRAILER:
           if (source.remaining() < TRAILER_SIZE) {
@@ -133,7 +132,7 @@ class GzipDecoder extends ZLibDecoder {
           }
           readTrailer(source);
           state = State.CONCAT_INSPECTION;
-          // Fallthrough
+          // fallthrough
 
         case CONCAT_INSPECTION:
           // Inspect on whether concatenated data has a chance of being
@@ -157,17 +156,17 @@ class GzipDecoder extends ZLibDecoder {
           }
           // Fail if reached end with data still available after inspection
           if (state == State.END && source.hasRemaining()) {
-            throw new IOException("Gzip stream finished prematurely");
+            throw new IOException("gzip stream finished prematurely");
           }
           break;
 
         default:
-          throw new AssertionError("Unexpected state: " + state);
+          throw new AssertionError("unexpected state: " + state);
       }
     }
     // Detect if source buffers end prematurely
     if (state != State.END && source.finalSource()) {
-      throw new EOFException("Unexpected end of gzip stream");
+      throw new EOFException("unexpected end of gzip stream");
     }
   }
 
@@ -196,11 +195,11 @@ class GzipDecoder extends ZLibDecoder {
     // +---+---+---+---+---+---+---+---+---+---+
     // |ID1|ID2|CM |FLG|     MTIME     |XFL|OS | (more-->)
     // +---+---+---+---+---+---+---+---+---+---+
-    checkValue(GZIP_MAGIC, getUShort(source), "Not in gzip format");
-    checkValue(CM_DEFLATE, getUByte(source), "Unsupported compression method");
+    checkValue(GZIP_MAGIC, getUShort(source), "not in gzip format");
+    checkValue(CM_DEFLATE, getUByte(source), "unsupported compression method");
     int flags = getUByte(source);
     if (FlagOption.RESERVED.isEnabled(flags)) {
-      throw new ZipException(format("Unsupported flags: %#x", flags));
+      throw new ZipException(format("unsupported flags: %#x", flags));
     }
     if (!FlagOption.HCRC.isEnabled(flags)) {
       computeCrc = false;
@@ -214,9 +213,11 @@ class GzipDecoder extends ZLibDecoder {
     // +---+---+---+---+---+---+---+---+
     // |     CRC32     |     ISIZE     |
     // +---+---+---+---+---+---+---+---+
-    checkValue(crc.getValue(), getUInt(source), "Corrupt gzip stream (CRC32)");
-    checkValue(inflater.getBytesWritten() & INT_MASK, getUInt(source), // Mask for modulo 2^32
-        "Corrupt gzip stream (ISIZE)");
+    checkValue(crc.getValue(), getUInt(source), "corrupt gzip stream (CRC32)");
+    checkValue(
+        inflater.getBytesWritten() & INT_MASK,
+        getUInt(source), // Mask for modulo 2^32
+        "corrupt gzip stream (ISIZE)");
   }
 
   private boolean trySkipExtraField(ByteSource source) {
@@ -283,18 +284,20 @@ class GzipDecoder extends ZLibDecoder {
 
   private enum State {
     BEGIN,
-    HEADER(dec -> {
-      dec.crc.reset();
-      dec.computeCrc = true; // Assume FHCRC is enabled until the FLG byte is read
-    }),
+    HEADER(
+        dec -> {
+          dec.crc.reset();
+          dec.computeCrc = true; // Assume FHCRC is enabled until the FLG byte is read
+        }),
     FLG_EXTRA_LEN(dec -> dec.fieldLength = 0),
-    FLG_EXTRA_DATA(dec ->  dec.fieldPosition = 0),
+    FLG_EXTRA_DATA(dec -> dec.fieldPosition = 0),
     FLG_ZERO_TERMINATED,
     FLG_HCRC(dec -> dec.computeCrc = false),
-    DEFLATED(dec -> {
-      dec.inflater.reset();
-      dec.crc.reset();
-    }),
+    DEFLATED(
+        dec -> {
+          dec.inflater.reset();
+          dec.crc.reset();
+        }),
     TRAILER,
     CONCAT_INSPECTION(HEADER.onPrepare),
     END;
@@ -322,9 +325,7 @@ class GzipDecoder extends ZLibDecoder {
     }
   }
 
-  /**
-   * Options in the FLG byte.
-   */
+  /** Options in the FLG byte. */
   @SuppressWarnings("unused") // Most are not explicitly used
   private enum FlagOption {
     // Order of declaration is important!
@@ -355,16 +356,6 @@ class GzipDecoder extends ZLibDecoder {
       this.state = state;
     }
 
-    static FlagOption nextEnabled(int flags) {
-      for (FlagOption option : values()) {
-        if (option.isEnabled(flags)) {
-          return option;
-        }
-      }
-      // FlagOptions cover all possible cases for a byte so this shouldn't be possible
-      throw new AssertionError("Couldn't get FlgOption for: " + Integer.toHexString(flags));
-    }
-
     boolean isEnabled(int flags) {
       return (flags & value) == value;
     }
@@ -375,6 +366,16 @@ class GzipDecoder extends ZLibDecoder {
 
     State forward(GzipDecoder ctx) {
       return state.prepare(ctx);
+    }
+
+    static FlagOption nextEnabled(int flags) {
+      for (FlagOption option : values()) {
+        if (option.isEnabled(flags)) {
+          return option;
+        }
+      }
+      // FlagOptions cover all possible cases for a byte so this shouldn't be possible
+      throw new AssertionError("couldn't get FlgOption for: " + Integer.toHexString(flags));
     }
   }
 }

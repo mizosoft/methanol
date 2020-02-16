@@ -28,9 +28,7 @@ import com.github.mizosoft.methanol.internal.Utils;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow;
 
-/**
- * Helpers for implementing reactive streams subscriptions and the like.
- */
+/** Helpers for implementing reactive streams subscriptions and the like. */
 public final class FlowSupport {
 
   private static final String PREFETCH_PROP = "com.github.mizosoft.methanol.flow.prefetch";
@@ -48,21 +46,19 @@ public final class FlowSupport {
   private static final int PREFETCH_THRESHOLD = (int) (PREFETCH * (loadPrefetchFactor() / 100f));
 
   // A subscription that does nothing
-  public static final Flow.Subscription NOOP_SUBSCRIPTION = new Flow.Subscription() {
-    @Override
-    public void request(long n) {
-    }
+  public static final Flow.Subscription NOOP_SUBSCRIPTION =
+      new Flow.Subscription() {
+        @Override
+        public void request(long n) {}
 
-    @Override
-    public void cancel() {
-    }
-  };
+        @Override
+        public void cancel() {}
+      };
 
   // An executor that executes the runnable in the calling thread.
   public static final Executor SYNC_EXECUTOR = Runnable::run;
 
-  private FlowSupport() { // Not instantiable
-  }
+  private FlowSupport() {} // non-instantiable
 
   static int loadPrefetch() {
     int prefetch = Utils.getIntProperty(PREFETCH_PROP, DEFAULT_PREFETCH);
@@ -88,16 +84,14 @@ public final class FlowSupport {
     return new IllegalArgumentException("non-positive subscription request");
   }
 
-  /**
-   * Returns the prefetch property or a default of {@value DEFAULT_PREFETCH}.
-   */
+  /** Returns the prefetch property or a default of {@value DEFAULT_PREFETCH}. */
   public static int prefetch() {
     return PREFETCH;
   }
 
   /**
    * Returns the prefetch threshold according to the prefetch factor property or a default of
-   * {@value DEFAULT_PREFETCH_FACTOR / 2}.
+   * {@value DEFAULT_PREFETCH_FACTOR}{@code / 2}.
    */
   public static int prefetchThreshold() {
     return PREFETCH_THRESHOLD;

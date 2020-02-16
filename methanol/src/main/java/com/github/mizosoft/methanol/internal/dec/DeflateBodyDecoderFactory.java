@@ -24,16 +24,13 @@
 
 package com.github.mizosoft.methanol.internal.dec;
 
-/**
- * {@code BodyDecoder.Factory} for "deflate".
- */
+/** {@code BodyDecoder.Factory} for "deflate". */
 public class DeflateBodyDecoderFactory extends ZLibBodyDecoderFactory {
 
   /**
    * Creates a new {@code DeflateBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}.
    */
-  public DeflateBodyDecoderFactory() {
-  }
+  public DeflateBodyDecoderFactory() {}
 
   @Override
   public String encoding() {

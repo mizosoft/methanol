@@ -65,9 +65,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
   private volatile @Nullable Throwable pendingError;
   private volatile int upstreamWindow;
 
-  /**
-   * Creates a new completed {@code ByteChannelSubscriber} instance.
-   */
+  /** Creates a new completed {@code ByteChannelSubscriber} instance. */
   public ByteChannelSubscriber() {
     prefetch = FlowSupport.prefetch();
     prefetchThreshold = FlowSupport.prefetchThreshold();
@@ -101,7 +99,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
     } else {
       // Upstream is trying to overflow us and somebody should know that
       upstream.cancel();
-      signalCompletion(new IllegalStateException("Missing back-pressure: queue overflow"));
+      signalCompletion(new IllegalStateException("missing back-pressure: queue overflow"));
     }
   }
 
@@ -132,7 +130,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
     try {
       upstreamBuffers.add(TOMBSTONE_LIST);
     } catch (IllegalStateException e) {
-      throw new AssertionError("No space for TOMBSTONE_LIST", e);
+      throw new AssertionError("no space for TOMBSTONE_LIST", e);
     }
   }
 
@@ -146,9 +144,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
     }
   }
 
-  /**
-   * Wrapper over an atomic reference to upstream subscription.
-   */
+  /** Wrapper over an atomic reference to upstream subscription. */
   private static final class UpstreamRef {
 
     private static final Subscription CLEARED = FlowSupport.NOOP_SUBSCRIPTION;
@@ -258,7 +254,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
     private void throwIfPending() throws IOException {
       Throwable error = pendingError;
       if (error != null) {
-        throw new IOException("Upstream error", error);
+        throw new IOException("upstream error", error);
       }
     }
 

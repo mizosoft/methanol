@@ -53,12 +53,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * type</a>. The {@linkplain #toString() text representation} of this class can be used as the value
  * of the {@code Content-Type} HTTP header.
  *
- * <p>A {@code MediaType} also defines a <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">
- * media range</a>. A media range has either both wildcard type and subtype, both concrete type and
- * subtype, or a concrete type and a wildcard subtype (but not a wildcard type and a concrete
- * subtype), with the character {@code *} denoting a wildcard. Inclusion in media ranges can be
- * tested using any of {@link #includes(MediaType)} or {@link #isCompatibleWith(MediaType)}, with
- * the later being symmetric among operands.
+ * <p>A {@code MediaType} also defines a <a
+ * href="https://tools.ietf.org/html/rfc7231#section-5.3.2">media range</a>. A media range has
+ * either both wildcard type and subtype, both concrete type and subtype, or a concrete type and a
+ * wildcard subtype (but not a wildcard type and a concrete subtype), with the character {@code *}
+ * denoting a wildcard. Inclusion in media ranges can be tested using any of {@link
+ * #includes(MediaType)} or {@link #isCompatibleWith(MediaType)}, with the later being symmetric
+ * among operands.
  *
  * <p>Case insensitive attributes such as the type, subtype, parameter names or the value of the
  * charset parameter are converted into lower-case.
@@ -77,19 +78,20 @@ public class MediaType {
   //                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
   //                    / DIGIT / ALPHA
   //                    ; any VCHAR, except delimiters
-  static final CharMatcher TOKEN_MATCHER = chars("!#$%&'*+-.^_`|~")
-      .or(alphaNum());
+  static final CharMatcher TOKEN_MATCHER = chars("!#$%&'*+-.^_`|~").or(alphaNum());
 
   // quoted-string  = DQUOTE *( qdtext / quoted-pair ) DQUOTE
   // qdtext         = HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text
   // obs-text       = %x80-FF
-  private static final CharMatcher QUOTED_TEXT_MATCHER = chars("\t \u0021")  // HTAB + SP + 0x21
-      .or(closedRange(0x23, 0x5B))
-      .or(closedRange(0x5D, 0x7E));
+  private static final CharMatcher QUOTED_TEXT_MATCHER =
+      chars("\t \u0021") // HTAB + SP + 0x21
+          .or(closedRange(0x23, 0x5B))
+          .or(closedRange(0x5D, 0x7E));
 
   // quoted-pair    = "\" ( HTAB / SP / VCHAR / obs-text )
-  private static final CharMatcher QUOTED_PAIR_MATCHER = chars("\t ") // HTAB + SP
-      .or(closedRange(0x21, 0x7E)); // VCHAR
+  private static final CharMatcher QUOTED_PAIR_MATCHER =
+      chars("\t ") // HTAB + SP
+          .or(closedRange(0x21, 0x7E)); // VCHAR
 
   //  OWS = *( SP / HTAB )
   private static final CharMatcher OWS_MATCHER = chars("\t ");
@@ -108,23 +110,17 @@ public class MediaType {
     this.parameters = parameters;
   }
 
-  /**
-   * Returns the general type.
-   */
+  /** Returns the general type. */
   public String type() {
     return type;
   }
 
-  /**
-   * Returns the subtype.
-   */
+  /** Returns the subtype. */
   public String subtype() {
     return subtype;
   }
 
-  /**
-   * Returns an immutable map representing the parameters.
-   */
+  /** Returns an immutable map representing the parameters. */
   public Map<String, String> parameters() {
     return parameters;
   }
@@ -133,10 +129,9 @@ public class MediaType {
    * Returns an {@code Optional} representing the value of the charset parameter. An empty {@code
    * Optional} is returned if no such parameter exists.
    *
-   * @throws IllegalCharsetNameException if a charset parameter exists the value of which is
-   *                                     invalid
+   * @throws IllegalCharsetNameException if a charset parameter exists the value of which is invalid
    * @throws UnsupportedCharsetException if a charset parameter exists the value of which is not
-   *                                     supported in this JVM
+   *     supported in this JVM
    */
   public Optional<Charset> charset() {
     Optional<Charset> charset = parsedCharset;
@@ -216,7 +211,7 @@ public class MediaType {
    * Returns a new {@code MediaType} with this instance's type, subtype and parameters but with the
    * value of the parameter specified by the given name set to the given value.
    *
-   * @param name  the parameter's name
+   * @param name the parameter's name
    * @param value the parameter's value
    * @throws IllegalArgumentException if the given name or value is invalid
    */
@@ -256,9 +251,7 @@ public class MediaType {
         && parameters.equals(other.parameters);
   }
 
-  /**
-   * Returns a hashcode for this media type.
-   */
+  /** Returns a hashcode for this media type. */
   @Override
   public int hashCode() {
     return Objects.hash(type, subtype, parameters);
@@ -272,10 +265,10 @@ public class MediaType {
   public String toString() {
     String str = type + "/" + subtype;
     if (!parameters.isEmpty()) {
-      String joinedParameters = parameters.entrySet()
-          .stream()
-          .map(e -> e.getKey() + "=" + escapeAndQuoteValue(e.getValue()))
-          .collect(Collectors.joining("; "));
+      String joinedParameters =
+          parameters.entrySet().stream()
+              .map(e -> e.getKey() + "=" + escapeAndQuoteValue(e.getValue()))
+              .collect(Collectors.joining("; "));
       str += "; " + joinedParameters;
     }
     return str;
@@ -284,7 +277,7 @@ public class MediaType {
   /**
    * Returns a new {@code MediaType} with the given type and subtype.
    *
-   * @param type    the general type
+   * @param type the general type
    * @param subtype the subtype
    * @throws IllegalArgumentException if the given type or subtype is invalid
    */
@@ -295,11 +288,11 @@ public class MediaType {
   /**
    * Returns a new {@code MediaType} with the given type, subtype and parameters.
    *
-   * @param type       the general type
-   * @param subtype    the subtype
+   * @param type the general type
+   * @param subtype the subtype
    * @param parameters the parameters
    * @throws IllegalArgumentException if the given type, subtype or any of the given parameters is
-   *                                  invalid
+   *     invalid
    */
   public static MediaType of(String type, String subtype, Map<String, String> parameters) {
     return create(type, subtype, parameters, new LinkedHashMap<>());
@@ -313,7 +306,8 @@ public class MediaType {
     requireNonNull(type, "type");
     requireNonNull(subtype, "subtype");
     requireNonNull(parameters, "parameters");
-    requireArgument(!WILDCARD.equals(type) || WILDCARD.equals(subtype),
+    requireArgument(
+        !WILDCARD.equals(type) || WILDCARD.equals(subtype),
         "cannot have a wildcard type with a concrete subtype");
     String normalizedType = normalizeToken(type);
     String normalizedSubtype = normalizeToken(subtype);
@@ -324,8 +318,10 @@ public class MediaType {
         normalizedValue = normalizeToken(entry.getValue());
       } else {
         normalizedValue = entry.getValue();
-        requireArgument(QUOTED_PAIR_MATCHER.allMatch(normalizedValue),
-            "illegal value: %s", normalizedAttribute);
+        requireArgument(
+            QUOTED_PAIR_MATCHER.allMatch(normalizedValue),
+            "illegal value: %s",
+            normalizedAttribute);
       }
       newParameters.put(normalizedAttribute, normalizedValue);
     }
@@ -348,7 +344,7 @@ public class MediaType {
       }
       return of(components.get(0), components.get(1), parameters);
     } catch (IllegalArgumentException | IllegalStateException e) {
-      throw new IllegalArgumentException(format("Couldn't parse: '%s'", value), e);
+      throw new IllegalArgumentException(format("couldn't parse: '%s'", value), e);
     }
   }
 
@@ -395,9 +391,7 @@ public class MediaType {
     return lower.toString();
   }
 
-  /**
-   * A parse component in a media type string.
-   */
+  /** A parse component in a media type string. */
   private enum Component {
     TYPE {
       @Override
@@ -419,7 +413,8 @@ public class MediaType {
       }
 
       @Override
-      @Nullable Component next(CharBuffer buff) {
+      @Nullable
+      Component next(CharBuffer buff) {
         return consumeDelimiter(buff) ? NAME : null;
       }
     },
@@ -444,12 +439,14 @@ public class MediaType {
           StringBuilder unescaped = new StringBuilder();
           while (!consumeCharIfPresent(buff, '"')) {
             char c = getCharacter(buff);
-            requireArgument(QUOTED_TEXT_MATCHER.matches(c) || c == '\\',
-                "illegal char %#x in a quoted-string", (int) c);
+            requireArgument(
+                QUOTED_TEXT_MATCHER.matches(c) || c == '\\',
+                "illegal char %#x in a quoted-string",
+                (int) c);
             if (c == '\\') { // quoted-pair
               c = getCharacter(buff);
-              requireArgument(QUOTED_PAIR_MATCHER.matches(c),
-                  "illegal char %#x in a quoted-pair", (int) c);
+              requireArgument(
+                  QUOTED_PAIR_MATCHER.matches(c), "illegal char %#x in a quoted-pair", (int) c);
             }
             unescaped.append(c);
           }
@@ -459,7 +456,8 @@ public class MediaType {
       }
 
       @Override
-      @Nullable Component next(CharBuffer buff) {
+      @Nullable
+      Component next(CharBuffer buff) {
         return consumeDelimiter(buff) ? NAME : null;
       }
     };

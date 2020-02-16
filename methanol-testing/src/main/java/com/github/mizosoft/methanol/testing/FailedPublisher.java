@@ -30,9 +30,7 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.function.Supplier;
 
-/**
- * A publisher that fails immediately with an error.
- */
+/** A publisher that fails immediately with an error. */
 public class FailedPublisher<T> implements Publisher<T> {
 
   private final Supplier<Throwable> errorSupplier;

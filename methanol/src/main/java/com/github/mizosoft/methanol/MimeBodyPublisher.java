@@ -26,13 +26,9 @@ package com.github.mizosoft.methanol;
 
 import java.net.http.HttpRequest.BodyPublisher;
 
-/**
- * A {@code BodyPublisher} with a {@linkplain MediaType media type}.
- */
+/** A {@code BodyPublisher} with a {@linkplain MediaType media type}. */
 public interface MimeBodyPublisher extends BodyPublisher {
 
-  /**
-   * Returns the body's media type.
-   */
+  /** Returns the body's media type. */
   MediaType mediaType();
 }

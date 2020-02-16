@@ -29,38 +29,27 @@ import com.github.mizosoft.methanol.convert.gson.GsonConverter.OfRequest;
 import com.github.mizosoft.methanol.convert.gson.GsonConverter.OfResponse;
 import com.google.gson.Gson;
 
-/**
- * Provides {@link Converter} implementations for the JSON format using Gson.
- */
+/** Provides {@link Converter} implementations for the JSON format using Gson. */
 public class GsonConverterFactory {
 
-  private GsonConverterFactory() { // non-instantiable
-  }
+  private GsonConverterFactory() {} // non-instantiable
 
-  /**
-   * Returns a {@code Converter.OfRequest} that uses a default {@code Gson} instance.
-   */
+  /** Returns a {@code Converter.OfRequest} that uses a default {@code Gson} instance. */
   public static Converter.OfRequest createOfRequest() {
     return createOfRequest(new Gson());
   }
 
-  /**
-   * Returns a {@code Converter.OfRequest} that uses the given {@code Gson} instance.
-   */
+  /** Returns a {@code Converter.OfRequest} that uses the given {@code Gson} instance. */
   public static Converter.OfRequest createOfRequest(Gson gson) {
     return new OfRequest(gson);
   }
 
-  /**
-   * Returns a {@code Converter.OfResponse} that uses a default {@code Gson} instance.
-   */
+  /** Returns a {@code Converter.OfResponse} that uses a default {@code Gson} instance. */
   public static Converter.OfResponse createOfResponse() {
     return createOfResponse(new Gson());
   }
 
-  /**
-   * Returns a {@code Converter.OfResponse} that uses the given {@code Gson} instance.
-   */
+  /** Returns a {@code Converter.OfResponse} that uses the given {@code Gson} instance. */
   public static Converter.OfResponse createOfResponse(Gson gson) {
     return new OfResponse(gson);
   }

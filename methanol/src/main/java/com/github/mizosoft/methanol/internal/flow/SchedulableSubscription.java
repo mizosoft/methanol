@@ -27,9 +27,7 @@ package com.github.mizosoft.methanol.internal.flow;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscription;
 
-/**
- * A subscription that has a {@link Schedulable} task for fulfilling subscriber demand.
- */
+/** A subscription that has a {@link Schedulable} task for fulfilling subscriber demand. */
 public abstract class SchedulableSubscription extends Schedulable implements Subscription {
 
   // A maximum of 1 ongoing schedules will do as the need is to either execute the task or schedule
@@ -47,9 +45,7 @@ public abstract class SchedulableSubscription extends Schedulable implements Sub
     super(executor, MAX_SCHEDULES);
   }
 
-  /**
-   * Signals this subscription to either run or be scheduled to run later if already running.
-   */
+  /** Signals this subscription to either run or be scheduled to run later if already running. */
   public void signal() {
     super.runOrSchedule();
   }
@@ -59,8 +55,6 @@ public abstract class SchedulableSubscription extends Schedulable implements Sub
     drain();
   }
 
-  /**
-   * Method to be overridden for implementing "drain" logic.
-   */
+  /** Method to be overridden for implementing "drain" logic. */
   protected abstract void drain();
 }

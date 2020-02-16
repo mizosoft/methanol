@@ -65,9 +65,7 @@ public interface Converter {
    */
   boolean supportsType(TypeReference<?> type);
 
-  /**
-   * {@code Converter} specialization for serializing objects into request bodies.
-   */
+  /** {@code Converter} specialization for serializing objects into request bodies. */
   interface OfRequest extends Converter {
 
     /**
@@ -75,16 +73,14 @@ public interface Converter {
      * the format specified by the given media type. If {@code mediaType} is {@code null}, the
      * converter's default format settings will be used.
      *
-     * @param object    the object
+     * @param object the object
      * @param mediaType the media type
      * @throws UnsupportedOperationException if the given object's type or the given media type are
-     *                                       not supported
+     *     not supported
      */
     BodyPublisher toBody(Object object, @Nullable MediaType mediaType);
 
-    /**
-     * Returns an immutable list containing the installed {@code OfRequest} converters.
-     */
+    /** Returns an immutable list containing the installed {@code OfRequest} converters. */
     static List<OfRequest> installed() {
       return ConverterFinder.findInstalledRequestConverters();
     }
@@ -94,7 +90,7 @@ public interface Converter {
      * object type and media type. If {@code mediaType} is {@code null}, any converter supporting
      * the given type will be returned.
      *
-     * @param type      the object type
+     * @param type the object type
      * @param mediaType an optional media type defining the serialization format
      */
     static Optional<OfRequest> getConverter(TypeReference<?> type, @Nullable MediaType mediaType) {
@@ -114,9 +110,9 @@ public interface Converter {
      * given type using the format specified by the given media type. If {@code mediaType} is {@code
      * null}, the converter's default format settings will be used.
      *
-     * @param type      the object type
+     * @param type the object type
      * @param mediaType the media type
-     * @param <T>       the type represent by {@code type}
+     * @param <T> the type represent by {@code type}
      */
     <T> BodySubscriber<T> toObject(TypeReference<T> type, @Nullable MediaType mediaType);
 
@@ -132,9 +128,9 @@ public interface Converter {
      * blocking source should override this method to defer reading from such a source until the
      * supplier is called.
      *
-     * @param type      the object type
+     * @param type the object type
      * @param mediaType the media type
-     * @param <T>       the type represent by {@code type}
+     * @param <T> the type represent by {@code type}
      */
     default <T> BodySubscriber<Supplier<T>> toDeferredObject(
         TypeReference<T> type, @Nullable MediaType mediaType) {
@@ -157,9 +153,7 @@ public interface Converter {
       };
     }
 
-    /**
-     * Returns an immutable list containing the installed {@code OfResponse} converters.
-     */
+    /** Returns an immutable list containing the installed {@code OfResponse} converters. */
     static List<OfResponse> installed() {
       return ConverterFinder.findInstalledResponseConverters();
     }
@@ -169,7 +163,7 @@ public interface Converter {
      * given object type and media type. If {@code mediaType} is {@code null}, any converter
      * supporting the given type will be returned.
      *
-     * @param type      the object type
+     * @param type the object type
      * @param mediaType an optional media type defining the deserialization format
      */
     static Optional<OfResponse> getConverter(TypeReference<?> type, @Nullable MediaType mediaType) {
@@ -180,8 +174,7 @@ public interface Converter {
   private static <C extends Converter> Optional<C> lookupConverter(
       List<C> installed, TypeReference<?> type, @Nullable MediaType mediaType) {
     return installed.stream()
-        .filter(c -> c.supportsType(type)
-            && (mediaType == null || c.isCompatibleWith(mediaType)))
+        .filter(c -> c.supportsType(type) && (mediaType == null || c.isCompatibleWith(mediaType)))
         .findFirst();
   }
 }

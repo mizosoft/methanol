@@ -32,8 +32,7 @@ import java.util.function.Supplier;
 /** Miscellaneous utilities. */
 public class Utils {
 
-  private Utils() { // Not instantiable
-  }
+  private Utils() {} // non-instantiable
 
   public static int copyRemaining(ByteBuffer src, ByteBuffer dst) {
     int toCopy = Math.min(src.remaining(), dst.remaining());

@@ -42,10 +42,9 @@ import java.util.concurrent.Executor;
  * their decompressed form to the {@link #downstream() downstream subscriber}, which itself converts
  * the former to the desired high-level type.
  *
- * <p>The guarantees given by the HTTP client are also given by the decoder; the downstream
- * receives a strictly ordered representation of the decoded response body in the form of immutable
- * lists of read-only {@code ByteBuffers}, which up on being passed, are no longer referenced by the
- * decoder.
+ * <p>The guarantees given by the HTTP client are also given by the decoder; the downstream receives
+ * a strictly ordered representation of the decoded response body in the form of immutable lists of
+ * read-only {@code ByteBuffers}, which up on being passed, are no longer referenced by the decoder.
  *
  * <p>Optionally, a {@code BodyDecoder} can have an {@code Executor}. If present, the executor is
  * used to deliver downstream signals (that is, downstream's onXXXX methods are dispatched to the
@@ -69,9 +68,7 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
    */
   Optional<Executor> executor();
 
-  /**
-   * Returns this decoder's downstream.
-   */
+  /** Returns this decoder's downstream. */
   BodySubscriber<T> downstream();
 
   /**
@@ -92,16 +89,14 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
    */
   interface Factory {
 
-    /**
-     * Returns the encoding used by {@code BodyDecoders} created by this factory.
-     */
+    /** Returns the encoding used by {@code BodyDecoders} created by this factory. */
     String encoding();
 
     /**
      * Creates and returns a {@code BodyDecoder} with the given downstream.
      *
      * @param downstream the downstream subscriber
-     * @param <T>        the body type
+     * @param <T> the body type
      */
     <T> BodyDecoder<T> create(BodySubscriber<T> downstream);
 
@@ -109,8 +104,8 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
      * Creates and returns a {@code BodyDecoder} with the given downstream and executor.
      *
      * @param downstream the downstream subscriber
-     * @param executor   the decoder's executor
-     * @param <T>        the body type
+     * @param executor the decoder's executor
+     * @param <T> the body type
      */
     <T> BodyDecoder<T> create(BodySubscriber<T> downstream, Executor executor);
 
@@ -118,7 +113,7 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
      * Returns an immutable list of the registered factories.
      *
      * @throws java.util.ServiceConfigurationError if an error occurs while loading the registered
-     *                                             factories
+     *     factories
      */
     static List<Factory> installedFactories() {
       return DecoderFactoryFinder.findInstalledFactories();

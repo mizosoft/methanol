@@ -32,9 +32,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 
-/**
- * Collects BodyPublisher's content.
- */
+/** Collects BodyPublisher's content. */
 public class BodyCollector implements Flow.Subscriber<ByteBuffer> {
 
   private final CompletableFuture<ByteBuffer> bodyCF;
@@ -72,9 +70,8 @@ public class BodyCollector implements Flow.Subscriber<ByteBuffer> {
   }
 
   public static ByteBuffer collect(List<ByteBuffer> buffers) {
-    ByteBuffer compacted = ByteBuffer.allocate(buffers.stream()
-        .mapToInt(ByteBuffer::remaining)
-        .sum());
+    ByteBuffer compacted =
+        ByteBuffer.allocate(buffers.stream().mapToInt(ByteBuffer::remaining).sum());
     buffers.forEach(compacted::put);
     return compacted.flip();
   }

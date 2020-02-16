@@ -33,9 +33,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-/**
- * Utility for loading/caching service providers.
- */
+/** Utility for loading/caching service providers. */
 public class ServiceCache<S> {
 
   private final Class<S> service;
@@ -51,7 +49,7 @@ public class ServiceCache<S> {
     if (cached == null) {
       // Prevent getProvider() from being called from a provider constructor/method
       if (lock.isHeldByCurrentThread()) {
-        throw new ServiceConfigurationError("Recursive loading of providers");
+        throw new ServiceConfigurationError("recursive loading of providers");
       }
       try {
         lock.lock();
@@ -68,8 +66,7 @@ public class ServiceCache<S> {
   }
 
   private List<S> loadProviders() {
-    return ServiceLoader.load(service, ClassLoader.getSystemClassLoader())
-        .stream()
+    return ServiceLoader.load(service, ClassLoader.getSystemClassLoader()).stream()
         .map(ServiceLoader.Provider::get)
         .collect(Collectors.toUnmodifiableList());
   }

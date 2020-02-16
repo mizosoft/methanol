@@ -79,16 +79,12 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     contentLength = UNINITIALIZED_LENGTH;
   }
 
-  /**
-   * Returns the boundary of this multipart body.
-   */
+  /** Returns the boundary of this multipart body. */
   public String boundary() {
     return mediaType.parameters().get(BOUNDARY_ATTRIBUTE); // A boundary attr is guaranteed to exist
   }
 
-  /**
-   * Returns an immutable list containing this body's parts.
-   */
+  /** Returns an immutable list containing this body's parts. */
   public List<Part> parts() {
     return parts;
   }
@@ -148,20 +144,15 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     target.append(name).append(": ").append(value).append("\r\n");
   }
 
-  /**
-   * Returns a new {@code MultipartBodyPublisher.Builder}.
-   */
+  /** Returns a new {@code MultipartBodyPublisher.Builder}. */
   public static Builder newBuilder() {
     return new Builder();
   }
 
-  /**
-   * Represents a part in a multipart request body.
-   */
+  /** Represents a part in a multipart request body. */
   public static final class Part {
 
-    private static final CharMatcher TOKEN_MATCHER = chars("!#$%&'*+-.^_`|~")
-        .or(alphaNum());
+    private static final CharMatcher TOKEN_MATCHER = chars("!#$%&'*+-.^_`|~").or(alphaNum());
 
     private final HttpHeaders headers;
     private final BodyPublisher bodyPublisher;
@@ -174,16 +165,12 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
       this.bodyPublisher = bodyPublisher;
     }
 
-    /**
-     * Returns the headers of this part.
-     */
+    /** Returns the headers of this part. */
     public HttpHeaders headers() {
       return headers;
     }
 
-    /**
-     * Returns the {@code BodyPublisher} that publishes this part's content.
-     */
+    /** Returns the {@code BodyPublisher} that publishes this part's content. */
     public BodyPublisher bodyPublisher() {
       return bodyPublisher;
     }
@@ -191,22 +178,23 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     /**
      * Creates and returns a new {@code Part} with the given headers and body publisher.
      *
-     * @param headers       the part's headers
+     * @param headers the part's headers
      * @param bodyPublisher the part's body publisher
      * @throws IllegalArgumentException if the name of any of the given headers is invalid or if a
-     *                                  {@code Content-Type} header is present but the given
-     *                                  publisher is a {@link MimeBodyPublisher}
+     *     {@code Content-Type} header is present but the given publisher is a {@link
+     *     MimeBodyPublisher}
      */
     public static Part create(HttpHeaders headers, BodyPublisher bodyPublisher) {
       return new Part(headers, bodyPublisher);
     }
 
     private static void validateHeaderNames(Set<String> names, BodyPublisher publisher) {
-      requireArgument(!(names.contains("Content-Type") && publisher instanceof MimeBodyPublisher),
+      requireArgument(
+          !(names.contains("Content-Type") && publisher instanceof MimeBodyPublisher),
           "unexpected Content-Type header");
       for (String name : names) {
-        requireArgument(TOKEN_MATCHER.allMatch(name) && !name.isEmpty(),
-            "illegal header name: %s", name);
+        requireArgument(
+            TOKEN_MATCHER.allMatch(name) && !name.isEmpty(), "illegal header name: %s", name);
       }
     }
   }
@@ -228,8 +216,7 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     // bcharnospace := DIGIT / ALPHA / "'" / "(" / ")" /
     //                 "+" / "_" / "," / "-" / "." ?
     //                 "/" / ":" / "=" / "?"
-    private static final CharMatcher BOUNDARY_MATCHER = chars("'()+_,-./:=? ")
-        .or(alphaNum());
+    private static final CharMatcher BOUNDARY_MATCHER = chars("'()+_,-./:=? ").or(alphaNum());
 
     private static final int MAX_BOUNDARY_LENGTH = 70;
 
@@ -261,7 +248,7 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
      *
      * @param mediaType the multipart media type
      * @throws IllegalArgumentException if the given media type is not a multipart type or if it has
-     *                                  an invalid boundary parameter
+     *     an invalid boundary parameter
      */
     public Builder mediaType(MediaType mediaType) {
       requireNonNull(mediaType);
@@ -283,7 +270,7 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     /**
      * Adds a form field with the given name and body.
      *
-     * @param name          the field's name
+     * @param name the field's name
      * @param bodyPublisher the field's body publisher
      */
     public Builder formPart(String name, BodyPublisher bodyPublisher) {
@@ -295,9 +282,9 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     /**
      * Adds a form field with the given name, filename and body.
      *
-     * @param name     the field's name
+     * @param name the field's name
      * @param filename the field's filename
-     * @param body     the field's body publisher
+     * @param body the field's body publisher
      */
     public Builder formPart(String name, String filename, BodyPublisher body) {
       requireNonNull(name, "name");
@@ -310,7 +297,7 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
      * Adds a {@code text/plain} form field with the given name and value. {@code UTF-8} is used for
      * encoding the field's body.
      *
-     * @param name  the field's name
+     * @param name the field's name
      * @param value an object whose string representation is used as the value
      */
     public Builder textPart(String name, Object value) {
@@ -321,16 +308,17 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
      * Adds a {@code text/plain} form field with the given name and value using the given charset
      * for encoding the field's body.
      *
-     * @param name    the field's name
-     * @param value   an object whose string representation is used as the value
+     * @param name the field's name
+     * @param value an object whose string representation is used as the value
      * @param charset the charset for encoding the field's body
      */
     public Builder textPart(String name, Object value, Charset charset) {
       requireNonNull(name, "name");
       requireNonNull(value, "value");
       requireNonNull(charset, "charset");
-      MimeBodyPublisher publisher = MoreBodyPublishers.ofMediaType(
-          BodyPublishers.ofString(value.toString(), charset), TEXT_PLAIN.withCharset(charset));
+      MimeBodyPublisher publisher =
+          MoreBodyPublishers.ofMediaType(
+              BodyPublishers.ofString(value.toString(), charset), TEXT_PLAIN.withCharset(charset));
       return formPart(name, publisher);
     }
 
@@ -353,8 +341,8 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
      * Adds a file form field with given name, file and media type. The field's filename property
      * will be that of the given path's {@link Path#getFileName() filename compontent}.
      *
-     * @param name      the field's name
-     * @param file      the file's path
+     * @param name the field's name
+     * @param file the file's path
      * @param mediaType the part's media type
      * @throws FileNotFoundException if a file with the given path cannot be found
      */
@@ -365,8 +353,8 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
       requireNonNull(mediaType, "mediaType");
       @Nullable Path filenameComponent = file.getFileName();
       String filename = filenameComponent != null ? filenameComponent.toString() : "";
-      MimeBodyPublisher publisher = MoreBodyPublishers.ofMediaType(
-          BodyPublishers.ofFile(file), mediaType);
+      MimeBodyPublisher publisher =
+          MoreBodyPublishers.ofMediaType(BodyPublishers.ofFile(file), mediaType);
       return formPart(name, filename, publisher);
     }
 
@@ -387,16 +375,20 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     private static String validateBoundary(String boundary) {
-      requireArgument(boundary.length() <= MAX_BOUNDARY_LENGTH && !boundary.isEmpty(),
-          "illegal boundary length: %s", boundary.length());
-      requireArgument(BOUNDARY_MATCHER.allMatch(boundary) && !boundary.endsWith(" "),
-          "illegal boundary: %s", boundary);
+      requireArgument(
+          boundary.length() <= MAX_BOUNDARY_LENGTH && !boundary.isEmpty(),
+          "illegal boundary length: %s",
+          boundary.length());
+      requireArgument(
+          BOUNDARY_MATCHER.allMatch(boundary) && !boundary.endsWith(" "),
+          "illegal boundary: %s",
+          boundary);
       return boundary;
     }
 
     private static MediaType checkMediaType(MediaType mediaType) {
-      requireArgument(MULTIPART_TYPE.equals(mediaType.type()),
-          "not a multipart type: %s", mediaType.type());
+      requireArgument(
+          MULTIPART_TYPE.equals(mediaType.type()), "not a multipart type: %s", mediaType.type());
       String boundary = mediaType.parameters().get(BOUNDARY_ATTRIBUTE);
       if (boundary != null) {
         validateBoundary(boundary);
@@ -433,14 +425,13 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
           return MediaType.parse(contentType);
         }
       } catch (IOException ignored) {
+        // Use OCTET_STREAM
       }
       return OCTET_STREAM;
     }
   }
 
-  /**
-   * Strategy for appending the boundary across parts.
-   */
+  /** Strategy for appending the boundary across parts. */
   private enum BoundaryAppender {
     FIRST("--", "\r\n"),
     MIDDLE("\r\n--", "\r\n"),
@@ -682,7 +673,8 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
       complete(null);
     }
 
-    @Nullable ByteBuffer poll() {
+    @Nullable
+    ByteBuffer poll() {
       ByteBuffer next = buffers.peek();
       if (next != null && next != END_OF_PART) {
         buffers.poll();

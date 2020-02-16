@@ -27,9 +27,7 @@ package com.github.mizosoft.methanol.internal.dec;
 import java.io.EOFException;
 import java.io.IOException;
 
-/**
- * {@code AsyncDecoder} for deflate.
- */
+/** {@code AsyncDecoder} for deflate. */
 class DeflateDecoder extends ZLibDecoder {
 
   DeflateDecoder() {
@@ -41,11 +39,11 @@ class DeflateDecoder extends ZLibDecoder {
     inflateSource(source, sink);
     if (inflater.finished()) {
       if (source.hasRemaining()) {
-        throw new IOException("Deflate stream finished prematurely");
+        throw new IOException("deflate stream finished prematurely");
       }
     } else if (source.finalSource()) {
       assert !source.hasRemaining();
-      throw new EOFException("Unexpected end of deflate stream");
+      throw new EOFException("unexpected end of deflate stream");
     }
   }
 }

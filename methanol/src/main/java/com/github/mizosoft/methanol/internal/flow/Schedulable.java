@@ -31,9 +31,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * A task that can be either executed or scheduled for execution if already running.
- */
+/** A task that can be either executed or scheduled for execution if already running. */
 public abstract class Schedulable {
 
   private static final int DIRTY = -1;
@@ -50,7 +48,7 @@ public abstract class Schedulable {
   /**
    * Creates a new {@code Schedulable} with the given executor and maximum schedules.
    *
-   * @param executor     the executor on which the task runs
+   * @param executor the executor on which the task runs
    * @param maxSchedules the maximum number of times the task is allowed to be scheduled
    * @throws IllegalArgumentException if {@code maxSchedules} is negative
    */
@@ -78,16 +76,12 @@ public abstract class Schedulable {
     }
   }
 
-  /**
-   * Permanently disables further executions or schedules for the task.
-   */
+  /** Permanently disables further executions or schedules for the task. */
   protected void stop() {
     state.set(STOPPED);
   }
 
-  /**
-   * Method to be overridden to run the task.
-   */
+  /** Method to be overridden to run the task. */
   protected abstract void run();
 
   private void runSchedulable() {

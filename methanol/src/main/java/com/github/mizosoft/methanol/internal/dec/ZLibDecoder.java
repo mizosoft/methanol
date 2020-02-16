@@ -32,9 +32,7 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 import java.util.zip.ZipException;
 
-/**
- * Base class for deflate and gzip decoders.
- */
+/** Base class for deflate and gzip decoders. */
 abstract class ZLibDecoder implements AsyncDecoder {
 
   private final WrapMode wrapMode;
@@ -66,12 +64,12 @@ abstract class ZLibDecoder implements AsyncDecoder {
     if (inflater.needsInput()) {
       inflater.setInput(in);
     } else if (inflater.needsDictionary()) {
-      throw new ZipException("Missing preset dictionary");
+      throw new ZipException("missing preset dictionary");
     }
     try {
       inflater.inflate(out);
     } catch (DataFormatException e) {
-      throw new ZipException(requireNonNull(e.getMessage(), "Wrong deflate format"));
+      throw new ZipException(requireNonNull(e.getMessage(), "wrong deflate format"));
     }
   }
 
