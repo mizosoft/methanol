@@ -214,7 +214,7 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
   private static final class UpstreamReference {
 
-    private final AtomicReference<Subscription> upstream;
+    private final AtomicReference<@Nullable Subscription> upstream;
 
     private UpstreamReference() {
       this.upstream = new AtomicReference<>();

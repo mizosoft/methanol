@@ -64,8 +64,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * <p>Case insensitive attributes such as the type, subtype, parameter names or the value of the
  * charset parameter are converted into lower-case.
  */
-// for parsedCharset which might be lazily initialized
-@SuppressWarnings({"OptionalAssignedToNull", "OptionalUsedAsFieldOrParameterType"})
 public class MediaType {
 
   // media-type     = type "/" subtype *( OWS ";" OWS parameter )
@@ -102,7 +100,8 @@ public class MediaType {
   private final String type;
   private final String subtype;
   private final Map<String, String> parameters;
-  private @MonotonicNonNull Optional<Charset> parsedCharset;
+  private @MonotonicNonNull Charset charset;
+  private boolean charsetIsParsed;
 
   private MediaType(String type, String subtype, Map<String, String> parameters) {
     this.type = type;
@@ -134,13 +133,14 @@ public class MediaType {
    *     supported in this JVM
    */
   public Optional<Charset> charset() {
-    Optional<Charset> charset = parsedCharset;
-    if (charset == null) {
+    if (!charsetIsParsed) {
       String charsetName = parameters.get(CHARSET_ATTRIBUTE);
-      charset = charsetName != null ? Optional.of(Charset.forName(charsetName)) : Optional.empty();
-      parsedCharset = charset;
+      if (charsetName != null) {
+        charset = Charset.forName(charsetName);
+      }
+      charsetIsParsed = true;
     }
-    return charset;
+    return Optional.ofNullable(charset);
   }
 
   /**
@@ -203,7 +203,8 @@ public class MediaType {
   public MediaType withCharset(Charset charset) {
     requireNonNull(charset);
     MediaType mediaType = withParameter(CHARSET_ATTRIBUTE, charset.name());
-    mediaType.parsedCharset = Optional.of(charset);
+    mediaType.charset = charset;
+    mediaType.charsetIsParsed = true;
     return mediaType;
   }
 
@@ -238,7 +239,7 @@ public class MediaType {
    * @param obj the object to test for equality
    */
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (obj == this) {
       return true;
     }
@@ -380,13 +381,9 @@ public class MediaType {
   }
 
   private static String toAsciiLowerCase(CharSequence value) {
-    StringBuilder lower = new StringBuilder();
+    StringBuilder lower = new StringBuilder(value.length());
     for (int i = 0; i < value.length(); i++) {
-      char c = value.charAt(i);
-      if (c >= 'A' && c <= 'Z') {
-        c += 32;
-      }
-      lower.append(c);
+      lower.append(Character.toLowerCase(value.charAt(i)));
     }
     return lower.toString();
   }

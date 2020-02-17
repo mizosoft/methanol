@@ -52,6 +52,7 @@ public interface AsyncDecoder extends AutoCloseable {
   /**
    * Releases any resources associated with the decoder. Must be both idempotent and thread safe.
    */
+  @Override
   void close();
 
   /**

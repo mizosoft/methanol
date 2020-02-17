@@ -122,7 +122,6 @@ abstract class JacksonConverter extends AbstractConverter {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
-      ObjectReader objReader = mapper.readerFor(mapper.constructType(type.type()));
       Charset charset = charsetOrDefault(mediaType, DEFAULT_ENCODING);
       // The non-blocking parser only works with UTF-8 and ASCII
       // https://github.com/FasterXML/jackson-core/issues/596
@@ -138,7 +137,7 @@ abstract class JacksonConverter extends AbstractConverter {
           BodySubscribers.ofByteArray(),
           bytes ->
               readValueUnchecked(
-                  objReader, new InputStreamReader(new ByteArrayInputStream(bytes), charset)));
+                  type, new InputStreamReader(new ByteArrayInputStream(bytes), charset)));
     }
 
     @Override
@@ -147,15 +146,14 @@ abstract class JacksonConverter extends AbstractConverter {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
-      ObjectReader objReader = mapper.readerFor(mapper.constructType(type.type()));
       return BodySubscribers.mapping(
           MoreBodySubscribers.ofReader(charsetOrDefault(mediaType, DEFAULT_ENCODING)),
-          reader -> () -> readValueUnchecked(objReader, reader));
+          reader -> () -> readValueUnchecked(type, reader));
     }
 
-    private static <T> T readValueUnchecked(ObjectReader objReader, Reader reader) {
+    private <T> T readValueUnchecked(TypeReference<T> type, Reader reader) {
       try {
-        return objReader.readValue(reader);
+        return mapper.readerFor(mapper.constructType(type.type())).readValue(reader);
       } catch (IOException ioe) {
         throw new UncheckedIOException(ioe);
       }

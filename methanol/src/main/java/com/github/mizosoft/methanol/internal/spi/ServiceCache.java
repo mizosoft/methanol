@@ -51,8 +51,8 @@ public class ServiceCache<S> {
       if (lock.isHeldByCurrentThread()) {
         throw new ServiceConfigurationError("recursive loading of providers");
       }
+      lock.lock();
       try {
-        lock.lock();
         cached = providers;
         if (cached == null) {
           cached = loadProviders();
@@ -62,7 +62,7 @@ public class ServiceCache<S> {
         lock.unlock();
       }
     }
-    return providers;
+    return cached;
   }
 
   private List<S> loadProviders() {

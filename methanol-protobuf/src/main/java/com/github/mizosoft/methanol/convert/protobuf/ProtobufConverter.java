@@ -38,9 +38,7 @@ abstract class ProtobufConverter extends AbstractConverter {
 
   static final class OfRequest extends ProtobufConverter implements Converter.OfRequest {
 
-    OfRequest() {
-      super();
-    }
+    OfRequest() {}
 
     @Override
     public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
@@ -65,9 +63,11 @@ abstract class ProtobufConverter extends AbstractConverter {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
-      MessageLite.Builder builder = getBuilderForMessage(type.rawType());
+      // We know that T is <= MessageLite to the caller, but the compiler doesn't
+      Class<T> messageClass = toRawType(type);
+      MessageLite.Builder builder = getBuilderForMessage(messageClass);
       return BodySubscribers.mapping(
-          BodySubscribers.ofByteArray(), data -> buildMessage(builder, data));
+          BodySubscribers.ofByteArray(), data -> buildMessage(messageClass, builder, data));
     }
 
     @Override
@@ -76,33 +76,34 @@ abstract class ProtobufConverter extends AbstractConverter {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
-      MessageLite.Builder builder = getBuilderForMessage(type.rawType());
+      Class<T> messageClass = toRawType(type);
+      MessageLite.Builder builder = getBuilderForMessage(messageClass);
       return BodySubscribers.mapping(
-          BodySubscribers.ofInputStream(), in -> () -> buildMessage(builder, in));
+          BodySubscribers.ofInputStream(), in -> () -> buildMessage(messageClass, builder, in));
     }
 
-    private <T> T buildMessage(MessageLite.Builder builder, byte[] data) {
+    private <T> T buildMessage(Class<T> messageClass, MessageLite.Builder builder, byte[] data) {
       try {
         builder.mergeFrom(data, registry);
       } catch (InvalidProtocolBufferException e) {
         throw new UncheckedIOException(e);
       }
-      return castMessage(builder.build());
+      return messageClass.cast(builder.build());
     }
 
-    private <T> T buildMessage(MessageLite.Builder builder, InputStream in) {
+    private <T> T buildMessage(Class<T> messageClass, MessageLite.Builder builder, InputStream in) {
       try {
         builder.mergeFrom(in, registry);
       } catch (IOException ioe) {
         throw new UncheckedIOException(ioe);
       }
-      return castMessage(builder.build());
+      return messageClass.cast(builder.build());
     }
 
-    // Used after we know that message is T to the caller
+    // Messages are never expected to be generic, so type.rawType() is also Class<T>
     @SuppressWarnings("unchecked")
-    private static <T> T castMessage(MessageLite message) {
-      return (T) message;
+    private static <T> Class<T> toRawType(TypeReference<T> type) {
+      return (Class<T>) type.rawType();
     }
 
     private static MessageLite.Builder getBuilderForMessage(Class<?> clazz) {

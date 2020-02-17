@@ -82,7 +82,9 @@ public final class MockGzipMember {
             .build()
             .map(Supplier::get) // Will be lazily evaluated
             .iterator();
-    return new SequenceInputStream(
+    // SequenceInputStream only takes Enumeration (can't use Collections.enumeration(List)
+    // as impl relies on lazy evaluation of stream's iterator)
+    @SuppressWarnings("JdkObsolete") Enumeration<InputStream> enumeration =
         new Enumeration<>() {
           @Override
           public boolean hasMoreElements() {
@@ -93,7 +95,8 @@ public final class MockGzipMember {
           public InputStream nextElement() {
             return ins.next();
           }
-        });
+        };
+    return new SequenceInputStream(enumeration);
   }
 
   private byte[] getTrailer(long crc32, long isize) {
@@ -191,7 +194,7 @@ public final class MockGzipMember {
     FNAME(8),
     FCOMMENT(16);
 
-    int value;
+    final int value;
 
     FLG(int value) {
       this.value = value;
@@ -204,9 +207,9 @@ public final class MockGzipMember {
 
   public static final class Builder {
 
-    private Map<FLG, Integer> flags;
+    private final Map<FLG, Integer> flags;
     private byte[] data;
-    private Map<CorruptionMode, Integer> corruptions;
+    private final Map<CorruptionMode, Integer> corruptions;
 
     Builder() {
       flags = new EnumMap<>(FLG.class);

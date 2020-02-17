@@ -28,8 +28,8 @@ ext.deps = [
     'protobufJava'          : "com.google.protobuf:protobuf-java:${versions.protobuf}",
     'protobufCompiler'      : "com.google.protobuf:protoc:${versions.protobuf}",
     'checkstyle'            : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}",
-    "errorprone"            : "com.google.errorprone:error_prone_core:${versions.errorprone}",
-    "errorproneAnnotations" : "com.google.errorprone:error_prone_annotations:${versions.errorprone}"
+    'errorprone'            : "com.google.errorprone:error_prone_core:${versions.errorprone}",
+    'errorproneAnnotations' : "com.google.errorprone:error_prone_annotations:${versions.errorprone}"
 ]
 
 // Make current module read given module for the given tasks

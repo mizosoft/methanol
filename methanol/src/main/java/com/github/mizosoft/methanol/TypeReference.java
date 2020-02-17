@@ -35,6 +35,7 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * An object that represents the {@link Type} of the generic argument {@code T}. This class utilizes
@@ -96,7 +97,7 @@ public abstract class TypeReference<T> {
    * @param obj the object to test for equality
    */
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (obj == this) {
       return true;
     }

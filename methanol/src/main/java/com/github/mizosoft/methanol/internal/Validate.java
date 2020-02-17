@@ -26,6 +26,10 @@ package com.github.mizosoft.methanol.internal;
 
 import static java.lang.String.format;
 
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 public class Validate {
 
   private Validate() {} // non-instantiable
@@ -36,7 +40,9 @@ public class Validate {
     }
   }
 
-  public static void requireArgument(boolean argIsValid, String msgFormat, Object... args) {
+  @FormatMethod
+  public static void requireArgument(
+      boolean argIsValid, @FormatString String msgFormat, @Nullable Object... args) {
     if (!argIsValid) {
       throw new IllegalArgumentException(format(msgFormat, args));
     }
@@ -48,7 +54,9 @@ public class Validate {
     }
   }
 
-  public static void requireState(boolean stateIsValid, String msgFormat, Object... args) {
+  @FormatMethod
+  public static void requireState(
+      boolean stateIsValid, @FormatString String msgFormat, @Nullable Object... args) {
     if (!stateIsValid) {
       throw new IllegalStateException(format(msgFormat, args));
     }

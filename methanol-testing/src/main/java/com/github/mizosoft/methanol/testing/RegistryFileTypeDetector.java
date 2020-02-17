@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.spi.FileTypeDetector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** {@link FileTypeDetector} that pulls media type from registered entries. */
 public class RegistryFileTypeDetector extends FileTypeDetector {
@@ -38,7 +39,7 @@ public class RegistryFileTypeDetector extends FileTypeDetector {
   private static final ConcurrentMap<String, MediaType> REGISTRY = new ConcurrentHashMap<>();
 
   @Override
-  public String probeContentType(Path path) {
+  public @Nullable String probeContentType(Path path) {
     MediaType type = REGISTRY.get(getExtension(path).toLowerCase());
     return type != null ? type.toString() : null;
   }

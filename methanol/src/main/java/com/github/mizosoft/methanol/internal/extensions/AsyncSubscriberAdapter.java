@@ -49,10 +49,10 @@ public class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuf
 
   private final S downstream;
   private final Function<? super S, ? extends CompletionStage<T>> asyncFinisher;
-  private final AtomicReference<Subscription> upstream;
+  private final AtomicReference<@Nullable Subscription> upstream;
   // Safety flag to ensure that deferred cancellation from upstream doesn't
   // cause the downstream to receive post-completion signals in case downstream's
-  // onSubscribe on onNext threw previously
+  // onSubscribe or onNext threw previously
   private volatile boolean completed;
 
   public AsyncSubscriberAdapter(

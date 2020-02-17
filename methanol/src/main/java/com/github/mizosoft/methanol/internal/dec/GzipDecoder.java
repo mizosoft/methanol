@@ -30,7 +30,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.function.Consumer;
 import java.util.zip.CRC32;
 import java.util.zip.ZipException;
 
@@ -284,36 +283,52 @@ class GzipDecoder extends ZLibDecoder {
 
   private enum State {
     BEGIN,
-    HEADER(
-        dec -> {
-          dec.crc.reset();
-          dec.computeCrc = true; // Assume FHCRC is enabled until the FLG byte is read
-        }),
-    FLG_EXTRA_LEN(dec -> dec.fieldLength = 0),
-    FLG_EXTRA_DATA(dec -> dec.fieldPosition = 0),
+    HEADER {
+      @Override
+      void onPrepare(GzipDecoder dec) {
+        dec.crc.reset();
+        dec.computeCrc = true; // Assume FHCRC is enabled until the FLG byte is read
+      }
+    },
+    FLG_EXTRA_LEN {
+      @Override
+      void onPrepare(GzipDecoder dec) {
+        dec.fieldLength = 0;
+      }
+    },
+    FLG_EXTRA_DATA {
+      @Override
+      void onPrepare(GzipDecoder dec) {
+        dec.fieldPosition = 0;
+      }
+    },
     FLG_ZERO_TERMINATED,
-    FLG_HCRC(dec -> dec.computeCrc = false),
-    DEFLATED(
-        dec -> {
-          dec.inflater.reset();
-          dec.crc.reset();
-        }),
+    FLG_HCRC {
+      @Override
+      void onPrepare(GzipDecoder dec) {
+        dec.computeCrc = false;
+      }
+    },
+    DEFLATED {
+      @Override
+      void onPrepare(GzipDecoder dec) {
+        dec.inflater.reset();
+        dec.crc.reset();
+      }
+    },
     TRAILER,
-    CONCAT_INSPECTION(HEADER.onPrepare),
+    CONCAT_INSPECTION {
+      @Override
+      void onPrepare(GzipDecoder dec) {
+        HEADER.onPrepare(dec);
+      }
+    },
     END;
 
-    private final Consumer<GzipDecoder> onPrepare;
-
-    State() {
-      this(dec -> {});
-    }
-
-    State(Consumer<GzipDecoder> onPrepare) {
-      this.onPrepare = onPrepare;
-    }
+    void onPrepare(GzipDecoder dec) {}
 
     final State prepare(GzipDecoder dec) {
-      onPrepare.accept(dec);
+      onPrepare(dec);
       return this;
     }
 
