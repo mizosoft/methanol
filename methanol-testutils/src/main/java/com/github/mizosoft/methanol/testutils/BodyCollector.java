@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testutils;
 
 import static java.util.Objects.requireNonNull;
 

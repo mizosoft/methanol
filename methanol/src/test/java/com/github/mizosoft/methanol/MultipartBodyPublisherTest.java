@@ -26,7 +26,7 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MoreBodyPublishers.ofMediaType;
 import static com.github.mizosoft.methanol.MultipartBodyPublisher.newBuilder;
-import static com.github.mizosoft.methanol.testing.TestUtils.headers;
+import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static java.net.http.HttpRequest.BodyPublishers.fromPublisher;
 import static java.net.http.HttpRequest.BodyPublishers.ofInputStream;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
@@ -38,10 +38,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
-import com.github.mizosoft.methanol.testing.BodyCollector;
-import com.github.mizosoft.methanol.testing.FailedPublisher;
-import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
-import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testutils.BodyCollector;
+import com.github.mizosoft.methanol.testutils.FailedPublisher;
+import com.github.mizosoft.methanol.testutils.RegistryFileTypeDetector;
+import com.github.mizosoft.methanol.testutils.TestException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;

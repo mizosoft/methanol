@@ -28,7 +28,7 @@ import static java.net.http.HttpRequest.BodyPublishers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.github.mizosoft.methanol.testing.BodyCollector;
+import com.github.mizosoft.methanol.testutils.BodyCollector;
 import org.junit.jupiter.api.Test;
 
 class MoreBodyPublishersTest {

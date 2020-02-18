@@ -28,9 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.github.mizosoft.methanol.testing.EmptyPublisher;
-import com.github.mizosoft.methanol.testing.FailedPublisher;
-import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testutils.EmptyPublisher;
+import com.github.mizosoft.methanol.testutils.FailedPublisher;
+import com.github.mizosoft.methanol.testutils.TestException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;

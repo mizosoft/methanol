@@ -1,14 +1,14 @@
 package com.github.mizosoft.methanol.internal.dec;
 
-import static com.github.mizosoft.methanol.testing.TestUtils.gunzip;
+import static com.github.mizosoft.methanol.testutils.TestUtils.gunzip;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.github.mizosoft.methanol.testing.MockGzipMember;
-import com.github.mizosoft.methanol.testing.MockGzipMember.CorruptionMode;
+import com.github.mizosoft.methanol.testutils.MockGzipMember;
+import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;

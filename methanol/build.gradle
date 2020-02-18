@@ -2,11 +2,11 @@ description 'core methanol module'
 
 dependencies {
   testImplementation deps.reactiveStreamsTckFlow
-  testImplementation project(':methanol-testing')
+  testImplementation project(':methanol-testutils')
 }
 
 // compileTestJava still compiles from the module path
-rootProject.addReads([compileTestJava], 'methanol.testing')
+rootProject.addReads([compileTestJava], 'methanol.testutils')
 
 tasks.withType(JavaCompile) {
   options.errorprone {

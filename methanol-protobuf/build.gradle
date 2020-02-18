@@ -6,10 +6,10 @@ dependencies {
   api project(':methanol')
   api deps.protobufJava
 
-  testImplementation project(':methanol-testing')
+  testImplementation project(':methanol-testutils')
 }
 
-rootProject.addReads([compileTestJava, test], 'methanol.testing')
+rootProject.addReads([compileTestJava, test], 'methanol.testutils')
 
 protobuf {
   protoc {

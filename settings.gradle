@@ -1,7 +1,7 @@
 rootProject.name = 'methanol-parent'
 
 include 'methanol'
-include 'methanol-testing'
+include 'methanol-testutils'
 include 'methanol-gson'
 include 'methanol-jackson'
 include 'methanol-protobuf'

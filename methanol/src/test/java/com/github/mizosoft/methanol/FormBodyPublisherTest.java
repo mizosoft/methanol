@@ -28,7 +28,7 @@ import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.github.mizosoft.methanol.testing.BodyCollector;
+import com.github.mizosoft.methanol.testutils.BodyCollector;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;

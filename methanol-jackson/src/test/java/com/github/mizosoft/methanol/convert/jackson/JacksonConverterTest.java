@@ -2,7 +2,7 @@ package com.github.mizosoft.methanol.convert.jackson;
 
 import static com.github.mizosoft.methanol.convert.jackson.JacksonConverterFactory.createOfRequest;
 import static com.github.mizosoft.methanol.convert.jackson.JacksonConverterFactory.createOfResponse;
-import static com.github.mizosoft.methanol.testing.TestUtils.NOOP_SUBSCRIPTION;
+import static com.github.mizosoft.methanol.testutils.TestUtils.NOOP_SUBSCRIPTION;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeReference;
-import com.github.mizosoft.methanol.testing.BodyCollector;
+import com.github.mizosoft.methanol.testutils.BodyCollector;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;

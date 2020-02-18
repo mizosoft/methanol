@@ -1,6 +1,6 @@
 package com.github.mizosoft.methanol.internal.dec;
 
-import static com.github.mizosoft.methanol.testing.TestUtils.inflate;
+import static com.github.mizosoft.methanol.testutils.TestUtils.inflate;
 
 class DeflateDecoderTest extends ZLibDecoderTest {
 

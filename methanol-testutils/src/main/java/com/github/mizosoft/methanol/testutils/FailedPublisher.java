@@ -22,36 +22,33 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testutils;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
+import java.util.function.Supplier;
 
-/** A publisher that completes subscribers immediately. */
-public final class EmptyPublisher<T> implements Publisher<T> {
+/** A publisher that fails immediately with an error. */
+public class FailedPublisher<T> implements Publisher<T> {
 
-  // Use same setup as Collections.emptyXXXX() as the type doesn't matter anyways
-  private static EmptyPublisher<?> INSTANCE = new EmptyPublisher<>();
+  private final Supplier<Throwable> errorSupplier;
 
-  private EmptyPublisher() { // Singleton
+  public FailedPublisher(Supplier<Throwable> errorSupplier) {
+    this.errorSupplier = errorSupplier;
   }
 
   @Override
   public void subscribe(Subscriber<? super T> subscriber) {
     requireNonNull(subscriber);
+    Throwable error = errorSupplier.get();
     try {
       subscriber.onSubscribe(TestUtils.NOOP_SUBSCRIPTION);
     } catch (Throwable t) {
-      subscriber.onError(t);
-      return;
+      error.addSuppressed(t);
+    } finally {
+      subscriber.onError(error);
     }
-    subscriber.onComplete();
-  }
-
-  @SuppressWarnings("unchecked")
-  public static <T> EmptyPublisher<T> instance() {
-    return (EmptyPublisher<T>) INSTANCE;
   }
 }

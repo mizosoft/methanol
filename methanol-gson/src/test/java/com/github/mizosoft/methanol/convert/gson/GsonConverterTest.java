@@ -26,7 +26,7 @@ package com.github.mizosoft.methanol.convert.gson;
 
 import static com.github.mizosoft.methanol.convert.gson.GsonConverterFactory.createOfRequest;
 import static com.github.mizosoft.methanol.convert.gson.GsonConverterFactory.createOfResponse;
-import static com.github.mizosoft.methanol.testing.TestUtils.NOOP_SUBSCRIPTION;
+import static com.github.mizosoft.methanol.testutils.TestUtils.NOOP_SUBSCRIPTION;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeReference;
-import com.github.mizosoft.methanol.testing.BodyCollector;
+import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;

@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testutils;
 
 public class TestException extends RuntimeException {
 

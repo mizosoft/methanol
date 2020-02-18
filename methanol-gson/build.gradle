@@ -2,10 +2,10 @@ dependencies {
   api project(':methanol')
   api deps.gson
 
-  testImplementation project(':methanol-testing')
+  testImplementation project(':methanol-testutils')
 }
 
-rootProject.addReads([compileTestJava, test], 'methanol.testing')
+rootProject.addReads([compileTestJava, test], 'methanol.testutils')
 
 test {
   moduleOptions {
