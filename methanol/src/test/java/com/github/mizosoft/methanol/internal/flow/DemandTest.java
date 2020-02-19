@@ -1,7 +1,5 @@
 /*
- * MIT License
- *
- * Copyright (c) 2019 Moataz Abdelnasser
+ * Copyright (c) 2019, 2020 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +22,10 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 

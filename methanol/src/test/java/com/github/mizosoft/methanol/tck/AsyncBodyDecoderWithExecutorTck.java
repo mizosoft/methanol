@@ -1,7 +1,5 @@
 /*
- * MIT License
- *
- * Copyright (c) 2019 Moataz Abdelnasser
+ * Copyright (c) 2019, 2020 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,10 +22,9 @@
 
 package com.github.mizosoft.methanol.tck;
 
+import java.util.concurrent.Executor;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.testng.annotations.Test;
-
-import java.util.concurrent.Executor;
 
 @Test
 public class AsyncBodyDecoderWithExecutorTck extends AsyncBodyDecoderTck {
