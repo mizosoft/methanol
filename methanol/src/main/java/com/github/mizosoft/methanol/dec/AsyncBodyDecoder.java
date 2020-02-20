@@ -109,6 +109,11 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
     prefetchThreshold = FlowSupport.prefetchThreshold();
   }
 
+  /** Returns the underlying {@code AsyncDecoder}. */
+  public AsyncDecoder asyncDecoder() {
+    return decoder;
+  }
+
   @Override
   public String encoding() {
     return decoder.encoding();
