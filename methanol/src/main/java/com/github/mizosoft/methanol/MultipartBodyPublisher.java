@@ -514,6 +514,7 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
         if (subscriber != null) {
           subscriber.clearUpstream(true);
         }
+        stop(); // Prevent further runs
       } else {
         // Logic is similar to AsyncBodyDecoder
 
