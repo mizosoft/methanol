@@ -58,8 +58,8 @@ public class Decode {
     IN_MANY_OUT_ONE(BUFFER_SIZE_MANY, 1),
     IN_ONE_OUT_ONE(1, 1);
 
-    int inSize;
-    int outSize;
+    final int inSize;
+    final int outSize;
 
     BuffSizeOption(int inSize, int outSize) {
       this.inSize = inSize;

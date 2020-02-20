@@ -56,7 +56,7 @@ final class IncrementalByteArraySource implements AsyncDecoder.ByteSource {
 
   @Override
   public long remaining() {
-    return buffer.remaining() + (limit - position);
+    return (long) buffer.remaining() + (limit - position);
   }
 
   @Override
