@@ -40,6 +40,7 @@ class AbstractConverterTest {
     assertTrue(converter.isCompatibleWith(MediaType.of("text", "plain")));
     assertTrue(converter.isCompatibleWith(MediaType.of("text", "html")));
     assertFalse(converter.isCompatibleWith(MediaType.of("application", "octet-stream")));
+    assertTrue(Set.of(MediaType.of("text", "*")).containsAll(converter.compatibleMediaTypes()));
   }
 
   @Test
@@ -50,6 +51,8 @@ class AbstractConverterTest {
     assertTrue(converter.isCompatibleWith(MediaType.of("application", "json")));
     assertTrue(converter.isCompatibleWith(MediaType.of("application", "*")));
     assertFalse(converter.isCompatibleWith(MediaType.of("application", "octet_stream")));
+    var types = Set.of(MediaType.of("text", "plain"), MediaType.of("application", "json"));
+    assertTrue(types.containsAll(converter.compatibleMediaTypes()));
   }
 
   @Test

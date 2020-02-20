@@ -63,6 +63,13 @@ public interface Converter {
    */
   boolean supportsType(TypeReference<?> type);
 
+  private static <C extends Converter> Optional<C> lookupConverter(
+      List<C> installed, TypeReference<?> type, @Nullable MediaType mediaType) {
+    return installed.stream()
+        .filter(c -> c.supportsType(type) && (mediaType == null || c.isCompatibleWith(mediaType)))
+        .findFirst();
+  }
+
   /** {@code Converter} specialization for serializing objects into request bodies. */
   interface OfRequest extends Converter {
 
@@ -167,12 +174,5 @@ public interface Converter {
     static Optional<OfResponse> getConverter(TypeReference<?> type, @Nullable MediaType mediaType) {
       return Converter.lookupConverter(installed(), type, mediaType);
     }
-  }
-
-  private static <C extends Converter> Optional<C> lookupConverter(
-      List<C> installed, TypeReference<?> type, @Nullable MediaType mediaType) {
-    return installed.stream()
-        .filter(c -> c.supportsType(type) && (mediaType == null || c.isCompatibleWith(mediaType)))
-        .findFirst();
   }
 }
