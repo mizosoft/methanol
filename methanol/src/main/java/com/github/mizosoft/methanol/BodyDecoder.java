@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.dec.DecoderFactoryFinder;
+import com.github.mizosoft.methanol.internal.spi.DecoderFactoryFinder;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.List;
 import java.util.Map;

@@ -20,12 +20,11 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.internal.spi;
 
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
-import com.github.mizosoft.methanol.internal.spi.ServiceCache;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
