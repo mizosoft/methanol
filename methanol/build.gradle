@@ -6,7 +6,7 @@ dependencies {
 }
 
 // compileTestJava still compiles from the module path
-rootProject.addReads([compileTestJava], 'methanol.testutils')
+addReads(compileTestJava, moduleName, 'methanol.testutils')
 
 tasks.withType(JavaCompile) {
   options.errorprone {

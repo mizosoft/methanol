@@ -22,8 +22,9 @@
 
 package com.github.mizosoft.methanol.internal.dec;
 
-import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
 
+import com.github.mizosoft.methanol.dec.AsyncDecoder;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.zip.DataFormatException;
@@ -67,7 +68,7 @@ abstract class ZLibDecoder implements AsyncDecoder {
     try {
       inflater.inflate(out);
     } catch (DataFormatException e) {
-      throw new ZipException(requireNonNull(e.getMessage(), "wrong deflate format"));
+      throw new ZipException(requireNonNullElse(e.getMessage(), "wrong deflate format"));
     }
   }
 

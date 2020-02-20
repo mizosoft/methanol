@@ -20,27 +20,37 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.testutils.dec;
 
-import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.dec.AsyncBodyDecoder;
-import java.net.http.HttpResponse.BodySubscriber;
-import java.util.concurrent.Executor;
+import com.github.mizosoft.methanol.dec.AsyncDecoder;
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 
-/** Convenient base class for deflate and gzip {@code BodyDecoder.Factory} providers. */
-abstract class ZLibBodyDecoderFactory implements BodyDecoder.Factory {
+final class ByteArraySink implements AsyncDecoder.ByteSink {
 
-  ZLibBodyDecoderFactory() {}
+  private final ByteBuffer buffer;
+  private final ByteArrayOutputStream dump;
 
-  abstract ZLibDecoder newDecoder();
-
-  @Override
-  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream) {
-    return new AsyncBodyDecoder<>(newDecoder(), downstream);
+  ByteArraySink(int bufferSize) {
+    buffer = ByteBuffer.allocate(bufferSize);
+    dump = new ByteArrayOutputStream();
   }
 
   @Override
-  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream, Executor executor) {
-    return new AsyncBodyDecoder<>(newDecoder(), downstream, executor);
+  public ByteBuffer currentSink() {
+    flush();
+    return buffer.clear();
+  }
+
+  byte[] toByteArray() {
+    flush();
+    return dump.toByteArray();
+  }
+
+  void flush() {
+    buffer.flip();
+    if (buffer.hasRemaining()) {
+      dump.write(buffer.array(), buffer.position(), buffer.limit());
+    }
   }
 }

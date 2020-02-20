@@ -25,9 +25,9 @@ package com.github.mizosoft.methanol.tck;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.dec.AsyncBodyDecoder;
+import com.github.mizosoft.methanol.dec.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.dec.AsyncBodyDecoder;
-import com.github.mizosoft.methanol.internal.dec.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Schedulable;
 import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTck.BufferListHandle;
@@ -122,8 +122,8 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
     // Just duplicate buffers to get a list
     return new BufferListHandle(
         Stream.generate(batch::duplicate)
-        .limit(BUFFERS_PER_LIST)
-        .collect(Collectors.toUnmodifiableList()));
+            .limit(BUFFERS_PER_LIST)
+            .collect(Collectors.toUnmodifiableList()));
   }
 
   @Override

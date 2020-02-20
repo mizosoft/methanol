@@ -3,4 +3,5 @@ module methanol.testutils {
   requires static org.checkerframework.checker.qual;
 
   exports com.github.mizosoft.methanol.testutils;
+  exports com.github.mizosoft.methanol.testutils.dec;
 }

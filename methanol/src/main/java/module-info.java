@@ -4,6 +4,7 @@ module methanol {
   requires static com.google.errorprone.annotations;
 
   exports com.github.mizosoft.methanol;
+  exports com.github.mizosoft.methanol.dec;
   exports com.github.mizosoft.methanol.convert;
   exports com.github.mizosoft.methanol.internal.flow to
       methanol.convert.jackson;

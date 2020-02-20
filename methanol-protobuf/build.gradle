@@ -9,7 +9,9 @@ dependencies {
   testImplementation project(':methanol-testutils')
 }
 
-rootProject.addReads([compileTestJava, test], 'methanol.testutils')
+[compileTestJava, test].each { task ->
+  addReads(task, moduleName, 'methanol.testutils')
+}
 
 protobuf {
   protoc {

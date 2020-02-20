@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.mizosoft.methanol.testutils.MockGzipMember;
 import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
+import com.github.mizosoft.methanol.testutils.dec.Decode;
+import com.github.mizosoft.methanol.testutils.dec.Decode.BuffSizeOption;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -73,16 +75,17 @@ class GzipDecoderTest extends ZLibDecoderTest {
     return gunzip(compressed);
   }
 
-  // gzip specific tests
+  // gzip-specific tests
+
   private void assertMemberDecodes(MockGzipMember member, BuffSizeOption sizeOption)
       throws IOException {
     byte[] compressed = member.getBytes();
-    assertArrayEquals(gunzip(compressed), decode(compressed, sizeOption));
+    assertArrayEquals(gunzip(compressed), Decode.decode(new GzipDecoder(), compressed, sizeOption));
   }
 
   @Test
   void decodesWithExtraField() throws IOException {
-    for (var so : BuffSizeOption.inOptions()) {
+    for (var so : inSizeOptions()) {
       var member = happyMember()
           .addExtraField(EXTRA_FIELD_SIZE)
           .build();
@@ -92,7 +95,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
 
   @Test
   void decodesWithComment() throws IOException {
-    for (var so : BuffSizeOption.inOptions()) {
+    for (var so : inSizeOptions()) {
       var member = happyMember()
           .addComment(EXTRA_FIELD_SIZE)
           .build();
@@ -102,7 +105,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
 
   @Test
   void decodeWithFileName() throws IOException {
-    for (var so : BuffSizeOption.inOptions()) {
+    for (var so : inSizeOptions()) {
       var member = happyMember()
           .addFileName(EXTRA_FIELD_SIZE)
           .build();
@@ -112,7 +115,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
 
   @Test
   void decodeWithHcrc() throws IOException {
-    for (var so : BuffSizeOption.inOptions()) {
+    for (var so : inSizeOptions()) {
       var member = happyMember()
           .addHeaderChecksum()
           .build();
@@ -130,7 +133,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
 
   @Test
   void decodeWithAll() throws IOException {
-    for (var so : BuffSizeOption.inOptions()) {
+    for (var so : inSizeOptions()) {
       var member = enableAllOptions(happyMember(), EXTRA_FIELD_SIZE).build();
       assertMemberDecodes(member, so);
     }
@@ -141,7 +144,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
     byte[] gzipped = happyMember().build().getBytes();
     byte[] appended = Arrays.copyOfRange(gzipped, 0, gzipped.length + 10);
     for (var so : BuffSizeOption.values()) {
-      var t = assertThrows(IOException.class, () -> decode(appended, so));
+      var t = assertThrows(IOException.class, () -> Decode.decode(new GzipDecoder(), appended, so));
       assertEquals("gzip stream finished prematurely", t.getMessage());
     }
   }
@@ -151,7 +154,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
     byte[] gzipped = happyMember().build().getBytes();
     byte[] appended = Arrays.copyOfRange(gzipped, 0, gzipped.length + 30);
     for (var so : BuffSizeOption.values()) {
-      var t = assertThrows(IOException.class, () -> decode(appended, so));
+      var t = assertThrows(IOException.class, () -> Decode.decode(new GzipDecoder(), appended, so));
       assertEquals("gzip stream finished prematurely", t.getMessage());
     }
   }
@@ -160,7 +163,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
   void decodesConcat() throws IOException {
     var outBuff = new ByteArrayOutputStream();
     outBuff.write(happyMember().build().getBytes());
-    outBuff.write(BASE64.decode(good()));
+    outBuff.write(BASE64_DEC.decode(good()));
     outBuff.write(enableAllOptions(happyMember(), 100).build().getBytes());
     //noinspection EmptyTryBlock
     try (var ignored = new GZIPOutputStream(outBuff)) {
@@ -171,7 +174,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
     }
     byte[] multiGzipped = outBuff.toByteArray();
     for (var so : BuffSizeOption.values()) {
-      byte[] decoded = decode(multiGzipped, so);
+      byte[] decoded = Decode.decode(new GzipDecoder(), multiGzipped, so);
       assertArrayEquals(gunzip(multiGzipped), decoded);
     }
   }
@@ -183,8 +186,9 @@ class GzipDecoderTest extends ZLibDecoderTest {
     var member = happyMember()
         .corrupt(CorruptionMode.MAGIC, 0xabcd)
         .build();
-    for (var so : BuffSizeOption.inOptions()) {
-      var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
+    for (var so : inSizeOptions()) {
+      var t = assertThrows(ZipException.class,
+          () -> Decode.decode(new GzipDecoder(), member.getBytes(), so));
       assertEquals("not in gzip format; expected: 0x8b1f, found: 0xabcd", t.getMessage());
     }
   }
@@ -194,8 +198,9 @@ class GzipDecoderTest extends ZLibDecoderTest {
     var member = happyMember()
         .corrupt(CorruptionMode.CM, 0x7) // Reserved cm
         .build();
-    for (var so : BuffSizeOption.inOptions()) {
-      var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
+    for (var so : inSizeOptions()) {
+      var t = assertThrows(ZipException.class,
+          () -> Decode.decode(new GzipDecoder(), member.getBytes(), so));
       assertEquals("unsupported compression method; expected: 0x8, found: 0x7", t.getMessage());
     }
   }
@@ -205,8 +210,9 @@ class GzipDecoderTest extends ZLibDecoderTest {
     var member = happyMember()
         .corrupt(CorruptionMode.FLG, 0xE0) // Reserved flags
         .build();
-    for (var so : BuffSizeOption.inOptions()) {
-      var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
+    for (var so : inSizeOptions()) {
+      var t = assertThrows(ZipException.class,
+          () -> Decode.decode(new GzipDecoder(), member.getBytes(), so));
       assertEquals("unsupported flags: 0xe0", t.getMessage());
     }
   }
@@ -220,8 +226,9 @@ class GzipDecoderTest extends ZLibDecoderTest {
     var member = happyMember()
         .corrupt(CorruptionMode.CRC32, (int) badVal)
         .build();
-    for (var so : BuffSizeOption.inOptions()) {
-      var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
+    for (var so : inSizeOptions()) {
+      var t = assertThrows(ZipException.class,
+          () -> Decode.decode(new GzipDecoder(), member.getBytes(), so));
       var msg = format("corrupt gzip stream (CRC32); expected: %#x, found: %#x", goodVal, badVal);
       assertEquals(msg, t.getMessage());
     }
@@ -234,8 +241,9 @@ class GzipDecoderTest extends ZLibDecoderTest {
     var member = happyMember()
         .corrupt(CorruptionMode.ISIZE, (int) badVal)
         .build();
-    for (var so : BuffSizeOption.inOptions()) {
-      var t = assertThrows(ZipException.class, () -> decode(member.getBytes(), so));
+    for (var so : inSizeOptions()) {
+      var t = assertThrows(ZipException.class,
+          () -> Decode.decode(new GzipDecoder(), member.getBytes(), so));
       var msg = format("corrupt gzip stream (ISIZE); expected: %#x, found: %#x", goodVal, badVal);
       assertEquals(msg, t.getMessage());
     }
@@ -252,5 +260,9 @@ class GzipDecoderTest extends ZLibDecoderTest {
 
   private static MockGzipMember.Builder happyMember() {
     return MockGzipMember.newBuilder().data(HAPPY_TEXT.getBytes(US_ASCII));
+  }
+
+  private static BuffSizeOption[] inSizeOptions() {
+    return new BuffSizeOption[] {BuffSizeOption.IN_ONE_OUT_MANY, BuffSizeOption.IN_MANY_OUT_MANY};
   }
 }

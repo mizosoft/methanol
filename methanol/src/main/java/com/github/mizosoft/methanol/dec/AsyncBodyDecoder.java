@@ -20,14 +20,14 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.dec;
 
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyDecoder;
+import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSink;
+import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSource;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.dec.AsyncDecoder.ByteSink;
-import com.github.mizosoft.methanol.internal.dec.AsyncDecoder.ByteSource;
 import com.github.mizosoft.methanol.internal.flow.Demand;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.SchedulableSubscription;
@@ -53,7 +53,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @param <T> the body type
  */
-// TODO consider making this API public (if native brotli decoder is to be added)
 public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
   private static final String BUFFER_SIZE_PROP = "com.github.mizosoft.methanol.dec.bufferSize";
@@ -208,6 +207,14 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       error = t;
     }
     signalDownstream(error);
+  }
+
+  static int getBufferSize() {
+    int bufferSize = Utils.getIntProperty(BUFFER_SIZE_PROP, DEFAULT_BUFFER_SIZE);
+    if (bufferSize <= 0) {
+      bufferSize = DEFAULT_BUFFER_SIZE;
+    }
+    return bufferSize;
   }
 
   private static final class UpstreamReference {
@@ -463,13 +470,5 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       }
       return 0; // Cancelled or completed so it doesn't matter what was emitted
     }
-  }
-
-  static int getBufferSize() {
-    int bufferSize = Utils.getIntProperty(BUFFER_SIZE_PROP, DEFAULT_BUFFER_SIZE);
-    if (bufferSize <= 0) {
-      bufferSize = DEFAULT_BUFFER_SIZE;
-    }
-    return bufferSize;
   }
 }
