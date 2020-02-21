@@ -64,7 +64,7 @@ class AbstractConverterTest {
       }
     };
     assertThrows(UnsupportedOperationException.class,
-        () -> converter.requireSupport(TypeReference.from(Set.class)));
+        () -> converter.requireSupport(Set.class));
   }
 
   @Test

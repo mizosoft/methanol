@@ -71,6 +71,14 @@ public abstract class AbstractConverter implements Converter {
   }
 
   /**
+   * @throws UnsupportedOperationException if the converter doesn't {@link
+   *     Converter#supportsType(TypeReference) support} the given raw type.
+   */
+  protected void requireSupport(Class<?> type) {
+    requireSupport(TypeReference.from(type));
+  }
+
+  /**
    * @throws UnsupportedOperationException if the converter is not {@link
    *     Converter#isCompatibleWith(MediaType) compatible} the given type.
    */

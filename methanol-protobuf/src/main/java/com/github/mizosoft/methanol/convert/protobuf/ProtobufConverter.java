@@ -65,7 +65,7 @@ abstract class ProtobufConverter extends AbstractConverter {
     @Override
     public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
       requireNonNull(object);
-      requireSupport(TypeReference.from(object.getClass()));
+      requireSupport(object.getClass());
       requireCompatibleOrNull(mediaType);
       MessageLite message = (MessageLite) object;
       return BodyPublishers.ofByteArray(message.toByteArray());

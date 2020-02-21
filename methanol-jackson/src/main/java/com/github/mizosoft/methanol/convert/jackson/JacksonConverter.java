@@ -88,7 +88,7 @@ abstract class JacksonConverter extends AbstractConverter {
     @Override
     public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
       requireNonNull(object);
-      requireSupport(TypeReference.from(object.getClass()));
+      requireSupport(object.getClass());
       requireCompatibleOrNull(mediaType);
       ObjectWriter objWriter = mapper.writerFor(object.getClass());
       ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
