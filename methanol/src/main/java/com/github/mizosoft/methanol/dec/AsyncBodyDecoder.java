@@ -42,6 +42,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -357,9 +358,11 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
           }
         }
         List<ByteBuffer> slice = sinkBuffers.subList(0, snapshotSize);
-        List<ByteBuffer> snapshot = List.copyOf(slice);
-        slice.clear(); // Drop references
+        List<ByteBuffer> snapshot = slice.stream()
+            .map(ByteBuffer::asReadOnlyBuffer)
+            .collect(Collectors.toUnmodifiableList());
         snapshot.forEach(ByteBuffer::flip); // Flip for downstream to read
+        slice.clear(); // Drop references
         return snapshot;
       }
       return List.of();
