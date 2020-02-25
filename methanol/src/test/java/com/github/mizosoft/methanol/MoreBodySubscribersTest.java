@@ -24,6 +24,8 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MoreBodySubscribers.fromAsyncSubscriber;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofByteChannel;
+import static com.github.mizosoft.methanol.MoreBodySubscribers.ofDeferredObject;
+import static com.github.mizosoft.methanol.MoreBodySubscribers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofReader;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptedly;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
@@ -39,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -51,19 +54,34 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.LongStream;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
 class MoreBodySubscribersTest {
+
+  private Executor executor;
+
+  @BeforeEach
+  void setupExecutor() {
+    executor = Executors.newFixedThreadPool(8);
+  }
+
+  @AfterEach
+  void shutdownExecutor() {
+    TestUtils.shutdown(executor);
+  }
 
   @Test
   void ofByteChannel_isCompleted() {
@@ -286,6 +304,45 @@ class MoreBodySubscribersTest {
     badDownstream.assertOnErrored(TestException.class);
   }
 
+  @Test
+  void ofObject_stringBody() {
+    var sample = "sample string";
+    var publisher = asciiPublisherOf(sample, sample.length(), 1);
+    var subscriber = ofObject(TypeReference.from(String.class), null);
+    publisher.subscribe(subscriber);
+    assertEquals(sample, getBody(subscriber));
+  }
+
+  @Test
+  void ofDeferredObject_stringBody() {
+    var sample = "sample string";
+    var publisher = asciiPublisherOf(sample, sample.length(), 1);
+    var subscriber = ofDeferredObject(TypeReference.from(String.class), MediaType.of("text", "plain"));
+    assertNotNull(toFuture(subscriber).getNow(null));
+    publisher.subscribe(subscriber);
+    var supplier = getBody(subscriber);
+    assertEquals(sample, supplier.get());
+  }
+
+  @Test
+  void ofObject_ofDeferredObject_unsupported() {
+    class Misplaced {}
+    assertThrows(UnsupportedOperationException.class,
+        () -> ofObject(TypeReference.from(Misplaced.class), null));
+    assertThrows(UnsupportedOperationException.class,
+        () -> ofObject(TypeReference.from(String.class), MediaType.parse("application/json")));
+    assertThrows(UnsupportedOperationException.class,
+        () -> ofDeferredObject(TypeReference.from(Misplaced.class), null));
+    assertThrows(UnsupportedOperationException.class,
+        () -> ofDeferredObject(TypeReference.from(String.class), MediaType.parse("application/json")));
+  }
+
+  private Publisher<List<ByteBuffer>> asciiPublisherOf(
+      String str, int buffSize, int buffsPerList) {
+    return FlowAdapters.toFlowPublisher(new AsyncIterablePublisher<>(
+        iterableOf(US_ASCII.encode(str), buffSize, buffsPerList), executor));
+  }
+
   private static <T> CompletableFuture<T> toFuture(BodySubscriber<T> s) {
     return s.getBody().toCompletableFuture();
   }
@@ -300,12 +357,6 @@ class MoreBodySubscribersTest {
         .limit(len)
         .collect(StringBuilder::new, (sb, i) -> sb.append((char) i), StringBuilder::append)
         .toString();
-  }
-
-  private static Publisher<List<ByteBuffer>> asciiPublisherOf(
-      String str, int buffSize, int buffsPerList) {
-    return FlowAdapters.toFlowPublisher(new AsyncIterablePublisher<>(
-        iterableOf(US_ASCII.encode(str), buffSize, buffsPerList), ForkJoinPool.commonPool()));
   }
 
   private static Iterable<List<ByteBuffer>> iterableOf(
