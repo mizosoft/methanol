@@ -11,7 +11,7 @@ dependencies {
 
 test {
   moduleOptions {
-    def pkg ='com.github.mizosoft.methanol.convert.jackson'
+    def pkg ='com.github.mizosoft.methanol.adapter.jackson'
     addOpens = [("$moduleName/$pkg" as String): 'com.fasterxml.jackson.databind']
   }
 }

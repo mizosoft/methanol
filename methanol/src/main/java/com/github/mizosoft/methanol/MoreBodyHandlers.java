@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.internal.extensions.BasicResponseInfo;
 import java.io.Reader;
 import java.net.http.HttpHeaders;
@@ -103,8 +104,8 @@ public class MoreBodyHandlers {
    *
    * @param type the raw type of {@code T}
    * @param <T> the response body type
-   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *     given type is installed
+   * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type is
+   *     installed
    */
   public static <T> BodyHandler<T> ofObject(Class<T> type) {
     return ofObject(TypeReference.from(type));
@@ -117,8 +118,8 @@ public class MoreBodyHandlers {
    *
    * @param type a {@code TypeReference} representing {@code T}
    * @param <T> the response body type
-   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *     given type is installed
+   * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type is
+   *     installed
    */
   public static <T> BodyHandler<T> ofObject(TypeReference<T> type) {
     requireSupport(type);
@@ -132,8 +133,8 @@ public class MoreBodyHandlers {
    *
    * @param type the raw type of {@code T}
    * @param <T> the response body type
-   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *     given type is installed
+   * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type is
+   *     installed
    */
   public static <T> BodyHandler<Supplier<T>> ofDeferredObject(Class<T> type) {
     return ofDeferredObject(TypeReference.from(type));
@@ -146,8 +147,8 @@ public class MoreBodyHandlers {
    *
    * @param type a {@code TypeReference} representing {@code T}
    * @param <T> the response body type
-   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *     given type is installed
+   * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type is
+   *     installed
    */
   public static <T> BodyHandler<Supplier<T>> ofDeferredObject(TypeReference<T> type) {
     requireSupport(type);
@@ -222,10 +223,10 @@ public class MoreBodyHandlers {
         .orElse(StandardCharsets.UTF_8);
   }
 
-  // Require that at least a converter exists for the given type
+  // Require that at least an adapter exists for the given type
   // (the media type cannot be known until the headers arrive)
   private static void requireSupport(TypeReference<?> type) {
-    Converter.OfResponse.getConverter(type, null)
+    Decoder.getDecoder(type, null)
         .orElseThrow(
             () ->
                 new UnsupportedOperationException(

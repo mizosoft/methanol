@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import com.github.mizosoft.methanol.internal.extensions.ForwardingMimeBodyPublisher;
 import java.net.http.HttpRequest.BodyPublisher;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -43,20 +44,20 @@ public class MoreBodyPublishers {
   }
 
   /**
-   * Returns a {@code BodyPublisher} as specified by {@link Converter.OfRequest#toBody(Object,
-   * MediaType)} using an installed converter.
+   * Returns a {@code BodyPublisher} as specified by {@link Encoder#toBody(Object, MediaType)} using
+   * an installed encoder.
    *
    * @param object the object
    * @param mediaType the media type
-   * @throws UnsupportedOperationException if no {@code Converter.OfRequest} that supports the
-   *     runtime type of the given object or the given media type is installed
+   * @throws UnsupportedOperationException if no {@code } that supports the runtime type of the
+   *     given object or the given media type is installed
    */
   public static BodyPublisher ofObject(Object object, @Nullable MediaType mediaType) {
     TypeReference<?> runtimeType = TypeReference.from(object.getClass());
-    Converter.OfRequest converter =
-        Converter.OfRequest.getConverter(runtimeType, mediaType)
+    Encoder encoder =
+        Encoder.getEncoder(runtimeType, mediaType)
             .orElseThrow(() -> unsupportedConversion(runtimeType, mediaType));
-    return converter.toBody(runtimeType, mediaType);
+    return encoder.toBody(runtimeType, mediaType);
   }
 
   private static UnsupportedOperationException unsupportedConversion(

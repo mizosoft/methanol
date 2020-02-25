@@ -5,14 +5,14 @@ module methanol {
 
   exports com.github.mizosoft.methanol;
   exports com.github.mizosoft.methanol.dec;
-  exports com.github.mizosoft.methanol.convert;
+  exports com.github.mizosoft.methanol.adapter;
   exports com.github.mizosoft.methanol.internal.flow to
-      methanol.convert.jackson;
+      methanol.adapter.jackson;
 
   uses com.github.mizosoft.methanol.BodyDecoder.Factory;
 
-  uses com.github.mizosoft.methanol.Converter.OfRequest;
-  uses com.github.mizosoft.methanol.Converter.OfResponse;
+  uses com.github.mizosoft.methanol.BodyAdapter.Encoder;
+  uses com.github.mizosoft.methanol.BodyAdapter.Decoder;
 
   provides com.github.mizosoft.methanol.BodyDecoder.Factory with
       com.github.mizosoft.methanol.internal.dec.DeflateBodyDecoderFactory,

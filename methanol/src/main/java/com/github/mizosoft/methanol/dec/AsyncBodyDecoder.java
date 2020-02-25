@@ -358,9 +358,10 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
           }
         }
         List<ByteBuffer> slice = sinkBuffers.subList(0, snapshotSize);
-        List<ByteBuffer> snapshot = slice.stream()
-            .map(ByteBuffer::asReadOnlyBuffer)
-            .collect(Collectors.toUnmodifiableList());
+        List<ByteBuffer> snapshot =
+            slice.stream()
+                .map(ByteBuffer::asReadOnlyBuffer)
+                .collect(Collectors.toUnmodifiableList());
         snapshot.forEach(ByteBuffer::flip); // Flip for downstream to read
         slice.clear(); // Drop references
         return snapshot;

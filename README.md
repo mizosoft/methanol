@@ -59,7 +59,7 @@ HttpResponse<String> response  = client.send(request, BodyHandlers.ofString());
 ```
 
 ### Converting the response body into a Java object
-Deserialize the response body into a Java object (e.g. `GitHubUser`) using an installed `Converter.OfResponse` for JSON.
+Decode the response body into a Java object (e.g. `GitHubUser`) using an installed `BodyAdapter.Decoder` for JSON.
 
 ```java
 var client = HttpClient.newHttpClient();

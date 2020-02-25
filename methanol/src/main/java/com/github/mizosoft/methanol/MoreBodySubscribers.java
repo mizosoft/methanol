@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.internal.extensions.AsyncSubscriberAdapter;
 import com.github.mizosoft.methanol.internal.extensions.ByteChannelSubscriber;
 import java.io.Reader;
@@ -95,37 +96,36 @@ public class MoreBodySubscribers {
 
   /**
    * Returns a {@code BodySubscriber} of {@code T} as specified by {@link
-   * Converter.OfResponse#toObject(TypeReference, MediaType)} using an installed converter.
+   * Decoder#toObject(TypeReference, MediaType)} using an installed decoder.
    *
    * @param type a {@code TypeReference} representing {@code T}
    * @param mediaType the media type
    * @param <T> the response body type
-   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *     given type or media type is installed
+   * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type or
+   *     media type is installed
    */
   public static <T> BodySubscriber<T> ofObject(
       TypeReference<T> type, @Nullable MediaType mediaType) {
-    return requireConverter(type, mediaType).toObject(type, mediaType);
+    return requireDecoder(type, mediaType).toObject(type, mediaType);
   }
 
   /**
    * Returns a {@code BodySubscriber} of {@code Supplier<T>} as specified by {@link
-   * Converter.OfResponse#toDeferredObject(TypeReference, MediaType)} using an installed converter.
+   * Decoder#toDeferredObject(TypeReference, MediaType)} using an installed decoder.
    *
    * @param type a {@code TypeReference} representing {@code T}
    * @param mediaType the media type
    * @param <T> the response body type
-   * @throws UnsupportedOperationException if no {@code Converter.OfResponse} that supports the
-   *     given type or media type is installed
+   * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type or
+   *     media type is installed
    */
   public static <T> BodySubscriber<Supplier<T>> ofDeferredObject(
       TypeReference<T> type, @Nullable MediaType mediaType) {
-    return requireConverter(type, mediaType).toDeferredObject(type, mediaType);
+    return requireDecoder(type, mediaType).toDeferredObject(type, mediaType);
   }
 
-  private static Converter.OfResponse requireConverter(
-      TypeReference<?> type, @Nullable MediaType mediaType) {
-    return Converter.OfResponse.getConverter(type, mediaType)
+  private static Decoder requireDecoder(TypeReference<?> type, @Nullable MediaType mediaType) {
+    return Decoder.getDecoder(type, mediaType)
         .orElseThrow(() -> unsupportedConversion(type, mediaType));
   }
 
