@@ -100,7 +100,7 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       } catch (IOException ioe) {
         throw new AssertionError(ioe); // writing to a memory buffer
       }
-      return BodyPublishers.ofByteArray(outBuffer.toByteArray());
+      return attachMediaType(BodyPublishers.ofByteArray(outBuffer.toByteArray()), mediaType);
     }
   }
 

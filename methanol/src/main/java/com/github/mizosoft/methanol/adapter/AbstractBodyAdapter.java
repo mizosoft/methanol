@@ -26,7 +26,10 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.MimeBodyPublisher;
+import com.github.mizosoft.methanol.MoreBodyPublishers;
 import com.github.mizosoft.methanol.TypeReference;
+import java.net.http.HttpRequest.BodyPublisher;
 import java.nio.charset.Charset;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -94,5 +97,19 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
    */
   public static Charset charsetOrDefault(@Nullable MediaType mediaType, Charset defaultCharset) {
     return mediaType != null ? mediaType.charsetOrDefault(defaultCharset) : defaultCharset;
+  }
+
+  /**
+   * Converts the given publisher into a {@link MimeBodyPublisher} only if the given media type is
+   * not {@code null} or {@link MediaType#hasWildcard() has a wildcard}, otherwise the given
+   * publisher is returned.
+   */
+  public static BodyPublisher attachMediaType(
+      BodyPublisher publisher, @Nullable MediaType mediaType) {
+    requireNonNull(publisher);
+    if (mediaType != null && !mediaType.hasWildcard()) {
+      return MoreBodyPublishers.ofMediaType(publisher, mediaType);
+    }
+    return publisher;
   }
 }

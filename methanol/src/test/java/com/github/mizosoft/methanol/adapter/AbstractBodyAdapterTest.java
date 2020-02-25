@@ -22,12 +22,16 @@
 
 package com.github.mizosoft.methanol.adapter;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.MimeBodyPublisher;
 import com.github.mizosoft.methanol.TypeReference;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -72,6 +76,20 @@ class AbstractBodyAdapterTest {
     var adapter = new BodyAdapterImpl(MediaType.of("text", "plain"));
     assertThrows(UnsupportedOperationException.class,
         () -> adapter.requireCompatibleOrNull(MediaType.of("application", "json")));
+  }
+
+  @Test
+  void attachMediaType() {
+    var textPlain = MediaType.of("text", "plain");
+    var source = BodyPublishers.ofString("hello there");
+    var withMediaType = AbstractBodyAdapter.attachMediaType(source, textPlain);
+    var withoutMediaType = AbstractBodyAdapter.attachMediaType(source, null);
+    var withoutMediaType2 = AbstractBodyAdapter.attachMediaType(
+        source, MediaType.of("text", "*"));
+    assertTrue(withMediaType instanceof MimeBodyPublisher);
+    assertEquals(textPlain, ((MimeBodyPublisher) withMediaType).mediaType());
+    assertSame(source, withoutMediaType);
+    assertSame(source, withoutMediaType2);
   }
 
   private static final class BodyAdapterImpl extends AbstractBodyAdapter {

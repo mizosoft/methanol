@@ -45,6 +45,6 @@ public class CharSequenceEncoder extends TextBodyAdapter implements BodyAdapter.
     requireNonNull(object);
     requireSupport(object.getClass());
     requireCompatibleOrNull(mediaType);
-    return BodyPublishers.ofString(object.toString());
+    return attachMediaType(BodyPublishers.ofString(object.toString()), mediaType);
   }
 }

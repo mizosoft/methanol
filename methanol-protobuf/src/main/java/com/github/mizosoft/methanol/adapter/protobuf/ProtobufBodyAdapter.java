@@ -68,7 +68,7 @@ abstract class ProtobufBodyAdapter extends AbstractBodyAdapter {
       requireSupport(object.getClass());
       requireCompatibleOrNull(mediaType);
       MessageLite message = (MessageLite) object;
-      return BodyPublishers.ofByteArray(message.toByteArray());
+      return attachMediaType(BodyPublishers.ofByteArray(message.toByteArray()), mediaType);
     }
   }
 
