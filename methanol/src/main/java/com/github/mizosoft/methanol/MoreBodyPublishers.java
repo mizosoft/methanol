@@ -57,7 +57,7 @@ public class MoreBodyPublishers {
     Encoder encoder =
         Encoder.getEncoder(runtimeType, mediaType)
             .orElseThrow(() -> unsupportedConversion(runtimeType, mediaType));
-    return encoder.toBody(runtimeType, mediaType);
+    return encoder.toBody(object, mediaType);
   }
 
   private static UnsupportedOperationException unsupportedConversion(

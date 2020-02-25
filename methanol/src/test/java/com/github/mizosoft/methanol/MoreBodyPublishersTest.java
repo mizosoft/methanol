@@ -22,11 +22,14 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.MoreBodyPublishers.ofObject;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.mizosoft.methanol.testutils.BodyCollector;
+import java.nio.CharBuffer;
 import org.junit.jupiter.api.Test;
 
 class MoreBodyPublishersTest {
@@ -39,5 +42,19 @@ class MoreBodyPublishersTest {
         MoreBodyPublishers.ofMediaType(ofString(content), plainText);
     assertEquals(plainText, publisher.mediaType());
     assertEquals(content, US_ASCII.decode(BodyCollector.collect(publisher)).toString());
+  }
+
+  @Test
+  void ofObject_charBufferBody() {
+    var content = CharBuffer.wrap("<p>very important text</p>");
+    var body = ofObject(content, MediaType.parse("text/html"));
+    assertEquals(content, US_ASCII.decode(BodyCollector.collect(body)));
+  }
+
+  @Test
+  void ofObject_unsupported() {
+    assertThrows(UnsupportedOperationException.class, () -> ofObject(5555, null));
+    assertThrows(UnsupportedOperationException.class,
+        () -> ofObject("blah", MediaType.parse("application/json")));
   }
 }
