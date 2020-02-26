@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.testutils;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -95,5 +97,21 @@ public class TestUtils {
     dst.put(src);
     src.limit(srcLimit);
     return toCopy;
+  }
+
+  public static byte[] load(Class<?> caller, String location) {
+    var in = caller.getResourceAsStream(location);
+    if (in == null) {
+      throw new AssertionError("couldn't find resource: " + location);
+    }
+    try (in) {
+      return in.readAllBytes();
+    } catch (IOException ioe) {
+      throw new UncheckedIOException(ioe);
+    }
+  }
+
+  public static String loadAscii(Class<?> caller, String location) {
+    return US_ASCII.decode(ByteBuffer.wrap(load(caller, location))).toString();
   }
 }

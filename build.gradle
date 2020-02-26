@@ -10,7 +10,8 @@ buildscript {
         'protobuf'        : '3.11.3',
         'checkstyle'      : '8.29',
         'errorprone'      : '2.3.4',
-        'brotliDec'       : '0.1.2'
+        'brotliDec'       : '0.1.2',
+        'okhttp'          : '4.4.0',
     ]
 
     deps = [
@@ -27,7 +28,10 @@ buildscript {
         'checkstyle'            : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}",
         'errorprone'            : "com.google.errorprone:error_prone_core:${versions.errorprone}",
         'errorproneAnnotations' : "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
-        'brotliDec'             : "org.brotli:dec:${versions.brotliDec}"
+        'brotliDec'             : "org.brotli:dec:${versions.brotliDec}",
+        'mockWebServer'         : "com.squareup.okhttp3:mockwebserver:${versions.okhttp}",
+        'reactiveStreams'       : "org.reactivestreams:reactive-streams:${versions.reactiveStreams}",
+        'reactiveStreamsExamples'       : "org.reactivestreams:reactive-streams-examples:${versions.reactiveStreams}",
     ]
 
     // Make current module read given module for the given tasks

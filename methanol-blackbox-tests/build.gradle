@@ -1,0 +1,31 @@
+plugins {
+  id 'com.google.protobuf' version '0.8.11'
+}
+
+dependencies {
+  implementation project(':methanol')
+  implementation project(':methanol-jackson')
+  implementation project(':methanol-protobuf')
+  implementation project(':methanol-brotli')
+  implementation project(':methanol-testutils')
+
+  testImplementation deps.mockWebServer
+  testImplementation deps.brotliDec
+  testImplementation deps.reactiveStreams
+  testImplementation deps.reactiveStreamsExamples
+}
+
+[compileTestJava, test].each { task ->
+  addReads(task, moduleName, 'okhttp3.mockwebserver')
+  addReads(task, moduleName, 'org.reactivestreams')
+}
+
+protobuf {
+  protoc {
+    artifact = deps.protobufCompiler
+  }
+}
+
+tasks.withType(Checkstyle) {
+  enabled = false
+}

@@ -44,6 +44,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
@@ -51,6 +52,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.api.io.TempDir;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
@@ -178,26 +180,24 @@ class MultipartBodyPublisherTest {
   }
 
   @Test
-  void serializeFileParts() throws IOException  {
-    var crazyExtension = "impossible.to.be.detected.by.anything.else";
-    var crazyFile = Files.createTempFile("", "." + crazyExtension);
-    var normalFile = Files.createTempFile("", ".txt");
+  void serializeFileParts(@TempDir Path tempDir) throws IOException  {
+    var crazyFile = Files.createFile(tempDir.resolve("crazy_file.impossible.to.be.detected.by.anything.else"));
+    var normalFile = Files.createFile(tempDir.resolve("normal_file.txt"));
+    RegistryFileTypeDetector.register(
+        "impossible.to.be.detected.by.anything.else", MediaType.parse("application/x-bruh"));
+    Files.writeString(crazyFile, "ey yo i'm trippin");
+    Files.writeString(normalFile, "we live in a society");
     var expected = "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"crazy_file_field\"; filename=\""
-        + crazyFile.getFileName().toString() + "\"\r\n"
+        + "Content-Disposition: form-data; name=\"crazy_file_field\"; filename=\"crazy_file.impossible.to.be.detected.by.anything.else\"\r\n"
         + "Content-Type: application/x-bruh\r\n"
         + "\r\n"
         + "ey yo i'm trippin\r\n"
         + "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"normal_file_field\"; filename=\""
-        + normalFile.getFileName().toString() + "\"\r\n"
+        + "Content-Disposition: form-data; name=\"normal_file_field\"; filename=\"normal_file.txt\"\r\n"
         + "Content-Type: text/plain\r\n"
         + "\r\n"
         + "we live in a society\r\n"
         + "--cool_boundary--\r\n";
-    Files.writeString(crazyFile, "ey yo i'm trippin");
-    Files.writeString(normalFile, "we live in a society");
-    RegistryFileTypeDetector.register(crazyExtension, MediaType.parse("application/x-bruh"));
     var body = newBuilder()
         .boundary("cool_boundary")
         .filePart("crazy_file_field", crazyFile)
