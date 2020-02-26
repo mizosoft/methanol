@@ -97,7 +97,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
     } else {
       // Upstream is trying to overflow us and somebody should know that
       upstream.cancel();
-      signalCompletion(new IllegalStateException("missing back-pressure: queue overflow"));
+      signalCompletion(new IllegalStateException("missing back-pressure: queue is overflowed"));
     }
   }
 
@@ -145,8 +145,6 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
   /** Wrapper over an atomic reference to upstream subscription. */
   private static final class UpstreamRef {
 
-    private static final Subscription CLEARED = FlowSupport.NOOP_SUBSCRIPTION;
-
     private final AtomicReference<@Nullable Subscription> ref;
 
     UpstreamRef() {
@@ -163,11 +161,11 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
     }
 
     void clear() {
-      ref.set(CLEARED);
+      ref.set(FlowSupport.NOOP_SUBSCRIPTION);
     }
 
     void cancel() {
-      Subscription s = ref.getAndSet(CLEARED);
+      Subscription s = ref.getAndSet(FlowSupport.NOOP_SUBSCRIPTION);
       if (s != null) {
         s.cancel();
       }
@@ -197,11 +195,11 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
     private @Nullable ByteBuffer pollNext() {
       ByteBuffer next;
       while ((next = nextAvailable()) == null) {
-        List<ByteBuffer> l = upstreamBuffers.poll(); // Do not block
-        if (l == null) {
+        List<ByteBuffer> buffers = upstreamBuffers.poll(); // Do not block
+        if (buffers == null) {
           return null;
         }
-        cached.addAll(l);
+        cached.addAll(buffers);
         decrementWindow();
       }
       return next;
@@ -215,8 +213,8 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
       ByteBuffer next;
       while ((next = nextAvailable()) == null) {
         try {
-          List<ByteBuffer> l = upstreamBuffers.take();
-          cached.addAll(l);
+          List<ByteBuffer> buffers = upstreamBuffers.take();
+          cached.addAll(buffers);
           decrementWindow();
         } catch (InterruptedException e) {
           // We are interruptible so handle this gracefully.
@@ -232,13 +230,12 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
      * if ran out of cached buffers.
      */
     private @Nullable ByteBuffer nextAvailable() {
-      List<ByteBuffer> c = cached;
-      while (c.size() > 0) {
-        ByteBuffer peek = c.get(0);
+      while (cached.size() > 0) {
+        ByteBuffer peek = cached.get(0);
         if (peek.hasRemaining() || peek == TOMBSTONE) {
           return peek;
         }
-        c.remove(0);
+        cached.remove(0);
       }
       return null;
     }
@@ -263,14 +260,13 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
         while (dst.hasRemaining()) {
           ByteBuffer next = read > 0 ? pollNext() : takeNext(); // Only block once
           throwIfPending(); // Might be an error signal
-          if (next != null) {
-            if (next == TOMBSTONE) { // Normal completion
-              if (read == 0) {
-                // Only expose EOF if no bytes were copied
-                read = -1;
-              }
-              break;
+          if (next == TOMBSTONE) { // Normal completion
+            if (read == 0) {
+              // Only expose EOF if no bytes were copied
+              read = -1;
             }
+            break;
+          } else if (next != null) {
             read += Utils.copyRemaining(next, dst);
           } else {
             // Either no buffers are available or interrupted if this is the
