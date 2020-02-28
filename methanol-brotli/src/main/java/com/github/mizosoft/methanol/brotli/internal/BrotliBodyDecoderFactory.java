@@ -38,6 +38,7 @@ public class BrotliBodyDecoderFactory implements BodyDecoder.Factory {
    * class.
    *
    * @throws IOException if the native brotli library cannot be loaded
+   * @throws UnsupportedOperationException if the current machine is not recognized
    */
   public BrotliBodyDecoderFactory() throws IOException {
     BrotliLoader.ensureLoaded();

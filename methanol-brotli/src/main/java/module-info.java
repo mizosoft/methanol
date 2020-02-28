@@ -1,5 +1,6 @@
 module methanol.brotli {
   requires methanol;
+  requires java.logging;
   requires static org.checkerframework.checker.qual;
 
   provides com.github.mizosoft.methanol.BodyDecoder.Factory with
