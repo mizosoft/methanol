@@ -26,22 +26,27 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.BufferOverflowException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Helper class for loading brotli JNI bindings. */
+/** Helper class for loading brotli JNI and setting bundled dictionary. */
 class BrotliLoader {
 
   private static final String LINUX = "linux";
   private static final String WINDOWS = "windows";
   private static final String MAC_OS = "macos";
-  private static final String UNKNOWN = "unknown";
 
   // Maps arch path in jar to os.arch aliases
   private static final Map<String, Set<String>> ARCH_PATHS =
@@ -49,9 +54,17 @@ class BrotliLoader {
           "x86", Set.of("x86", "i386", "i486", "i586", "i686"),
           "x86-64" /* '-' and not '_' is used in arch path */, Set.of("x86_64", "amd64"));
 
-  static final String BASE_LIB_NAME = "brotlidecjni";
+  static final String BASE_LIB_NAME = "brotlijni";
   static final String ENTRY_DIR_PREFIX = BrotliLoader.class.getName() + "-";
   private static final String LIB_ROOT = "native";
+  private static final String DICT_PATH = "/data/dictionary.bin";
+
+  public static final int BROTLI_DICT_SIZE = 122784;
+  private static final byte[] BROTLI_DICT_SHA_256 =
+      new byte[] {
+        32, -28, 46, -79, -75, 17, -62, 24, 6, -44, -46, 39, -48, 126, 93, -48,
+        104, 119, -40, -50, 123, 58, -127, 127, 55, -113, 49, 54, 83, -13, 92, 112
+      };
 
   private static final Logger LOGGER = Logger.getLogger(BrotliLoader.class.getName());
 
@@ -61,20 +74,14 @@ class BrotliLoader {
     if (!loaded) {
       synchronized (BrotliLoader.class) {
         if (!loaded) {
+          ByteBuffer dictData = loadBrotliDict();
           LibEntry entry = extractLib();
-          Runtime.getRuntime()
-              .addShutdownHook(
-                  new Thread(
-                      () -> {
-                        try {
-                          entry.deleteIfExists();
-                        } catch (IOException ignored) {
-                          // An AccessDeniedException will ALWAYS be thrown
-                          // in windows so it might be annoying to log it
-                        }
-                      }));
+          entry.deleteOnExit();
           entry.loadLib();
-          loaded = true;
+          if (!CommonJNI.nativeSetDictionaryData(dictData)) {
+            throw new IOException("failed to set brotli dictionary");
+          }
+          loaded = true; // Mission accomplished!
         }
       }
     }
@@ -85,7 +92,7 @@ class BrotliLoader {
     String libPath = findLibPath(libName);
     URL libUrl = BrotliLoader.class.getResource(libPath);
     if (libUrl == null) {
-      throw new FileNotFoundException("couldn't find jar-bundled native library: " + libPath);
+      throw new FileNotFoundException("couldn't find brotli jni library: " + libPath);
     }
     Path tempDir = getTempDir();
     cleanStaleEntries(tempDir, libName);
@@ -134,40 +141,70 @@ class BrotliLoader {
             "com.github.mizosoft.methanol.brotli.tmpdir", System.getProperty("java.io.tmpdir")));
   }
 
-  // UNKNOWN is used as a fake enum
-  @SuppressWarnings({"StringEquality", "ReferenceEquality"})
-  private static String findLibPath(String libName) throws IOException {
+  private static String findLibPath(String libName) {
     String os = System.getProperty("os.name");
     String normalizedOs = normalizeOs(os.toLowerCase(Locale.ROOT));
-    if (normalizedOs == UNKNOWN) {
+    if (normalizedOs == null) {
       throw new UnsupportedOperationException("unrecognized OS: " + os);
     }
     String arch = System.getProperty("os.arch");
     String normalizedArch = normalizeArch(arch.toLowerCase(Locale.ROOT));
-    if (normalizedArch == UNKNOWN) {
+    if (normalizedArch == null) {
       throw new UnsupportedOperationException("unrecognized architecture: " + arch);
     }
     return String.format("/%s/%s/%s/%s", LIB_ROOT, normalizedOs, normalizedArch, libName);
   }
 
-  private static String normalizeOs(String os) {
+  private static @Nullable String normalizeOs(String os) {
     if (os.contains("linux")) {
       return LINUX;
     } else if (os.contains("windows")) {
       return WINDOWS;
     } else if (os.contains("mac os x") || os.contains("darwin") || os.contains("osx")) {
       return MAC_OS;
-    } else {
-      return UNKNOWN;
     }
+    return null;
   }
 
-  private static String normalizeArch(String arch) {
+  private static @Nullable String normalizeArch(String arch) {
     return ARCH_PATHS.entrySet().stream()
         .filter(e -> e.getValue().contains(arch))
         .findFirst()
         .map(Map.Entry::getKey)
-        .orElse(UNKNOWN);
+        .orElse(null);
+  }
+
+  private static ByteBuffer loadBrotliDict() throws IOException {
+    InputStream dicIn = BrotliLoader.class.getResourceAsStream(DICT_PATH);
+    if (dicIn == null) {
+      throw new FileNotFoundException("couldn't find brotli dictionary: " + DICT_PATH);
+    }
+    MessageDigest dictDigest;
+    try {
+      dictDigest = MessageDigest.getInstance("SHA-256");
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException("cannot digest brotli dictionary", e);
+    }
+    // buffer must be direct as the native address
+    // is directory passed to BrotliSetDictionaryData from the jni side
+    ByteBuffer dictData = ByteBuffer.allocateDirect(BROTLI_DICT_SIZE);
+    try (dicIn) {
+      int read;
+      byte[] tempBuffer = new byte[4 * 1024];
+      while ((read = dicIn.read(tempBuffer)) != -1) {
+        dictData.put(tempBuffer, 0, read);
+        dictDigest.update(tempBuffer, 0, read);
+      }
+    } catch (BufferOverflowException e) {
+      throw new IOException("too large dictionary");
+    }
+    if (dictData.hasRemaining()) {
+      throw new IOException("incomplete dictionary");
+    }
+    if (!Arrays.equals(dictDigest.digest(), BROTLI_DICT_SHA_256)) {
+      throw new IOException("dictionary is corrupt");
+    }
+    return dictData;
   }
 
   /** Represents a temp entry for the extracted library and it's lock file. */
@@ -194,6 +231,20 @@ class BrotliLoader {
       Files.deleteIfExists(lockFile);
       Files.deleteIfExists(libFile);
       Files.deleteIfExists(dir);
+    }
+
+    void deleteOnExit() {
+      Runtime.getRuntime()
+          .addShutdownHook(
+              new Thread(
+                  () -> {
+                    try {
+                      deleteIfExists();
+                    } catch (IOException ignored) {
+                      // An AccessDeniedException will ALWAYS be thrown
+                      // in windows so it might be annoying to log it
+                    }
+                  }));
     }
 
     boolean isStale() {

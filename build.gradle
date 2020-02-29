@@ -43,7 +43,7 @@ plugins {
 }
 
 subprojects { project ->
-  if (project.name.startsWith('brotli-dec')) {
+  if (project.name == 'brotli-dec' || project.name == 'brotli-jni') {
     return
   }
 

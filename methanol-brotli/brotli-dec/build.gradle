@@ -9,7 +9,7 @@ library {
   linkage = [Linkage.STATIC]
 
   publicHeaders.from brotliInclude
-  privateHeaders.from brotliCommon, brotliDec
+  privateHeaders.from(brotliCommon, brotliDec)
 
   binaries.configureEach(CppStaticLibrary) {
     def compileTask = compileTask.get()
@@ -22,7 +22,7 @@ library {
 
     // Compile for C explicitly as gradle doesn't currently have a "c-library" plugin
     if (toolChain in Gcc || toolChain in Clang) {
-      compilerArgs.addAll '-x', 'c'
+      compilerArgs.addAll('-x', 'c')
     } else {
       compilerArgs.add '/TC'
     }
@@ -42,6 +42,13 @@ library {
           '-Wshadow',
           '-Wsign-compare'
       ])
+    }
+
+    // dictionary is bundled separately to save space
+    if (toolChain in Gcc || toolChain in Clang) {
+      compilerArgs.add '-DBROTLI_EXTERNAL_DICTIONARY_DATA'
+    } else {
+      compilerArgs.add '/DBROTLI_EXTERNAL_DICTIONARY_DATA'
     }
 
     compileTask.positionIndependentCode = true

@@ -45,10 +45,10 @@ targets.each { target ->
     canBeResolved = true
     canBeConsumed = false
     attributes {
-      attribute optimizedAttribute, true // Use optimized version, normally the 'release' variant
-      attribute osAttribute, target.operatingSystemFamily
-      attribute archAttribute, target.architecture
-      attribute Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, Usage.NATIVE_RUNTIME)
+      attribute(optimizedAttribute, true) // Use optimized version, normally the 'release' variant
+      attribute(osAttribute, target.operatingSystemFamily)
+      attribute(archAttribute, target.architecture)
+      attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.class, Usage.NATIVE_RUNTIME))
     }
   }
 }
@@ -56,7 +56,7 @@ targets.each { target ->
 dependencies {
   implementation project(':methanol')
   getJniConfigs(configurations).each { config ->
-    dependencies.add(config.name, project('brotli-dec-jni'))
+    dependencies.add(config.name, project('brotli-jni'))
   }
 
   testImplementation deps.brotliDec
