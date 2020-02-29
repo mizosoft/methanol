@@ -26,17 +26,9 @@ ext {
   }
 }
 
-// Subprojects are not Java so disable cf
+// Subproject  is not Java so disable cf
 checkerFramework {
   applyToSubprojects = false
-}
-
-subprojects {
-  apply plugin: 'cpp-library'
-
-  library {
-    targetMachines = targets
-  }
 }
 
 // Create consumer configuration for each target variant

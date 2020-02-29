@@ -1,11 +1,20 @@
+plugins {
+  id 'cpp-library'
+}
+
 library {
   baseName = 'brotlijni'
   linkage = [Linkage.SHARED]
 
-  source.from 'src/jni'
+  targetMachines = parent.targets
 
-  binaries.configureEach(CppSharedLibrary) {
-    def includes = compileTask.get().includes
+  source.from 'src/jni'
+  privateHeaders.from files('src/include', 'src/common') // src/common has dictionary.h for common_jni.cc
+
+  tasks.withType(CppCompile) {
+    // C sources had to be defined here for some reason
+    source.from fileTree(dir: 'src/common', include: '*.c')
+    source.from fileTree(dir: 'src/dec', include: '*.c')
 
     // add jni include paths
     def javaHome = System.getenv().JAVA_HOME
@@ -15,23 +24,36 @@ library {
     if (javaHome.endsWith('/')) {
       javaHome = javaHome.substring(0, javaHome.length() - 1)
     }
-    includes.from "$javaHome/include"
+    includes "$javaHome/include"
     def os = machines.host().operatingSystemFamily
     if (os.isLinux()) {
-      includes.from "$javaHome/include/linux"
+      includes "$javaHome/include/linux"
     } else if (os.isWindows()) {
-      includes.from "$javaHome/include/win32"
+      includes "$javaHome/include/win32"
     } else if (os.isMacOs()) {
-      includes.from "$javaHome/include/darwin"
+      includes "$javaHome/include/darwin"
     } else {
       throw new GradleException('unsupported OS: ' + os)
     }
 
-    // add common/ from brotli-dec so that common_jni can include dictionary.h
-    includes.from project(':methanol-brotli:brotli-dec').file('src/common')
-  }
+    // dictionary is bundled separately to save space
+    macros.put('BROTLI_EXTERNAL_DICTIONARY_DATA', null)
 
-  dependencies {
-    implementation project(':methanol-brotli:brotli-dec')
+    // Set strict warning options for gcc (these are enabled in the main brotli repo)
+    if (toolChain in [Gcc, Clang]) {
+      compilerArgs.addAll([
+          '--pedantic-errors',
+          '-Wall',
+          '-Wconversion',
+          '-Werror',
+          '-Wextra',
+          '-Wlong-long',
+          '-Wmissing-declarations',
+          '-Wmissing-prototypes',
+          '-Wno-strict-aliasing',
+          '-Wshadow',
+          '-Wsign-compare'
+      ])
+    }
   }
 }
