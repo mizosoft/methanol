@@ -6,12 +6,7 @@ dependencies {
 }
 
 [compileTestJava, test].each { task ->
-  addReads(task, moduleName, 'methanol.testutils')
+  addReads(task, 'methanol.testutils')
 }
 
-test {
-  moduleOptions {
-    def pkg ='com.github.mizosoft.methanol.adapter.gson'
-    addOpens = [("$moduleName/$pkg" as String): 'com.google.gson']
-  }
-}
+addOpens(test, 'com.github.mizosoft.methanol.adapter.gson', 'com.google.gson')

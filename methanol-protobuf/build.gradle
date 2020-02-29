@@ -10,7 +10,7 @@ dependencies {
 }
 
 [compileTestJava, test].each { task ->
-  addReads(task, moduleName, 'methanol.testutils')
+  addReads(task, 'methanol.testutils')
 }
 
 protobuf {

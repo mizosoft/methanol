@@ -1,13 +1,13 @@
 buildscript {
   ext {
     versions = [
-        'junit'           : '5.5.2',
-        'junitPlatform'   : '1.3.1',
+        'junitJupiter'    : '5.6.0',
+        'junitPlatform'   : '1.6.0',
         'reactiveStreams' : '1.0.3',
         'checkerFramework': '3.1.1',
         'gson'            : '2.8.6',
         'jackson'         : '2.10.2',
-        'protobuf'        : '3.11.3',
+        'protobuf'        : '3.11.4',
         'checkstyle'      : '8.29',
         'errorprone'      : '2.3.4',
         'brotliDec'       : '0.1.2',
@@ -15,34 +15,24 @@ buildscript {
     ]
 
     deps = [
-        'junitApi'              : "org.junit.jupiter:junit-jupiter-api:${versions.junit}",
-        'junitEngine'           : "org.junit.jupiter:junit-jupiter-engine:${versions.junit}",
-        'junitPlatformLauncher' : "org.junit.platform:junit-platform-launcher:${versions.junitPlatform}",
-        'reactiveStreamsTckFlow': "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
-        'checkerFramework'      : "org.checkerframework:checker:${versions.checkerFramework}",
-        'checkerFrameworkQual'  : "org.checkerframework:checker-qual:${versions.checkerFramework}",
-        'gson'                  : "com.google.code.gson:gson:${versions.gson}",
-        'jacksonDatabind'       : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
-        'protobufJava'          : "com.google.protobuf:protobuf-java:${versions.protobuf}",
-        'protobufCompiler'      : "com.google.protobuf:protoc:${versions.protobuf}",
-        'checkstyle'            : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}",
-        'errorprone'            : "com.google.errorprone:error_prone_core:${versions.errorprone}",
-        'errorproneAnnotations' : "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
-        'brotliDec'             : "org.brotli:dec:${versions.brotliDec}",
-        'mockWebServer'         : "com.squareup.okhttp3:mockwebserver:${versions.okhttp}",
-        'reactiveStreams'       : "org.reactivestreams:reactive-streams:${versions.reactiveStreams}",
-        'reactiveStreamsExamples'       : "org.reactivestreams:reactive-streams-examples:${versions.reactiveStreams}",
+        'junitApi'               : "org.junit.jupiter:junit-jupiter-api:${versions.junitJupiter}",
+        'junitEngine'            : "org.junit.jupiter:junit-jupiter-engine:${versions.junitJupiter}",
+        'junitPlatformLauncher'  : "org.junit.platform:junit-platform-launcher:${versions.junitPlatform}",
+        'reactiveStreamsTckFlow' : "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
+        'checkerFramework'       : "org.checkerframework:checker:${versions.checkerFramework}",
+        'checkerFrameworkQual'   : "org.checkerframework:checker-qual:${versions.checkerFramework}",
+        'gson'                   : "com.google.code.gson:gson:${versions.gson}",
+        'jacksonDatabind'        : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
+        'protobufJava'           : "com.google.protobuf:protobuf-java:${versions.protobuf}",
+        'protobufCompiler'       : "com.google.protobuf:protoc:${versions.protobuf}",
+        'checkstyle'             : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}",
+        'errorprone'             : "com.google.errorprone:error_prone_core:${versions.errorprone}",
+        'errorproneAnnotations'  : "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
+        'brotliDec'              : "org.brotli:dec:${versions.brotliDec}",
+        'mockWebServer'          : "com.squareup.okhttp3:mockwebserver:${versions.okhttp}",
+        'reactiveStreams'        : "org.reactivestreams:reactive-streams:${versions.reactiveStreams}",
+        'reactiveStreamsExamples': "org.reactivestreams:reactive-streams-examples:${versions.reactiveStreams}",
     ]
-
-    // Make current module read given module for the given tasks
-    addReads = { task, consumerModule, readModule ->
-      configure(task) {
-        moduleOptions {
-          addModules += [consumerModule, readModule]
-          addReads.merge(consumerModule, readModule) { v1, v2 -> "$v1,$v2" as String }
-        }
-      }
-    }
   }
 }
 
@@ -94,6 +84,30 @@ subprojects { project ->
     // IllegalAccessError when org.junit.platform.launcher is implied as unnamed which
     // prevents tests from running in the module path
     testRuntimeOnly deps.junitPlatformLauncher
+  }
+
+  // Add helper extensions for modular subprojects
+  if (project.extensions.findByName('moduleName') != null) {
+    configure(extensions) {
+      add('addReads') { task, targetModule ->
+        configure(task) {
+          moduleOptions {
+            def module = moduleName as String
+            addModules += [module, targetModule]
+            addReads.merge(module, targetModule) { v1, v2 -> "$v1,$v2" as String }
+          }
+        }
+      }
+      add('addOpens') { task, openedPackage, targetModule ->
+        configure(task) {
+          moduleOptions {
+            addModules += [targetModule]
+            def opensExpr = "$moduleName/$openedPackage" as String;
+            addOpens.merge(opensExpr, targetModule) { v1, v2 -> "$v1,$v2" as String }
+          }
+        }
+      }
+    }
   }
 
   checkerFramework {

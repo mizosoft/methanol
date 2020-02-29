@@ -64,10 +64,8 @@ dependencies {
 }
 
 [compileTestJava, test].each { task ->
-  addReads(task, moduleName, 'methanol.testutils')
-}
-[compileTestJava, test].each { task ->
-  addReads(task, moduleName, 'dec')
+  addReads(task, 'methanol.testutils')
+  addReads(task, 'dec') // org.brotli.dec
 }
 
 task installBrotli(type: Copy) {

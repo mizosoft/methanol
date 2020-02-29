@@ -179,6 +179,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
     }
   }
 
+  @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
   private final class ChannelView extends AbstractInterruptibleChannel
       implements ReadableByteChannel {
 

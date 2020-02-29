@@ -5,15 +5,6 @@ dependencies {
   testImplementation project(':methanol-testutils')
 }
 
-// compileTestJava still compiles from the module path
-addReads(compileTestJava, moduleName, 'methanol.testutils')
-
-tasks.withType(JavaCompile) {
-  options.errorprone {
-    disable('ReferenceEquality') // For use of sentinel values, which require ref equality
-  }
-}
-
 compileJava {
   // methanol exports a package to methanol.adapter.jackson but the compiler won't be able
   // to resolve methanol.adapter.jackson as it's not a dependency so it issues a warning
@@ -22,16 +13,16 @@ compileJava {
 
 task testNG(type: Test) {
   useTestNG()
-
   include '**/tck/**'
-  scanForTestClasses = false
 }
 
 test {
   exclude '**/tck/**'
-
-  // MultipartBodyPublisherTest uses a META-INF/services provider so run on cp
+  // run from classpath to use META-INF/services which doesn't work from module path
   moduleOptions {
     runOnClasspath = true
   }
 }
+
+// compileTestJava still compiles from the module path
+addReads(compileTestJava, 'methanol.testutils')

@@ -6,12 +6,7 @@ dependencies {
 }
 
 [compileTestJava, test].each { task ->
-  addReads(task, moduleName, 'methanol.testutils')
+  addReads(task, 'methanol.testutils')
 }
 
-test {
-  moduleOptions {
-    def pkg ='com.github.mizosoft.methanol.adapter.jackson'
-    addOpens = [("$moduleName/$pkg" as String): 'com.fasterxml.jackson.databind']
-  }
-}
+addOpens(test, 'com.github.mizosoft.methanol.adapter.jackson', 'com.fasterxml.jackson.databind')
