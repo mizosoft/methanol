@@ -38,10 +38,8 @@ import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeReference;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.UncheckedIOException;
@@ -51,8 +49,14 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -64,7 +68,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
 
   public static final MediaType APPLICATION_JSON = MediaType.of("application", "json");
-  public static final Charset DEFAULT_ENCODING = StandardCharsets.UTF_8;
+  public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
   final ObjectMapper mapper;
 
@@ -93,7 +97,7 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       ObjectWriter objWriter = mapper.writerFor(object.getClass());
       ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
       try (Writer writer =
-          new OutputStreamWriter(outBuffer, charsetOrDefault(mediaType, DEFAULT_ENCODING))) {
+          new OutputStreamWriter(outBuffer, charsetOrDefault(mediaType, DEFAULT_CHARSET))) {
         objWriter.writeValue(writer, object);
       } catch (JsonProcessingException e) {
         throw new UncheckedIOException(e);
@@ -120,22 +124,21 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
-      Charset charset = charsetOrDefault(mediaType, DEFAULT_ENCODING);
+      Charset charset = charsetOrDefault(mediaType, DEFAULT_CHARSET);
       // The non-blocking parser only works with UTF-8 and ASCII
       // https://github.com/FasterXML/jackson-core/issues/596
-      if (charset.equals(StandardCharsets.UTF_8) || charset.equals(StandardCharsets.US_ASCII)) {
-        try {
-          return new JacksonSubscriber<>(
-              mapper, type, mapper.getFactory().createNonBlockingByteArrayParser());
-        } catch (IOException | UnsupportedOperationException ignored) {
-          // Fallback to de-serializing from byte array
-        }
+      EncodingProcessor processor =
+          charset.equals(StandardCharsets.US_ASCII) || charset.equals(StandardCharsets.UTF_8)
+              ? (buffs, eof) -> buffs // NOOP
+              : new ToUtf8Processor(charset.newDecoder());
+      try {
+        return new JacksonSubscriber<>(
+            mapper, type, mapper.getFactory().createNonBlockingByteArrayParser(), processor);
+      } catch (IOException | UnsupportedOperationException ignored) {
+        // Fallback to de-serializing from byte array
+        return BodySubscribers.mapping(
+            BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(type, bytes));
       }
-      return BodySubscribers.mapping(
-          BodySubscribers.ofByteArray(),
-          bytes ->
-              readValueUnchecked(
-                  type, new InputStreamReader(new ByteArrayInputStream(bytes), charset)));
     }
 
     @Override
@@ -145,8 +148,17 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
       return BodySubscribers.mapping(
-          MoreBodySubscribers.ofReader(charsetOrDefault(mediaType, DEFAULT_ENCODING)),
+          MoreBodySubscribers.ofReader(charsetOrDefault(mediaType, DEFAULT_CHARSET)),
           reader -> () -> readValueUnchecked(type, reader));
+    }
+
+    private <T> T readValueUnchecked(TypeReference<T> type, byte[] body) {
+      try {
+        JsonParser parser = mapper.getFactory().createParser(body);
+        return mapper.readerFor(mapper.constructType(type.type())).readValue(parser);
+      } catch (IOException ioe) {
+        throw new UncheckedIOException(ioe);
+      }
     }
 
     private <T> T readValueUnchecked(TypeReference<T> type, Reader reader) {
@@ -157,11 +169,101 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       }
     }
 
+    private interface EncodingProcessor {
+
+      List<ByteBuffer> process(List<ByteBuffer> input, boolean endOfInput)
+          throws CharacterCodingException;
+    }
+
+    // This "function" decodes body using response charset then encodes
+    // it again in UTF-8 to be usable with the non-blocking parser
+    private static final class ToUtf8Processor implements EncodingProcessor {
+
+      private static final int TEMP_BUFFER_SIZE = 4 * 1024;
+
+      private final CharsetDecoder decoder;
+      private final CharsetEncoder utf8Encoder;
+      private final CharBuffer tempCharBuff;
+      private @Nullable ByteBuffer leftover;
+
+      ToUtf8Processor(CharsetDecoder decoder) {
+        this.decoder = decoder;
+        utf8Encoder = StandardCharsets.UTF_8.newEncoder();
+        tempCharBuff = CharBuffer.allocate(TEMP_BUFFER_SIZE);
+      }
+
+      @Override
+      public List<ByteBuffer> process(List<ByteBuffer> item, boolean endOfInput)
+          throws CharacterCodingException {
+        List<ByteBuffer> processed = new ArrayList<>(item.size());
+        for (ByteBuffer buffer : item) {
+          ByteBuffer processedBuffer = processBuffer(buffer, endOfInput);
+          if (processedBuffer.hasRemaining()) {
+            processed.add(processedBuffer);
+          }
+        }
+        return processed;
+      }
+
+      private ByteBuffer processBuffer(ByteBuffer input, boolean endOfInput)
+          throws CharacterCodingException {
+        if (leftover != null) {
+          // add leftover bytes from previous round
+          input =
+              ByteBuffer.allocate(leftover.remaining() + input.remaining())
+                  .put(leftover)
+                  .put(input)
+                  .flip();
+          leftover = null;
+        }
+        int cap =
+            (int)
+                (input.remaining()
+                    * decoder.averageCharsPerByte()
+                    * utf8Encoder.averageBytesPerChar());
+        ByteBuffer out = ByteBuffer.allocate(cap);
+        while (true) {
+          CoderResult decoderResult = decoder.decode(input, tempCharBuff, endOfInput);
+          if (decoderResult.isUnderflow() && endOfInput) {
+            decoderResult = decoder.flush(tempCharBuff);
+          }
+          if (decoderResult.isError()) {
+            decoderResult.throwException();
+          }
+          // it's not eoi for encoder unless decoder also finished (underflow result)
+          boolean endOfInputForEncoder = decoderResult.isUnderflow() && endOfInput;
+          CoderResult encoderResult =
+              utf8Encoder.encode(tempCharBuff.flip(), out, endOfInputForEncoder);
+          tempCharBuff.compact();
+          if (encoderResult.isUnderflow() && endOfInputForEncoder) {
+            encoderResult = utf8Encoder.flush(out);
+          }
+          if (encoderResult.isError()) {
+            encoderResult.throwException();
+          }
+          if (encoderResult.isOverflow()) { // need bigger out buffer
+            cap = cap + Math.max(1, cap >> 1);
+            ByteBuffer newOut = ByteBuffer.allocate(cap);
+            newOut.put(out.flip());
+            out = newOut;
+          } else if (encoderResult.isUnderflow() && decoderResult.isUnderflow()) { // round finished
+            if (input.hasRemaining()) {
+              leftover = input.slice(); // save for next round
+            }
+            return out.flip();
+          }
+        }
+      }
+    }
+
     private static final class JacksonSubscriber<T> implements BodySubscriber<T> {
+
+      private static final List<ByteBuffer> EMPTY_BUFFER_LIST = List.of(ByteBuffer.allocate(0));
 
       private final ObjectMapper mapper;
       private final ObjectReader objReader;
       private final JsonParser parser;
+      private final EncodingProcessor processor;
       private final ByteArrayFeeder feeder;
       private final TokenBuffer jsonBuffer;
       private final CompletableFuture<T> valueFuture;
@@ -170,10 +272,15 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       private final int prefetchThreshold;
       private int upstreamWindow;
 
-      JacksonSubscriber(ObjectMapper mapper, TypeReference<T> type, JsonParser parser) {
+      JacksonSubscriber(
+          ObjectMapper mapper,
+          TypeReference<T> type,
+          JsonParser parser,
+          EncodingProcessor processor) {
         this.mapper = mapper;
         this.objReader = mapper.readerFor(mapper.constructType(type.type()));
         this.parser = parser;
+        this.processor = processor;
         feeder = (ByteArrayFeeder) parser.getNonBlockingInputFeeder();
         jsonBuffer = new TokenBuffer(this.parser);
         valueFuture = new CompletableFuture<>();
@@ -201,8 +308,8 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       @Override
       public void onNext(List<ByteBuffer> item) {
         requireNonNull(item);
-        byte[] bytes = collectBytes(item);
         try {
+          byte[] bytes = collectBytes(processor.process(item, false));
           feeder.feedInput(bytes, 0, bytes.length);
           flushParser();
         } catch (Throwable ioe) {
@@ -246,9 +353,15 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
         if (error != null) {
           valueFuture.completeExceptionally(error);
         } else {
-          feeder.endOfInput();
           try {
-            flushParser(); // Flush parser after endOfInput even
+            // flush processor
+            List<ByteBuffer> flushed = processor.process(EMPTY_BUFFER_LIST, true);
+            if (!flushed.isEmpty() && flushed != EMPTY_BUFFER_LIST) {
+              byte[] bytes = collectBytes(flushed);
+              feeder.feedInput(bytes, 0, bytes.length);
+            }
+            feeder.endOfInput();
+            flushParser(); // Flush parser after endOfInput event
             valueFuture.complete(objReader.readValue(jsonBuffer.asParser(mapper)));
           } catch (Throwable ioe) {
             valueFuture.completeExceptionally(ioe);

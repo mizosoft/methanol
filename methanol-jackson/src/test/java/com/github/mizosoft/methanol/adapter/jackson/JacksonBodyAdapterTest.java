@@ -22,9 +22,10 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import static com.github.mizosoft.methanol.adapter.jackson.JacksonBodyAdapterFactory.createEncoder;
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonBodyAdapterFactory.createDecoder;
+import static com.github.mizosoft.methanol.adapter.jackson.JacksonBodyAdapterFactory.createEncoder;
 import static com.github.mizosoft.methanol.testutils.TestUtils.NOOP_SUBSCRIPTION;
+import static com.github.mizosoft.methanol.testutils.TestUtils.load;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,6 +44,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -60,9 +62,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.SubmissionPublisher;
 import org.junit.jupiter.api.Test;
 
 class JacksonBodyAdapterTest {
@@ -161,6 +168,42 @@ class JacksonBodyAdapterTest {
     var json = "{\"value\":\"beans are boring\"}";
     var bean = publish(subscriber, json, UTF_16);
     assertEquals(bean.value, "beans are boring");
+  }
+
+  @Test
+  void deserializeJson_utf16_stressed() {
+    int[] buffSizes = {1, 10, 3, 20, 8096, 5, 100, 51, 1, 3};
+    var aladin = new String(load(getClass(), "/aladin_utf8.txt"), UTF_8);
+    var jsonBytes = ("{\"aladin\":\"" + aladin + "\"}").getBytes(UTF_16);
+    var buffers = new ArrayList<ByteBuffer>();
+    for (int i = 0, off = 0;
+        off < jsonBytes.length;
+        off += buffSizes[i], i = (i + 1) % buffSizes.length) {
+      int len = Math.min(buffSizes[i], jsonBytes.length - off);
+      var buffer = ByteBuffer.allocate(len);
+      buffer.put(jsonBytes, off, len);
+      buffers.add(buffer.flip());
+    }
+    var mapper = new JsonMapper.Builder(new JsonMapper())
+        .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
+        .build();
+    var subscriber = JacksonBodyAdapterFactory.createDecoder(mapper)
+        .toObject(new TypeReference<Map<String, String>>() {}, MediaType.parse("application/json; charset=utf-16"));
+    var executor = Executors.newFixedThreadPool(8);
+    try (var publisher = new SubmissionPublisher<List<ByteBuffer>>(executor, Integer.MAX_VALUE)) {
+      publisher.subscribe(subscriber);
+      for (int i = 0; i < buffers.size(); ) {
+        List<ByteBuffer> item = new ArrayList<>();
+        item.add(buffers.get(i++));
+        if (i < buffers.size()) {
+          item.add(buffers.get(i++));
+        }
+        publisher.submit(item);
+      }
+    } finally {
+      executor.shutdown();
+    }
+    assertEquals(Map.of("aladin", aladin), subscriber.getBody().toCompletableFuture().join());
   }
 
   @Test
