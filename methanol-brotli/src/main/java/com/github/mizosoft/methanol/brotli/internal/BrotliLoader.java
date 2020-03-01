@@ -59,6 +59,11 @@ class BrotliLoader {
   private static final String LIB_ROOT = "native";
   private static final String DICT_PATH = "/data/dictionary.bin";
 
+  private static final Path TEMP_DIR =
+      Path.of(
+          System.getProperty(
+              "com.github.mizosoft.methanol.brotli.tmpdir", System.getProperty("java.io.tmpdir")));
+
   public static final int BROTLI_DICT_SIZE = 122784;
   private static final byte[] BROTLI_DICT_SHA_256 =
       new byte[] {
@@ -94,14 +99,13 @@ class BrotliLoader {
     if (libUrl == null) {
       throw new FileNotFoundException("couldn't find brotli jni library: " + libPath);
     }
-    Path tempDir = getTempDir();
-    cleanStaleEntries(tempDir, libName);
-    return createLibEntry(tempDir, libName, libUrl);
+    cleanStaleEntries(libName);
+    return createLibEntry(libName, libUrl);
   }
 
-  private static void cleanStaleEntries(Path tempDir, String libName) {
+  private static void cleanStaleEntries(String libName) {
     try (Stream<Path> entryDirs =
-        Files.list(tempDir).filter(p -> p.getFileName().toString().startsWith(ENTRY_DIR_PREFIX))) {
+        Files.list(TEMP_DIR).filter(p -> p.getFileName().toString().startsWith(ENTRY_DIR_PREFIX))) {
       entryDirs.forEach(
           dir -> {
             LibEntry entry = new LibEntry(dir, libName);
@@ -118,9 +122,8 @@ class BrotliLoader {
     }
   }
 
-  private static LibEntry createLibEntry(Path tempDir, String libName, URL libUrl)
-      throws IOException {
-    Path entryDir = Files.createTempDirectory(tempDir, ENTRY_DIR_PREFIX);
+  private static LibEntry createLibEntry(String libName, URL libUrl) throws IOException {
+    Path entryDir = Files.createTempDirectory(TEMP_DIR, ENTRY_DIR_PREFIX);
     LibEntry entry = new LibEntry(entryDir, libName);
     try (InputStream libIn = libUrl.openStream()) {
       entry.create(libIn);
@@ -133,12 +136,6 @@ class BrotliLoader {
       throw ioe;
     }
     return entry;
-  }
-
-  private static Path getTempDir() {
-    return Path.of(
-        System.getProperty(
-            "com.github.mizosoft.methanol.brotli.tmpdir", System.getProperty("java.io.tmpdir")));
   }
 
   private static String findLibPath(String libName) {
