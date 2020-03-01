@@ -25,11 +25,13 @@ package com.github.mizosoft.methanol.adapter.jackson;
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonBodyAdapterFactory.createDecoder;
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonBodyAdapterFactory.createEncoder;
 import static com.github.mizosoft.methanol.testutils.TestUtils.NOOP_SUBSCRIPTION;
+import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static com.github.mizosoft.methanol.testutils.TestUtils.load;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -70,6 +72,7 @@ import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class JacksonBodyAdapterTest {
@@ -145,11 +148,11 @@ class JacksonBodyAdapterTest {
     var keanu = new AwesomePerson("Keanu", null, 55); // You know it's Reeves!
     var body = createEncoder(mapper).toBody(keanu, null);
     var expected =
-        "{\r\n"
-            + "  \"firstName\" : \"Keanu\",\r\n"
-            + "  \"age\" : 55\r\n"
+             "{\n"
+            + "  \"firstName\" : \"Keanu\",\n"
+            + "  \"age\" : 55\n"
             + "}";
-    assertEquals(expected, toUtf8(body));
+    assertLinesMatch(lines(expected), lines(toUtf8(body)));
   }
 
   @Test
@@ -235,7 +238,7 @@ class JacksonBodyAdapterTest {
         .enable(Feature.ALLOW_UNQUOTED_FIELD_NAMES);
     var subscriber = createDecoder(mapper).toObject(new TypeReference<AwesomePerson>() {}, null);
     var nonStdJson =
-        "{\n"
+             "{\n"
             + "  firstName: 'Keanu',\n"
             + "  lastName: 'Reeves',\n"
             + "  age: 55 // bruuhh, he hasn't aged a bit\n"

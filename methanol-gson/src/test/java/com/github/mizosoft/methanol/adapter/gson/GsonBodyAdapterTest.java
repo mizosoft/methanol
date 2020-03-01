@@ -25,10 +25,12 @@ package com.github.mizosoft.methanol.adapter.gson;
 import static com.github.mizosoft.methanol.adapter.gson.GsonBodyAdapterFactory.createEncoder;
 import static com.github.mizosoft.methanol.adapter.gson.GsonBodyAdapterFactory.createDecoder;
 import static com.github.mizosoft.methanol.testutils.TestUtils.NOOP_SUBSCRIPTION;
+import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -128,7 +130,7 @@ class GsonBodyAdapterTest {
         + "  \"lastName\": null,\n"
         + "  \"age\": 48\n"
         + "}";
-    assertEquals(expected, toUtf8(body));
+    assertLinesMatch(lines(expected), lines(toUtf8(body)));
   }
 
   @Test

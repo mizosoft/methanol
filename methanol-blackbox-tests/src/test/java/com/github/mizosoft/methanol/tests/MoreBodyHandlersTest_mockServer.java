@@ -6,12 +6,14 @@ import static com.github.mizosoft.methanol.MoreBodyHandlers.ofByteChannel;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofDeferredObject;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofReader;
+import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static com.github.mizosoft.methanol.testutils.TestUtils.load;
 import static com.github.mizosoft.methanol.testutils.TestUtils.loadAscii;
 import static java.net.http.HttpResponse.BodyHandlers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -113,7 +115,7 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
         .setHeader("Content-Encoding", encoding));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofString()));
-    assertEquals(lotsOfText, response.body());
+    assertLinesMatch(lines(lotsOfText), lines(response.body()));
   }
 
   @Test
@@ -156,7 +158,7 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
         .setHeader("Content-Encoding", "gzip"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofString()));
-    assertEquals(lotsOfText + poem + lotsOfText, response.body());
+    assertLinesMatch(lines(lotsOfText + poem + lotsOfText), lines(response.body()));
   }
 
   @Test
@@ -227,8 +229,14 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
         .throttleBody(16 * 1024, 100, TimeUnit.MILLISECONDS)); // 100 MS every 16 KB
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofByteChannel(), executor));
-    var body = new String(Channels.newInputStream(response.body()).readAllBytes(), US_ASCII);
-    assertEquals(lotsOfText, body);
+    try (var responseReader = new BufferedReader(Channels.newReader(response.body(), US_ASCII))) {
+      var expectedReader = new BufferedReader(new StringReader(lotsOfText));
+      String expectedLine;
+      while ((expectedLine = expectedReader.readLine()) != null) {
+        assertEquals(expectedLine, responseReader.readLine());
+      }
+      assertNull(responseReader.readLine());
+    }
   }
 
   @Test

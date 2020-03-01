@@ -35,6 +35,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Flow.Subscription;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 
@@ -113,5 +114,9 @@ public class TestUtils {
 
   public static String loadAscii(Class<?> caller, String location) {
     return US_ASCII.decode(ByteBuffer.wrap(load(caller, location))).toString();
+  }
+
+  public static List<String> lines(String s) {
+    return s.lines().collect(Collectors.toUnmodifiableList());
   }
 }
