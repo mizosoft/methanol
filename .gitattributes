@@ -1,1 +1,5 @@
+* text=auto
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+
 methanol-brotli/brotli-jni/src/* linguist-vendored
