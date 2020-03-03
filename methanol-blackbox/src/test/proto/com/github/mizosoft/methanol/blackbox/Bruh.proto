@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package mizosoft.methanol.blackbox;
+
+option java_package = "com.github.mizosoft.methanol.blackbox";
+
+import "google/protobuf/any.proto";
+
+message BruhMoment {
+  string message = 1;
+}
+
+message BruhMoments {
+  repeated BruhMoment moments = 1;
+}
