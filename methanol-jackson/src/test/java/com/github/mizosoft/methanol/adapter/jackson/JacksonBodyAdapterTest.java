@@ -60,19 +60,18 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeReference;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
+import com.github.mizosoft.methanol.testutils.BufferTokenizer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
-import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class JacksonBodyAdapterTest {
@@ -175,38 +174,27 @@ class JacksonBodyAdapterTest {
 
   @Test
   void deserializeJson_utf16_stressed() {
-    int[] buffSizes = {1, 10, 3, 20, 8096, 5, 100, 51, 1, 3};
-    var aladin = new String(load(getClass(), "/aladin_utf8.txt"), UTF_8);
-    var jsonBytes = ("{\"aladin\":\"" + aladin + "\"}").getBytes(UTF_16);
-    var buffers = new ArrayList<ByteBuffer>();
-    for (int i = 0, off = 0;
-        off < jsonBytes.length;
-        off += buffSizes[i], i = (i + 1) % buffSizes.length) {
-      int len = Math.min(buffSizes[i], jsonBytes.length - off);
-      var buffer = ByteBuffer.allocate(len);
-      buffer.put(jsonBytes, off, len);
-      buffers.add(buffer.flip());
-    }
+    var aladinText = new String(load(getClass(), "/aladin_utf8.txt"), UTF_8);
+    var jsonUtf16 = UTF_16.encode("{\"aladin\":\"" + aladinText + "\"}");
     var mapper = new JsonMapper.Builder(new JsonMapper())
         .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
         .build();
     var subscriber = JacksonBodyAdapterFactory.createDecoder(mapper)
         .toObject(new TypeReference<Map<String, String>>() {}, MediaType.parse("application/json; charset=utf-16"));
     var executor = Executors.newFixedThreadPool(8);
+    int[] buffSizes = {1, 32, 555, 1024, 21};
+    int[] listSizes = {1, 3, 1};
     try (var publisher = new SubmissionPublisher<List<ByteBuffer>>(executor, Integer.MAX_VALUE)) {
       publisher.subscribe(subscriber);
-      for (int i = 0; i < buffers.size(); ) {
-        List<ByteBuffer> item = new ArrayList<>();
-        item.add(buffers.get(i++));
-        if (i < buffers.size()) {
-          item.add(buffers.get(i++));
-        }
-        publisher.submit(item);
-      }
+      BufferTokenizer.tokenizeToLists(jsonUtf16, buffSizes, listSizes)
+          .forEach(publisher::submit);
     } finally {
       executor.shutdown();
     }
-    assertEquals(Map.of("aladin", aladin), subscriber.getBody().toCompletableFuture().join());
+    var body = subscriber.getBody().toCompletableFuture().join();
+    var receivedText = body.get("aladin");
+    assertNotNull(body);
+    assertLinesMatch(lines(aladinText), lines(receivedText));
   }
 
   @Test

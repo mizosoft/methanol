@@ -125,20 +125,20 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
       Charset charset = charsetOrDefault(mediaType, DEFAULT_CHARSET);
-      // The non-blocking parser only works with UTF-8 and ASCII
-      // https://github.com/FasterXML/jackson-core/issues/596
-      EncodingProcessor processor =
-          charset.equals(StandardCharsets.US_ASCII) || charset.equals(StandardCharsets.UTF_8)
-              ? (buffs, eof) -> buffs // NOOP
-              : new ToUtf8Processor(charset.newDecoder());
+      JsonParser asyncParser;
       try {
-        return new JacksonSubscriber<>(
-            mapper, type, mapper.getFactory().createNonBlockingByteArrayParser(), processor);
+        asyncParser = mapper.getFactory().createNonBlockingByteArrayParser();
       } catch (IOException | UnsupportedOperationException ignored) {
         // Fallback to de-serializing from byte array
         return BodySubscribers.mapping(
             BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(type, bytes));
       }
+      // The non-blocking parser only works with UTF-8 and ASCII
+      // https://github.com/FasterXML/jackson-core/issues/596
+      return charset.equals(StandardCharsets.US_ASCII) || charset.equals(StandardCharsets.UTF_8)
+          ? new JacksonSubscriber<>(mapper, type, asyncParser)
+          : new Utf8CoercingJacksonSubscriber<>(
+              mapper, type, asyncParser, charset.newDecoder(), StandardCharsets.UTF_8.newEncoder());
     }
 
     @Override
@@ -169,31 +169,155 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       }
     }
 
-    private interface EncodingProcessor {
+    private static class JacksonSubscriber<T> implements BodySubscriber<T> {
 
-      List<ByteBuffer> process(List<ByteBuffer> input, boolean endOfInput)
-          throws CharacterCodingException;
+      private final ObjectMapper mapper;
+      private final ObjectReader objReader;
+      private final JsonParser parser;
+      private final ByteArrayFeeder feeder;
+      private final TokenBuffer jsonBuffer;
+      private final CompletableFuture<T> valueFuture;
+      private final AtomicReference<@Nullable Subscription> upstream;
+      private final int prefetch;
+      private final int prefetchThreshold;
+      private int upstreamWindow;
+
+      JacksonSubscriber(ObjectMapper mapper, TypeReference<T> type, JsonParser parser) {
+        this.mapper = mapper;
+        this.objReader = mapper.readerFor(mapper.constructType(type.type()));
+        this.parser = parser;
+        feeder = (ByteArrayFeeder) parser.getNonBlockingInputFeeder();
+        jsonBuffer = new TokenBuffer(this.parser);
+        valueFuture = new CompletableFuture<>();
+        upstream = new AtomicReference<>();
+        prefetch = FlowSupport.prefetch();
+        prefetchThreshold = FlowSupport.prefetchThreshold();
+      }
+
+      @Override
+      public CompletionStage<T> getBody() {
+        return valueFuture;
+      }
+
+      @Override
+      public void onSubscribe(Subscription subscription) {
+        requireNonNull(subscription);
+        if (upstream.compareAndSet(null, subscription)) {
+          upstreamWindow = prefetch;
+          subscription.request(prefetch);
+        } else {
+          subscription.cancel();
+        }
+      }
+
+      @Override
+      public void onNext(List<ByteBuffer> item) {
+        requireNonNull(item);
+        try {
+          byte[] bytes = collectBytes(item, false);
+          feeder.feedInput(bytes, 0, bytes.length);
+          flushParser();
+        } catch (Throwable t) {
+          clearUpstream(true);
+          valueFuture.completeExceptionally(t);
+          return;
+        }
+        updateWindow();
+      }
+
+      @Override
+      public void onError(Throwable throwable) {
+        requireNonNull(throwable);
+        clearUpstream(false);
+        valueFuture.completeExceptionally(throwable);
+      }
+
+      @Override
+      public void onComplete() {
+        clearUpstream(false);
+        try {
+          byte[] flushed = collectBytes(List.of(), true);
+          feeder.feedInput(flushed, 0, flushed.length);
+          feeder.endOfInput();
+          flushParser();
+          valueFuture.complete(objReader.readValue(jsonBuffer.asParser(mapper)));
+        } catch (Throwable ioe) {
+          valueFuture.completeExceptionally(ioe);
+        }
+      }
+
+      private void updateWindow() {
+        // See if more should be requested w.r.t prefetch logic
+        Subscription s = upstream.get();
+        if (s != null) {
+          int update = upstreamWindow - 1;
+          if (update <= prefetchThreshold) {
+            upstreamWindow = prefetch;
+            s.request(prefetch - update);
+          } else {
+            upstreamWindow = update;
+          }
+        }
+      }
+
+      private void clearUpstream(boolean cancel) {
+        if (cancel) {
+          Subscription s = upstream.getAndSet(FlowSupport.NOOP_SUBSCRIPTION);
+          if (s != null) {
+            s.cancel();
+          }
+        } else {
+          upstream.set(FlowSupport.NOOP_SUBSCRIPTION);
+        }
+      }
+
+      private void flushParser() throws IOException {
+        JsonToken token;
+        while ((token = parser.nextToken()) != null && token != JsonToken.NOT_AVAILABLE) {
+          jsonBuffer.copyCurrentEvent(parser);
+        }
+      }
+
+      byte[] collectBytes(List<ByteBuffer> item, boolean endOfInput)
+          throws CharacterCodingException {
+        int size = item.stream().mapToInt(ByteBuffer::remaining).sum();
+        byte[] bytes = new byte[size];
+        int offset = 0;
+        for (ByteBuffer buff : item) {
+          int remaining = buff.remaining();
+          buff.get(bytes, offset, buff.remaining());
+          offset += remaining;
+        }
+        return bytes;
+      }
     }
 
-    // This "function" decodes body using response charset then encodes
+    // This subscriber decodes body using response charset then encodes
     // it again in UTF-8 to be usable with the non-blocking parser
-    private static final class ToUtf8Processor implements EncodingProcessor {
+    private static final class Utf8CoercingJacksonSubscriber<T> extends JacksonSubscriber<T> {
 
       private static final int TEMP_BUFFER_SIZE = 4 * 1024;
+      private static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
       private final CharsetDecoder decoder;
       private final CharsetEncoder utf8Encoder;
       private final CharBuffer tempCharBuff;
       private @Nullable ByteBuffer leftover;
 
-      ToUtf8Processor(CharsetDecoder decoder) {
+      Utf8CoercingJacksonSubscriber(
+          ObjectMapper mapper,
+          TypeReference<T> type,
+          JsonParser parser,
+          CharsetDecoder decoder,
+          CharsetEncoder utf8Encoder) {
+        super(mapper, type, parser);
         this.decoder = decoder;
-        utf8Encoder = StandardCharsets.UTF_8.newEncoder();
+        this.utf8Encoder = utf8Encoder;
         tempCharBuff = CharBuffer.allocate(TEMP_BUFFER_SIZE);
       }
 
       @Override
-      public List<ByteBuffer> process(List<ByteBuffer> item, boolean endOfInput)
+      byte[] collectBytes(List<ByteBuffer> item, boolean endOfInput)
           throws CharacterCodingException {
         List<ByteBuffer> processed = new ArrayList<>(item.size());
         for (ByteBuffer buffer : item) {
@@ -202,7 +326,7 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
             processed.add(processedBuffer);
           }
         }
-        return processed;
+        return processed.size() > 0 ? super.collectBytes(processed, endOfInput) : EMPTY_BYTE_ARRAY;
       }
 
       private ByteBuffer processBuffer(ByteBuffer input, boolean endOfInput)
@@ -253,139 +377,6 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
             return out.flip();
           }
         }
-      }
-    }
-
-    private static final class JacksonSubscriber<T> implements BodySubscriber<T> {
-
-      private static final List<ByteBuffer> EMPTY_BUFFER_LIST = List.of(ByteBuffer.allocate(0));
-
-      private final ObjectMapper mapper;
-      private final ObjectReader objReader;
-      private final JsonParser parser;
-      private final EncodingProcessor processor;
-      private final ByteArrayFeeder feeder;
-      private final TokenBuffer jsonBuffer;
-      private final CompletableFuture<T> valueFuture;
-      private final AtomicReference<@Nullable Subscription> upstream;
-      private final int prefetch;
-      private final int prefetchThreshold;
-      private int upstreamWindow;
-
-      JacksonSubscriber(
-          ObjectMapper mapper,
-          TypeReference<T> type,
-          JsonParser parser,
-          EncodingProcessor processor) {
-        this.mapper = mapper;
-        this.objReader = mapper.readerFor(mapper.constructType(type.type()));
-        this.parser = parser;
-        this.processor = processor;
-        feeder = (ByteArrayFeeder) parser.getNonBlockingInputFeeder();
-        jsonBuffer = new TokenBuffer(this.parser);
-        valueFuture = new CompletableFuture<>();
-        upstream = new AtomicReference<>();
-        prefetch = FlowSupport.prefetch();
-        prefetchThreshold = FlowSupport.prefetchThreshold();
-      }
-
-      @Override
-      public CompletionStage<T> getBody() {
-        return valueFuture;
-      }
-
-      @Override
-      public void onSubscribe(Subscription subscription) {
-        requireNonNull(subscription);
-        if (upstream.compareAndSet(null, subscription)) {
-          upstreamWindow = prefetch;
-          subscription.request(prefetch);
-        } else {
-          subscription.cancel();
-        }
-      }
-
-      @Override
-      public void onNext(List<ByteBuffer> item) {
-        requireNonNull(item);
-        try {
-          byte[] bytes = collectBytes(processor.process(item, false));
-          feeder.feedInput(bytes, 0, bytes.length);
-          flushParser();
-        } catch (Throwable ioe) {
-          complete(ioe, true);
-          return;
-        }
-
-        // See if more should be requested w.r.t prefetch logic
-        Subscription s = upstream.get();
-        if (s != null) {
-          int update = upstreamWindow - 1;
-          if (update <= prefetchThreshold) {
-            upstreamWindow = prefetch;
-            s.request(prefetch - update);
-          } else {
-            upstreamWindow = update;
-          }
-        }
-      }
-
-      @Override
-      public void onError(Throwable throwable) {
-        requireNonNull(throwable);
-        complete(throwable, false);
-      }
-
-      @Override
-      public void onComplete() {
-        complete(null, false);
-      }
-
-      private void complete(@Nullable Throwable error, boolean cancelUpstream) {
-        if (cancelUpstream) {
-          Subscription s = upstream.getAndSet(FlowSupport.NOOP_SUBSCRIPTION);
-          if (s != null) {
-            s.cancel();
-          }
-        } else {
-          upstream.set(FlowSupport.NOOP_SUBSCRIPTION);
-        }
-        if (error != null) {
-          valueFuture.completeExceptionally(error);
-        } else {
-          try {
-            // flush processor
-            List<ByteBuffer> flushed = processor.process(EMPTY_BUFFER_LIST, true);
-            if (!flushed.isEmpty() && flushed != EMPTY_BUFFER_LIST) {
-              byte[] bytes = collectBytes(flushed);
-              feeder.feedInput(bytes, 0, bytes.length);
-            }
-            feeder.endOfInput();
-            flushParser(); // Flush parser after endOfInput event
-            valueFuture.complete(objReader.readValue(jsonBuffer.asParser(mapper)));
-          } catch (Throwable ioe) {
-            valueFuture.completeExceptionally(ioe);
-          }
-        }
-      }
-
-      private void flushParser() throws IOException {
-        JsonToken token;
-        while ((token = parser.nextToken()) != null && token != JsonToken.NOT_AVAILABLE) {
-          jsonBuffer.copyCurrentEvent(parser);
-        }
-      }
-
-      private byte[] collectBytes(List<ByteBuffer> buffs) {
-        int size = buffs.stream().mapToInt(ByteBuffer::remaining).sum();
-        byte[] bytes = new byte[size];
-        int offset = 0;
-        for (ByteBuffer buff : buffs) {
-          int remaining = buff.remaining();
-          buff.get(bytes, offset, buff.remaining());
-          offset += remaining;
-        }
-        return bytes;
       }
     }
   }
