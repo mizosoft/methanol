@@ -1,0 +1,39 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
+plugins {
+  id 'com.github.johnrengelman.shadow' version '5.2.0'
+}
+
+dependencies {
+  annotationProcessor deps.jmhAnnotationProcessor
+  implementation project(':methanol')
+  implementation project(':methanol-jackson')
+  implementation project(':methanol-testutils')
+  implementation deps.mockWebServer
+  implementation deps.jmhCore
+}
+
+task jmhJar(type: ShadowJar) {
+  dependsOn compileJava
+  archivesBaseName = 'methanol'
+  archiveClassifier = 'jmh'
+  from sourceSets.main.runtimeClasspath
+  exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+  manifest {
+    attributes 'Main-Class': 'org.openjdk.jmh.Main'
+  }
+}
+
+task jmh(type: JavaExec) {
+  classpath = files(jmhJar)
+  jvmArgs('--foe', 'true')
+  def additionalArgs = System.getenv().jmhArgs
+  if (additionalArgs) {
+    if (additionalArgs.length() > 2
+        && additionalArgs.startsWithAny("'", '"')
+        && additionalArgs.endsWithAny("'", '"')) {
+      additionalArgs = additionalArgs[1..additionalArgs.length() - 1]
+    }
+    jvmArgs(additionalArgs)
+  }
+}
