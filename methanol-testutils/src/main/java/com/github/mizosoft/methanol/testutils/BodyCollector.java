@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.testutils;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.ByteBuffer;
@@ -78,5 +79,9 @@ public class BodyCollector implements Flow.Subscriber<ByteBuffer> {
     var collector = new BodyCollector();
     publisher.subscribe(collector);
     return collector.bodyCF.join();
+  }
+
+  public static String collectToAscii(Flow.Publisher<ByteBuffer> publisher) {
+    return US_ASCII.decode(collect(publisher)).toString();
   }
 }

@@ -14,6 +14,8 @@ compileJava {
 task testNG(type: Test) {
   useTestNG()
   include '**/tck/**'
+  shouldRunAfter test
+  scanForTestClasses = false
 }
 
 test {
