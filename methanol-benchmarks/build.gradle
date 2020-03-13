@@ -37,3 +37,7 @@ task jmh(type: JavaExec) {
     jvmArgs(additionalArgs)
   }
 }
+
+tasks.withType(JavaCompile) {
+  options.errorprone.disableWarningsInGeneratedCode = true // jmh code makes errorprone go nuts
+}
