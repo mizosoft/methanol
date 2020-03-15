@@ -1,53 +1,71 @@
-buildscript {
-  ext {
-    versions = [
-        'junitJupiter'    : '5.6.0',
-        'junitPlatform'   : '1.6.0',
-        'reactiveStreams' : '1.0.3',
-        'checkerFramework': '3.1.1',
-        'gson'            : '2.8.6',
-        'jackson'         : '2.10.2',
-        'protobuf'        : '3.11.4',
-        'checkstyle'      : '8.29',
-        'errorprone'      : '2.3.4',
-        'brotliDec'       : '0.1.2',
-        'okhttp'          : '4.4.0',
-        'jmh'             : '1.23'
-    ]
-
-    deps = [
-        'junitApi'               : "org.junit.jupiter:junit-jupiter-api:${versions.junitJupiter}",
-        'junitEngine'            : "org.junit.jupiter:junit-jupiter-engine:${versions.junitJupiter}",
-        'junitPlatformLauncher'  : "org.junit.platform:junit-platform-launcher:${versions.junitPlatform}",
-        'reactiveStreamsTckFlow' : "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
-        'checkerFramework'       : "org.checkerframework:checker:${versions.checkerFramework}",
-        'checkerFrameworkQual'   : "org.checkerframework:checker-qual:${versions.checkerFramework}",
-        'gson'                   : "com.google.code.gson:gson:${versions.gson}",
-        'jacksonDatabind'        : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
-        'protobufJava'           : "com.google.protobuf:protobuf-java:${versions.protobuf}",
-        'protobufCompiler'       : "com.google.protobuf:protoc:${versions.protobuf}",
-        'checkstyle'             : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}",
-        'errorprone'             : "com.google.errorprone:error_prone_core:${versions.errorprone}",
-        'errorproneAnnotations'  : "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
-        'brotliDec'              : "org.brotli:dec:${versions.brotliDec}",
-        'mockWebServer'          : "com.squareup.okhttp3:mockwebserver:${versions.okhttp}",
-        'reactiveStreams'        : "org.reactivestreams:reactive-streams:${versions.reactiveStreams}",
-        'reactiveStreamsExamples': "org.reactivestreams:reactive-streams-examples:${versions.reactiveStreams}",
-        'jmhCore'                : "org.openjdk.jmh:jmh-core:$versions.jmh",
-        'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh"
-    ]
-  }
-}
-
 plugins {
   id 'org.checkerframework' version '0.4.12' apply false
   id 'org.javamodularity.moduleplugin' version '1.6.0' apply false
   id 'net.ltgt.errorprone' version '1.1.1' apply false
+  id 'jacoco' // apply to root
 }
 
-subprojects { project ->
-  if (project.name == 'brotli-jni') {
-    return
+ext {
+  versions = [
+      'junitJupiter'    : '5.6.0',
+      'junitPlatform'   : '1.6.0',
+      'reactiveStreams' : '1.0.3',
+      'checkerFramework': '3.1.1',
+      'gson'            : '2.8.6',
+      'jackson'         : '2.10.2',
+      'protobuf'        : '3.11.4',
+      'checkstyle'      : '8.29',
+      'errorprone'      : '2.3.4',
+      'brotliDec'       : '0.1.2',
+      'okhttp'          : '4.4.0',
+      'jmh'             : '1.23'
+  ]
+
+  deps = [
+      'junitApi'               : "org.junit.jupiter:junit-jupiter-api:${versions.junitJupiter}",
+      'junitEngine'            : "org.junit.jupiter:junit-jupiter-engine:${versions.junitJupiter}",
+      'junitPlatformLauncher'  : "org.junit.platform:junit-platform-launcher:${versions.junitPlatform}",
+      'reactiveStreamsTckFlow' : "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
+      'checkerFramework'       : "org.checkerframework:checker:${versions.checkerFramework}",
+      'checkerFrameworkQual'   : "org.checkerframework:checker-qual:${versions.checkerFramework}",
+      'gson'                   : "com.google.code.gson:gson:${versions.gson}",
+      'jacksonDatabind'        : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
+      'protobufJava'           : "com.google.protobuf:protobuf-java:${versions.protobuf}",
+      'protobufCompiler'       : "com.google.protobuf:protoc:${versions.protobuf}",
+      'checkstyle'             : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}",
+      'errorprone'             : "com.google.errorprone:error_prone_core:${versions.errorprone}",
+      'errorproneAnnotations'  : "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
+      'brotliDec'              : "org.brotli:dec:${versions.brotliDec}",
+      'mockWebServer'          : "com.squareup.okhttp3:mockwebserver:${versions.okhttp}",
+      'reactiveStreams'        : "org.reactivestreams:reactive-streams:${versions.reactiveStreams}",
+      'reactiveStreamsExamples': "org.reactivestreams:reactive-streams-examples:${versions.reactiveStreams}",
+      'jmhCore'                : "org.openjdk.jmh:jmh-core:$versions.jmh",
+      'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh"
+  ]
+
+  isJavaProject = { project ->
+    project.name != 'brotli-jni'
+  }
+  isPublished = { project ->
+    isJavaProject(project) && project.name != 'methanol-blackbox'
+  }
+  contributesToTests = { project ->
+    isJavaProject(project) && !(project.name in ['methanol-benchmarks', 'methanol-testutils'])
+  }
+}
+
+allprojects {
+  repositories {
+    jcenter()
+  }
+
+  group = 'com.github.mizosoft.methanol'
+  version = '1.0.0-SNAPSHOT'
+}
+
+subprojects { subproject ->
+  if (!isJavaProject(subproject)) {
+    return;
   }
 
   apply plugin: 'java-library'
@@ -56,15 +74,9 @@ subprojects { project ->
   apply plugin: 'checkstyle'
   apply plugin: 'net.ltgt.errorprone'
   apply plugin: 'idea'
-
-  group = 'com.github.mizosoft.methanol'
-  version = '1.0-SNAPSHOT'
+  apply plugin: 'jacoco'
 
   sourceCompatibility = JavaVersion.VERSION_11
-
-  repositories {
-    jcenter()
-  }
 
   configurations {
     checkstyleConfig
@@ -90,7 +102,7 @@ subprojects { project ->
   }
 
   // Add helper extensions for modular subprojects
-  if (project.extensions.findByName('moduleName') != null) {
+  if (subproject.extensions.findByName('moduleName') != null) {
     configure(extensions) {
       add('addReads') { task, targetModule ->
         configure(task) {
@@ -117,7 +129,7 @@ subprojects { project ->
     excludeTests = true
     if (System.properties.containsKey('checkerframework')) {
       checkers = [
-          // 'org.checkerframework.checker.nullness.NullnessChecker'
+          'org.checkerframework.checker.nullness.NullnessChecker'
       ]
     }
   }
@@ -125,11 +137,11 @@ subprojects { project ->
   checkstyle {
     toolVersion = versions.checkstyle
     config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
-    sourceSets = [project.sourceSets.main]
+    sourceSets = [subproject.sourceSets.main]
   }
 
   tasks.withType(Checkstyle) {
-    enabled = System.properties.containsKey('checkstyle')
+    onlyIf { System.properties.containsKey('checkstyle') }
     reports {
       xml.enabled = false
       html.enabled = true
@@ -159,4 +171,32 @@ subprojects { project ->
   test {
     useJUnitPlatform()
   }
+}
+
+task jacocoMerge(type: JacocoMerge) {
+  subprojects.each { subproject ->
+    if (contributesToTests(subproject)) {
+      executionData subproject.tasks.withType(Test)
+    }
+  }
+}
+
+task jacocoRootReport(type: JacocoReport) {
+  dependsOn jacocoMerge
+  executionData jacocoMerge.destinationFile
+  subprojects.each { subproject ->
+    if (isPublished(subproject) && contributesToTests(subproject)) {
+      additionalSourceDirs.from subproject.sourceSets.main.allSource
+      sourceDirectories.from subproject.sourceSets.main.allSource
+      classDirectories.from subproject.sourceSets.main.output
+    }
+  }
+  reports {
+    xml.enabled false
+    html.enabled true
+  }
+}
+
+task cleanRoot(type: Delete) {
+  delete rootProject.buildDir
 }

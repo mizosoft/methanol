@@ -15,8 +15,7 @@ dependencies {
 
 task jmhJar(type: ShadowJar) {
   dependsOn compileJava
-  archivesBaseName = 'methanol'
-  archiveClassifier = 'jmh'
+  archivesBaseName = 'benchmarks'
   from sourceSets.main.runtimeClasspath
   exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
   manifest {
