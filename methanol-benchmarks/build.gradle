@@ -15,7 +15,7 @@ dependencies {
 
 task jmhJar(type: ShadowJar) {
   dependsOn compileJava
-  archivesBaseName = 'benchmarks'
+  archivesBaseName = rootProject.getArtifactId(project)
   from sourceSets.main.runtimeClasspath
   exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
   manifest {

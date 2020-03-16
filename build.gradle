@@ -18,7 +18,8 @@ ext {
       'errorprone'      : '2.3.4',
       'brotliDec'       : '0.1.2',
       'okhttp'          : '4.4.0',
-      'jmh'             : '1.23'
+      'jmh'             : '1.23',
+      'jacoco'   : '0.8.5'
   ]
 
   deps = [
@@ -43,6 +44,8 @@ ext {
       'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh"
   ]
 
+  // querying properties about subprojects
+
   isJavaProject = { project ->
     project.name != 'brotli-jni'
   }
@@ -52,20 +55,34 @@ ext {
   contributesToTests = { project ->
     isJavaProject(project) && !(project.name in ['methanol-benchmarks', 'methanol-testutils'])
   }
+  getArtifactId = { project ->
+    if (isPublished(project)) {
+      if (project.name == 'methanol-benchmarks') {
+        return 'benchmarks'
+      }
+      return project.name
+    }
+    return null
+  }
 }
 
 allprojects {
+  group = 'com.github.mizosoft.methanol'
+  ext.artifactId = getArtifactId(project)
+  version = '1.0.0-SNAPSHOT'
+
   repositories {
     jcenter()
   }
 
-  group = 'com.github.mizosoft.methanol'
-  version = '1.0.0-SNAPSHOT'
+  jacoco {
+    toolVersion = versions.jacoco
+  }
 }
 
 subprojects { subproject ->
   if (!isJavaProject(subproject)) {
-    return;
+    return
   }
 
   apply plugin: 'java-library'
@@ -170,6 +187,96 @@ subprojects { subproject ->
 
   test {
     useJUnitPlatform()
+  }
+}
+
+// configure publishing for published projects
+subprojects { subproject ->
+  if (!isPublished(subproject)) {
+    return
+  }
+
+  apply plugin: 'maven-publish'
+  apply plugin: 'signing'
+
+  publishing {
+    def benchmarks = artifactId == 'benchmarks'
+
+    if (!benchmarks) {
+      java {
+        withSourcesJar()
+        withJavadocJar()
+      }
+    }
+
+    publications {
+      maven(MavenPublication) {
+        groupId = project.group
+        artifactId = project.ext.artifactId
+        version = project.version
+        if (benchmarks) {
+          // publish the runnable uber-jar for benchmarks
+          afterEvaluate {
+            artifact jmhJar
+          }
+        } else {
+          from components.java
+        }
+
+        pom {
+          name = project.name
+          description = "Web extensions built on top of Java's non-blocking HTTP client"
+          url = 'https://github.com/mizosoft/methanol'
+          inceptionYear = '2019'
+
+          scm {
+            url = 'https://github.com/mizosoft/methanol'
+            connection = 'scm:git:https://github.com/mizosoft/methanol.git'
+            developerConnection = 'scm:git:ssh://git@github.com/mizosoft/methanol.git'
+          }
+
+          developers {
+            developer {
+              id = 'mizosoft'
+              name = 'Moataz Abdelnasser'
+              email = 'moataz.nasser20@gmail.com'
+              url = 'https://github.com/mizosoft'
+            }
+          }
+
+          licenses {
+            license {
+              name = 'MIT license'
+              url = 'https://opensource.org/licenses/MIT'
+            }
+          }
+        }
+      }
+    }
+
+    repositories {
+      maven {
+        url = version.endsWith('SNAPSHOT')
+            ? 'https://oss.sonatype.org/content/repositories/snapshots'
+            : 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+
+        credentials {
+          username = project.findProperty('nexusUsername')
+          password = project.findProperty('nexusPassword')
+        }
+      }
+    }
+  }
+
+  signing {
+    // Workaround for https://github.com/gradle/gradle/issues/888 (use gpg 2.2.X from CLI)
+    useGpgCmd()
+
+    // Workaround for https://github.com/gradle/gradle/issues/11387
+    required { false }
+    if (!project.version.endsWith('SNAPSHOT')) {
+      sign publishing.publications.maven
+    }
   }
 }
 
