@@ -47,8 +47,11 @@ targets.each { target ->
 
 dependencies {
   implementation project(':methanol')
-  getJniConfigs(configurations).each { config ->
-    dependencies.add(config.name, project('brotli-jni'))
+
+  if (project.findProject('brotli-jni')) { // project included in the build
+    getJniConfigs(configurations).each { config ->
+      dependencies.add(config.name, project('brotli-jni'))
+    }
   }
 
   testImplementation deps.brotliDec
