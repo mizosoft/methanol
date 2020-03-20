@@ -2,6 +2,7 @@ Note: This project is a WIP
 
 # Methanol
 [![CI status](https://github.com/mizosoft/methanol/workflows/CI/badge.svg)](https://github.com/mizosoft/methanol/actions)
+[![codecov](https://codecov.io/gh/mizosoft/methanol/branch/master/graph/badge.svg)](https://codecov.io/gh/mizosoft/methanol)
 
 A set of useful extensions for the Java HTTP client.
 
