@@ -32,8 +32,8 @@ jobs:
       - name: Run Gradle build
         shell: bash
         run: | # brotli is not currently supported for mac so tests are excluded on macos
-        ./gradlew --warning-mode=all -PenableErrorprone build \
-        `if [[ "${{ matrix.os }}" == macos* ]]; then echo '-x :methanol-brotli:test'; fi`
+          ./gradlew --warning-mode=all -PenableErrorprone build \
+          `if [[ "${{ matrix.os }}" == macos* ]]; then echo '-x :methanol-brotli:test'; fi`
 
   publish_snapshot:
     name: Publish snapshot version
