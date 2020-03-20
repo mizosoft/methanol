@@ -22,7 +22,10 @@
 
 package com.github.mizosoft.methanol.internal.dec;
 
+import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
+
 /** {@code BodyDecoder.Factory} for "deflate". */
+@DefaultProvider
 public class DeflateBodyDecoderFactory extends ZLibBodyDecoderFactory {
 
   /**
