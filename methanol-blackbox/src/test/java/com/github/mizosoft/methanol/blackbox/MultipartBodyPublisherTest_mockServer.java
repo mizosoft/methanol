@@ -40,8 +40,6 @@ import java.net.http.HttpRequest;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -55,7 +53,6 @@ public class MultipartBodyPublisherTest_mockServer extends Lifecycle {
     var tweet = new Tweet();
     tweet.sender = "Albert Einstein";
     tweet.content = "Is math related to science?";
-    tweet.dateSent = new Date(1921, Calendar.NOVEMBER, 9);
     var theoryFile = Files.createFile(tempDir.resolve("relativity.theory"));
     Files.writeString(theoryFile, "Time is relative bro");
     RegistryFileTypeDetector.register("theory", MediaType.parse("application/x-theory"));
@@ -83,7 +80,7 @@ public class MultipartBodyPublisherTest_mockServer extends Lifecycle {
             + "Content-Disposition: form-data; name=\"tweet\"\r\n"
             + "Content-Type: application/json\r\n"
             + "\r\n"
-            + "{\"sender\":\"Albert Einstein\",\"content\":\"Is math related to science?\",\"dateSent\":58438879200000}\r\n"
+            + "{\"sender\":\"Albert Einstein\",\"content\":\"Is math related to science?\"}\r\n"
             + "--my_awesome_boundary\r\n"
             + "Content-Disposition: form-data; name=\"attachment\"; filename=\"relativity.theory\"\r\n"
             + "Content-Type: application/x-theory\r\n"
@@ -164,7 +161,6 @@ public class MultipartBodyPublisherTest_mockServer extends Lifecycle {
 
     public String sender;
     public String content;
-    public Date dateSent;
 
     public Tweet() {
     }
