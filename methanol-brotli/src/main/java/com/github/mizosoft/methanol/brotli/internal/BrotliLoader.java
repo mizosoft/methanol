@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.brotli.internal;
 
+import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,10 +40,9 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Helper class for loading brotli JNI and setting bundled dictionary. */
-class BrotliLoader {
+final class BrotliLoader {
 
   private static final String LINUX = "linux";
   private static final String WINDOWS = "windows";
@@ -57,12 +57,7 @@ class BrotliLoader {
   static final String BASE_LIB_NAME = "brotlijni";
   static final String ENTRY_DIR_PREFIX = BrotliLoader.class.getName() + "-";
   private static final String LIB_ROOT = "native";
-  private static final String DICT_PATH = "/data/dictionary.bin";
-
-  private static final Path TEMP_DIR =
-      Path.of(
-          System.getProperty(
-              "com.github.mizosoft.methanol.brotli.tmpdir", System.getProperty("java.io.tmpdir")));
+  private static final String DEFAULT_DICTIONARY_PATH = "/data/dictionary.bin";
 
   public static final int BROTLI_DICT_SIZE = 122784;
   private static final byte[] BROTLI_DICT_SHA_256 =
@@ -71,19 +66,41 @@ class BrotliLoader {
         104, 119, -40, -50, 123, 58, -127, 127, 55, -113, 49, 54, 83, -13, 92, 112
       };
 
+  private static final BrotliLoader LOADER;
+
+  static {
+    Path configuredTempDir =
+        Path.of(
+            System.getProperty(
+                "com.github.mizosoft.methanol.brotli.tmpdir",
+                System.getProperty("java.io.tmpdir")));
+    LOADER = new BrotliLoader(configuredTempDir);
+  }
+
   private static final Logger LOGGER = Logger.getLogger(BrotliLoader.class.getName());
 
-  private static volatile boolean loaded;
+  private final Path tempDir;
+  private final String dictionaryPath;
+  private volatile boolean loaded;
 
-  static void ensureLoaded() throws IOException {
+  BrotliLoader(Path tempDir) {
+    this(tempDir, DEFAULT_DICTIONARY_PATH);
+  }
+
+  BrotliLoader(Path tempDir, String dictionaryPath) {
+    this.tempDir = tempDir;
+    this.dictionaryPath = dictionaryPath;
+  }
+
+  void ensureLoaded() throws IOException {
     if (!loaded) {
-      synchronized (BrotliLoader.class) {
+      synchronized (this) {
         if (!loaded) {
-          ByteBuffer dictData = loadBrotliDict();
-          LibEntry entry = extractLib();
+          ByteBuffer dictionary = loadBrotliDictionary();
+          LibEntry entry = extractLibrary();
           entry.deleteOnExit();
-          entry.loadLib();
-          if (!CommonJNI.nativeSetDictionaryData(dictData)) {
+          entry.loadLibrary();
+          if (!CommonJNI.nativeSetDictionaryData(dictionary)) {
             throw new IOException("failed to set brotli dictionary");
           }
           loaded = true; // Mission accomplished!
@@ -92,89 +109,10 @@ class BrotliLoader {
     }
   }
 
-  static LibEntry extractLib() throws IOException {
-    String libName = System.mapLibraryName(BASE_LIB_NAME);
-    String libPath = findLibPath(libName);
-    URL libUrl = BrotliLoader.class.getResource(libPath);
-    if (libUrl == null) {
-      throw new FileNotFoundException("couldn't find brotli jni library: " + libPath);
-    }
-    cleanStaleEntries(libName);
-    return createLibEntry(libName, libUrl);
-  }
-
-  private static void cleanStaleEntries(String libName) {
-    try (Stream<Path> entryDirs =
-        Files.list(TEMP_DIR).filter(p -> p.getFileName().toString().startsWith(ENTRY_DIR_PREFIX))) {
-      entryDirs.forEach(
-          dir -> {
-            LibEntry entry = new LibEntry(dir, libName);
-            if (entry.isStale()) {
-              try {
-                entry.deleteIfExists();
-              } catch (IOException ioe) {
-                LOGGER.log(Level.WARNING, "couldn't delete stale entry: " + dir, ioe);
-              }
-            }
-          });
-    } catch (IOException ioe) {
-      LOGGER.log(Level.WARNING, "couldn't perform cleanup routine for stale entries", ioe);
-    }
-  }
-
-  private static LibEntry createLibEntry(String libName, URL libUrl) throws IOException {
-    Path entryDir = Files.createTempDirectory(TEMP_DIR, ENTRY_DIR_PREFIX);
-    LibEntry entry = new LibEntry(entryDir, libName);
-    try (InputStream libIn = libUrl.openStream()) {
-      entry.create(libIn);
-    } catch (IOException ioe) {
-      try {
-        entry.deleteIfExists();
-      } catch (IOException suppressed) {
-        ioe.addSuppressed(suppressed);
-      }
-      throw ioe;
-    }
-    return entry;
-  }
-
-  private static String findLibPath(String libName) {
-    String os = System.getProperty("os.name");
-    String normalizedOs = normalizeOs(os.toLowerCase(Locale.ROOT));
-    if (normalizedOs == null) {
-      throw new UnsupportedOperationException("unrecognized OS: " + os);
-    }
-    String arch = System.getProperty("os.arch");
-    String normalizedArch = normalizeArch(arch.toLowerCase(Locale.ROOT));
-    if (normalizedArch == null) {
-      throw new UnsupportedOperationException("unrecognized architecture: " + arch);
-    }
-    return String.format("/%s/%s/%s/%s", LIB_ROOT, normalizedOs, normalizedArch, libName);
-  }
-
-  private static @Nullable String normalizeOs(String os) {
-    if (os.contains("linux")) {
-      return LINUX;
-    } else if (os.contains("windows")) {
-      return WINDOWS;
-    } else if (os.contains("mac os x") || os.contains("darwin") || os.contains("osx")) {
-      return MAC_OS;
-    }
-    return null;
-  }
-
-  private static @Nullable String normalizeArch(String arch) {
-    return ARCH_PATHS.entrySet().stream()
-        .filter(e -> e.getValue().contains(arch))
-        .findFirst()
-        .map(Map.Entry::getKey)
-        .orElse(null);
-  }
-
-  private static ByteBuffer loadBrotliDict() throws IOException {
-    InputStream dicIn = BrotliLoader.class.getResourceAsStream(DICT_PATH);
+  ByteBuffer loadBrotliDictionary() throws IOException {
+    InputStream dicIn = BrotliLoader.class.getResourceAsStream(dictionaryPath);
     if (dicIn == null) {
-      throw new FileNotFoundException("couldn't find brotli dictionary: " + DICT_PATH);
+      throw new FileNotFoundException("couldn't find brotli dictionary: " + dictionaryPath);
     }
     MessageDigest dictDigest;
     try {
@@ -196,12 +134,88 @@ class BrotliLoader {
       throw new IOException("too large dictionary");
     }
     if (dictData.hasRemaining()) {
-      throw new IOException("incomplete dictionary");
+      throw new EOFException("incomplete dictionary");
     }
     if (!Arrays.equals(dictDigest.digest(), BROTLI_DICT_SHA_256)) {
       throw new IOException("dictionary is corrupt");
     }
     return dictData;
+  }
+
+  LibEntry extractLibrary() throws IOException {
+    String libName = System.mapLibraryName(BASE_LIB_NAME);
+    String libPath = findLibraryPath(libName);
+    URL libUrl = BrotliLoader.class.getResource(libPath);
+    if (libUrl == null) {
+      throw new FileNotFoundException("couldn't find brotli jni library: " + libPath);
+    }
+    cleanStaleEntries(libName);
+    return createLibEntry(libName, libUrl);
+  }
+
+  private void cleanStaleEntries(String libName) {
+    try (Stream<Path> entryDirs =
+        Files.list(tempDir).filter(p -> p.getFileName().toString().startsWith(ENTRY_DIR_PREFIX))) {
+      entryDirs.forEach(
+          dir -> {
+            LibEntry entry = new LibEntry(dir, libName);
+            if (entry.isStale()) {
+              try {
+                entry.deleteIfExists();
+              } catch (IOException ioe) {
+                LOGGER.log(Level.WARNING, "couldn't delete stale entry: " + dir, ioe);
+              }
+            }
+          });
+    } catch (IOException ioe) {
+      LOGGER.log(Level.WARNING, "couldn't perform cleanup routine for stale entries", ioe);
+    }
+  }
+
+  private LibEntry createLibEntry(String libName, URL libUrl) throws IOException {
+    Path entryDir = Files.createTempDirectory(tempDir, ENTRY_DIR_PREFIX);
+    LibEntry entry = new LibEntry(entryDir, libName);
+    try (InputStream libIn = libUrl.openStream()) {
+      entry.create(libIn);
+    } catch (IOException ioe) {
+      try {
+        entry.deleteIfExists();
+      } catch (IOException suppressed) {
+        ioe.addSuppressed(suppressed);
+      }
+      throw ioe;
+    }
+    return entry;
+  }
+
+  private static String findLibraryPath(String libName) {
+    String normalizedOs = normalizeOs(System.getProperty("os.name").toLowerCase(Locale.ROOT));
+    String normalizedArch = normalizeArch(System.getProperty("os.arch").toLowerCase(Locale.ROOT));
+    return String.format("/%s/%s/%s/%s", LIB_ROOT, normalizedOs, normalizedArch, libName);
+  }
+
+  private static String normalizeOs(String os) {
+    if (os.contains("linux")) {
+      return LINUX;
+    } else if (os.contains("windows")) {
+      return WINDOWS;
+    } else if (os.contains("mac os x") || os.contains("darwin") || os.contains("osx")) {
+      return MAC_OS;
+    }
+    throw new UnsupportedOperationException("unrecognized OS: " + os);
+  }
+
+  private static String normalizeArch(String arch) {
+    return ARCH_PATHS.entrySet().stream()
+        .filter(e -> e.getValue().contains(arch))
+        .findFirst()
+        .map(Map.Entry::getKey)
+        .orElseThrow(() -> new UnsupportedOperationException("unrecognized architecture: " + arch));
+  }
+
+  /** Retrieves the singleton instance of this loader. */
+  static BrotliLoader instance() {
+    return LOADER;
   }
 
   /** Represents a temp entry for the extracted library and it's lock file. */
@@ -251,7 +265,7 @@ class BrotliLoader {
       return Files.notExists(lockFile) && Files.exists(libFile);
     }
 
-    void loadLib() {
+    void loadLibrary() {
       System.load(libFile.toAbsolutePath().toString());
     }
   }

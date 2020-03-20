@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpHeaders;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -118,5 +120,11 @@ public class TestUtils {
 
   public static List<String> lines(String s) {
     return s.lines().collect(Collectors.toUnmodifiableList());
+  }
+
+  public static List<Path> listFiles(Path dir) throws IOException {
+    try (var stream = Files.list(dir)) {
+      return stream.collect(Collectors.toUnmodifiableList());
+    }
   }
 }
