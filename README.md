@@ -1,7 +1,7 @@
 Note: This project is a WIP
 
 # Methanol
-![](https://github.com/mizosoft/methanol/workflows/CI/badge.svg)
+[![CI status](https://github.com/mizosoft/methanol/workflows/CI/badge.svg)](https://github.com/mizosoft/methanol/actions)
 
 A set of useful extensions for the Java HTTP client.
 
