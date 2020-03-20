@@ -297,17 +297,18 @@ task jacocoRootReport(type: JacocoReport) {
   executionData jacocoMerge.destinationFile
   subprojects.each { subproject ->
     if (isPublished(subproject) && contributesToTests(subproject)) {
-      additionalSourceDirs.from subproject.sourceSets.main.allSource
-      sourceDirectories.from subproject.sourceSets.main.allSource
+      additionalSourceDirs.from subproject.sourceSets.main.allSource.srcDirs
+      sourceDirectories.from subproject.sourceSets.main.allSource.srcDirs
       classDirectories.from subproject.sourceSets.main.output
     }
   }
   reports {
-    xml.enabled false
+    xml.enabled true
     html.enabled true
+    csv.enabled false
   }
 }
 
-task cleanRoot(type: Delete) {
+task clean(type: Delete) {
   delete rootProject.buildDir
 }

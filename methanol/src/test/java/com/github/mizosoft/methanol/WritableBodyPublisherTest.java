@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,6 +42,11 @@ import java.util.concurrent.Flow.Subscription;
 import org.junit.jupiter.api.Test;
 
 class WritableBodyPublisherTest {
+
+  @Test
+  void contentLengthIsUndefined() {
+    assertTrue(WritableBodyPublisher.create().contentLength() < 0);
+  }
 
   @Test
   void writeWithByteChannel() throws IOException {
@@ -91,6 +97,7 @@ class WritableBodyPublisherTest {
     var body = WritableBodyPublisher.create();
     body.subscribe(subscriber);
     body.byteChannel().close();
+    assertFalse(body.byteChannel().isOpen());
     assertTrue(subscriber.completed);
   }
 
