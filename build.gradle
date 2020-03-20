@@ -3,6 +3,7 @@ plugins {
   id 'org.javamodularity.moduleplugin' version '1.6.0' apply false
   id 'net.ltgt.errorprone' version '1.1.1' apply false
   id 'jacoco' // apply to root
+  id 'com.github.kt3k.coveralls' version '2.10.1' // apply to root
 }
 
 ext {
@@ -54,6 +55,9 @@ ext {
   }
   contributesToTests = { project ->
     isJavaProject(project) && !(project.name in ['methanol-benchmarks', 'methanol-testutils'])
+  }
+  contributesToCoverage = { project ->
+    isPublished(project) && contributesToTests(project)
   }
   getArtifactId = { project ->
     if (isPublished(project)) {
@@ -296,7 +300,7 @@ task jacocoRootReport(type: JacocoReport) {
   dependsOn jacocoMerge
   executionData jacocoMerge.destinationFile
   subprojects.each { subproject ->
-    if (isPublished(subproject) && contributesToTests(subproject)) {
+    if (contributesToCoverage(project)) {
       additionalSourceDirs.from subproject.sourceSets.main.allSource.srcDirs
       sourceDirectories.from subproject.sourceSets.main.allSource.srcDirs
       classDirectories.from subproject.sourceSets.main.output
@@ -307,6 +311,20 @@ task jacocoRootReport(type: JacocoReport) {
     html.enabled true
     csv.enabled false
   }
+}
+
+coveralls {
+  jacocoReportPath = jacocoRootReport.reports.xml.outputLocation
+  subprojects.each { subproject ->
+    if (contributesToCoverage(subproject)) {
+      sourceDirs += subproject.sourceSets.main.allSource.srcDirs.flatten()
+    }
+  }
+}
+
+tasks.coveralls {
+  dependsOn jacocoRootReport
+  onlyIf { System.getenv().GITHUB_ACTIONS }
 }
 
 task clean(type: Delete) {
