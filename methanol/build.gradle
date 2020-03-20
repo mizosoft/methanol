@@ -9,7 +9,7 @@ compileJava {
   options.compilerArgs += '-Xlint:-module'
 }
 
-task testNG(type: Test) {
+task tckTest(type: Test) {
   useTestNG()
   include '**/tck/**'
   shouldRunAfter test
@@ -23,6 +23,8 @@ test {
     runOnClasspath = true
   }
 }
+
+check.dependsOn tckTest
 
 // compileTestJava still compiles from the module path
 addReads(compileTestJava, 'methanol.testutils')
