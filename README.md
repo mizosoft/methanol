@@ -1,6 +1,7 @@
 Note: This project is a WIP
 
 # Methanol
+![](https://github.com/mizosoft/methanol/workflows/CI/badge.svg)
 
 A set of useful extensions for the Java HTTP client.
 
