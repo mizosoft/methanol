@@ -1,7 +1,5 @@
 import org.gradle.nativeplatform.internal.DefaultTargetMachineFactory
 
-description = 'provides brotli decompression for methanol'
-
 ext {
   libRoot = 'native'
 
@@ -47,8 +45,11 @@ targets.each { target ->
 
 dependencies {
   implementation project(':methanol')
-  getJniConfigs(configurations).each { config ->
-    dependencies.add(config.name, project('brotli-jni'))
+
+  if (project.findProject('brotli-jni')) { // project included in the build
+    getJniConfigs(configurations).each { config ->
+      dependencies.add(config.name, project('brotli-jni'))
+    }
   }
 
   testImplementation deps.brotliDec

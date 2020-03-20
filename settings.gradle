@@ -6,6 +6,10 @@ include 'methanol-gson'
 include 'methanol-jackson'
 include 'methanol-protobuf'
 include 'methanol-brotli'
-include 'methanol-brotli:brotli-jni'
 include 'methanol-blackbox'
 include 'methanol-benchmarks'
+// only include native brotli-jni project if explicitly requested
+if (settings.hasProperty('includeBrotliJni')
+    || settings.gradle.startParameter.taskNames.contains('installBrotli')) {
+  include 'methanol-brotli:brotli-jni'
+}
