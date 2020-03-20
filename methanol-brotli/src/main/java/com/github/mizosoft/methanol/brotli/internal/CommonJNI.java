@@ -10,5 +10,6 @@ import java.nio.ByteBuffer;
 
 /** JNI wrapper for brotli common. */
 class CommonJNI {
+
   static native boolean nativeSetDictionaryData(ByteBuffer data);
 }

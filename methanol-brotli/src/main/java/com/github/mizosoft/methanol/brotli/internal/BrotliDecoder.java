@@ -25,6 +25,8 @@ package com.github.mizosoft.methanol.brotli.internal;
 import com.github.mizosoft.methanol.dec.AsyncDecoder;
 import java.io.EOFException;
 import java.io.IOException;
+import java.lang.ref.Cleaner;
+import java.lang.ref.Cleaner.Cleanable;
 import java.nio.ByteBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -33,12 +35,12 @@ class BrotliDecoder implements AsyncDecoder {
   // TODO: maybe make it configurable with a system property ?
   private static final int INPUT_BUFFER_SIZE = 4096;
 
-  // Initialization is deferred to first decode() to rethrow any IOException directly
-  private DecoderJNI.@MonotonicNonNull Wrapper brotliNative;
-  private boolean destroyed;
+  private static final Cleaner CLEANER = Cleaner.create();
 
-  BrotliDecoder() { // package-private
-  }
+  private final WrapperHandle handle = new WrapperHandle();
+  private final Cleanable cleanable = CLEANER.register(this, new Destroyer(handle));
+
+  BrotliDecoder() {} // package-private
 
   @Override
   public String encoding() {
@@ -46,62 +48,96 @@ class BrotliDecoder implements AsyncDecoder {
   }
 
   @Override
-  public synchronized void decode(ByteSource source, ByteSink sink) throws IOException {
-    if (destroyed) {
-      return;
-    }
+  public void decode(ByteSource source, ByteSink sink) throws IOException {
+    synchronized (handle.mutex) {
+      if (handle.destroyed) {
+        return;
+      }
 
-    if (brotliNative == null) {
-      brotliNative = new DecoderJNI.Wrapper(INPUT_BUFFER_SIZE);
-    }
+      DecoderJNI.Wrapper brotliNative = handle.brotliNative;
+      if (brotliNative == null) {
+        brotliNative = new DecoderJNI.Wrapper(INPUT_BUFFER_SIZE);
+        handle.brotliNative = brotliNative;
+      }
 
-    outerLoop:
-    while (true) {
-      switch (brotliNative.getStatus()) {
-        case OK:
-          brotliNative.push(0);
-          break;
+      outerLoop:
+      while (true) {
+        switch (brotliNative.getStatus()) {
+          case OK:
+            brotliNative.push(0);
+            break;
 
-        case NEEDS_MORE_INPUT:
-          if (!source.hasRemaining()) {
-            if (source.finalSource()) {
-              throw new EOFException("unexpected end of brotli stream");
+          case NEEDS_MORE_INPUT:
+            if (!source.hasRemaining()) {
+              if (source.finalSource()) {
+                throw new EOFException("unexpected end of brotli stream");
+              }
+              break outerLoop; // More decode rounds to come...
             }
-            break outerLoop; // More decode rounds to come...
-          }
-          ByteBuffer brotliIn = brotliNative.getInputBuffer();
-          source.pullBytes(brotliIn.clear());
-          brotliNative.push(brotliIn.position());
-          break;
+            ByteBuffer brotliIn = brotliNative.getInputBuffer();
+            source.pullBytes(brotliIn.clear());
+            brotliNative.push(brotliIn.position());
+            break;
 
-        case NEEDS_MORE_OUTPUT:
-          do {
-            sink.pushBytes(brotliNative.pull());
-          } while (brotliNative.hasOutput());
-          break;
+          case NEEDS_MORE_OUTPUT:
+            do {
+              sink.pushBytes(brotliNative.pull());
+            } while (brotliNative.hasOutput());
+            break;
 
-        case ERROR:
-          throw new IOException("corrupt brotli stream");
+          case ERROR:
+            throw new IOException("corrupt brotli stream");
 
-        case DONE:
-          if (source.hasRemaining()) {
-            throw new IOException("brotli stream finished prematurely");
-          }
-          // Flush any remaining output
-          while (brotliNative.hasOutput()) {
-            sink.pushBytes(brotliNative.pull());
-          }
-          break outerLoop; // Brotli stream finished!
+          case DONE:
+            if (source.hasRemaining()) {
+              throw new IOException("brotli stream finished prematurely");
+            }
+            // Flush any remaining output
+            while (brotliNative.hasOutput()) {
+              sink.pushBytes(brotliNative.pull());
+            }
+            break outerLoop; // Brotli stream finished!
+        }
       }
     }
   }
 
   @Override
-  public synchronized void close() {
-    if (!destroyed) {
-      destroyed = true;
-      if (brotliNative != null) {
-        brotliNative.destroy();
+  public void close() {
+    cleanable.clean();
+  }
+
+  // Shared handle between Destroyer and BrotliDecoder over the lazily initialized native instance
+  static final class WrapperHandle {
+
+    // Initialization is deferred to first decode() to rethrow any IOException directly
+    private DecoderJNI.@MonotonicNonNull Wrapper brotliNative;
+    private boolean destroyed;
+
+    // For guarding brotliNative against possible concurrent decodes & (closes | cleanup)
+    private final Object mutex = new Object();
+
+    WrapperHandle() {}
+  }
+
+  private static final class Destroyer implements Runnable {
+
+    private final WrapperHandle handle;
+
+    Destroyer(WrapperHandle handle) {
+      this.handle = handle;
+    }
+
+    @Override
+    public void run() {
+      synchronized (handle.mutex) {
+        if (!handle.destroyed) {
+          handle.destroyed = true;
+          DecoderJNI.Wrapper brotliNative = handle.brotliNative;
+          if (brotliNative != null) {
+            brotliNative.destroy();
+          }
+        }
       }
     }
   }

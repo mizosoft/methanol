@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 
 /** JNI wrapper for brotli decoder. */
 class DecoderJNI {
+
   private static native ByteBuffer nativeCreate(long[] context);
 
   private static native void nativePush(long[] context, int length);
@@ -28,10 +29,10 @@ class DecoderJNI {
   }
 
   static class Wrapper {
+
     private final long[] context = new long[3];
     private final ByteBuffer inputBuffer;
     private Status lastStatus = Status.NEEDS_MORE_INPUT;
-    private boolean fresh = true;
 
     Wrapper(int inputBufferSize) throws IOException {
       this.context[1] = inputBufferSize;
@@ -54,7 +55,6 @@ class DecoderJNI {
       if (lastStatus == Status.OK && length != 0) {
         throw new IllegalStateException("pushing input to decoder in OK state");
       }
-      fresh = false;
       nativePush(context, length);
       parseStatus();
     }
@@ -93,7 +93,6 @@ class DecoderJNI {
       if (lastStatus != Status.NEEDS_MORE_OUTPUT && !hasOutput()) {
         throw new IllegalStateException("pulling output from decoder in " + lastStatus + " state");
       }
-      fresh = false;
       ByteBuffer result = nativePull(context);
       parseStatus();
       return result;
@@ -106,15 +105,6 @@ class DecoderJNI {
       }
       nativeDestroy(context);
       context[0] = 0;
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-      if (context[0] != 0) {
-        /* TODO: log resource leak? */
-        destroy();
-      }
-      super.finalize();
     }
   }
 }
