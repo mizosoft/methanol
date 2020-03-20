@@ -1,7 +1,5 @@
 import org.gradle.nativeplatform.internal.DefaultTargetMachineFactory
 
-description = 'provides brotli decompression for methanol'
-
 ext {
   libRoot = 'native'
 

@@ -38,5 +38,7 @@ task jmh(type: JavaExec) {
 }
 
 tasks.withType(JavaCompile) {
-  options.errorprone.disableWarningsInGeneratedCode = true // jmh code makes errorprone go nuts
+  options.errorprone {
+    excludedPaths = '.*/build/generated/.*' // jmh generated code makes errorprone go nuts
+  }
 }
