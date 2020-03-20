@@ -2,6 +2,7 @@ import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.blackbox.BadzipBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.CharSequenceEncoderProvider;
+import com.github.mizosoft.methanol.blackbox.FailingBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.JacksonProviders;
 import com.github.mizosoft.methanol.blackbox.MyBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.ProtobufProviders;
@@ -21,7 +22,8 @@ open module methanol.blackbox {
   provides BodyDecoder.Factory with
       MyBodyDecoderFactory.MyDeflateBodyDecoderFactory,
       MyBodyDecoderFactory.MyGzipBodyDecoderFactory,
-      BadzipBodyDecoderFactory;
+      BadzipBodyDecoderFactory,
+      FailingBodyDecoderFactory;
 
   provides BodyAdapter.Encoder with
       JacksonProviders.EncoderProvider,

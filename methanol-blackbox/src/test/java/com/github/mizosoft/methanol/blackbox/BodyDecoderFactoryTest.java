@@ -23,27 +23,48 @@
 package com.github.mizosoft.methanol.blackbox;
 
 import static com.github.mizosoft.methanol.BodyDecoder.Factory.installedBindings;
-import static com.github.mizosoft.methanol.BodyDecoder.Factory.installedFactories;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.blackbox.MyBodyDecoderFactory.MyDeflateBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.MyBodyDecoderFactory.MyGzipBodyDecoderFactory;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.logging.Filter;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class BodyDecoderFactoryTest {
 
+  private static final String LOGGER_NAME =
+      "com.github.mizosoft.methanol.internal.spi.ServiceCache";
+
+  private static RecordingFilter recordingFilter;
+  private static Filter originalFilter;
+
+  @BeforeAll
+  static void setFilter() {
+    Logger logger = Logger.getLogger(LOGGER_NAME);
+    originalFilter = logger.getFilter();
+    recordingFilter = new RecordingFilter();
+    logger.setFilter(recordingFilter);
+  }
+
+  @AfterAll
+  static void setOriginalFilter() {
+    Logger logger = Logger.getLogger(LOGGER_NAME);
+    logger.setFilter(originalFilter);
+  }
+
+  /** @see FailingBodyDecoderFactory */
   @Test
-  void findInstalled() {
-    var expected = Set.of("gzip", "deflate", "br", "badzip");
-    var found = installedFactories()
-        .stream()
-        .map(BodyDecoder.Factory::encoding)
-        .collect(Collectors.toSet());
-    assertEquals(expected, found);
-    assertEquals(expected, installedBindings().keySet());
+  void failingDecoderIsIgnoredAndLogged() {
+    BodyDecoder.Factory.installedFactories(); // trigger service lookup
+    assertNotNull(recordingFilter.record);
+    assertEquals(Level.WARNING, recordingFilter.record.getLevel()); // that would suffice :)
   }
 
   @Test
@@ -51,5 +72,19 @@ class BodyDecoderFactoryTest {
     var bindings = installedBindings();
     assertEquals(MyDeflateBodyDecoderFactory.class, bindings.get("deflate").getClass());
     assertEquals(MyGzipBodyDecoderFactory.class, bindings.get("gzip").getClass());
+  }
+
+  // Doesn't log but records what was last tried to be logged
+  private static final class RecordingFilter implements Filter {
+
+    LogRecord record;
+
+    RecordingFilter() {}
+
+    @Override
+    public boolean isLoggable(LogRecord record) {
+      this.record = record;
+      return false;
+    }
   }
 }

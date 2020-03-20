@@ -18,6 +18,7 @@ dependencies {
 [compileTestJava, test].each { task ->
   addReads(task, 'okhttp3.mockwebserver')
   addReads(task, 'org.reactivestreams')
+  addReads(task, 'java.logging')
 }
 
 protobuf {

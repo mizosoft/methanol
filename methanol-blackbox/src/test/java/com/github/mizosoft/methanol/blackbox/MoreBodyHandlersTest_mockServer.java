@@ -39,8 +39,10 @@ import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.TypeReference;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
@@ -67,9 +69,12 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 import okhttp3.mockwebserver.MockResponse;
 import okio.Buffer;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -122,6 +127,13 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
         .build();
   }
 
+  @BeforeAll
+  static void turnOffServiceLogger() {
+    // Do not log service loader failures.
+    Logger logger = Logger.getLogger("com.github.mizosoft.methanol.internal.spi.ServiceCache");
+    logger.setLevel(Level.OFF);
+  }
+
   private void assertDecodesSmall(String encoding) throws Exception {
     server.enqueue(new MockResponse()
         .setBody(okBuffer(BASE64_DEC.decode(poemEncodings.get(encoding))))
@@ -154,6 +166,7 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
 
   @Test
   void decoding_brotli() throws Exception {
+    assumeTrue(BodyDecoder.Factory.getFactory("br").isPresent());
     assertDecodesSmall("br");
     assertDecodesLarge("br");
   }

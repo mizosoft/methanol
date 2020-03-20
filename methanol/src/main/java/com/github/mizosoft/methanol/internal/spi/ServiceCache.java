@@ -24,15 +24,21 @@ package com.github.mizosoft.methanol.internal.spi;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /** Utility for loading/caching service providers. */
 public class ServiceCache<S> {
+
+  private static final Logger LOGGER = Logger.getLogger(ServiceCache.class.getName());
 
   private final Class<S> service;
   private final ReentrantLock lock = new ReentrantLock();
@@ -64,8 +70,20 @@ public class ServiceCache<S> {
   }
 
   private List<S> loadProviders() {
-    return ServiceLoader.load(service, ClassLoader.getSystemClassLoader()).stream()
-        .map(ServiceLoader.Provider::get)
-        .collect(Collectors.toUnmodifiableList());
+    List<S> providers = new ArrayList<>();
+    ServiceLoader.load(service, ClassLoader.getSystemClassLoader()).stream()
+        .forEach(p -> addProviderLenient(p, providers));
+    return Collections.unmodifiableList(providers);
+  }
+
+  private void addProviderLenient(Provider<S> provider, List<S> providers) {
+    try {
+      providers.add(provider.get());
+    } catch (ServiceConfigurationError error) {
+      LOGGER.log(
+          Level.WARNING,
+          "provider <" + provider.type() + "> will be ignored as it couldn't be instantiated",
+          error);
+    }
   }
 }
