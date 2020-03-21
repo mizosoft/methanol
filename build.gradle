@@ -53,11 +53,13 @@ ext {
   isPublished = { project ->
     isJavaProject(project) && project.name != 'methanol-blackbox'
   }
+  // project has tests that contribute to coverage ?
   contributesToTests = { project ->
     isJavaProject(project) && !(project.name in ['methanol-benchmarks', 'methanol-testutils'])
   }
-  contributesToCoverage = { project ->
-    isPublished(project) && contributesToTests(project)
+  // project is included in coverage report ?
+  contributesToCoverageReport = { project ->
+    isPublished(project) && project.name != 'methanol-benchmarks'
   }
   getArtifactId = { project ->
     if (isPublished(project)) {
@@ -300,7 +302,7 @@ task jacocoRootReport(type: JacocoReport) {
   dependsOn jacocoMerge
   executionData jacocoMerge.destinationFile
   subprojects.each { subproject ->
-    if (contributesToCoverage(project)) {
+    if (contributesToCoverageReport(subproject)) {
       additionalSourceDirs.from subproject.sourceSets.main.allSource.srcDirs
       sourceDirectories.from subproject.sourceSets.main.allSource.srcDirs
       classDirectories.from subproject.sourceSets.main.output
@@ -316,7 +318,7 @@ task jacocoRootReport(type: JacocoReport) {
 coveralls {
   jacocoReportPath = jacocoRootReport.reports.xml.outputLocation
   subprojects.each { subproject ->
-    if (contributesToCoverage(subproject)) {
+    if (contributesToCoverageReport(subproject)) {
       sourceDirs += subproject.sourceSets.main.allSource.srcDirs.flatten()
     }
   }
