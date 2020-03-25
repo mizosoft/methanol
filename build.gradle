@@ -72,7 +72,7 @@ ext {
 allprojects {
   group = 'com.github.mizosoft.methanol'
   ext.artifactId = getArtifactId(project)
-  version = '1.0.0'
+  version = '1.0.1-SNAPSHOT'
 
   repositories {
     jcenter()
