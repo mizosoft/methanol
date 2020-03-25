@@ -10,11 +10,11 @@ A lightweight library that complements `java.net.http` for a more thorough HTTP 
 
 Features provided by ***Methanol*** include, but are not limited to:
 
- * Automatic response decompression.
- * Special `BodyPublisher` implementations for form submission.
- * An extensible object conversion mechanism.
- * Modules for object conversion using formats like JSON and Google's Protocol Buffers.
- * Additional `BodyPublisher`, `BodySubscriber` and `BodyHandler` implementations.
+* Automatic response decompression.
+* Special `BodyPublisher` implementations for form submission.
+* An extensible object conversion mechanism.
+* Modules for object conversion using formats like JSON and Google's Protocol Buffers.
+* Additional `BodyPublisher`, `BodySubscriber` and `BodyHandler` implementations.
 
 ## Installation (Note: not yet released)
 
@@ -41,9 +41,9 @@ dependencies {
 
 ## Documentation
 
- * [Javadocs](https://javadoc.io/doc/com.github.mizosoft.methanol/methanol/): Latest API documentation
- * [GitHub Wikis](https://github.com/mizosoft/methanol/wiki): User guide with examples
+* [Javadocs](https://mizosoft.github.io/methanol/1.x/doc/): Latest API documentation
+* [GitHub Wikis](https://github.com/mizosoft/methanol/wiki): User guide with examples
 
-## License 
+## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
