@@ -20,7 +20,7 @@ ext {
       'brotliDec'       : '0.1.2',
       'okhttp'          : '4.4.0',
       'jmh'             : '1.23',
-      'jacoco'   : '0.8.5'
+      'jacoco'          : '0.8.5'
   ]
 
   deps = [
@@ -183,7 +183,7 @@ subprojects { subproject ->
   javadoc {
     options {
       links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
-      addBooleanOption 'Xdoclint:-missing', true
+      addBooleanOption('Xdoclint:-missing', true)
     }
   }
 
@@ -327,6 +327,46 @@ coveralls {
 tasks.coveralls {
   dependsOn jacocoRootReport
   onlyIf { System.getenv().GITHUB_ACTIONS }
+}
+
+/** This task generates an aggregate Javadoc for all published modules (except benchmarks). */
+task rootJavadoc(type: Javadoc) {
+  def modulePath = files() // --module-path
+  def moduleSrcPaths = [:] // --module-source-path for multi-module compilation
+  subprojects { subproject ->
+    if (isPublished(subproject) && subproject != project(':methanol-benchmarks')) {
+      source subproject.sourceSets.main.allJava
+      afterEvaluate {
+        modulePath.from subproject.sourceSets.main.compileClasspath
+        moduleSrcPaths[subproject.moduleName] = subproject.file('src/main/java')
+      }
+    }
+  }
+  options {
+    links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
+    addBooleanOption('Xdoclint:-missing', true)
+    addStringOption('doctitle', "Methanol ${project.version} API")
+    addStringOption('windowtitle', "Methanol ${project.version} API")
+    subprojects {
+      afterEvaluate {
+        addStringOption('-module-path', modulePath.asPath)
+        addMultilineStringsOption('-module-source-path').with {
+          value = moduleSrcPaths.collect { entry ->
+            "${entry.key}=${entry.value}" as String
+          }
+        }
+      }
+    }
+  }
+  destinationDir = file("${project.buildDir}/docs/javadoc")
+  doFirst {
+    // Must be run in JDK12+ as the specific form of --module-source-path
+    // is used because module names don't match containing directory names
+    // https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8208608
+    if (!JavaVersion.current().isJava12Compatible()) {
+      throw new GradleException('JDK 12 or later is required for multimodule Javadoc');
+    }
+  }
 }
 
 task clean(type: Delete) {
