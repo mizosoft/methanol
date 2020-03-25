@@ -4,7 +4,7 @@ A lightweight library that complements `java.net.http` for a more thorough HTTP 
 
 [![CI status](https://github.com/mizosoft/methanol/workflows/CI/badge.svg)](https://github.com/mizosoft/methanol/actions)
 [![Coverage Status](https://coveralls.io/repos/github/mizosoft/methanol/badge.svg)](https://coveralls.io/github/mizosoft/methanol)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.mizosoft.methanol/methanol/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.mizosoft.methanol/methanol)
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.mizosoft.methanol/methanol.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22com.github.mizosoft.methanol%22%20AND%20a:%22methanol%22)
 
 ## Overview
 
