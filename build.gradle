@@ -72,7 +72,7 @@ ext {
 allprojects {
   group = 'com.github.mizosoft.methanol'
   ext.artifactId = getArtifactId(project)
-  version = '1.0.0-SNAPSHOT'
+  version = '1.0.0'
 
   repositories {
     jcenter()
@@ -210,13 +210,9 @@ subprojects { subproject ->
   apply plugin: 'signing'
 
   publishing {
-    def benchmarks = artifactId == 'benchmarks'
-
-    if (!benchmarks) {
-      java {
-        withSourcesJar()
-        withJavadocJar()
-      }
+    java {
+      withSourcesJar()
+      withJavadocJar()
     }
 
     publications {
@@ -224,13 +220,13 @@ subprojects { subproject ->
         groupId = project.group
         artifactId = project.ext.artifactId
         version = project.version
-        if (benchmarks) {
-          // publish the runnable uber-jar for benchmarks
+        from components.java
+        if (artifactId == 'benchmarks') {
           afterEvaluate {
-            artifact jmhJar
+            artifact(jmhJar) { // publish the runnable uber-jar for benchmarks
+              classifier = 'all'
+            }
           }
-        } else {
-          from components.java
         }
 
         pom {

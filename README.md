@@ -16,7 +16,7 @@ Features provided by ***Methanol*** include, but are not limited to:
 * Modules for object conversion using formats like JSON and Google's Protocol Buffers.
 * Additional `BodyPublisher`, `BodySubscriber` and `BodyHandler` implementations.
 
-## Installation (Note: not yet released)
+## Installation
 
 ### Gradle
 
