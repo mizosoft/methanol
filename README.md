@@ -42,7 +42,7 @@ dependencies {
 ## Documentation
 
 * [Javadocs](https://mizosoft.github.io/methanol/1.x/doc/): Latest API documentation
-* [GitHub Wikis](https://github.com/mizosoft/methanol/wiki): User guide with examples
+* [GitHub Wikis](https://github.com/mizosoft/methanol/wiki): User guide with examples (under construction)
 
 ## License
 

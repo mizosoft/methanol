@@ -400,9 +400,9 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
     @Override
     public void cancel() {
       if (!cancelled) { // Races are OK
+        cancelOwn();
         upstream.cancel();
         decoder.close();
-        cancelOwn();
       }
     }
 
@@ -420,18 +420,8 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
     @Override
     protected void drain() {
       Subscriber<? super List<ByteBuffer>> s = downstream;
+      subscribeOnDrain(s); // Apply onSubscribe if this is the first signal
       for (long e = 0L, d = demand.current(); !cancelled; ) {
-        // Apply onSubscribe if this is the first signal
-        if (!subscribed) {
-          subscribed = true;
-          try {
-            s.onSubscribe(this);
-          } catch (Throwable t) {
-            cancel();
-            s.onError(t);
-            break;
-          }
-        }
         Throwable error = pendingError;
         if (error != null) {
           cancelOwn();
@@ -444,7 +434,9 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
           e += f;
           d = demand.current(); // Get fresh demand
           if (e == d || f == 0L) { // Need to flush `e` and potentially exit
-            d = demand.decreaseAndGet(e);
+            if (e > 0) {
+              d = demand.decreaseAndGet(e);
+            }
             if (d == 0L || f == 0L) {
               break; // Either cancelled/completed or no items/demand-slots so give up
             }
@@ -454,9 +446,22 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       }
     }
 
+    private void subscribeOnDrain(Subscriber<? super List<ByteBuffer>> s) {
+      if (!subscribed && !cancelled) {
+        subscribed = true;
+        try {
+          s.onSubscribe(this);
+        } catch (Throwable t) {
+          cancel();
+          s.onError(t);
+        }
+      }
+    }
+
     private long emitItems(Subscriber<? super List<ByteBuffer>> s, long d) {
       List<ByteBuffer> batch = currentBatch;
-      for (long x = 0L; !cancelled; x++) {
+      currentBatch = null;
+      for (long e = 0L; !cancelled; e++) {
         // The list is polled prematurely (before investigating demand). This
         // is done so that completion is passed downstream regardless of demand.
         if (batch == null) {
@@ -465,7 +470,7 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
         if (batch == COMPLETE) {
           cancelOwn();
           s.onComplete();
-        } else if (batch != null && x < d) {
+        } else if (batch != null && e < d) {
           try {
             s.onNext(batch);
           } catch (Throwable t) {
@@ -475,7 +480,7 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
           batch = null;
         } else {
           currentBatch = batch; // Save last polled batch, might be non-null
-          return x;
+          return e;
         }
       }
       return 0; // Cancelled or completed so it doesn't matter what was emitted

@@ -520,17 +520,8 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
         // Logic is similar to AsyncBodyDecoder
 
         Subscriber<? super ByteBuffer> s = downstream;
+        subscribeOnDrain(s);
         for (long d = demand.current(), e = 0L; !cancelled; ) {
-          if (!subscribed) {
-            subscribed = true;
-            try {
-              s.onSubscribe(this);
-            } catch (Throwable t) {
-              doCancel(false);
-              s.onError(t);
-              break;
-            }
-          }
           Throwable error = pendingError();
           if (error != null) {
             doCancel(false);
@@ -543,13 +534,27 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
             e += f;
             d = demand.current();
             if (e == d || f == 0L) {
-              d = demand.decreaseAndGet(e);
+              if (e > 0) {
+                d = demand.decreaseAndGet(e);
+              }
               if (d == 0L || f == 0L) {
                 break;
               }
               e = 0L;
             }
           }
+        }
+      }
+    }
+
+    private void subscribeOnDrain(Subscriber<? super ByteBuffer> s) {
+      if (!subscribed && !cancelled) {
+        subscribed = true;
+        try {
+          s.onSubscribe(this);
+        } catch (Throwable t) {
+          cancel();
+          s.onError(t);
         }
       }
     }
