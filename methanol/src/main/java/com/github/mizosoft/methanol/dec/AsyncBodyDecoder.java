@@ -430,7 +430,7 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
           // The local accumulation of emitted items to `e` helps in decreasing contention
           // over demand and maintains some sort of a keep-alive policy on active demand
           // updates (similar to what SubmissionPublisher does but unbounded)
-          long f = emitItems(s, d);
+          long f = emitItems(s, d - e);
           e += f;
           d = demand.current(); // Get fresh demand
           if (e == d || f == 0L) { // Need to flush `e` and potentially exit

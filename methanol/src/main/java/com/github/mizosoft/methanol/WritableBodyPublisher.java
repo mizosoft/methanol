@@ -338,7 +338,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
           cancel();
           s.onError(t);
         } else {
-          long f = emitItems(s, d);
+          long f = emitItems(s, d - e);
           e += f;
           d = demand.current();
           if (e == d || f == 0L) {
