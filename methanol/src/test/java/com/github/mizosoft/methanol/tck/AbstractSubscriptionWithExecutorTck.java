@@ -25,8 +25,8 @@ package com.github.mizosoft.methanol.tck;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 
 public class AbstractSubscriptionWithExecutorTck extends AbstractSubscriptionTck {
 
@@ -39,12 +39,12 @@ public class AbstractSubscriptionWithExecutorTck extends AbstractSubscriptionTck
     return executor;
   }
 
-  @BeforeMethod
+  @BeforeClass
   public void setUpExecutor() {
     executor = Executors.newFixedThreadPool(8);
   }
 
-  @AfterMethod
+  @AfterClass
   public void shutdownExecutor() {
     TestUtils.shutdown(executor);
   }

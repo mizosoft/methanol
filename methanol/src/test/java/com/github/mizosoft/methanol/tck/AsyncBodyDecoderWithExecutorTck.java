@@ -27,8 +27,8 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 @Test
@@ -43,12 +43,12 @@ public class AsyncBodyDecoderWithExecutorTck extends AsyncBodyDecoderTck {
     return requireNonNull(executor);
   }
 
-  @BeforeMethod
+  @BeforeClass
   public void setUpDecoderExecutor() {
     executor = Executors.newFixedThreadPool(8);
   }
 
-  @AfterMethod
+  @AfterClass
   public void shutdownDecoderExecutor() {
     TestUtils.shutdown(executor);
   }

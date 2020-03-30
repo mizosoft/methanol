@@ -57,7 +57,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+@Timeout(value = 60)
 class AbstractSubscriptionTest {
 
   // Overridden by AbstractSubscriptionTestWithExecutor for async version
@@ -257,8 +259,8 @@ class AbstractSubscriptionTest {
     var pub = new SubmittableSubscription<>(new Sub(), executor());
     ref.set(pub);
     pub.signal(true);
-    CompletableFuture.runAsync(() -> pub.submit(Boolean.TRUE)).get(30_000, TimeUnit.MILLISECONDS);
-    finished.await(30_000, TimeUnit.MILLISECONDS);
+    CompletableFuture.runAsync(() -> pub.submit(Boolean.TRUE)).get(30, TimeUnit.SECONDS);
+    finished.await(30, TimeUnit.SECONDS);
   }
 
   @Test

@@ -52,9 +52,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 import org.testng.SkipException;
-import org.testng.annotations.AfterMethod;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 @Test
@@ -74,12 +73,12 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
     return null;
   }
 
-  @BeforeMethod
+  @BeforeClass
   public void setUpPublisherExecutor() {
     publisherExecutorService = Executors.newFixedThreadPool(8);
   }
 
-  @AfterMethod
+  @AfterClass
   public void shutdownPublisherExecutor() {
     TestUtils.shutdown(publisherExecutorService);
   }
