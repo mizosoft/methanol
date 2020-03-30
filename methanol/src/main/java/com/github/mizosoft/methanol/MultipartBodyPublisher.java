@@ -36,6 +36,8 @@ import com.github.mizosoft.methanol.internal.flow.Upstream;
 import com.github.mizosoft.methanol.internal.text.CharMatcher;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -454,9 +456,30 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
 
   private static final class MultipartSubscription extends AbstractSubscription<ByteBuffer> {
 
+    private static final VarHandle PART_SUBSCRIBER;
+    static {
+      try {
+        PART_SUBSCRIBER = MethodHandles.lookup()
+            .findVarHandle(MultipartSubscription.class, "partSubscriber", Subscriber.class);
+      } catch (NoSuchFieldException | IllegalAccessException e) {
+        throw new ExceptionInInitializerError(e);
+      }
+    }
+
+    // A tombstone to protect against race conditions that would otherwise occur if a
+    // thread tries to abort() while another tries to peekNextPart(), which might lead
+    // to a newly subscribed part being missed by abort().
+    private static final Subscriber<ByteBuffer> CANCELLED = new Subscriber<>() {
+      @Override public void onSubscribe(Subscription subscription) {}
+      @Override public void onNext(ByteBuffer item) {}
+      @Override public void onError(Throwable throwable) {}
+      @Override public void onComplete() {}
+    };
+
     private final String boundary;
     private final List<Part> parts;
-    private @MonotonicNonNull PartSubscriber partSubscriber;
+    @SuppressWarnings("unused")
+    private volatile @MonotonicNonNull Subscriber<ByteBuffer> partSubscriber;
     private int partIndex;
     private boolean complete;
 
@@ -483,42 +506,54 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void abort(boolean flowInterrupted) {
-      PartSubscriber subscriber = partSubscriber;
-      if (subscriber != null) {
-        subscriber.abortUpstream(flowInterrupted);
+      Subscriber<ByteBuffer> subscriber = partSubscriber;
+      if (subscriber != CANCELLED) {
+        subscriber = (Subscriber<ByteBuffer>) PART_SUBSCRIBER.getAndSet(this, CANCELLED);
+        if (subscriber instanceof PartSubscriber) {
+          ((PartSubscriber) subscriber).abortUpstream(flowInterrupted);
+        }
       }
     }
 
     private @Nullable ByteBuffer pollNext() {
-      PartSubscriber subscriber = partSubscriber;
-      if (subscriber != null) {
-        ByteBuffer next = subscriber.pollNext();
+      Subscriber<ByteBuffer> subscriber = partSubscriber;
+      if (subscriber instanceof PartSubscriber) { // not cancelled & not null
+        ByteBuffer next = ((PartSubscriber) subscriber).pollNext();
         if (next != PartSubscriber.END_OF_PART) {
           return next;
         }
       }
-      return peekNextPart();
+      return subscriber != CANCELLED ? peekNextPart() : null;
     }
 
-    private ByteBuffer peekNextPart() {
+    private @Nullable ByteBuffer peekNextPart() {
       StringBuilder heading = new StringBuilder();
       BoundaryAppender.get(partIndex, parts.size()).append(heading, boundary);
       if (partIndex < parts.size()) {
         Part part = parts.get(partIndex++);
+        if (!subscribeToPart(part)) {
+          return null;
+        }
         appendPartHeaders(heading, part);
         heading.append("\r\n");
-        partSubscriber = subscribeToPart(part);
       } else {
+        partSubscriber = CANCELLED; // race against abort() here is OK
         complete = true;
       }
       return UTF_8.encode(CharBuffer.wrap(heading));
     }
 
-    private PartSubscriber subscribeToPart(Part part) {
+    private boolean subscribeToPart(Part part) {
       PartSubscriber subscriber = new PartSubscriber(this);
-      part.bodyPublisher().subscribe(subscriber);
-      return subscriber;
+      Subscriber<ByteBuffer> current = partSubscriber;
+      if (current != CANCELLED
+          && PART_SUBSCRIBER.compareAndSet(this, current, subscriber)) {
+        part.bodyPublisher().subscribe(subscriber);
+        return true;
+      }
+      return false;
     }
   }
 
