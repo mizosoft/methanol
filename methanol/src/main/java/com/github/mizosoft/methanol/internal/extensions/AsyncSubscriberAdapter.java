@@ -24,14 +24,13 @@ package com.github.mizosoft.methanol.internal.extensions;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -47,7 +46,7 @@ public class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuf
 
   private final S downstream;
   private final Function<? super S, ? extends CompletionStage<T>> asyncFinisher;
-  private final AtomicReference<@Nullable Subscription> upstream;
+  private final Upstream upstream;
   // Safety flag to ensure that deferred cancellation from upstream doesn't
   // cause the downstream to receive post-completion signals in case downstream's
   // onSubscribe or onNext threw previously
@@ -57,7 +56,7 @@ public class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuf
       S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
     this.downstream = requireNonNull(downstream, "downstream");
     this.asyncFinisher = requireNonNull(asyncFinisher, "asyncFinisher");
-    upstream = new AtomicReference<>();
+    upstream = new Upstream();
   }
 
   @Override
@@ -68,14 +67,13 @@ public class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuf
   @Override
   public void onSubscribe(Subscription subscription) {
     requireNonNull(subscription);
-    if (upstream.compareAndSet(null, subscription)) {
+    if (upstream.setOrCancel(subscription)) {
       try {
         downstream.onSubscribe(subscription);
       } catch (Throwable t) {
-        complete(t, true);
+        upstream.cancel();
+        complete(t);
       }
-    } else {
-      subscription.cancel();
     }
   }
 
@@ -86,7 +84,8 @@ public class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuf
       try {
         downstream.onNext(item);
       } catch (Throwable t) {
-        complete(t, true);
+        upstream.cancel();
+        complete(t);
       }
     }
   }
@@ -94,27 +93,17 @@ public class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuf
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
-    complete(throwable, false);
+    upstream.clear();
+    complete(throwable);
   }
 
   @Override
   public void onComplete() {
-    complete(null, false);
+    upstream.clear();
+    complete(null);
   }
 
-  private void clearUpstream(boolean cancel) {
-    if (cancel) {
-      Subscription s = upstream.getAndSet(FlowSupport.NOOP_SUBSCRIPTION);
-      if (s != null) {
-        s.cancel();
-      }
-    } else {
-      upstream.set(FlowSupport.NOOP_SUBSCRIPTION);
-    }
-  }
-
-  private void complete(@Nullable Throwable error, boolean cancelUpstream) {
-    clearUpstream(cancelUpstream);
+  private void complete(@Nullable Throwable error) {
     if (!completed) {
       completed = true;
       if (error != null) {

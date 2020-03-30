@@ -37,7 +37,8 @@ import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeReference;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.flow.Prefetcher;
+import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -61,7 +62,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -177,10 +177,8 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       private final ByteArrayFeeder feeder;
       private final TokenBuffer jsonBuffer;
       private final CompletableFuture<T> valueFuture;
-      private final AtomicReference<@Nullable Subscription> upstream;
-      private final int prefetch;
-      private final int prefetchThreshold;
-      private int upstreamWindow;
+      private final Upstream upstream;
+      private final Prefetcher prefetcher;
 
       JacksonSubscriber(ObjectMapper mapper, TypeReference<T> type, JsonParser parser) {
         this.mapper = mapper;
@@ -189,9 +187,8 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
         feeder = (ByteArrayFeeder) parser.getNonBlockingInputFeeder();
         jsonBuffer = new TokenBuffer(this.parser);
         valueFuture = new CompletableFuture<>();
-        upstream = new AtomicReference<>();
-        prefetch = FlowSupport.prefetch();
-        prefetchThreshold = FlowSupport.prefetchThreshold();
+        upstream = new Upstream();
+        prefetcher = new Prefetcher();
       }
 
       @Override
@@ -202,11 +199,8 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
       @Override
       public void onSubscribe(Subscription subscription) {
         requireNonNull(subscription);
-        if (upstream.compareAndSet(null, subscription)) {
-          upstreamWindow = prefetch;
-          subscription.request(prefetch);
-        } else {
-          subscription.cancel();
+        if (upstream.setOrCancel(subscription)) {
+          prefetcher.update(upstream);
         }
       }
 
@@ -218,23 +212,23 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
           feeder.feedInput(bytes, 0, bytes.length);
           flushParser();
         } catch (Throwable t) {
-          clearUpstream(true);
           valueFuture.completeExceptionally(t);
+          upstream.cancel();
           return;
         }
-        updateWindow();
+        prefetcher.update(upstream);
       }
 
       @Override
       public void onError(Throwable throwable) {
         requireNonNull(throwable);
-        clearUpstream(false);
+        upstream.clear();
         valueFuture.completeExceptionally(throwable);
       }
 
       @Override
       public void onComplete() {
-        clearUpstream(false);
+        upstream.clear();
         try {
           byte[] flushed = collectBytes(List.of(), true);
           feeder.feedInput(flushed, 0, flushed.length);
@@ -243,31 +237,6 @@ abstract class JacksonBodyAdapter extends AbstractBodyAdapter {
           valueFuture.complete(objReader.readValue(jsonBuffer.asParser(mapper)));
         } catch (Throwable ioe) {
           valueFuture.completeExceptionally(ioe);
-        }
-      }
-
-      private void updateWindow() {
-        // See if more should be requested w.r.t prefetch logic
-        Subscription s = upstream.get();
-        if (s != null) {
-          int update = upstreamWindow - 1;
-          if (update <= prefetchThreshold) {
-            upstreamWindow = prefetch;
-            s.request(prefetch - update);
-          } else {
-            upstreamWindow = update;
-          }
-        }
-      }
-
-      private void clearUpstream(boolean cancel) {
-        if (cancel) {
-          Subscription s = upstream.getAndSet(FlowSupport.NOOP_SUBSCRIPTION);
-          if (s != null) {
-            s.cancel();
-          }
-        } else {
-          upstream.set(FlowSupport.NOOP_SUBSCRIPTION);
         }
       }
 

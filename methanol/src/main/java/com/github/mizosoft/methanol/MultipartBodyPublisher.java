@@ -29,9 +29,10 @@ import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.flow.Demand;
+import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.flow.SchedulableSubscription;
+import com.github.mizosoft.methanol.internal.flow.Prefetcher;
+import com.github.mizosoft.methanol.internal.flow.Upstream;
 import com.github.mizosoft.methanol.internal.text.CharMatcher;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -51,7 +52,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.atomic.AtomicReference;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -106,8 +106,7 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
   @Override
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
     requireNonNull(subscriber);
-    MultipartSubscription subscription = new MultipartSubscription(this, subscriber);
-    subscription.signal();
+    new MultipartSubscription(this, subscriber).signal(true); // apply onSubscribe
   }
 
   private long computeLength() {
@@ -453,165 +452,63 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     }
   }
 
-  private static final class MultipartSubscription extends SchedulableSubscription {
+  private static final class MultipartSubscription extends AbstractSubscription<ByteBuffer> {
 
-    private final Subscriber<? super ByteBuffer> downstream;
-    private final Demand demand;
-    private @MonotonicNonNull PartSubscriber partSubscriber;
-    private boolean subscribed;
-    private boolean complete;
-    private volatile boolean cancelled;
-    private volatile boolean illegalRequest;
-
-    // multipart-related stuff
     private final String boundary;
     private final List<Part> parts;
+    private @MonotonicNonNull PartSubscriber partSubscriber;
     private int partIndex;
+    private boolean complete;
 
     MultipartSubscription(
         MultipartBodyPublisher upstream, Subscriber<? super ByteBuffer> downstream) {
-      // Use synchronous execution. It seems that the HTTP client publisher
-      // implementations are all synchronous and exposing an Executor option
-      // will only lead to more API weight with unnecessary confusion.
-      super(FlowSupport.SYNC_EXECUTOR);
-      this.downstream = downstream;
-      demand = new Demand();
+      super(downstream, FlowSupport.SYNC_EXECUTOR);
       boundary = upstream.boundary();
       parts = upstream.parts();
     }
 
     @Override
-    public void request(long n) {
-      if (!cancelled) {
-        if ((n > 0 && demand.increase(n)) || (illegalRequest = n <= 0)) {
-          signal();
-        }
+    protected long emit(Subscriber<? super ByteBuffer> d, long e) {
+      for (long c = 0; ; c++) {
+        ByteBuffer batch;
+        if (complete) {
+          cancelOnComplete(d);
+          return 0;
+        } else if (c >= e || (batch = pollNext()) == null) { // exhausted demand or available batches
+          return c;
+        } else if (!submitOnNext(d, batch)) {
+          return 0;
+        } // else continue
       }
     }
 
     @Override
-    public void cancel() {
-      doCancel(true);
-    }
-
-    // does cancellation with optionally cancelling current part
-    void doCancel(boolean cancelPart) {
-      if (!cancelled) { // Races are OK
-        cancelled = true;
-        if (cancelPart) {
-          signal(); // part is cancelled inline with drain logic
-        }
+    protected void abort(boolean flowInterrupted) {
+      PartSubscriber subscriber = partSubscriber;
+      if (subscriber != null) {
+        subscriber.abortUpstream(flowInterrupted);
       }
-    }
-
-    @Override
-    protected void drain() {
-      if (cancelled) {
-        // It's either a false alarm or a part's subscription, if
-        // any, needs to be cancelled. In case it's a false alarm,
-        // the part's subscription will have probably been NOOPed
-        // already so it won't harm NOOPing/cancelling it again
-        PartSubscriber subscriber = partSubscriber;
-        if (subscriber != null) {
-          subscriber.clearUpstream(true);
-        }
-        stop(); // Prevent further runs
-      } else {
-        // Logic is similar to AsyncBodyDecoder
-
-        Subscriber<? super ByteBuffer> s = downstream;
-        subscribeOnDrain(s);
-        for (long d = demand.current(), e = 0L; !cancelled; ) {
-          Throwable error = pendingError();
-          if (error != null) {
-            doCancel(false);
-            s.onError(error);
-          } else if (illegalRequest) {
-            doCancel(true);
-            s.onError(FlowSupport.illegalRequest());
-          } else {
-            long f = emitItems(s, d - e);
-            e += f;
-            d = demand.current();
-            if (e == d || f == 0L) {
-              if (e > 0) {
-                d = demand.decreaseAndGet(e);
-              }
-              if (d == 0L || f == 0L) {
-                break;
-              }
-              e = 0L;
-            }
-          }
-        }
-      }
-    }
-
-    private void subscribeOnDrain(Subscriber<? super ByteBuffer> s) {
-      if (!subscribed && !cancelled) {
-        subscribed = true;
-        try {
-          s.onSubscribe(this);
-        } catch (Throwable t) {
-          cancel();
-          s.onError(t);
-        }
-      }
-    }
-
-    private long emitItems(Subscriber<? super ByteBuffer> s, long demand) {
-      long x;
-      for (x = 0L; x < demand && !cancelled; x++) {
-        try {
-          ByteBuffer buffer = pollNext();
-          if (buffer == null) {
-            break; // No items, give up.
-          }
-          s.onNext(buffer);
-        } catch (Throwable t) {
-          doCancel(true);
-          s.onError(t);
-          break;
-        }
-        if (complete) { // pollNext() completed
-          doCancel(false);
-          s.onComplete();
-        }
-      }
-      return x;
-    }
-
-    private @Nullable Throwable pendingError() {
-      PartSubscriber current = partSubscriber;
-      return current != null ? current.pendingError : null;
     }
 
     private @Nullable ByteBuffer pollNext() {
       PartSubscriber subscriber = partSubscriber;
       if (subscriber != null) {
-        ByteBuffer next = subscriber.poll();
+        ByteBuffer next = subscriber.pollNext();
         if (next != PartSubscriber.END_OF_PART) {
           return next;
         }
       }
-      return peekPart();
+      return peekNextPart();
     }
 
-    /**
-     * Subscribes to the next part and returns the part's heading (boundary + headers). If there are
-     * no more parts then the end boundary is returned.
-     */
-    private ByteBuffer peekPart() {
-      int idx = partIndex;
-      int size = parts.size();
+    private ByteBuffer peekNextPart() {
       StringBuilder heading = new StringBuilder();
-      BoundaryAppender.get(idx, size).append(heading, boundary);
-      if (idx < size) {
-        Part part = parts.get(idx++);
+      BoundaryAppender.get(partIndex, parts.size()).append(heading, boundary);
+      if (partIndex < parts.size()) {
+        Part part = parts.get(partIndex++);
         appendPartHeaders(heading, part);
         heading.append("\r\n");
         partSubscriber = subscribeToPart(part);
-        partIndex = idx;
       } else {
         complete = true;
       }
@@ -619,7 +516,7 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     private PartSubscriber subscribeToPart(Part part) {
-      PartSubscriber subscriber = new PartSubscriber(this::signal);
+      PartSubscriber subscriber = new PartSubscriber(this);
       part.bodyPublisher().subscribe(subscriber);
       return subscriber;
     }
@@ -629,34 +526,27 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
 
     static final ByteBuffer END_OF_PART = ByteBuffer.allocate(0);
 
-    private final Runnable onSignal; // Hook to be called when upstream signals arrive
+    private final MultipartSubscription downstream; // for signalling
     private final ConcurrentLinkedQueue<ByteBuffer> buffers;
-    private final AtomicReference<@Nullable Subscription> upstream;
-    private final int prefetch;
-    private final int prefetchThreshold;
-    private volatile @MonotonicNonNull Throwable pendingError;
-    private volatile int upstreamWindow;
+    private final Upstream upstream;
+    private final Prefetcher prefetcher;
 
-    PartSubscriber(Runnable onSignal) {
-      this.onSignal = onSignal;
+    PartSubscriber(MultipartSubscription downstream) {
+      this.downstream = downstream;
       buffers = new ConcurrentLinkedQueue<>();
-      upstream = new AtomicReference<>();
-      prefetch = FlowSupport.prefetch();
-      prefetchThreshold = FlowSupport.prefetchThreshold();
+      upstream = new Upstream();
+      prefetcher = new Prefetcher();
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
       requireNonNull(subscription);
-      if (upstream.compareAndSet(null, subscription)) {
-        // The only possible concurrent access to `incoming` applies here.
+      if (upstream.setOrCancel(subscription)) {
+        // The only possible concurrent access to prefetcher applies here.
         // But the operation need not be atomic as other reads/writes
         // are done serially when ByteBuffers are polled, which is only
-        // possible after this write to `incoming`.
-        upstreamWindow = prefetch;
-        subscription.request(prefetch);
-      } else {
-        subscription.cancel();
+        // possible after this volatile write.
+        prefetcher.update(upstream);
       }
     }
 
@@ -664,60 +554,38 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
     public void onNext(ByteBuffer item) {
       requireNonNull(item);
       buffers.offer(item);
-      onSignal.run();
+      downstream.signal(false);
     }
 
     @Override
     public void onError(Throwable throwable) {
       requireNonNull(throwable);
-      complete(throwable);
+      abortUpstream(false);
+      downstream.signalError(throwable);
     }
 
     @Override
     public void onComplete() {
-      complete(null);
+      abortUpstream(false);
+      buffers.offer(END_OF_PART);
+      downstream.signal(true); // force completion signal
     }
 
-    @Nullable
-    ByteBuffer poll() {
+    void abortUpstream(boolean cancel) {
+      if (cancel) {
+        upstream.cancel();
+      } else {
+        upstream.clear();
+      }
+    }
+
+    @Nullable ByteBuffer pollNext() {
       ByteBuffer next = buffers.peek();
       if (next != null && next != END_OF_PART) {
-        buffers.poll();
-        // See if window should be brought back to prefetch
-        Subscription sub = upstream.get();
-        if (sub != null) {
-          int update = Math.max(0, upstreamWindow - 1);
-          if (update <= prefetchThreshold) {
-            upstreamWindow = prefetch;
-            sub.request(prefetch - update);
-          } else {
-            upstreamWindow = update;
-          }
-        }
+        buffers.poll(); // remove
+        prefetcher.update(upstream);
       }
       return next;
-    }
-
-    void clearUpstream(boolean cancel) {
-      if (cancel) {
-        Subscription sub = upstream.getAndSet(FlowSupport.NOOP_SUBSCRIPTION);
-        if (sub != null) {
-          sub.cancel();
-        }
-      } else {
-        // Avoid the CAS
-        upstream.set(FlowSupport.NOOP_SUBSCRIPTION);
-      }
-    }
-
-    private void complete(@Nullable Throwable error) {
-      clearUpstream(false);
-      if (error != null) {
-        pendingError = error;
-      } else {
-        buffers.offer(END_OF_PART);
-      }
-      onSignal.run();
     }
   }
 }

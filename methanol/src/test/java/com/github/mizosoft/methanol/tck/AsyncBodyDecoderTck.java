@@ -29,14 +29,14 @@ import com.github.mizosoft.methanol.dec.AsyncBodyDecoder;
 import com.github.mizosoft.methanol.dec.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.flow.Schedulable;
 import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTck.BufferListHandle;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,13 +48,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 @Test
@@ -63,32 +63,32 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
   private static final int BUFFERS_PER_LIST = 5;
   private static final int BUFFER_SIZE = 64;
 
-  @MonotonicNonNull ExecutorService service;
+  private ExecutorService publisherExecutorService; // used by test publisher
 
   public AsyncBodyDecoderTck() {
     super(new TestEnvironment());
   }
 
+  // Used by AsyncBodyDecoder, overridden by AsyncBodyDecoderWithExecutorTck for async version
+  Executor decoderExecutor() {
+    return null;
+  }
+
+  @BeforeMethod
+  public void setUpPublisherExecutor() {
+    publisherExecutorService = Executors.newFixedThreadPool(8);
+  }
+
+  @AfterMethod
+  public void shutdownPublisherExecutor() {
+    TestUtils.shutdown(publisherExecutorService);
+  }
+
   @BeforeClass
-  void setUpBufferSize() {
+  public static void setupBufferSize() {
     // Make sure AsyncBodyDecoder allocates same buffer sizes
     System.setProperty("com.github.mizosoft.methanol.dec.bufferSize",
         Integer.toString(BUFFER_SIZE));
-  }
-
-  @BeforeClass
-  void setUpExecutor() {
-    service = Executors.newFixedThreadPool(8);
-  }
-
-  @AfterClass
-  void shutdownExecutor() {
-    TestUtils.shutdown(service);
-  }
-
-  // Overridden by AsyncBodyDecoderWithExecutorTck
-  @Nullable Executor decoderExecutor() {
-    return null;
   }
 
   @Override
@@ -108,7 +108,7 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
 
   @Override
   public ExecutorService publisherExecutorService() {
-    return service;
+    return requireNonNull(publisherExecutorService);
   }
 
   @Override
@@ -207,22 +207,21 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
   /**
    * Adapts a {@code AsyncBodyDecoder} into a processor.
    */
-  private static final class AsyncBodyDecoderProcessorView extends Schedulable
+  private static final class AsyncBodyDecoderProcessorView
       implements Processor<BufferListHandle, BufferListHandle> {
 
     private final AsyncDecoder decoder;
     private final @Nullable Executor executor;
     private final AtomicReference<AsyncBodyDecoder<Void>> bodyDecoderRef;
-    private final ConcurrentLinkedQueue<Consumer<AsyncBodyDecoder<Void>>> signals;
+    private final Queue<Consumer<AsyncBodyDecoder<Void>>> signals;
 
     private AsyncBodyDecoderProcessorView(
         AsyncDecoder decoder,
         @Nullable Executor executor) {
-      super(FlowSupport.SYNC_EXECUTOR, 1);
       this.decoder = decoder;
       this.executor = executor;
       bodyDecoderRef = new AtomicReference<>();
-      signals = new ConcurrentLinkedQueue<>();
+      signals = new LinkedList<>();
     }
 
     @Override
@@ -247,7 +246,7 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
           ? new AsyncBodyDecoder<>(decoder, downstream, executor)
           : new AsyncBodyDecoder<>(decoder, downstream);
       if (bodyDecoderRef.compareAndSet(null, bodyDecoder)) {
-        runOrSchedule();
+        drainSignals();
       } else {
         Throwable error = new IllegalStateException("Already subscribed");
         try {
@@ -282,11 +281,10 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
 
     private void putSignal(Consumer<AsyncBodyDecoder<Void>> signal) {
       signals.offer(signal);
-      runOrSchedule();
+      drainSignals();
     }
 
-    @Override
-    protected void run() {
+    private synchronized void drainSignals() {
       var dec = bodyDecoderRef.get();
       if (dec != null) {
         Consumer<AsyncBodyDecoder<Void>> signal;

@@ -22,34 +22,30 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static java.util.Objects.requireNonNull;
-
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
-@Test
-public class AsyncBodyDecoderWithExecutorTck extends AsyncBodyDecoderTck {
+public class AbstractSubscriptionWithExecutorTck extends AbstractSubscriptionTck {
 
   private Executor executor;
 
-  public AsyncBodyDecoderWithExecutorTck() {}
+  public AbstractSubscriptionWithExecutorTck() {}
 
   @Override
-  Executor decoderExecutor() {
-    return requireNonNull(executor);
+  Executor executor() {
+    return executor;
   }
 
   @BeforeMethod
-  public void setUpDecoderExecutor() {
+  public void setUpExecutor() {
     executor = Executors.newFixedThreadPool(8);
   }
 
   @AfterMethod
-  public void shutdownDecoderExecutor() {
+  public void shutdownExecutor() {
     TestUtils.shutdown(executor);
   }
 }
