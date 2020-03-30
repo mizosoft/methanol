@@ -29,7 +29,6 @@ import com.github.mizosoft.methanol.testutils.TestException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Flow.Publisher;
-import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.BeforeClass;
 
@@ -39,7 +38,7 @@ public class WritableBodyPublisherTck extends FlowPublisherVerification<ByteBuff
   private static final ByteBuffer DUMMY_ELEMENT = US_ASCII.encode("5".repeat(BUFFER_SIZE)); // whatever
 
   public WritableBodyPublisherTck() {
-    super(new TestEnvironment());
+    super(TckUtils.testEnvironment());
   }
 
   @BeforeClass

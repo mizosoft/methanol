@@ -9,18 +9,22 @@ compileJava {
   options.compilerArgs += '-Xlint:-module'
 }
 
-task tckTest(type: Test) {
-  useTestNG()
-  include '**/tck/**'
-  shouldRunAfter test
-  scanForTestClasses = false
-}
-
 test {
   exclude '**/tck/**'
   // run from classpath to use META-INF/services which doesn't work from module path
   moduleOptions {
     runOnClasspath = true
+  }
+}
+
+task tckTest(type: Test) {
+  useTestNG()
+  include '**/tck/**'
+  shouldRunAfter test
+  scanForTestClasses false
+  if (System.getenv().GITHUB_ACTIONS) {
+    systemProperties.TCK_TIMEOUT_MILLIS = 1_000
+    systemProperties.TCK_NO_SIGNAL_TIMEOUT_MILLIS = 100
   }
 }
 

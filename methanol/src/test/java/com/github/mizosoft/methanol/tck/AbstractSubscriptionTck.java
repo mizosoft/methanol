@@ -30,13 +30,12 @@ import com.github.mizosoft.methanol.testutils.TestException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
-import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 
 public class AbstractSubscriptionTck extends FlowPublisherVerification<Long> {
 
   public AbstractSubscriptionTck() {
-    super(new TestEnvironment());
+    super(TckUtils.testEnvironment());
   }
 
   // Overridden by AsyncAbstractSubscriptionTck for async tests

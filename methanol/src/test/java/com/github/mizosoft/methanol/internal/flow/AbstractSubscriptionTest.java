@@ -59,7 +59,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-@Timeout(value = 60)
+@Timeout(value = 20)
 class AbstractSubscriptionTest {
 
   // Overridden by AbstractSubscriptionTestWithExecutor for async version
@@ -259,8 +259,8 @@ class AbstractSubscriptionTest {
     var pub = new SubmittableSubscription<>(new Sub(), executor());
     ref.set(pub);
     pub.signal(true);
-    CompletableFuture.runAsync(() -> pub.submit(Boolean.TRUE)).get(30, TimeUnit.SECONDS);
-    finished.await(30, TimeUnit.SECONDS);
+    CompletableFuture.runAsync(() -> pub.submit(Boolean.TRUE)).get(20, TimeUnit.SECONDS);
+    finished.await(20, TimeUnit.SECONDS);
   }
 
   @Test

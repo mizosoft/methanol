@@ -39,7 +39,6 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.stream.Stream;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
-import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
@@ -56,7 +55,7 @@ public class MultipartBodyPublisherTck extends FlowPublisherVerification<ByteBuf
   private Executor executor;
 
   public MultipartBodyPublisherTck() {
-    super(new TestEnvironment());
+    super(TckUtils.testEnvironment());
   }
 
   @BeforeClass

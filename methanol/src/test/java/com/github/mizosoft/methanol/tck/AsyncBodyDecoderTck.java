@@ -49,7 +49,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
@@ -65,7 +64,7 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
   private ExecutorService publisherExecutorService; // used by test publisher
 
   public AsyncBodyDecoderTck() {
-    super(new TestEnvironment());
+    super(TckUtils.testEnvironment());
   }
 
   // Used by AsyncBodyDecoder, overridden by AsyncBodyDecoderWithExecutorTck for async version
