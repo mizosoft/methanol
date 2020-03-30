@@ -65,8 +65,8 @@ public abstract class AbstractSubscription<T> implements Subscription {
 
   private final Subscriber<? super T> downstream;
   private final Executor executor;
-  @SuppressWarnings("unused") private volatile int state;
-  @SuppressWarnings("unused") private volatile long demand;
+  private volatile int state;
+  private volatile long demand;
   private volatile @Nullable Throwable pendingError;
 
   protected AbstractSubscription(Subscriber<? super T> downstream, Executor executor) {

@@ -478,7 +478,6 @@ public class MultipartBodyPublisher implements MimeBodyPublisher {
 
     private final String boundary;
     private final List<Part> parts;
-    @SuppressWarnings("unused")
     private volatile @MonotonicNonNull Subscriber<ByteBuffer> partSubscriber;
     private int partIndex;
     private boolean complete;

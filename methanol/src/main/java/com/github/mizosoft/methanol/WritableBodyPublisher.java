@@ -311,6 +311,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
 
     @Override
+    @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel
     protected long emit(Subscriber<? super ByteBuffer> d, long e) {
       ByteBuffer batch = currentBatch;
       currentBatch = null;
