@@ -43,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.testutils.TestException;
 import java.util.concurrent.CompletableFuture;
@@ -265,6 +266,7 @@ class AbstractSubscriptionTest {
     var p = subscription(new TestSubscriber());
     p.cancel();
     p.cancel();
+    p.awaitAbort();
     assertEquals(1, p.aborts);
     assertTrue(p.flowInterrupted);
   }
@@ -277,7 +279,7 @@ class AbstractSubscriptionTest {
     p.submit(1);
     p.complete();
     s.awaitComplete();
-    p.cancel();
+    p.awaitAbort();
     assertEquals(1, p.aborts);
     assertFalse(p.flowInterrupted);
   }
@@ -290,7 +292,7 @@ class AbstractSubscriptionTest {
     p.submit(1);
     p.signalError(new TestException());
     s.awaitError();
-    p.cancel();
+    p.awaitAbort();
     assertEquals(1, p.aborts);
     assertFalse(p.flowInterrupted);
   }
@@ -302,7 +304,7 @@ class AbstractSubscriptionTest {
     var p = subscription(s);
     p.signal(true);
     s.awaitError();
-    p.cancel();
+    p.awaitAbort();
     assertEquals(1, s.errors);
     assertEquals(1, p.aborts);
     assertTrue(p.flowInterrupted);
@@ -318,7 +320,7 @@ class AbstractSubscriptionTest {
     p.submit(1);
     p.complete();
     s.awaitError();
-    p.cancel();
+    p.awaitAbort();
     assertEquals(1, s.errors);
     assertEquals(1, p.aborts);
     assertTrue(p.flowInterrupted);
@@ -465,9 +467,21 @@ class AbstractSubscriptionTest {
     }
 
     @Override
-    protected void abort(boolean flowInterrupted) {
-      aborts++;
-      this.flowInterrupted = flowInterrupted;
+    protected synchronized void abort(boolean flowInterrupted) {
+      if (aborts++ == 0) {
+        this.flowInterrupted = flowInterrupted;
+      }
+      notifyAll();
+    }
+
+    synchronized void awaitAbort() {
+      while (aborts == 0) {
+        try {
+          wait();
+        } catch (InterruptedException e) {
+          fail(e);
+        }
+      }
     }
 
     void submit(T item) {
