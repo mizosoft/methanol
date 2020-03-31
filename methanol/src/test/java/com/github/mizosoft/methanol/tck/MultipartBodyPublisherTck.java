@@ -37,10 +37,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
-import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
@@ -54,19 +52,19 @@ public class MultipartBodyPublisherTck extends FlowPublisherVerification<ByteBuf
   private static final ByteBuffer BATCH = US_ASCII.encode("something");
   private static final HttpHeaders HEADERS = headers("Content-Type", "text/plain; charset=ascii");
 
-  private @Nullable Executor executor;
+  private Executor executor;
 
   public MultipartBodyPublisherTck() {
-    super(new TestEnvironment());
+    super(TckUtils.testEnvironment());
   }
 
   @BeforeClass
-  void setUpExecutor() {
+  public void setUpExecutor() {
     executor = Executors.newFixedThreadPool(8);
   }
 
   @AfterClass
-  void shutdownExecutor() {
+  public void shutdownExecutor() {
     TestUtils.shutdown(executor);
   }
 

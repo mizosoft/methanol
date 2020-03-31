@@ -125,7 +125,8 @@ class MultipartBodyPublisherTest {
 
   @Test
   void serializeBodyPart() {
-    var expected = "--cool_boundary\r\n"
+    var expected =
+          "--cool_boundary\r\n"
         + "Foo: bar\r\n"
         + "\r\n"
         + "some content\r\n"
@@ -139,7 +140,8 @@ class MultipartBodyPublisherTest {
 
   @Test
   void serializeFormParts() {
-    var expected = "--cool_boundary\r\n"
+    var expected =
+          "--cool_boundary\r\n"
         + "Content-Disposition: form-data; name=\"innocent_field\"\r\n"
         + "\r\n"
         + "Hold my innocent cup of water\r\n"
@@ -160,7 +162,8 @@ class MultipartBodyPublisherTest {
 
   @Test
   void serializeTextPartUtf8() {
-    var expected = "--cool_boundary\r\n"
+    var expected =
+          "--cool_boundary\r\n"
         + "Content-Disposition: form-data; name=\"important_question\"\r\n"
         + "Content-Type: text/plain; charset=utf-8\r\n"
         + "\r\n"
@@ -187,7 +190,8 @@ class MultipartBodyPublisherTest {
         "impossible.to.be.detected.by.anything.else", MediaType.parse("application/x-bruh"));
     Files.writeString(crazyFile, "ey yo i'm trippin");
     Files.writeString(normalFile, "we live in a society");
-    var expected = "--cool_boundary\r\n"
+    var expected =
+          "--cool_boundary\r\n"
         + "Content-Disposition: form-data; name=\"crazy_file_field\"; filename=\"crazy_file.impossible.to.be.detected.by.anything.else\"\r\n"
         + "Content-Type: application/x-bruh\r\n"
         + "\r\n"
@@ -210,7 +214,8 @@ class MultipartBodyPublisherTest {
   void asyncBodyPart() {
     var token = "REPEAT ME!\r\n";
     var count = 10000;
-    var expected = "--cool_boundary\r\n"
+    var expected =
+          "--cool_boundary\r\n"
         + "Content-Disposition: form-data; name=\"sync_field_1\"\r\n"
         + "\r\n"
         + "blah blah\r\n"
@@ -248,7 +253,8 @@ class MultipartBodyPublisherTest {
 
   @Test
   void utf8HeaderValues() {
-    var expected = "--cool_boundary\r\n"
+    var expected =
+          "--cool_boundary\r\n"
         + "Utf8-Header: πω\r\n"
         + "\r\n"
         + "blah blah\r\n"
@@ -267,7 +273,8 @@ class MultipartBodyPublisherTest {
 
   @Test
   void nameWithBackslashAndQuote() {
-    var expected = "--cool_boundary\r\n"
+    var expected =
+          "--cool_boundary\r\n"
         + "Content-Disposition: form-data; name=\"field\\\\name\"; filename=\"\\\"file\\\\name\\\"\"\r\n"
         + "\r\n"
         + "escaping is a mess\r\n"
@@ -311,6 +318,7 @@ class MultipartBodyPublisherTest {
       assertEquals(bodyContent.remaining(), body.contentLength());
       assertEquals(expectedContent.remaining(), body.contentLength());
     }
-    assertEquals(expectedContent, bodyContent);
+    int mismatch = expectedContent.mismatch(bodyContent);
+    assertEquals(-1, mismatch);
   }
 }

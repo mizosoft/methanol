@@ -26,6 +26,8 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.flow.Prefetcher;
+import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
@@ -40,7 +42,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.atomic.AtomicReference;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -56,19 +57,16 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
   private static final ByteBuffer TOMBSTONE = ByteBuffer.allocate(0);
   private static final List<ByteBuffer> TOMBSTONE_LIST = List.of(TOMBSTONE);
 
-  private final int prefetch;
-  private final int prefetchThreshold;
-  private final UpstreamRef upstream;
+  private final Upstream upstream;
+  private final Prefetcher prefetcher;
   private final BlockingQueue<List<ByteBuffer>> upstreamBuffers;
   private volatile @Nullable Throwable pendingError;
-  private volatile int upstreamWindow;
 
   /** Creates a new completed {@code ByteChannelSubscriber} instance. */
   public ByteChannelSubscriber() {
-    prefetch = FlowSupport.prefetch();
-    prefetchThreshold = FlowSupport.prefetchThreshold();
-    upstream = new UpstreamRef();
-    upstreamBuffers = new ArrayBlockingQueue<>(prefetch + 1); // Consider TOMBSTONE_LIST
+    upstream = new Upstream();
+    prefetcher = new Prefetcher();
+    upstreamBuffers = new ArrayBlockingQueue<>(FlowSupport.prefetch() + 1); // Consider TOMBSTONE_LIST
   }
 
   @Override
@@ -79,12 +77,10 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
   @Override
   public void onSubscribe(Subscription subscription) {
     requireNonNull(subscription);
-    UpstreamRef ref = upstream;
-    if (ref.setOrCancel(subscription)) {
-      // non-atomic write is safe because window decrements are only possible
+    if (upstream.setOrCancel(subscription)) {
+      // non-atomic update is safe because window decrements are only possible
       // after successful takes/polls which can only happen after requests
-      upstreamWindow = prefetch;
-      ref.request(prefetch);
+      prefetcher.update(upstream);
     }
   }
 
@@ -132,53 +128,6 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
     }
   }
 
-  private void decrementWindow() {
-    int update = Math.max(0, upstreamWindow - 1);
-    if (update <= prefetchThreshold) {
-      upstreamWindow = prefetch;
-      upstream.request(prefetch - update);
-    } else {
-      upstreamWindow = update;
-    }
-  }
-
-  /** Wrapper over an atomic reference to upstream subscription. */
-  private static final class UpstreamRef {
-
-    private final AtomicReference<@Nullable Subscription> ref;
-
-    UpstreamRef() {
-      ref = new AtomicReference<>();
-    }
-
-    boolean setOrCancel(Subscription upstream) {
-      if (!ref.compareAndSet(null, upstream)) {
-        // Cancel if not null either due to earlier subscription or cancellation
-        upstream.cancel();
-        return false;
-      }
-      return true;
-    }
-
-    void clear() {
-      ref.set(FlowSupport.NOOP_SUBSCRIPTION);
-    }
-
-    void cancel() {
-      Subscription s = ref.getAndSet(FlowSupport.NOOP_SUBSCRIPTION);
-      if (s != null) {
-        s.cancel();
-      }
-    }
-
-    void request(long n) {
-      Subscription s = ref.get();
-      if (s != null) {
-        s.request(n);
-      }
-    }
-  }
-
   @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
   private final class ChannelView extends AbstractInterruptibleChannel
       implements ReadableByteChannel {
@@ -201,7 +150,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
           return null;
         }
         cached.addAll(buffers);
-        decrementWindow();
+        prefetcher.update(upstream);
       }
       return next;
     }
@@ -216,7 +165,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
         try {
           List<ByteBuffer> buffers = upstreamBuffers.take();
           cached.addAll(buffers);
-          decrementWindow();
+          prefetcher.update(upstream);
         } catch (InterruptedException e) {
           // We are interruptible so handle this gracefully.
           Thread.currentThread().interrupt(); // Assert interruption status

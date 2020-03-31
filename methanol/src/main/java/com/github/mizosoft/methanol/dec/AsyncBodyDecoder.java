@@ -28,9 +28,10 @@ import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSink;
 import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSource;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.flow.Demand;
+import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.flow.SchedulableSubscription;
+import com.github.mizosoft.methanol.internal.flow.Prefetcher;
+import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
@@ -41,7 +42,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -67,14 +67,12 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   private final BodySubscriber<T> downstream;
   private final Executor executor;
   private final boolean userExecutor;
-  private final UpstreamReference upstream;
+  private final Upstream upstream;
+  private final Prefetcher prefetcher;
   private final QueueByteSource source;
   private final StackByteSink sink;
   private final ConcurrentLinkedQueue<List<ByteBuffer>> decodedBuffers;
-  private final int prefetch;
-  private final int prefetchThreshold;
   private volatile @MonotonicNonNull SubscriptionImpl downstreamSubscription;
-  private int upstreamWindow;
 
   /**
    * Creates an {@code AsyncBodyDecoder} in sync mode.
@@ -103,12 +101,11 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
     this.downstream = requireNonNull(downstream, "downstream");
     this.executor = requireNonNull(executor, "executor");
     this.userExecutor = userExecutor;
-    upstream = new UpstreamReference();
+    upstream = new Upstream();
+    prefetcher = new Prefetcher();
     source = new QueueByteSource();
     sink = new StackByteSink();
     decodedBuffers = new ConcurrentLinkedQueue<>();
-    prefetch = FlowSupport.prefetch();
-    prefetchThreshold = FlowSupport.prefetchThreshold();
   }
 
   /** Returns the underlying {@code AsyncDecoder}. */
@@ -137,9 +134,8 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
     if (upstream.setOrCancel(subscription)) {
       SubscriptionImpl s = new SubscriptionImpl();
       downstreamSubscription = s;
-      s.signal(); // Apply downstream's onSubscribe
-      upstreamWindow = prefetch;
-      subscription.request(prefetch);
+      s.signal(true); // Apply downstream's onSubscribe
+      prefetcher.initialize(upstream);
     }
   }
 
@@ -150,70 +146,47 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
     try {
       decoder.decode(source, sink);
     } catch (Throwable t) {
-      upstream.cancel();
-      decoder.close();
-      signalDownstream(t); // Notify downstream about the error
+      upstream.cancel(); // flow is interrupted
+      onError(t);
       return;
     }
-    decrementWindow();
-    if (sink.flush(decodedBuffers, false)) {
-      signalDownstream(null); // Notify downstream there is new data
+    prefetcher.update(upstream);
+    SubscriptionImpl s = downstreamSubscription;
+    if (sink.flush(decodedBuffers, false) && s != null) {
+      s.signal(false); // Notify downstream there is new data
     }
   }
 
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
-    complete(throwable);
+    SubscriptionImpl s = downstreamSubscription;
+    if (s != null) {
+      s.signalError(throwable);
+    }
   }
 
   @Override
   public void onComplete() {
-    complete(null);
-  }
-
-  private void decrementWindow() {
-    // Decrement current window and bring it back to
-    // prefetch if became less than prefetchThreshold
-    int update = upstreamWindow - 1;
-    if (update <= prefetchThreshold) {
-      upstreamWindow = prefetch;
-      upstream.request(prefetch - update);
-    } else {
-      upstreamWindow = update;
-    }
-  }
-
-  private void signalDownstream(@Nullable Throwable error) {
     SubscriptionImpl s = downstreamSubscription;
-    if (s != null) {
-      if (error != null) {
-        s.signalError(error);
-      } else {
-        s.signal();
-      }
-    }
-  }
-
-  // Shared completion method for onComplete and onError
-  private void complete(@Nullable Throwable error) {
-    upstream.clear();
     try (decoder) {
-      if (error == null) { // Normal completion
-        // Acknowledge final source
-        source.onComplete();
-        decoder.decode(source, sink);
-        if (source.hasRemaining()) {
-          throw new IOException("input source not exhausted by the decoder");
-        }
-        // Flush any incomplete buffer and put completion signal
-        sink.flush(decodedBuffers, true);
-        decodedBuffers.offer(COMPLETE);
+      // Acknowledge final decode round
+      source.onComplete();
+      decoder.decode(source, sink);
+      if (source.hasRemaining()) {
+        throw new IOException("input source not exhausted by the decoder");
+      }
+      // Flush any incomplete buffer and put completion signal
+      sink.flush(decodedBuffers, true);
+      decodedBuffers.offer(COMPLETE);
+      if (s != null) {
+        s.signal(true);
       }
     } catch (Throwable t) {
-      error = t;
+      if (s != null) {
+        s.signalError(t);
+      }
     }
-    signalDownstream(error);
   }
 
   static int getBufferSize() {
@@ -222,41 +195,6 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       bufferSize = DEFAULT_BUFFER_SIZE;
     }
     return bufferSize;
-  }
-
-  private static final class UpstreamReference {
-
-    private final AtomicReference<@Nullable Subscription> upstream;
-
-    private UpstreamReference() {
-      this.upstream = new AtomicReference<>();
-    }
-
-    boolean setOrCancel(Subscription subscription) {
-      if (!upstream.compareAndSet(null, subscription)) {
-        subscription.cancel();
-        return false;
-      }
-      return true;
-    }
-
-    void request(long n) {
-      Subscription s = upstream.get();
-      if (s != null) {
-        s.request(n);
-      }
-    }
-
-    void cancel() {
-      Subscription s = upstream.getAndSet(FlowSupport.NOOP_SUBSCRIPTION);
-      if (s != null) {
-        s.cancel();
-      }
-    }
-
-    void clear() {
-      upstream.set(FlowSupport.NOOP_SUBSCRIPTION);
-    }
   }
 
   /**
@@ -372,118 +310,46 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   }
 
   /** The subscription supplied downstream. */
-  private final class SubscriptionImpl extends SchedulableSubscription {
+  private final class SubscriptionImpl extends AbstractSubscription<List<ByteBuffer>> {
 
-    private final Demand demand;
-    private volatile boolean cancelled;
-    private boolean subscribed;
-    private volatile @MonotonicNonNull Throwable pendingError;
     private @Nullable List<ByteBuffer> currentBatch;
 
-    SubscriptionImpl() {
-      super(executor);
-      demand = new Demand();
+    protected SubscriptionImpl() {
+      super(downstream, executor);
     }
 
     @Override
-    public void request(long n) {
-      if (!cancelled) {
-        if (n > 0 && demand.increase(n)) {
-          signal();
-        } else if (n <= 0) {
-          upstream.cancel();
-          signalError(FlowSupport.illegalRequest());
-        }
-      }
-    }
-
-    @Override
-    public void cancel() {
-      if (!cancelled) { // Races are OK
-        cancelOwn();
-        upstream.cancel();
-        decoder.close();
-      }
-    }
-
-    void signalError(Throwable error) {
-      pendingError = error;
-      runOrSchedule();
-    }
-
-    /** Only cancels this subscription in case upstream is already cancelled. */
-    private void cancelOwn() {
-      cancelled = true;
-      stop();
-    }
-
-    @Override
-    protected void drain() {
-      Subscriber<? super List<ByteBuffer>> s = downstream;
-      subscribeOnDrain(s); // Apply onSubscribe if this is the first signal
-      for (long e = 0L, d = demand.current(); !cancelled; ) {
-        Throwable error = pendingError;
-        if (error != null) {
-          cancelOwn();
-          s.onError(error);
-        } else {
-          // The local accumulation of emitted items to `e` helps in decreasing contention
-          // over demand and maintains some sort of a keep-alive policy on active demand
-          // updates (similar to what SubmissionPublisher does but unbounded)
-          long f = emitItems(s, d - e);
-          e += f;
-          d = demand.current(); // Get fresh demand
-          if (e == d || f == 0L) { // Need to flush `e` and potentially exit
-            if (e > 0) {
-              d = demand.decreaseAndGet(e);
-            }
-            if (d == 0L || f == 0L) {
-              break; // Either cancelled/completed or no items/demand-slots so give up
-            }
-            e = 0L; // Reset and continue emitting
-          }
-        }
-      }
-    }
-
-    private void subscribeOnDrain(Subscriber<? super List<ByteBuffer>> s) {
-      if (!subscribed && !cancelled) {
-        subscribed = true;
-        try {
-          s.onSubscribe(this);
-        } catch (Throwable t) {
-          cancel();
-          s.onError(t);
-        }
-      }
-    }
-
-    private long emitItems(Subscriber<? super List<ByteBuffer>> s, long d) {
+    protected long emit(Subscriber<? super List<ByteBuffer>> d, long e) {
+      // List is polled prematurely to detect completion regardless of demand
       List<ByteBuffer> batch = currentBatch;
       currentBatch = null;
-      for (long e = 0L; !cancelled; e++) {
-        // The list is polled prematurely (before investigating demand). This
-        // is done so that completion is passed downstream regardless of demand.
-        if (batch == null) {
-          batch = decodedBuffers.poll();
-        }
+      if (batch == null) {
+        batch = decodedBuffers.poll();
+      }
+      for (long c = 0L; ; c++) {
         if (batch == COMPLETE) {
-          cancelOwn();
-          s.onComplete();
-        } else if (batch != null && e < d) {
-          try {
-            s.onNext(batch);
-          } catch (Throwable t) {
-            cancel();
-            s.onError(t);
-          }
-          batch = null;
+          cancelOnComplete(d);
+          return 0;
+        } if (c >= e || batch == null) { // exhausted either demand or batches
+          currentBatch = batch; // might be non-null
+          return c;
+        } else if (submitOnNext(d, batch)) {
+          batch = decodedBuffers.poll(); // get next batch and continue
         } else {
-          currentBatch = batch; // Save last polled batch, might be non-null
-          return e;
+          return 0;
         }
       }
-      return 0; // Cancelled or completed so it doesn't matter what was emitted
+    }
+
+    @Override
+    protected void abort(boolean flowInterrupted) {
+      if (flowInterrupted) {
+        upstream.cancel();
+      } else {
+        upstream.clear();
+      }
+      decoder.close();
+      decodedBuffers.clear();
     }
   }
 }

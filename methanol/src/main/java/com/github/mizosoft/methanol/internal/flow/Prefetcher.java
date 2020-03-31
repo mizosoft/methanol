@@ -20,36 +20,39 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.tck;
+package com.github.mizosoft.methanol.internal.flow;
 
-import static java.util.Objects.requireNonNull;
+/** Simple class for encapsulating prefetch logic used across subscribers. */
+public final class Prefetcher {
 
-import com.github.mizosoft.methanol.testutils.TestUtils;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+  private final int prefetch;
+  private final int prefetchThreshold;
+  private volatile int upstreamWindow;
 
-@Test
-public class AsyncBodyDecoderWithExecutorTck extends AsyncBodyDecoderTck {
-
-  private Executor executor;
-
-  public AsyncBodyDecoderWithExecutorTck() {}
-
-  @Override
-  Executor decoderExecutor() {
-    return requireNonNull(executor);
+  public Prefetcher() {
+    prefetch = FlowSupport.prefetch();
+    prefetchThreshold = FlowSupport.prefetchThreshold();
   }
 
-  @BeforeClass
-  public void setUpDecoderExecutor() {
-    executor = Executors.newFixedThreadPool(8);
+  public void initialize(Upstream upstream) {
+    upstreamWindow = prefetch;
+    upstream.request(prefetch);
   }
 
-  @AfterClass
-  public void shutdownDecoderExecutor() {
-    TestUtils.shutdown(executor);
+  public void update(Upstream upstream) {
+    // Decrement current window and bring it back to
+    // prefetch if became <= prefetchThreshold
+    int update = upstreamWindow - 1;
+    if (update <= prefetchThreshold) {
+      upstreamWindow = prefetch;
+      upstream.request(prefetch - update);
+    } else {
+      upstreamWindow = update;
+    }
+  }
+
+  // for testing
+  int currentWindow() {
+    return upstreamWindow;
   }
 }

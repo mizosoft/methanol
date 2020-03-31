@@ -25,9 +25,8 @@ package com.github.mizosoft.methanol;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.flow.Demand;
+import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.flow.SchedulableSubscription;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -67,8 +66,8 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
   private final AtomicBoolean subscribed;
   private final ConcurrentLinkedQueue<ByteBuffer> pipe;
-  private volatile @Nullable SubscriptionImpl downstream;
-  private volatile @MonotonicNonNull Throwable pendingError;
+  private volatile @Nullable SubscriptionImpl downstreamSubscription;
+  private volatile @MonotonicNonNull Throwable closeError; // cache error in case not yet subscribed
   private volatile boolean closed;
 
   private final Object writeLock;
@@ -110,9 +109,11 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     requireNonNull(error);
     if (!closed) {
       closed = true;
-      pendingError = error;
-      pipe.clear();
-      signalDownstream();
+      closeError = error;
+      SubscriptionImpl s = downstreamSubscription;
+      if (s != null) {
+        s.signalError(error);
+      }
     }
   }
 
@@ -126,7 +127,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       closed = true;
       flushInternal();
       pipe.offer(CLOSED);
-      signalDownstream();
+      signalDownstream(true);
     }
   }
 
@@ -141,7 +142,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       throw new IllegalStateException("closed");
     }
     if (flushInternal()) {
-      signalDownstream(); // notify downstream if flushing produced any signals
+      signalDownstream(false); // notify downstream if flushing produced any signals
     }
   }
 
@@ -153,13 +154,19 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   @Override
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
     requireNonNull(subscriber);
-    SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
+    SubscriptionImpl s = new SubscriptionImpl(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      downstream = subscription;
-      subscription.signal();
+      downstreamSubscription = s;
+      // check if was closed due to error before subscribing
+      Throwable e = closeError;
+      if (e != null) {
+        s.signalError(e);
+      } else {
+        s.signal(true); // apply onSubscribe
+      }
     } else {
       Throwable error =
-          new IllegalStateException("Already subscribed, multiple subscribers not supported");
+          new IllegalStateException("already subscribed, multiple subscribers not supported");
       try {
         subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
       } catch (Throwable t) {
@@ -170,10 +177,10 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
-  private void signalDownstream() {
-    SubscriptionImpl s = downstream;
+  private void signalDownstream(boolean force) {
+    SubscriptionImpl s = downstreamSubscription;
     if (s != null) {
-      s.signal();
+      s.signal(force);
     }
   }
 
@@ -244,7 +251,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         }
       }
       if (signalsAvailable) {
-        signalDownstream();
+        signalDownstream(false);
       }
       return written;
     }
@@ -295,102 +302,41 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
-  private final class SubscriptionImpl extends SchedulableSubscription {
+  private final class SubscriptionImpl extends AbstractSubscription<ByteBuffer> {
 
-    private final Subscriber<? super ByteBuffer> subscriber;
-    private final Demand demand;
-    private volatile boolean cancelled;
-    private boolean subscribed;
-    private ByteBuffer currentBatch;
+    private @Nullable ByteBuffer currentBatch;
 
-    SubscriptionImpl(Subscriber<? super ByteBuffer> subscriber) {
-      super(FlowSupport.SYNC_EXECUTOR);
-      this.subscriber = subscriber;
-      demand = new Demand();
+    SubscriptionImpl(Subscriber<? super ByteBuffer> downstream) {
+      super(downstream, FlowSupport.SYNC_EXECUTOR);
     }
 
     @Override
-    public void request(long n) {
-      if (!cancelled) {
-        if (n > 0 && demand.increase(n)) {
-          signal();
-        } else if (n <= 0) {
-          pendingError = FlowSupport.illegalRequest();
-          signal();
-        }
-      }
-    }
-
-    @Override
-    public void cancel() {
-      cancelled = true;
-      WritableBodyPublisher.this.downstream = null; // make parent loose reference to "this"
-      stop();
-    }
-
-    @Override
-    protected void drain() {
-      Subscriber<? super ByteBuffer> s = subscriber;
-      subscribeOnDrain(s);
-      for (long d = demand.current(), e = 0; !cancelled; ) {
-        Throwable t = pendingError;
-        if (t != null) {
-          cancel();
-          s.onError(t);
-        } else {
-          long f = emitItems(s, d - e);
-          e += f;
-          d = demand.current();
-          if (e == d || f == 0L) {
-            if (e > 0) {
-              d = demand.decreaseAndGet(e);
-            }
-            if (d == 0L || f == 0L) {
-              break;
-            }
-            e = 0L;
-          }
-        }
-      }
-    }
-
-    private void subscribeOnDrain(Subscriber<? super ByteBuffer> s) {
-      if (!subscribed && !cancelled) {
-        subscribed = true;
-        try {
-          s.onSubscribe(this);
-        } catch (Throwable t) {
-          cancel();
-          s.onError(t);
-        }
-      }
-    }
-
-    @SuppressWarnings("ReferenceEquality")
-    private long emitItems(Subscriber<? super ByteBuffer> s, long d) {
+    @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel
+    protected long emit(Subscriber<? super ByteBuffer> d, long e) {
       ByteBuffer batch = currentBatch;
       currentBatch = null;
-      for (long e = 0; !cancelled; e++) {
-        if (batch == null) {
-          batch = pipe.poll(); // poll prematurely to detect completion regardless of demand
-        }
+      if (batch == null) {
+        batch = pipe.poll();
+      }
+      for (long c = 0; ; c++) {
         if (batch == CLOSED) {
-          cancel();
-          s.onComplete();
-        } else if (batch != null && e < d) {
-          try {
-            s.onNext(batch);
-          } catch (Throwable t) {
-            cancel();
-            s.onError(t);
-          }
-          batch = null;
+          cancelOnComplete(d);
+          return 0;
+        } else if (c >= e || batch == null) { // demand or pipe exhausted
+          currentBatch = batch; // save last polled batch, which might be non-null
+          return c;
+        } else if (submitOnNext(d, batch)) {
+          batch = pipe.poll(); // poll next and continue
         } else {
-          currentBatch = batch; // save polled batch (which might be non-null)
-          return e;
+          return 0;
         }
       }
-      return 0;
+    }
+
+    @Override
+    protected void abort(boolean flowInterrupted) {
+      WritableBodyPublisher.this.downstreamSubscription = null; // loose reference "this"
+      pipe.clear();
     }
   }
 }

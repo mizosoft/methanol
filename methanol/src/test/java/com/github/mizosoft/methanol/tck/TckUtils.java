@@ -22,34 +22,34 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static java.util.Objects.requireNonNull;
+import org.reactivestreams.tck.TestEnvironment;
 
-import com.github.mizosoft.methanol.testutils.TestUtils;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+/** Reads TestEnvironment timeouts from system properties and not env. */
+public class TckUtils {
 
-@Test
-public class AsyncBodyDecoderWithExecutorTck extends AsyncBodyDecoderTck {
+  private static final long DEFAULT_TIMEOUT_MILLIS = 200L;
 
-  private Executor executor;
+  private static final long TIMEOUT_MILLIS =
+      getTimeout("TCK_TIMEOUT_MILLIS", DEFAULT_TIMEOUT_MILLIS);
+  private static final long NO_SIGNAL_TIMEOUT_MILLIS =
+      getTimeout("TCK_NO_SIGNAL_TIMEOUT_MILLIS", TIMEOUT_MILLIS);
+  private static final long POLL_TIMEOUT_MILLIS =
+      getTimeout("TCK_POLL_TIMEOUT_MILLIS", TIMEOUT_MILLIS);
 
-  public AsyncBodyDecoderWithExecutorTck() {}
-
-  @Override
-  Executor decoderExecutor() {
-    return requireNonNull(executor);
+  static TestEnvironment testEnvironment() {
+    return new TestEnvironment(TIMEOUT_MILLIS, NO_SIGNAL_TIMEOUT_MILLIS, POLL_TIMEOUT_MILLIS);
   }
 
-  @BeforeClass
-  public void setUpDecoderExecutor() {
-    executor = Executors.newFixedThreadPool(8);
-  }
-
-  @AfterClass
-  public void shutdownDecoderExecutor() {
-    TestUtils.shutdown(executor);
+  private static long getTimeout(String prop, long defaultVal) {
+    String value = System.getProperty(prop);
+    if (value == null) {
+      return defaultVal;
+    }
+    try {
+      return Long.parseLong(value);
+    } catch (NumberFormatException ex) {
+      throw new RuntimeException(
+          "Unable to parse <" + value + "> for property <" + prop + ">", ex);
+    }
   }
 }

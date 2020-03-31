@@ -22,37 +22,28 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
+import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Flow.Subscription;
+import java.util.concurrent.Executors;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
-/** A subscription that has a {@link Schedulable} task for fulfilling subscriber demand. */
-public abstract class SchedulableSubscription extends Schedulable implements Subscription {
+class AbstractSubscriptionWithExecutorTest extends AbstractSubscriptionTest {
 
-  // A maximum of 1 ongoing schedules will do as the need is to either execute the task or schedule
-  // a "follow up" if one is already running. In "fulfuiller" subscription tasks, a "follow up"
-  // is needed on demand/cancellation or arrival of upstream signals, as a running (but maybe
-  // about to exit) task might not have not observed such signals, so another task must follow it.
-  private static final int MAX_SCHEDULES = 1;
-
-  /**
-   * Creates a new {@code SchedulableSubscription} with the given executor.
-   *
-   * @param executor the executor on which the task runs
-   */
-  protected SchedulableSubscription(Executor executor) {
-    super(executor, MAX_SCHEDULES);
-  }
-
-  /** Signals this subscription to either run or be scheduled to run later if already running. */
-  public void signal() {
-    super.runOrSchedule();
-  }
+  private Executor executor;
 
   @Override
-  protected final void run() {
-    drain();
+  Executor executor() {
+    return executor;
   }
 
-  /** Method to be overridden for implementing "drain" logic. */
-  protected abstract void drain();
+  @BeforeEach
+  void setUpExecutor() {
+    executor = Executors.newFixedThreadPool(8);
+  }
+
+  @AfterEach
+  void shutdownExecutor() {
+    TestUtils.shutdown(executor);
+  }
 }
