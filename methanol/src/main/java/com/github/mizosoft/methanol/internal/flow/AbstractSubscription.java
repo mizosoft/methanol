@@ -193,29 +193,29 @@ public abstract class AbstractSubscription<T> implements Subscription {
     int s;
     Subscriber<? super T> d = downstream;
     subscribeOnDrain(d);
-    for (long x = 0, r = demand; ((s = state) & CANCELLED) == 0; ) {
+    for (long x = 0L, r = demand; ((s = state) & CANCELLED) == 0; ) {
       long e;
       Throwable error = pendingError;
       if (error != null) {
         pendingError = null;
         cancelOnError(d, error, false);
-      } else if ((e = emit(d, r - x)) > 0) {
+      } else if ((e = emit(d, r - x)) > 0L) {
         x += e;
         r = demand; // get fresh demand
         if (x == r) { // 'x' needs to be flushed
           r = subtractAndGetDemand(x);
           x = 0L;
         }
-      } else {
+      } else if (r == (r = demand)) { // check that emit() actually failed on a fresh demand
         // un keep-alive or kill task if a dead-end is reached, which is possible if:
         // - there is no active emission (x <= 0)
         // - there is no active demand (r <= 0 after flushing x)
         // - cancelled (checked by the loop condition)
-        boolean exhausted = x <= 0;
+        boolean exhausted = x <= 0L;
         if (!exhausted) {
           r = subtractAndGetDemand(x);
           x = 0L;
-          exhausted = r <= 0;
+          exhausted = r <= 0L;
         }
         int unsetBit = (s & KEEP_ALIVE) != 0 ? KEEP_ALIVE : RUN;
         if (exhausted && STATE.compareAndSet(this, s, s & ~unsetBit) && unsetBit == RUN) {
