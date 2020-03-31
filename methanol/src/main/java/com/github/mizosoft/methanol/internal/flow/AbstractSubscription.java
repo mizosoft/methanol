@@ -85,8 +85,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
 
   @Override
   public final void cancel() {
-    int s = getAndBitwiseOrState(CANCELLED);
-    if ((s & CANCELLED) == 0) {
+    if ((getAndBitwiseOrState(CANCELLED) & CANCELLED) == 0) {
       abort(true);
     }
   }
@@ -131,8 +130,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
    */
   protected final void cancelOnError(
       Subscriber<? super T> d, @Nullable Throwable error, boolean flowInterrupted) {
-    int s = getAndBitwiseOrState(CANCELLED);
-    if ((s & CANCELLED) == 0) {
+    if ((getAndBitwiseOrState(CANCELLED) & CANCELLED) == 0) {
       try {
         if (error != null) {
           d.onError(error);
@@ -145,8 +143,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
 
   /** Calls downstream's {@code onComplete} after cancelling this subscription. */
   protected final void cancelOnComplete(Subscriber<? super T> d) {
-    int s = getAndBitwiseOrState(CANCELLED);
-    if ((s & CANCELLED) == 0) {
+    if ((getAndBitwiseOrState(CANCELLED) & CANCELLED) == 0) {
       try {
         d.onComplete();
       } finally {
@@ -226,17 +223,14 @@ public abstract class AbstractSubscription<T> implements Subscription {
   }
 
   private void subscribeOnDrain(Subscriber<? super T> d) {
-    int s = state;
-    if ((s & (SUBSCRIBED | CANCELLED)) == 0) {
-      s = getAndBitwiseOrState(SUBSCRIBED);
-      if ((s & (SUBSCRIBED | CANCELLED)) == 0) {
-        try {
-          d.onSubscribe(this);
-        } catch (Throwable t) {
-          Throwable e = propagateError(t);
-          pendingError = null;
-          cancelOnError(d, e, true);
-        }
+    if ((state & (SUBSCRIBED | CANCELLED)) == 0
+        && (getAndBitwiseOrState(SUBSCRIBED) & (SUBSCRIBED | CANCELLED)) == 0) {
+      try {
+        d.onSubscribe(this);
+      } catch (Throwable t) {
+        Throwable e = propagateError(t);
+        pendingError = null;
+        cancelOnError(d, e, true);
       }
     }
   }
