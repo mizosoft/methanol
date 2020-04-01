@@ -343,16 +343,6 @@ task rootJavadoc(type: Javadoc) {
     addBooleanOption('Xdoclint:-missing', true)
     addStringOption('doctitle', "Methanol ${project.version} API")
     addStringOption('windowtitle', "Methanol ${project.version} API")
-    subprojects {
-      afterEvaluate {
-        addStringOption('-module-path', modulePath.asPath)
-        addMultilineStringsOption('-module-source-path').with {
-          value = moduleSrcPaths.collect { entry ->
-            "${entry.key}=${entry.value}" as String
-          }
-        }
-      }
-    }
   }
   destinationDir = file("${project.buildDir}/docs/javadoc")
   doFirst {
@@ -361,6 +351,16 @@ task rootJavadoc(type: Javadoc) {
     // https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8208608
     if (!JavaVersion.current().isJava12Compatible()) {
       throw new GradleException('JDK 12 or later is required for multimodule Javadoc');
+    }
+
+    // these would otherwise be in gradlew.projectsEvaluated {} but it complains
+    options {
+      addStringOption('-module-path', modulePath.asPath)
+      addMultilineStringsOption('-module-source-path').with {
+        value = moduleSrcPaths.collect { entry ->
+          "${entry.key}=${entry.value}" as String
+        }
+      }
     }
   }
 }
