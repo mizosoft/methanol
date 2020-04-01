@@ -28,11 +28,13 @@ import static com.github.mizosoft.methanol.MoreBodyHandlers.ofByteChannel;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofDeferredObject;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofReader;
+import static com.github.mizosoft.methanol.MoreBodyHandlers.withReadTimeout;
 import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static com.github.mizosoft.methanol.testutils.TestUtils.load;
 import static com.github.mizosoft.methanol.testutils.TestUtils.loadAscii;
 import static java.net.http.HttpResponse.BodyHandlers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertLinesMatch;
@@ -43,11 +45,13 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.BodyDecoder;
+import com.github.mizosoft.methanol.HttpReadTimeoutException;
 import com.github.mizosoft.methanol.TypeReference;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
 import com.github.mizosoft.methanol.testutils.MockGzipMember;
 import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
+import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -60,13 +64,16 @@ import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ClosedByInterruptException;
+import java.nio.channels.ReadableByteChannel;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Subscription;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
@@ -75,6 +82,7 @@ import java.util.zip.GZIPOutputStream;
 import okhttp3.mockwebserver.MockResponse;
 import okio.Buffer;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -125,6 +133,18 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
         .addMoments(1, BruhMoment.newBuilder().setMessage("bbruuuhhh"))
         .addMoments(2, BruhMoment.newBuilder().setMessage("bbrrruuuuuuuhhhhhhhh!!??"))
         .build();
+  }
+
+  private ScheduledExecutorService scheduler;
+
+  @BeforeEach
+  void setUpScheduler() {
+    scheduler = Executors.newSingleThreadScheduledExecutor();
+  }
+
+  @BeforeEach
+  void shutdownScheduler() {
+    TestUtils.shutdown(scheduler);
   }
 
   @BeforeAll
@@ -385,30 +405,65 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
   @Test
   void fromAsyncSubscriber_uncompletedToCompletedBody() throws Exception {
     server.enqueue(new MockResponse()
-        .setBody(okBuffer(new byte[] {1}))
-        .throttleBody(1, Long.MAX_VALUE, TimeUnit.MILLISECONDS)); // only passes one byte
+        .setBody(okBuffer(new byte[] {1})));
     var request = HttpRequest.newBuilder(server.url("/").uri())
         .timeout(Duration.ofSeconds(10))
         .build();
     var deadlockBody = new BodySubscriber<>() {
+      private final CompletableFuture<Subscription> subscriptionCf = new CompletableFuture<>();
+
       @Override public CompletionStage<Object> getBody() {
         return new CompletableFuture<>(); // never completes!
       }
-
-      private final CompletableFuture<Subscription> subscriptionCf = new CompletableFuture<>();
       @Override public void onSubscribe(Subscription subscription) {
         subscriptionCf.complete(subscription);
       }
-
       @Override public void onNext(List<ByteBuffer> item) {}
-
       @Override public void onError(Throwable throwable) {}
-
-      @Override
-      public void onComplete() {}
+      @Override public void onComplete() {}
     };
     var response = client.send(request, fromAsyncSubscriber(deadlockBody, body -> body.subscriptionCf));
     response.body().cancel(); // this closes the connection
+  }
+
+  @Test
+  void withReadTimeout_readThroughByteChannel() throws Exception {
+    var timeoutMillis = 50L;
+    server.enqueue(new MockResponse()
+        .setBody(poem)
+        .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS));
+    var request = HttpRequest.newBuilder(server.url("/").uri()).build();
+    var response = client.send(
+        request, withReadTimeout(ofByteChannel(), Duration.ofMillis(timeoutMillis)));
+    try (var channel = response.body()) {
+      assertReadTimeout(channel);
+    }
+  }
+
+  @Test
+  void withReadTimeout_readThroughByteChannel_customScheduler() throws Exception {
+    var scheduler = Executors.newScheduledThreadPool(1);
+    try {
+      var timeoutMillis = 50L;
+      server.enqueue(new MockResponse()
+          .setBody(poem)
+          .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS));
+      var request = HttpRequest.newBuilder(server.url("/").uri()).build();
+      var response = client.send(
+          request,
+          withReadTimeout(
+              decoding(ofByteChannel(), executor), Duration.ofMillis(timeoutMillis), scheduler));
+      try (var channel = response.body()) {
+        assertReadTimeout(channel);
+      }
+    } finally {
+      scheduler.shutdown();
+    }
+  }
+
+  private static void assertReadTimeout(ReadableByteChannel channel) {
+    var ioe = assertThrows(IOException.class, () -> channel.read(ByteBuffer.allocate(1)));
+    assertSame(HttpReadTimeoutException.class, ioe.getCause().getClass());
   }
 
   private static Buffer okBuffer(byte[] bytes) {

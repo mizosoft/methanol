@@ -27,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.internal.extensions.AsyncSubscriberAdapter;
 import com.github.mizosoft.methanol.internal.extensions.ByteChannelSubscriber;
+import com.github.mizosoft.methanol.internal.extensions.TimeoutSubscriber;
 import java.io.Reader;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
@@ -35,9 +36,11 @@ import java.nio.channels.Channels;
 import java.nio.channels.InterruptibleChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow.Subscriber;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -63,6 +66,30 @@ public class MoreBodySubscribers {
       BodySubscriber<T> fromAsyncSubscriber(
           S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
     return new AsyncSubscriberAdapter<>(downstream, asyncFinisher);
+  }
+
+  /**
+   * Returns a {@code BodySubscriber<T>} that completes the given downstream with {@link
+   * HttpReadTimeoutException} if a requested signal is not received within the given timeout. A
+   * system-wide scheduler is used to schedule timeout events.
+   */
+  public static <T> BodySubscriber<T> withReadTimeout(BodySubscriber<T> base, Duration timeout) {
+    requireNonNull(base, "base");
+    requireNonNull(timeout, "timeout");
+    return new TimeoutSubscriber<>(base, timeout, null);
+  }
+
+  /**
+   * Returns a {@code BodySubscriber<T>} that completes the given downstream with {@link
+   * HttpReadTimeoutException} if a requested signal is not received within the given timeout. The
+   * given {@code ScheduledExecutorService} is used to schedule timeout events.
+   */
+  public static <T> BodySubscriber<T> withReadTimeout(
+      BodySubscriber<T> base, Duration timeout, ScheduledExecutorService scheduler) {
+    requireNonNull(base, "base");
+    requireNonNull(timeout, "timeout");
+    requireNonNull(timeout, "scheduler");
+    return new TimeoutSubscriber<>(base, timeout, scheduler);
   }
 
   /**

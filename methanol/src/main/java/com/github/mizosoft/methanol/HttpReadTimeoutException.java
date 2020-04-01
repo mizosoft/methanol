@@ -20,37 +20,22 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.extensions;
-
-import static java.util.Objects.requireNonNull;
+package com.github.mizosoft.methanol;
 
 import java.net.http.HttpResponse.BodySubscriber;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Flow.Subscriber;
-import java.util.function.Function;
+import java.net.http.HttpTimeoutException;
+import java.time.Duration;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Adapts a subscriber to a {@code BodySubscriber} where the body's completion need not be in
- * accordance with {@code onComplete} or {@code onError}.
+ * Thrown when a body subscriber doesn't receive a requested signal within a timeout.
  *
- * @param <T> the body type
- * @param <S> the subscriber's type
+ * @see MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration)
  */
-public class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuffer>>>
-    extends DelegatingSubscriber<List<ByteBuffer>, S> implements BodySubscriber<T> {
+public class HttpReadTimeoutException extends HttpTimeoutException {
 
-  private final Function<? super S, ? extends CompletionStage<T>> asyncFinisher;
-
-  public AsyncSubscriberAdapter(
-      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
-    super(downstream);
-    this.asyncFinisher = requireNonNull(asyncFinisher, "asyncFinisher");
-  }
-
-  @Override
-  public CompletionStage<T> getBody() {
-    return asyncFinisher.apply(downstream);
+  /** Creates a new {@code HttpReadTimeoutException}. */
+  public HttpReadTimeoutException(@Nullable String message) {
+    super(message);
   }
 }

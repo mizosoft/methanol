@@ -34,11 +34,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -64,6 +66,28 @@ public class MoreBodyHandlers {
     requireNonNull(downstream, "downstream");
     requireNonNull(asyncFinisher, "asyncFinisher");
     return info -> MoreBodySubscribers.fromAsyncSubscriber(downstream, asyncFinisher);
+  }
+
+  /**
+   * Returns a {@code BodyHandler} that returns the {@code BodySubscriber} specified by {@link
+   * MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration)}.
+   */
+  public static <T> BodyHandler<T> withReadTimeout(BodyHandler<T> baseHandler, Duration timeout) {
+    requireNonNull(baseHandler, "baseHandler");
+    requireNonNull(timeout, "timeout");
+    return info -> MoreBodySubscribers.withReadTimeout(baseHandler.apply(info), timeout);
+  }
+
+  /**
+   * Returns a {@code BodyHandler} that returns the {@code BodySubscriber} specified by {@link
+   * MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration, ScheduledExecutorService)}.
+   */
+  public static <T> BodyHandler<T> withReadTimeout(
+      BodyHandler<T> baseHandler, Duration timeout, ScheduledExecutorService scheduler) {
+    requireNonNull(baseHandler, "baseHandler");
+    requireNonNull(timeout, "timeout");
+    requireNonNull(timeout, "scheduler");
+    return info -> MoreBodySubscribers.withReadTimeout(baseHandler.apply(info), timeout, scheduler);
   }
 
   /**
