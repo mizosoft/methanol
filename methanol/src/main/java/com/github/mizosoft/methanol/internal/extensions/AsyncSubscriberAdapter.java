@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.internal.extensions;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.flow.DelegatingSubscriber;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.util.List;

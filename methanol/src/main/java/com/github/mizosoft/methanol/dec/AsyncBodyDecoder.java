@@ -314,7 +314,7 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
     private @Nullable List<ByteBuffer> currentBatch;
 
-    protected SubscriptionImpl() {
+    SubscriptionImpl() {
       super(downstream, executor);
     }
 

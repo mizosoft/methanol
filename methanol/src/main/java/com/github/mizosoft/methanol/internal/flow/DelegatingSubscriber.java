@@ -20,26 +20,27 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.extensions;
+package com.github.mizosoft.methanol.internal.flow;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A defensive wrapper over a {@code Subscriber<T>}. */
-abstract class DelegatingSubscriber<T, S extends Subscriber<? super T>> implements Subscriber<T> {
+public abstract class DelegatingSubscriber<T, S extends Subscriber<? super T>>
+    implements Subscriber<T> {
 
-  final S downstream;
-  final Upstream upstream;
+  protected final S downstream;
+  protected final Upstream upstream;
+
   // Safety flag to ensure that deferred cancellation from upstream doesn't
   // cause the downstream to receive post-completion signals in case downstream's
   // onSubscribe or onNext threw previously
   private volatile boolean completed;
 
-  DelegatingSubscriber(S downstream) {
+  protected DelegatingSubscriber(S downstream) {
     this.downstream = requireNonNull(downstream, "downstream");
     upstream = new Upstream();
   }

@@ -58,7 +58,7 @@ public class AbstractSubscriptionTck extends FlowPublisherVerification<Long> {
     private long from;
     private final long toExclusive;
 
-    protected RangeSubscription(
+    RangeSubscription(
         Subscriber<? super Long> downstream, Executor executor, long from, long toExclusive) {
       super(requireNonNull(downstream), executor);
       this.from = from;

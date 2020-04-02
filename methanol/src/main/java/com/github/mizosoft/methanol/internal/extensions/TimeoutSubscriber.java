@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.extensions;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.HttpReadTimeoutException;
+import com.github.mizosoft.methanol.internal.flow.DelegatingSubscriber;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -78,6 +79,7 @@ public final class TimeoutSubscriber<T>
   private volatile long itemIndex;
   // demand must be tracked to know when to schedule timeouts
   private volatile long demand;
+  // timeout task for the currently requested item
   private volatile @Nullable Cancellable timeoutTask;
 
   public TimeoutSubscriber(BodySubscriber<T> downstream, Duration timeout,
@@ -111,12 +113,12 @@ public final class TimeoutSubscriber<T>
     requireNonNull(item);
     long idx = itemIndex;
     if (idx != TOMBSTONE && ITEM_INDEX.compareAndSet(this, idx, ++idx)) { // could reach before timeout?
-      // remove timeout scheduled for this signal
-      Cancellable currentTask = (Cancellable) TIMEOUT_TASK.getAndSet(this, null);
+      Cancellable currentTask = timeoutTask;
+      if (currentTask == Cancellable.CANCELLED
+          || !TIMEOUT_TASK.compareAndSet(this, currentTask, null)) { // remove this signal's timeout
+        return; // detected cancellation promptly, downstream is lucky!
+      }
       if (currentTask != null) {
-        if (currentTask == Cancellable.CANCELLED) {
-          return; // detected cancellation promptly, downstream is lucky!
-        }
         currentTask.cancel();
       }
       long d = decrementAndGetDemand();
@@ -135,6 +137,7 @@ public final class TimeoutSubscriber<T>
                 "missing backpressure: receiving more items than requested"));
         return;
       }
+      // and finally...
       super.onNext(item);
     }
   }
@@ -143,7 +146,7 @@ public final class TimeoutSubscriber<T>
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
     if ((long) ITEM_INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) { // could reach before timeout?
-      Cancellable currentTask = cancelTimeout();
+      Cancellable currentTask = disableTimeout();
       if (currentTask != null) {
         currentTask.cancel();
       }
@@ -154,7 +157,7 @@ public final class TimeoutSubscriber<T>
   @Override
   public void onComplete() {
     if ((long) ITEM_INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) { // could reach before timeout?
-      Cancellable currentTask = cancelTimeout();
+      Cancellable currentTask = disableTimeout();
       if (currentTask != null) {
         currentTask.cancel();
       }
@@ -175,7 +178,7 @@ public final class TimeoutSubscriber<T>
     }
   }
 
-  private @Nullable Cancellable cancelTimeout() {
+  private @Nullable Cancellable disableTimeout() {
     return (Cancellable) TIMEOUT_TASK.getAndSet(this, Cancellable.CANCELLED);
   }
 
@@ -221,7 +224,7 @@ public final class TimeoutSubscriber<T>
     @Override
     public void cancel() {
       itemIndex = TOMBSTONE; // ignore further signals
-      Cancellable task = cancelTimeout();
+      Cancellable task = disableTimeout();
       if (task != null) {
         task.cancel();
       }
