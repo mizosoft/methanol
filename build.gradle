@@ -189,7 +189,7 @@ subprojects { subproject ->
 
   tasks.withType(Test) {
     testLogging {
-      events = ['failed']
+      events = System.getenv().GITHUB_ACTIONS ? ['passed', 'skipped', 'failed'] : ['failed']
       showStandardStreams = true
       exceptionFormat = 'full'
     }
