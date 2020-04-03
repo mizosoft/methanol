@@ -91,6 +91,7 @@ import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 import okhttp3.mockwebserver.MockResponse;
 import okio.Buffer;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -147,11 +148,25 @@ class IntegrationTests extends Lifecycle {
         .build();
   }
 
+  private static final String SERVICE_LOGGER_NAME =
+      "com.github.mizosoft.methanol.internal.spi.ServiceCache";
+
+  private static Level previousServiceLoggerLevel;
+
   @BeforeAll
   static void turnOffServiceLogger() {
     // Do not log service loader failures.
-    Logger logger = Logger.getLogger("com.github.mizosoft.methanol.internal.spi.ServiceCache");
+    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
+    previousServiceLoggerLevel = logger.getLevel();
     logger.setLevel(Level.OFF);
+  }
+
+  @AfterAll
+  static void resetServiceLogger() {
+    if (previousServiceLoggerLevel != null) {
+      Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
+      logger.setLevel(previousServiceLoggerLevel);
+    }
   }
 
   private void assertDecodesSmall(String encoding) throws Exception {

@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
 
 class BodyDecoderFactoryTest {
 
-  private static final String LOGGER_NAME =
+  private static final String SERVICE_LOGGER_NAME =
       "com.github.mizosoft.methanol.internal.spi.ServiceCache";
 
   private static RecordingFilter recordingFilter;
@@ -47,7 +47,7 @@ class BodyDecoderFactoryTest {
 
   @BeforeAll
   static void setFilter() {
-    Logger logger = Logger.getLogger(LOGGER_NAME);
+    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
     originalFilter = logger.getFilter();
     recordingFilter = new RecordingFilter();
     logger.setFilter(recordingFilter);
@@ -55,7 +55,7 @@ class BodyDecoderFactoryTest {
 
   @AfterAll
   static void setOriginalFilter() {
-    Logger logger = Logger.getLogger(LOGGER_NAME);
+    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
     logger.setFilter(originalFilter);
   }
 
