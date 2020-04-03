@@ -44,19 +44,23 @@ class BodyDecoderFactoryTest {
 
   private static RecordingFilter recordingFilter;
   private static Filter originalFilter;
+  private static Level originalLevel;
 
   @BeforeAll
   static void setFilter() {
     Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-    originalFilter = logger.getFilter();
     recordingFilter = new RecordingFilter();
+    originalFilter = logger.getFilter();
     logger.setFilter(recordingFilter);
+    originalLevel = logger.getLevel();
+    logger.setLevel(Level.WARNING);
   }
 
   @AfterAll
-  static void setOriginalFilter() {
+  static void resetFilter() {
     Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
     logger.setFilter(originalFilter);
+    logger.setLevel(originalLevel);
   }
 
   /** @see FailingBodyDecoderFactory */

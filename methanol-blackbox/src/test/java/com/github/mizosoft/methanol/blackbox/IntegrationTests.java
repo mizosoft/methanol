@@ -163,10 +163,8 @@ class IntegrationTests extends Lifecycle {
 
   @AfterAll
   static void resetServiceLogger() {
-    if (previousServiceLoggerLevel != null) {
-      Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-      logger.setLevel(previousServiceLoggerLevel);
-    }
+    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
+    logger.setLevel(previousServiceLoggerLevel);
   }
 
   private void assertDecodesSmall(String encoding) throws Exception {
