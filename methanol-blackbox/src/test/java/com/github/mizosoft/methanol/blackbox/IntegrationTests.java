@@ -157,6 +157,9 @@ class IntegrationTests extends Lifecycle {
   static void turnOffServiceLogger() {
     // Do not log service loader failures.
     Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
+    System.out.println("logger: " + logger);
+    System.out.println("logger level: " + logger.getLevel());
+    System.out.println("logger filter: " + logger.getFilter());
     originalLogFilter = logger.getFilter();
     logger.setFilter(l -> false);
   }
@@ -164,6 +167,9 @@ class IntegrationTests extends Lifecycle {
   @AfterAll
   static void resetServiceLogger() {
     Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
+    System.out.println("logger: " + logger);
+    System.out.println("logger level: " + logger.getLevel());
+    System.out.println("logger filter: " + logger.getFilter());
     logger.setFilter(originalLogFilter);
   }
 

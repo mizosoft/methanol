@@ -48,6 +48,9 @@ class BodyDecoderFactoryTest {
   @BeforeAll
   static void setFilter() {
     Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
+    System.out.println("logger: " + logger);
+    System.out.println("logger level: " + logger.getLevel());
+    System.out.println("logger filter: " + logger.getFilter());
     recordingFilter = new RecordingFilter();
     originalFilter = logger.getFilter();
     logger.setFilter(recordingFilter);
@@ -56,6 +59,9 @@ class BodyDecoderFactoryTest {
   @AfterAll
   static void resetFilter() {
     Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
+    System.out.println("logger: " + logger);
+    System.out.println("logger level: " + logger.getLevel());
+    System.out.println("logger filter: " + logger.getFilter());
     logger.setFilter(originalFilter);
   }
 
