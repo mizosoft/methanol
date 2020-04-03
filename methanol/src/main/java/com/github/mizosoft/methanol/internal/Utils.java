@@ -23,9 +23,6 @@
 package com.github.mizosoft.methanol.internal;
 
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.function.Supplier;
 
 /** Miscellaneous utilities. */
 public class Utils {
@@ -39,13 +36,5 @@ public class Utils {
     dst.put(src);
     src.limit(srcLimit);
     return toCopy;
-  }
-
-  public static int getIntProperty(String name, int defaultValue) {
-    return getPrivileged(() -> Integer.getInteger(name, defaultValue));
-  }
-
-  private static <T> T getPrivileged(Supplier<T> action) {
-    return AccessController.doPrivileged((PrivilegedAction<T>) action::get);
   }
 }

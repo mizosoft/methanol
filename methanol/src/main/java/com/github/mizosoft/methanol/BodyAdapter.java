@@ -23,15 +23,11 @@
 package com.github.mizosoft.methanol;
 
 import com.github.mizosoft.methanol.internal.spi.BodyAdapterFinder;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -42,7 +38,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * {@link java.util.ServiceLoader} class.
  *
  * <p>A {@code BodyAdapter} communicates the format it uses and the set of types it supports through
- * {@link #isCompatibleWith(MediaType)} and {@link #supportsType(TypeReference)} respectively. For
+ * {@link #isCompatibleWith(MediaType)} and {@link #supportsType(TypeRef)} respectively. For
  * example, a {@code BodyAdapter} that uses the JSON format is compatible with any {@code
  * application/json} media type, and supports any object type supported by the underlying
  * serializer/deserializer.
@@ -62,10 +58,10 @@ public interface BodyAdapter {
    *
    * @param type the object type
    */
-  boolean supportsType(TypeReference<?> type);
+  boolean supportsType(TypeRef<?> type);
 
   private static <A extends BodyAdapter> Optional<A> lookupAdapter(
-      List<A> installed, TypeReference<?> type, @Nullable MediaType mediaType) {
+      List<A> installed, TypeRef<?> type, @Nullable MediaType mediaType) {
     return installed.stream()
         .filter(a -> a.supportsType(type) && (mediaType == null || a.isCompatibleWith(mediaType)))
         .findFirst();
@@ -99,7 +95,7 @@ public interface BodyAdapter {
      * @param type the object type
      * @param mediaType an optional media type defining the serialization format
      */
-    static Optional<Encoder> getEncoder(TypeReference<?> type, @Nullable MediaType mediaType) {
+    static Optional<Encoder> getEncoder(TypeRef<?> type, @Nullable MediaType mediaType) {
       return BodyAdapter.lookupAdapter(installed(), type, mediaType);
     }
   }
@@ -120,7 +116,7 @@ public interface BodyAdapter {
      * @param mediaType the media type
      * @param <T> the type represent by {@code type}
      */
-    <T> BodySubscriber<T> toObject(TypeReference<T> type, @Nullable MediaType mediaType);
+    <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType);
 
     /**
      * Returns a completed {@code BodySubscriber} that lazily decodes the response body into an
@@ -128,9 +124,9 @@ public interface BodyAdapter {
      * mediaType} is {@code null}, the decoder's default format settings will be used.
      *
      * <p>The default implementation returns a subscriber completed with a supplier that blocks
-     * (uninterruptedly) on the subscriber returned by {@link #toObject(TypeReference, MediaType)}.
-     * Any completion exception raised while blocking will be rethrown from the supplier as an
-     * {@code UncheckedIOException}. Encoders that support reading from a blocking source should
+     * (uninterruptedly) on the subscriber returned by {@link #toObject(TypeRef, MediaType)}.
+     * Any completion exception raised while blocking is rethrown from the supplier as a
+     * {@code CompletionException}. Encoders that support reading from a blocking source should
      * override this method to defer reading from such a source until the supplier is called.
      *
      * @param type the object type
@@ -138,24 +134,10 @@ public interface BodyAdapter {
      * @param <T> the type represent by {@code type}
      */
     default <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeReference<T> type, @Nullable MediaType mediaType) {
+        TypeRef<T> type, @Nullable MediaType mediaType) {
       return MoreBodySubscribers.fromAsyncSubscriber(
-          toObject(type, mediaType), s -> CompletableFuture.completedStage(defer(s.getBody())));
-    }
-
-    private <T> Supplier<T> defer(CompletionStage<T> stage) {
-      return () -> {
-        try {
-          return stage.toCompletableFuture().join();
-        } catch (CompletionException e) {
-          // TODO: try to clone if cause is RuntimeException or Error
-          Throwable t = e.getCause();
-          if (t instanceof IOException) {
-            throw new UncheckedIOException(((IOException) t));
-          }
-          throw new UncheckedIOException(new IOException(t));
-        }
-      };
+          toObject(type, mediaType),
+          s -> CompletableFuture.completedStage(() -> s.getBody().toCompletableFuture().join()));
     }
 
     /** Returns an immutable list containing the installed decoders. */
@@ -171,7 +153,7 @@ public interface BodyAdapter {
      * @param type the object type
      * @param mediaType an optional media type defining the deserialization format
      */
-    static Optional<Decoder> getDecoder(TypeReference<?> type, @Nullable MediaType mediaType) {
+    static Optional<Decoder> getDecoder(TypeRef<?> type, @Nullable MediaType mediaType) {
       return BodyAdapter.lookupAdapter(installed(), type, mediaType);
     }
   }

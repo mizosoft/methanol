@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MimeBodyPublisher;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.util.List;
 import java.util.Set;
@@ -63,7 +63,7 @@ class AbstractBodyAdapterTest {
   void requireSupport() {
     var adapter = new AbstractBodyAdapter() {
       @Override
-      public boolean supportsType(TypeReference<?> type) {
+      public boolean supportsType(TypeRef<?> type) {
         return List.class.isAssignableFrom(type.rawType());
       }
     };
@@ -99,7 +99,7 @@ class AbstractBodyAdapterTest {
     }
 
     @Override
-    public boolean supportsType(TypeReference<?> type) {
+    public boolean supportsType(TypeRef<?> type) {
       return false;
     }
   }

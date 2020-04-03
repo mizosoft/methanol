@@ -32,7 +32,7 @@ import java.util.zip.CRC32;
 import java.util.zip.ZipException;
 
 /** {@code AsyncDecoder} for gzip. */
-class GzipDecoder extends ZLibDecoder {
+final class GzipDecoder extends ZLibDecoder {
 
   private static final int GZIP_MAGIC = 0x8B1F; // ID1 and ID2 as a little-endian ordered short
   private static final int CM_DEFLATE = 8;

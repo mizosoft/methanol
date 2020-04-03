@@ -29,7 +29,7 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse.ResponseInfo;
 
 /** Basic implementation of {@code ResponseInfo}. */
-public class BasicResponseInfo implements ResponseInfo {
+public final class BasicResponseInfo implements ResponseInfo {
 
   private final int statusCode;
   private final HttpHeaders headers;

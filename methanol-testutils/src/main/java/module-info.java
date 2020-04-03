@@ -20,9 +20,7 @@
  * SOFTWARE.
  */
 
-/**
- * Miscellaneous test utilities used internally.
- */
+/** Miscellaneous test utilities used internally. */
 module methanol.testutils {
   requires transitive methanol;
   requires static org.checkerframework.checker.qual;

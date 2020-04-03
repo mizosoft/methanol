@@ -22,8 +22,8 @@
 
 package com.github.mizosoft.methanol.adapter.gson;
 
-import static com.github.mizosoft.methanol.adapter.gson.GsonBodyAdapterFactory.createEncoder;
-import static com.github.mizosoft.methanol.adapter.gson.GsonBodyAdapterFactory.createDecoder;
+import static com.github.mizosoft.methanol.adapter.gson.GsonAdapterFactory.createDecoder;
+import static com.github.mizosoft.methanol.adapter.gson.GsonAdapterFactory.createEncoder;
 import static com.github.mizosoft.methanol.testutils.TestUtils.NOOP_SUBSCRIPTION;
 import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static java.nio.charset.StandardCharsets.UTF_16;
@@ -36,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
@@ -50,11 +50,11 @@ import java.nio.charset.Charset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class GsonBodyAdapterTest {
+class GsonAdapterTest {
 
   @Test
   void isCompatibleWith_anyApplicationJson() {
-    for (var c : List.of(GsonBodyAdapterFactory.createEncoder(), GsonBodyAdapterFactory.createDecoder())) {
+    for (var c : List.of(GsonAdapterFactory.createEncoder(), GsonAdapterFactory.createDecoder())) {
       assertTrue(c.isCompatibleWith(MediaType.of("application", "json")));
       assertTrue(c.isCompatibleWith(MediaType.of("application", "json").withCharset(UTF_8)));
       assertTrue(c.isCompatibleWith(MediaType.of("application", "*")));
@@ -65,25 +65,25 @@ class GsonBodyAdapterTest {
 
   @Test
   void unsupportedConversion_encoder() {
-    var encoder = GsonBodyAdapterFactory.createEncoder();
+    var encoder = GsonAdapterFactory.createEncoder();
     assertThrows(UnsupportedOperationException.class,
         () -> encoder.toBody(new Point(1, 2), MediaType.of("text", "plain")));
   }
 
   @Test
   void unsupportedConversion_decoder() {
-    var decoder = GsonBodyAdapterFactory.createDecoder();
+    var decoder = GsonAdapterFactory.createDecoder();
     var textPlain = MediaType.of("text", "plain");
     assertThrows(UnsupportedOperationException.class,
-        () -> decoder.toObject(new TypeReference<Point>() {}, textPlain));
+        () -> decoder.toObject(new TypeRef<Point>() {}, textPlain));
     assertThrows(UnsupportedOperationException.class,
-        () -> decoder.toDeferredObject(new TypeReference<Point>() {}, textPlain));
+        () -> decoder.toDeferredObject(new TypeRef<Point>() {}, textPlain));
   }
 
   @Test
   void serializeJson() {
     var obama = new AwesomePerson("Barack", "Obama", 58);
-    var body = GsonBodyAdapterFactory.createEncoder().toBody(obama, null);
+    var body = GsonAdapterFactory.createEncoder().toBody(obama, null);
     var expected = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
     assertEquals(expected, toUtf8(body));
   }
@@ -91,7 +91,7 @@ class GsonBodyAdapterTest {
   @Test
   void serializeJson_utf16() {
     var obama = new AwesomePerson("Barack", "Obama", 58);
-    var body = GsonBodyAdapterFactory.createEncoder().toBody(obama, MediaType.parse("application/json; charset=utf-16"));
+    var body = GsonAdapterFactory.createEncoder().toBody(obama, MediaType.parse("application/json; charset=utf-16"));
     var expected = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
     assertEquals(expected, toString(body, UTF_16));
   }
@@ -136,8 +136,8 @@ class GsonBodyAdapterTest {
   @Test
   void deserializeJson() {
     var json = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
-    var subscriber = GsonBodyAdapterFactory
-        .createDecoder().toObject(new TypeReference<AwesomePerson>() {}, null);
+    var subscriber = GsonAdapterFactory.createDecoder()
+        .toObject(new TypeRef<AwesomePerson>() {}, null);
     var obama = publishUtf8(subscriber, json);
     assertEquals(obama.firstName, "Barack");
     assertEquals(obama.lastName, "Obama");
@@ -147,8 +147,8 @@ class GsonBodyAdapterTest {
   @Test
   void deserializeJson_utf16() {
     var json = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
-    var subscriber = GsonBodyAdapterFactory.createDecoder().toObject(
-        new TypeReference<AwesomePerson>() {}, MediaType.parse("application/json; charset=utf-16"));
+    var subscriber = GsonAdapterFactory.createDecoder().toObject(
+        new TypeRef<AwesomePerson>() {}, MediaType.parse("application/json; charset=utf-16"));
     var obama = publish(subscriber, json, UTF_16);
     assertEquals(obama.firstName, "Barack");
     assertEquals(obama.lastName, "Obama");
@@ -160,7 +160,7 @@ class GsonBodyAdapterTest {
     var gson = new GsonBuilder()
         .registerTypeAdapter(Point.class, new PointAdapter())
         .create();
-    var subscriber = createDecoder(gson).toObject(new TypeReference<Point>() {}, null);
+    var subscriber = createDecoder(gson).toObject(new TypeRef<Point>() {}, null);
     var point = publishUtf8(subscriber, "[1,2]");
     assertEquals(point.x, 1);
     assertEquals(point.y, 2);
@@ -171,7 +171,7 @@ class GsonBodyAdapterTest {
     var gson = new GsonBuilder()
         .registerTypeAdapter(Point.class, new PointAdapter())
         .create();
-    var subscriber = createDecoder(gson).toObject(new TypeReference<List<Point>>() {}, null);
+    var subscriber = createDecoder(gson).toObject(new TypeRef<List<Point>>() {}, null);
     var pointList = publishUtf8(subscriber, "[[1,2],[2,1],[0,0]]");
     var expected = List.of(new Point(1, 2), new Point(2, 1), new Point(0, 0));
     assertEquals(expected, pointList);
@@ -182,7 +182,7 @@ class GsonBodyAdapterTest {
     var gson = new GsonBuilder()
         .setLenient()
         .create();
-    var subscriber = createDecoder(gson).toObject(new TypeReference<AwesomePerson>() {}, null);
+    var subscriber = createDecoder(gson).toObject(new TypeRef<AwesomePerson>() {}, null);
     var nonStdJson =
           "{\n"
         + "  firstName: 'Elon',\n"
@@ -198,8 +198,8 @@ class GsonBodyAdapterTest {
   @Test
   void deserializeJson_deferred() {
     var json = "{\"firstName\":\"Barack\",\"lastName\":\"Obama\",\"age\":58}";
-    var subscriber = GsonBodyAdapterFactory.createDecoder()
-        .toDeferredObject(new TypeReference<AwesomePerson>() {}, null);
+    var subscriber = GsonAdapterFactory.createDecoder()
+        .toDeferredObject(new TypeRef<AwesomePerson>() {}, null);
     var userSupplier = subscriber.getBody().toCompletableFuture().getNow(null);
     assertNotNull(userSupplier);
     new Thread(() -> {
@@ -215,8 +215,8 @@ class GsonBodyAdapterTest {
 
   @Test
   void deserializeJson_deferredWithError() {
-    var subscriber = GsonBodyAdapterFactory
-        .createDecoder().toDeferredObject(new TypeReference<AwesomePerson>() {}, null);
+    var subscriber = GsonAdapterFactory
+        .createDecoder().toDeferredObject(new TypeRef<AwesomePerson>() {}, null);
     var userSupplier = subscriber.getBody().toCompletableFuture().getNow(null);
     assertNotNull(userSupplier);
     new Thread(() -> {
@@ -275,8 +275,7 @@ class GsonBodyAdapterTest {
 
   private static class PointAdapter extends TypeAdapter<Point> {
 
-    PointAdapter() {
-    }
+    PointAdapter() {}
 
     @Override
     public void write(JsonWriter out, Point value) throws IOException {

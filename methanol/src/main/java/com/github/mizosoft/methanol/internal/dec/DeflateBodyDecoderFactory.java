@@ -26,7 +26,7 @@ import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
 
 /** {@code BodyDecoder.Factory} for "deflate". */
 @DefaultProvider
-public class DeflateBodyDecoderFactory extends ZLibBodyDecoderFactory {
+public final class DeflateBodyDecoderFactory extends ZLibBodyDecoderFactory {
 
   /**
    * Creates a new {@code DeflateBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}.

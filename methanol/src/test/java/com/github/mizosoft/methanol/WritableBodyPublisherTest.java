@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -51,7 +50,7 @@ class WritableBodyPublisherTest {
   @Test
   void writeWithByteChannel() throws IOException {
     var body = WritableBodyPublisher.create();
-    try (var writer = Channels.newWriter(body.byteChannel(), UTF_8)) {
+    try (var writer = Channels.newWriter(body.byteChannel(), US_ASCII)) {
       writer.write("I don't like sand");
     }
     assertEquals("I don't like sand", BodyCollector.collectToAscii(body));

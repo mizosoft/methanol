@@ -94,8 +94,7 @@ class MoreBodySubscribersTest {
 
   @AfterEach
   void shutdownExecutor() {
-    TestUtils.shutdown(executor);
-    TestUtils.shutdown(scheduler);
+    TestUtils.shutdown(executor, scheduler);
   }
 
   @Test
@@ -487,7 +486,7 @@ class MoreBodySubscribersTest {
   void ofObject_stringBody() {
     var sample = "sample string";
     var publisher = asciiPublisherOf(sample, sample.length(), 1);
-    var subscriber = ofObject(TypeReference.from(String.class), null);
+    var subscriber = ofObject(TypeRef.from(String.class), null);
     publisher.subscribe(subscriber);
     assertEquals(sample, getBody(subscriber));
   }
@@ -496,7 +495,7 @@ class MoreBodySubscribersTest {
   void ofDeferredObject_stringBody() {
     var sample = "sample string";
     var publisher = asciiPublisherOf(sample, sample.length(), 1);
-    var subscriber = ofDeferredObject(TypeReference.from(String.class), MediaType.of("text", "plain"));
+    var subscriber = ofDeferredObject(TypeRef.from(String.class), MediaType.of("text", "plain"));
     assertNotNull(toFuture(subscriber).getNow(null));
     publisher.subscribe(subscriber);
     var supplier = getBody(subscriber);
@@ -507,13 +506,13 @@ class MoreBodySubscribersTest {
   void ofObject_ofDeferredObject_unsupported() {
     class Misplaced {}
     assertThrows(UnsupportedOperationException.class,
-        () -> ofObject(TypeReference.from(Misplaced.class), null));
+        () -> ofObject(TypeRef.from(Misplaced.class), null));
     assertThrows(UnsupportedOperationException.class,
-        () -> ofObject(TypeReference.from(String.class), MediaType.parse("application/json")));
+        () -> ofObject(TypeRef.from(String.class), MediaType.parse("application/json")));
     assertThrows(UnsupportedOperationException.class,
-        () -> ofDeferredObject(TypeReference.from(Misplaced.class), null));
+        () -> ofDeferredObject(TypeRef.from(Misplaced.class), null));
     assertThrows(UnsupportedOperationException.class,
-        () -> ofDeferredObject(TypeReference.from(String.class), MediaType.parse("application/json")));
+        () -> ofDeferredObject(TypeRef.from(String.class), MediaType.parse("application/json")));
   }
 
   private Publisher<List<ByteBuffer>> asciiPublisherOf(

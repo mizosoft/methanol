@@ -22,12 +22,11 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
-import com.github.mizosoft.methanol.internal.Utils;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow;
 
 /** Helpers for implementing reactive streams subscriptions and the like. */
-public final class FlowSupport {
+public class FlowSupport {
 
   private static final String PREFETCH_PROP = "com.github.mizosoft.methanol.flow.prefetch";
   private static final String PREFETCH_FACTOR_PROP =
@@ -59,7 +58,7 @@ public final class FlowSupport {
   private FlowSupport() {} // non-instantiable
 
   static int loadPrefetch() {
-    int prefetch = Utils.getIntProperty(PREFETCH_PROP, DEFAULT_PREFETCH);
+    int prefetch = Integer.getInteger(PREFETCH_PROP, DEFAULT_PREFETCH);
     if (prefetch <= 0) {
       return DEFAULT_PREFETCH;
     }
@@ -67,7 +66,7 @@ public final class FlowSupport {
   }
 
   static int loadPrefetchFactor() {
-    int prefetchFactor = Utils.getIntProperty(PREFETCH_FACTOR_PROP, DEFAULT_PREFETCH_FACTOR);
+    int prefetchFactor = Integer.getInteger(PREFETCH_FACTOR_PROP, DEFAULT_PREFETCH_FACTOR);
     if (prefetchFactor < 0 || prefetchFactor > 100) {
       prefetchFactor = DEFAULT_PREFETCH_FACTOR;
     }

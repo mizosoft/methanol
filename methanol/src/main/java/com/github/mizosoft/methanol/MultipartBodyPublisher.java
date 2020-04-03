@@ -63,7 +63,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @see <a href="https://tools.ietf.org/html/rfc2046#section-5.1">RFC 2046 Multipart Media Type</a>
  */
 @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
-public class MultipartBodyPublisher implements MimeBodyPublisher {
+public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
   private static final long UNKNOWN_LENGTH = -1;
   private static final long UNINITIALIZED_LENGTH = -2;

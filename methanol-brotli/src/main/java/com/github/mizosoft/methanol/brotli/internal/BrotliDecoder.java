@@ -30,7 +30,7 @@ import java.lang.ref.Cleaner.Cleanable;
 import java.nio.ByteBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-class BrotliDecoder implements AsyncDecoder {
+final class BrotliDecoder implements AsyncDecoder {
 
   // TODO: maybe make it configurable with a system property ?
   private static final int INPUT_BUFFER_SIZE = 4096;
@@ -108,7 +108,7 @@ class BrotliDecoder implements AsyncDecoder {
   }
 
   // Shared handle between Destroyer and BrotliDecoder over the lazily initialized native instance
-  static final class WrapperHandle {
+  private static final class WrapperHandle {
 
     // Initialization is deferred to first decode() to rethrow any IOException directly
     private DecoderJNI.@MonotonicNonNull Wrapper brotliNative;

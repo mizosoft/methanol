@@ -36,7 +36,7 @@ import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /** Utility for loading/caching service providers. */
-public class ServiceCache<S> {
+public final class ServiceCache<S> {
 
   private static final Logger LOGGER = Logger.getLogger(ServiceCache.class.getName());
 

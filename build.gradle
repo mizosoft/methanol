@@ -72,7 +72,7 @@ ext {
 allprojects {
   group = 'com.github.mizosoft.methanol'
   ext.artifactId = getArtifactId(project)
-  version = '1.0.1-SNAPSHOT'
+  version = '1.1.0-SNAPSHOT'
 
   repositories {
     jcenter()
@@ -122,7 +122,7 @@ subprojects { subproject ->
   }
 
   // Add helper extensions for modular subprojects
-  if (subproject.extensions.findByName('moduleName') != null) {
+  if (subproject.extensions.findByName('moduleName')) {
     configure(extensions) {
       add('addReads') { task, targetModule ->
         configure(task) {
@@ -334,7 +334,9 @@ task rootJavadoc(type: Javadoc) {
       source subproject.sourceSets.main.allJava
       afterEvaluate {
         modulePath.from subproject.sourceSets.main.compileClasspath
-        moduleSrcPaths[subproject.moduleName] = subproject.file('src/main/java')
+        if (subproject.extensions.findByName('moduleName')) {
+          moduleSrcPaths[subproject.moduleName] = subproject.file('src/main/java')
+        }
       }
     }
   }

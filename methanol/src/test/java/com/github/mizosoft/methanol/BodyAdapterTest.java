@@ -30,12 +30,12 @@ import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.testutils.EmptyPublisher;
 import com.github.mizosoft.methanol.testutils.FailedPublisher;
 import com.github.mizosoft.methanol.testutils.TestException;
-import java.io.UncheckedIOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +44,7 @@ class BodyAdapterTest {
   @Test
   void toDeferredObject_default() {
     var decoder = new ReplacingDecoder("lol");
-    var subscriber = decoder.toDeferredObject(new TypeReference<String>() {}, null);
+    var subscriber = decoder.toDeferredObject(new TypeRef<String>() {}, null);
     var supplier = toFuture(subscriber).getNow(null);
     assertNotNull(supplier);
     EmptyPublisher.<List<ByteBuffer>>instance().subscribe(subscriber);
@@ -54,14 +54,13 @@ class BodyAdapterTest {
   @Test
   void toDeferredObject_default_completeExceptionally() {
     var decoder = new ReplacingDecoder("lol");
-    var subscriber = decoder.toDeferredObject(new TypeReference<String>() {}, null);
+    var subscriber = decoder.toDeferredObject(new TypeRef<String>() {}, null);
     var supplier = toFuture(subscriber).getNow(null);
     assertNotNull(supplier);
     new FailedPublisher<List<ByteBuffer>>(TestException::new)
         .subscribe(subscriber);
-    var uncheckedIoe = assertThrows(UncheckedIOException.class, supplier::get);
-    var checkedIoe = uncheckedIoe.getCause();
-    assertEquals(TestException.class, checkedIoe.getCause().getClass());
+    var ex = assertThrows(CompletionException.class, supplier::get);
+    assertEquals(TestException.class, ex.getCause().getClass());
   }
 
   private static <T> CompletableFuture<T> toFuture(BodySubscriber<T> s) {
@@ -80,13 +79,13 @@ class BodyAdapterTest {
       return false;
     }
 
-    @Override public boolean supportsType(TypeReference<?> type) {
+    @Override public boolean supportsType(TypeRef<?> type) {
       return false;
     }
 
     @SuppressWarnings("unchecked")
     @Override public <T> BodySubscriber<T> toObject(
-        TypeReference<T> type, @Nullable MediaType mediaType) {
+        TypeRef<T> type, @Nullable MediaType mediaType) {
       return (BodySubscriber<T>) BodySubscribers.replacing(value);
     }
   }

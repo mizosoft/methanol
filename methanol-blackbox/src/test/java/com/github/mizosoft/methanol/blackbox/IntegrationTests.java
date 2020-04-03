@@ -29,9 +29,13 @@ import static com.github.mizosoft.methanol.MoreBodyHandlers.ofDeferredObject;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofReader;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.withReadTimeout;
+import static com.github.mizosoft.methanol.MoreBodyPublishers.ofMediaType;
+import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static com.github.mizosoft.methanol.testutils.TestUtils.load;
 import static com.github.mizosoft.methanol.testutils.TestUtils.loadAscii;
+import static java.net.http.HttpRequest.BodyPublishers.fromPublisher;
+import static java.net.http.HttpResponse.BodyHandlers.discarding;
 import static java.net.http.HttpResponse.BodyHandlers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertSame;
@@ -46,12 +50,17 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.HttpReadTimeoutException;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.MoreBodyPublishers;
+import com.github.mizosoft.methanol.MultipartBodyPublisher;
+import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
+import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
+import com.github.mizosoft.methanol.testutils.BuffIterator;
 import com.github.mizosoft.methanol.testutils.MockGzipMember;
 import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testutils.RegistryFileTypeDetector;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -65,6 +74,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
@@ -73,7 +84,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
@@ -82,11 +92,13 @@ import java.util.zip.GZIPOutputStream;
 import okhttp3.mockwebserver.MockResponse;
 import okio.Buffer;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.reactivestreams.FlowAdapters;
+import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
-class MoreBodyHandlersTest_mockServer extends Lifecycle {
+class IntegrationTests extends Lifecycle {
 
   private static final Base64.Decoder BASE64_DEC = Base64.getDecoder();
 
@@ -102,7 +114,7 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
   private static final List<Map<String, Object>> lotsOfJsonDecoded;
   private static final BruhMoments bruhMoments;
   static {
-    Class<?> cls = MoreBodyHandlersTest_mockServer.class;
+    Class<?> cls = IntegrationTests.class;
 
     lotsOfText = loadAscii(cls, "/payload/alice.txt");
     lotsOfJson = loadAscii(cls, "/payload/lots_of_json.json");
@@ -120,7 +132,7 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
         "badzip", new byte[0]);
 
     var mapper = new JsonMapper();
-    var type = new TypeReference<List<Map<String, Object>>>() {};
+    var type = new TypeRef<List<Map<String, Object>>>() {};
     try {
       lotsOfJsonDecoded = mapper.readerFor(mapper.constructType(type.type()))
           .readValue(lotsOfJson);
@@ -133,18 +145,6 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
         .addMoments(1, BruhMoment.newBuilder().setMessage("bbruuuhhh"))
         .addMoments(2, BruhMoment.newBuilder().setMessage("bbrrruuuuuuuhhhhhhhh!!??"))
         .build();
-  }
-
-  private ScheduledExecutorService scheduler;
-
-  @BeforeEach
-  void setUpScheduler() {
-    scheduler = Executors.newSingleThreadScheduledExecutor();
-  }
-
-  @BeforeEach
-  void shutdownScheduler() {
-    TestUtils.shutdown(scheduler);
   }
 
   @BeforeAll
@@ -243,11 +243,9 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
 
   @Test
   void decoding_unsupported() {
-    var ioe = assertThrows(IOException.class, () -> {
-      server.enqueue(new MockResponse().setHeader("Content-Encoding", "alienzip"));
-      var request = HttpRequest.newBuilder(server.url("/").uri()).build();
-      client.send(request, decoding(ofString()));
-    });
+    server.enqueue(new MockResponse().setHeader("Content-Encoding", "alienzip"));
+    var request = HttpRequest.newBuilder(server.url("/").uri()).build();
+    var ioe = assertThrows(IOException.class, () -> client.send(request, decoding(ofString())));
     assertTrue(ioe.getCause() instanceof UnsupportedOperationException, ioe.toString());
   }
 
@@ -366,7 +364,7 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
         .addHeader("Content-Encoding", "gzip")
         .addHeader("Content-Type", "application/json"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
-    var type = new TypeReference<List<Map<String, Object>>>() {};
+    var type = new TypeRef<List<Map<String, Object>>>() {};
     var response = client.send(request, decoding(ofObject(type), executor));
     assertEquals(lotsOfJsonDecoded, response.body());
   }
@@ -377,7 +375,7 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
         .setBody(lotsOfJson)
         .addHeader("Content-Type", "application/json"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
-    var type = new TypeReference<List<Map<String, Object>>>() {};
+    var type = new TypeRef<List<Map<String, Object>>>() {};
     var response = client.send(request, ofObject(type));
     assertEquals(lotsOfJsonDecoded, response.body());
   }
@@ -446,7 +444,8 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
     try {
       var timeoutMillis = 50L;
       server.enqueue(new MockResponse()
-          .setBody(poem)
+          .setBody(poemEncodings.get("gzip"))
+          .setHeader("Content-Encoding", "gzip")
           .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS));
       var request = HttpRequest.newBuilder(server.url("/").uri()).build();
       var response = client.send(
@@ -459,6 +458,111 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
     } finally {
       scheduler.shutdown();
     }
+  }
+
+  @Test
+  void sendFormBody(@TempDir Path tempDir) throws Exception {
+    var tweet = new Tweet();
+    tweet.sender = "Albert Einstein";
+    tweet.content = "Is math related to science?";
+    var theoryFile = Files.createFile(tempDir.resolve("relativity.theory"));
+    Files.writeString(theoryFile, "Time is relative bro");
+    RegistryFileTypeDetector.register("theory", MediaType.parse("application/x-theory"));
+    var multipartBody = MultipartBodyPublisher.newBuilder()
+        .boundary("my_awesome_boundary")
+        .textPart("action", "sendTweet")
+        .formPart("tweet", MoreBodyPublishers.ofObject(tweet, MediaType.of("application", "json")))
+        .filePart("attachment", theoryFile)
+        .build();
+    var request = HttpRequest.newBuilder(server.url("/").uri())
+        .header("Content-Type", multipartBody.mediaType().toString())
+        .POST(multipartBody)
+        .build();
+    client.sendAsync(request, discarding());
+    var sentRequest = server.takeRequest();
+    assertEquals("multipart/form-data; boundary=my_awesome_boundary",
+        sentRequest.getHeader("Content-Type"));
+    var expectedBody =
+              "--my_awesome_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"action\"\r\n"
+            + "Content-Type: text/plain; charset=utf-8\r\n"
+            + "\r\n"
+            + "sendTweet\r\n"
+            + "--my_awesome_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"tweet\"\r\n"
+            + "Content-Type: application/json\r\n"
+            + "\r\n"
+            + "{\"sender\":\"Albert Einstein\",\"content\":\"Is math related to science?\"}\r\n"
+            + "--my_awesome_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"attachment\"; filename=\"relativity.theory\"\r\n"
+            + "Content-Type: application/x-theory\r\n"
+            + "\r\n"
+            + "Time is relative bro\r\n"
+            + "--my_awesome_boundary--\r\n";
+    assertEquals(expectedBody, sentRequest.getBody().readUtf8());
+  }
+
+  @Test
+  void sendEmailBody() throws Exception {
+    var multipartAlternative = MultipartBodyPublisher.newBuilder()
+        .mediaType(MediaType.of("multipart", "alternative"))
+        .boundary("my_cool_boundary")
+        .part(Part.create(
+            headers("Content-Transfer-Encoding", "quoted-printable"),
+            MoreBodyPublishers.ofObject("Hey, that's pretty good", MediaType.of("text", "plain"))))
+        .part(Part.create(
+            headers("Content-Transfer-Encoding", "quoted-printable"),
+            MoreBodyPublishers
+                .ofObject("<h1>Hey, that's pretty good</h1>", MediaType.of("text", "html"))))
+        .build();
+    var attachment = load(getClass(), "/payload/alice.txt");
+    var attachmentPublisher = FlowAdapters.toFlowPublisher(new AsyncIterablePublisher<>(
+        () -> new BuffIterator(ByteBuffer.wrap(attachment), 1024), executor));
+    var multipartMixed = MultipartBodyPublisher.newBuilder()
+        .mediaType(MediaType.of("multipart", "mixed"))
+        .boundary("no_boundary_is_like_my_boundary")
+        .part(Part.create(headers(), multipartAlternative))
+        .part(Part.create(
+            headers("Content-Disposition", "attachment; name=\"file_attachment\"; filename=\"alice.txt\""),
+            ofMediaType(
+                fromPublisher(attachmentPublisher, attachment.length),
+                MediaType.of("text", "plain"))))
+        .build();
+    var expected_template =
+              "--no_boundary_is_like_my_boundary\r\n"
+            + "Content-Type: multipart/alternative; boundary=my_cool_boundary\r\n"
+            + "\r\n"
+            + "--my_cool_boundary\r\n"
+            + "Content-Transfer-Encoding: quoted-printable\r\n"
+            + "Content-Type: text/plain\r\n"
+            + "\r\n"
+            + "Hey, that's pretty good\r\n"
+            + "--my_cool_boundary\r\n"
+            + "Content-Transfer-Encoding: quoted-printable\r\n"
+            + "Content-Type: text/html\r\n"
+            + "\r\n"
+            + "<h1>Hey, that's pretty good</h1>\r\n"
+            + "--my_cool_boundary--\r\n"
+            + "\r\n"
+            + "--no_boundary_is_like_my_boundary\r\n"
+            + "Content-Disposition: attachment; name=\"file_attachment\"; filename=\"alice.txt\"\r\n"
+            + "Content-Type: text/plain\r\n"
+            + "\r\n"
+            + "%s\r\n" // alice goes here
+            + "--no_boundary_is_like_my_boundary--\r\n";
+    var request = HttpRequest.newBuilder(server.url("/").uri())
+        .header("Content-Type", multipartMixed.mediaType().toString())
+        .POST(multipartMixed)
+        .build();
+    client.sendAsync(request, discarding());
+    var sentRequest = server.takeRequest();
+    assertEquals("multipart/mixed; boundary=no_boundary_is_like_my_boundary",
+        sentRequest.getHeader("Content-Type"));
+    assertEquals(sentRequest.getHeader("Content-Length"),
+        Long.toString(multipartMixed.contentLength()));
+    assertEquals(
+        String.format(expected_template, loadAscii(getClass(), "/payload/alice.txt")),
+        sentRequest.getBody().readUtf8());
   }
 
   private static void assertReadTimeout(ReadableByteChannel channel) {
@@ -480,5 +584,13 @@ class MoreBodyHandlersTest_mockServer extends Lifecycle {
     } catch (IOException ioe) {
       throw new AssertionError(ioe);
     }
+  }
+
+  static final class Tweet {
+
+    public String sender;
+    public String content;
+
+    public Tweet() {}
   }
 }

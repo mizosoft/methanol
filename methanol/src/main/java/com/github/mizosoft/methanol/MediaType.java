@@ -56,13 +56,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * either both wildcard type and subtype, both concrete type and subtype, or a concrete type and a
  * wildcard subtype (but not a wildcard type and a concrete subtype), with the character {@code *}
  * denoting a wildcard. Inclusion in media ranges can be tested using any of {@link
- * #includes(MediaType)} or {@link #isCompatibleWith(MediaType)}, with the later being symmetric
+ * #includes(MediaType)} or {@link #isCompatibleWith(MediaType)}, with the latter being symmetric
  * among operands.
  *
  * <p>Case insensitive attributes such as the type, subtype, parameter names or the value of the
  * charset parameter are converted into lower-case.
  */
-public class MediaType {
+public final class MediaType {
 
   // media-type     = type "/" subtype *( OWS ";" OWS parameter )
   // type           = token
@@ -166,8 +166,9 @@ public class MediaType {
 
   /**
    * Returns whether this media type includes the given one. A media type includes the other if the
-   * former's parameters is a subset of the later's and either the former is a {@link #hasWildcard()
-   * wildcard type} that includes the later or both have equal concrete type and subtype.
+   * former's parameters is a subset of the latter's and either the former is a {@link
+   * #hasWildcard() wildcard type} that includes the latter or both have equal concrete type and
+   * subtype.
    *
    * @param other the other media type
    */

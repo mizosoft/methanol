@@ -27,7 +27,6 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSink;
 import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSource;
-import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;
@@ -55,7 +54,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <T> the body type
  */
 @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
-public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
+public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
   private static final String BUFFER_SIZE_PROP = "com.github.mizosoft.methanol.dec.bufferSize";
   private static final int DEFAULT_BUFFER_SIZE = 8 * 1024; // 8Kb
@@ -190,7 +189,7 @@ public class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   }
 
   static int getBufferSize() {
-    int bufferSize = Utils.getIntProperty(BUFFER_SIZE_PROP, DEFAULT_BUFFER_SIZE);
+    int bufferSize = Integer.getInteger(BUFFER_SIZE_PROP, DEFAULT_BUFFER_SIZE);
     if (bufferSize <= 0) {
       bufferSize = DEFAULT_BUFFER_SIZE;
     }

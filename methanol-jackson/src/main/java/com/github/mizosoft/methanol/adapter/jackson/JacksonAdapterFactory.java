@@ -20,35 +20,36 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.gson;
+package com.github.mizosoft.methanol.adapter.jackson;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
-import com.google.gson.Gson;
 
-/** Provides {@link BodyAdapter} implementations for the JSON format using Gson. */
-public class GsonBodyAdapterFactory {
+/** Provides {@link BodyAdapter} implementations for the JSON format using Jackson. */
+public class JacksonAdapterFactory {
 
-  private GsonBodyAdapterFactory() {} // non-instantiable
+  private JacksonAdapterFactory() {} // non-instantiable
 
-  /** Returns a {@code Encoder} that uses a default {@code Gson} instance. */
+  /** Returns a {@code Encoder} that uses a default {@code ObjectMapper} instance. */
   public static Encoder createEncoder() {
-    return createEncoder(new Gson());
+    return createEncoder(new JsonMapper());
   }
 
-  /** Returns a {@code Encoder} that uses the given {@code Gson} instance. */
-  public static Encoder createEncoder(Gson gson) {
-    return new GsonBodyAdapter.Encoder(gson);
+  /** Returns a {@code Encoder} that uses the given {@code ObjectMapper} instance. */
+  public static Encoder createEncoder(ObjectMapper mapper) {
+    return new JacksonAdapter.Encoder(mapper);
   }
 
-  /** Returns a {@code Decoder} that uses a default {@code Gson} instance. */
+  /** Returns a {@code Decoder} that uses a default {@code ObjectMapper} instance. */
   public static Decoder createDecoder() {
-    return createDecoder(new Gson());
+    return createDecoder(new JsonMapper());
   }
 
-  /** Returns a {@code Decoder} that uses the given {@code Gson} instance. */
-  public static Decoder createDecoder(Gson gson) {
-    return new GsonBodyAdapter.Decoder(gson);
+  /** Returns a {@code Decoder} that uses the given {@code ObjectMapper} instance. */
+  public static Decoder createDecoder(ObjectMapper mapper) {
+    return new JacksonAdapter.Decoder(mapper);
   }
 }

@@ -28,8 +28,7 @@ import java.util.List;
 
 public class BufferTokenizer {
 
-  private BufferTokenizer() {
-  }
+  private BufferTokenizer() {}
 
   public static List<List<ByteBuffer>> tokenizeToLists(
       ByteBuffer source, int[] listSizes, int[] bufferSizes) {

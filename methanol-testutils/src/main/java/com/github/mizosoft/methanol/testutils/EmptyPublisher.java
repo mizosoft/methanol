@@ -31,10 +31,9 @@ import java.util.concurrent.Flow.Subscriber;
 public final class EmptyPublisher<T> implements Publisher<T> {
 
   // Use same setup as Collections.emptyXXXX() as the type doesn't matter anyways
-  private static EmptyPublisher<?> INSTANCE = new EmptyPublisher<>();
+  private static final EmptyPublisher<?> INSTANCE = new EmptyPublisher<>();
 
-  private EmptyPublisher() { // Singleton
-  }
+  private EmptyPublisher() {} // Singleton
 
   @Override
   public void subscribe(Subscriber<? super T> subscriber) {

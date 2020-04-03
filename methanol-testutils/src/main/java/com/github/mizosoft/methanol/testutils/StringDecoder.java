@@ -26,7 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.charset.StandardCharsets;
@@ -37,12 +37,12 @@ public class StringDecoder extends TextBodyAdapter implements BodyAdapter.Decode
   public StringDecoder() {}
 
   @Override
-  public boolean supportsType(TypeReference<?> type) {
+  public boolean supportsType(TypeRef<?> type) {
     return String.class == type.rawType();
   }
 
   @Override
-  public <T> BodySubscriber<T> toObject(TypeReference<T> type, @Nullable MediaType mediaType) {
+  public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
     requireNonNull(type);
     requireSupport(type);
     requireCompatibleOrNull(mediaType);

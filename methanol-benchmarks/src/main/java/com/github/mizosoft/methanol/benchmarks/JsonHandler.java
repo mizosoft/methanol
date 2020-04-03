@@ -26,7 +26,7 @@ import static com.github.mizosoft.methanol.benchmarks.BenchmarkUtils.APPLICATION
 import static com.github.mizosoft.methanol.benchmarks.BenchmarkUtils.ARRAY_OF_OBJECTS;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.github.mizosoft.methanol.adapter.jackson.JacksonBodyAdapterFactory;
+import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -37,7 +37,7 @@ public enum JsonHandler {
   ASYNC_PARSER {
     @Override
     BodySubscriber<List<Map<String, Object>>> createSubscriber(JsonMapper mapper, Charset charset) {
-      return JacksonBodyAdapterFactory.createDecoder(mapper)
+      return JacksonAdapterFactory.createDecoder(mapper)
           .toObject(ARRAY_OF_OBJECTS, APPLICATION_JSON.withCharset(charset));
     }
   },

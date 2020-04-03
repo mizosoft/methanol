@@ -30,7 +30,7 @@ import java.net.http.HttpRequest.BodyPublisher;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Flow.Subscriber;
 
-public class ForwardingMimeBodyPublisher implements MimeBodyPublisher {
+public final class ForwardingMimeBodyPublisher implements MimeBodyPublisher {
 
   private final BodyPublisher basePublisher;
   private final MediaType mediaType;

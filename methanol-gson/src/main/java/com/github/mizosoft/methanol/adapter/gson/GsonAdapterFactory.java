@@ -20,36 +20,35 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jackson;
+package com.github.mizosoft.methanol.adapter.gson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
+import com.google.gson.Gson;
 
-/** Provides {@link BodyAdapter} implementations for the JSON format using Jackson. */
-public class JacksonBodyAdapterFactory {
+/** Provides {@link BodyAdapter} implementations for the JSON format using Gson. */
+public class GsonAdapterFactory {
 
-  private JacksonBodyAdapterFactory() {} // non-instantiable
+  private GsonAdapterFactory() {} // non-instantiable
 
-  /** Returns a {@code Encoder} that uses a default {@code ObjectMapper} instance. */
+  /** Returns a {@code Encoder} that uses a default {@code Gson} instance. */
   public static Encoder createEncoder() {
-    return createEncoder(new JsonMapper());
+    return createEncoder(new Gson());
   }
 
-  /** Returns a {@code Encoder} that uses the given {@code ObjectMapper} instance. */
-  public static Encoder createEncoder(ObjectMapper mapper) {
-    return new JacksonBodyAdapter.Encoder(mapper);
+  /** Returns a {@code Encoder} that uses the given {@code Gson} instance. */
+  public static Encoder createEncoder(Gson gson) {
+    return new GsonAdapter.Encoder(gson);
   }
 
-  /** Returns a {@code Decoder} that uses a default {@code ObjectMapper} instance. */
+  /** Returns a {@code Decoder} that uses a default {@code Gson} instance. */
   public static Decoder createDecoder() {
-    return createDecoder(new JsonMapper());
+    return createDecoder(new Gson());
   }
 
-  /** Returns a {@code Decoder} that uses the given {@code ObjectMapper} instance. */
-  public static Decoder createDecoder(ObjectMapper mapper) {
-    return new JacksonBodyAdapter.Decoder(mapper);
+  /** Returns a {@code Decoder} that uses the given {@code Gson} instance. */
+  public static Decoder createDecoder(Gson gson) {
+    return new GsonAdapter.Decoder(gson);
   }
 }

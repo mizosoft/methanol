@@ -26,7 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -43,22 +43,22 @@ import java.net.http.HttpResponse.BodySubscribers;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-abstract class ProtobufBodyAdapter extends AbstractBodyAdapter {
+abstract class ProtobufAdapter extends AbstractBodyAdapter {
 
   private static final MediaType APPLICATION_OCTET_STREAM =
       MediaType.of("application", "octet-stream");
   private static final MediaType APPLICATION_PROTOBUF = MediaType.of("application", "x-protobuf");
 
-  ProtobufBodyAdapter() {
+  ProtobufAdapter() {
     super(APPLICATION_OCTET_STREAM, APPLICATION_PROTOBUF);
   }
 
   @Override
-  public boolean supportsType(TypeReference<?> type) {
+  public boolean supportsType(TypeRef<?> type) {
     return MessageLite.class.isAssignableFrom(type.rawType());
   }
 
-  static final class Encoder extends ProtobufBodyAdapter implements BodyAdapter.Encoder {
+  static final class Encoder extends ProtobufAdapter implements BodyAdapter.Encoder {
 
     Encoder() {}
 
@@ -72,7 +72,7 @@ abstract class ProtobufBodyAdapter extends AbstractBodyAdapter {
     }
   }
 
-  static final class Decoder extends ProtobufBodyAdapter implements BodyAdapter.Decoder {
+  static final class Decoder extends ProtobufAdapter implements BodyAdapter.Decoder {
 
     private final ExtensionRegistryLite registry;
 
@@ -81,7 +81,7 @@ abstract class ProtobufBodyAdapter extends AbstractBodyAdapter {
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeReference<T> type, @Nullable MediaType mediaType) {
+    public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
@@ -94,7 +94,7 @@ abstract class ProtobufBodyAdapter extends AbstractBodyAdapter {
 
     @Override
     public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeReference<T> type, @Nullable MediaType mediaType) {
+        TypeRef<T> type, @Nullable MediaType mediaType) {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
@@ -124,7 +124,7 @@ abstract class ProtobufBodyAdapter extends AbstractBodyAdapter {
 
     // Messages are never expected to be generic, so type.rawType() is also Class<T>
     @SuppressWarnings("unchecked")
-    private static <T> Class<T> toRawType(TypeReference<T> type) {
+    private static <T> Class<T> toRawType(TypeRef<T> type) {
       return (Class<T>) type.rawType();
     }
 

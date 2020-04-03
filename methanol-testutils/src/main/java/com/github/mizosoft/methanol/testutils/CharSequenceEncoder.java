@@ -26,7 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -36,7 +36,7 @@ public class CharSequenceEncoder extends TextBodyAdapter implements BodyAdapter.
   public CharSequenceEncoder() {}
 
   @Override
-  public boolean supportsType(TypeReference<?> type) {
+  public boolean supportsType(TypeRef<?> type) {
     return CharSequence.class.isAssignableFrom(type.rawType());
   }
 

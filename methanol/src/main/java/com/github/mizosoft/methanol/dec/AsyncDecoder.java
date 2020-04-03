@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 
 /**
  * An object that decompresses {@code ByteBuffer} chunks of a compressed stream in a non-blocking
- * manner. An {@code AsyncDecoder} can be used with a {@link AsyncBodyDecoder} to craft an
+ * manner. An {@code AsyncDecoder} is used with a {@link AsyncBodyDecoder} to craft an
  * implementation of the {@link com.github.mizosoft.methanol.BodyDecoder} interface.
  */
 public interface AsyncDecoder extends AutoCloseable {
@@ -46,28 +46,19 @@ public interface AsyncDecoder extends AutoCloseable {
    */
   void decode(ByteSource source, ByteSink sink) throws IOException;
 
-  /**
-   * Releases any resources associated with the decoder. Must be both idempotent and thread safe.
-   */
+  /** Releases any resources associated with the decoder. Must be idempotent and thread safe. */
   @Override
   void close();
 
-  /**
-   * A source of bytes from which the compressed stream can be read as {@code ByteBuffer} chunks.
-   */
+  /** A source of bytes for reading the compressed stream as {@code ByteBuffer} chunks. */
   interface ByteSource {
 
-    /**
-     * Returns a read-only {@code ByteBuffer} from which the compressed stream can be read. An empty
-     * buffer is returned if all buffers for this source were exhausted.
-     */
+    /** Returns a read-only {@code ByteBuffer} representing the currently available chunk. */
     ByteBuffer currentSource();
 
     /**
-     * Pulls {@code min(source.remaining(), dst.remaining())} bytes from this source to the given
-     * buffer.
-     *
-     * @param dst the destination buffer
+     * Pulls {@code min(this.remaining(), dst.remaining())} bytes from this source to the given
+     * destination buffer.
      */
     default void pullBytes(ByteBuffer dst) {
       int toCopy = (int) Math.min(remaining(), dst.remaining());
@@ -76,7 +67,7 @@ public interface AsyncDecoder extends AutoCloseable {
       }
     }
 
-    /** Returns total remaining bytes from this source. */
+    /** Returns the total number of bytes remaining in this source. */
     long remaining();
 
     /** Returns {@code true} if this source has remaining bytes. */
@@ -84,28 +75,17 @@ public interface AsyncDecoder extends AutoCloseable {
       return remaining() > 0;
     }
 
-    /**
-     * Returns true if this is the final source and no more decode operations are to be expected.
-     */
+    /** Returns true if this source is final and no more decode operations are to be expected.*/
     boolean finalSource();
   }
 
-  /**
-   * A sink of bytes to which the decompressed stream can be written as {@code ByteBuffer} chunks.
-   */
+  /** A sink of bytes for writing the decompressed stream as {@code ByteBuffer} chunks. */
   interface ByteSink {
 
-    /**
-     * Returns a {@code ByteBuffer} with available space to which the decompressed stream can be
-     * written.
-     */
+    /** Returns a {@code ByteBuffer} with available space for writing the decompressed stream. */
     ByteBuffer currentSink();
 
-    /**
-     * Pushes {@code src.remaining()} bytes from the given buffer to this sink.
-     *
-     * @param src the source buffer
-     */
+    /** Pushes {@code src.remaining()} bytes from the given source buffer to this sink. */
     default void pushBytes(ByteBuffer src) {
       while (src.hasRemaining()) {
         Utils.copyRemaining(src, currentSink());

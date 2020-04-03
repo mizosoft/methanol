@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
-import com.github.mizosoft.methanol.adapter.jackson.JacksonBodyAdapterFactory;
+import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
 
 public class JacksonProviders {
 
@@ -47,7 +47,7 @@ public class JacksonProviders {
     private EncoderProvider() {}
 
     public static Encoder provider() {
-      return JacksonBodyAdapterFactory.createEncoder(configuredMapper);
+      return JacksonAdapterFactory.createEncoder(configuredMapper);
     }
   }
 
@@ -56,7 +56,7 @@ public class JacksonProviders {
     private DecoderProvider() {}
 
     public static BodyAdapter.Decoder provider() {
-      return JacksonBodyAdapterFactory.createDecoder(configuredMapper);
+      return JacksonAdapterFactory.createDecoder(configuredMapper);
     }
   }
 }

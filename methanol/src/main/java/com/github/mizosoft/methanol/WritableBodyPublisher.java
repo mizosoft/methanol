@@ -201,7 +201,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   }
 
   private static int getSinkBufferSize() {
-    int size = Utils.getIntProperty(SINK_BUFFER_SIZE_PROP, DEFAULT_SINK_BUFFER_SIZE);
+    int size = Integer.getInteger(SINK_BUFFER_SIZE_PROP, DEFAULT_SINK_BUFFER_SIZE);
     if (size <= 0) {
       return DEFAULT_SINK_BUFFER_SIZE;
     }

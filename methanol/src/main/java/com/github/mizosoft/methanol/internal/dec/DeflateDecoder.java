@@ -26,7 +26,7 @@ import java.io.EOFException;
 import java.io.IOException;
 
 /** {@code AsyncDecoder} for deflate. */
-class DeflateDecoder extends ZLibDecoder {
+final class DeflateDecoder extends ZLibDecoder {
 
   DeflateDecoder() {
     super(WrapMode.DEFLATE);

@@ -37,36 +37,36 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * An object that represents the {@link Type} of the generic argument {@code T}. This class utilizes
- * the supertype-token idiom, which is used to capture complex types (i.e. generic collections) that
- * are otherwise impossible to represent using ordinary {@code Class} objects.
+ * the supertype-token idiom, which is used to capture complex types (i.e. generic types) that are
+ * otherwise impossible to represent using ordinary {@code Class} objects.
  *
  * @param <T> the type this object represents
  */
-public abstract class TypeReference<T> {
+public abstract class TypeRef<T> {
 
   private final Type type;
   private @MonotonicNonNull Class<? super T> rawType;
 
   /**
-   * Creates a new {@code TypeReference<T>} capturing the {@code Type} of {@code T}. It is usually
-   * the case that this constructor is invoked as an anonymous class expression (e.g. {@code new
-   * TypeReference<List<String>>() {}}).
+   * Creates a new {@code TypeRef<T>} capturing the {@code Type} of {@code T}. It is usually the
+   * case that this constructor is invoked as an anonymous class expression (e.g. {@code new
+   * TypeRef<List<String>>() {}}).
    *
    * @throws IllegalStateException if the raw version of this class is used
    */
-  protected TypeReference() {
+  protected TypeRef() {
     Type superClass = getClass().getGenericSuperclass();
     requireState(superClass instanceof ParameterizedType, "not used in parameterized form");
     this.type = ((ParameterizedType) superClass).getActualTypeArguments()[0];
   }
 
   @SuppressWarnings("unchecked")
-  private TypeReference(Type type) {
+  private TypeRef(Type type) {
     this.type = type;
     rawType = (Class<? super T>) findRawType(type);
   }
 
-  /** Returns the underlying java {@link Type}. */
+  /** Returns the underlying Java {@link Type}. */
   public final Type type() {
     return type;
   }
@@ -89,7 +89,7 @@ public abstract class TypeReference<T> {
   }
 
   /**
-   * Returns {@code true} if the given object is a {@code TypeReference} and both instances
+   * Returns {@code true} if the given object is a {@code TypeRef} and both instances
    * represent the same type.
    *
    * @param obj the object to test for equality
@@ -99,10 +99,10 @@ public abstract class TypeReference<T> {
     if (obj == this) {
       return true;
     }
-    if (!(obj instanceof TypeReference)) {
+    if (!(obj instanceof TypeRef)) {
       return false;
     }
-    return type.equals(((TypeReference<?>) obj).type);
+    return type.equals(((TypeRef<?>) obj).type);
   }
 
   @Override
@@ -149,29 +149,29 @@ public abstract class TypeReference<T> {
   }
 
   /**
-   * Creates a new {@code TypeReference} from the given type.
+   * Creates a new {@code TypeRef} from the given type.
    *
    * @param type the type
    * @throws IllegalArgumentException if the given type is not a standard specialization of a java
    *     {@code Type}
    */
-  public static TypeReference<?> from(Type type) {
-    return new ExplicitTypeReference<>(type);
+  public static TypeRef<?> from(Type type) {
+    return new ExplicitTypeRef<>(type);
   }
 
   /**
-   * Creates a new {@code TypeReference} from the given class.
+   * Creates a new {@code TypeRef} from the given class.
    *
    * @param rawType the class
    * @param <U> the raw type that the given class represents
    */
-  public static <U> TypeReference<U> from(Class<U> rawType) {
-    return new ExplicitTypeReference<>(rawType);
+  public static <U> TypeRef<U> from(Class<U> rawType) {
+    return new ExplicitTypeRef<>(rawType);
   }
 
-  private static final class ExplicitTypeReference<T> extends TypeReference<T> {
+  private static final class ExplicitTypeRef<T> extends TypeRef<T> {
 
-    ExplicitTypeReference(Type type) {
+    ExplicitTypeRef(Type type) {
       super(requireNonNull(type));
     }
   }

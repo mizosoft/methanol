@@ -30,6 +30,7 @@ import java.io.Reader;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
+import java.net.http.HttpResponse.ResponseInfo;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.charset.Charset;
@@ -123,7 +124,7 @@ public class MoreBodyHandlers {
 
   /**
    * Returns a {@code BodyHandler} of {@code T} as specified by {@link
-   * MoreBodySubscribers#ofObject(TypeReference, MediaType)}. The media type will inferred from the
+   * MoreBodySubscribers#ofObject(TypeRef, MediaType)}. The media type will inferred from the
    * {@code Content-Type} response header.
    *
    * @param type the raw type of {@code T}
@@ -132,27 +133,27 @@ public class MoreBodyHandlers {
    *     installed
    */
   public static <T> BodyHandler<T> ofObject(Class<T> type) {
-    return ofObject(TypeReference.from(type));
+    return ofObject(TypeRef.from(type));
   }
 
   /**
    * Returns a {@code BodyHandler} of {@code T} as specified by {@link
-   * MoreBodySubscribers#ofObject(TypeReference, MediaType)}. The media type will inferred from the
+   * MoreBodySubscribers#ofObject(TypeRef, MediaType)}. The media type will inferred from the
    * {@code Content-Type} response header.
    *
-   * @param type a {@code TypeReference} representing {@code T}
+   * @param type a {@code TypeRef representing {@code T}
    * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type is
    *     installed
    */
-  public static <T> BodyHandler<T> ofObject(TypeReference<T> type) {
+  public static <T> BodyHandler<T> ofObject(TypeRef<T> type) {
     requireSupport(type);
     return info -> MoreBodySubscribers.ofObject(type, mediaTypeOrNull(info.headers()));
   }
 
   /**
    * Returns a {@code BodyHandler} of {@code Supplier<T>} as specified by {@link
-   * MoreBodySubscribers#ofDeferredObject(TypeReference, MediaType)}. The media type will inferred
+   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will inferred
    * from the {@code Content-Type} response header.
    *
    * @param type the raw type of {@code T}
@@ -161,20 +162,20 @@ public class MoreBodyHandlers {
    *     installed
    */
   public static <T> BodyHandler<Supplier<T>> ofDeferredObject(Class<T> type) {
-    return ofDeferredObject(TypeReference.from(type));
+    return ofDeferredObject(TypeRef.from(type));
   }
 
   /**
    * Returns a {@code BodyHandler} of {@code Supplier<T>} as specified by {@link
-   * MoreBodySubscribers#ofDeferredObject(TypeReference, MediaType)}. The media type will inferred
+   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will inferred
    * from the {@code Content-Type} response header.
    *
-   * @param type a {@code TypeReference} representing {@code T}
+   * @param type a {@code TypeRef} representing {@code T}
    * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type is
    *     installed
    */
-  public static <T> BodyHandler<Supplier<T>> ofDeferredObject(TypeReference<T> type) {
+  public static <T> BodyHandler<Supplier<T>> ofDeferredObject(TypeRef<T> type) {
     requireSupport(type);
     return info -> MoreBodySubscribers.ofDeferredObject(type, mediaTypeOrNull(info.headers()));
   }
@@ -194,7 +195,7 @@ public class MoreBodyHandlers {
    */
   public static <T> BodyHandler<T> decoding(BodyHandler<T> downstreamHandler) {
     requireNonNull(downstreamHandler);
-    return decodingInternal(downstreamHandler, null);
+    return new DecodingHandler<>(downstreamHandler, null);
   }
 
   /**
@@ -214,12 +215,42 @@ public class MoreBodyHandlers {
   public static <T> BodyHandler<T> decoding(BodyHandler<T> downstreamHandler, Executor executor) {
     requireNonNull(downstreamHandler, "downstreamHandler");
     requireNonNull(executor, "executor");
-    return decodingInternal(downstreamHandler, executor);
+    return new DecodingHandler<>(downstreamHandler, executor);
   }
 
-  private static <T> BodyHandler<T> decodingInternal(
-      BodyHandler<T> downstreamHandler, @Nullable Executor executor) {
-    return info -> {
+  private static Charset getCharsetOrUtf8(HttpHeaders headers) {
+    return headers
+        .firstValue("Content-Type")
+        .map(s -> MediaType.parse(s).charsetOrDefault(StandardCharsets.UTF_8))
+        .orElse(StandardCharsets.UTF_8);
+  }
+
+  // Require that at least an adapter exists for the given type
+  // (the media type cannot be known until the headers arrive)
+  private static void requireSupport(TypeRef<?> type) {
+    Decoder.getDecoder(type, null)
+        .orElseThrow(
+            () ->
+                new UnsupportedOperationException(
+                    "unsupported conversion to an object of type <" + type + ">"));
+  }
+
+  private static @Nullable MediaType mediaTypeOrNull(HttpHeaders headers) {
+    return headers.firstValue("Content-Type").map(MediaType::parse).orElse(null);
+  }
+
+  private static final class DecodingHandler<T> implements BodyHandler<T> {
+
+    private final BodyHandler<T> downstreamHandler;
+    private final @Nullable Executor executor;
+
+    DecodingHandler(BodyHandler<T> downstreamHandler, @Nullable Executor executor) {
+      this.downstreamHandler = downstreamHandler;
+      this.executor = executor;
+    }
+
+    @Override
+    public BodySubscriber<T> apply(ResponseInfo info) {
       Optional<String> encHeader = info.headers().firstValue("Content-Encoding");
       if (encHeader.isEmpty()) {
         return downstreamHandler.apply(info); // No decompression needed
@@ -237,27 +268,6 @@ public class MoreBodyHandlers {
           downstreamHandler.apply(
               new BasicResponseInfo(info.statusCode(), headersCopy, info.version()));
       return executor != null ? factory.create(downstream, executor) : factory.create(downstream);
-    };
-  }
-
-  private static Charset getCharsetOrUtf8(HttpHeaders headers) {
-    return headers
-        .firstValue("Content-Type")
-        .map(s -> MediaType.parse(s).charsetOrDefault(StandardCharsets.UTF_8))
-        .orElse(StandardCharsets.UTF_8);
-  }
-
-  // Require that at least an adapter exists for the given type
-  // (the media type cannot be known until the headers arrive)
-  private static void requireSupport(TypeReference<?> type) {
-    Decoder.getDecoder(type, null)
-        .orElseThrow(
-            () ->
-                new UnsupportedOperationException(
-                    "unsupported conversion to an object of type <" + type + ">"));
-  }
-
-  private static @Nullable MediaType mediaTypeOrNull(HttpHeaders headers) {
-    return headers.firstValue("Content-Type").map(MediaType::parse).orElse(null);
+    }
   }
 }

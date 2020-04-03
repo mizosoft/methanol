@@ -22,8 +22,8 @@
 
 package com.github.mizosoft.methanol.adapter.protobuf;
 
-import static com.github.mizosoft.methanol.adapter.protobuf.ProtobufBodyAdapterFactory.createEncoder;
-import static com.github.mizosoft.methanol.adapter.protobuf.ProtobufBodyAdapterFactory.createDecoder;
+import static com.github.mizosoft.methanol.adapter.protobuf.ProtobufAdapterFactory.createDecoder;
+import static com.github.mizosoft.methanol.adapter.protobuf.ProtobufAdapterFactory.createEncoder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.protobuf.TestProto.AwesomePerson;
 import com.github.mizosoft.methanol.adapter.protobuf.TestProto.Awesomeness;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
@@ -47,18 +47,18 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-public class ProtobufBodyAdapterTest {
+public class ProtobufAdapterTest {
 
   @Test
   void isCompatibleWith_supportsType() {
-    for (var c : List.of(createEncoder(), ProtobufBodyAdapterFactory.createDecoder())) {
+    for (var c : List.of(createEncoder(), ProtobufAdapterFactory.createDecoder())) {
       assertTrue(c.isCompatibleWith(MediaType.of("application", "octet-stream")));
       assertTrue(c.isCompatibleWith(MediaType.of("application", "x-protobuf")));
       assertTrue(c.isCompatibleWith(MediaType.of("application", "*")));
       assertFalse(c.isCompatibleWith(MediaType.of("application", "json")));
-      assertTrue(c.supportsType(TypeReference.from(MessageLite.class)));
-      assertTrue(c.supportsType(TypeReference.from(Message.class)));
-      assertFalse(c.supportsType(TypeReference.from(String.class)));
+      assertTrue(c.supportsType(TypeRef.from(MessageLite.class)));
+      assertTrue(c.supportsType(TypeRef.from(Message.class)));
+      assertFalse(c.supportsType(TypeRef.from(String.class)));
     }
   }
 
@@ -72,11 +72,11 @@ public class ProtobufBodyAdapterTest {
 
   @Test
   void unsupportedConversion_decoder() {
-    var decoder = ProtobufBodyAdapterFactory.createDecoder();
+    var decoder = ProtobufAdapterFactory.createDecoder();
     assertThrows(UnsupportedOperationException.class,
-        () -> decoder.toObject(TypeReference.from(String.class), null));
+        () -> decoder.toObject(TypeRef.from(String.class), null));
     assertThrows(UnsupportedOperationException.class,
-        () -> decoder.toObject(TypeReference.from(AwesomePerson.class),
+        () -> decoder.toObject(TypeRef.from(AwesomePerson.class),
             MediaType.of("text", "plain")));
   }
 
@@ -93,8 +93,8 @@ public class ProtobufBodyAdapterTest {
 
   @Test
   void deserializeMessage() {
-    var subscriber = ProtobufBodyAdapterFactory
-        .createDecoder().toObject(TypeReference.from(AwesomePerson.class), null);
+    var subscriber = ProtobufAdapterFactory
+        .createDecoder().toObject(TypeRef.from(AwesomePerson.class), null);
     var elon = AwesomePerson.newBuilder()
         .setFirstName("Elon")
         .setLastName("Musk")
@@ -108,7 +108,7 @@ public class ProtobufBodyAdapterTest {
     var registry = ExtensionRegistry.newInstance();
     registry.add(TestProto.awesomeness);
     var subscriber = createDecoder(registry)
-        .toObject(TypeReference.from(AwesomePerson.class), null);
+        .toObject(TypeRef.from(AwesomePerson.class), null);
     var elon = AwesomePerson.newBuilder()
         .setFirstName("Elon")
         .setLastName("Musk")
@@ -120,8 +120,8 @@ public class ProtobufBodyAdapterTest {
 
   @Test
   void deserializeMessage_deferred() {
-    var subscriber = ProtobufBodyAdapterFactory.createDecoder()
-        .toDeferredObject(TypeReference.from(AwesomePerson.class), null);
+    var subscriber = ProtobufAdapterFactory.createDecoder()
+        .toDeferredObject(TypeRef.from(AwesomePerson.class), null);
     var elon = AwesomePerson.newBuilder()
         .setFirstName("Elon")
         .setLastName("Musk")
@@ -139,8 +139,8 @@ public class ProtobufBodyAdapterTest {
 
   @Test
   void deserializeMessage_deferredWithError() {
-    var subscriber = ProtobufBodyAdapterFactory.createDecoder()
-        .toDeferredObject(TypeReference.from(AwesomePerson.class), null);
+    var subscriber = ProtobufAdapterFactory.createDecoder()
+        .toDeferredObject(TypeRef.from(AwesomePerson.class), null);
     var supplier = subscriber.getBody().toCompletableFuture().getNow(null);
     assertNotNull(supplier);
     new Thread(() -> {

@@ -29,12 +29,10 @@ import java.util.concurrent.Flow.Subscription;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A defensive wrapper over a {@code Subscriber<T>}. */
-public abstract class DelegatingSubscriber<T, S extends Subscriber<? super T>>
-    implements Subscriber<T> {
+public class DelegatingSubscriber<T, S extends Subscriber<? super T>> implements Subscriber<T> {
 
   protected final S downstream;
   protected final Upstream upstream;
-
   // Safety flag to ensure that deferred cancellation from upstream doesn't
   // cause the downstream to receive post-completion signals in case downstream's
   // onSubscribe or onNext threw previously

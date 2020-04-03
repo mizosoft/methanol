@@ -28,9 +28,10 @@ import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MimeBodyPublisher;
 import com.github.mizosoft.methanol.MoreBodyPublishers;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -65,9 +66,9 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
 
   /**
    * @throws UnsupportedOperationException if this adapter doesn't {@link
-   *     BodyAdapter#supportsType(TypeReference) support} the given type.
+   *     BodyAdapter#supportsType(TypeRef) support} the given type.
    */
-  protected void requireSupport(TypeReference<?> type) {
+  protected void requireSupport(TypeRef<?> type) {
     if (!supportsType(type)) {
       throw new UnsupportedOperationException("unsupported type: " + type);
     }
@@ -75,10 +76,10 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
 
   /**
    * @throws UnsupportedOperationException if this adapter doesn't {@link
-   *     BodyAdapter#supportsType(TypeReference) support} the given raw type.
+   *     BodyAdapter#supportsType(TypeRef) support} the given raw type.
    */
   protected void requireSupport(Class<?> type) {
-    requireSupport(TypeReference.from(type));
+    requireSupport(TypeRef.from(type));
   }
 
   /**
@@ -97,6 +98,14 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
    */
   public static Charset charsetOrDefault(@Nullable MediaType mediaType, Charset defaultCharset) {
     return mediaType != null ? mediaType.charsetOrDefault(defaultCharset) : defaultCharset;
+  }
+
+  /**
+   * Returns either the result of {@link MediaType#charsetOrDefault(Charset)} or {@code
+   * UTF-8} directly if {@code mediaType} is null.
+   */
+  public static Charset charsetOrUtf8(@Nullable MediaType mediaType) {
+    return charsetOrDefault(mediaType, StandardCharsets.UTF_8);
   }
 
   /**

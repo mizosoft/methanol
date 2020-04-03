@@ -20,12 +20,14 @@
  * SOFTWARE.
  */
 
+import com.github.mizosoft.methanol.adapter.gson.GsonAdapterFactory;
+
 /**
  * Provides {@link com.github.mizosoft.methanol.BodyAdapter.Encoder} and {@link
  * com.github.mizosoft.methanol.BodyAdapter.Decoder} implementations for JSON using the Gson
  * library. Note that, for the sake of configurability, the adapters are not service-provided by
  * default. You will need to explicitly declare service-providers that delegate to the instances
- * created by {@link com.github.mizosoft.methanol.adapter.gson.GsonBodyAdapterFactory}.
+ * created by {@link GsonAdapterFactory}.
  */
 module methanol.adapter.gson {
   requires transitive methanol;

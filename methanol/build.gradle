@@ -4,8 +4,7 @@ dependencies {
 }
 
 compileJava {
-  // methanol exports a package to methanol.adapter.jackson but the compiler won't be able
-  // to resolve methanol.adapter.jackson as it's not a dependency so it issues a warning
+  // suppress exporting to module module on compilation
   options.compilerArgs += '-Xlint:-module'
 }
 

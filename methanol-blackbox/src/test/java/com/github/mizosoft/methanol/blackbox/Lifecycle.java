@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,7 @@ class Lifecycle {
   MockWebServer server;
   HttpClient client;
   Executor executor;
+  ScheduledExecutorService scheduler;
 
   @BeforeEach
   void setup() throws IOException {
@@ -46,6 +48,7 @@ class Lifecycle {
     configureClient(builder);
     client = builder.build();
     executor = createExecutor();
+    scheduler = Executors.newSingleThreadScheduledExecutor();
   }
 
   @AfterEach
@@ -53,7 +56,7 @@ class Lifecycle {
     if (server != null) {
       server.shutdown();
     }
-    TestUtils.shutdown(executor);
+    TestUtils.shutdown(executor, scheduler);
   }
 
   void configureServer(MockWebServer server) {}

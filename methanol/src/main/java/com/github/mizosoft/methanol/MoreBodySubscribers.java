@@ -123,41 +123,41 @@ public class MoreBodySubscribers {
 
   /**
    * Returns a {@code BodySubscriber} of {@code T} as specified by {@link
-   * Decoder#toObject(TypeReference, MediaType)} using an installed decoder.
+   * Decoder#toObject(TypeRef, MediaType)} using an installed decoder.
    *
-   * @param type a {@code TypeReference} representing {@code T}
+   * @param type a {@code TypeRef} representing {@code T}
    * @param mediaType the media type
    * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type or
    *     media type is installed
    */
   public static <T> BodySubscriber<T> ofObject(
-      TypeReference<T> type, @Nullable MediaType mediaType) {
+      TypeRef<T> type, @Nullable MediaType mediaType) {
     return requireDecoder(type, mediaType).toObject(type, mediaType);
   }
 
   /**
    * Returns a {@code BodySubscriber} of {@code Supplier<T>} as specified by {@link
-   * Decoder#toDeferredObject(TypeReference, MediaType)} using an installed decoder.
+   * Decoder#toDeferredObject(TypeRef, MediaType)} using an installed decoder.
    *
-   * @param type a {@code TypeReference} representing {@code T}
+   * @param type a {@code TypeRef} representing {@code T}
    * @param mediaType the media type
    * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type or
    *     media type is installed
    */
   public static <T> BodySubscriber<Supplier<T>> ofDeferredObject(
-      TypeReference<T> type, @Nullable MediaType mediaType) {
+      TypeRef<T> type, @Nullable MediaType mediaType) {
     return requireDecoder(type, mediaType).toDeferredObject(type, mediaType);
   }
 
-  private static Decoder requireDecoder(TypeReference<?> type, @Nullable MediaType mediaType) {
+  private static Decoder requireDecoder(TypeRef<?> type, @Nullable MediaType mediaType) {
     return Decoder.getDecoder(type, mediaType)
         .orElseThrow(() -> unsupportedConversion(type, mediaType));
   }
 
   private static UnsupportedOperationException unsupportedConversion(
-      TypeReference<?> type, @Nullable MediaType mediaType) {
+      TypeRef<?> type, @Nullable MediaType mediaType) {
     String message = "unsupported conversion to an object of type <" + type + ">";
     if (mediaType != null) {
       message += " with media type <" + mediaType + ">";

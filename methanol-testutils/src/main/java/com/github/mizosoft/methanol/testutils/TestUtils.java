@@ -63,9 +63,11 @@ public class TestUtils {
     }
   }
 
-  public static void shutdown(Executor executor) {
-    if (executor instanceof ExecutorService) {
-      ((ExecutorService) executor).shutdown();
+  public static void shutdown(Executor... executors) {
+    for (Executor e : executors) {
+      if (e instanceof ExecutorService) {
+        ((ExecutorService) e).shutdown();
+      }
     }
   }
 

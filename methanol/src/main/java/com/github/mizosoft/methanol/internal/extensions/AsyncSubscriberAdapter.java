@@ -39,7 +39,7 @@ import java.util.function.Function;
  * @param <T> the body type
  * @param <S> the subscriber's type
  */
-public class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuffer>>>
+public final class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuffer>>>
     extends DelegatingSubscriber<List<ByteBuffer>, S> implements BodySubscriber<T> {
 
   private final Function<? super S, ? extends CompletionStage<T>> asyncFinisher;

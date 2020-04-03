@@ -28,7 +28,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -46,12 +46,12 @@ final class ByteArrayJacksonDecoder extends AbstractBodyAdapter implements BodyA
   }
 
   @Override
-  public boolean supportsType(TypeReference<?> type) {
+  public boolean supportsType(TypeRef<?> type) {
     return mapper.canDeserialize(mapper.constructType(type.type()));
   }
 
   @Override
-  public <T> BodySubscriber<T> toObject(TypeReference<T> type, @Nullable MediaType mediaType) {
+  public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
     requireNonNull(type);
     requireSupport(type);
     requireCompatibleOrNull(mediaType);
@@ -59,7 +59,7 @@ final class ByteArrayJacksonDecoder extends AbstractBodyAdapter implements BodyA
         BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(type, bytes));
   }
 
-  private <T> T readValueUnchecked(TypeReference<T> type, byte[] body) {
+  private <T> T readValueUnchecked(TypeRef<T> type, byte[] body) {
     try {
       JsonParser parser = mapper.getFactory().createParser(body);
       return mapper.readerFor(mapper.constructType(type.type())).readValue(parser);

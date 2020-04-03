@@ -51,7 +51,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * cancelled. Any errors received from upstream are immediately thrown when reading if detected,
  * even if some bytes were available.
  */
-public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel> {
+public final class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel> {
 
   // Constant communicating upstream completion (EOF) to read()
   private static final ByteBuffer TOMBSTONE = ByteBuffer.allocate(0);
@@ -138,13 +138,9 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
       cached = new ArrayList<>();
     }
 
-    /**
-     * Returns immediately either the currently available buffer with remaining bytes, TOMBSTONE if
-     * completed or null if there are currently no buffers from upstream.
-     */
     private @Nullable ByteBuffer pollNext() {
       ByteBuffer next;
-      while ((next = nextAvailable()) == null) {
+      while ((next = nextCached()) == null) {
         List<ByteBuffer> buffers = upstreamBuffers.poll(); // Do not block
         if (buffers == null) {
           return null;
@@ -155,13 +151,9 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
       return next;
     }
 
-    /**
-     * Returns either the currently available buffer (blocking if necessary) TOMBSTONE if completed
-     * or null if interrupted while blocking.
-     */
     private @Nullable ByteBuffer takeNext() {
       ByteBuffer next;
-      while ((next = nextAvailable()) == null) {
+      while ((next = nextCached()) == null) {
         try {
           List<ByteBuffer> buffers = upstreamBuffers.take();
           cached.addAll(buffers);
@@ -175,11 +167,7 @@ public class ByteChannelSubscriber implements BodySubscriber<ReadableByteChannel
       return next;
     }
 
-    /**
-     * Returns the next buffer with available bytes in cached buffers, TOMBSTONE if complete or null
-     * if ran out of cached buffers.
-     */
-    private @Nullable ByteBuffer nextAvailable() {
+    private @Nullable ByteBuffer nextCached() {
       while (cached.size() > 0) {
         ByteBuffer peek = cached.get(0);
         if (peek.hasRemaining() || peek == TOMBSTONE) {

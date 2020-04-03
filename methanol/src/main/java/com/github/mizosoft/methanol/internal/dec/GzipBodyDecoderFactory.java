@@ -26,7 +26,7 @@ import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
 
 /** {@code BodyDecoder.Factory} for "gzip". */
 @DefaultProvider
-public class GzipBodyDecoderFactory extends ZLibBodyDecoderFactory {
+public final class GzipBodyDecoderFactory extends ZLibBodyDecoderFactory {
 
   /** Creates a new {@code GzipBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}. */
   public GzipBodyDecoderFactory() {}

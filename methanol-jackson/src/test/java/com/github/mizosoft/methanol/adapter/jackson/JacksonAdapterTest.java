@@ -22,8 +22,8 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import static com.github.mizosoft.methanol.adapter.jackson.JacksonBodyAdapterFactory.createDecoder;
-import static com.github.mizosoft.methanol.adapter.jackson.JacksonBodyAdapterFactory.createEncoder;
+import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createDecoder;
+import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createEncoder;
 import static com.github.mizosoft.methanol.testutils.TestUtils.NOOP_SUBSCRIPTION;
 import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static com.github.mizosoft.methanol.testutils.TestUtils.load;
@@ -58,7 +58,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BufferTokenizer;
 import java.io.IOException;
@@ -74,11 +74,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
 import org.junit.jupiter.api.Test;
 
-class JacksonBodyAdapterTest {
+class JacksonAdapterTest {
 
   @Test
   void isCompatibleWith_anyApplicationJson() {
-    for (var c : List.of(JacksonBodyAdapterFactory.createEncoder(), JacksonBodyAdapterFactory
+    for (var c : List.of(JacksonAdapterFactory.createEncoder(), JacksonAdapterFactory
         .createDecoder())) {
       assertTrue(c.isCompatibleWith(MediaType.of("application", "json")));
       assertTrue(c.isCompatibleWith(MediaType.of("application", "json").withCharset(UTF_8)));
@@ -90,25 +90,25 @@ class JacksonBodyAdapterTest {
 
   @Test
   void unsupportedConversion_encoder() {
-    var encoder = JacksonBodyAdapterFactory.createEncoder();
+    var encoder = JacksonAdapterFactory.createEncoder();
     assertThrows(UnsupportedOperationException.class,
         () -> encoder.toBody(new Point(1, 2), MediaType.of("text", "plain")));
   }
 
   @Test
   void unsupportedConversion_decoder() {
-    var decoder = JacksonBodyAdapterFactory.createDecoder();
+    var decoder = JacksonAdapterFactory.createDecoder();
     var textPlain = MediaType.of("text", "plain");
     assertThrows(UnsupportedOperationException.class,
-        () -> decoder.toObject(new TypeReference<Point>() {}, textPlain));
+        () -> decoder.toObject(new TypeRef<Point>() {}, textPlain));
     assertThrows(UnsupportedOperationException.class,
-        () -> decoder.toDeferredObject(new TypeReference<Point>() {}, textPlain));
+        () -> decoder.toDeferredObject(new TypeRef<Point>() {}, textPlain));
   }
 
   @Test
   void serializeJson() {
     var bean = new Bean("beans are boring");
-    var body = JacksonBodyAdapterFactory.createEncoder().toBody(bean, null);
+    var body = JacksonAdapterFactory.createEncoder().toBody(bean, null);
     var expected = "{\"value\":\"beans are boring\"}";
     assertEquals(expected, toUtf8(body));
   }
@@ -116,7 +116,7 @@ class JacksonBodyAdapterTest {
   @Test
   void serializeJson_utf16() {
     var bean = new Bean("beans are boring");
-    var body = JacksonBodyAdapterFactory.createEncoder().toBody(bean, MediaType.parse("application/json; charset=utf-16"));
+    var body = JacksonAdapterFactory.createEncoder().toBody(bean, MediaType.parse("application/json; charset=utf-16"));
     var expected = "{\"value\":\"beans are boring\"}";
     assertEquals(expected, toString(body, UTF_16));
   }
@@ -156,8 +156,8 @@ class JacksonBodyAdapterTest {
 
   @Test
   void deserializeJson() {
-    var subscriber = JacksonBodyAdapterFactory.createDecoder().toObject(
-        new TypeReference<Bean>() {}, null);
+    var subscriber = JacksonAdapterFactory.createDecoder().toObject(
+        new TypeRef<Bean>() {}, null);
     var json = "{\"value\":\"beans are boring\"}";
     var bean = publishUtf8(subscriber, json);
     assertEquals(bean.value , "beans are boring");
@@ -165,8 +165,8 @@ class JacksonBodyAdapterTest {
 
   @Test
   void deserializeJson_utf16() {
-    var subscriber = JacksonBodyAdapterFactory.createDecoder().toObject(
-        new TypeReference<Bean>() {}, MediaType.parse("application/json; charset=utf-16"));
+    var subscriber = JacksonAdapterFactory.createDecoder().toObject(
+        new TypeRef<Bean>() {}, MediaType.parse("application/json; charset=utf-16"));
     var json = "{\"value\":\"beans are boring\"}";
     var bean = publish(subscriber, json, UTF_16);
     assertEquals(bean.value, "beans are boring");
@@ -179,8 +179,8 @@ class JacksonBodyAdapterTest {
     var mapper = new JsonMapper.Builder(new JsonMapper())
         .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
         .build();
-    var subscriber = JacksonBodyAdapterFactory.createDecoder(mapper)
-        .toObject(new TypeReference<Map<String, String>>() {}, MediaType.parse("application/json; charset=utf-16"));
+    var subscriber = JacksonAdapterFactory.createDecoder(mapper)
+        .toObject(new TypeRef<Map<String, String>>() {}, MediaType.parse("application/json; charset=utf-16"));
     var executor = Executors.newFixedThreadPool(8);
     int[] buffSizes = {1, 32, 555, 1024, 21};
     int[] listSizes = {1, 3, 1};
@@ -201,7 +201,7 @@ class JacksonBodyAdapterTest {
   void deserializeJson_customDeserializer() {
     var mapper = new JsonMapper()
         .registerModule(new SimpleModule().addDeserializer(Point.class, new PointDeserializer()));
-    var subscriber = createDecoder(mapper).toObject(new TypeReference<Point>() {}, null);
+    var subscriber = createDecoder(mapper).toObject(new TypeRef<Point>() {}, null);
     var point = publishUtf8(subscriber, "[1, 2]");
     assertEquals(point.x, 1);
     assertEquals(point.y, 2);
@@ -211,8 +211,8 @@ class JacksonBodyAdapterTest {
   void deserializeJson_typeWithGenerics() {
     var mapper = new JsonMapper()
         .registerModule(new SimpleModule().addDeserializer(Point.class, new PointDeserializer()));
-    var subscriber = JacksonBodyAdapterFactory.createDecoder(mapper)
-        .toObject(new TypeReference<List<Point>>() {}, null);
+    var subscriber = JacksonAdapterFactory.createDecoder(mapper)
+        .toObject(new TypeRef<List<Point>>() {}, null);
     var pointList = publishUtf8(subscriber, "[[1,2],[2,1],[0,0]]");
     var expected = List.of(new Point(1, 2), new Point(2, 1), new Point(0, 0));
     assertEquals(expected, pointList);
@@ -224,7 +224,7 @@ class JacksonBodyAdapterTest {
         .enable(Feature.ALLOW_COMMENTS)
         .enable(Feature.ALLOW_SINGLE_QUOTES)
         .enable(Feature.ALLOW_UNQUOTED_FIELD_NAMES);
-    var subscriber = createDecoder(mapper).toObject(new TypeReference<AwesomePerson>() {}, null);
+    var subscriber = createDecoder(mapper).toObject(new TypeRef<AwesomePerson>() {}, null);
     var nonStdJson =
              "{\n"
             + "  firstName: 'Keanu',\n"
@@ -239,8 +239,8 @@ class JacksonBodyAdapterTest {
 
   @Test
   void deserializeJson_deferred() {
-    var subscriber = JacksonBodyAdapterFactory.createDecoder()
-        .toDeferredObject(new TypeReference<Bean>() {}, null);
+    var subscriber = JacksonAdapterFactory.createDecoder()
+        .toDeferredObject(new TypeRef<Bean>() {}, null);
     var beanSupplier = subscriber.getBody().toCompletableFuture().getNow(null);
     assertNotNull(beanSupplier);
     var json = "{\"value\":\"beans are boring\"}";
@@ -255,8 +255,8 @@ class JacksonBodyAdapterTest {
 
   @Test
   void deserializeJson_deferredWithError() {
-    var subscriber = JacksonBodyAdapterFactory.createDecoder()
-        .toDeferredObject(new TypeReference<Bean>() {}, null);
+    var subscriber = JacksonAdapterFactory.createDecoder()
+        .toDeferredObject(new TypeRef<Bean>() {}, null);
     var beanSupplier = subscriber.getBody().toCompletableFuture().getNow(null);
     assertNotNull(beanSupplier);
     new Thread(() -> {
@@ -268,8 +268,8 @@ class JacksonBodyAdapterTest {
 
   @Test
   void deserializeJson_badJson() {
-    var subscriber = JacksonBodyAdapterFactory
-        .createDecoder().toObject(new TypeReference<Bean>() {}, null);
+    var subscriber = JacksonAdapterFactory
+        .createDecoder().toObject(new TypeRef<Bean>() {}, null);
     var badJson = "{\"value\":\"beans\"+\"are\"+\"boring\"}";
     var ex = assertThrows(CompletionException.class, () -> publishUtf8(subscriber, badJson));
     var cause = ex.getCause();
@@ -281,7 +281,7 @@ class JacksonBodyAdapterTest {
   void deserializeJson_fromDeserializerThatNeedsParserCodec() {
     var mapper = new ObjectMapper()
         .registerModule(new SimpleModule().addDeserializer(Bean.class, new BeanNodeDeserializer()));
-    var subscriber = createDecoder(mapper).toObject(TypeReference.from(Bean.class), null);
+    var subscriber = createDecoder(mapper).toObject(TypeRef.from(Bean.class), null);
     var bean = publishUtf8(subscriber, "{\"value\": \"beans are boring\"}");
     assertEquals("beans are boring", bean.value);
   }

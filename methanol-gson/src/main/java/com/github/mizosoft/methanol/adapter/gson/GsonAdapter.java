@@ -27,11 +27,10 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
-import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -45,24 +44,22 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-abstract class GsonBodyAdapter extends AbstractBodyAdapter {
+abstract class GsonAdapter extends AbstractBodyAdapter {
 
-  private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
   private static final MediaType APPLICATION_JSON = MediaType.of("application", "json");
 
   final Gson gson;
 
-  GsonBodyAdapter(Gson gson) {
+  GsonAdapter(Gson gson) {
     super(APPLICATION_JSON);
     this.gson = requireNonNull(gson);
   }
 
   @Override
-  public boolean supportsType(TypeReference<?> type) {
+  public boolean supportsType(TypeRef<?> type) {
     try {
       getAdapter(type);
       return true;
@@ -73,11 +70,11 @@ abstract class GsonBodyAdapter extends AbstractBodyAdapter {
   }
 
   @SuppressWarnings("unchecked")
-  <T> TypeAdapter<T> getAdapter(TypeReference<T> type) {
-    return (TypeAdapter<T>) gson.getAdapter(TypeToken.get(type.type()));
+  <T> TypeAdapter<T> getAdapter(TypeRef<T> type) {
+    return (TypeAdapter<T>) gson.getAdapter(com.google.gson.reflect.TypeToken.get(type.type()));
   }
 
-  static final class Encoder extends GsonBodyAdapter implements BodyAdapter.Encoder {
+  static final class Encoder extends GsonAdapter implements BodyAdapter.Encoder {
 
     Encoder(Gson gson) {
       super(gson);
@@ -86,15 +83,14 @@ abstract class GsonBodyAdapter extends AbstractBodyAdapter {
     @Override
     public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
       requireNonNull(object);
-      TypeReference<?> runtimeType = TypeReference.from(object.getClass());
+      TypeRef<?> runtimeType = TypeRef.from(object.getClass());
       requireSupport(runtimeType);
       requireCompatibleOrNull(mediaType);
       @SuppressWarnings("unchecked")
       TypeAdapter<Object> adapter = (TypeAdapter<Object>) getAdapter(runtimeType);
       ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
       try (JsonWriter writer =
-          gson.newJsonWriter(
-              new OutputStreamWriter(outBuffer, charsetOrDefault(mediaType, DEFAULT_CHARSET)))) {
+          gson.newJsonWriter(new OutputStreamWriter(outBuffer, charsetOrUtf8(mediaType)))) {
         adapter.write(writer, object);
       } catch (IOException ioe) {
         throw new AssertionError(ioe); // writing to a memory buffer
@@ -103,19 +99,19 @@ abstract class GsonBodyAdapter extends AbstractBodyAdapter {
     }
   }
 
-  static final class Decoder extends GsonBodyAdapter implements BodyAdapter.Decoder {
+  static final class Decoder extends GsonAdapter implements BodyAdapter.Decoder {
 
     Decoder(Gson gson) {
       super(gson);
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeReference<T> type, @Nullable MediaType mediaType) {
+    public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
       TypeAdapter<T> adapter = getAdapter(type);
-      Charset charset = charsetOrDefault(mediaType, DEFAULT_CHARSET);
+      Charset charset = charsetOrUtf8(mediaType);
       return BodySubscribers.mapping(
           BodySubscribers.ofByteArray(),
           bytes ->
@@ -125,13 +121,13 @@ abstract class GsonBodyAdapter extends AbstractBodyAdapter {
 
     @Override
     public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeReference<T> type, @Nullable MediaType mediaType) {
+        TypeRef<T> type, @Nullable MediaType mediaType) {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
       TypeAdapter<T> adapter = getAdapter(type);
       return BodySubscribers.mapping(
-          MoreBodySubscribers.ofReader(charsetOrDefault(mediaType, DEFAULT_CHARSET)),
+          MoreBodySubscribers.ofReader(charsetOrUtf8(mediaType)),
           in -> () -> toJsonUnchecked(in, adapter));
     }
 

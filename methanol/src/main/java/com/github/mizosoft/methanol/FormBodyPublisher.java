@@ -44,7 +44,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  * A {@code BodyPublisher} for form submission using the {@code application/x-www-form-urlencoded}
  * request type.
  */
-public class FormBodyPublisher implements MimeBodyPublisher {
+public final class FormBodyPublisher implements MimeBodyPublisher {
 
   private static final MediaType FORM_URL_ENCODED =
       MediaType.of("application", "x-www-form-urlencoded");

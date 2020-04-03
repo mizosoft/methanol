@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.benchmarks;
 
 import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.TypeReference;
+import com.github.mizosoft.methanol.TypeRef;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,8 +39,8 @@ public class BenchmarkUtils {
 
   public static final MediaType APPLICATION_JSON = MediaType.of("application", "json");
 
-  public static final TypeReference<List<Map<String, Object>>> ARRAY_OF_OBJECTS =
-      new TypeReference<>() {};
+  public static final TypeRef<List<Map<String, Object>>> ARRAY_OF_OBJECTS =
+      new TypeRef<>() {};
 
   public static byte[] gzip(byte[] data) {
     var outBuff = new ByteArrayOutputStream();

@@ -53,7 +53,7 @@ public class MoreBodyPublishers {
    *     given object or the given media type is installed
    */
   public static BodyPublisher ofObject(Object object, @Nullable MediaType mediaType) {
-    TypeReference<?> runtimeType = TypeReference.from(object.getClass());
+    TypeRef<?> runtimeType = TypeRef.from(object.getClass());
     Encoder encoder =
         Encoder.getEncoder(runtimeType, mediaType)
             .orElseThrow(() -> unsupportedConversion(runtimeType, mediaType));
@@ -61,7 +61,7 @@ public class MoreBodyPublishers {
   }
 
   private static UnsupportedOperationException unsupportedConversion(
-      TypeReference<?> type, @Nullable MediaType mediaType) {
+      TypeRef<?> type, @Nullable MediaType mediaType) {
     String message = "unsupported conversion from an object type <" + type + ">";
     if (mediaType != null) {
       message += " with media type <" + mediaType + ">";

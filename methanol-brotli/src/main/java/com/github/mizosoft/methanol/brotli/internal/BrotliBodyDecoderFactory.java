@@ -29,7 +29,7 @@ import java.net.http.HttpResponse.BodySubscriber;
 import java.util.concurrent.Executor;
 
 /** {@code BodyDecoder.Factory} provider for brotli encoding. */
-public class BrotliBodyDecoderFactory implements BodyDecoder.Factory {
+public final class BrotliBodyDecoderFactory implements BodyDecoder.Factory {
 
   static final String BROTLI_ENCODING = "br";
 

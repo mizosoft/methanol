@@ -34,17 +34,17 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-class TypeReferenceTest {
+class TypeRefTest {
 
   @Test
   void new_rawType() {
-    var ref = new TypeReference<String>() {};
+    var ref = new TypeRef<String>() {};
     assertEquals(String.class, ref.type());
   }
 
   @Test
   void new_parameterizedType() {
-    var ref = new TypeReference<List<String>>() {};
+    var ref = new TypeRef<List<String>>() {};
     assertEquals(StringList.type, ref.type());
   }
 
@@ -52,120 +52,120 @@ class TypeReferenceTest {
 
   @Test
   void rawType_rawType() {
-    var ref = new TypeReference<String>() {};
+    var ref = new TypeRef<String>() {};
     assertEquals(String.class, ref.rawType());
   }
 
   @Test
   void rawType_parameterizedType() {
-    var ref = new TypeReference<List<String>>() {};
+    var ref = new TypeRef<List<String>>() {};
     assertEquals(List.class, ref.rawType());
   }
 
   @Test
   <T> void rawType_typeVariableNoBounds() {
-    var ref = new TypeReference<T>() {};
+    var ref = new TypeRef<T>() {};
     assertEquals(Object.class, ref.rawType());
   }
 
   @Test
   <T extends Dummy1> void rawType_typeVariableOneBound() {
-    var ref = new TypeReference<T>() {};
+    var ref = new TypeRef<T>() {};
     assertEquals(Dummy1.class, ref.rawType());
   }
 
   @Test
   <T extends Dummy1 & Dummy2> void rawType_typeVariableTwoBounds() {
-    var ref = new TypeReference<T>() {};
+    var ref = new TypeRef<T>() {};
     assertEquals(Dummy1.class, ref.rawType()); // First bound is considered as the raw type
   }
 
   @Test
   void rawType_wildcardNoBounds() {
-    var wildCard = ((ParameterizedType) new TypeReference<List<?>>() {}.type())
+    var wildCard = ((ParameterizedType) new TypeRef<List<?>>() {}.type())
         .getActualTypeArguments()[0];
-    var ref = TypeReference.from(wildCard);
+    var ref = TypeRef.from(wildCard);
     assertTrue(ref.type() instanceof WildcardType);
     assertEquals(Object.class, ref.rawType());
   }
 
   @Test
   void rawType_wildcardOneBounds() {
-    var wildCard = ((ParameterizedType) new TypeReference<List<? extends Dummy1>>() {}.type())
+    var wildCard = ((ParameterizedType) new TypeRef<List<? extends Dummy1>>() {}.type())
         .getActualTypeArguments()[0];
-    var ref = TypeReference.from(wildCard);
+    var ref = TypeRef.from(wildCard);
     assertTrue(ref.type() instanceof WildcardType);
     assertEquals(Dummy1.class, ref.rawType());
   }
 
   @Test
   void rawType_parameterizedTypeArray() {
-    var ref = new TypeReference<List<String>[]>() {};
+    var ref = new TypeRef<List<String>[]>() {};
     assertEquals(List[].class, ref.rawType());
   }
 
   @Test
   <T> void rawType_typeVariableArrayNoBounds() {
-    var ref = new TypeReference<T[]>() {};
+    var ref = new TypeRef<T[]>() {};
     assertEquals(Object[].class, ref.rawType());
   }
 
   @Test
   <T extends Dummy1 & Dummy2> void rawType_typeVariableArrayTwoBounds() {
-    var ref = new TypeReference<T[]>() {};
+    var ref = new TypeRef<T[]>() {};
     assertEquals(Dummy1[].class, ref.rawType());
   }
 
   @Test
   <T extends Dummy1 & Dummy2> void rawType_typeVariable3DArrayTwoBounds() {
-    var ref = new TypeReference<T[][][]>() {};
+    var ref = new TypeRef<T[][][]>() {};
     assertEquals(Dummy1[][][].class, ref.rawType());
   }
 
   @Test
   <T extends Dummy1 & Dummy2, Y extends T, X extends Y>
   void rawType_typeVariableWithTypeVariableBound() {
-    var ref = new TypeReference<X>() {};
+    var ref = new TypeRef<X>() {};
     assertEquals(Dummy1.class, ref.rawType());
   }
 
   @Test
   <T extends Dummy1 & Dummy2, Y extends T, X extends Y>
   void rawType_wildcardWithTypeVariableBound() {
-    var wildCard = ((ParameterizedType) new TypeReference<List<? extends X>>() {}.type())
+    var wildCard = ((ParameterizedType) new TypeRef<List<? extends X>>() {}.type())
         .getActualTypeArguments()[0];
-    var ref = TypeReference.from(wildCard);
+    var ref = TypeRef.from(wildCard);
     assertTrue(ref.type() instanceof WildcardType);
     assertEquals(Dummy1.class, ref.rawType());
   }
 
   @Test
   <T extends List<String>> void rawType_typeVariableWithParameterizedTypeBounds() {
-    var ref = new TypeReference<T>() {};
+    var ref = new TypeRef<T>() {};
     assertEquals(List.class, ref.rawType());
   }
 
   @Test
   <T extends Dummy1 & Dummy2, Y extends T, X extends Y>
   void rawType_typeVariable3DArrayWithTypeVariableBound() {
-    var ref = new TypeReference<X[][][]>() {};
+    var ref = new TypeRef<X[][][]>() {};
     assertEquals(Dummy1[][][].class, ref.rawType());
   }
 
   @Test
   void equals_hashCode() {
-    var ref1 = new TypeReference<List<String>>() {};
-    var ref2 = TypeReference.from(StringList.type);
+    var ref1 = new TypeRef<List<String>>() {};
+    var ref2 = TypeRef.from(StringList.type);
     assertEquals(ref1, ref1);
     assertEquals(ref1, ref2);
     assertEquals(ref1.hashCode(), ref2.hashCode());
-    assertNotEquals(ref2, TypeReference.from(List.class));
+    assertNotEquals(ref2, TypeRef.from(List.class));
     assertNotEquals(ref1, "I'm not a TypeReference, I'm a String!");
   }
 
   @Test
   void toString_isTypeName() {
-    var ref = new TypeReference<List<String>>() {};
+    var ref = new TypeRef<List<String>>() {};
     assertEquals(StringList.type.getTypeName(), ref.toString());
   }
 
@@ -174,12 +174,12 @@ class TypeReferenceTest {
   @SuppressWarnings("rawtypes") // intentional
   @Test
   void new_rawSubtype() {
-    assertIllegalState(() -> new TypeReference() {});
+    assertIllegalState(() -> new TypeRef() {});
   }
 
   @Test
   void from_nonstandardTypeSpecialization() {
-    assertIllegalArg(() -> TypeReference.from(new Type() {}));
+    assertIllegalArg(() -> TypeRef.from(new Type() {}));
   }
 
   @Test
@@ -197,7 +197,7 @@ class TypeReferenceTest {
         return null;
       }
     };
-    assertIllegalArg(() -> TypeReference.from(fakeParameterizedType));
+    assertIllegalArg(() -> TypeRef.from(fakeParameterizedType));
   }
 
   interface StringList extends List<String> {
