@@ -52,6 +52,9 @@ class BodyDecoderFactoryTest {
   @BeforeAll
   static void prepareServiceLogger() {
     serviceCacheLogger = Logger.getLogger(SERVICE_LOGGER_NAME);
+    System.out.println(serviceCacheLogger);
+    System.out.println(serviceCacheLogger.getName());
+    System.out.println(serviceCacheLogger.getLevel());
     originalLevel = serviceCacheLogger.getLevel();
     serviceCacheLogger.setLevel(Level.WARNING);
     originalFilter = serviceCacheLogger.getFilter();
@@ -89,6 +92,7 @@ class BodyDecoderFactoryTest {
 
     @Override
     public boolean isLoggable(LogRecord record) {
+      System.out.println("isLoggable(" + record + ")");
       this.record = record;
       return false;
     }
