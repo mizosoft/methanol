@@ -42,27 +42,27 @@ class BodyDecoderFactoryTest {
   private static final String SERVICE_LOGGER_NAME =
       "com.github.mizosoft.methanol.internal.spi.ServiceCache";
 
+  // Must hold a strong ref to retain configuration during tests
+  private static Logger serviceCacheLogger;
+
   private static RecordingFilter recordingFilter;
   private static Filter originalFilter;
+  private static Level originalLevel;
 
   @BeforeAll
-  static void setFilter() {
-    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-    System.out.println("logger: " + logger);
-    System.out.println("logger level: " + logger.getLevel());
-    System.out.println("logger filter: " + logger.getFilter());
+  static void prepareServiceLogger() {
+    serviceCacheLogger = Logger.getLogger(SERVICE_LOGGER_NAME);
+    originalLevel = serviceCacheLogger.getLevel();
+    serviceCacheLogger.setLevel(Level.WARNING);
+    originalFilter = serviceCacheLogger.getFilter();
     recordingFilter = new RecordingFilter();
-    originalFilter = logger.getFilter();
-    logger.setFilter(recordingFilter);
+    serviceCacheLogger.setFilter(recordingFilter);
   }
 
   @AfterAll
-  static void resetFilter() {
-    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-    System.out.println("logger: " + logger);
-    System.out.println("logger level: " + logger.getLevel());
-    System.out.println("logger filter: " + logger.getFilter());
-    logger.setFilter(originalFilter);
+  static void resetServiceLogger() {
+    serviceCacheLogger.setLevel(originalLevel);
+    serviceCacheLogger.setFilter(originalFilter);
   }
 
   /** @see FailingBodyDecoderFactory */

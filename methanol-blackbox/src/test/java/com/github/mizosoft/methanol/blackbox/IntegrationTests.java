@@ -86,7 +86,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Filter;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 import okhttp3.mockwebserver.MockResponse;
@@ -151,26 +151,22 @@ class IntegrationTests extends Lifecycle {
   private static final String SERVICE_LOGGER_NAME =
       "com.github.mizosoft.methanol.internal.spi.ServiceCache";
 
-  private static Filter originalLogFilter;
+  // Must hold a strong ref to retain configuration during tests
+  private static Logger serviceCacheLogger;
+
+  private static Level originalLevel;
 
   @BeforeAll
   static void turnOffServiceLogger() {
     // Do not log service loader failures.
-    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-    System.out.println("logger: " + logger);
-    System.out.println("logger level: " + logger.getLevel());
-    System.out.println("logger filter: " + logger.getFilter());
-    originalLogFilter = logger.getFilter();
-    logger.setFilter(l -> false);
+    serviceCacheLogger = Logger.getLogger(SERVICE_LOGGER_NAME);
+    originalLevel = serviceCacheLogger.getLevel();
+    serviceCacheLogger.setLevel(Level.OFF);
   }
 
   @AfterAll
   static void resetServiceLogger() {
-    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-    System.out.println("logger: " + logger);
-    System.out.println("logger level: " + logger.getLevel());
-    System.out.println("logger filter: " + logger.getFilter());
-    logger.setFilter(originalLogFilter);
+    serviceCacheLogger.setLevel(originalLevel);
   }
 
   private void assertDecodesSmall(String encoding) throws Exception {
