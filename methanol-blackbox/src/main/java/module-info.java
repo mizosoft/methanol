@@ -17,6 +17,7 @@ open module methanol.blackbox {
   requires methanol.brotli;
   requires methanol.testutils;
   requires com.google.protobuf;
+  requires java.logging;
   requires static org.checkerframework.checker.qual;
 
   provides BodyDecoder.Factory with

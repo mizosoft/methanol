@@ -22,34 +22,30 @@
 
 package com.github.mizosoft.methanol.blackbox;
 
-import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.testutils.TestException;
-import java.net.http.HttpResponse.BodySubscriber;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
 
-/** For asserting that BodyDecoder.Factory providers failing on creation are ignored. */
-public class FailingBodyDecoderFactory implements BodyDecoder.Factory {
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-  static final AtomicInteger constructorCalls = new AtomicInteger();
+/** Turns off ServiceCache logger during tests. */
+public class ServiceLoggerHelper {
 
-  public FailingBodyDecoderFactory() {
-    constructorCalls.getAndIncrement();
-    throw new TestException();
+  private static final String SERVICE_LOGGER_NAME =
+      "com.github.mizosoft.methanol.internal.spi.ServiceCache";
+
+  private final Logger logger;
+  private Level originalLevel;
+
+  ServiceLoggerHelper() {
+    this.logger = Logger.getLogger(SERVICE_LOGGER_NAME);
   }
 
-  @Override
-  public String encoding() {
-    throw new AssertionError();
+  void turnOff() {
+    // Do not log service loader failures.
+    originalLevel = logger.getLevel();
+    logger.setLevel(Level.OFF);
   }
 
-  @Override
-  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream) {
-    throw new AssertionError();
-  }
-
-  @Override
-  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream, Executor executor) {
-    throw new AssertionError();
+  void reset() {
+    logger.setLevel(originalLevel);
   }
 }
