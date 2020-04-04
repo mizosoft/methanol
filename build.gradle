@@ -189,7 +189,7 @@ subprojects { subproject ->
 
   tasks.withType(Test) {
     testLogging {
-      events = ['failed']
+      events = ['passed']
       showStandardStreams = true
       exceptionFormat = 'full'
     }

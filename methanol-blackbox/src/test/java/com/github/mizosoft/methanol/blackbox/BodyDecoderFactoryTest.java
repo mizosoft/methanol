@@ -24,51 +24,36 @@ package com.github.mizosoft.methanol.blackbox;
 
 import static com.github.mizosoft.methanol.BodyDecoder.Factory.installedBindings;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.blackbox.MyBodyDecoderFactory.MyDeflateBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.MyBodyDecoderFactory.MyGzipBodyDecoderFactory;
 import java.util.logging.Filter;
-import java.util.logging.Level;
 import java.util.logging.LogRecord;
-import java.util.logging.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class BodyDecoderFactoryTest {
 
-  private static final String SERVICE_LOGGER_NAME =
-      "com.github.mizosoft.methanol.internal.spi.ServiceCache";
-
-  private static RecordingFilter recordingFilter;
-  private static Filter originalFilter;
-  private static Level originalLevel;
+  private static ServiceLoggerHelper loggerHelper;
 
   @BeforeAll
-  static void setFilter() {
-    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-    recordingFilter = new RecordingFilter();
-    originalFilter = logger.getFilter();
-    logger.setFilter(recordingFilter);
-    originalLevel = logger.getLevel();
-    logger.setLevel(Level.WARNING);
+  static void turnOffServiceLogger() {
+    // Do not log service loader failures.
+    loggerHelper = new ServiceLoggerHelper();
+    loggerHelper.turnOff();
   }
 
   @AfterAll
-  static void resetFilter() {
-    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-    logger.setFilter(originalFilter);
-    logger.setLevel(originalLevel);
+  static void resetServiceLogger() {
+    loggerHelper.reset();
   }
 
-  /** @see FailingBodyDecoderFactory */
   @Test
-  void failingDecoderIsIgnoredAndLogged() {
-    BodyDecoder.Factory.installedFactories(); // trigger service lookup
-    assertNotNull(recordingFilter.record);
-    assertEquals(Level.WARNING, recordingFilter.record.getLevel()); // that would suffice :)
+  void failingDecoderIsIgnored() {
+    BodyDecoder.Factory.installedFactories(); // trigger service lookup if not yet done
+    assertEquals(1, FailingBodyDecoderFactory.constructorCalls.get());
   }
 
   @Test
@@ -87,6 +72,7 @@ class BodyDecoderFactoryTest {
 
     @Override
     public boolean isLoggable(LogRecord record) {
+      System.out.println("isLoggable(" + record + ")");
       this.record = record;
       return false;
     }

@@ -86,8 +86,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 import okhttp3.mockwebserver.MockResponse;
 import okio.Buffer;
@@ -148,23 +146,18 @@ class IntegrationTests extends Lifecycle {
         .build();
   }
 
-  private static final String SERVICE_LOGGER_NAME =
-      "com.github.mizosoft.methanol.internal.spi.ServiceCache";
-
-  private static Level previousServiceLoggerLevel;
+  private static ServiceLoggerHelper loggerHelper;
 
   @BeforeAll
   static void turnOffServiceLogger() {
     // Do not log service loader failures.
-    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-    previousServiceLoggerLevel = logger.getLevel();
-    logger.setLevel(Level.OFF);
+    loggerHelper = new ServiceLoggerHelper();
+    loggerHelper.turnOff();
   }
 
   @AfterAll
   static void resetServiceLogger() {
-    Logger logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-    logger.setLevel(previousServiceLoggerLevel);
+    loggerHelper.reset();
   }
 
   private void assertDecodesSmall(String encoding) throws Exception {
