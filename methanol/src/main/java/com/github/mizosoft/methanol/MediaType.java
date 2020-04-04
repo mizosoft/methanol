@@ -22,9 +22,9 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Utils.TOKEN_MATCHER;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.alphaNum;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.closedRange;
 import static java.lang.String.format;
@@ -68,13 +68,6 @@ public final class MediaType {
   // type           = token
   // subtype        = token
   // parameter      = token "=" ( token / quoted-string )
-
-  // token          = 1*tchar
-  // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
-  //                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
-  //                    / DIGIT / ALPHA
-  //                    ; any VCHAR, except delimiters
-  static final CharMatcher TOKEN_MATCHER = chars("!#$%&'*+-.^_`|~").or(alphaNum());
 
   // quoted-string  = DQUOTE *( qdtext / quoted-pair ) DQUOTE
   // qdtext         = HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text
@@ -320,8 +313,7 @@ public final class MediaType {
         normalizedValue = entry.getValue();
         requireArgument(
             QUOTED_PAIR_MATCHER.allMatch(normalizedValue),
-            "illegal value: %s",
-            normalizedAttribute);
+            "illegal value: '%s'", normalizedValue);
       }
       newParameters.put(normalizedAttribute, normalizedValue);
     }
@@ -375,7 +367,9 @@ public final class MediaType {
   }
 
   private static String normalizeToken(String token) {
-    requireArgument(TOKEN_MATCHER.allMatch(token) && !token.isEmpty(), "illegal token: %s", token);
+    requireArgument(
+        TOKEN_MATCHER.allMatch(token) && !token.isEmpty(),
+        "illegal token: '%s'", token);
     return toAsciiLowerCase(token);
   }
 

@@ -22,12 +22,53 @@
 
 package com.github.mizosoft.methanol.internal;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static com.github.mizosoft.methanol.internal.text.CharMatcher.alphaNum;
+import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
+import static com.github.mizosoft.methanol.internal.text.CharMatcher.closedRange;
+import static java.util.Objects.requireNonNull;
+
+import com.github.mizosoft.methanol.internal.text.CharMatcher;
 import java.nio.ByteBuffer;
 
 /** Miscellaneous utilities. */
 public class Utils {
 
+  // header-field   = field-name ":" OWS field-value OWS
+  //
+  // field-name     = token
+  // field-value    = *( field-content / obs-fold )
+
+  // token          = 1*tchar
+  // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+  //                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+  //                    / DIGIT / ALPHA
+  //                    ; any VCHAR, except delimiters
+  public static final CharMatcher TOKEN_MATCHER =
+      chars("!#$%&'*+-.^_`|~")
+          .or(alphaNum());
+
+  // field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
+  // field-vchar    = VCHAR / obs-text
+  //
+  // obs-fold       = CRLF 1*( SP / HTAB )
+  //                ; obsolete line folding
+  //                ; see Section 3.2.4
+  // (obs-fold & obs-test will be forbidden)
+  public static final CharMatcher FIELD_VALUE_MATCHER =
+      closedRange(0x21, 0x7E) // VCHAR
+          .or(chars(" \t"));  // ( SP / HTAB )
+
   private Utils() {} // non-instantiable
+
+  public static void validateHeader(String name, String value) {
+    requireNonNull(name, "name");
+    requireNonNull(value, "value");
+    requireArgument(
+        !name.isEmpty() && TOKEN_MATCHER.allMatch(name),
+        "illegal header name: '%s'", name);
+    requireArgument(FIELD_VALUE_MATCHER.allMatch(value), "illegal header value: '%s'", name);
+  }
 
   public static int copyRemaining(ByteBuffer src, ByteBuffer dst) {
     int toCopy = Math.min(src.remaining(), dst.remaining());
