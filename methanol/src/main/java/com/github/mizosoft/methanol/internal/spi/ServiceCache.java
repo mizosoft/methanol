@@ -80,10 +80,6 @@ public final class ServiceCache<S> {
     try {
       providers.add(provider.get());
     } catch (ServiceConfigurationError error) {
-      System.out.println(LOGGER);
-      System.out.println(LOGGER.getName());
-      System.out.println(LOGGER.getLevel());
-      System.out.println(LOGGER.getFilter());
       LOGGER.log(
           Level.WARNING,
           "provider <" + provider.type() + "> will be ignored as it couldn't be instantiated",
