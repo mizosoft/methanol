@@ -110,9 +110,9 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     if (!closed) {
       closed = true;
       closeError = error;
-      SubscriptionImpl s = downstreamSubscription;
-      if (s != null) {
-        s.signalError(error);
+      SubscriptionImpl subscription = downstreamSubscription;
+      if (subscription != null) {
+        subscription.signalError(error);
       }
     }
   }
@@ -154,15 +154,15 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   @Override
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
     requireNonNull(subscriber);
-    SubscriptionImpl s = new SubscriptionImpl(subscriber);
+    SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      downstreamSubscription = s;
+      downstreamSubscription = subscription;
       // check if was closed due to error before subscribing
       Throwable e = closeError;
       if (e != null) {
-        s.signalError(e);
+        subscription.signalError(e);
       } else {
-        s.signal(true); // apply onSubscribe
+        subscription.signal(true); // apply onSubscribe
       }
     } else {
       Throwable error =
@@ -178,9 +178,9 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   }
 
   private void signalDownstream(boolean force) {
-    SubscriptionImpl s = downstreamSubscription;
-    if (s != null) {
-      s.signal(force);
+    SubscriptionImpl subscription = downstreamSubscription;
+    if (subscription != null) {
+      subscription.signal(force);
     }
   }
 
@@ -312,21 +312,24 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
     @Override
     @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel
-    protected long emit(Subscriber<? super ByteBuffer> d, long e) {
+    protected long emit(Subscriber<? super ByteBuffer> downstream, long emit) {
+      // List is polled prematurely to detect completion regardless of demand
       ByteBuffer batch = currentBatch;
       currentBatch = null;
       if (batch == null) {
         batch = pipe.poll();
       }
-      for (long c = 0; ; c++) {
+      long submitted = 0L;
+      while(true) {
         if (batch == CLOSED) {
-          cancelOnComplete(d);
+          cancelOnComplete(downstream);
           return 0;
-        } else if (c >= e || batch == null) { // demand or pipe exhausted
-          currentBatch = batch; // save last polled batch, which might be non-null
-          return c;
-        } else if (submitOnNext(d, batch)) {
-          batch = pipe.poll(); // poll next and continue
+        } else if (submitted >= emit || batch == null) { // exhausted either demand or batches
+          currentBatch = batch; // might be non-null
+          return submitted;
+        } else if (submitOnNext(downstream, batch)) {
+          submitted++;
+          batch = pipe.poll(); // get next batch and continue
         } else {
           return 0;
         }

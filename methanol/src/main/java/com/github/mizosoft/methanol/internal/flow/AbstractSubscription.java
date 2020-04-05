@@ -22,6 +22,9 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
+import static com.github.mizosoft.methanol.internal.flow.FlowSupport.getAndAddDemand;
+import static com.github.mizosoft.methanol.internal.flow.FlowSupport.subtractAndGetDemand;
+
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.concurrent.Executor;
@@ -43,14 +46,15 @@ public abstract class AbstractSubscription<T> implements Subscription {
    * representing execution states.
    */
 
-  private static final int RUN = 0x1;        // run signaller task
+  private static final int RUN = 0x1; // run signaller task
   private static final int KEEP_ALIVE = 0x2; // keep running signaller task
-  private static final int CANCELLED = 0x4;  // subscription is cancelled
+  private static final int CANCELLED = 0x4; // subscription is cancelled
   private static final int SUBSCRIBED = 0x8; // onSubscribe called
 
   private static final VarHandle STATE;
   private static final VarHandle PENDING_ERROR;
   private static final VarHandle DEMAND;
+
   static {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
@@ -76,7 +80,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
 
   @Override
   public final void request(long n) {
-    if (n > 0 && getAndAddDemand(n) == 0) {
+    if (n > 0 && getAndAddDemand(this, DEMAND, n) == 0) {
       signal();
     } else if (n <= 0) {
       signalError(FlowSupport.illegalRequest());
@@ -108,7 +112,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
    * of emitted items is returned, may be {@code 0} in case of cancellation. If the underlying
    * source is finished, the subscriber is completed with {@link #cancelOnComplete(Subscriber)}.
    */
-  protected abstract long emit(Subscriber<? super T> d, long e);
+  protected abstract long emit(Subscriber<? super T> downstream, long emit);
 
   /**
    * Called when the subscription is cancelled. {@code flowInterrupted} specifies whether
@@ -117,10 +121,10 @@ public abstract class AbstractSubscription<T> implements Subscription {
    */
   protected void abort(boolean flowInterrupted) {}
 
-//  /** Returns {@code true} if cancelled. {@code false} result is immediately outdated. */
-//  protected final boolean isCancelled() {
-//    return (state & CANCELLED) != 0;
-//  }
+  //  /** Returns {@code true} if cancelled. {@code false} result is immediately outdated. */
+  //  protected final boolean isCancelled() {
+  //    return (state & CANCELLED) != 0;
+  //  }
 
   // TODO: catch and log throwable from onError|onComplete instead of rethrowing?
 
@@ -129,12 +133,10 @@ public abstract class AbstractSubscription<T> implements Subscription {
    * tells whether the error interrupted the normal flow of signals.
    */
   protected final void cancelOnError(
-      Subscriber<? super T> d, @Nullable Throwable error, boolean flowInterrupted) {
+      Subscriber<? super T> downstream, Throwable error, boolean flowInterrupted) {
     if ((getAndBitwiseOrState(CANCELLED) & CANCELLED) == 0) {
       try {
-        if (error != null) {
-          d.onError(error);
-        }
+        downstream.onError(error);
       } finally {
         abort(flowInterrupted);
       }
@@ -142,10 +144,10 @@ public abstract class AbstractSubscription<T> implements Subscription {
   }
 
   /** Calls downstream's {@code onComplete} after cancelling this subscription. */
-  protected final void cancelOnComplete(Subscriber<? super T> d) {
+  protected final void cancelOnComplete(Subscriber<? super T> downstream) {
     if ((getAndBitwiseOrState(CANCELLED) & CANCELLED) == 0) {
       try {
-        d.onComplete();
+        downstream.onComplete();
       } finally {
         abort(false);
       }
@@ -153,15 +155,15 @@ public abstract class AbstractSubscription<T> implements Subscription {
   }
 
   /** Submits given item to the downstream, returning {@code false} and cancelling on failure. */
-  protected final boolean submitOnNext(Subscriber<? super T> d, T item) {
+  protected final boolean submitOnNext(Subscriber<? super T> downstream, T item) {
     if ((state & CANCELLED) == 0) {
       try {
-        d.onNext(item);
+        downstream.onNext(item);
         return true;
       } catch (Throwable t) {
         Throwable error = propagateError(t);
         pendingError = null;
-        cancelOnError(d, error, true);
+        cancelOnError(downstream, error, true);
       }
     }
     return false;
@@ -191,16 +193,16 @@ public abstract class AbstractSubscription<T> implements Subscription {
     Subscriber<? super T> d = downstream;
     subscribeOnDrain(d);
     for (long x = 0L, r = demand; ((s = state) & CANCELLED) == 0; ) {
-      long e;
+      long emitted;
       Throwable error = pendingError;
       if (error != null) {
         pendingError = null;
         cancelOnError(d, error, false);
-      } else if ((e = emit(d, r - x)) > 0L) {
-        x += e;
+      } else if ((emitted = emit(d, r - x)) > 0L) {
+        x += emitted;
         r = demand; // get fresh demand
         if (x == r) { // 'x' needs to be flushed
-          r = subtractAndGetDemand(x);
+          r = subtractAndGetDemand(this, DEMAND, x);
           x = 0L;
         }
       } else if (r == (r = demand)) { // check that emit() actually failed on a fresh demand
@@ -210,7 +212,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
         // - cancelled (checked by the loop condition)
         boolean exhausted = x <= 0L;
         if (!exhausted) {
-          r = subtractAndGetDemand(x);
+          r = subtractAndGetDemand(this, DEMAND, x);
           x = 0L;
           exhausted = r <= 0L;
         }
@@ -222,22 +224,22 @@ public abstract class AbstractSubscription<T> implements Subscription {
     }
   }
 
-  private void subscribeOnDrain(Subscriber<? super T> d) {
+  private void subscribeOnDrain(Subscriber<? super T> downstream) {
     if ((state & (SUBSCRIBED | CANCELLED)) == 0
         && (getAndBitwiseOrState(SUBSCRIBED) & (SUBSCRIBED | CANCELLED)) == 0) {
       try {
-        d.onSubscribe(this);
+        downstream.onSubscribe(this);
       } catch (Throwable t) {
         Throwable e = propagateError(t);
         pendingError = null;
-        cancelOnError(d, e, true);
+        cancelOnError(downstream, e, true);
       }
     }
   }
 
   /** Sets pending error or adds new one as suppressed in case of multiple error sources. */
   private Throwable propagateError(Throwable error) {
-    do {
+    while(true) {
       Throwable currentError = pendingError;
       if (currentError != null) {
         currentError.addSuppressed(error); // addSuppressed is thread-safe
@@ -246,24 +248,10 @@ public abstract class AbstractSubscription<T> implements Subscription {
       if (PENDING_ERROR.compareAndSet(this, null, error)) {
         return error;
       }
-    } while (true);
+    }
   }
 
   private int getAndBitwiseOrState(int bits) {
     return (int) STATE.getAndBitwiseOr(this, bits);
-  }
-
-  private long getAndAddDemand(long n) {
-    do {
-      long d = demand;
-      long r = Long.MAX_VALUE - d >= n ? d + n : Long.MAX_VALUE;
-      if (DEMAND.compareAndSet(this, d, r)) {
-        return d;
-      }
-    } while (true);
-  }
-
-  private long subtractAndGetDemand(long n) {
-    return (long) DEMAND.getAndAdd(this, -n) - n;
   }
 }

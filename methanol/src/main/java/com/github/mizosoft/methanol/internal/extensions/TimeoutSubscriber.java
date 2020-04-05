@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.internal.extensions;
 
+import static com.github.mizosoft.methanol.internal.flow.FlowSupport.getAndAddDemand;
+import static com.github.mizosoft.methanol.internal.flow.FlowSupport.subtractAndGetDemand;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.HttpReadTimeoutException;
@@ -44,23 +46,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Intercepts requests to upstream and schedules error completion with
- * {@code HttpReadTimeoutException} if each not fulfilled within a timeout.
+ * Intercepts requests to upstream and schedules error completion with {@code
+ * HttpReadTimeoutException} if each not fulfilled within a timeout.
  */
 public final class TimeoutSubscriber<T>
-    extends DelegatingSubscriber<List<ByteBuffer>, BodySubscriber<T>>
-    implements BodySubscriber<T> {
+    extends DelegatingSubscriber<List<ByteBuffer>, BodySubscriber<T>> implements BodySubscriber<T> {
 
   private static final VarHandle ITEM_INDEX;
   private static final VarHandle DEMAND;
   private static final VarHandle TIMEOUT_TASK;
+
   static {
     MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
       ITEM_INDEX = lookup.findVarHandle(TimeoutSubscriber.class, "itemIndex", long.class);
       DEMAND = lookup.findVarHandle(TimeoutSubscriber.class, "demand", long.class);
-      TIMEOUT_TASK = lookup.findVarHandle(
-          TimeoutSubscriber.class, "timeoutTask", Cancellable.class);
+      TIMEOUT_TASK =
+          lookup.findVarHandle(TimeoutSubscriber.class, "timeoutTask", Cancellable.class);
     } catch (IllegalAccessException | NoSuchFieldException e) {
       throw new IllegalArgumentException(e);
     }
@@ -82,7 +84,9 @@ public final class TimeoutSubscriber<T>
   // timeout task for the currently requested item
   private volatile @Nullable Cancellable timeoutTask;
 
-  public TimeoutSubscriber(BodySubscriber<T> downstream, Duration timeout,
+  public TimeoutSubscriber(
+      BodySubscriber<T> downstream,
+      Duration timeout,
       @Nullable ScheduledExecutorService schedulerService) {
     super(downstream);
     this.timeoutMillis = TimeUnit.MILLISECONDS.convert(timeout);
@@ -90,8 +94,9 @@ public final class TimeoutSubscriber<T>
       this.timer = idx -> new ScheduledTimeoutTask(idx, schedulerService, timeoutMillis);
     } else {
       // use the system-wide scheduler from CompletableFuture
-      Executor delayedExecutor = CompletableFuture.delayedExecutor(
-          timeoutMillis, TimeUnit.MILLISECONDS, FlowSupport.SYNC_EXECUTOR);
+      Executor delayedExecutor =
+          CompletableFuture.delayedExecutor(
+              timeoutMillis, TimeUnit.MILLISECONDS, FlowSupport.SYNC_EXECUTOR);
       this.timer = idx -> new DelayedTimeoutTask(idx, delayedExecutor);
     }
   }
@@ -111,8 +116,9 @@ public final class TimeoutSubscriber<T>
   @Override
   public void onNext(List<ByteBuffer> item) {
     requireNonNull(item);
-    long idx = itemIndex;
-    if (idx != TOMBSTONE && ITEM_INDEX.compareAndSet(this, idx, ++idx)) { // could reach before timeout?
+    long index = itemIndex;
+    if (index != TOMBSTONE
+        && ITEM_INDEX.compareAndSet(this, index, ++index)) { // could reach before timeout?
       Cancellable currentTask = timeoutTask;
       if (currentTask == Cancellable.CANCELLED
           || !TIMEOUT_TASK.compareAndSet(this, currentTask, null)) { // remove this signal's timeout
@@ -121,20 +127,19 @@ public final class TimeoutSubscriber<T>
       if (currentTask != null) {
         currentTask.cancel();
       }
-      long d = decrementAndGetDemand();
-      if (d > 0) { // still have requests, start a new timeout for the next
+      long currentDemand = subtractAndGetDemand(this, DEMAND, 1);
+      if (currentDemand > 0) { // still have requests, start a new timeout for the next
         try {
-          setAndScheduleTimeout(idx);
-        } catch (RuntimeException e) { // execute() | schedule() can throw
+          setAndScheduleTimeout(index);
+        } catch (RuntimeException | Error e) { // execute() | schedule() can throw
           upstream.cancel();
           super.onError(e);
           return;
         }
-      } else if (d < 0) { // this means that upstream is trying to overflow us
+      } else if (currentDemand < 0) { // this means that upstream is trying to overflow us
         upstream.cancel();
         super.onError(
-            new IllegalStateException(
-                "missing backpressure: receiving more items than requested"));
+            new IllegalStateException("missing backpressure: receiving more items than requested"));
         return;
       }
       // and finally...
@@ -182,20 +187,6 @@ public final class TimeoutSubscriber<T>
     return (Cancellable) TIMEOUT_TASK.getAndSet(this, Cancellable.CANCELLED);
   }
 
-  private long getAndAddDemand(long n) {
-    do {
-      long d = demand;
-      long r = Long.MAX_VALUE - d >= n ? d + n : Long.MAX_VALUE;
-      if (DEMAND.compareAndSet(this, d, r)) {
-        return d;
-      }
-    } while (true);
-  }
-
-  private long decrementAndGetDemand() {
-    return (long) DEMAND.getAndAdd(this, -1L) - 1L;
-  }
-
   private final class TimeoutSubscription implements Subscription {
 
     private final Subscription actualUpstream;
@@ -206,17 +197,18 @@ public final class TimeoutSubscriber<T>
 
     @Override
     public void request(long n) {
-      long idx = itemIndex;
-      if (idx != TOMBSTONE) {
-        if (n > 0 && getAndAddDemand(n) == 0) {
+      long currentIndex = itemIndex;
+      if (currentIndex != TOMBSTONE) {
+        if (n > 0 && getAndAddDemand(TimeoutSubscriber.this, DEMAND, n) == 0) {
           // start timeout for first item in demand, further timeouts are scheduled by onNext()
           try {
-            setAndScheduleTimeout(idx);
+            setAndScheduleTimeout(currentIndex);
           } catch (RuntimeException e) { // schedule() can throw
             cancel();
             throw e;
           }
         }
+        // do actual request from upstream
         actualUpstream.request(n);
       }
     }
@@ -224,9 +216,9 @@ public final class TimeoutSubscriber<T>
     @Override
     public void cancel() {
       itemIndex = TOMBSTONE; // ignore further signals
-      Cancellable task = disableTimeout();
-      if (task != null) {
-        task.cancel();
+      Cancellable currentTask = disableTimeout();
+      if (currentTask != null) {
+        currentTask.cancel();
       }
       actualUpstream.cancel();
     }
@@ -255,10 +247,12 @@ public final class TimeoutSubscriber<T>
 
     @Override
     public void run() {
-      if (ITEM_INDEX.compareAndSet(TimeoutSubscriber.this, timeoutIndex, TOMBSTONE)) { // could reach before other signals?
+      if (ITEM_INDEX.compareAndSet(
+          TimeoutSubscriber.this, timeoutIndex, TOMBSTONE)) { // could reach before other signals?
         upstream.cancel(); // cancels TimeoutSubscription & actualUpstream
-        TimeoutSubscriber.super.onError(new HttpReadTimeoutException(
-            String.format("read [%d] timed out after %d ms", timeoutIndex, timeoutMillis)));
+        TimeoutSubscriber.super.onError(
+            new HttpReadTimeoutException(
+                String.format("read [%d] timed out after %d ms", timeoutIndex, timeoutMillis)));
       }
     }
   }
@@ -290,8 +284,7 @@ public final class TimeoutSubscriber<T>
 
     private final ScheduledFuture<?> future;
 
-    ScheduledTimeoutTask(
-        long timeoutIndex, ScheduledExecutorService scheduler, long delayMillis) {
+    ScheduledTimeoutTask(long timeoutIndex, ScheduledExecutorService scheduler, long delayMillis) {
       super(timeoutIndex);
       this.future = scheduler.schedule(this, delayMillis, TimeUnit.MILLISECONDS);
     }

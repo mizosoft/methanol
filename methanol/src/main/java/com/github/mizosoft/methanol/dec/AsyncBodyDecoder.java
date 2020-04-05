@@ -128,12 +128,12 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   }
 
   @Override
-  public void onSubscribe(Subscription subscription) {
-    requireNonNull(subscription);
-    if (upstream.setOrCancel(subscription)) {
-      SubscriptionImpl s = new SubscriptionImpl();
-      downstreamSubscription = s;
-      s.signal(true); // Apply downstream's onSubscribe
+  public void onSubscribe(Subscription upstreamSubscription) {
+    requireNonNull(upstreamSubscription);
+    if (upstream.setOrCancel(upstreamSubscription)) {
+      SubscriptionImpl subscription = new SubscriptionImpl();
+      downstreamSubscription = subscription;
+      subscription.signal(true); // Apply downstream's onSubscribe
       prefetcher.initialize(upstream);
     }
   }
@@ -150,45 +150,45 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       return;
     }
     prefetcher.update(upstream);
-    SubscriptionImpl s = downstreamSubscription;
-    if (sink.flush(decodedBuffers, false) && s != null) {
-      s.signal(false); // Notify downstream there is new data
+    SubscriptionImpl subscription = downstreamSubscription;
+    if (sink.flush(decodedBuffers, false) && subscription != null) {
+      subscription.signal(false); // Notify downstream there is new data
     }
   }
 
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
-    SubscriptionImpl s = downstreamSubscription;
-    if (s != null) {
-      s.signalError(throwable);
+    SubscriptionImpl subscription = downstreamSubscription;
+    if (subscription != null) {
+      subscription.signalError(throwable);
     }
   }
 
   @Override
   public void onComplete() {
-    SubscriptionImpl s = downstreamSubscription;
+    SubscriptionImpl subscription = downstreamSubscription;
     try (decoder) {
       // Acknowledge final decode round
       source.onComplete();
       decoder.decode(source, sink);
       if (source.hasRemaining()) {
-        throw new IOException("input source not exhausted by the decoder");
+        throw new IOException("unexhausted bytes after final source: " + source.remaining());
       }
       // Flush any incomplete buffer and put completion signal
       sink.flush(decodedBuffers, true);
       decodedBuffers.offer(COMPLETE);
-      if (s != null) {
-        s.signal(true);
+      if (subscription != null) {
+        subscription.signal(true);
       }
     } catch (Throwable t) {
-      if (s != null) {
-        s.signalError(t);
+      if (subscription != null) {
+        subscription.signalError(t);
       }
     }
   }
 
-  static int getBufferSize() {
+  private static int getBufferSize() {
     int bufferSize = Integer.getInteger(BUFFER_SIZE_PROP, DEFAULT_BUFFER_SIZE);
     if (bufferSize <= 0) {
       bufferSize = DEFAULT_BUFFER_SIZE;
@@ -283,28 +283,26 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       return false;
     }
 
-    private List<ByteBuffer> slice(boolean includeNonFull) {
-      // If last buffer is incomplete, it is only submitted
-      // if includeNonFull is true provided it has some bytes.
-      int size = sinkBuffers.size();
-      if (size > 0) {
-        int snapshotSize = size;
-        ByteBuffer last = sinkBuffers.get(size - 1);
-        if (last.hasRemaining()) {
-          if (!includeNonFull || last.position() == 0) {
-            snapshotSize--; // Do not include
-          }
-        }
-        List<ByteBuffer> slice = sinkBuffers.subList(0, snapshotSize);
-        List<ByteBuffer> snapshot =
-            slice.stream()
-                .map(ByteBuffer::asReadOnlyBuffer)
-                .collect(Collectors.toUnmodifiableList());
-        snapshot.forEach(ByteBuffer::flip); // Flip for downstream to read
-        slice.clear(); // Drop references
-        return snapshot;
+    private List<ByteBuffer> slice(boolean finished) {
+      if (sinkBuffers.isEmpty()) {
+        return List.of();
       }
-      return List.of();
+      // If last buffer is incomplete, it is only submitted
+      // if finished is true provided it has some bytes.
+      int size = sinkBuffers.size();
+      int snapshotSize = size;
+      ByteBuffer last = sinkBuffers.get(size - 1);
+      if (last.hasRemaining() && (!finished || last.position() == 0)) {
+        snapshotSize--; // Do not submit
+      }
+      List<ByteBuffer> slice = sinkBuffers.subList(0, snapshotSize);
+      List<ByteBuffer> snapshot =
+          slice.stream()
+              .map(ByteBuffer::asReadOnlyBuffer)
+              .collect(Collectors.toUnmodifiableList());
+      snapshot.forEach(ByteBuffer::flip); // Flip for downstream to read
+      slice.clear(); // Drop references
+      return snapshot;
     }
   }
 
@@ -318,21 +316,23 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
     }
 
     @Override
-    protected long emit(Subscriber<? super List<ByteBuffer>> d, long e) {
+    protected long emit(Subscriber<? super List<ByteBuffer>> downstream, long emit) {
       // List is polled prematurely to detect completion regardless of demand
       List<ByteBuffer> batch = currentBatch;
       currentBatch = null;
       if (batch == null) {
         batch = decodedBuffers.poll();
       }
-      for (long c = 0L; ; c++) {
+      long submitted = 0L;
+      while(true) {
         if (batch == COMPLETE) {
-          cancelOnComplete(d);
+          cancelOnComplete(downstream);
           return 0;
-        } if (c >= e || batch == null) { // exhausted either demand or batches
+        } else if (submitted >= emit || batch == null) { // exhausted either demand or batches
           currentBatch = batch; // might be non-null
-          return c;
-        } else if (submitOnNext(d, batch)) {
+          return submitted;
+        } else if (submitOnNext(downstream, batch)) {
+          submitted++;
           batch = decodedBuffers.poll(); // get next batch and continue
         } else {
           return 0;

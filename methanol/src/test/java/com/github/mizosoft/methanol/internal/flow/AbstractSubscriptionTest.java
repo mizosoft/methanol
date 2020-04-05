@@ -367,14 +367,14 @@ class AbstractSubscriptionTest {
     }
 
     @Override
-    protected long emit(Subscriber<? super T> d, long e) {
+    protected long emit(Subscriber<? super T> downstream, long emit) {
       for (long c = 0L; ; c++) {
         if (items.isEmpty() && complete) { // end of source
-          cancelOnComplete(d);
+          cancelOnComplete(downstream);
           return 0;
-        } else if (items.isEmpty() || c >= e) { // exhausted source or demand
+        } else if (items.isEmpty() || c >= emit) { // exhausted source or demand
           return c;
-        } else if (!submitOnNext(d, items.poll())) {
+        } else if (!submitOnNext(downstream, items.poll())) {
           return 0;
         }
       }

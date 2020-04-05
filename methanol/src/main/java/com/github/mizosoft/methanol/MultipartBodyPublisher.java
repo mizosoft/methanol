@@ -457,10 +457,12 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
   private static final class MultipartSubscription extends AbstractSubscription<ByteBuffer> {
 
     private static final VarHandle PART_SUBSCRIBER;
+
     static {
       try {
-        PART_SUBSCRIBER = MethodHandles.lookup()
-            .findVarHandle(MultipartSubscription.class, "partSubscriber", Subscriber.class);
+        PART_SUBSCRIBER =
+            MethodHandles.lookup()
+                .findVarHandle(MultipartSubscription.class, "partSubscriber", Subscriber.class);
       } catch (NoSuchFieldException | IllegalAccessException e) {
         throw new ExceptionInInitializerError(e);
       }
@@ -469,12 +471,13 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     // A tombstone to protect against race conditions that would otherwise occur if a
     // thread tries to abort() while another tries to peekNextPart(), which might lead
     // to a newly subscribed part being missed by abort().
-    private static final Subscriber<ByteBuffer> CANCELLED = new Subscriber<>() {
-      @Override public void onSubscribe(Subscription subscription) {}
-      @Override public void onNext(ByteBuffer item) {}
-      @Override public void onError(Throwable throwable) {}
-      @Override public void onComplete() {}
-    };
+    private static final Subscriber<ByteBuffer> CANCELLED =
+        new Subscriber<>() {
+          @Override public void onSubscribe(Subscription subscription) {}
+          @Override public void onNext(ByteBuffer item) {}
+          @Override public void onError(Throwable throwable) {}
+          @Override public void onComplete() {}
+        };
 
     private final String boundary;
     private final List<Part> parts;
@@ -490,17 +493,21 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     @Override
-    protected long emit(Subscriber<? super ByteBuffer> d, long e) {
-      for (long c = 0; ; c++) {
+    protected long emit(Subscriber<? super ByteBuffer> downstream, long emit) {
+      long submitted = 0L;
+      while (true) {
         ByteBuffer batch;
         if (complete) {
-          cancelOnComplete(d);
+          cancelOnComplete(downstream);
           return 0;
-        } else if (c >= e || (batch = pollNext()) == null) { // exhausted demand or available batches
-          return c;
-        } else if (!submitOnNext(d, batch)) {
+        } else if (submitted >= emit
+            || (batch = pollNext()) == null) { // exhausted demand or batches
+          return submitted;
+        } else if (submitOnNext(downstream, batch)) {
+          submitted++;
+        } else {
           return 0;
-        } // else continue
+        }
       }
     }
 
@@ -547,8 +554,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     private boolean subscribeToPart(Part part) {
       PartSubscriber subscriber = new PartSubscriber(this);
       Subscriber<ByteBuffer> current = partSubscriber;
-      if (current != CANCELLED
-          && PART_SUBSCRIBER.compareAndSet(this, current, subscriber)) {
+      if (current != CANCELLED && PART_SUBSCRIBER.compareAndSet(this, current, subscriber)) {
         part.bodyPublisher().subscribe(subscriber);
         return true;
       }
@@ -613,7 +619,8 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       }
     }
 
-    @Nullable ByteBuffer pollNext() {
+    @Nullable
+    ByteBuffer pollNext() {
       ByteBuffer next = buffers.peek();
       if (next != null && next != END_OF_PART) {
         buffers.poll(); // remove
