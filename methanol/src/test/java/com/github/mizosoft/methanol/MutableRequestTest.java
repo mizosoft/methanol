@@ -103,7 +103,7 @@ class MutableRequestTest {
   void defaultFields() {
     var request = create();
     assertEquals("GET", request.method());
-    assertEquals(URI.create("/"), request.uri());
+    assertEquals(URI.create(""), request.uri());
     assertEquals(headers(/* empty */), request.headers());
     assertEquals(Optional.empty(), request.bodyPublisher());
     assertEquals(Optional.empty(), request.timeout());

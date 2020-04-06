@@ -69,7 +69,7 @@ public final class MutableRequest extends HttpRequest
   private static final String PUT = "PUT";
   private static final String DELETE = "DELETE";
 
-  private static final URI EMPTY_URI = URI.create("/");
+  private static final URI EMPTY_URI = URI.create("");
 
   private final HeadersBuilder headersBuilder;
   private String method;
@@ -152,8 +152,8 @@ public final class MutableRequest extends HttpRequest
   /**
    * {@inheritDoc}
    *
-   * A {@code URI} of {@code /} (root path without a scheme or a host) is returned if no {@code URI}
-   * was previously set.
+   * An empty {@code URI} (without a scheme, path or a host) is returned if no {@code URI} was
+   * previously set.
    */
   @Override
   public URI uri() {
