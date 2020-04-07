@@ -127,6 +127,10 @@ class MutableRequestTest {
     assertEquals(
         headers("Content-Type", "application/x-bruh-moment"),
         request.setHeader("Content-Type", "application/x-bruh-moment").headers());
+    // setHeader should also add header when it doesn't exist
+    assertEquals(
+        headers("Content-Type", "application/x-bruh-moment", "Accept", "text/html"),
+        request.setHeader("Accept", "text/html").headers());
     assertEquals(headers(/* empty */), request.removeHeaders().headers());
   }
 

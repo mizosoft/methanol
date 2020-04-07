@@ -335,7 +335,7 @@ public final class MutableRequest extends HttpRequest
     }
 
     void setHeader(String name, String value) {
-      headersMap.replace(name, new ArrayList<>(List.of(value)));
+      headersMap.put(name, new ArrayList<>(List.of(value)));
     }
 
     boolean removeHeader(String name) {
