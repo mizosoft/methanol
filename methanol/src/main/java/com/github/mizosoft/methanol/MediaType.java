@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.TOKEN_MATCHER;
+import static com.github.mizosoft.methanol.internal.Utils.isValidToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
@@ -349,7 +350,7 @@ public final class MediaType {
   private static String escapeAndQuoteValue(String value) {
     // If value is already a token then it doesn't need quoting
     // special case: if the value is empty then it is not a token
-    if (TOKEN_MATCHER.allMatch(value) && !value.isEmpty()) {
+    if (isValidToken(value)) {
       return value;
     }
     StringBuilder escaped = new StringBuilder();
@@ -367,9 +368,7 @@ public final class MediaType {
   }
 
   private static String normalizeToken(String token) {
-    requireArgument(
-        TOKEN_MATCHER.allMatch(token) && !token.isEmpty(),
-        "illegal token: '%s'", token);
+    requireArgument(isValidToken(token), "illegal token: '%s'", token);
     return toAsciiLowerCase(token);
   }
 

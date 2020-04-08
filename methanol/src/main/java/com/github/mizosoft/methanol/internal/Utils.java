@@ -30,6 +30,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.text.CharMatcher;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 
 /** Miscellaneous utilities. */
 public class Utils {
@@ -61,13 +62,30 @@ public class Utils {
 
   private Utils() {} // non-instantiable
 
+  public static boolean isValidToken(String token) {
+    return !token.isEmpty() && TOKEN_MATCHER.allMatch(token);
+  }
+
+  public static void validateHeaderName(String name) {
+    requireNonNull(name);
+    requireArgument(isValidToken(name), "illegal header name: '%s'", name);
+  }
+
+  public static void validateHeaderValue(String value) {
+    requireNonNull(value);
+    requireArgument(FIELD_VALUE_MATCHER.allMatch(value), "illegal header value: '%s'", value);
+  }
+
   public static void validateHeader(String name, String value) {
-    requireNonNull(name, "name");
-    requireNonNull(value, "value");
+    validateHeaderName(name);
+    validateHeaderValue(value);
+  }
+
+  public static void validateTimeout(Duration timeout) {
+    requireNonNull(timeout);
     requireArgument(
-        !name.isEmpty() && TOKEN_MATCHER.allMatch(name),
-        "illegal header name: '%s'", name);
-    requireArgument(FIELD_VALUE_MATCHER.allMatch(value), "illegal header value: '%s'", name);
+        !(timeout.isNegative() || timeout.isZero()),
+        "non-positive duration: %s", timeout);
   }
 
   public static int copyRemaining(ByteBuffer src, ByteBuffer dst) {

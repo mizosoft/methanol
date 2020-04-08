@@ -44,11 +44,11 @@ import org.junit.jupiter.api.Test;
 
 class MutableRequestTest {
 
-  private static final URI uri = URI.create("https://example.com");
+  private static final URI uri = URI.create("https://localhost");
   private static final String method = "PUT";
   private static final String[] headersArray = {
-      "Content-Type", "application/x-bruh",
-      "Content-Length", "69"
+    "Content-Type", "application/x-bruh",
+    "Content-Length", "69"
   };
   private static final HttpHeaders headers = headers(headersArray);
   private static final BodyPublisher publisher = BodyPublishers.noBody();
@@ -81,22 +81,40 @@ class MutableRequestTest {
     assertEquals(headers("Content-Length", "69"), request.headers());
     request.header("Content-Type", "application/x-bruh");
     assertEquals(
-        headers(
-            "Content-Length", "69",
-            "Content-Type", "application/x-bruh"),
+        headers("Content-Length", "69", "Content-Type", "application/x-bruh"),
         request.headers());
   }
 
   @Test
-  void copyIsStructural() {
+  void addFromHttpHeaders() {
+    var headers = headers(
+        "Accept", "text/html",
+        "Cookie", "sessionid=123",
+        "Cookie", "password=321");
+    var request = create().headers(headers);
+    assertEquals(headers, request.headers());
+  }
+
+  @Test
+  void changeHeadersAfterCopy() {
     var request1 = create().header("Content-Length", "69");
     var request2 = request1.copy().header("Content-Type", "application/x-bruh");
     assertEquals(headers("Content-Length", "69"), request1.headers());
     assertEquals(
-        headers(
-            "Content-Length", "69",
-            "Content-Type", "application/x-bruh"),
+        headers("Content-Length", "69", "Content-Type", "application/x-bruh"),
         request2.headers());
+  }
+
+  @Test
+  void copyOf() {
+    var request = create()
+        .POST(publisher)
+        .headers(headersArray)
+        .expectContinue(expectContinue)
+        .timeout(timeout)
+        .version(version);
+    assertDeepEquals(request, MutableRequest.copyOf(request));
+    assertDeepEquals(request, MutableRequest.copyOf(request.build()));
   }
 
   @Test
@@ -113,13 +131,9 @@ class MutableRequestTest {
 
   @Test
   void changeHeaders() {
-    var request = create().headers(
-        "Content-Length", "69",
-        "Content-Type", "application/x-bruh");
+    var request = create().headers("Content-Length", "69", "Content-Type", "application/x-bruh");
     assertEquals(
-        headers(
-            "Content-Length", "69",
-            "Content-Type", "application/x-bruh"),
+        headers("Content-Length", "69", "Content-Type", "application/x-bruh"),
         request.headers());
     assertEquals(
         headers("Content-Type", "application/x-bruh"),
@@ -175,15 +189,16 @@ class MutableRequestTest {
   void headers_invalidLength() {
     assertThrows(IllegalArgumentException.class, () -> create().headers(new String[0]));
     assertThrows(
-        IllegalArgumentException.class,
-        () -> create().headers("Content-Length", "69", "Orphan"));
+        IllegalArgumentException.class, () -> create().headers("Content-Length", "69", "Orphan"));
   }
 
   @Test
   void illegalHeaders() {
-    create().header("foo", "fa \t"); // valid
+    create().header("foo", "fa\t "); // valid
     assertThrows(IllegalArgumentException.class, () -> create().header("ba\r", "foo"));
     assertThrows(IllegalArgumentException.class, () -> create().headers("Name", "…"));
+    assertThrows(IllegalArgumentException.class, () -> create().headers(headers("ba\r..", "foo")));
+    assertThrows(IllegalArgumentException.class, () -> create().headers(headers("Name", "…")));
   }
 
   @Test
@@ -195,8 +210,17 @@ class MutableRequestTest {
   @Test
   void illegalMethodName() {
     assertThrows(
-        IllegalArgumentException.class,
-        () -> create().method("ba\r", BodyPublishers.noBody()));
+        IllegalArgumentException.class, () -> create().method("ba\r", BodyPublishers.noBody()));
+  }
+
+  private static void assertDeepEquals(HttpRequest x, HttpRequest y) {
+    assertEquals(x.method(), y.method());
+    assertEquals(x.uri(), y.uri());
+    assertEquals(x.headers(), y.headers());
+    assertEquals(x.bodyPublisher(), y.bodyPublisher());
+    assertEquals(x.timeout(), y.timeout());
+    assertEquals(x.version(), y.version());
+    assertEquals(x.expectContinue(), y.expectContinue());
   }
 
   private static void assertHasFields(HttpRequest req) {

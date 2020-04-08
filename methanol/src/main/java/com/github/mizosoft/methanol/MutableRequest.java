@@ -22,8 +22,11 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.internal.Utils.TOKEN_MATCHER;
+import static com.github.mizosoft.methanol.internal.Utils.isValidToken;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
+import static com.github.mizosoft.methanol.internal.Utils.validateHeaderName;
+import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
+import static com.github.mizosoft.methanol.internal.Utils.validateTimeout;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -49,6 +52,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * <p>{@code MutableRequest} adds some convenience when the {@code HttpRequest} is used immediately
  * after creation:
+ *
  * <pre>{@code
  * client.send(
  *     MutableRequest
@@ -64,11 +68,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class MutableRequest extends HttpRequest
     implements HttpRequest.Builder, Consumable<MutableRequest> {
 
-  private static final String GET = "GET";
-  private static final String POST = "POST";
-  private static final String PUT = "PUT";
-  private static final String DELETE = "DELETE";
-
   private static final URI EMPTY_URI = URI.create("");
 
   private final HeadersBuilder headersBuilder;
@@ -82,7 +81,7 @@ public final class MutableRequest extends HttpRequest
 
   private MutableRequest() {
     headersBuilder = new HeadersBuilder();
-    method = GET;
+    method = "GET";
     uri = EMPTY_URI;
   }
 
@@ -117,8 +116,24 @@ public final class MutableRequest extends HttpRequest
 
   /** Removes any header associated with the given name. */
   public MutableRequest removeHeader(String name) {
+    requireNonNull(name);
     if (headersBuilder.removeHeader(name)) {
       cachedHeaders = null; // invalidated
+    }
+    return this;
+  }
+
+  /** Adds each of the given {@code HttpHeaders}. */
+  public MutableRequest headers(HttpHeaders headers) {
+    requireNonNull(headers);
+    cachedHeaders = null; // invalidated
+    for (var entry : headers.map().entrySet()) {
+      String name = entry.getKey();
+      validateHeaderName(name);
+      for (String value : entry.getValue()) {
+        validateHeaderValue(value);
+        headersBuilder.addHeader(name, value);
+      }
     }
     return this;
   }
@@ -152,7 +167,7 @@ public final class MutableRequest extends HttpRequest
   /**
    * {@inheritDoc}
    *
-   * An empty {@code URI} (without a scheme, path or a host) is returned if no {@code URI} was
+   * <p>An empty {@code URI} (without a scheme, path or a host) is returned if no {@code URI} was
    * previously set.
    */
   @Override
@@ -219,10 +234,7 @@ public final class MutableRequest extends HttpRequest
 
   @Override
   public MutableRequest timeout(Duration timeout) {
-    requireNonNull(timeout);
-    requireArgument(
-        !(timeout.isNegative() || timeout.isZero()),
-        "non-positive duration: %s", timeout);
+    validateTimeout(timeout);
     this.timeout = timeout;
     return this;
   }
@@ -237,38 +249,32 @@ public final class MutableRequest extends HttpRequest
 
   @Override
   public MutableRequest GET() {
-    method = "GET";
-    bodyPublisher = null; // invalidated
-    return this;
+    return setMethod("GET", null);
   }
 
   @Override
   public MutableRequest POST(BodyPublisher bodyPublisher) {
-    return method(POST, bodyPublisher);
+    requireNonNull(bodyPublisher);
+    return setMethod("POST", bodyPublisher);
   }
 
   @Override
   public MutableRequest PUT(BodyPublisher bodyPublisher) {
-    return method(PUT, bodyPublisher);
+    requireNonNull(bodyPublisher);
+    return setMethod("PUT", bodyPublisher);
   }
 
   @Override
   public MutableRequest DELETE() {
-    method = DELETE;
-    bodyPublisher = null; // invalidated
-    return this;
+    return setMethod("DELETE", null);
   }
 
   @Override
   public MutableRequest method(String method, BodyPublisher bodyPublisher) {
     requireNonNull(method, "method");
     requireNonNull(bodyPublisher, "bodyPublisher");
-    requireArgument(
-        !method.isEmpty() && TOKEN_MATCHER.allMatch(method),
-        "illegal method string: '%s'", method);
-    this.method = method;
-    this.bodyPublisher = bodyPublisher;
-    return this;
+    requireArgument(isValidToken(method), "illegal method name: '%s'", method);
+    return setMethod(method, bodyPublisher);
   }
 
   @Override
@@ -285,6 +291,32 @@ public final class MutableRequest extends HttpRequest
   @Override
   public String toString() {
     return uri.toString() + " " + method;
+  }
+
+  private MutableRequest setMethod(String method, @Nullable BodyPublisher bodyPublisher) {
+    this.method = method;
+    this.bodyPublisher = bodyPublisher;
+    return this;
+  }
+
+  private static MutableRequest createCopy(HttpRequest other) {
+    return new MutableRequest()
+        .uri(other.uri())
+        .headers(other.headers())
+        .setMethod(other.method(), other.bodyPublisher().orElse(null))
+        .expectContinue(other.expectContinue())
+        .apply(
+            req -> {
+              other.timeout().ifPresent(req::timeout);
+              other.version().ifPresent(req::version);
+            });
+  }
+
+  public static MutableRequest copyOf(HttpRequest other) {
+    requireNonNull(other);
+    return other instanceof MutableRequest
+        ? ((MutableRequest) other).copy()
+        : createCopy(other);
   }
 
   /** Returns a new {@code MutableRequest}. */
