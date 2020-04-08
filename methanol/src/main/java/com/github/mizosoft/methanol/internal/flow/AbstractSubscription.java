@@ -121,10 +121,19 @@ public abstract class AbstractSubscription<T> implements Subscription {
    */
   protected void abort(boolean flowInterrupted) {}
 
-  //  /** Returns {@code true} if cancelled. {@code false} result is immediately outdated. */
-  //  protected final boolean isCancelled() {
-  //    return (state & CANCELLED) != 0;
-  //  }
+  /** Returns {@code true} if cancelled. {@code false} result is immediately outdated. */
+  protected final boolean isCancelled() {
+    return (state & CANCELLED) != 0;
+  }
+
+  /**
+   * Returns {@code true} if the subscriber is to be completed exceptionally. {@code false} result
+   * is immediately outdated. Can be used by implementation to halt producing items in case the
+   * subscription was asynchronously signalled with an error.
+   */
+  protected final boolean hasPendingErrors() {
+    return pendingError != null;
+  }
 
   // TODO: catch and log throwable from onError|onComplete instead of rethrowing?
 
@@ -156,7 +165,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
 
   /** Submits given item to the downstream, returning {@code false} and cancelling on failure. */
   protected final boolean submitOnNext(Subscriber<? super T> downstream, T item) {
-    if ((state & CANCELLED) == 0) {
+    if (!(isCancelled() || hasPendingErrors())) {
       try {
         downstream.onNext(item);
         return true;

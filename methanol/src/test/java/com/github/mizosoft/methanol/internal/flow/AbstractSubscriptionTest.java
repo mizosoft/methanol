@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -126,7 +127,7 @@ class AbstractSubscriptionTest {
   }
 
   @Test
-  void onItemThenError() {
+  void oneItemThenError() {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s);
     p.signal(true);
@@ -281,6 +282,7 @@ class AbstractSubscriptionTest {
     p.submit(1);
     p.complete();
     s.awaitComplete();
+    s.subscription.cancel();
     p.awaitAbort();
     assertEquals(1, p.aborts);
     assertFalse(p.flowInterrupted);
@@ -346,6 +348,41 @@ class AbstractSubscriptionTest {
     s.awaitError();
     assertEquals(1, s.errors);
     assertEquals(1, s.lastError.getSuppressed().length);
+  }
+
+  @Test
+  void pendingErrorStopsSubmission() {
+    // test that emit() loop stops due to submitOnNext
+    // returning false in case of an asynchronous signalError
+
+    var awaitSignalError = new CountDownLatch(1);
+    var awaitFirstOnNext = new CountDownLatch(1);
+    var s = new TestSubscriber<Integer>() {
+      @Override
+      public synchronized void onNext(Integer item) {
+        awaitFirstOnNext.countDown();
+        TestUtils.awaitUninterruptedly(awaitSignalError);
+        super.onNext(item);
+      }
+    };
+    var p = subscription(s);
+    s.request = 0L;
+    p.signal(true);
+    // make 2 items available
+    p.items.offer(1);
+    p.items.offer(1);
+    // request these 2 (async to not block if this test is not with an async executor)
+    s.awaitSubscribe();
+    CompletableFuture.runAsync(() -> s.subscription.request(2L));
+    // wait till first onNext comes
+    TestUtils.awaitUninterruptedly(awaitFirstOnNext);
+    // set pendingError (first onNext now blocking)
+    p.signalError(new TestException());
+    // let first onNext pass
+    awaitSignalError.countDown();
+    s.awaitError();
+    // second onNext shouldn't be called!
+    assertEquals(1, s.nexts);
   }
 
   private SubmittableSubscription<Integer> subscription(
