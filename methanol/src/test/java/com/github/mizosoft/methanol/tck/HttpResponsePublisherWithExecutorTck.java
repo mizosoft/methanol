@@ -20,50 +20,30 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.blackbox;
+package com.github.mizosoft.methanol.tck;
 
 import com.github.mizosoft.methanol.testutils.TestUtils;
-import java.io.IOException;
-import java.net.http.HttpClient;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import okhttp3.mockwebserver.MockWebServer;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 
-class Lifecycle {
+public class HttpResponsePublisherWithExecutorTck extends HttpResponsePublisherTck {
 
-  MockWebServer server;
-  HttpClient client;
-  Executor executor;
-  ScheduledExecutorService scheduler;
+  private Executor executor;
 
-  @BeforeEach
-  void setup() throws IOException {
-    server = new MockWebServer();
-    configureServer(server);
-    server.start();
-    var builder = HttpClient.newBuilder();
-    configureClient(builder);
-    client = builder.build();
-    executor = createExecutor();
-    scheduler = Executors.newSingleThreadScheduledExecutor();
+  @Override
+  Executor executor() {
+    return executor;
   }
 
-  @AfterEach
-  void teardown() throws IOException {
-    if (server != null) {
-      server.shutdown();
-    }
-    TestUtils.shutdown(executor, scheduler);
+  @BeforeClass
+  public void setUpExecutor() {
+    executor = Executors.newFixedThreadPool(8);
   }
 
-  void configureServer(MockWebServer server) {}
-
-  void configureClient(HttpClient.Builder builder) {}
-
-  Executor createExecutor() {
-    return Executors.newFixedThreadPool(8);
+  @AfterClass
+  public void shutdownExecutor() {
+    TestUtils.shutdown(executor);
   }
 }

@@ -122,11 +122,12 @@ public final class TimeoutSubscriber<T>
       Cancellable currentTask = timeoutTask;
       if (currentTask == Cancellable.CANCELLED
           || !TIMEOUT_TASK.compareAndSet(this, currentTask, null)) { // remove this signal's timeout
-        return; // detected cancellation promptly, downstream is lucky!
+        return; // only possible contention at this point is with cancel() so return
       }
       if (currentTask != null) {
         currentTask.cancel();
       }
+
       long currentDemand = subtractAndGetDemand(this, DEMAND, 1);
       if (currentDemand > 0) { // still have requests, start a new timeout for the next
         try {
@@ -142,7 +143,7 @@ public final class TimeoutSubscriber<T>
             new IllegalStateException("missing backpressure: receiving more items than requested"));
         return;
       }
-      // and finally...
+      // and finally signal to downstream
       super.onNext(item);
     }
   }

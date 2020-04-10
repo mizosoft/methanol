@@ -1,5 +1,6 @@
 dependencies {
   testImplementation deps.reactiveStreamsTckFlow
+  testImplementation deps.mockWebServer
   testImplementation project(':methanol-testutils')
 }
 

@@ -514,12 +514,10 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     @Override
     @SuppressWarnings("unchecked")
     protected void abort(boolean flowInterrupted) {
-      Subscriber<ByteBuffer> subscriber = partSubscriber;
-      if (subscriber != CANCELLED) {
-        subscriber = (Subscriber<ByteBuffer>) PART_SUBSCRIBER.getAndSet(this, CANCELLED);
-        if (subscriber instanceof PartSubscriber) {
-          ((PartSubscriber) subscriber).abortUpstream(flowInterrupted);
-        }
+      Subscriber<ByteBuffer> previous =
+          (Subscriber<ByteBuffer>) PART_SUBSCRIBER.getAndSet(this, CANCELLED);
+      if (previous instanceof PartSubscriber) {
+        ((PartSubscriber) previous).abortUpstream(flowInterrupted);
       }
     }
 

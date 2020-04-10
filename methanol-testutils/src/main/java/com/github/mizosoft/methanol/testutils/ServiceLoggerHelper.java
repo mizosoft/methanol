@@ -20,39 +20,31 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.extensions;
+package com.github.mizosoft.methanol.testutils;
 
-import static java.util.Objects.requireNonNull;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import java.net.http.HttpClient.Version;
-import java.net.http.HttpHeaders;
-import java.net.http.HttpResponse.ResponseInfo;
+/** Turns off ServiceCache logger during tests. */
+public class ServiceLoggerHelper {
 
-/** Basic implementation of {@code ResponseInfo}. */
-public final class BasicResponseInfo implements ResponseInfo {
+  private static final String SERVICE_LOGGER_NAME =
+      "com.github.mizosoft.methanol.internal.spi.ServiceCache";
 
-  private final int statusCode;
-  private final HttpHeaders headers;
-  private final Version version;
+  private final Logger logger;
+  private Level originalLevel;
 
-  public BasicResponseInfo(int statusCode, HttpHeaders headers, Version version) {
-    this.statusCode = statusCode;
-    this.headers = requireNonNull(headers, "headers");
-    this.version = requireNonNull(version, "version");
+  public ServiceLoggerHelper() {
+    this.logger = Logger.getLogger(SERVICE_LOGGER_NAME);
   }
 
-  @Override
-  public int statusCode() {
-    return statusCode;
+  public void turnOff() {
+    // Do not log service loader failures.
+    originalLevel = logger.getLevel();
+    logger.setLevel(Level.OFF);
   }
 
-  @Override
-  public HttpHeaders headers() {
-    return headers;
-  }
-
-  @Override
-  public Version version() {
-    return version;
+  public void reset() {
+    logger.setLevel(originalLevel);
   }
 }

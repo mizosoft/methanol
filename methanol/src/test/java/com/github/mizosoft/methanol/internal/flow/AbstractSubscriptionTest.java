@@ -350,16 +350,14 @@ class AbstractSubscriptionTest {
     assertEquals(1, s.lastError.getSuppressed().length);
   }
 
+  /** Test that emit() stops in case of an asynchronous signalError detected by submitOnNext. */
   @Test
   void pendingErrorStopsSubmission() {
-    // test that emit() loop stops due to submitOnNext
-    // returning false in case of an asynchronous signalError
-
     var awaitSignalError = new CountDownLatch(1);
     var awaitFirstOnNext = new CountDownLatch(1);
     var s = new TestSubscriber<Integer>() {
       @Override
-      public synchronized void onNext(Integer item) {
+      public void onNext(Integer item) {
         awaitFirstOnNext.countDown();
         TestUtils.awaitUninterruptedly(awaitSignalError);
         super.onNext(item);

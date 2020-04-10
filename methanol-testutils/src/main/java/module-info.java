@@ -23,6 +23,8 @@
 /** Miscellaneous test utilities used internally. */
 module methanol.testutils {
   requires transitive methanol;
+  requires okhttp3.tls;
+  requires java.logging;
   requires static org.checkerframework.checker.qual;
 
   exports com.github.mizosoft.methanol.testutils;

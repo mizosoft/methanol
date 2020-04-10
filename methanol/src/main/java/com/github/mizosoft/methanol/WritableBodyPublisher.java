@@ -51,9 +51,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * #closeExceptionally(Throwable)} can be used to fail the request in case an error is encountered
  * while writing.
  *
- * <p>Only the chunked {@code Transfer-Encoding} is supported ({@link #contentLength()} always
- * returns {@code -1}). If the content length is known prior to writing, {@link
- * BodyPublishers#fromPublisher(Publisher, long)} can be used to wrap this publisher.
+ * <p>Note that ({@link #contentLength()} always returns {@code -1}). If the content length is known
+ * prior to writing, {@link BodyPublishers#fromPublisher(Publisher, long)} can be used to attach
+ * the the known length to this publisher.
  */
 public final class WritableBodyPublisher implements BodyPublisher, Flushable, AutoCloseable {
 

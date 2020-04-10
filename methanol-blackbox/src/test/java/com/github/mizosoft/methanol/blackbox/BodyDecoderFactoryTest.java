@@ -28,8 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.blackbox.MyBodyDecoderFactory.MyDeflateBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.MyBodyDecoderFactory.MyGzipBodyDecoderFactory;
-import java.util.logging.Filter;
-import java.util.logging.LogRecord;
+import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -61,20 +60,5 @@ class BodyDecoderFactoryTest {
     var bindings = installedBindings();
     assertEquals(MyDeflateBodyDecoderFactory.class, bindings.get("deflate").getClass());
     assertEquals(MyGzipBodyDecoderFactory.class, bindings.get("gzip").getClass());
-  }
-
-  // Doesn't log but records what was last tried to be logged
-  private static final class RecordingFilter implements Filter {
-
-    LogRecord record;
-
-    RecordingFilter() {}
-
-    @Override
-    public boolean isLoggable(LogRecord record) {
-      System.out.println("isLoggable(" + record + ")");
-      this.record = record;
-      return false;
-    }
   }
 }

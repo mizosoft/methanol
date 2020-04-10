@@ -42,7 +42,8 @@ ext {
       'reactiveStreams'        : "org.reactivestreams:reactive-streams:${versions.reactiveStreams}",
       'reactiveStreamsExamples': "org.reactivestreams:reactive-streams-examples:${versions.reactiveStreams}",
       'jmhCore'                : "org.openjdk.jmh:jmh-core:$versions.jmh",
-      'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh"
+      'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh",
+      'okhttpTls'              : "com.squareup.okhttp3:okhttp-tls:${versions.okhttp}"
   ]
 
   // querying properties about subprojects
@@ -161,7 +162,7 @@ subprojects { subproject ->
   }
 
   tasks.withType(Checkstyle) {
-    onlyIf { subproject.hasProperty('enableCheckstylle') }
+    onlyIf { subproject.hasProperty('enableCheckstyle') }
     reports {
       xml.enabled = false
       html.enabled = true

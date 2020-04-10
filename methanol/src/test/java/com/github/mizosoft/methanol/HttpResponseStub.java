@@ -20,32 +20,24 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.blackbox;
+package com.github.mizosoft.methanol;
 
+import java.net.URI;
+import java.net.http.HttpClient.Version;
+import java.net.http.HttpHeaders;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Optional;
+import javax.net.ssl.SSLSession;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+public class HttpResponseStub<T> implements HttpResponse<T> {
 
-/** Turns off ServiceCache logger during tests. */
-public class ServiceLoggerHelper {
-
-  private static final String SERVICE_LOGGER_NAME =
-      "com.github.mizosoft.methanol.internal.spi.ServiceCache";
-
-  private final Logger logger;
-  private Level originalLevel;
-
-  ServiceLoggerHelper() {
-    this.logger = Logger.getLogger(SERVICE_LOGGER_NAME);
-  }
-
-  void turnOff() {
-    // Do not log service loader failures.
-    originalLevel = logger.getLevel();
-    logger.setLevel(Level.OFF);
-  }
-
-  void reset() {
-    logger.setLevel(originalLevel);
-  }
+  @Override public int statusCode() { throw new AssertionError(); }
+  @Override public HttpRequest request() { throw new AssertionError(); }
+  @Override public Optional<HttpResponse<T>> previousResponse() { throw new AssertionError(); }
+  @Override public HttpHeaders headers() { throw new AssertionError(); }
+  @Override public T body() { throw new AssertionError(); }
+  @Override public Optional<SSLSession> sslSession() { throw new AssertionError(); }
+  @Override public URI uri() { throw new AssertionError(); }
+  @Override public Version version() { throw new AssertionError(); }
 }
