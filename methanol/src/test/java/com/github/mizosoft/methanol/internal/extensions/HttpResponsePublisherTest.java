@@ -79,7 +79,7 @@ class HttpResponsePublisherTest {
     Thread.sleep(800);
     assertEquals(0, client.calls.get());
 
-    subscriber.subscription.request(20L);
+    subscriber.subscription.request(10L);
     client.awaitSend.join();
     assertSame(request, client.request);
     assertSame(handler, client.handler);
@@ -301,6 +301,69 @@ class HttpResponsePublisherTest {
     assertEquals(1, subscriber.errors);
     assertEquals(0, subscriber.completes);
     assertSame(TestException.class, subscriber.lastError.getClass());
+  }
+
+  @Test
+  void request1NoPush() {
+    var client = new FakeHttpClient();
+    var publisher = createPublisher(
+        client, GET("https://localhost"), replacing(null), null);
+    var subscriber = new TestSubscriber<HttpResponse<?>>();
+    subscriber.request = 0L;
+    publisher.subscribe(subscriber);
+    subscriber.awaitSubscribe();
+    subscriber.subscription.request(1L);
+
+    // fulfill demand
+    client.responseCf.complete(new HttpResponseStub<>());
+
+    // should be completed even after 0 demand
+    subscriber.awaitComplete();
+    assertEquals(1, subscriber.nexts);
+    assertEquals(1, subscriber.completes);
+    assertEquals(0, subscriber.errors);
+  }
+
+  @Test
+  void request3WithPush() {
+    var request = GET("https://localhost");
+    var client = new FakeHttpClient();
+    var publisher = createPublisher(
+        client, request, replacing(""), push -> replacing("gibe that push"));
+    var subscriber = new TestSubscriber<HttpResponse<?>>();
+    subscriber.request = 0L;
+    publisher.subscribe(subscriber);
+    subscriber.awaitSubscribe();
+    subscriber.subscription.request(3L);
+
+    client.awaitSend.join();
+
+    // apply 2 pushes
+    @SuppressWarnings("unchecked")
+    var ppHandler = (PushPromiseHandler<String>) client.pushPromiseHandler;
+    var pushCompleter = new PushCompleter<String>();
+    ppHandler.applyPushPromise(request, GET("https://localhost/push1"), pushCompleter);
+    ppHandler.applyPushPromise(request, GET("https://localhost/push2"), pushCompleter);
+    assertEquals(2, pushCompleter.acceptedCfs.size());
+
+    // fulfill 2 demand slots with accepted pushes (delayed)
+    pushCompleter.acceptedCfs.forEach(
+        cf -> delayer.execute(() -> cf.complete(new HttpResponseStub<>())));
+
+    // fulfill 1 demand slot with main response
+    client.responseCf.complete(new HttpResponseStub<>());
+
+    // complete main response body (delayed)
+    var mainBodySubscriber = client.handler.apply(
+        new ImmutableResponseInfo(200, headers(/* empty */), Version.HTTP_2));
+    mainBodySubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
+    delayer.execute(mainBodySubscriber::onComplete);
+
+    // should be completed even after 0 demand
+    subscriber.awaitComplete();
+    assertEquals(3, subscriber.nexts);
+    assertEquals(1, subscriber.completes);
+    assertEquals(0, subscriber.errors);
   }
 
   private <T> HttpResponsePublisher<T> createPublisher(

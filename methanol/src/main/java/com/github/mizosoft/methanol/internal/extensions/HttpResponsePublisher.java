@@ -179,23 +179,21 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
       }
 
       long submitted = 0L;
-      while (submitted < emit) {
-        HttpResponse<V> response = receivedResponses.poll();
-        if (response != null) {
-          ONGOING.getAndAdd(this, -1);
-          if (submitOnNext(downstream, response)) {
-            submitted++;
-          } else {
-            return 0;
-          }
-        } else if (receivedAllResponses()) {
+      while(true) {
+        HttpResponse<V> response;
+        if (receivedAllResponses()) {
           cancelOnComplete(downstream);
           return 0;
-        } else { // no signals
-          break;
+        } else if (submitted >= emit
+            || (response = receivedResponses.poll()) == null) { // exhausted demand or responses
+          return submitted;
+        } else if (submitOnNext(downstream, response)) {
+          ONGOING.getAndAdd(this, -1);
+          submitted++;
+        } else {
+          return 0;
         }
       }
-      return submitted;
     }
 
     private void onCompletion(HttpResponse<V> response, Throwable error) {
@@ -219,7 +217,9 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
     }
 
     private boolean receivedAllResponses() {
-      return ongoing == 0 && (pushPromiseAcceptor == null || receivedInitialResponseBody);
+      return ongoing == 0
+          && initialRequestSent
+          && (pushPromiseAcceptor == null || receivedInitialResponseBody);
     }
 
     /*private boolean hasSameOrigin(HttpRequest pushPromise) {
