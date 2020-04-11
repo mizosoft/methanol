@@ -20,32 +20,13 @@
  * SOFTWARE.
  */
 
-/**
- * Core Methanol module.
- *
- * @uses com.github.mizosoft.methanol.BodyDecoder.Factory
- * @uses com.github.mizosoft.methanol.BodyAdapter.Encoder
- * @uses com.github.mizosoft.methanol.BodyAdapter.Decoder
- * @provides com.github.mizosoft.methanol.BodyDecoder.Factory For the gzip and deflate encodings.
- */
-module methanol {
-  requires transitive java.net.http;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
-  requires java.logging;
+package com.github.mizosoft.methanol;
 
-  exports com.github.mizosoft.methanol;
-  exports com.github.mizosoft.methanol.dec;
-  exports com.github.mizosoft.methanol.adapter;
-  exports com.github.mizosoft.methanol.internal.flow to
-      methanol.adapter.jackson;
+import java.util.function.Consumer;
 
-  uses com.github.mizosoft.methanol.BodyDecoder.Factory;
+/** An object that can be fluently acted upon by a {@code Consumer}. */
+public interface Consumable<T extends Consumable<T>> {
 
-  uses com.github.mizosoft.methanol.BodyAdapter.Encoder;
-  uses com.github.mizosoft.methanol.BodyAdapter.Decoder;
-
-  provides com.github.mizosoft.methanol.BodyDecoder.Factory with
-      com.github.mizosoft.methanol.internal.dec.GzipBodyDecoderFactory,
-      com.github.mizosoft.methanol.internal.dec.DeflateBodyDecoderFactory;
+  /** Calls the given consumer against this object. */
+  T apply(Consumer<? super T> consumer);
 }

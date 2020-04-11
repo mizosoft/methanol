@@ -27,6 +27,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.InetAddress;
 import java.net.http.HttpHeaders;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -40,6 +41,9 @@ import java.util.concurrent.Flow.Subscription;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
+import javax.net.ssl.SSLContext;
+import okhttp3.tls.HandshakeCertificates;
+import okhttp3.tls.HeldCertificate;
 
 public class TestUtils {
 
@@ -128,5 +132,18 @@ public class TestUtils {
     try (var stream = Files.list(dir)) {
       return stream.collect(Collectors.toUnmodifiableList());
     }
+  }
+
+  /** Build {@code SSLContext} that trusts a self-assigned certificate for localhost in tests. */
+  public static SSLContext localhostSslContext() throws IOException {
+    var heldCertificate =
+        new HeldCertificate.Builder()
+            .addSubjectAlternativeName(InetAddress.getByName("localhost").getCanonicalHostName())
+            .build();
+    return new HandshakeCertificates.Builder()
+        .heldCertificate(heldCertificate)
+        .addTrustedCertificate(heldCertificate.certificate())
+        .build()
+        .sslContext();
   }
 }

@@ -40,6 +40,10 @@ public class TckUtils {
     return new TestEnvironment(TIMEOUT_MILLIS, NO_SIGNAL_TIMEOUT_MILLIS, POLL_TIMEOUT_MILLIS);
   }
 
+  static TestEnvironment testEnvironmentWithTimeout(long timeoutMillis) {
+    return new TestEnvironment(timeoutMillis, NO_SIGNAL_TIMEOUT_MILLIS, timeoutMillis);
+  }
+
   private static long getTimeout(String prop, long defaultVal) {
     String value = System.getProperty(prop);
     if (value == null) {

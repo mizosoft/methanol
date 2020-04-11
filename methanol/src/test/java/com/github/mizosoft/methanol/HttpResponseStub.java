@@ -20,39 +20,24 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.extensions;
+package com.github.mizosoft.methanol;
 
-import static java.util.Objects.requireNonNull;
-
+import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
-import java.net.http.HttpResponse.ResponseInfo;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.Optional;
+import javax.net.ssl.SSLSession;
 
-/** Basic implementation of {@code ResponseInfo}. */
-public final class BasicResponseInfo implements ResponseInfo {
+public class HttpResponseStub<T> implements HttpResponse<T> {
 
-  private final int statusCode;
-  private final HttpHeaders headers;
-  private final Version version;
-
-  public BasicResponseInfo(int statusCode, HttpHeaders headers, Version version) {
-    this.statusCode = statusCode;
-    this.headers = requireNonNull(headers, "headers");
-    this.version = requireNonNull(version, "version");
-  }
-
-  @Override
-  public int statusCode() {
-    return statusCode;
-  }
-
-  @Override
-  public HttpHeaders headers() {
-    return headers;
-  }
-
-  @Override
-  public Version version() {
-    return version;
-  }
+  @Override public int statusCode() { throw new AssertionError(); }
+  @Override public HttpRequest request() { throw new AssertionError(); }
+  @Override public Optional<HttpResponse<T>> previousResponse() { throw new AssertionError(); }
+  @Override public HttpHeaders headers() { throw new AssertionError(); }
+  @Override public T body() { throw new AssertionError(); }
+  @Override public Optional<SSLSession> sslSession() { throw new AssertionError(); }
+  @Override public URI uri() { throw new AssertionError(); }
+  @Override public Version version() { throw new AssertionError(); }
 }

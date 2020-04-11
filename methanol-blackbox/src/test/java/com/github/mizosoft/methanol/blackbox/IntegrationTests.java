@@ -61,11 +61,14 @@ import com.github.mizosoft.methanol.testutils.BuffIterator;
 import com.github.mizosoft.methanol.testutils.MockGzipMember;
 import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
 import com.github.mizosoft.methanol.testutils.RegistryFileTypeDetector;
+import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
+import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
+import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
@@ -82,22 +85,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Subscription;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
 import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
 import okio.Buffer;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
-class IntegrationTests extends Lifecycle {
+class IntegrationTests {
 
   private static final Base64.Decoder BASE64_DEC = Base64.getDecoder();
 
@@ -106,13 +114,21 @@ class IntegrationTests extends Lifecycle {
       + "Violets are blue,\n"
       + "I hope my tests pass\n"
       + "I really hope they do";
-  private static final String lotsOfText;
-  private static final Map<String, String> poemEncodings;
-  private static final Map<String, byte[]> lotsOfTextEncodings;
-  private static final String lotsOfJson;
-  private static final List<Map<String, Object>> lotsOfJsonDecoded;
-  private static final BruhMoments bruhMoments;
-  static {
+
+  private static String lotsOfText;
+  private static Map<String, String> poemEncodings;
+  private static Map<String, byte[]> lotsOfTextEncodings;
+  private static String lotsOfJson;
+  private static List<Map<String, Object>> lotsOfJsonDecoded;
+  private static BruhMoments bruhMoments;
+
+  private MockWebServer server;
+  private HttpClient client;
+  private Executor executor;
+  private ScheduledExecutorService scheduler;
+
+  @BeforeAll
+  static void readTestData() {
     Class<?> cls = IntegrationTests.class;
 
     lotsOfText = loadAscii(cls, "/payload/alice.txt");
@@ -158,6 +174,22 @@ class IntegrationTests extends Lifecycle {
   @AfterAll
   static void resetServiceLogger() {
     loggerHelper.reset();
+  }
+
+  @BeforeEach
+  void setUpLifecycle() throws IOException {
+    server = new MockWebServer();
+    server.start();
+    var builder = HttpClient.newBuilder();
+    client = builder.build();
+    executor = Executors.newFixedThreadPool(8);
+    scheduler = Executors.newSingleThreadScheduledExecutor();
+  }
+
+  @AfterEach
+  void tearDownLifecycle() throws IOException {
+    server.shutdown();
+    TestUtils.shutdown(executor, scheduler);
   }
 
   private void assertDecodesSmall(String encoding) throws Exception {
@@ -446,23 +478,18 @@ class IntegrationTests extends Lifecycle {
 
   @Test
   void withReadTimeout_readThroughByteChannel_customScheduler() throws Exception {
-    var scheduler = Executors.newScheduledThreadPool(1);
-    try {
-      var timeoutMillis = 50L;
-      server.enqueue(new MockResponse()
-          .setBody(poemEncodings.get("gzip"))
-          .setHeader("Content-Encoding", "gzip")
-          .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS));
-      var request = HttpRequest.newBuilder(server.url("/").uri()).build();
-      var response = client.send(
-          request,
-          withReadTimeout(
-              decoding(ofByteChannel(), executor), Duration.ofMillis(timeoutMillis), scheduler));
-      try (var channel = response.body()) {
-        assertReadTimeout(channel);
-      }
-    } finally {
-      scheduler.shutdown();
+    var timeoutMillis = 50L;
+    server.enqueue(new MockResponse()
+        .setBody(poemEncodings.get("gzip"))
+        .setHeader("Content-Encoding", "gzip")
+        .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS));
+    var request = HttpRequest.newBuilder(server.url("/").uri()).build();
+    var response = client.send(
+        request,
+        withReadTimeout(
+            decoding(ofByteChannel(), executor), Duration.ofMillis(timeoutMillis), scheduler));
+    try (var channel = response.body()) {
+      assertReadTimeout(channel);
     }
   }
 

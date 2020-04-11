@@ -1,5 +1,6 @@
 dependencies {
   api project(':methanol')
+  implementation deps.okhttpTls
 }
 
 // Skip style checks for ths module

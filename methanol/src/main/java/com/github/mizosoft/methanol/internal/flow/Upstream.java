@@ -31,9 +31,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class Upstream {
 
   private static final VarHandle SUBSCRIPTION;
+
   static {
     try {
-      SUBSCRIPTION = MethodHandles.lookup().findVarHandle(Upstream.class, "subscription", Subscription.class);
+      SUBSCRIPTION =
+          MethodHandles.lookup().findVarHandle(Upstream.class, "subscription", Subscription.class);
     } catch (NoSuchFieldException | IllegalAccessException e) {
       throw new ExceptionInInitializerError(e);
     }
@@ -54,17 +56,18 @@ public final class Upstream {
 
   /** Requests {@code n} items from upstream if set. */
   public void request(long n) {
-    Subscription s = subscription;
-    if (s != null) {
-      s.request(n);
+    Subscription currentSubscription = subscription;
+    if (currentSubscription != null) {
+      currentSubscription.request(n);
     }
   }
 
   /** Cancels the upstream if set. */
   public void cancel() {
-    Subscription s = (Subscription) SUBSCRIPTION.getAndSet(this, FlowSupport.NOOP_SUBSCRIPTION);
-    if (s != null) {
-      s.cancel();
+    Subscription currentSubscription =
+        (Subscription) SUBSCRIPTION.getAndSet(this, FlowSupport.NOOP_SUBSCRIPTION);
+    if (currentSubscription != null) {
+      currentSubscription.cancel();
     }
   }
 

@@ -20,32 +20,30 @@
  * SOFTWARE.
  */
 
-/**
- * Core Methanol module.
- *
- * @uses com.github.mizosoft.methanol.BodyDecoder.Factory
- * @uses com.github.mizosoft.methanol.BodyAdapter.Encoder
- * @uses com.github.mizosoft.methanol.BodyAdapter.Decoder
- * @provides com.github.mizosoft.methanol.BodyDecoder.Factory For the gzip and deflate encodings.
- */
-module methanol {
-  requires transitive java.net.http;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
-  requires java.logging;
+package com.github.mizosoft.methanol.internal.extensions;
 
-  exports com.github.mizosoft.methanol;
-  exports com.github.mizosoft.methanol.dec;
-  exports com.github.mizosoft.methanol.adapter;
-  exports com.github.mizosoft.methanol.internal.flow to
-      methanol.adapter.jackson;
+import com.github.mizosoft.methanol.testutils.TestUtils;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
-  uses com.github.mizosoft.methanol.BodyDecoder.Factory;
+class HttpResponsePublisherWithExecutorTest extends HttpResponsePublisherTest {
 
-  uses com.github.mizosoft.methanol.BodyAdapter.Encoder;
-  uses com.github.mizosoft.methanol.BodyAdapter.Decoder;
+  private Executor executor;
 
-  provides com.github.mizosoft.methanol.BodyDecoder.Factory with
-      com.github.mizosoft.methanol.internal.dec.GzipBodyDecoderFactory,
-      com.github.mizosoft.methanol.internal.dec.DeflateBodyDecoderFactory;
+  @Override
+  Executor executor() {
+    return executor;
+  }
+
+  @BeforeEach
+  void setUpExecutor() {
+    executor = Executors.newFixedThreadPool(8);
+  }
+
+  @AfterEach
+  void shutdownExecutor() {
+    TestUtils.shutdown(executor);
+  }
 }

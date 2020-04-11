@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
+import java.lang.invoke.VarHandle;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow;
 
@@ -92,5 +93,24 @@ public class FlowSupport {
    */
   public static int prefetchThreshold() {
     return PREFETCH_THRESHOLD;
+  }
+
+  /** Adds given count to demand not exceeding {@code Long.MAX_VALUE}. */
+  public static long getAndAddDemand(Object owner, VarHandle demand, long n) {
+    while(true) {
+      long currentDemand = (long) demand.getVolatile(owner);
+      long addedDemand = currentDemand + n;
+      if (addedDemand < 0) { // overflow
+        addedDemand = Long.MAX_VALUE;
+      }
+      if (demand.compareAndSet(owner, currentDemand, addedDemand)) {
+        return currentDemand;
+      }
+    }
+  }
+
+  /** Subtracts given count from demand. Caller ensures result won't be negative. */
+  public static long subtractAndGetDemand(Object owner, VarHandle demand, long n) {
+    return (long) demand.getAndAdd(owner, -n) - n;
   }
 }

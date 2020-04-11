@@ -212,8 +212,8 @@ final class GzipDecoder extends ZLibDecoder {
     // +---+---+---+---+---+---+---+---+
     checkValue(crc.getValue(), getUInt(source), "corrupt gzip stream (CRC32)");
     checkValue(
-        inflater.getBytesWritten() & INT_MASK,
-        getUInt(source), // Mask for modulo 2^32
+        inflater.getBytesWritten() & INT_MASK, // Mask for modulo 2^32
+        getUInt(source),
         "corrupt gzip stream (ISIZE)");
   }
 
@@ -242,24 +242,19 @@ final class GzipDecoder extends ZLibDecoder {
     // +==========================================================+
     // |...(file comment | original file name), zero-terminated...| (more-->)
     // +==========================================================+
-    boolean zeroByteFound = false;
-    while (source.hasRemaining() && !zeroByteFound) {
+    while (source.hasRemaining()) {
       ByteBuffer in = source.currentSource();
-      int prePos = in.position();
       while (in.hasRemaining()) {
-        if (in.get() == 0) {
-          zeroByteFound = true;
-          break;
+        byte currentByte = in.get();
+        if (computeCrc) {
+          crc.update(currentByte);
+        }
+        if (currentByte == 0) {
+          return true;
         }
       }
-      if (computeCrc) {
-        int postPos = in.position();
-        int originalLimit = in.limit();
-        crc.update(in.position(prePos).limit(postPos));
-        in.limit(originalLimit);
-      }
     }
-    return zeroByteFound;
+    return false;
   }
 
   // Override to compute crc32 of the inflated bytes

@@ -66,14 +66,14 @@ public class AbstractSubscriptionTck extends FlowPublisherVerification<Long> {
     }
 
     @Override
-    protected long emit(Subscriber<? super Long> d, long e) {
+    protected long emit(Subscriber<? super Long> downstream, long emit) {
       for (long c = 0L; ; c++) {
         if (from >= toExclusive) {
-          cancelOnComplete(d);
+          cancelOnComplete(downstream);
           return 0;
-        } if (c >= e) {
+        } else if (c >= emit) {
           return c;
-        } else if (!submitOnNext(d, from++)) {
+        } else if (!submitOnNext(downstream, from++)) {
           return 0;
         }
       }
@@ -87,8 +87,8 @@ public class AbstractSubscriptionTck extends FlowPublisherVerification<Long> {
     }
 
     @Override
-    protected long emit(Subscriber<? super Long> d, long e) {
-      cancelOnError(d, new TestException(), true);
+    protected long emit(Subscriber<? super Long> downstream, long emit) {
+      cancelOnError(downstream, new TestException(), true);
       return 0;
     }
   }

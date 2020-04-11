@@ -20,32 +20,31 @@
  * SOFTWARE.
  */
 
-/**
- * Core Methanol module.
- *
- * @uses com.github.mizosoft.methanol.BodyDecoder.Factory
- * @uses com.github.mizosoft.methanol.BodyAdapter.Encoder
- * @uses com.github.mizosoft.methanol.BodyAdapter.Decoder
- * @provides com.github.mizosoft.methanol.BodyDecoder.Factory For the gzip and deflate encodings.
- */
-module methanol {
-  requires transitive java.net.http;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
-  requires java.logging;
+package com.github.mizosoft.methanol.testutils;
 
-  exports com.github.mizosoft.methanol;
-  exports com.github.mizosoft.methanol.dec;
-  exports com.github.mizosoft.methanol.adapter;
-  exports com.github.mizosoft.methanol.internal.flow to
-      methanol.adapter.jackson;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-  uses com.github.mizosoft.methanol.BodyDecoder.Factory;
+/** Turns off ServiceCache logger during tests. */
+public class ServiceLoggerHelper {
 
-  uses com.github.mizosoft.methanol.BodyAdapter.Encoder;
-  uses com.github.mizosoft.methanol.BodyAdapter.Decoder;
+  private static final String SERVICE_LOGGER_NAME =
+      "com.github.mizosoft.methanol.internal.spi.ServiceCache";
 
-  provides com.github.mizosoft.methanol.BodyDecoder.Factory with
-      com.github.mizosoft.methanol.internal.dec.GzipBodyDecoderFactory,
-      com.github.mizosoft.methanol.internal.dec.DeflateBodyDecoderFactory;
+  private final Logger logger;
+  private Level originalLevel;
+
+  public ServiceLoggerHelper() {
+    this.logger = Logger.getLogger(SERVICE_LOGGER_NAME);
+  }
+
+  public void turnOff() {
+    // Do not log service loader failures.
+    originalLevel = logger.getLevel();
+    logger.setLevel(Level.OFF);
+  }
+
+  public void reset() {
+    logger.setLevel(originalLevel);
+  }
 }

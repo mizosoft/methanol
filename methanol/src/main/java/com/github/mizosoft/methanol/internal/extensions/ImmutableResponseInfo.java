@@ -20,32 +20,39 @@
  * SOFTWARE.
  */
 
-/**
- * Core Methanol module.
- *
- * @uses com.github.mizosoft.methanol.BodyDecoder.Factory
- * @uses com.github.mizosoft.methanol.BodyAdapter.Encoder
- * @uses com.github.mizosoft.methanol.BodyAdapter.Decoder
- * @provides com.github.mizosoft.methanol.BodyDecoder.Factory For the gzip and deflate encodings.
- */
-module methanol {
-  requires transitive java.net.http;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
-  requires java.logging;
+package com.github.mizosoft.methanol.internal.extensions;
 
-  exports com.github.mizosoft.methanol;
-  exports com.github.mizosoft.methanol.dec;
-  exports com.github.mizosoft.methanol.adapter;
-  exports com.github.mizosoft.methanol.internal.flow to
-      methanol.adapter.jackson;
+import static java.util.Objects.requireNonNull;
 
-  uses com.github.mizosoft.methanol.BodyDecoder.Factory;
+import java.net.http.HttpClient.Version;
+import java.net.http.HttpHeaders;
+import java.net.http.HttpResponse.ResponseInfo;
 
-  uses com.github.mizosoft.methanol.BodyAdapter.Encoder;
-  uses com.github.mizosoft.methanol.BodyAdapter.Decoder;
+/** Basic implementation of {@code ResponseInfo}. */
+public final class ImmutableResponseInfo implements ResponseInfo {
 
-  provides com.github.mizosoft.methanol.BodyDecoder.Factory with
-      com.github.mizosoft.methanol.internal.dec.GzipBodyDecoderFactory,
-      com.github.mizosoft.methanol.internal.dec.DeflateBodyDecoderFactory;
+  private final int statusCode;
+  private final HttpHeaders headers;
+  private final Version version;
+
+  public ImmutableResponseInfo(int statusCode, HttpHeaders headers, Version version) {
+    this.statusCode = statusCode;
+    this.headers = requireNonNull(headers, "headers");
+    this.version = requireNonNull(version, "version");
+  }
+
+  @Override
+  public int statusCode() {
+    return statusCode;
+  }
+
+  @Override
+  public HttpHeaders headers() {
+    return headers;
+  }
+
+  @Override
+  public Version version() {
+    return version;
+  }
 }

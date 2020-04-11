@@ -25,7 +25,7 @@ package com.github.mizosoft.methanol;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
-import com.github.mizosoft.methanol.internal.extensions.BasicResponseInfo;
+import com.github.mizosoft.methanol.internal.extensions.ImmutableResponseInfo;
 import java.io.Reader;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse.BodyHandler;
@@ -266,7 +266,7 @@ public class MoreBodyHandlers {
                   !"Content-Encoding".equalsIgnoreCase(n) && !"Content-Length".equalsIgnoreCase(n));
       BodySubscriber<T> downstream =
           downstreamHandler.apply(
-              new BasicResponseInfo(info.statusCode(), headersCopy, info.version()));
+              new ImmutableResponseInfo(info.statusCode(), headersCopy, info.version()));
       return executor != null ? factory.create(downstream, executor) : factory.create(downstream);
     }
   }

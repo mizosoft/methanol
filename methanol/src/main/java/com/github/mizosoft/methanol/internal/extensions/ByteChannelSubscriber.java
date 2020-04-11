@@ -66,7 +66,8 @@ public final class ByteChannelSubscriber implements BodySubscriber<ReadableByteC
   public ByteChannelSubscriber() {
     upstream = new Upstream();
     prefetcher = new Prefetcher();
-    upstreamBuffers = new ArrayBlockingQueue<>(FlowSupport.prefetch() + 1); // Consider TOMBSTONE_LIST
+    upstreamBuffers =
+        new ArrayBlockingQueue<>(FlowSupport.prefetch() + 1); // Consider TOMBSTONE_LIST
   }
 
   @Override

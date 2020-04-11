@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -126,7 +127,7 @@ class AbstractSubscriptionTest {
   }
 
   @Test
-  void onItemThenError() {
+  void oneItemThenError() {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s);
     p.signal(true);
@@ -281,6 +282,7 @@ class AbstractSubscriptionTest {
     p.submit(1);
     p.complete();
     s.awaitComplete();
+    s.subscription.cancel();
     p.awaitAbort();
     assertEquals(1, p.aborts);
     assertFalse(p.flowInterrupted);
@@ -348,6 +350,39 @@ class AbstractSubscriptionTest {
     assertEquals(1, s.lastError.getSuppressed().length);
   }
 
+  /** Test that emit() stops in case of an asynchronous signalError detected by submitOnNext. */
+  @Test
+  void pendingErrorStopsSubmission() {
+    var awaitSignalError = new CountDownLatch(1);
+    var awaitFirstOnNext = new CountDownLatch(1);
+    var s = new TestSubscriber<Integer>() {
+      @Override
+      public void onNext(Integer item) {
+        awaitFirstOnNext.countDown();
+        TestUtils.awaitUninterruptedly(awaitSignalError);
+        super.onNext(item);
+      }
+    };
+    var p = subscription(s);
+    s.request = 0L;
+    p.signal(true);
+    // make 2 items available
+    p.items.offer(1);
+    p.items.offer(1);
+    // request these 2 (async to not block if this test is not with an async executor)
+    s.awaitSubscribe();
+    CompletableFuture.runAsync(() -> s.subscription.request(2L));
+    // wait till first onNext comes
+    TestUtils.awaitUninterruptedly(awaitFirstOnNext);
+    // set pendingError (first onNext now blocking)
+    p.signalError(new TestException());
+    // let first onNext pass
+    awaitSignalError.countDown();
+    s.awaitError();
+    // second onNext shouldn't be called!
+    assertEquals(1, s.nexts);
+  }
+
   private SubmittableSubscription<Integer> subscription(
       Subscriber<? super Integer> downstream) {
     return new SubmittableSubscription<>(downstream, executor());
@@ -367,14 +402,14 @@ class AbstractSubscriptionTest {
     }
 
     @Override
-    protected long emit(Subscriber<? super T> d, long e) {
+    protected long emit(Subscriber<? super T> downstream, long emit) {
       for (long c = 0L; ; c++) {
         if (items.isEmpty() && complete) { // end of source
-          cancelOnComplete(d);
+          cancelOnComplete(downstream);
           return 0;
-        } else if (items.isEmpty() || c >= e) { // exhausted source or demand
+        } else if (items.isEmpty() || c >= emit) { // exhausted source or demand
           return c;
-        } else if (!submitOnNext(d, items.poll())) {
+        } else if (!submitOnNext(downstream, items.poll())) {
           return 0;
         }
       }
