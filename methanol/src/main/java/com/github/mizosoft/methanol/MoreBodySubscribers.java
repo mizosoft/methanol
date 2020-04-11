@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Utils.validateTimeout;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
@@ -72,10 +73,13 @@ public class MoreBodySubscribers {
    * Returns a {@code BodySubscriber<T>} that completes the given downstream with {@link
    * HttpReadTimeoutException} if a requested signal is not received within the given timeout. A
    * system-wide scheduler is used to schedule timeout events.
+   *
+   * @throws IllegalArgumentException if the timeout is non-positive
    */
   public static <T> BodySubscriber<T> withReadTimeout(BodySubscriber<T> base, Duration timeout) {
     requireNonNull(base, "base");
     requireNonNull(timeout, "timeout");
+    validateTimeout(timeout);
     return new TimeoutSubscriber<>(base, timeout, null);
   }
 
@@ -83,12 +87,15 @@ public class MoreBodySubscribers {
    * Returns a {@code BodySubscriber<T>} that completes the given downstream with {@link
    * HttpReadTimeoutException} if a requested signal is not received within the given timeout. The
    * given {@code ScheduledExecutorService} is used to schedule timeout events.
+   *
+   * @throws IllegalArgumentException if the timeout is non-positive
    */
   public static <T> BodySubscriber<T> withReadTimeout(
       BodySubscriber<T> base, Duration timeout, ScheduledExecutorService scheduler) {
     requireNonNull(base, "base");
     requireNonNull(timeout, "timeout");
     requireNonNull(timeout, "scheduler");
+    validateTimeout(timeout);
     return new TimeoutSubscriber<>(base, timeout, scheduler);
   }
 

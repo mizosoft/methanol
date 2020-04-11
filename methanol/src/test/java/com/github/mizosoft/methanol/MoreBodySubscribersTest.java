@@ -29,6 +29,7 @@ import static com.github.mizosoft.methanol.MoreBodySubscribers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofReader;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.withReadTimeout;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptedly;
+import static java.net.http.HttpResponse.BodySubscribers.discarding;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -480,6 +481,18 @@ class MoreBodySubscribersTest {
     subscription.assertCancelled();
     assertNotNull(taskRef.get());
     assertTrue(taskRef.get().isCancelled());
+  }
+
+  @Test
+  void withReadTimeout_illegalTimeout() {
+    var zero = Duration.ofSeconds(0);
+    var negative = Duration.ofSeconds(-1);
+    assertThrows(IllegalArgumentException.class, () -> withReadTimeout(discarding(), zero));
+    assertThrows(IllegalArgumentException.class, () -> withReadTimeout(discarding(), negative));
+    assertThrows(IllegalArgumentException.class,
+        () -> withReadTimeout(discarding(), zero, scheduler));
+    assertThrows(IllegalArgumentException.class,
+        () -> withReadTimeout(discarding(), zero, scheduler));
   }
 
   @Test
