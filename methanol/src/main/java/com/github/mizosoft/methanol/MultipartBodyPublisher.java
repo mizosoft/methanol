@@ -381,7 +381,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
           boundary.length());
       requireArgument(
           BOUNDARY_MATCHER.allMatch(boundary) && !boundary.endsWith(" "),
-          "illegal boundary: %s",
+          "illegal boundary: '%s'",
           boundary);
       return boundary;
     }

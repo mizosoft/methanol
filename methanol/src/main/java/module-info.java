@@ -30,9 +30,9 @@
  */
 module methanol {
   requires transitive java.net.http;
+  requires java.logging;
   requires static org.checkerframework.checker.qual;
   requires static com.google.errorprone.annotations;
-  requires java.logging;
 
   exports com.github.mizosoft.methanol;
   exports com.github.mizosoft.methanol.dec;

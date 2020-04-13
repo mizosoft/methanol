@@ -65,8 +65,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * setting a {@code URI} entirely. This is for the case when the request is used with a {@link
  * Methanol} client that has a base URL, with which this request's URL is resolved.
  */
-public final class MutableRequest extends HttpRequest
-    implements HttpRequest.Builder, Consumable<MutableRequest> {
+public final class MutableRequest extends HttpRequest implements HttpRequest.Builder {
 
   private static final URI EMPTY_URI = URI.create("");
 
@@ -138,7 +137,7 @@ public final class MutableRequest extends HttpRequest
     return this;
   }
 
-  @Override
+  /** Calls the given consumer against this request. */
   public MutableRequest apply(Consumer<? super MutableRequest> consumer) {
     consumer.accept(this);
     return this;

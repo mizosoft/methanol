@@ -57,7 +57,7 @@ import javax.net.ssl.SSLParameters;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An {@code HttpClient} with extended functionality.
+ * An {@code HttpClient} with request decoration and reactive extensions.
  *
  * <p>In addition to implementing the {@link HttpClient} interface, this class also allows to:
  *
@@ -322,7 +322,7 @@ public final class Methanol extends HttpClient {
   }
 
   /** A base {@code Methanol} builder allowing to set the non-standard properties. */
-  public abstract static class BaseBuilder<B extends BaseBuilder<B>> implements Consumable<B> {
+  public abstract static class BaseBuilder<B extends BaseBuilder<B>> {
 
     final HeadersBuilder headersBuilder;
     @Nullable String userAgent;
@@ -335,7 +335,7 @@ public final class Methanol extends HttpClient {
       autoAcceptEncoding = true;
     }
 
-    @Override
+    /** Calls the given consumer against this builder. */
     public final B apply(Consumer<? super B> consumer) {
       consumer.accept(self());
       return self();
