@@ -37,7 +37,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
 @State(Scope.Benchmark)
-public class ClientServerLifcycle {
+public class ClientServerLifecycle {
 
   public MockWebServer server;
   public HttpClient client;

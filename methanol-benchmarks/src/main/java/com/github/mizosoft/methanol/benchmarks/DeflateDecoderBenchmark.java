@@ -57,7 +57,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Measurement(iterations = 6, time = 5)
 @OutputTimeUnit(TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
-public class DeflateDecoderBenchmark extends ClientServerLifcycle {
+public class DeflateDecoderBenchmark extends ClientServerLifecycle {
 
   @Benchmark
   public byte[] readBytesInflaterInputStream() throws Exception {

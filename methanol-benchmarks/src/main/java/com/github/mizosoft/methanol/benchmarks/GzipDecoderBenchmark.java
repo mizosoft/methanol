@@ -62,7 +62,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Measurement(iterations = 6, time = 5)
 @OutputTimeUnit(TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
-public class GzipDecoderBenchmark extends ClientServerLifcycle {
+public class GzipDecoderBenchmark extends ClientServerLifecycle {
 
   @Benchmark
   public byte[] readBytesGZIPInputStream() throws Exception {

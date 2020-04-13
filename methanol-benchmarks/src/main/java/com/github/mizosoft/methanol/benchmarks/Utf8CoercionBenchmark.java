@@ -60,7 +60,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @OutputTimeUnit(TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
 @SuppressWarnings("unused")
-public class Utf8CoercionBenchmark extends ClientServerLifcycle {
+public class Utf8CoercionBenchmark extends ClientServerLifecycle {
 
   @Param({"ASYNC_PARSER", "BYTE_ARRAY_PARSER"})
   private JsonHandler handler;
