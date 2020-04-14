@@ -23,18 +23,23 @@
 package com.github.mizosoft.methanol.benchmarks;
 
 import static com.github.mizosoft.methanol.testutils.TestUtils.load;
-import static java.nio.charset.StandardCharsets.UTF_16;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import java.util.List;
-import java.util.Map;
+import com.github.mizosoft.methanol.BodyDecoder;
+import com.github.mizosoft.methanol.MoreBodyHandlers;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.HttpResponse.BodySubscribers;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
+import org.brotli.dec.BrotliInputStream;
 import org.jetbrains.annotations.NotNull;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -42,15 +47,10 @@ import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
-import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
@@ -59,43 +59,57 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Measurement(iterations = 5, time = 5)
 @OutputTimeUnit(TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
-@SuppressWarnings("unused")
-public class Utf8CoercionBenchmark extends ClientServerLifecycle {
+public class BrotliDecoderBenchmark extends ClientServerLifecycle {
 
-  @Param({"ASYNC_PARSER", "BYTE_ARRAY_PARSER"})
-  private JsonHandler handler;
-
-  private JsonMapper mapper;
-
-  @Setup
-  public void setupJsonMapper() {
-    mapper = new JsonMapper();
+  @Benchmark
+  public byte[] readBytesBrotliInputStream() throws Exception {
+    return client
+        .sendAsync(
+            defaultGet,
+            info ->
+                BodySubscribers.mapping(
+                    BodySubscribers.ofInputStream(), BrotliDecoderBenchmark::wrapBrotli))
+        .thenApplyAsync(res -> res.body().get(), client.executor().orElse(null))
+        .join()
+        .readAllBytes();
   }
 
   @Benchmark
-  public List<Map<String, Object>> decodeJson() throws Exception {
-    return client.send(defaultGet, info -> handler.createSubscriber(mapper, UTF_16)).body();
+  public byte[] readBytesBrotliDecoder() throws Exception {
+    return client
+        .sendAsync(defaultGet, MoreBodyHandlers.decoding(BodyHandlers.ofInputStream()))
+        .thenApply(HttpResponse::body)
+        .join()
+        .readAllBytes();
   }
 
   @Override
   public void configureServer(MockWebServer server) {
-    var jsonUtf8 = load(Utf8CoercionBenchmark.class, "/payload/json_utf8.json");
-    var body = new Buffer().writeString(new String(jsonUtf8, UTF_8), UTF_16);
+    if (!BodyDecoder.Factory.installedBindings().containsKey("br")) {
+      throw new IllegalStateException("can't find brotli bro");
+    }
+
+    byte[] data = load(BrotliDecoderBenchmark.class, "/payload/alice29.br");
+    var body = new Buffer().write(data);
     server.setDispatcher(
         new Dispatcher() {
           @NotNull
           @Override
           public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
-            return new MockResponse().setBody(body.clone());
+            return new MockResponse().addHeader("Content-Encoding", "br").setBody(body.clone());
           }
         });
   }
 
-  public static void main(String[] args) throws RunnerException {
-    var builder =
-        new OptionsBuilder()
-            .include(Utf8CoercionBenchmark.class.getSimpleName())
-            .shouldFailOnError(true);
-    new Runner(builder.build()).run();
+  // use supplier due to deadlock in pre JDK13 when mapper blocks on input (BrotliInputStream::new
+  // does)
+  private static Supplier<InputStream> wrapBrotli(InputStream in) {
+    return () -> {
+      try {
+        return new BrotliInputStream(in);
+      } catch (IOException ioe) {
+        throw new UncheckedIOException(ioe);
+      }
+    };
   }
 }

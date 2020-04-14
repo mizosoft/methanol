@@ -8,14 +8,18 @@ dependencies {
   annotationProcessor deps.jmhAnnotationProcessor
   implementation project(':methanol')
   implementation project(':methanol-jackson')
+  implementation project(':methanol-brotli')
   implementation project(':methanol-testutils')
   implementation deps.mockWebServer
   implementation deps.jmhCore
+  implementation deps.brotliDec
 }
 
 task jmhJar(type: ShadowJar) {
   dependsOn compileJava
   archivesBaseName = rootProject.getArtifactId(project)
+  archiveClassifier = 'all'
+  mergeServiceFiles()
   from sourceSets.main.runtimeClasspath
   exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
   manifest {
@@ -25,15 +29,15 @@ task jmhJar(type: ShadowJar) {
 
 task jmh(type: JavaExec) {
   classpath = files(jmhJar)
-  jvmArgs('--foe', 'true')
-  def additionalArgs = System.getenv().jmhArgs
+  args('-foe', 'true')
+  def additionalArgs = System.properties.jmhArgs
   if (additionalArgs) {
     if (additionalArgs.length() > 2
         && additionalArgs.startsWithAny("'", '"')
         && additionalArgs.endsWithAny("'", '"')) {
       additionalArgs = additionalArgs[1..additionalArgs.length() - 1]
     }
-    jvmArgs(additionalArgs)
+    args additionalArgs
   }
 }
 

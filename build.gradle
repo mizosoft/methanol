@@ -224,9 +224,7 @@ subprojects { subproject ->
         from components.java
         if (artifactId == 'benchmarks') {
           afterEvaluate {
-            artifact(jmhJar) { // publish the runnable uber-jar for benchmarks
-              classifier = 'all'
-            }
+            artifact(jmhJar) // publish the runnable uber-jar for benchmarks
           }
         }
 

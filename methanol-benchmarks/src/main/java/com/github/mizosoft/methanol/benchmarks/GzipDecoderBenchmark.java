@@ -58,8 +58,8 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Threads(Threads.MAX)
-@Warmup(iterations = 4, time = 5)
-@Measurement(iterations = 6, time = 5)
+@Warmup(iterations = 5, time = 5)
+@Measurement(iterations = 5, time = 5)
 @OutputTimeUnit(TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
 public class GzipDecoderBenchmark extends ClientServerLifecycle {

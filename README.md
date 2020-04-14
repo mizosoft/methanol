@@ -12,8 +12,8 @@ Features provided by ***Methanol*** include, but are not limited to:
 
 * Automatic response decompression.
 * Special `BodyPublisher` implementations for form submission.
-* An extensible object conversion mechanism.
-* Modules for object conversion using formats like JSON and Google's Protocol Buffers.
+* An extensible object conversion mechanism, with optional support for JSON and Protocol Buffers.
+* A special `HttpClient` with request decoration and `Publisher<HttpResponse<T>>` requests.
 * Additional `BodyPublisher`, `BodySubscriber` and `BodyHandler` implementations.
 
 ## Installation
@@ -34,7 +34,6 @@ dependencies {
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol</artifactId>
     <version>1.0.0</version>
-    <scope>compile</scope>
   </dependency>
 </dependencies>
 ```
@@ -42,7 +41,7 @@ dependencies {
 ## Documentation
 
 * [Javadocs](https://mizosoft.github.io/methanol/1.x/doc/): Latest API documentation
-* [GitHub Wikis](https://github.com/mizosoft/methanol/wiki): User guide with examples (under construction)
+* [GitHub Wikis](https://github.com/mizosoft/methanol/wiki): User guide with examples
 
 ## License
 
