@@ -2,7 +2,7 @@
 
 Provides `BodyAdapter` implementations for Google's [Protocol Buffers][protocol_buffers] format. Any
 subtype of `MessageLite` is supported for decoding and encoding. The adapters are compatible with
-the `application/x-protobuf` and `application/octet-stream` media types.
+`application/x-protobuf` and `application/octet-stream`.
 
 ## Installation
 
