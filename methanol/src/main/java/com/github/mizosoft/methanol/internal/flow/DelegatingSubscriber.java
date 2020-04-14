@@ -33,10 +33,7 @@ public class DelegatingSubscriber<T, S extends Subscriber<? super T>> implements
 
   protected final S downstream;
   protected final Upstream upstream;
-  // Safety flag to ensure that deferred cancellation from upstream doesn't
-  // cause the downstream to receive post-completion signals in case downstream's
-  // onSubscribe or onNext threw previously
-  private volatile boolean completed;
+  private boolean completed;
 
   protected DelegatingSubscriber(S downstream) {
     this.downstream = requireNonNull(downstream, "downstream");
