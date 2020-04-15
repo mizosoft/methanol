@@ -7,7 +7,7 @@ ext {
   targets = [
       targetFactory.linux.x86, targetFactory.linux.x86_64,
       targetFactory.windows.x86, targetFactory.windows.x86_64,
-      // targetFactory.macOS.x86, targetFactory.macOS.x86_64
+      targetFactory.macOS.x86, targetFactory.macOS.x86_64
   ]
 
   optimizedAttribute = Attribute.of('org.gradle.native.optimized', Boolean.class)

@@ -259,7 +259,7 @@ final class BrotliLoader {
     }
 
     boolean isStale() {
-      // Staleness is only reported on a "complete" entry (has both the lib file and
+      // Staleness is only reported on a "complete" entry (has the lib file and possibly
       // the lock file). This is because entry creation is not atomic, so care must
       // be taken to not delete an entry that is still under creation (still empty)
       return Files.notExists(lockFile) && Files.exists(libFile);
