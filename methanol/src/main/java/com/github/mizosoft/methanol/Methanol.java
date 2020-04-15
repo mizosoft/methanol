@@ -271,15 +271,12 @@ public final class Methanol extends HttpClient {
       }
     }
 
-    // add Content-Type without overwriting if request body is MimeBodyPublisher
-    if (!originalHeadersMap.containsKey("Content-Type")
-        && !defaultHeadersMap.containsKey("Content-Type")) {
-      original
-          .bodyPublisher()
-          .filter(MimeBodyPublisher.class::isInstance)
-          .map(body -> ((MimeBodyPublisher) body).mediaType())
-          .ifPresent(mt -> builder.header("Content-Type", mt.toString()));
-    }
+    // overwrite Content-Type if request body is MimeBodyPublisher
+    original
+        .bodyPublisher()
+        .filter(MimeBodyPublisher.class::isInstance)
+        .map(body -> ((MimeBodyPublisher) body).mediaType())
+        .ifPresent(mt -> builder.setHeader("Content-Type", mt.toString()));
 
     // add default timeout if not already present
     if (original.timeout().isEmpty()) {

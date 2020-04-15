@@ -227,10 +227,10 @@ class MethanolTest {
   }
 
   @Test
-  void requestDecoration_noOverwrites() throws Exception {
+  void requestDecoration_noOverwrites_exceptWithContentType() throws Exception {
     var delegate = new RecordingClient();
     var client = Methanol.newBuilder(delegate)
-        .defaultHeader("Accept", "text/html")
+        .defaultHeaders("Accept", "text/html", "Content-Type", "image/png")
         .autoAcceptEncoding(true)
         .userAgent("Mr Potato")
         .requestTimeout(Duration.ofSeconds(69))
@@ -251,7 +251,7 @@ class MethanolTest {
             "Accept", "application/json", // not overwritten by default header
             "Accept-Encoding", "myzip", // not overwritten by autoCompression
             "User-Agent", "Joe Mama", // not overwritten by userAgent
-            "Content-Type", "text/plain"), // not overwritten by MimeBodyPublisher
+            "Content-Type", mimeBody.mediaType().toString()), // overwritten by MimeBodyPublisher
         delegate.request.headers());
     assertEquals(request.timeout(), delegate.request.timeout()); // not overwritten by requestTimeout
   }
