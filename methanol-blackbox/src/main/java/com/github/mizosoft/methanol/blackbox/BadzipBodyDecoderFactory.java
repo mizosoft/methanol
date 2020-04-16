@@ -23,8 +23,8 @@
 package com.github.mizosoft.methanol.blackbox;
 
 import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.dec.AsyncBodyDecoder;
-import com.github.mizosoft.methanol.dec.AsyncDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.concurrent.Executor;

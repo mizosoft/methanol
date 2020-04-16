@@ -20,26 +20,27 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.internal.decoder;
 
-import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
+import com.github.mizosoft.methanol.BodyDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.util.concurrent.Executor;
 
-/** {@code BodyDecoder.Factory} for "deflate". */
-@DefaultProvider
-public final class DeflateBodyDecoderFactory extends ZLibBodyDecoderFactory {
+/** Convenient base class for deflate and gzip {@code BodyDecoder.Factory} providers. */
+abstract class ZLibBodyDecoderFactory implements BodyDecoder.Factory {
 
-  /**
-   * Creates a new {@code DeflateBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}.
-   */
-  public DeflateBodyDecoderFactory() {}
+  ZLibBodyDecoderFactory() {}
+
+  abstract ZLibDecoder newDecoder();
 
   @Override
-  public String encoding() {
-    return "deflate";
+  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream) {
+    return new AsyncBodyDecoder<>(newDecoder(), downstream);
   }
 
   @Override
-  ZLibDecoder newDecoder() {
-    return new DeflateDecoder();
+  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream, Executor executor) {
+    return new AsyncBodyDecoder<>(newDecoder(), downstream, executor);
   }
 }

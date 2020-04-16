@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.testutils.dec;
 
-import com.github.mizosoft.methanol.dec.AsyncDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.nio.ByteBuffer;
 
 /** A ByteSource that reads from a byte array up to a limit that can be incremented each round. */

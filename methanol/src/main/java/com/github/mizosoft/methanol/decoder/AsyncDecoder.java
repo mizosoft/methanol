@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.dec;
+package com.github.mizosoft.methanol.decoder;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import java.io.IOException;

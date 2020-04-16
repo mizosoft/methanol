@@ -35,7 +35,7 @@ module methanol {
   requires static com.google.errorprone.annotations;
 
   exports com.github.mizosoft.methanol;
-  exports com.github.mizosoft.methanol.dec;
+  exports com.github.mizosoft.methanol.decoder;
   exports com.github.mizosoft.methanol.adapter;
   exports com.github.mizosoft.methanol.internal.flow to
       methanol.adapter.jackson;
@@ -46,6 +46,6 @@ module methanol {
   uses com.github.mizosoft.methanol.BodyAdapter.Decoder;
 
   provides com.github.mizosoft.methanol.BodyDecoder.Factory with
-      com.github.mizosoft.methanol.internal.dec.GzipBodyDecoderFactory,
-      com.github.mizosoft.methanol.internal.dec.DeflateBodyDecoderFactory;
+      com.github.mizosoft.methanol.internal.decoder.GzipBodyDecoderFactory,
+      com.github.mizosoft.methanol.internal.decoder.DeflateBodyDecoderFactory;
 }

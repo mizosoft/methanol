@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.internal.decoder;
 
 import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
 

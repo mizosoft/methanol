@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.testutils.dec;
 
-import com.github.mizosoft.methanol.dec.AsyncDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 

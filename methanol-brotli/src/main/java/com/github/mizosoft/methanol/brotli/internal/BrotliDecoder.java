@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.brotli.internal;
 
-import com.github.mizosoft.methanol.dec.AsyncDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.io.EOFException;
 import java.io.IOException;
 import java.lang.ref.Cleaner;

@@ -20,27 +20,28 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.internal.decoder;
 
-import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.dec.AsyncBodyDecoder;
-import java.net.http.HttpResponse.BodySubscriber;
-import java.util.concurrent.Executor;
+import java.io.EOFException;
+import java.io.IOException;
 
-/** Convenient base class for deflate and gzip {@code BodyDecoder.Factory} providers. */
-abstract class ZLibBodyDecoderFactory implements BodyDecoder.Factory {
+/** {@code AsyncDecoder} for deflate. */
+final class DeflateDecoder extends ZLibDecoder {
 
-  ZLibBodyDecoderFactory() {}
-
-  abstract ZLibDecoder newDecoder();
-
-  @Override
-  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream) {
-    return new AsyncBodyDecoder<>(newDecoder(), downstream);
+  DeflateDecoder() {
+    super(WrapMode.DEFLATE);
   }
 
   @Override
-  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream, Executor executor) {
-    return new AsyncBodyDecoder<>(newDecoder(), downstream, executor);
+  public void decode(ByteSource source, ByteSink sink) throws IOException {
+    inflateSource(source, sink);
+    if (inflater.finished()) {
+      if (source.hasRemaining()) {
+        throw new IOException("deflate stream finished prematurely");
+      }
+    } else if (source.finalSource()) {
+      assert !source.hasRemaining();
+      throw new EOFException("unexpected end of deflate stream");
+    }
   }
 }

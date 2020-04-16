@@ -1,2 +1,2 @@
-com.github.mizosoft.methanol.internal.dec.GzipBodyDecoderFactory
-com.github.mizosoft.methanol.internal.dec.DeflateBodyDecoderFactory
+com.github.mizosoft.methanol.internal.decoder.GzipBodyDecoderFactory
+com.github.mizosoft.methanol.internal.decoder.DeflateBodyDecoderFactory

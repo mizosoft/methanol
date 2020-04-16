@@ -20,11 +20,11 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.internal.decoder;
 
 import static java.util.Objects.requireNonNullElse;
 
-import com.github.mizosoft.methanol.dec.AsyncDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.zip.DataFormatException;

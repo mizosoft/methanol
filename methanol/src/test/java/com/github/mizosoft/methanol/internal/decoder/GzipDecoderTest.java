@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.internal.decoder;
 
 import static com.github.mizosoft.methanol.testutils.TestUtils.gunzip;
 import static java.lang.String.format;

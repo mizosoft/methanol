@@ -25,8 +25,8 @@ package com.github.mizosoft.methanol.tck;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.dec.AsyncBodyDecoder;
-import com.github.mizosoft.methanol.dec.AsyncDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTck.BufferListHandle;

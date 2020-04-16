@@ -20,13 +20,13 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.dec;
+package com.github.mizosoft.methanol.decoder;
 
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSink;
-import com.github.mizosoft.methanol.dec.AsyncDecoder.ByteSource;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder.ByteSink;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder.ByteSource;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;

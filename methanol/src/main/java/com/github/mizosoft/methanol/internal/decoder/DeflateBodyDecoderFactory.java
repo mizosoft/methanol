@@ -20,28 +20,26 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.dec;
+package com.github.mizosoft.methanol.internal.decoder;
 
-import java.io.EOFException;
-import java.io.IOException;
+import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
 
-/** {@code AsyncDecoder} for deflate. */
-final class DeflateDecoder extends ZLibDecoder {
+/** {@code BodyDecoder.Factory} for "deflate". */
+@DefaultProvider
+public final class DeflateBodyDecoderFactory extends ZLibBodyDecoderFactory {
 
-  DeflateDecoder() {
-    super(WrapMode.DEFLATE);
+  /**
+   * Creates a new {@code DeflateBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}.
+   */
+  public DeflateBodyDecoderFactory() {}
+
+  @Override
+  public String encoding() {
+    return "deflate";
   }
 
   @Override
-  public void decode(ByteSource source, ByteSink sink) throws IOException {
-    inflateSource(source, sink);
-    if (inflater.finished()) {
-      if (source.hasRemaining()) {
-        throw new IOException("deflate stream finished prematurely");
-      }
-    } else if (source.finalSource()) {
-      assert !source.hasRemaining();
-      throw new EOFException("unexpected end of deflate stream");
-    }
+  ZLibDecoder newDecoder() {
+    return new DeflateDecoder();
   }
 }
