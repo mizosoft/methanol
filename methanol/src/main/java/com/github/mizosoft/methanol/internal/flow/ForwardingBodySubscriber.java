@@ -20,43 +20,32 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.extensions;
+package com.github.mizosoft.methanol.internal.flow;
 
-import com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Flow.Subscriber;
-import java.util.function.Function;
 
-/**
- * Adapts a subscriber to a {@code BodySubscriber} where the body's completion need not be in
- * accordance with {@code onComplete} or {@code onError}.
- *
- * @param <T> the body type
- * @param <S> the subscriber's type
- */
-public final class AsyncSubscriberAdapter<T, S extends Subscriber<? super List<ByteBuffer>>>
+/** A {@code BodySubscriber<T>} forwarding to another {@code BodySubscriber<T>}. */
+public class ForwardingBodySubscriber<T>
     extends ForwardingSubscriber<List<ByteBuffer>>
     implements BodySubscriber<T> {
 
-  private final S downstream;
-  private final Function<? super S, ? extends CompletionStage<T>> asyncFinisher;
+  private final BodySubscriber<T> downstream;
 
-  public AsyncSubscriberAdapter(
-      S downstream, Function<? super S, ? extends CompletionStage<T>> asyncFinisher) {
+  /** Creates a {@code ForwardingBodySubscriber} that forwards to the given downstream. */
+  protected ForwardingBodySubscriber(BodySubscriber<T> downstream) {
     this.downstream = downstream;
-    this.asyncFinisher = asyncFinisher;
   }
 
   @Override
-  protected Subscriber<? super List<ByteBuffer>> downstream() {
+  protected final BodySubscriber<T> downstream() {
     return downstream;
   }
 
   @Override
   public CompletionStage<T> getBody() {
-    return asyncFinisher.apply(downstream);
+    return downstream.getBody();
   }
 }

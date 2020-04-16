@@ -190,7 +190,6 @@ subprojects { subproject ->
 
   tasks.withType(Test) {
     testLogging {
-      events = ['passed']
       showStandardStreams = true
       exceptionFormat = 'full'
     }
@@ -198,6 +197,9 @@ subprojects { subproject ->
 
   test {
     useJUnitPlatform()
+    testLogging {
+      events = ['skipped', 'failed']
+    }
   }
 }
 

@@ -27,8 +27,8 @@ import static com.github.mizosoft.methanol.internal.flow.FlowSupport.subtractAnd
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.HttpReadTimeoutException;
-import com.github.mizosoft.methanol.internal.flow.DelegatingSubscriber;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -36,7 +36,6 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.ScheduledExecutorService;
@@ -49,8 +48,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * Intercepts requests to upstream and schedules error completion with {@code
  * HttpReadTimeoutException} if each not fulfilled within a timeout.
  */
-public final class TimeoutSubscriber<T>
-    extends DelegatingSubscriber<List<ByteBuffer>, BodySubscriber<T>> implements BodySubscriber<T> {
+public final class TimeoutSubscriber<T> extends ForwardingBodySubscriber<T> {
 
   private static final VarHandle ITEM_INDEX;
   private static final VarHandle DEMAND;
@@ -74,6 +72,7 @@ public final class TimeoutSubscriber<T>
 
   private final long timeoutMillis;
   private final Timer timer;
+
   // This counter represents the index of the item to which a timeout is
   // scheduled, incremented by onNext and set to TOMBSTONE by terminal signals.
   // This ensures that timeout error completion is not signalled for the wrong
@@ -99,11 +98,6 @@ public final class TimeoutSubscriber<T>
               timeoutMillis, TimeUnit.MILLISECONDS, FlowSupport.SYNC_EXECUTOR);
       this.timer = idx -> new DelayedTimeoutTask(idx, delayedExecutor);
     }
-  }
-
-  @Override
-  public CompletionStage<T> getBody() {
-    return downstream.getBody();
   }
 
   @Override

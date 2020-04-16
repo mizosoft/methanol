@@ -28,24 +28,25 @@ import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A defensive wrapper over a {@code Subscriber<T>}. */
-public class DelegatingSubscriber<T, S extends Subscriber<? super T>> implements Subscriber<T> {
+/** A defensive {@code Subscriber<T>} forwarding to a downstream {@code Subscriber<? super T>}. */
+public abstract class ForwardingSubscriber<T> implements Subscriber<T> {
 
-  protected final S downstream;
   protected final Upstream upstream;
   private boolean completed;
 
-  protected DelegatingSubscriber(S downstream) {
-    this.downstream = requireNonNull(downstream, "downstream");
+  protected ForwardingSubscriber() {
     upstream = new Upstream();
   }
+
+  /** Returns the downstream to which signals are forwarded. */
+  protected abstract Subscriber<? super T> downstream();
 
   @Override
   public void onSubscribe(Subscription subscription) {
     requireNonNull(subscription);
     if (upstream.setOrCancel(subscription)) {
       try {
-        downstream.onSubscribe(subscription);
+        downstream().onSubscribe(subscription);
       } catch (Throwable t) {
         upstream.cancel();
         complete(t);
@@ -58,7 +59,7 @@ public class DelegatingSubscriber<T, S extends Subscriber<? super T>> implements
     requireNonNull(item);
     if (!completed) {
       try {
-        downstream.onNext(item);
+        downstream().onNext(item);
       } catch (Throwable t) {
         upstream.cancel();
         complete(t);
@@ -83,9 +84,9 @@ public class DelegatingSubscriber<T, S extends Subscriber<? super T>> implements
     if (!completed) {
       completed = true;
       if (error != null) {
-        downstream.onError(error);
+        downstream().onError(error);
       } else {
-        downstream.onComplete();
+        downstream().onComplete();
       }
     }
   }

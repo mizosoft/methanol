@@ -37,7 +37,7 @@ import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
-import com.github.mizosoft.methanol.internal.flow.DelegatingSubscriber;
+import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.io.ByteArrayOutputStream;
@@ -169,7 +169,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     }
   }
 
-  private static class JacksonSubscriber<T> implements BodySubscriber<T> {
+  private static final class JacksonSubscriber<T> implements BodySubscriber<T> {
 
     private final ObjectMapper mapper;
     private final ObjectReader objReader;
@@ -262,9 +262,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
    * Decodes body using {@code sourceCharset} then encodes it again to {@code targetCharset}. Used
    * to coerce response into UTF-8 if not already to be parsable by the non-blocking parser.
    */
-  public static final class CharsetCoercingSubscriber<T>
-      extends DelegatingSubscriber<List<ByteBuffer>, BodySubscriber<T>>
-      implements BodySubscriber<T> {
+  private static final class CharsetCoercingSubscriber<T> extends ForwardingBodySubscriber<T> {
 
     private static final int TEMP_BUFFER_SIZE = 4 * 1024;
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
@@ -274,17 +272,12 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     private final CharBuffer tempCharBuff;
     private @Nullable ByteBuffer leftover;
 
-    public CharsetCoercingSubscriber(BodySubscriber<T> downstream,
+    CharsetCoercingSubscriber(BodySubscriber<T> downstream,
         Charset sourceCharset, Charset targetCharset) {
       super(downstream);
       decoder = sourceCharset.newDecoder();
       encoder = targetCharset.newEncoder();
       tempCharBuff = CharBuffer.allocate(TEMP_BUFFER_SIZE);
-    }
-
-    @Override
-    public CompletionStage<T> getBody() {
-      return downstream.getBody();
     }
 
     @Override

@@ -22,6 +22,10 @@ task tckTest(type: Test) {
   include '**/tck/**'
   shouldRunAfter test
   scanForTestClasses false
+  testLogging {
+    events = ['failed']
+  }
+
   if (System.getenv().GITHUB_ACTIONS) {
     systemProperties.TCK_TIMEOUT_MILLIS = 1_000
     systemProperties.TCK_NO_SIGNAL_TIMEOUT_MILLIS = 100

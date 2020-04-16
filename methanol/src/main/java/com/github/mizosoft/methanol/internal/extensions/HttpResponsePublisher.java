@@ -26,7 +26,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
-import com.github.mizosoft.methanol.internal.flow.DelegatingSubscriber;
+import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.http.HttpClient;
@@ -36,10 +36,7 @@ import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.net.http.HttpResponse.ResponseInfo;
-import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
@@ -246,9 +243,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
    * Notifies parent after initial response body has been received, after then no push promise is
    * expected. Helpful to know when to complete downstream if accepting push promises.
    */
-  private static final class NotifyingBodySubscriber<R>
-      extends DelegatingSubscriber<List<ByteBuffer>, BodySubscriber<R>>
-      implements BodySubscriber<R> {
+  private static final class NotifyingBodySubscriber<R> extends ForwardingBodySubscriber<R> {
 
     private final Runnable onCompletion;
 
@@ -258,14 +253,12 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
     }
 
     @Override
-    public CompletionStage<R> getBody() {
-      return downstream.getBody();
-    }
-
-    @Override
     public void onComplete() {
-      onCompletion.run();
-      super.onComplete();
+      try {
+        super.onComplete();
+      } finally {
+        onCompletion.run();
+      }
     }
   }
 }
