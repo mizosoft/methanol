@@ -4,21 +4,22 @@ plugins {
   id 'net.ltgt.errorprone' version '1.1.1' apply false
   id 'jacoco' // apply to root
   id 'com.github.kt3k.coveralls' version '2.10.1' // apply to root
+  id 'com.github.ben-manes.versions' version '0.28.0'
 }
 
 ext {
   versions = [
-      'junitJupiter'    : '5.6.0',
-      'junitPlatform'   : '1.6.0',
+      'junitJupiter'    : '5.6.1',
+      'junitPlatform'   : '1.6.1',
       'reactiveStreams' : '1.0.3',
-      'checkerFramework': '3.1.1',
+      'checkerFramework': '3.3.0',
       'gson'            : '2.8.6',
       'jackson'         : '2.10.2',
       'protobuf'        : '3.11.4',
-      'checkstyle'      : '8.29',
+      'checkstyle'      : '8.31',
       'errorprone'      : '2.3.4',
       'brotliDec'       : '0.1.2',
-      'okhttp'          : '4.4.0',
+      'okhttp'          : '4.5.0',
       'jmh'             : '1.23',
       'jacoco'          : '0.8.5'
   ]
@@ -348,6 +349,7 @@ task rootJavadoc(type: Javadoc) {
     addStringOption('windowtitle', "Methanol ${project.version} API")
   }
   destinationDir = file("${project.buildDir}/docs/javadoc")
+
   doFirst {
     // Must be run in JDK12+ as the specific form of --module-source-path
     // is used because module names don't match containing directory names

@@ -359,7 +359,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
         }
         if (encoderResult.isOverflow()) { // need bigger out buffer
           // TODO: not overflow aware?
-          capacity = capacity + Math.max(1, capacity >> 1);
+          capacity = capacity + Math.max(1, capacity >>> 1);
           ByteBuffer newOut = ByteBuffer.allocate(capacity);
           newOut.put(out.flip());
           out = newOut;

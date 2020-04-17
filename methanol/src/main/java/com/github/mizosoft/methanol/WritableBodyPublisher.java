@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
@@ -138,9 +139,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
    */
   @Override
   public void flush() {
-    if (closed) {
-      throw new IllegalStateException("closed");
-    }
+    requireState(!closed, "closed");
     if (flushInternal()) {
       signalDownstream(false); // notify downstream if flushing produced any signals
     }
@@ -226,6 +225,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       if (!src.hasRemaining()) {
         return 0;
       }
+
       int written = 0;
       boolean signalsAvailable = false;
       synchronized (writeLock) {
@@ -241,6 +241,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
             sink = null;
           }
         } while (src.hasRemaining() && isOpen());
+
         if (closed) {
           sinkBuffer = null;
           if (written <= 0) { // only report if no bytes were written
@@ -250,6 +251,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
           sinkBuffer = sink;
         }
       }
+
       if (signalsAvailable) {
         signalDownstream(false);
       }

@@ -228,11 +228,10 @@ public class MoreBodyHandlers {
   // Require that at least an adapter exists for the given type
   // (the media type cannot be known until the headers arrive)
   private static void requireSupport(TypeRef<?> type) {
-    Decoder.getDecoder(type, null)
-        .orElseThrow(
-            () ->
-                new UnsupportedOperationException(
-                    "unsupported conversion to an object of type <" + type + ">"));
+    if (Decoder.installed().stream().noneMatch(d -> d.supportsType(type))) {
+      throw new UnsupportedOperationException(
+          "unsupported conversion to an object of type <" + type + ">");
+    }
   }
 
   private static @Nullable MediaType mediaTypeOrNull(HttpHeaders headers) {
