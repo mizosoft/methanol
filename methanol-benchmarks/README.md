@@ -8,7 +8,7 @@ Benchmarks are available as a runnable Jar in [Maven][benchmarks_maven]. Downloa
 following:
 
 ```bsh
-java -jar benchmarks-1.0.0-all.jar
+java -jar benchmarks-1.1.0-all.jar
 ```
 
 ## Results
@@ -43,5 +43,5 @@ shows that performance is not that different from the byte array parser (tested 
 | BYTE_ARRAY_PARSER | thrpt | 5   | 11167.702 | 128.353 | ops/s |
 
 [jmh]: https://openjdk.java.net/projects/code-tools/jmh/
-[benchmarks_maven]: https://mvnrepository.com/artifact/com.github.mizosoft.methanol/benchmarks/1.0.0
+[benchmarks_maven]: https://mvnrepository.com/artifact/com.github.mizosoft.methanol/benchmarks/1.1.0
 [methanol_jackson]: https://github.com/mizosoft/methanol/tree/master/methanol-jackson

@@ -10,7 +10,7 @@ A `BodyDecoder.Factory` is service-provided by default. You only need to add thi
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-brotli:1.0.0'
+  implementation 'com.github.mizosoft.methanol:methanol-brotli:1.1.0'
 }
 ```
 
@@ -21,7 +21,7 @@ dependencies {
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol-brotli</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
   </dependency>
 </dependencies>
 ```
