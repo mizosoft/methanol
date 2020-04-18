@@ -518,7 +518,6 @@ class IntegrationTests {
     var expectedBody =
               "--my_awesome_boundary\r\n"
             + "Content-Disposition: form-data; name=\"action\"\r\n"
-            + "Content-Type: text/plain; charset=utf-8\r\n"
             + "\r\n"
             + "sendTweet\r\n"
             + "--my_awesome_boundary\r\n"

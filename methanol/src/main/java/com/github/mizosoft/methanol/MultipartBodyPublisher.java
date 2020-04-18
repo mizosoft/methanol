@@ -316,10 +316,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       requireNonNull(name, "name");
       requireNonNull(value, "value");
       requireNonNull(charset, "charset");
-      MimeBodyPublisher publisher =
-          MoreBodyPublishers.ofMediaType(
-              BodyPublishers.ofString(value.toString(), charset), TEXT_PLAIN.withCharset(charset));
-      return formPart(name, publisher);
+      return formPart(name, BodyPublishers.ofString(value.toString(), charset));
     }
 
     /**

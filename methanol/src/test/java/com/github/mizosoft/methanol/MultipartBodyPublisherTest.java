@@ -165,12 +165,10 @@ class MultipartBodyPublisherTest {
     var expected =
           "--cool_boundary\r\n"
         + "Content-Disposition: form-data; name=\"important_question\"\r\n"
-        + "Content-Type: text/plain; charset=utf-8\r\n"
         + "\r\n"
         + "Is math related to science? £_£\r\n"
         + "--cool_boundary\r\n"
         + "Content-Disposition: form-data; name=\"less_important_question\"\r\n"
-        + "Content-Type: text/plain; charset=us-ascii\r\n"
         + "\r\n"
         + "Is earth flat? $_$\r\n"
         + "--cool_boundary--\r\n";
