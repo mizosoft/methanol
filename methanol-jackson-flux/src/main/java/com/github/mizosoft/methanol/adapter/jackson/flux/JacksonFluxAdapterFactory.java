@@ -20,43 +20,37 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.blackbox;
+package com.github.mizosoft.methanol.adapter.jackson.flux;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.BodyAdapter;
+import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
-import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
 
-public class JacksonProviders {
+/** Provides {@link BodyAdapter} implementations for the JSON format using Jackson. */
+public class JacksonFluxAdapterFactory {
 
-  static final ObjectMapper configuredMapper =
-      new JsonMapper()
-          .disable(MapperFeature.AUTO_DETECT_GETTERS)
-          .disable(MapperFeature.AUTO_DETECT_SETTERS)
-          .disable(MapperFeature.AUTO_DETECT_IS_GETTERS)
-          .setVisibility(PropertyAccessor.ALL, Visibility.ANY);
+  private JacksonFluxAdapterFactory() {} // non-instantiable
 
-  private JacksonProviders() {}
-
-  public static class EncoderProvider {
-
-    private EncoderProvider() {}
-
-    public static Encoder provider() {
-      return JacksonAdapterFactory.createEncoder(configuredMapper);
-    }
+  /** Returns a {@code Encoder} that uses a default {@code ObjectMapper} instance. */
+  public static Encoder createEncoder() {
+    return createEncoder(new JsonMapper());
   }
 
-  public static class DecoderProvider {
+  /** Returns a {@code Encoder} that uses the given {@code ObjectMapper} instance. */
+  public static Encoder createEncoder(ObjectMapper mapper) {
+    return new JacksonFluxAdapter.Encoder(mapper);
+  }
 
-    private DecoderProvider() {}
+  /** Returns a {@code Decoder} that uses a default {@code ObjectMapper} instance. */
+  public static Decoder createDecoder() {
+    return createDecoder(new JsonMapper());
+  }
 
-    public static BodyAdapter.Decoder provider() {
-      return JacksonAdapterFactory.createDecoder(configuredMapper);
-    }
+  /** Returns a {@code Decoder} that uses the given {@code ObjectMapper} instance. */
+  public static Decoder createDecoder(ObjectMapper mapper) {
+    return new JacksonFluxAdapter.Decoder(mapper);
   }
 }
+

@@ -208,7 +208,6 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
    */
   public static final class Builder {
 
-    private static final MediaType TEXT_PLAIN = MediaType.of("text", "plain");
     private static final MediaType OCTET_STREAM = MediaType.of("application", "octet-stream");
 
     // boundary     := 0*69<bchars> bcharnospace
@@ -581,7 +580,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
         // But the operation need not be atomic as other reads/writes
         // are done serially when ByteBuffers are polled, which is only
         // possible after this volatile write.
-        prefetcher.update(upstream);
+        prefetcher.initialize(upstream);
       }
     }
 

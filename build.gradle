@@ -21,7 +21,8 @@ ext {
       'brotliDec'       : '0.1.2',
       'okhttp'          : '4.5.0',
       'jmh'             : '1.23',
-      'jacoco'          : '0.8.5'
+      'jacoco'          : '0.8.5',
+      'reactor'         : '3.3.4.RELEASE'
   ]
 
   deps = [
@@ -44,7 +45,8 @@ ext {
       'reactiveStreamsExamples': "org.reactivestreams:reactive-streams-examples:${versions.reactiveStreams}",
       'jmhCore'                : "org.openjdk.jmh:jmh-core:$versions.jmh",
       'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh",
-      'okhttpTls'              : "com.squareup.okhttp3:okhttp-tls:${versions.okhttp}"
+      'okhttpTls'              : "com.squareup.okhttp3:okhttp-tls:${versions.okhttp}",
+      'reactorCore'            : "io.projectreactor:reactor-core:${versions.reactor}"
   ]
 
   // querying properties about subprojects

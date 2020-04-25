@@ -35,4 +35,6 @@ module methanol.adapter.jackson {
   requires static org.checkerframework.checker.qual;
 
   exports com.github.mizosoft.methanol.adapter.jackson;
+  exports com.github.mizosoft.methanol.adapter.jackson.internal
+      to methanol.adapter.jackson.flux;
 }

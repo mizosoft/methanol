@@ -38,6 +38,7 @@ import static java.net.http.HttpRequest.BodyPublishers.fromPublisher;
 import static java.net.http.HttpResponse.BodyHandlers.discarding;
 import static java.net.http.HttpResponse.BodyHandlers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -54,6 +55,7 @@ import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodyPublishers;
 import com.github.mizosoft.methanol.MultipartBodyPublisher;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
+import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
@@ -83,6 +85,7 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -104,6 +107,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
+import reactor.core.publisher.Flux;
 
 class IntegrationTests {
 
@@ -436,6 +440,33 @@ class IntegrationTests {
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, ofObject(String.class));
     assertEquals(poem, response.body());
+  }
+
+  @Test
+  void ofObject_jsonFlux() throws Exception {
+    server.enqueue(new MockResponse()
+        .setBody(okBuffer(gzip(lotsOfJson.getBytes(UTF_8))))
+        .addHeader("Content-Encoding", "gzip")
+        .throttleBody(8 * 1024, 100, TimeUnit.MILLISECONDS));
+    var request = HttpRequest.newBuilder(server.url("/").uri()).build();
+    var response = client.send(
+        request, decoding(ofObject(new TypeRef<Flux<Map<String, Object>>>() {})));
+    var listMono = response.body().collectList();
+    assertEquals(Optional.of(lotsOfJsonDecoded), listMono.blockOptional());
+  }
+
+  @Test
+  void ofObject_uploadFlux() throws Exception {
+    server.enqueue(new MockResponse());
+    var flux = Flux.fromIterable(lotsOfJsonDecoded);
+    var request = MutableRequest.POST(
+        server.url("/").uri(), MoreBodyPublishers.ofObject(flux, null));
+    client.sendAsync(request, discarding());
+
+    var recordedRequest = server.takeRequest();
+    var uploaded = recordedRequest.getBody().readUtf8();
+    var expected = JacksonProviders.configuredMapper.writeValueAsString(lotsOfJsonDecoded);
+    assertEquals(expected, uploaded);
   }
 
   @Test

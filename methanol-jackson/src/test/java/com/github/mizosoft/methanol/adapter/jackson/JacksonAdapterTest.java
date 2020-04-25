@@ -26,7 +26,6 @@ import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createEncoder;
 import static com.github.mizosoft.methanol.testutils.TestUtils.NOOP_SUBSCRIPTION;
 import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
-import static com.github.mizosoft.methanol.testutils.TestUtils.load;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,7 +45,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -60,18 +58,13 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
-import com.github.mizosoft.methanol.testutils.BufferTokenizer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.SubmissionPublisher;
 import org.junit.jupiter.api.Test;
 
 class JacksonAdapterTest {
@@ -147,7 +140,7 @@ class JacksonAdapterTest {
     var keanu = new AwesomePerson("Keanu", null, 55); // You know it's Reeves!
     var body = createEncoder(mapper).toBody(keanu, null);
     var expected =
-             "{\n"
+              "{\n"
             + "  \"firstName\" : \"Keanu\",\n"
             + "  \"age\" : 55\n"
             + "}";
@@ -160,7 +153,7 @@ class JacksonAdapterTest {
         new TypeRef<Bean>() {}, null);
     var json = "{\"value\":\"beans are boring\"}";
     var bean = publishUtf8(subscriber, json);
-    assertEquals(bean.value , "beans are boring");
+    assertEquals("beans are boring" , bean.value);
   }
 
   @Test
@@ -169,32 +162,7 @@ class JacksonAdapterTest {
         new TypeRef<Bean>() {}, MediaType.parse("application/json; charset=utf-16"));
     var json = "{\"value\":\"beans are boring\"}";
     var bean = publish(subscriber, json, UTF_16);
-    assertEquals(bean.value, "beans are boring");
-  }
-
-  @Test
-  void deserializeJson_utf16_stressed() {
-    var aladinText = new String(load(getClass(), "/aladin_utf8.txt"), UTF_8);
-    var jsonUtf16 = UTF_16.encode("{\"aladin\":\"" + aladinText + "\"}");
-    var mapper = new JsonMapper.Builder(new JsonMapper())
-        .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
-        .build();
-    var subscriber = JacksonAdapterFactory.createDecoder(mapper)
-        .toObject(new TypeRef<Map<String, String>>() {}, MediaType.parse("application/json; charset=utf-16"));
-    var executor = Executors.newFixedThreadPool(8);
-    int[] buffSizes = {1, 32, 555, 1024, 21};
-    int[] listSizes = {1, 3, 1};
-    try (var publisher = new SubmissionPublisher<List<ByteBuffer>>(executor, Integer.MAX_VALUE)) {
-      publisher.subscribe(subscriber);
-      BufferTokenizer.tokenizeToLists(jsonUtf16, buffSizes, listSizes)
-          .forEach(publisher::submit);
-    } finally {
-      executor.shutdown();
-    }
-    var body = subscriber.getBody().toCompletableFuture().join();
-    var receivedText = body.get("aladin");
-    assertNotNull(body);
-    assertLinesMatch(lines(aladinText), lines(receivedText));
+    assertEquals("beans are boring", bean.value);
   }
 
   @Test
@@ -203,8 +171,8 @@ class JacksonAdapterTest {
         .registerModule(new SimpleModule().addDeserializer(Point.class, new PointDeserializer()));
     var subscriber = createDecoder(mapper).toObject(new TypeRef<Point>() {}, null);
     var point = publishUtf8(subscriber, "[1, 2]");
-    assertEquals(point.x, 1);
-    assertEquals(point.y, 2);
+    assertEquals(1, point.x);
+    assertEquals(2, point.y);
   }
 
   @Test
@@ -232,9 +200,9 @@ class JacksonAdapterTest {
             + "  age: 55 // bruuhh, he hasn't aged a bit\n"
             + "}";
     var keanu = publishUtf8(subscriber, nonStdJson);
-    assertEquals(keanu.firstName, "Keanu");
-    assertEquals(keanu.lastName, "Reeves");
-    assertEquals(keanu.age, 55);
+    assertEquals("Keanu", keanu.firstName);
+    assertEquals("Reeves", keanu.lastName);
+    assertEquals(55, keanu.age);
   }
 
   @Test
@@ -250,7 +218,7 @@ class JacksonAdapterTest {
       subscriber.onComplete();
     }).start();
     var bean = beanSupplier.get();
-    assertEquals(bean.value, "beans are boring");
+    assertEquals("beans are boring", bean.value);
   }
 
   @Test

@@ -81,7 +81,7 @@ public final class ByteChannelSubscriber implements BodySubscriber<ReadableByteC
     if (upstream.setOrCancel(subscription)) {
       // non-atomic update is safe because window decrements are only possible
       // after successful takes/polls which can only happen after requests
-      prefetcher.update(upstream);
+      prefetcher.initialize(upstream);
     }
   }
 
