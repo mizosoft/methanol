@@ -24,11 +24,6 @@ ext {
   }
 }
 
-// Subproject  is not Java so disable cf
-checkerFramework {
-  applyToSubprojects = false
-}
-
 // Create consumer configuration for each target variant
 targets.each { target ->
   configurations.create(getJniConfigName(target)) {
