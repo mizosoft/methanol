@@ -5,9 +5,11 @@ plugins {
 dependencies {
   implementation project(':methanol')
   implementation project(':methanol-jackson')
+  implementation project(':methanol-jackson-flux')
   implementation project(':methanol-protobuf')
   implementation project(':methanol-brotli')
   implementation project(':methanol-testutils')
+  implementation deps.reactorCore
 
   testImplementation deps.mockWebServer
   testImplementation deps.brotliDec

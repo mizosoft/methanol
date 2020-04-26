@@ -22,32 +22,20 @@
 
 package com.github.mizosoft.methanol.blackbox;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.github.mizosoft.methanol.BodyAdapter;
+import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
-import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
+import com.github.mizosoft.methanol.adapter.jackson.flux.JacksonFluxAdapterFactory;
 
-public class JacksonProviders {
+public class JacksonFluxProviders {
 
-  static final ObjectMapper configuredMapper =
-      new JsonMapper()
-          .disable(MapperFeature.AUTO_DETECT_GETTERS)
-          .disable(MapperFeature.AUTO_DETECT_SETTERS)
-          .disable(MapperFeature.AUTO_DETECT_IS_GETTERS)
-          .setVisibility(PropertyAccessor.ALL, Visibility.ANY);
-
-  private JacksonProviders() {}
+  private JacksonFluxProviders() {}
 
   public static class EncoderProvider {
 
     private EncoderProvider() {}
 
     public static Encoder provider() {
-      return JacksonAdapterFactory.createEncoder(configuredMapper);
+      return JacksonFluxAdapterFactory.createEncoder(JacksonProviders.configuredMapper);
     }
   }
 
@@ -55,8 +43,8 @@ public class JacksonProviders {
 
     private DecoderProvider() {}
 
-    public static BodyAdapter.Decoder provider() {
-      return JacksonAdapterFactory.createDecoder(configuredMapper);
+    public static Decoder provider() {
+      return JacksonFluxAdapterFactory.createDecoder(JacksonProviders.configuredMapper);
     }
   }
 }

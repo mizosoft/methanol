@@ -1,6 +1,9 @@
 dependencies {
-  api project(':methanol')
   api deps.jacksonDatabind
+  api project(':methanol')
+  implementation deps.reactorCore
+  implementation deps.reactiveStreams
+  implementation project(':methanol-jackson')
 
   testImplementation project(':methanol-testutils')
 }
@@ -14,4 +17,4 @@ compileJava {
   addReads(task, 'methanol.testutils')
 }
 
-addOpens(test, 'com.github.mizosoft.methanol.adapter.jackson', 'com.fasterxml.jackson.databind')
+addOpens(test, 'com.github.mizosoft.methanol.adapter.jackson.flux', 'com.fasterxml.jackson.databind')

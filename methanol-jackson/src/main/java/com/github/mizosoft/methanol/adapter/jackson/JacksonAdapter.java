@@ -22,24 +22,20 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
+import static com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.util.TokenBuffer;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
-import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
-import com.github.mizosoft.methanol.internal.flow.Prefetcher;
-import com.github.mizosoft.methanol.internal.flow.Upstream;
+import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
+import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonSubscriber;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -50,26 +46,10 @@ import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Flow.Subscription;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class JacksonAdapter extends AbstractBodyAdapter {
-
-  public static final MediaType APPLICATION_JSON = MediaType.of("application", "json");
 
   final ObjectMapper mapper;
 
@@ -131,13 +111,8 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
         return BodySubscribers.mapping(
             BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(type, bytes));
       }
-      // The non-blocking parser only works with UTF-8 and ASCII
-      // https://github.com/FasterXML/jackson-core/issues/596
-      Charset charset = charsetOrUtf8(mediaType);
-      JacksonSubscriber<T> subscriber = new JacksonSubscriber<>(mapper, type, asyncParser);
-      return charset.equals(StandardCharsets.US_ASCII) || charset.equals(StandardCharsets.UTF_8)
-          ? subscriber
-          : new CharsetCoercingSubscriber<>(subscriber, charset, StandardCharsets.UTF_8);
+      return JacksonAdapterUtils.coerceUtf8(
+          new JacksonSubscriber<>(mapper, type, asyncParser), charsetOrUtf8(mediaType));
     }
 
     @Override
@@ -165,210 +140,6 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
         return mapper.readerFor(mapper.constructType(type.type())).readValue(reader);
       } catch (IOException ioe) {
         throw new UncheckedIOException(ioe);
-      }
-    }
-  }
-
-  private static final class JacksonSubscriber<T> implements BodySubscriber<T> {
-
-    private final ObjectMapper mapper;
-    private final ObjectReader objReader;
-    private final JsonParser parser;
-    private final ByteArrayFeeder feeder;
-    private final TokenBuffer jsonBuffer;
-    private final CompletableFuture<T> valueFuture;
-    private final Upstream upstream;
-    private final Prefetcher prefetcher;
-
-    JacksonSubscriber(ObjectMapper mapper, TypeRef<T> type, JsonParser parser) {
-      this.mapper = mapper;
-      this.objReader = mapper.readerFor(mapper.constructType(type.type()));
-      this.parser = parser;
-      feeder = (ByteArrayFeeder) parser.getNonBlockingInputFeeder();
-      jsonBuffer = new TokenBuffer(this.parser);
-      valueFuture = new CompletableFuture<>();
-      upstream = new Upstream();
-      prefetcher = new Prefetcher();
-    }
-
-    @Override
-    public CompletionStage<T> getBody() {
-      return valueFuture;
-    }
-
-    @Override
-    public void onSubscribe(Subscription subscription) {
-      requireNonNull(subscription);
-      if (upstream.setOrCancel(subscription)) {
-        prefetcher.update(upstream);
-      }
-    }
-
-    @Override
-    public void onNext(List<ByteBuffer> item) {
-      requireNonNull(item);
-      byte[] bytes = collectBytes(item);
-      try {
-        feeder.feedInput(bytes, 0, bytes.length);
-        flushParser();
-      } catch (Throwable t) {
-        valueFuture.completeExceptionally(t);
-        upstream.cancel();
-        return;
-      }
-      prefetcher.update(upstream);
-    }
-
-    @Override
-    public void onError(Throwable throwable) {
-      requireNonNull(throwable);
-      upstream.clear();
-      valueFuture.completeExceptionally(throwable);
-    }
-
-    @Override
-    public void onComplete() {
-      upstream.clear();
-      feeder.endOfInput();
-      try {
-        flushParser();
-        valueFuture.complete(objReader.readValue(jsonBuffer.asParser(mapper)));
-      } catch (Throwable ioe) {
-        valueFuture.completeExceptionally(ioe);
-      }
-    }
-
-    private void flushParser() throws IOException {
-      JsonToken token;
-      while ((token = parser.nextToken()) != null && token != JsonToken.NOT_AVAILABLE) {
-        jsonBuffer.copyCurrentEvent(parser);
-      }
-    }
-
-    private byte[] collectBytes(List<ByteBuffer> item) {
-      int size = item.stream().mapToInt(ByteBuffer::remaining).sum();
-      byte[] bytes = new byte[size];
-      int offset = 0;
-      for (ByteBuffer buff : item) {
-        int remaining = buff.remaining();
-        buff.get(bytes, offset, buff.remaining());
-        offset += remaining;
-      }
-      return bytes;
-    }
-  }
-
-  /**
-   * Decodes body using {@code sourceCharset} then encodes it again to {@code targetCharset}. Used
-   * to coerce response into UTF-8 if not already to be parsable by the non-blocking parser.
-   */
-  private static final class CharsetCoercingSubscriber<T> extends ForwardingBodySubscriber<T> {
-
-    private static final int TEMP_BUFFER_SIZE = 4 * 1024;
-    private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
-
-    private final CharsetDecoder decoder;
-    private final CharsetEncoder encoder;
-    private final CharBuffer tempCharBuff;
-    private @Nullable ByteBuffer leftover;
-
-    CharsetCoercingSubscriber(BodySubscriber<T> downstream,
-        Charset sourceCharset, Charset targetCharset) {
-      super(downstream);
-      decoder = sourceCharset.newDecoder();
-      encoder = targetCharset.newEncoder();
-      tempCharBuff = CharBuffer.allocate(TEMP_BUFFER_SIZE);
-    }
-
-    @Override
-    public void onNext(List<ByteBuffer> item) {
-      requireNonNull(item);
-      List<ByteBuffer> processed;
-      try {
-        processed = processItem(item);
-      } catch (Throwable t) {
-        upstream.cancel(); // flow interrupted
-        super.onError(t);
-        return;
-      }
-      super.onNext(processed);
-    }
-
-    @Override
-    public void onComplete() {
-      ByteBuffer flushed;
-      try {
-        flushed = processBuffer(EMPTY_BUFFER, true);
-      } catch (Throwable t) {
-        super.onError(t);
-        return;
-      }
-      if (flushed.hasRemaining()) {
-        super.onNext(List.of(flushed));
-      }
-      super.onComplete();
-    }
-
-    private List<ByteBuffer> processItem(List<ByteBuffer> item) throws CharacterCodingException {
-      List<ByteBuffer> processed = new ArrayList<>(item.size());
-      for (ByteBuffer buffer : item) {
-        ByteBuffer processedBuffer = processBuffer(buffer, false);
-        if (processedBuffer.hasRemaining()) {
-          processed.add(processedBuffer);
-        }
-      }
-      return processed.isEmpty() ? List.of() : Collections.unmodifiableList(processed);
-    }
-
-    private ByteBuffer processBuffer(ByteBuffer input, boolean endOfInput)
-        throws CharacterCodingException {
-      // add any leftover bytes from previous round
-      if (leftover != null) {
-        input =
-            ByteBuffer.allocate(leftover.remaining() + input.remaining())
-                .put(leftover)
-                .put(input)
-                .flip();
-        leftover = null;
-      }
-      // allocate estimate capacity and grow when full
-      int capacity =
-          (int)
-              (input.remaining()
-                  * decoder.averageCharsPerByte()
-                  * encoder.averageBytesPerChar());
-      ByteBuffer out = ByteBuffer.allocate(capacity);
-      while (true) {
-        CoderResult decoderResult = decoder.decode(input, tempCharBuff, endOfInput);
-        if (decoderResult.isUnderflow() && endOfInput) {
-          decoderResult = decoder.flush(tempCharBuff);
-        }
-        if (decoderResult.isError()) {
-          decoderResult.throwException();
-        }
-        // it's not eoi for encoder unless decoder also finished (underflow result)
-        boolean endOfInputForEncoder = decoderResult.isUnderflow() && endOfInput;
-        CoderResult encoderResult =
-            encoder.encode(tempCharBuff.flip(), out, endOfInputForEncoder);
-        tempCharBuff.compact(); // might not have been completely consumed
-        if (encoderResult.isUnderflow() && endOfInputForEncoder) {
-          encoderResult = encoder.flush(out);
-        }
-        if (encoderResult.isError()) {
-          encoderResult.throwException();
-        }
-        if (encoderResult.isOverflow()) { // need bigger out buffer
-          // TODO: not overflow aware?
-          capacity = capacity + Math.max(1, capacity >>> 1);
-          ByteBuffer newOut = ByteBuffer.allocate(capacity);
-          newOut.put(out.flip());
-          out = newOut;
-        } else if (encoderResult.isUnderflow() && decoderResult.isUnderflow()) { // round finished
-          if (input.hasRemaining()) {
-            leftover = input.slice(); // save for next round
-          }
-          return out.flip();
-        }
       }
     }
   }

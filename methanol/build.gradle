@@ -5,7 +5,7 @@ dependencies {
 }
 
 compileJava {
-  // suppress exporting to module module on compilation
+  // suppress exporting to module unresolvable on compilation
   options.compilerArgs += '-Xlint:-module'
 }
 

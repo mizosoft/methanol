@@ -21,32 +21,20 @@
  */
 
 /**
- * Core Methanol module.
- *
- * @uses com.github.mizosoft.methanol.BodyDecoder.Factory
- * @uses com.github.mizosoft.methanol.BodyAdapter.Encoder
- * @uses com.github.mizosoft.methanol.BodyAdapter.Decoder
- * @provides com.github.mizosoft.methanol.BodyDecoder.Factory For the gzip and deflate encodings.
+ * Provides publisher-based {@link com.github.mizosoft.methanol.BodyAdapter.Encoder} and {@link
+ * com.github.mizosoft.methanol.BodyAdapter.Decoder} implementations for JSON using the Jackson
+ * library and Project Rector. Note that, for the sake of configurability, the adapters are not
+ * service-provided by default. You will need to explicitly declare service-providers that delegate
+ * to the instances created by {@link
+ * com.github.mizosoft.methanol.adapter.jackson.flux.JacksonFluxAdapterFactory}.
  */
-module methanol {
-  requires transitive java.net.http;
-  requires java.logging;
+module methanol.adapter.jackson.flux {
+  requires transitive methanol;
+  requires transitive com.fasterxml.jackson.databind;
+  requires reactor.core;
+  requires methanol.adapter.jackson;
+  requires org.reactivestreams;
   requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
 
-  exports com.github.mizosoft.methanol;
-  exports com.github.mizosoft.methanol.decoder;
-  exports com.github.mizosoft.methanol.adapter;
-  exports com.github.mizosoft.methanol.internal.flow to
-      methanol.adapter.jackson,
-      methanol.adapter.jackson.flux;
-
-  uses com.github.mizosoft.methanol.BodyDecoder.Factory;
-
-  uses com.github.mizosoft.methanol.BodyAdapter.Encoder;
-  uses com.github.mizosoft.methanol.BodyAdapter.Decoder;
-
-  provides com.github.mizosoft.methanol.BodyDecoder.Factory with
-      com.github.mizosoft.methanol.internal.decoder.GzipBodyDecoderFactory,
-      com.github.mizosoft.methanol.internal.decoder.DeflateBodyDecoderFactory;
+  exports com.github.mizosoft.methanol.adapter.jackson.flux;
 }
