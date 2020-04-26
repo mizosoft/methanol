@@ -32,8 +32,8 @@ import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
 import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonSubscriber;
-import com.github.mizosoft.methanol.adapter.jackson.internal.Utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -61,7 +61,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
   final ObjectMapper mapper;
 
   JacksonFluxAdapter(ObjectMapper mapper) {
-    super(Utils.APPLICATION_JSON);
+    super(JacksonAdapterUtils.APPLICATION_JSON);
     this.mapper = mapper;
   }
 
@@ -103,7 +103,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
       try (Writer writer = new OutputStreamWriter(outputBuffer, charset)) {
         mapper.writeValue(writer, object);
       } catch (IOException ioe) {
-        throw Utils.throwUnchecked(ioe);
+        throw JacksonAdapterUtils.throwUnchecked(ioe);
       }
       return ByteBuffer.wrap(outputBuffer.toByteArray());
     }
@@ -128,7 +128,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
       try {
         sequenceWriter.write(value);
       } catch (IOException ioe) {
-        throw Utils.throwUnchecked(ioe);
+        throw JacksonAdapterUtils.throwUnchecked(ioe);
       }
       byte[] writtenBytes = outBuffer.toByteArray();
       outBuffer.reset();
@@ -190,7 +190,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
                 : fluxSubscriber;
       }
       return BodySubscribers.mapping(
-          Utils.coerceUtf8(subscriber, charsetOrUtf8(mediaType)),
+          JacksonAdapterUtils.coerceUtf8(subscriber, charsetOrUtf8(mediaType)),
           p -> {
             @SuppressWarnings("unchecked")
             T publisher = (T) rawPublisherType.cast(p);

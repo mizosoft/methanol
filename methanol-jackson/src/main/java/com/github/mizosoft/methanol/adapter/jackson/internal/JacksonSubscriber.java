@@ -79,7 +79,7 @@ public final class JacksonSubscriber<T> implements BodySubscriber<T> {
   @Override
   public void onNext(List<ByteBuffer> item) {
     requireNonNull(item);
-    byte[] bytes = Utils.collectBytes(item);
+    byte[] bytes = JacksonAdapterUtils.collectBytes(item);
     try {
       feeder.feedInput(bytes, 0, bytes.length);
       flushParser();

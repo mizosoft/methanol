@@ -28,7 +28,7 @@ import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 
-import com.github.mizosoft.methanol.adapter.jackson.internal.Utils;
+import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
 import com.github.mizosoft.methanol.testutils.BufferTokenizer;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.net.http.HttpResponse.BodySubscribers;
@@ -59,7 +59,7 @@ class Utf8CoercionTest {
   void ut8Coercion_fromUtf16() {
     var aladinText = new String(load(getClass(), "/aladin_utf8.txt"), UTF_8);
     var aladinBytesUtf16 = UTF_16.encode(aladinText);
-    var subscriber = Utils.coerceUtf8(BodySubscribers.ofString(UTF_8), UTF_16);
+    var subscriber = JacksonAdapterUtils.coerceUtf8(BodySubscribers.ofString(UTF_8), UTF_16);
     var executor = Executors.newFixedThreadPool(8);
     int[] buffSizes = {1, 32, 555, 1024, 21, 77};
     int[] listSizes = {1, 3, 1};

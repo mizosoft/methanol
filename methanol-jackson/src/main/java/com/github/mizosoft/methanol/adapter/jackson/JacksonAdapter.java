@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import static com.github.mizosoft.methanol.adapter.jackson.internal.Utils.APPLICATION_JSON;
+import static com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.core.JsonParser;
@@ -34,8 +34,8 @@ import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
 import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonSubscriber;
-import com.github.mizosoft.methanol.adapter.jackson.internal.Utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -111,7 +111,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
         return BodySubscribers.mapping(
             BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(type, bytes));
       }
-      return Utils.coerceUtf8(
+      return JacksonAdapterUtils.coerceUtf8(
           new JacksonSubscriber<>(mapper, type, asyncParser), charsetOrUtf8(mediaType));
     }
 

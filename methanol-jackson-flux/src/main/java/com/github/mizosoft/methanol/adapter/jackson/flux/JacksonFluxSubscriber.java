@@ -33,7 +33,7 @@ import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.util.TokenBuffer;
-import com.github.mizosoft.methanol.adapter.jackson.internal.Utils;
+import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber;
 import java.io.IOException;
@@ -147,7 +147,7 @@ public class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuff
 
     @Override
     public List<TokenBuffer> apply(List<ByteBuffer> buffers) {
-      byte[] input = Utils.collectBytes(buffers);
+      byte[] input = JacksonAdapterUtils.collectBytes(buffers);
       List<TokenBuffer> tokenized = new ArrayList<>();
       try {
         feeder.feedInput(input, 0, input.length);
@@ -156,7 +156,7 @@ public class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuff
           tokenized.add(tokenizedStream);
         }
       } catch (IOException ioe) {
-        throw Utils.throwUnchecked(ioe);
+        throw JacksonAdapterUtils.throwUnchecked(ioe);
       }
       return Collections.unmodifiableList(tokenized);
     }

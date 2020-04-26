@@ -29,11 +29,11 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class Utils {
+public class JacksonAdapterUtils {
 
   public static final MediaType APPLICATION_JSON = MediaType.of("application", "json");
 
-  private Utils() {}
+  private JacksonAdapterUtils() {}
 
   public static byte[] collectBytes(List<ByteBuffer> buffers) {
     int size = buffers.stream().mapToInt(ByteBuffer::remaining).sum();
