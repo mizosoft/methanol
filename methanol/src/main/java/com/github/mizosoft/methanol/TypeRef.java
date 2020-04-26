@@ -45,7 +45,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public abstract class TypeRef<T> {
 
   private final Type type;
-  private @MonotonicNonNull Class<? super T> rawType;
+  private @MonotonicNonNull Class<?> rawType;
 
   /**
    * Creates a new {@code TypeRef<T>} capturing the {@code Type} of {@code T}. It is usually the
@@ -60,10 +60,9 @@ public abstract class TypeRef<T> {
     this.type = ((ParameterizedType) superClass).getActualTypeArguments()[0];
   }
 
-  @SuppressWarnings("unchecked")
   private TypeRef(Type type) {
     this.type = type;
-    rawType = (Class<? super T>) findRawType(type);
+    rawType = findRawType(type);
   }
 
   /** Returns the underlying Java {@link Type}. */
@@ -74,10 +73,10 @@ public abstract class TypeRef<T> {
   /** Returns the {@code Class} object that represents the raw type of {@code T}. */
   @SuppressWarnings("unchecked")
   public final Class<? super T> rawType() {
-    Class<? super T> clz = rawType;
+    Class<?> clz = rawType;
     if (clz == null) {
       try {
-        clz = (Class<? super T>) findRawType(type);
+        clz = findRawType(type);
       } catch (IllegalArgumentException e) {
         // rawType is lazily initialized only if not user-provided and
         // on that case findRawType shouldn't fail
@@ -85,7 +84,7 @@ public abstract class TypeRef<T> {
       }
       rawType = clz;
     }
-    return clz;
+    return (Class<? super T>) clz;
   }
 
   /**
