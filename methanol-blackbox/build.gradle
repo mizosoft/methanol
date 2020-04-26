@@ -9,6 +9,7 @@ dependencies {
   implementation project(':methanol-protobuf')
   implementation project(':methanol-brotli')
   implementation project(':methanol-testutils')
+  implementation deps.reactorCore
 
   testImplementation deps.mockWebServer
   testImplementation deps.brotliDec

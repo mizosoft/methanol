@@ -48,7 +48,7 @@ public class Utils {
   }
 
   /** Used when the exception is not handled structurally to avoid unchecked wrapping. */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "TypeParameterUnusedInFormals"})
   public static <X extends Throwable> X throwUnchecked(Throwable t) throws X {
     throw (X) t; // when Java generics actually work... uuh or don't?... what?
   }
