@@ -43,6 +43,29 @@ import org.junit.jupiter.api.function.Executable;
 class MediaTypeTest {
 
   @Test
+  void constantsSanityTest() {
+    assertEquals("*/*", MediaType.ALL_TYPES.toString());
+    assertEquals("application/*", MediaType.ALL_APPLICATION.toString());
+    assertEquals("image/*", MediaType.ALL_IMAGE.toString());
+    assertEquals("text/*", MediaType.ALL_TEXT.toString());
+    assertEquals(
+        "application/x-www-form-urlencoded",
+        MediaType.APPLICATION_FORM_URLENCODED.toString());
+    assertEquals("application/json", MediaType.APPLICATION_JSON.toString());
+    assertEquals("application/octet-stream", MediaType.APPLICATION_OCTET_STREAM.toString());
+    assertEquals("application/xhtml+xml", MediaType.APPLICATION_XHTML_XML.toString());
+    assertEquals("application/xml", MediaType.APPLICATION_XML.toString());
+    assertEquals("application/x-protobuf", MediaType.APPLICATION_X_PROTOBUF.toString());
+    assertEquals("image/gif", MediaType.IMAGE_GIF.toString());
+    assertEquals("image/jpeg", MediaType.IMAGE_JPEG.toString());
+    assertEquals("image/png", MediaType.IMAGE_PNG.toString());
+    assertEquals("text/html", MediaType.TEXT_HTML.toString());
+    assertEquals("text/markdown", MediaType.TEXT_MARKDOWN.toString());
+    assertEquals("text/plain", MediaType.TEXT_PLAIN.toString());
+    assertEquals("text/xml", MediaType.TEXT_XML.toString());
+  }
+
+  @Test
   void parse_simpleType() {
     var type = MediaType.parse("text/plain");
     assertEquals("text", type.type());

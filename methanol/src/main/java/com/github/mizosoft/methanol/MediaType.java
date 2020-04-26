@@ -89,11 +89,84 @@ public final class MediaType {
   private static final String CHARSET_ATTRIBUTE = "charset";
   private static final String WILDCARD = "*";
 
+  private static final String APPLICATION_TYPE = "application";
+  private static final String IMAGE_TYPE = "image";
+  private static final String TEXT_TYPE = "text";
+
+  /*---Media ranges---*/
+
+  /** Matches any type ({@code *}{@code /*}). */
+  public static final MediaType ALL_TYPES = new MediaType("*", "*");
+
+  /** Matches any application type ({@code application}{@code /*}). */
+  public static final MediaType ALL_APPLICATION = new MediaType(APPLICATION_TYPE, "*");
+
+  /** Matches any image type ({@code image}{@code /*}). */
+  public static final MediaType ALL_IMAGE = new MediaType(IMAGE_TYPE, "*");
+
+  /** Matches any text type ({@code text}{@code /*}). */
+  public static final MediaType ALL_TEXT = new MediaType(TEXT_TYPE, "*");
+
+  /*---Application types---*/
+
+  /** {@code application/x-www-form-urlencoded} */
+  public static final MediaType APPLICATION_FORM_URLENCODED =
+      new MediaType(APPLICATION_TYPE, "x-www-form-urlencoded");
+
+  /** {@code application/json} */
+  public static final MediaType APPLICATION_JSON = new MediaType(APPLICATION_TYPE, "json");
+
+  /** {@code application/octet-stream} */
+  public static final MediaType APPLICATION_OCTET_STREAM =
+      new MediaType(APPLICATION_TYPE, "octet-stream");
+
+  /** {@code application/xhtml+xml} */
+  public static final MediaType APPLICATION_XHTML_XML =
+      new MediaType(APPLICATION_TYPE, "xhtml+xml");
+
+  /** {@code application/xml} */
+  public static final MediaType APPLICATION_XML = new MediaType(APPLICATION_TYPE, "xml");
+
+  /** {@code application/x-protobuf} */
+  public static final MediaType APPLICATION_X_PROTOBUF =
+      new MediaType(APPLICATION_TYPE, "x-protobuf");
+
+  /*---Image types---*/
+
+  /** {@code image/gif} */
+  public static final MediaType IMAGE_GIF = new MediaType(IMAGE_TYPE, "gif");
+
+  /** {@code image/jpeg} */
+  public static final MediaType IMAGE_JPEG = new MediaType(IMAGE_TYPE, "jpeg");
+
+  /** {@code image/png} */
+  public static final MediaType IMAGE_PNG = new MediaType(IMAGE_TYPE, "png");
+
+  /*---Text types---*/
+
+  /** {@code text/html} */
+  public static final MediaType TEXT_HTML = new MediaType(TEXT_TYPE, "html");
+
+  /** {@code text/markdown} */
+  public static final MediaType TEXT_MARKDOWN = new MediaType(TEXT_TYPE, "markdown");
+
+  /** {@code text/plain} */
+  public static final MediaType TEXT_PLAIN = new MediaType(TEXT_TYPE, "plain");
+
+  /** {@code text/xml} */
+  public static final MediaType TEXT_XML = new MediaType(TEXT_TYPE, "xml");
+
   private final String type;
   private final String subtype;
   private final Map<String, String> parameters;
   private @MonotonicNonNull Charset charset;
   private boolean charsetIsParsed;
+
+  private MediaType(String type, String subtype) {
+    this.type = type;
+    this.subtype = subtype;
+    this.parameters = Map.of();
+  }
 
   private MediaType(String type, String subtype, Map<String, String> parameters) {
     this.type = type;
@@ -313,8 +386,7 @@ public final class MediaType {
       } else {
         normalizedValue = entry.getValue();
         requireArgument(
-            QUOTED_PAIR_MATCHER.allMatch(normalizedValue),
-            "illegal value: '%s'", normalizedValue);
+            QUOTED_PAIR_MATCHER.allMatch(normalizedValue), "illegal value: '%s'", normalizedValue);
       }
       newParameters.put(normalizedAttribute, normalizedValue);
     }
