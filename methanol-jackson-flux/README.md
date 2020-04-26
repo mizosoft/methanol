@@ -26,7 +26,7 @@ Add this module as a dependency (*note: not yet released*):
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-jackson:'
+  implementation 'com.github.mizosoft.methanol:methanol-jackson:1.2.1-SNAPSHOT'
 }
 ```
 
@@ -37,7 +37,7 @@ dependencies {
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol-jackson</artifactId>
-    <version></version>
+    <version>1.2.1-SNAPSHOT</version>
   </dependency>
 </dependencies>
 ```
