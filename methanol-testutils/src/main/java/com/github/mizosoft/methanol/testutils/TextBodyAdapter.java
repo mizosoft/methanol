@@ -29,6 +29,6 @@ import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 public abstract class TextBodyAdapter extends AbstractBodyAdapter {
 
   protected TextBodyAdapter() {
-    super(MediaType.of("text", "*"));
+    super(MediaType.ALL_TEXT);
   }
 }

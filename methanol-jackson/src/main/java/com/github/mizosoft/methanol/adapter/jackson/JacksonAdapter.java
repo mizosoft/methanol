@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import static com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils.APPLICATION_JSON;
 import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.core.JsonParser;
@@ -54,7 +53,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
   final ObjectMapper mapper;
 
   JacksonAdapter(ObjectMapper mapper) {
-    super(APPLICATION_JSON);
+    super(MediaType.APPLICATION_JSON);
     this.mapper = requireNonNull(mapper);
   }
 

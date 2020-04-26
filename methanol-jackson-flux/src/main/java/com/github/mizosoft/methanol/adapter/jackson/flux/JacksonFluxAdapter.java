@@ -61,7 +61,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
   final ObjectMapper mapper;
 
   JacksonFluxAdapter(ObjectMapper mapper) {
-    super(JacksonAdapterUtils.APPLICATION_JSON);
+    super(MediaType.APPLICATION_JSON);
     this.mapper = mapper;
   }
 

@@ -49,12 +49,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class GsonAdapter extends AbstractBodyAdapter {
 
-  private static final MediaType APPLICATION_JSON = MediaType.of("application", "json");
-
   final Gson gson;
 
   GsonAdapter(Gson gson) {
-    super(APPLICATION_JSON);
+    super(MediaType.APPLICATION_JSON);
     this.gson = requireNonNull(gson);
   }
 

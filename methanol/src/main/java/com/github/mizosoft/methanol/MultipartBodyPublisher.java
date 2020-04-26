@@ -208,8 +208,6 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
    */
   public static final class Builder {
 
-    private static final MediaType OCTET_STREAM = MediaType.of("application", "octet-stream");
-
     // boundary     := 0*69<bchars> bcharnospace
     // bchars       := bcharnospace / " "
     // bcharnospace := DIGIT / ALPHA / "'" / "(" / ")" /
@@ -220,14 +218,14 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     private static final int MAX_BOUNDARY_LENGTH = 70;
 
     private static final String MULTIPART_TYPE = "multipart";
-    private static final String DEFAULT_SUBTYPE = "form-data";
+    private static final String FORM_DATA_SUBTYPE = "form-data";
 
     private final List<Part> parts;
     private MediaType mediaType;
 
     Builder() {
       parts = new ArrayList<>();
-      mediaType = MediaType.of(MULTIPART_TYPE, DEFAULT_SUBTYPE);
+      mediaType = MediaType.of(MULTIPART_TYPE, FORM_DATA_SUBTYPE);
     }
 
     /**
@@ -423,7 +421,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       } catch (IOException ignored) {
         // Use OCTET_STREAM
       }
-      return OCTET_STREAM;
+      return MediaType.APPLICATION_OCTET_STREAM;
     }
   }
 

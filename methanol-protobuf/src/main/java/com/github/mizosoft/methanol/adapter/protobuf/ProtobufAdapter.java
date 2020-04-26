@@ -45,12 +45,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class ProtobufAdapter extends AbstractBodyAdapter {
 
-  private static final MediaType APPLICATION_OCTET_STREAM =
-      MediaType.of("application", "octet-stream");
-  private static final MediaType APPLICATION_PROTOBUF = MediaType.of("application", "x-protobuf");
-
   ProtobufAdapter() {
-    super(APPLICATION_OCTET_STREAM, APPLICATION_PROTOBUF);
+    super(MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_X_PROTOBUF);
   }
 
   @Override

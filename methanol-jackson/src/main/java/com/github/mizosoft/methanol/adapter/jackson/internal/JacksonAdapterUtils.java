@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.adapter.jackson.internal;
 
-import com.github.mizosoft.methanol.MediaType;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -30,8 +29,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class JacksonAdapterUtils {
-
-  public static final MediaType APPLICATION_JSON = MediaType.of("application", "json");
 
   private JacksonAdapterUtils() {}
 

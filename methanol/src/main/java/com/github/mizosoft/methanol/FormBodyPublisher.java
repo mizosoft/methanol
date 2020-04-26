@@ -28,7 +28,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URLEncoder;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -45,11 +44,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  * request type.
  */
 public final class FormBodyPublisher implements MimeBodyPublisher {
-
-  private static final MediaType FORM_URL_ENCODED =
-      MediaType.of("application", "x-www-form-urlencoded");
-
-  private static final Charset ENCODING_CHARSET = StandardCharsets.UTF_8;
 
   private final Map<String, List<String>> queries;
   private @MonotonicNonNull String encodedString;
@@ -71,9 +65,9 @@ public final class FormBodyPublisher implements MimeBodyPublisher {
   private String computeEncodedString() {
     StringJoiner joiner = new StringJoiner("&");
     for (var entry : queries.entrySet()) {
-      String encodedName = URLEncoder.encode(entry.getKey(), ENCODING_CHARSET);
+      String encodedName = encodeFormValueUtf8(entry.getKey());
       for (var value : entry.getValue()) {
-        joiner.add(encodedName + "=" + URLEncoder.encode(value, ENCODING_CHARSET));
+        joiner.add(encodedName + "=" + encodeFormValueUtf8(value));
       }
     }
     return joiner.toString();
@@ -106,7 +100,7 @@ public final class FormBodyPublisher implements MimeBodyPublisher {
 
   @Override
   public MediaType mediaType() {
-    return FORM_URL_ENCODED;
+    return MediaType.APPLICATION_FORM_URLENCODED;
   }
 
   @Override
@@ -119,6 +113,10 @@ public final class FormBodyPublisher implements MimeBodyPublisher {
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
     requireNonNull(subscriber);
     BodyPublishers.ofString(encodedString(), US_ASCII).subscribe(subscriber);
+  }
+
+  private static String encodeFormValueUtf8(String value) {
+    return URLEncoder.encode(value, StandardCharsets.UTF_8);
   }
 
   /** Returns a new {@code FormBodyPublisher.Builder}. */
