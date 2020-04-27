@@ -160,6 +160,7 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
+    upstream.clear();
     SubscriptionImpl subscription = downstreamSubscription;
     if (subscription != null) {
       subscription.signalError(throwable);
@@ -168,6 +169,7 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
   @Override
   public void onComplete() {
+    upstream.clear();
     SubscriptionImpl subscription = downstreamSubscription;
     try (decoder) {
       // Acknowledge final decode round
@@ -325,7 +327,7 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
         batch = decodedBuffers.poll();
       }
       long submitted = 0L;
-      while(true) {
+      while (true) {
         if (batch == COMPLETE) {
           cancelOnComplete(downstream);
           return 0;
