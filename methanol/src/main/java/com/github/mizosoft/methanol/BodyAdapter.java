@@ -103,7 +103,8 @@ public interface BodyAdapter {
   /**
    * {@code BodyAdapter} specialization for converting response bodies into objects.
    *
-   * <p>TODO: explain why there exists T and Supplier of T variants
+   * @see <a href="https://github.com/mizosoft/methanol/wiki/ConversionWiki#t-vs-suppliert">
+   *   {@code T} vs {@code Supplier<}{@code T>}</a>
    */
   interface Decoder extends BodyAdapter {
 
