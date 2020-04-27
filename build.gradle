@@ -16,7 +16,6 @@ ext {
       'gson'            : '2.8.6',
       'jackson'         : '2.10.2',
       'protobuf'        : '3.11.4',
-      'checkstyle'      : '8.31',
       'errorprone'      : '2.3.4',
       'brotliDec'       : '0.1.2',
       'okhttp'          : '4.5.0',
@@ -36,7 +35,6 @@ ext {
       'jacksonDatabind'        : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
       'protobufJava'           : "com.google.protobuf:protobuf-java:${versions.protobuf}",
       'protobufCompiler'       : "com.google.protobuf:protoc:${versions.protobuf}",
-      'checkstyle'             : "com.puppycrawl.tools:checkstyle:${versions.checkstyle}",
       'errorprone'             : "com.google.errorprone:error_prone_core:${versions.errorprone}",
       'errorproneAnnotations'  : "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
       'brotliDec'              : "org.brotli:dec:${versions.brotliDec}",
@@ -95,25 +93,17 @@ subprojects { subproject ->
   apply plugin: 'java-library'
   apply plugin: 'org.checkerframework'
   apply plugin: 'org.javamodularity.moduleplugin'
-  apply plugin: 'checkstyle'
   apply plugin: 'net.ltgt.errorprone'
   apply plugin: 'idea'
   apply plugin: 'jacoco'
 
   sourceCompatibility = JavaVersion.VERSION_11
 
-  configurations {
-    checkstyleConfig
-  }
-
   dependencies {
     compileOnly deps.checkerFrameworkQual
     compileOnly deps.errorproneAnnotations
     checkerFramework deps.checkerFramework
     errorprone deps.errorprone
-    checkstyleConfig dependencies.create(deps.checkstyle) {
-      transitive = false
-    }
 
     testCompileOnly deps.checkerFrameworkQual
     testCompileOnly deps.errorproneAnnotations
@@ -155,20 +145,6 @@ subprojects { subproject ->
       checkers = [
           'org.checkerframework.checker.nullness.NullnessChecker'
       ]
-    }
-  }
-
-  checkstyle {
-    toolVersion = versions.checkstyle
-    config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, 'google_checks.xml')
-    sourceSets = [subproject.sourceSets.main]
-  }
-
-  tasks.withType(Checkstyle) {
-    onlyIf { subproject.hasProperty('enableCheckstyle') }
-    reports {
-      xml.enabled = false
-      html.enabled = true
     }
   }
 

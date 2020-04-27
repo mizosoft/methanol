@@ -2,8 +2,3 @@ dependencies {
   api project(':methanol')
   implementation deps.okhttpTls
 }
-
-// Skip style checks for ths module
-tasks.withType(Checkstyle) {
-  enabled = false
-}
