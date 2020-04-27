@@ -97,7 +97,7 @@ public class FlowSupport {
 
   /** Adds given count to demand not exceeding {@code Long.MAX_VALUE}. */
   public static long getAndAddDemand(Object owner, VarHandle demand, long n) {
-    while(true) {
+    while (true) {
       long currentDemand = (long) demand.getVolatile(owner);
       long addedDemand = currentDemand + n;
       if (addedDemand < 0) { // overflow

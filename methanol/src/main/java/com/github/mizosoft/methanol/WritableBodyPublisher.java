@@ -322,7 +322,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         batch = pipe.poll();
       }
       long submitted = 0L;
-      while(true) {
+      while (true) {
         if (batch == CLOSED) {
           cancelOnComplete(downstream);
           return 0;

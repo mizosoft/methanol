@@ -124,8 +124,8 @@ public class MoreBodyHandlers {
 
   /**
    * Returns a {@code BodyHandler} of {@code T} as specified by {@link
-   * MoreBodySubscribers#ofObject(TypeRef, MediaType)}. The media type will inferred from the
-   * {@code Content-Type} response header.
+   * MoreBodySubscribers#ofObject(TypeRef, MediaType)}. The media type will inferred from the {@code
+   * Content-Type} response header.
    *
    * @param type the raw type of {@code T}
    * @param <T> the response body type
@@ -141,7 +141,7 @@ public class MoreBodyHandlers {
    * MoreBodySubscribers#ofObject(TypeRef, MediaType)}. The media type will inferred from the
    * {@code Content-Type} response header.
    *
-   * @param type a {@code TypeRef representing {@code T}
+   * @param type a {@code TypeRef} representing {@code T}
    * @param <T> the response body type
    * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type is
    *     installed
@@ -153,8 +153,8 @@ public class MoreBodyHandlers {
 
   /**
    * Returns a {@code BodyHandler} of {@code Supplier<T>} as specified by {@link
-   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will inferred
-   * from the {@code Content-Type} response header.
+   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will inferred from
+   * the {@code Content-Type} response header.
    *
    * @param type the raw type of {@code T}
    * @param <T> the response body type
@@ -167,8 +167,8 @@ public class MoreBodyHandlers {
 
   /**
    * Returns a {@code BodyHandler} of {@code Supplier<T>} as specified by {@link
-   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will inferred
-   * from the {@code Content-Type} response header.
+   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will inferred from
+   * the {@code Content-Type} response header.
    *
    * @param type a {@code TypeRef} representing {@code T}
    * @param <T> the response body type

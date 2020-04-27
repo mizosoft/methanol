@@ -348,7 +348,7 @@ public final class Methanol extends HttpClient {
 
     /**
      * Sets the base {@code URI} with which each outgoing requests' {@code URI} is {@link
-     * URI#resolve(URI) resolved. */
+     * URI#resolve(URI) resolved}. */
     public B baseUri(String uri) {
       return baseUri(URI.create(uri));
     }
