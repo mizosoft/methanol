@@ -85,7 +85,7 @@ public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<Buffe
   @BeforeClass
   public static void setUpBufferSize() {
     // Make sure AsyncBodyDecoder allocates same buffer sizes
-    System.setProperty("com.github.mizosoft.methanol.dec.bufferSize",
+    System.setProperty("com.github.mizosoft.methanol.decoder.AsyncBodyDecoder.bufferSize",
         Integer.toString(BUFFER_SIZE));
   }
 

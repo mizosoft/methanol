@@ -56,7 +56,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
 public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
-  private static final String BUFFER_SIZE_PROP = "com.github.mizosoft.methanol.dec.bufferSize";
+  private static final String BUFFER_SIZE_PROP =
+      "com.github.mizosoft.methanol.decoder.AsyncBodyDecoder.bufferSize";
   private static final int DEFAULT_BUFFER_SIZE = 8 * 1024; // 8Kb
   private static final int BUFFER_SIZE = getBufferSize();
 
