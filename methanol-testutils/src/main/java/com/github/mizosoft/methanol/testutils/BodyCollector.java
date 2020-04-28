@@ -23,9 +23,11 @@
 package com.github.mizosoft.methanol.testutils;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -81,7 +83,15 @@ public class BodyCollector implements Flow.Subscriber<ByteBuffer> {
     return collector.bodyCF.join();
   }
 
-  public static String collectToAscii(Flow.Publisher<ByteBuffer> publisher) {
-    return US_ASCII.decode(collect(publisher)).toString();
+  public static String collectAscii(Flow.Publisher<ByteBuffer> publisher) {
+    return collectString(publisher, US_ASCII);
+  }
+
+  public static String collectUtf8(Flow.Publisher<ByteBuffer> publisher) {
+    return collectString(publisher, UTF_8);
+  }
+
+  public static String collectString(Flow.Publisher<ByteBuffer> publisher, Charset charset) {
+    return charset.decode(collect(publisher)).toString();
   }
 }

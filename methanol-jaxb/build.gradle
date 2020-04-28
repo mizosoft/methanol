@@ -1,0 +1,15 @@
+dependencies {
+  api project(':methanol')
+  api deps.jaxbApi
+
+  testImplementation project(':methanol-testutils')
+  testImplementation deps.jaxbRuntime
+}
+
+test {
+  moduleOptions {
+    runOnClasspath = true
+  }
+}
+
+addReads(compileTestJava, 'methanol.testutils')

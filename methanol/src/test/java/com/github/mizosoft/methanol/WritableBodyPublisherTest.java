@@ -53,7 +53,7 @@ class WritableBodyPublisherTest {
     try (var writer = Channels.newWriter(body.byteChannel(), US_ASCII)) {
       writer.write("I don't like sand");
     }
-    assertEquals("I don't like sand", BodyCollector.collectToAscii(body));
+    assertEquals("I don't like sand", BodyCollector.collectAscii(body));
   }
 
   @Test
@@ -62,7 +62,7 @@ class WritableBodyPublisherTest {
     try (var writer = new OutputStreamWriter(body.outputStream(), US_ASCII)) {
       writer.write("I don't like sand");
     }
-    assertEquals("I don't like sand", BodyCollector.collectToAscii(body));
+    assertEquals("I don't like sand", BodyCollector.collectAscii(body));
   }
 
   @Test

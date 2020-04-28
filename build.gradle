@@ -23,7 +23,9 @@ ext {
       'jmh'             : '1.23',
       'jacoco'          : '0.8.5',
       'reactor'         : '3.3.4.RELEASE',
-      'nullAway'        : '0.7.9'
+      'nullAway'        : '0.7.9',
+      'jaxb'            : '2.3.1',
+      'jaxbRuntime'     : '2.7.6'
   ]
 
   deps = [
@@ -47,7 +49,9 @@ ext {
       'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh",
       'okhttpTls'              : "com.squareup.okhttp3:okhttp-tls:${versions.okhttp}",
       'reactorCore'            : "io.projectreactor:reactor-core:${versions.reactor}",
-      'nullAway'               : "com.uber.nullaway:nullaway:${versions.nullAway}"
+      'nullAway'               : "com.uber.nullaway:nullaway:${versions.nullAway}",
+      'jaxbApi': "javax.xml.bind:jaxb-api:${versions.jaxb}",
+      'jaxbRuntime'         :  "org.eclipse.persistence:org.eclipse.persistence.moxy:${versions.jaxbRuntime}"
   ]
 
   // querying properties about subprojects

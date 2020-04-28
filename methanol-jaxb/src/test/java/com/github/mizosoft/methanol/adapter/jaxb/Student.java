@@ -20,15 +20,30 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testutils;
+package com.github.mizosoft.methanol.adapter.jaxb;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import javax.xml.bind.annotation.XmlElement;
 
-/** Converts {@code CharSequence} to requests and responses to {@code String}. */
-public abstract class TextBodyAdapter extends AbstractBodyAdapter {
+final class Student {
 
-  protected TextBodyAdapter() {
-    super(MediaType.TEXT_ANY);
+  @XmlElement(required = true)
+ final String name;
+
+  private Student() {
+    this("");
+  }
+
+  Student(String name) {
+    this.name = name;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Student && name.equals(((Student) obj).name);
+  }
+
+  @Override
+  public String toString() {
+    return "Student[" + name + "]";
   }
 }

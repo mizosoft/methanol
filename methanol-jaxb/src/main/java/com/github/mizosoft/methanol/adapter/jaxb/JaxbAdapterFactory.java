@@ -20,15 +20,31 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testutils;
+package com.github.mizosoft.methanol.adapter.jaxb;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import com.github.mizosoft.methanol.BodyAdapter.Decoder;
+import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 
-/** Converts {@code CharSequence} to requests and responses to {@code String}. */
-public abstract class TextBodyAdapter extends AbstractBodyAdapter {
+/** Creates {@link com.github.mizosoft.methanol.BodyAdapter} implementations for XML using JAXB. */
+public class JaxbAdapterFactory {
 
-  protected TextBodyAdapter() {
-    super(MediaType.TEXT_ANY);
+  private JaxbAdapterFactory() {}
+
+  public static Encoder createEncoder() {
+    return createEncoder(JaxbBindingFactory.create());
+  }
+
+  /** Returns a new {@code Encoder} using the given factory. */
+  public static Encoder createEncoder(JaxbBindingFactory jaxbFactory) {
+    return new JaxbAdapter.Encoder(jaxbFactory);
+  }
+
+  public static Decoder createDecoder() {
+    return createDecoder(JaxbBindingFactory.create());
+  }
+
+  /** Returns a new {@code Decoder} using the given factory. */
+  public static Decoder createDecoder(JaxbBindingFactory jaxbFactory) {
+    return new JaxbAdapter.Decoder(jaxbFactory);
   }
 }

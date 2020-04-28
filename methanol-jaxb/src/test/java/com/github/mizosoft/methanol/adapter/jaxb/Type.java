@@ -20,15 +20,10 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testutils;
+package com.github.mizosoft.methanol.adapter.jaxb;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
-
-/** Converts {@code CharSequence} to requests and responses to {@code String}. */
-public abstract class TextBodyAdapter extends AbstractBodyAdapter {
-
-  protected TextBodyAdapter() {
-    super(MediaType.TEXT_ANY);
-  }
+enum Type {
+  UNKNOWN,
+  ART,
+  CALCULUS
 }

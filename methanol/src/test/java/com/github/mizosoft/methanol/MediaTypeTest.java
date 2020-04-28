@@ -44,10 +44,10 @@ class MediaTypeTest {
 
   @Test
   void constantsSanityTest() {
-    assertEquals("*/*", MediaType.ALL_TYPES.toString());
-    assertEquals("application/*", MediaType.ALL_APPLICATION.toString());
-    assertEquals("image/*", MediaType.ALL_IMAGE.toString());
-    assertEquals("text/*", MediaType.ALL_TEXT.toString());
+    assertEquals("*/*", MediaType.ANY.toString());
+    assertEquals("application/*", MediaType.APPLICATION_ANY.toString());
+    assertEquals("image/*", MediaType.IMAGE_ANY.toString());
+    assertEquals("text/*", MediaType.TEXT_ANY.toString());
     assertEquals(
         "application/x-www-form-urlencoded",
         MediaType.APPLICATION_FORM_URLENCODED.toString());

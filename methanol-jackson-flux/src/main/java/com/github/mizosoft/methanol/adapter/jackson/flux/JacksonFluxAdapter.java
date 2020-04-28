@@ -62,7 +62,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
 
   JacksonFluxAdapter(ObjectMapper mapper) {
     super(MediaType.APPLICATION_JSON);
-    this.mapper = mapper;
+    this.mapper = requireNonNull(mapper);
   }
 
   static final class Encoder extends JacksonFluxAdapter implements BodyAdapter.Encoder {
