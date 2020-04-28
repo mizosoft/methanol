@@ -31,6 +31,7 @@ import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.util.concurrent.Executors;
 import okhttp3.mockwebserver.MockWebServer;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -39,12 +40,12 @@ import org.openjdk.jmh.annotations.TearDown;
 @State(Scope.Benchmark)
 public class ClientServerLifecycle {
 
-  public MockWebServer server;
-  public HttpClient client;
-  public HttpRequest defaultGet;
+  public @MonotonicNonNull MockWebServer server;
+  public @MonotonicNonNull HttpClient client;
+  public @MonotonicNonNull HttpRequest defaultGet;
 
   @Setup
-  public void setupClientServer() throws IOException {
+  public void setUpClientServer() throws IOException {
     server = new MockWebServer();
     configureServer(server);
     server.start();
@@ -59,10 +60,7 @@ public class ClientServerLifecycle {
   @TearDown
   public void tearDownClientServer() throws IOException {
     server.shutdown();
-    server = null;
     client.executor().ifPresent(TestUtils::shutdown);
-    client = null;
-    defaultGet = null;
   }
 
   public void configureServer(MockWebServer server) {}

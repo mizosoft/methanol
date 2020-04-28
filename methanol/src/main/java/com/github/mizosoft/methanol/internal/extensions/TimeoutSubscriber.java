@@ -78,8 +78,11 @@ public final class TimeoutSubscriber<T> extends ForwardingBodySubscriber<T> {
   // This ensures that timeout error completion is not signalled for the wrong
   // item or after another terminal signal.
   private volatile long itemIndex;
+
   // demand must be tracked to know when to schedule timeouts
+  @SuppressWarnings("UnusedVariable") // used through VarHandle
   private volatile long demand;
+
   // timeout task for the currently requested item
   private volatile @Nullable Cancellable timeoutTask;
 

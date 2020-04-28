@@ -2,6 +2,7 @@ plugins {
   id 'org.checkerframework' version '0.5.0' apply false
   id 'org.javamodularity.moduleplugin' version '1.6.0' apply false
   id 'net.ltgt.errorprone' version '1.1.1' apply false
+  id 'net.ltgt.nullaway' version '1.0.1' apply false
   id 'jacoco' // apply to root
   id 'com.github.kt3k.coveralls' version '2.10.1' // apply to root
   id 'com.github.ben-manes.versions' version '0.28.0'
@@ -21,7 +22,8 @@ ext {
       'okhttp'          : '4.5.0',
       'jmh'             : '1.23',
       'jacoco'          : '0.8.5',
-      'reactor'         : '3.3.4.RELEASE'
+      'reactor'         : '3.3.4.RELEASE',
+      'nullAway'        : '0.7.9'
   ]
 
   deps = [
@@ -44,7 +46,8 @@ ext {
       'jmhCore'                : "org.openjdk.jmh:jmh-core:$versions.jmh",
       'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh",
       'okhttpTls'              : "com.squareup.okhttp3:okhttp-tls:${versions.okhttp}",
-      'reactorCore'            : "io.projectreactor:reactor-core:${versions.reactor}"
+      'reactorCore'            : "io.projectreactor:reactor-core:${versions.reactor}",
+      'nullAway'               : "com.uber.nullaway:nullaway:${versions.nullAway}"
   ]
 
   // querying properties about subprojects
@@ -94,6 +97,7 @@ subprojects { subproject ->
   apply plugin: 'org.checkerframework'
   apply plugin: 'org.javamodularity.moduleplugin'
   apply plugin: 'net.ltgt.errorprone'
+  apply plugin: 'net.ltgt.nullaway'
   apply plugin: 'idea'
   apply plugin: 'jacoco'
 
@@ -104,6 +108,7 @@ subprojects { subproject ->
     compileOnly deps.errorproneAnnotations
     checkerFramework deps.checkerFramework
     errorprone deps.errorprone
+    errorprone deps.nullAway
 
     testCompileOnly deps.checkerFrameworkQual
     testCompileOnly deps.errorproneAnnotations
@@ -152,7 +157,12 @@ subprojects { subproject ->
     options.encoding = 'utf-8'
     options.errorprone {
       enabled = subproject.hasProperty('enableErrorprone')
+
       disable('FutureReturnValueIgnored') // https://github.com/google/error-prone/issues/1157
+      nullaway {
+        annotatedPackages.add('com.github.mizosoft.methanol')
+        excludedFieldAnnotations = ['org.checkerframework.checker.nullness.qual.MonotonicNonNull']
+      }
     }
   }
 

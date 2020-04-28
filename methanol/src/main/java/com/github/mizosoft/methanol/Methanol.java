@@ -54,6 +54,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -322,9 +323,9 @@ public final class Methanol extends HttpClient {
   public abstract static class BaseBuilder<B extends BaseBuilder<B>> {
 
     final HeadersBuilder headersBuilder;
-    @Nullable String userAgent;
-    @Nullable URI baseUri;
-    @Nullable Duration requestTimeout;
+    @MonotonicNonNull String userAgent;
+    @MonotonicNonNull URI baseUri;
+    @MonotonicNonNull Duration requestTimeout;
     boolean autoAcceptEncoding;
 
     BaseBuilder() {

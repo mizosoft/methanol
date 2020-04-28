@@ -29,6 +29,7 @@ import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Validate;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;
@@ -82,7 +83,8 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
   /** Returns the boundary of this multipart body. */
   public String boundary() {
-    return mediaType.parameters().get(BOUNDARY_ATTRIBUTE); // A boundary attr is guaranteed to exist
+    return Validate.castNonNull(
+        mediaType.parameters().get(BOUNDARY_ATTRIBUTE)); // A boundary attr is guaranteed to exist
   }
 
   /** Returns an immutable list containing this body's parts. */
@@ -359,13 +361,14 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      * @throws IllegalStateException if no part was added
      */
     public MultipartBodyPublisher build() {
-      List<Part> parts = List.copyOf(this.parts);
-      requireState(!parts.isEmpty(), "at least one part should be added");
-      MediaType mediaType = this.mediaType;
-      if (!mediaType.parameters().containsKey(BOUNDARY_ATTRIBUTE)) {
-        mediaType = mediaType.withParameter(BOUNDARY_ATTRIBUTE, UUID.randomUUID().toString());
+      List<Part> addedParts = List.copyOf(parts);
+      requireState(!addedParts.isEmpty(), "at least one part should be added");
+      MediaType localMediaType = mediaType;
+      if (!localMediaType.parameters().containsKey(BOUNDARY_ATTRIBUTE)) {
+        localMediaType =
+            localMediaType.withParameter(BOUNDARY_ATTRIBUTE, UUID.randomUUID().toString());
       }
-      return new MultipartBodyPublisher(parts, mediaType);
+      return new MultipartBodyPublisher(addedParts, localMediaType);
     }
 
     private static String validateBoundary(String boundary) {

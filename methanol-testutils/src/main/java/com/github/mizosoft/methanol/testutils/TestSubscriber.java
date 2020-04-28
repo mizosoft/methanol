@@ -22,10 +22,13 @@
 
 package com.github.mizosoft.methanol.testutils;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public class TestSubscriber<T> implements Subscriber<T> {
 
@@ -33,13 +36,14 @@ public class TestSubscriber<T> implements Subscriber<T> {
   public volatile int errors;
   public volatile int completes;
   public volatile long request = 1L;
-  public volatile Subscription subscription;
-  public volatile Throwable lastError;
+  public volatile @MonotonicNonNull Subscription subscription;
+  public volatile @MonotonicNonNull Throwable lastError;
   public volatile boolean throwOnCall;
   public final Deque<T> items = new ArrayDeque<>();
 
   @Override
   public synchronized void onSubscribe(Subscription subscription) {
+    requireNonNull(subscription);
     if (this.subscription != null) {
       throw new AssertionError("my subscription is not null");
     }
@@ -55,6 +59,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
 
   @Override
   public synchronized void onNext(T item) {
+    requireNonNull(item);
     nexts++;
     items.addLast(item);
     notifyAll();
@@ -68,6 +73,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
 
   @Override
   public synchronized void onError(Throwable throwable) {
+    requireNonNull(throwable);
     errors++;
     lastError = throwable;
     notifyAll();

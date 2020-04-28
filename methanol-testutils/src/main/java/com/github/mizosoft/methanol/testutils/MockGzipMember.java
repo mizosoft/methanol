@@ -59,7 +59,6 @@ public final class MockGzipMember {
   private static final int TRAILER_SIZE = 8;
 
   private final Map<FLG, Integer> flagMap;
-  private final Set<FLG> flags;
   private final byte[] data;
   private final Map<CorruptionMode, Integer> corruptions;
 
@@ -109,7 +108,6 @@ public final class MockGzipMember {
 
   private MockGzipMember(Builder builder) {
     flagMap = Map.copyOf(builder.flags);
-    flags = flagMap.keySet();
     data = builder.data;
     corruptions = Collections.unmodifiableMap(new EnumMap<>(builder.corruptions));
   }
@@ -135,7 +133,7 @@ public final class MockGzipMember {
   private byte[] getHeader() {
     var outBuff = new ByteArrayOutputStream();
     writeMainHeader(outBuff);
-    if (flags.contains(FLG.FHCRC)) {
+    if (flagMap.containsKey(FLG.FHCRC)) {
       CRC32 crc32 = new CRC32();
       crc32.update(outBuff.toByteArray());
       writeFlagData(new CheckedOutputStream(outBuff, crc32), crc32);
@@ -149,7 +147,7 @@ public final class MockGzipMember {
     var corr = corruptions;
     writeShort(out, corr.getOrDefault(CorruptionMode.MAGIC, GZIP_MAGIC));
     writeByte(out, corr.getOrDefault(CorruptionMode.CM, CM_DEFLATE));
-    writeByte(out, corr.getOrDefault(CorruptionMode.FLG, FLG.toFlgByte(flags)));
+    writeByte(out, corr.getOrDefault(CorruptionMode.FLG, FLG.toFlgByte(flagMap.keySet())));
     // MTIME default
     writeInt(out, 0);
     // Default XFL & OS
@@ -159,7 +157,7 @@ public final class MockGzipMember {
 
   private void writeFlagData(OutputStream out, @Nullable CRC32 crc32) {
     try {
-      if (flags.contains(FLG.FEXTRA)) {
+      if (flagMap.containsKey(FLG.FEXTRA)) {
         // The extra field has a format (specific subfields),
         // but this doesn't matter because it will be ignored
         // anyways so the data is randomly generated
@@ -169,11 +167,11 @@ public final class MockGzipMember {
         ThreadLocalRandom.current().nextBytes(b);
         out.write(b);
       }
-      if (flags.contains(FLG.FNAME)) {
+      if (flagMap.containsKey(FLG.FNAME)) {
         int len = flagMap.get(FLG.FNAME);
         out.write(Arrays.copyOf(rndAscii(len), len + 1));
       }
-      if (flags.contains(FLG.FCOMMENT)) {
+      if (flagMap.containsKey(FLG.FCOMMENT)) {
         int len = flagMap.get(FLG.FCOMMENT);
         out.write(Arrays.copyOf(rndAscii(len), len + 1));
       }

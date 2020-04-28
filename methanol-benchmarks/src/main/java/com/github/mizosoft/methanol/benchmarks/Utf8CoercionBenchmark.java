@@ -35,6 +35,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import okio.Buffer;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.jetbrains.annotations.NotNull;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -63,9 +64,9 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 public class Utf8CoercionBenchmark extends ClientServerLifecycle {
 
   @Param({"ASYNC_PARSER", "BYTE_ARRAY_PARSER"})
-  private JsonHandler handler;
+  private @MonotonicNonNull JsonHandler handler;
 
-  private JsonMapper mapper;
+  private @MonotonicNonNull JsonMapper mapper;
 
   @Setup
   public void setupJsonMapper() {

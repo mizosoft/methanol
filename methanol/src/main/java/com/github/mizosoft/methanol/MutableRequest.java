@@ -91,9 +91,14 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
     uri = other.uri;
     cachedHeaders = other.cachedHeaders;
     bodyPublisher = other.bodyPublisher;
-    timeout = other.timeout;
-    version = other.version;
     expectContinue = other.expectContinue;
+    // unnecessary checks to respect MonotonicNonNull's contract
+    if (other.timeout != null) {
+      timeout = other.timeout;
+    }
+    if (other.version != null) {
+      version = other.version;
+    }
   }
 
   /**

@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.extensions;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Validate;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
 import java.lang.invoke.MethodHandles;
@@ -143,9 +144,13 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         HttpRequest incomingPushPromise,
         Function<BodyHandler<V>, CompletableFuture<HttpResponse<V>>> completer) {
       requireState(pushPromiseAcceptor != null, "unexpected push promise");
+      // Analysis tools cannot assert that pushPromiseAcceptor is non-null
+      // at this point. Kudos to Intellij though cuz it can!
+      Function<HttpRequest, @Nullable BodyHandler<V>> acceptor =
+          Validate.castNonNull(pushPromiseAcceptor);
       BodyHandler<V> pushedResponseHandler;
       try {
-        pushedResponseHandler = pushPromiseAcceptor.apply(incomingPushPromise);
+        pushedResponseHandler = acceptor.apply(incomingPushPromise);
       } catch (Throwable t) {
         signalError(t);
         return;

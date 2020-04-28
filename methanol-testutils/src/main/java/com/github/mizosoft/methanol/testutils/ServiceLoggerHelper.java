@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.testutils;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /** Turns off ServiceCache logger during tests. */
 public class ServiceLoggerHelper {
@@ -32,7 +33,7 @@ public class ServiceLoggerHelper {
       "com.github.mizosoft.methanol.internal.spi.ServiceCache";
 
   private final Logger logger;
-  private Level originalLevel;
+  private @MonotonicNonNull Level originalLevel;
 
   public ServiceLoggerHelper() {
     this.logger = Logger.getLogger(SERVICE_LOGGER_NAME);
