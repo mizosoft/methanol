@@ -38,7 +38,7 @@ public class StringDecoder extends TextBodyAdapter implements BodyAdapter.Decode
 
   @Override
   public boolean supportsType(TypeRef<?> type) {
-    return String.class == type.rawType();
+    return String.class == type.type();
   }
 
   @Override
@@ -46,9 +46,8 @@ public class StringDecoder extends TextBodyAdapter implements BodyAdapter.Decode
     requireNonNull(type);
     requireSupport(type);
     requireCompatibleOrNull(mediaType);
-    @SuppressWarnings("unchecked") BodySubscriber<T> subscriber =
-        (BodySubscriber<T>) BodySubscribers.ofString(
-            charsetOrDefault(mediaType, StandardCharsets.UTF_8));
-    return subscriber;
+    BodySubscriber<String> subscriber =
+        BodySubscribers.ofString(charsetOrDefault(mediaType, StandardCharsets.UTF_8));
+    return BodySubscribers.mapping(subscriber, type.exactRawType()::cast);
   }
 }

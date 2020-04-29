@@ -169,6 +169,12 @@ class TypeRefTest {
     assertEquals(StringList.type.getTypeName(), ref.toString());
   }
 
+  @Test
+  void exactRawType_fromRawType() {
+    var ref = new TypeRef<String>() {};
+    assertEquals(String.class, ref.exactRawType());
+  }
+
   // exceptional behaviour
 
   @SuppressWarnings("rawtypes") // intentional
@@ -198,6 +204,12 @@ class TypeRefTest {
       }
     };
     assertIllegalArg(() -> TypeRef.from(fakeParameterizedType));
+  }
+
+  @Test
+  <T> void exactRawType_notRaw() {
+    assertThrows(IllegalStateException.class, () -> new TypeRef<T>() {}.exactRawType());
+    assertThrows(IllegalStateException.class, () -> new TypeRef<List<String>>() {}.exactRawType());
   }
 
   interface StringList extends List<String> {

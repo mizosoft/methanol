@@ -51,7 +51,8 @@ abstract class ProtobufAdapter extends AbstractBodyAdapter {
 
   @Override
   public boolean supportsType(TypeRef<?> type) {
-    return MessageLite.class.isAssignableFrom(type.rawType());
+    return type.type() instanceof Class<?>
+        && MessageLite.class.isAssignableFrom(type.rawType());
   }
 
   static final class Encoder extends ProtobufAdapter implements BodyAdapter.Encoder {
@@ -82,7 +83,7 @@ abstract class ProtobufAdapter extends AbstractBodyAdapter {
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
       // We know that T is <= MessageLite to the caller, but the compiler doesn't
-      Class<T> messageClass = toRawType(type);
+      Class<T> messageClass = type.exactRawType();
       MessageLite.Builder builder = getBuilderForMessage(messageClass);
       return BodySubscribers.mapping(
           BodySubscribers.ofByteArray(), data -> buildMessage(messageClass, builder, data));
@@ -94,7 +95,7 @@ abstract class ProtobufAdapter extends AbstractBodyAdapter {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
-      Class<T> messageClass = toRawType(type);
+      Class<T> messageClass = type.exactRawType();
       MessageLite.Builder builder = getBuilderForMessage(messageClass);
       return BodySubscribers.mapping(
           BodySubscribers.ofInputStream(), in -> () -> buildMessage(messageClass, builder, in));
@@ -116,12 +117,6 @@ abstract class ProtobufAdapter extends AbstractBodyAdapter {
         throw new UncheckedIOException(ioe);
       }
       return messageClass.cast(builder.build());
-    }
-
-    // Messages are never expected to be generic, so type.rawType() is also Class<T>
-    @SuppressWarnings("unchecked")
-    private static <T> Class<T> toRawType(TypeRef<T> type) {
-      return (Class<T>) type.rawType();
     }
 
     private static MessageLite.Builder getBuilderForMessage(Class<?> clazz) {

@@ -70,7 +70,13 @@ public abstract class TypeRef<T> {
     return type;
   }
 
-  /** Returns the {@code Class} object that represents the raw type of {@code T}. */
+  /**
+   * Returns the {@code Class} object that represents the resolved raw type of {@code T}. The
+   * returned class is {@code Class<? super T>} because {@code T} can possibly be a generic type,
+   * and it is not semantically correct for a {@code Class} to be parameterized with such.
+   *
+   * @see #exactRawType()
+   */
   @SuppressWarnings("unchecked")
   public final Class<? super T> rawType() {
     Class<?> clz = rawType;
@@ -85,6 +91,18 @@ public abstract class TypeRef<T> {
       rawType = clz;
     }
     return (Class<? super T>) clz;
+  }
+
+  /**
+   * Returns the underlying type as a {@code Class<T>} for when it is known that {@link T} is
+   * already raw. Similar to {@code (Class<T>) typeRef.type()}.
+   *
+   * @throws IllegalStateException if the underlying type is not a raw type
+   */
+  @SuppressWarnings("unchecked")
+  public final Class<T> exactRawType() {
+    requireState(type instanceof Class<?>, "%s is not a raw type", type);
+    return (Class<T>) type;
   }
 
   /**
