@@ -20,15 +20,20 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testutils;
+package com.github.mizosoft.methanol.adapter.jaxb;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import javax.xml.bind.JAXBException;
 
-/** Converts {@code CharSequence} to requests and responses to {@code String}. */
-public abstract class TextBodyAdapter extends AbstractBodyAdapter {
+/** Unchecked wrapper over a {@link JAXBException}. */
+public class UncheckedJaxbException extends RuntimeException {
 
-  protected TextBodyAdapter() {
-    super(MediaType.TEXT_ANY);
+  /** Creates a new {@code UncheckedJaxbException} with the given cause. */
+  public UncheckedJaxbException(JAXBException cause) {
+    super(cause);
+  }
+
+  @Override
+  public JAXBException getCause() {
+    return (JAXBException) super.getCause();
   }
 }

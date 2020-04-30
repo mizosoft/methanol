@@ -97,6 +97,7 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
    * defaultCharset} directly if {@code mediaType} is null.
    */
   public static Charset charsetOrDefault(@Nullable MediaType mediaType, Charset defaultCharset) {
+    requireNonNull(defaultCharset);
     return mediaType != null ? mediaType.charsetOrDefault(defaultCharset) : defaultCharset;
   }
 

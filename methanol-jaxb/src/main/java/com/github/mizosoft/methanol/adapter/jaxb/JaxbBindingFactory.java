@@ -20,15 +20,26 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testutils;
+package com.github.mizosoft.methanol.adapter.jaxb;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
 
-/** Converts {@code CharSequence} to requests and responses to {@code String}. */
-public abstract class TextBodyAdapter extends AbstractBodyAdapter {
+/** Creates new {@link Marshaller} or {@link Unmarshaller} on demand for use by an adapter. */
+public interface JaxbBindingFactory {
 
-  protected TextBodyAdapter() {
-    super(MediaType.TEXT_ANY);
+  /** Returns a new {@code Marshaller} for encoding an object of the given class. */
+  Marshaller createMarshaller(Class<?> boundClass) throws JAXBException;
+
+  /** Returns a new {@code Unmarshaller} for decoding to an object of the given class. */
+  Unmarshaller createUnmarshaller(Class<?> boundClass) throws JAXBException;
+
+  /**
+   * Returns a default {@code JaxbBindingFactory} that creates and caches {@code JAXBContexts} for
+   * each requested type.
+   */
+  static JaxbBindingFactory create() {
+    return new CachingJaxbBindingFactory();
   }
 }

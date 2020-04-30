@@ -20,15 +20,46 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testutils;
+package com.github.mizosoft.methanol.adapter.jaxb;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlRootElement;
 
-/** Converts {@code CharSequence} to requests and responses to {@code String}. */
-public abstract class TextBodyAdapter extends AbstractBodyAdapter {
+@XmlRootElement(name = "course")
+final class Course {
 
-  protected TextBodyAdapter() {
-    super(MediaType.TEXT_ANY);
+  @XmlAttribute(required = true)
+  final Type type;
+
+  @XmlElementWrapper(name = "enrolled-students")
+  @XmlElement(name = "student")
+  final List<Student> enrolledStudents;
+
+  private Course() {
+    this(Type.UNKNOWN, new ArrayList<>());
+  }
+
+  Course(Type type, List<Student> enrolledStudents) {
+    this.type = type;
+    this.enrolledStudents = enrolledStudents;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return obj instanceof Course
+        && type == ((Course) obj).type
+        && enrolledStudents.equals(((Course) obj).enrolledStudents);
+  }
+
+  @Override
+  public String toString() {
+     return "Course[type="
+         + type
+         + ", enrolledStudents="
+         + enrolledStudents + "]";
   }
 }

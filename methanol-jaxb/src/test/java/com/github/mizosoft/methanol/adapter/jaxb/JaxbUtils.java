@@ -20,15 +20,35 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testutils;
+package com.github.mizosoft.methanol.adapter.jaxb;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import java.util.Map;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBContextFactory;
+import javax.xml.bind.JAXBException;
 
-/** Converts {@code CharSequence} to requests and responses to {@code String}. */
-public abstract class TextBodyAdapter extends AbstractBodyAdapter {
+public class JaxbUtils {
 
-  protected TextBodyAdapter() {
-    super(MediaType.TEXT_ANY);
+  static void registerImplementation() {
+    System.setProperty(JAXBContext.JAXB_CONTEXT_FACTORY, MoxyJaxbContextFactory.class.getName());
+  }
+
+  public static class MoxyJaxbContextFactory implements JAXBContextFactory {
+
+    public MoxyJaxbContextFactory() {}
+
+    @Override
+    public JAXBContext createContext(Class<?>[] classesToBeBound, Map<String, ?> properties)
+        throws JAXBException {
+      return org.eclipse.persistence.jaxb.JAXBContextFactory
+          .createContext(classesToBeBound, properties);
+    }
+
+    @Override
+    public JAXBContext createContext(String contextPath, ClassLoader classLoader,
+        Map<String, ?> properties) throws JAXBException {
+      return org.eclipse.persistence.jaxb.JAXBContextFactory
+          .createContext(contextPath, classLoader, properties);
+    }
   }
 }
