@@ -4,8 +4,6 @@ Provides [brotli][brotli_google] decompression for Methanol.
 
 ## Installation
 
-A `BodyDecoder.Factory` is service-provided by default. You only need to add this module as a dependency:
-
 ### Gradle
 
 ```gradle

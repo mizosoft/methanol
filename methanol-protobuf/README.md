@@ -1,8 +1,7 @@
 # methanol-protobuf
 
-Provides `BodyAdapter` implementations for Google's [Protocol Buffers][protocol_buffers] format. Any
-subtype of `MessageLite` is supported for decoding and encoding. The adapters are compatible with
-`application/x-protobuf` and `application/octet-stream`.
+`BodyAdapter` implementations for Google's [Protocol Buffers][protocol_buffers] format. Any subtype
+of `MessageLite` is supported for decoding and encoding.
 
 ## Installation
 
@@ -44,7 +43,7 @@ public class ProtobufProviders {
   public static class EncoderProvider {
     private EncoderProvider() {}
 
-    public static Encoder provider() {
+    public static BodyAdapter.Encoder provider() {
       return ProtobufAdapterFactory.createEncoder();
     }
   }
@@ -76,16 +75,15 @@ that forward to the instances created by `ProtobufAdapterFactory`. Then declare 
 
 ## Usage
 
-### For request
-
 ```java
+// For request
 MyMessage message = ...
-var requestBody = MoreBodyPublishers.ofObject(message, MediaType.of("application", "x-protobuf"));
-```
+HttpRequest request = HttpRequest.newBuilder(...)
+    .POST(MoreBodyPublishers.ofObject(message, MediaType.APPLICATION_X_PROTOBUF))
+     ...
+    .build();
 
-### For response
-
-```java
+// For response
 HttpResponse<MyMessage> response = client.send(request, MoreBodyHandlers.ofObject(MyMessage.class));
 ```
 

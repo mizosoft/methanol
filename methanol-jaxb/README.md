@@ -42,7 +42,7 @@ public class JaxbProviders {
   public static class EncoderProvider {
     private EncoderProvider() {}
 
-    public static Encoder provider() {
+    public static BodyAdapter.Encoder provider() {
       // By default, JAXBContexts are created and cached for each type
       return JaxbAdapterFactory.createEncoder();
     }

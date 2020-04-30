@@ -1,6 +1,6 @@
 # methanol-jackson
 
-Provides `BodyAdapter` implementations for JSON using the [Jackson][jackson_github] library.
+`BodyAdapter` implementations for JSON using the [Jackson][jackson_github] library.
 
 ## Installation
 
@@ -42,7 +42,7 @@ public class JacksonProviders {
   public static class EncoderProvider {
     private EncoderProvider() {}
 
-    public static Encoder provider() {
+    public static BodyAdapter.Encoder provider() {
       // Use a default ObjectMapper
       return JacksonAdapterFactory.createEncoder();
     }
@@ -79,12 +79,12 @@ that forward to the instances created by `JacksonAdapterFactory`. Then declare t
 
 ```java
 MyDto dto = ...
-var requestBody = MoreBodyPublishers.ofObject(dto, MediaType.of("application", "json"));
-```
+HttpRequest request = HttpRequest.newBuilder(...)
+    .POST(MoreBodyPublishers.ofObject(dto, MediaType.APPLICATION_JSON))
+     ...
+    .build();
 
-### For response
-
-```java
+// For response
 HttpResponse<MyDto> response = client.send(request, MoreBodyHandlers.ofObject(MyDto.class));
 ```
 

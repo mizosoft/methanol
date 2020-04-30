@@ -1,6 +1,6 @@
 # methanol-gson
 
-Provides `BodyAdapter` implementations for JSON using the [Gson][gson_github] library.
+`BodyAdapter` implementations for JSON using the [Gson][gson_github] library.
 
 ## Installation
 
@@ -42,7 +42,7 @@ public class GsonProviders {
   public static class EncoderProvider {
     private EncoderProvider() {}
 
-    public static Encoder provider() {
+    public static BodyAdapter.Encoder provider() {
       // Use a default Gson instance
       return GsonAdapterFactory.createEncoder();
     }
@@ -75,16 +75,15 @@ that forward to the instances created by `GsonAdapterFactory`. Then declare them
 
 ## Usage
 
-### For request
-
 ```java
+// For request
 MyDto dto = ...
-var requestBody = MoreBodyPublishers.ofObject(dto, MediaType.of("application", "json"));
-```
+HttpRequest request = HttpRequest.newBuilder(...)
+    .POST(MoreBodyPublishers.ofObject(dto, MediaType.APPLICATION_JSON))
+     ...
+    .build();
 
-### For response
-
-```java
+// For response
 HttpResponse<MyDto> response = client.send(request, MoreBodyHandlers.ofObject(MyDto.class));
 ```
 

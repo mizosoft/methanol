@@ -1,7 +1,7 @@
 # methanol-jackson-flux
 
-Provides `Publisher`-based `BodyAdapter` implementations for JSON using [Jackson][jackson_github]
-and [Project reactor][reactor_github].
+`Publisher`-based `BodyAdapter` implementations for JSON using [Jackson][jackson_github] and
+[Project Reactor][reactor_github].
 
 ## Encoding and Decoding
 
@@ -10,23 +10,23 @@ containing zero or more elements corresponding to each published object. `Mono` 
 encoded into a single JSON object (if completed with any).
 
 Decodable types are `Flux`, `Mono`, `org.reactivestreams.Publisher` and `Flow.Publisher`. For all
-aforementioned types except `Mono`, a JSON array is first tokenized into its individual elements before
+these types except `Mono`, a JSON array is first tokenized into its individual elements before
 deserialization.
 
 An `HttpResponse` handled with such a decoder is completed immediately after the response headers
 are received. Additionally, the decoder always uses Jackson's non-blocking parser (using a streaming
-sources is not possible). [Deferring][wiki_t_vs_supplier] the response body into a `Supplier` gives
+source is not possible). [Deferring][wiki_t_vs_supplier] the response body into a `Supplier` gives
 no benefits with this decoder.
 
 ## Installation
 
-Add this module as a dependency (*note: not yet released*):
+Add this module as a dependency:
 
 ### Gradle
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-jackson:1.2.1-SNAPSHOT'
+  implementation 'com.github.mizosoft.methanol:methanol-jackson-flux:1.2.1-SNAPSHOT'
 }
 ```
 
@@ -36,7 +36,7 @@ dependencies {
 <dependencies>
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
-    <artifactId>methanol-jackson</artifactId>
+    <artifactId>methanol-jackson-flux</artifactId>
     <version>1.2.1-SNAPSHOT</version>
   </dependency>
 </dependencies>
@@ -91,16 +91,15 @@ that forward to the instances created by `JacksonFluxAdapterFactory`. Then decla
 
 ## Usage
 
-### For request
-
 ```java
+// For request
 Mono<MyDto> mono = ...
-BodyPublisher requestBody = MoreBodyPublishers.ofObject(mono, MediaType.of("application", "json"));
-```
+HttpRequest request = HttpRequest.newBuilder(...)
+    .POST(MoreBodyPublishers.ofObject(mono, MediaType.APPLICATION_JSON))
+     ...
+    .build();
 
-### For response
-
-```java
+// For response
 HttpResponse<Flux<MyDto>> response =
     client.send(request, MoreBodyHandlers.ofObject(new TypeRef<Flux<MyDto>>() {}));
 ```
