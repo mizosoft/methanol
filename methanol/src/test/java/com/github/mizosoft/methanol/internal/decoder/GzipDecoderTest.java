@@ -28,6 +28,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.testutils.MockGzipMember;
 import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
@@ -156,6 +157,12 @@ class GzipDecoderTest extends ZLibDecoderTest {
     for (var so : BuffSizeOption.values()) {
       var t = assertThrows(IOException.class, () -> Decode.decode(new GzipDecoder(), appended, so));
       assertEquals("gzip stream finished prematurely", t.getMessage());
+      // will suppress read header failure
+      var suppressed = t.getSuppressed();
+      assertEquals(1, suppressed.length);
+      var suppressedIoe = suppressed[0];
+      assertTrue(suppressedIoe instanceof IOException);
+      assertEquals("not in gzip format; expected: 0x8b1f, found: 0x0", suppressedIoe.getMessage());
     }
   }
 

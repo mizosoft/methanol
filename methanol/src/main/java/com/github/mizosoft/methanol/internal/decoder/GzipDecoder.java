@@ -40,7 +40,7 @@ final class GzipDecoder extends ZLibDecoder {
   private static final int HEADER_SKIPPED_SIZE = 6;
   private static final int TRAILER_SIZE = 8;
   private static final int TEMP_BUFFER_SIZE = 10;
-  private static final int MIN_GZIP_MEMBER_SIZE = 20;
+  private static final int MIN_GZIP_MEMBER_SIZE = HEADER_SIZE + TRAILER_SIZE + 2;
   private static final int BYTE_MASK = 0xFF;
   private static final int SHORT_MASK = 0xFFFF;
   private static final long INT_MASK = 0xFFFFFFFFL;
@@ -135,6 +135,8 @@ final class GzipDecoder extends ZLibDecoder {
           // Inspect on whether concatenated data has a chance of being
           // another gzip member or this should be the end of the gzip stream.
           // TODO: allow ignoring trailing garbage via a system property
+
+          IOException failedToReadHeader = null;
           if (source.remaining() < MIN_GZIP_MEMBER_SIZE) {
             if (!source.finalSource()) {
               break outerLoop; // Expect more bytes to come
@@ -148,12 +150,19 @@ final class GzipDecoder extends ZLibDecoder {
               state = State.fromFlags(this);
               // Keep reading as another gzip stream...
             } catch (IOException e) {
+              failedToReadHeader = e;
               state = State.END;
             }
           }
+
           // Fail if reached end with data still available after inspection
           if (state == State.END && source.hasRemaining()) {
-            throw new IOException("gzip stream finished prematurely");
+            IOException streamFinishedPrematurely =
+                new IOException("gzip stream finished prematurely");
+            if (failedToReadHeader != null) {
+              streamFinishedPrematurely.addSuppressed(failedToReadHeader);
+            }
+            throw streamFinishedPrematurely;
           }
           break;
 
@@ -161,6 +170,7 @@ final class GzipDecoder extends ZLibDecoder {
           throw new AssertionError("unexpected state: " + state);
       }
     }
+
     // Detect if source buffers end prematurely
     if (state != State.END && source.finalSource()) {
       throw new EOFException("unexpected end of gzip stream");
