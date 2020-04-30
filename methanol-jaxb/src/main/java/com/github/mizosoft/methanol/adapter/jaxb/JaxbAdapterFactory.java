@@ -30,6 +30,7 @@ public class JaxbAdapterFactory {
 
   private JaxbAdapterFactory() {}
 
+  /** Returns a new {@code Encoder} using the default caching factory. */
   public static Encoder createEncoder() {
     return createEncoder(JaxbBindingFactory.create());
   }
@@ -39,6 +40,7 @@ public class JaxbAdapterFactory {
     return new JaxbAdapter.Encoder(jaxbFactory);
   }
 
+  /** Returns a new {@code Decoder} using the default caching factory. */
   public static Decoder createDecoder() {
     return createDecoder(JaxbBindingFactory.create());
   }
