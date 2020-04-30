@@ -8,7 +8,7 @@ Provides [brotli][brotli_google] decompression for Methanol.
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-brotli:1.1.0'
+  implementation 'com.github.mizosoft.methanol:methanol-brotli:1.2.0'
 }
 ```
 
@@ -19,7 +19,7 @@ dependencies {
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol-brotli</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
   </dependency>
 </dependencies>
 ```

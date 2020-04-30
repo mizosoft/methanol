@@ -10,7 +10,7 @@ Add this module as a dependency:
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-jaxb:1.2.0-SNAPSHOT'
+  implementation 'com.github.mizosoft.methanol:methanol-jaxb:1.2.0'
 }
 ```
 
@@ -21,7 +21,7 @@ dependencies {
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol-jaxb</artifactId>
-    <version>1.2.0-SNAPSHOT</version>
+    <version>1.2.0</version>
   </dependency>
 </dependencies>
 ```
