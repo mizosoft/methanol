@@ -51,7 +51,7 @@ import org.junit.jupiter.api.Test;
 
 class JaxbAdapterTest {
 
-  static final String epicArtCourseXmlUtf8 =
+  private static final String epicArtCourseXmlUtf8 =
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
           + "<course type=\"ART\">"
           + "<enrolled-students>"
@@ -64,7 +64,7 @@ class JaxbAdapterTest {
           + "</enrolled-students>"
           + "</course>";
 
-  static final String epicARtCourseXmlUtf16 =
+  private static final String epicARtCourseXmlUtf16 =
       "<?xml version=\"1.0\" encoding=\"UTF-16\"?>"
           + "<course type=\"ART\">"
           + "<enrolled-students>"
@@ -77,7 +77,7 @@ class JaxbAdapterTest {
           + "</enrolled-students>"
           + "</course>";
 
-  static final String epicArtCourseFormattedXmlUtf8 =
+  private static final String epicArtCourseFormattedXmlUtf8 =
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
           + "<course type=\"ART\">\n"
           + "   <enrolled-students>\n"
@@ -90,7 +90,7 @@ class JaxbAdapterTest {
           + "   </enrolled-students>\n"
           + "</course>";
 
-  static final Course epicArtCourse =
+  private static final Course epicArtCourse =
       new Course(Type.ART, List.of(new Student("Leonardo Da Vinci"), new Student("Michelangelo")));
 
   @BeforeAll

@@ -23,13 +23,27 @@
 package com.github.mizosoft.methanol.blackbox;
 
 import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.testutils.StringDecoder;
+import com.github.mizosoft.methanol.adapter.jaxb.JaxbAdapterFactory;
 
-public class StringDecoderProvider {
+public class JaxbProviders {
 
-  private StringDecoderProvider() {}
+  private JaxbProviders() {}
 
-  public static BodyAdapter.Decoder provider() {
-    return new StringDecoder();
+  public static class EncoderProvider {
+
+    private EncoderProvider() {}
+
+    public static BodyAdapter.Encoder provider() {
+      return JaxbAdapterFactory.createEncoder();
+    }
+  }
+
+  public static class DecoderProvider {
+
+    private DecoderProvider() {}
+
+    public static BodyAdapter.Decoder provider() {
+      return JaxbAdapterFactory.createDecoder();
+    }
   }
 }

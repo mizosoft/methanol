@@ -82,6 +82,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +96,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBContextFactory;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
+import javax.xml.bind.annotation.XmlRootElement;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okio.Buffer;
@@ -118,6 +126,22 @@ class IntegrationTests {
       + "Violets are blue,\n"
       + "I hope my tests pass\n"
       + "I really hope they do";
+
+  private static final String epicArtCourseXmlUtf8 =
+      "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+          + "<course type=\"ART\">"
+          + "<enrolled-students>"
+          + "<student>"
+          + "<name>Leonardo Da Vinci</name>"
+          + "</student>"
+          + "<student>"
+          + "<name>Michelangelo</name>"
+          + "</student>"
+          + "</enrolled-students>"
+          + "</course>";
+
+  private static final Course epicArtCourse =
+      new Course(Type.ART, List.of(new Student("Leonardo Da Vinci"), new Student("Michelangelo")));
 
   private static String lotsOfText;
   private static Map<String, String> poemEncodings;
@@ -178,6 +202,11 @@ class IntegrationTests {
   @AfterAll
   static void resetServiceLogger() {
     loggerHelper.reset();
+  }
+
+  @BeforeAll
+  static void registerJaxbImplementation() {
+    System.setProperty(JAXBContext.JAXB_CONTEXT_FACTORY, MoxyJaxbContextFactory.class.getName());
   }
 
   @BeforeEach
@@ -453,6 +482,7 @@ class IntegrationTests {
     server.enqueue(new MockResponse()
         .setBody(okBuffer(gzip(lotsOfJson.getBytes(UTF_8))))
         .addHeader("Content-Encoding", "gzip")
+        .addHeader("Content-Type", "application/json")
         .throttleBody(8 * 1024, 100, TimeUnit.MILLISECONDS));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(
@@ -466,13 +496,37 @@ class IntegrationTests {
     server.enqueue(new MockResponse());
     var flux = Flux.fromIterable(lotsOfJsonDecoded);
     var request = MutableRequest.POST(
-        server.url("/").uri(), MoreBodyPublishers.ofObject(flux, null));
+        server.url("/").uri(), MoreBodyPublishers.ofObject(flux, MediaType.APPLICATION_JSON));
     client.sendAsync(request, discarding());
 
     var recordedRequest = server.takeRequest();
     var uploaded = recordedRequest.getBody().readUtf8();
     var expected = JacksonProviders.configuredMapper.writeValueAsString(lotsOfJsonDecoded);
     assertEquals(expected, uploaded);
+  }
+
+  @Test
+  void ofObject_downloadXml() throws Exception {
+    server.enqueue(new MockResponse()
+        .setBody(okBuffer(gzip(epicArtCourseXmlUtf8.getBytes(UTF_8))))
+        .addHeader("Content-Encoding", "gzip")
+        .addHeader("Content-Type", "application/xml"));
+    var request = MutableRequest.GET(server.url("/").uri());
+    var response = client.send(request, decoding(ofObject(new TypeRef<Course>() {})));
+    assertEquals(epicArtCourse, response.body());
+  }
+
+  @Test
+  void ofObject_uploadXml() throws Exception {
+    server.enqueue(new MockResponse());
+    var request = MutableRequest.POST(
+        server.url("/").uri(),
+        MoreBodyPublishers.ofObject(epicArtCourse, MediaType.TEXT_XML.withCharset(UTF_8)));
+    client.sendAsync(request, discarding());
+
+    var recordedRequest = server.takeRequest();
+    var uploaded = recordedRequest.getBody().readUtf8();
+    assertEquals(epicArtCourseXmlUtf8, uploaded);
   }
 
   @Test
@@ -661,5 +715,89 @@ class IntegrationTests {
     public String content;
 
     public Tweet() {}
+  }
+
+  @XmlRootElement(name = "course")
+  private static final class Course {
+
+    @XmlAttribute(required = true)
+    private final Type type;
+
+    @XmlElementWrapper(name = "enrolled-students")
+    @XmlElement(name = "student")
+    private final List<Student> enrolledStudents;
+
+    private Course() {
+      this(Type.UNKNOWN, new ArrayList<>());
+    }
+
+    Course(Type type, List<Student> enrolledStudents) {
+      this.type = type;
+      this.enrolledStudents = enrolledStudents;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof Course
+          && type == ((Course) obj).type
+          && enrolledStudents.equals(((Course) obj).enrolledStudents);
+    }
+
+    @Override
+    public String toString() {
+      return "Course[type="
+          + type
+          + ", enrolledStudents="
+          + enrolledStudents + "]";
+    }
+  }
+
+  private static final class Student {
+
+    @XmlElement(required = true)
+    private final String name;
+
+    private Student() {
+      this("");
+    }
+
+    Student(String name) {
+      this.name = name;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof Student && name.equals(((Student) obj).name);
+    }
+
+    @Override
+    public String toString() {
+      return "Student[" + name + "]";
+    }
+  }
+
+  private enum Type {
+    UNKNOWN,
+    ART,
+    CALCULUS
+  }
+
+  public static class MoxyJaxbContextFactory implements JAXBContextFactory {
+
+    public MoxyJaxbContextFactory() {}
+
+    @Override
+    public JAXBContext createContext(Class<?>[] classesToBeBound, Map<String, ?> properties)
+        throws JAXBException {
+      return org.eclipse.persistence.jaxb.JAXBContextFactory
+          .createContext(classesToBeBound, properties);
+    }
+
+    @Override
+    public JAXBContext createContext(String contextPath, ClassLoader classLoader,
+        Map<String, ?> properties) throws JAXBException {
+      return org.eclipse.persistence.jaxb.JAXBContextFactory
+          .createContext(contextPath, classLoader, properties);
+    }
   }
 }

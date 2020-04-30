@@ -27,7 +27,7 @@ import javax.xml.bind.annotation.XmlElement;
 final class Student {
 
   @XmlElement(required = true)
- final String name;
+  private final String name;
 
   private Student() {
     this("");

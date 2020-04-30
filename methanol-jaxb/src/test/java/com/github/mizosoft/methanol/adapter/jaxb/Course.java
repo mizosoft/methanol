@@ -33,11 +33,11 @@ import javax.xml.bind.annotation.XmlRootElement;
 final class Course {
 
   @XmlAttribute(required = true)
-  final Type type;
+  private final Type type;
 
   @XmlElementWrapper(name = "enrolled-students")
   @XmlElement(name = "student")
-  final List<Student> enrolledStudents;
+  private final List<Student> enrolledStudents;
 
   private Course() {
     this(Type.UNKNOWN, new ArrayList<>());

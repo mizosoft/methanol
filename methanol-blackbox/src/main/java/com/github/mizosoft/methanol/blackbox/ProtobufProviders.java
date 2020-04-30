@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol.blackbox;
 
 import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import com.github.mizosoft.methanol.adapter.protobuf.ProtobufAdapterFactory;
 
 public class ProtobufProviders {
@@ -34,7 +33,7 @@ public class ProtobufProviders {
 
     private EncoderProvider() {}
 
-    public static Encoder provider() {
+    public static BodyAdapter.Encoder provider() {
       return ProtobufAdapterFactory.createEncoder();
     }
   }

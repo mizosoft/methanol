@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 
 class CachingJaxbBindingFactoryTest {
 
-  static final String epicArtCourseXml =
+  private static final String epicArtCourseXmlUtf8 =
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
           + "<course type=\"ART\">"
           + "<enrolled-students>"
@@ -47,7 +47,7 @@ class CachingJaxbBindingFactoryTest {
           + "</enrolled-students>"
           + "</course>";
 
-  static final Course epicArtCourse =
+  private static final Course epicArtCourse =
       new Course(Type.ART, List.of(new Student("Leonardo Da Vinci"), new Student("Michelangelo")));
 
   @BeforeAll
@@ -66,14 +66,14 @@ class CachingJaxbBindingFactoryTest {
     var factory = new CachingJaxbBindingFactory();
     var outputBuffer = new StringWriter();
     factory.createMarshaller(Course.class).marshal(epicArtCourse, outputBuffer);
-    assertEquals(epicArtCourseXml, outputBuffer.toString());
+    assertEquals(epicArtCourseXmlUtf8, outputBuffer.toString());
   }
 
   @Test
   void unmarshal() throws JAXBException {
     var factory = new CachingJaxbBindingFactory();
     var course = (Course) factory.createUnmarshaller(Course.class)
-        .unmarshal(new StringReader(epicArtCourseXml));
+        .unmarshal(new StringReader(epicArtCourseXmlUtf8));
     assertEquals(epicArtCourse, course);
   }
 }

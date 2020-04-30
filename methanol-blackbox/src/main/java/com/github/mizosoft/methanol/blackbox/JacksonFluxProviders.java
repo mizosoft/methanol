@@ -22,8 +22,7 @@
 
 package com.github.mizosoft.methanol.blackbox;
 
-import com.github.mizosoft.methanol.BodyAdapter.Decoder;
-import com.github.mizosoft.methanol.BodyAdapter.Encoder;
+import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.adapter.jackson.flux.JacksonFluxAdapterFactory;
 
 public class JacksonFluxProviders {
@@ -34,7 +33,7 @@ public class JacksonFluxProviders {
 
     private EncoderProvider() {}
 
-    public static Encoder provider() {
+    public static BodyAdapter.Encoder provider() {
       return JacksonFluxAdapterFactory.createEncoder(JacksonProviders.configuredMapper);
     }
   }
@@ -43,7 +42,7 @@ public class JacksonFluxProviders {
 
     private DecoderProvider() {}
 
-    public static Decoder provider() {
+    public static BodyAdapter.Decoder provider() {
       return JacksonFluxAdapterFactory.createDecoder(JacksonProviders.configuredMapper);
     }
   }

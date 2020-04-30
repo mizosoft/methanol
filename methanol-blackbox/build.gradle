@@ -7,6 +7,7 @@ dependencies {
   implementation project(':methanol-jackson')
   implementation project(':methanol-jackson-flux')
   implementation project(':methanol-protobuf')
+  implementation project(':methanol-jaxb')
   implementation project(':methanol-brotli')
   implementation project(':methanol-testutils')
   implementation deps.reactorCore
@@ -15,6 +16,7 @@ dependencies {
   testImplementation deps.brotliDec
   testImplementation deps.reactiveStreams
   testImplementation deps.reactiveStreamsExamples
+  testImplementation deps.jaxbRuntime
 }
 
 [compileTestJava, test].each { task ->
