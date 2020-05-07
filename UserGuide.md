@@ -429,7 +429,7 @@ aware however that processing in that case is done by the thread invoking the su
 ### Reactive request dispatches
 
 For a truly reactive experience, one might want to dispatch async requests as
-`Publisher<HttpResponse<T>>` sources.
+`Publisher<HttpResponse<T>>` sources. You can use `Methanol::exchnge` for this.
 
 ```java
 Methanol client = Methanol.create();

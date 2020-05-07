@@ -75,16 +75,15 @@ that forward to the instances created by `JaxbAdapterFactory`. Then declare them
 
 ## Usage
 
-### For request
-
 ```java
+// For request
 MyDto dto = ...
-BodyPublisher requestBody = MoreBodyPublishers.ofObject(dto, MediaType.APPLICATION_XML);
-```
+HttpRequest request = HttpRequest.newBuilder(...)
+    .POST(MoreBodyPublishers.ofObject(dto, MediaType.APPLICATION_XML))
+     ...
+    .build();
 
-### For response
-
-```java
+// For response
 HttpResponse<MyDto> response = client.send(request, MoreBodyHandlers.ofObject(MyDto.class));
 ```
 

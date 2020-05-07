@@ -75,9 +75,8 @@ that forward to the instances created by `JacksonAdapterFactory`. Then declare t
 
 ## Usage
 
-### For request
-
 ```java
+// For request
 MyDto dto = ...
 HttpRequest request = HttpRequest.newBuilder(...)
     .POST(MoreBodyPublishers.ofObject(dto, MediaType.APPLICATION_JSON))

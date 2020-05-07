@@ -8,9 +8,9 @@ A lightweight library that complements `java.net.http` for a better HTTP experie
 
 ## Overview
 
-***Methanol*** provides useful lightweight HTTP extensions built on top of `java.net.http`.
-Applications using Java's non-blocking HTTP client shall find it more robust and easier to use with
-Methanol.
+***Methanol*** provides useful lightweight HTTP extensions aimed at making it much easier to work
+with `java.net.http`. Applications using Java's non-blocking HTTP client shall find it more robust
+and easier to use with Methanol.
 
 ### Features
 
@@ -118,7 +118,8 @@ static class RenderRequest {
 
 ### Form bodies
 
-This example downloads an article from Wikipedia using a provided search query.
+You can use `FormBodyPublisher` for submitting URL-encoded forms. In this example, an article is
+downloaded from Wikipedia using a provided search query.
 
 ```java
 final Methanol client = Methanol.newBuilder()
@@ -140,8 +141,8 @@ Path downloadArticle(String title) throws IOException, InterruptedException {
 
 ### Multipart bodies
 
-This example uploads an image to the [imgur](https://imgur.com) image sharing service using a
-multipart body.
+The library also provides flexible support for multipart. In this example, a multipart body is used
+to upload an image to [imgur](https://imgur.com).
 
 ```java
 final Methanol client = Methanol.newBuilder()
