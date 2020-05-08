@@ -130,7 +130,8 @@ public final class ByteChannelSubscriber implements BodySubscriber<ReadableByteC
   }
 
   @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
-  private final class ChannelView extends AbstractInterruptibleChannel
+  private final class ChannelView
+      extends AbstractInterruptibleChannel
       implements ReadableByteChannel {
 
     private final List<ByteBuffer> cached;
@@ -196,7 +197,7 @@ public final class ByteChannelSubscriber implements BodySubscriber<ReadableByteC
       int read = 0;
       try {
         begin(); // Set blocker
-        while (dst.hasRemaining()) {
+        while (dst.hasRemaining() && isOpen()) {
           ByteBuffer next = read > 0 ? pollNext() : takeNext(); // Only block once
           throwIfPending(); // Might be an error signal
           if (next == TOMBSTONE) { // Normal completion
