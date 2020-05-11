@@ -43,7 +43,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.function.Function;
-import org.checkerframework.checker.nullness.NullnessUtil;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -158,7 +157,8 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
       }
       if (pushedResponseHandler != null) {
         ONGOING.getAndAdd(this, 1);
-        completer.apply(handlerDecorator.apply(pushedResponseHandler))
+        completer
+            .apply(handlerDecorator.apply(pushedResponseHandler))
             .whenComplete(this::onCompletion);
       }
     }
@@ -182,7 +182,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
       }
 
       long submitted = 0L;
-      while(true) {
+      while (true) {
         HttpResponse<V> response;
         if (receivedAllResponses()) {
           cancelOnComplete(downstream);

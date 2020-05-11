@@ -257,69 +257,6 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void fromAsyncSubscriber_forwardsBodyToDownstream() {
-    int buffSize = 100;
-    int buffsPerList = 5;
-    int listCount = 10;
-    var str = rndAlpha(buffSize * buffsPerList * listCount);
-    var publisher = asciiPublisherOf(str, buffSize, buffsPerList);
-    var subscriber = fromAsyncSubscriber(ofString(US_ASCII), MoreBodySubscribersTest::toFuture);
-    publisher.subscribe(subscriber);
-    assertEquals(str, getBody(subscriber));
-  }
-
-  @Test
-  void fromAsyncSubscriber_downstreamErrorsAreRelayed() {
-    var subscription = new ToBeCancelledSubscription();
-    var badDownstream = new ToBeOnErroredSubscriber() {
-      @Override public void onNext(List<ByteBuffer> item) {
-        throw new TestException();
-      }
-    };
-    var subscriber = fromAsyncSubscriber(badDownstream, s -> s.completion);
-    subscriber.onSubscribe(subscription);
-    subscriber.onNext(List.of(ByteBuffer.wrap(new byte[]{'a'})));
-    subscriber.onComplete(); // Shouldn't be normally completed
-    subscription.assertCancelled();
-    badDownstream.assertOnErrored(TestException.class);
-  }
-
-  @Test
-  void fromAsyncSubscriber_deferredCancellationAfterDownstreamError() {
-    var badDownstream = new ToBeOnErroredSubscriber() {
-      @Override public void onSubscribe(Subscription subscription) {
-        subscription.request(5); // Trigger onNext
-      }
-      @Override public void onNext(List<ByteBuffer> item) {
-        throw new TestException();
-      }
-    };
-    // Doesn't detect cancellation promptly
-    var laggySubscription = new ToBeCancelledSubscription() {
-      Subscriber<List<ByteBuffer>> subscriber;
-      void apply(Subscriber<List<ByteBuffer>> subscriber) {
-        this.subscriber = subscriber;
-        subscriber.onSubscribe(this);
-      }
-      @Override public void request(long n) {
-        // produce n elements only once
-        var s = subscriber;
-        subscriber = null;
-        if (s != null) {
-          for (int i = 0; i < n; i++) {
-            s.onNext(List.of(ByteBuffer.wrap(new byte[]{'a'})));
-          }
-          s.onComplete();
-        }
-      }
-    };
-    var subscriber = fromAsyncSubscriber(badDownstream, s -> s.completion);
-    laggySubscription.apply(subscriber);
-    laggySubscription.assertCancelled();
-    badDownstream.assertOnErrored(TestException.class);
-  }
-
-  @Test
   void withReadTimeout_infiniteTimeout() {
     int buffSize = 100;
     int buffsPerList = 5;

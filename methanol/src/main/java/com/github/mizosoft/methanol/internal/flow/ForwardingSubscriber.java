@@ -26,13 +26,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A defensive {@code Subscriber<T>} forwarding to a downstream {@code Subscriber<? super T>}. */
+/** A {@code Subscriber<T>} that forwards to a downstream {@code Subscriber<? super T>}. */
 public abstract class ForwardingSubscriber<T> implements Subscriber<T> {
 
   protected final Upstream upstream;
-  private boolean completed;
 
   protected ForwardingSubscriber() {
     upstream = new Upstream();
@@ -45,49 +43,26 @@ public abstract class ForwardingSubscriber<T> implements Subscriber<T> {
   public void onSubscribe(Subscription subscription) {
     requireNonNull(subscription);
     if (upstream.setOrCancel(subscription)) {
-      try {
-        downstream().onSubscribe(subscription);
-      } catch (Throwable t) {
-        upstream.cancel();
-        complete(t);
-      }
+      downstream().onSubscribe(subscription);
     }
   }
 
   @Override
   public void onNext(T item) {
     requireNonNull(item);
-    if (!completed) {
-      try {
-        downstream().onNext(item);
-      } catch (Throwable t) {
-        upstream.cancel();
-        complete(t);
-      }
-    }
+    downstream().onNext(item);
   }
 
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
     upstream.clear();
-    complete(throwable);
+    downstream().onError(throwable);
   }
 
   @Override
   public void onComplete() {
     upstream.clear();
-    complete(null);
-  }
-
-  private void complete(@Nullable Throwable error) {
-    if (!completed) {
-      completed = true;
-      if (error != null) {
-        downstream().onError(error);
-      } else {
-        downstream().onComplete();
-      }
-    }
+    downstream().onComplete();
   }
 }

@@ -56,7 +56,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 
-public class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
+class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
     implements BodySubscriber<Flux<T>> {
 
   private final ObjectMapper mapper;
