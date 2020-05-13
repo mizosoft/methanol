@@ -30,6 +30,7 @@ import static com.github.mizosoft.methanol.MoreBodyHandlers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofReader;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.withReadTimeout;
 import static com.github.mizosoft.methanol.MoreBodyPublishers.ofMediaType;
+import static com.github.mizosoft.methanol.testutils.TestUtils.gunzip;
 import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static com.github.mizosoft.methanol.testutils.TestUtils.load;
@@ -46,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -57,6 +59,7 @@ import com.github.mizosoft.methanol.MultipartBodyPublisher;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.WritableBodyPublisher;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
 import com.github.mizosoft.methanol.testutils.BuffIterator;
@@ -66,6 +69,7 @@ import com.github.mizosoft.methanol.testutils.RegistryFileTypeDetector;
 import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
@@ -686,6 +690,23 @@ class IntegrationTests {
     assertEquals(
         String.format(expected_template, loadAscii(getClass(), "/payload/alice.txt")),
         sentRequest.getBody().readUtf8());
+  }
+
+  @Test
+  void sendGzippedRequest() throws Exception {
+    var body = WritableBodyPublisher.create();
+    var request = MutableRequest.POST(server.url("/").uri(), body);
+    client.sendAsync(request, BodyHandlers.discarding());
+    CompletableFuture.runAsync(() -> {
+      try (var gzipOut = new GZIPOutputStream(body.outputStream())) {
+        new ByteArrayInputStream(lotsOfText.getBytes(UTF_8)).transferTo(gzipOut);
+      } catch (IOException e) {
+        fail(e);
+      }
+    });
+
+    var recordedRequest = server.takeRequest();
+    assertEquals(lotsOfText, new String(gunzip(recordedRequest.getBody().readByteArray()), UTF_8));
   }
 
   private static void assertReadTimeout(ReadableByteChannel channel) {

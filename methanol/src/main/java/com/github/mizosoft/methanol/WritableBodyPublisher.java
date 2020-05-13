@@ -34,6 +34,7 @@ import java.io.OutputStream;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.Channels;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.WritableByteChannel;
@@ -242,10 +243,10 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
           }
         } while (src.hasRemaining() && isOpen());
 
-        if (closed) {
+        if (closed) { // asynchronously closed
           sinkBuffer = null;
           if (written <= 0) { // only report if no bytes were written
-            throw new ClosedChannelException();
+            throw new AsynchronousCloseException();
           }
         } else {
           sinkBuffer = sink;

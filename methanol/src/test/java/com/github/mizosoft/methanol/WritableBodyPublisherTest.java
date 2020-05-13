@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -163,6 +164,17 @@ class WritableBodyPublisherTest {
     body.close();
     assertThrows(IllegalStateException.class, body::flush);
     assertThrows(IOException.class, body.outputStream()::flush);
+  }
+
+  @Test
+  void writeAfterFlush() throws IOException {
+    var body = WritableBodyPublisher.create();
+    try (var writer = new OutputStreamWriter(body.outputStream(), UTF_8)) {
+      writer.write("abc");
+      writer.flush();
+      writer.write("ABC");
+    }
+    assertEquals("abcABC", BodyCollector.collectUtf8(body));
   }
 
   private static class TestSubscriber implements Subscriber<ByteBuffer> {
