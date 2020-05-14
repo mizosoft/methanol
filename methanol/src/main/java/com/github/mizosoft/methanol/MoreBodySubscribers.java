@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.internal.Utils.validateTimeout;
+import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
@@ -79,7 +79,7 @@ public class MoreBodySubscribers {
   public static <T> BodySubscriber<T> withReadTimeout(BodySubscriber<T> base, Duration timeout) {
     requireNonNull(base, "base");
     requireNonNull(timeout, "timeout");
-    validateTimeout(timeout);
+    requirePositiveDuration(timeout);
     return new TimeoutSubscriber<>(base, timeout, null);
   }
 
@@ -95,7 +95,7 @@ public class MoreBodySubscribers {
     requireNonNull(base, "base");
     requireNonNull(timeout, "timeout");
     requireNonNull(timeout, "scheduler");
-    validateTimeout(timeout);
+    requirePositiveDuration(timeout);
     return new TimeoutSubscriber<>(base, timeout, scheduler);
   }
 

@@ -81,7 +81,7 @@ public class Utils {
     validateHeaderValue(value);
   }
 
-  public static void validateTimeout(Duration timeout) {
+  public static void requirePositiveDuration(Duration timeout) {
     requireNonNull(timeout);
     requireArgument(
         !(timeout.isNegative() || timeout.isZero()),

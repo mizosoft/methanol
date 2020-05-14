@@ -60,11 +60,14 @@ ext {
     project.name != 'brotli-jni'
   }
   isPublished = { project ->
-    isJavaProject(project) && project.name != 'methanol-blackbox'
+    isJavaProject(project) &&
+        project.name != 'methanol-blackbox' &&
+        project.name != 'methanol-samples'
   }
   // project has tests that contribute to coverage ?
   contributesToTests = { project ->
-    isJavaProject(project) && !(project.name in ['methanol-benchmarks', 'methanol-testutils'])
+    isJavaProject(project) &&
+        !(project.name in ['methanol-benchmarks', 'methanol-testutils', 'methanol-samples'])
   }
   // project is included in coverage report ?
   contributesToCoverageReport = { project ->

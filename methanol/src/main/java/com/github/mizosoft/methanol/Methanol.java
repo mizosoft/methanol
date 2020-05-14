@@ -22,9 +22,9 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
-import static com.github.mizosoft.methanol.internal.Utils.validateTimeout;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -388,7 +388,7 @@ public final class Methanol extends HttpClient {
 
     /** Sets a default request timeout to use when not explicitly by an {@code HttpRequest}. */
     public B requestTimeout(Duration requestTimeout) {
-      validateTimeout(requestTimeout);
+      requirePositiveDuration(requestTimeout);
       this.requestTimeout = requestTimeout;
       return self();
     }

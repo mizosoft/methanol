@@ -23,10 +23,10 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.isValidToken;
+import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeaderName;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
-import static com.github.mizosoft.methanol.internal.Utils.validateTimeout;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -238,7 +238,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
 
   @Override
   public MutableRequest timeout(Duration timeout) {
-    validateTimeout(timeout);
+    requirePositiveDuration(timeout);
     this.timeout = timeout;
     return this;
   }
