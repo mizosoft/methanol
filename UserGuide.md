@@ -636,7 +636,7 @@ In case of [compressed responses](#response-decompression), the `Content-Length`
 invalidated, which prevents calculation of progress percentage. On such case you can first send a
 `HEAD` request with `Accept-Encoding: identity` to get the correct length. Then use that to track
 download from a downstream `BodySubscriber`. See 
-[this JavaFX sample](methanol-samples/src/main/java/com/github/mizosoft/methanol/samples/ProgressJavaFx.java)
+[this JavaFX sample](methanol-samples/src/main/java/com/github/mizosoft/methanol/samples/DownloadProgress.java)
 for an example.
 
 [tck]: <https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck-flow>

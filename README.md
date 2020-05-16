@@ -42,6 +42,11 @@ dependencies {
 </dependencies>
 ```
 
+## Documentation
+
+* [User Guide](UserGuide.md)
+* [Javadoc](https://mizosoft.github.io/methanol/1.x/doc/)
+
 ## Examples
 
 ### Response decompression
@@ -210,7 +215,7 @@ JdkFlowAdapter.flowPublisherToFlux(publisher)
     .subscribe(System.out::println);
 ```
 
-## Tracking progress
+### Tracking progress
 
 A response application needs a method to provide progression feedback for long-running tasks.
 `ProgressTracker` comes in handy in such case. This example logs progress events of a large
@@ -253,11 +258,6 @@ static float round(double value) {
   return Math.round(100.f * value) / 100.f;
 }
 ```
-
-## Documentation
-
-* [User Guide](UserGuide.md)
-* [Javadoc](https://mizosoft.github.io/methanol/1.x/doc/)
 
 ## License
 
