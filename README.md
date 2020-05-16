@@ -210,6 +210,50 @@ JdkFlowAdapter.flowPublisherToFlux(publisher)
     .subscribe(System.out::println);
 ```
 
+## Tracking progress
+
+A response application needs a method to provide progression feedback for long-running tasks.
+`ProgressTracker` comes in handy in such case. This example logs progress events of a large
+file download.
+
+```java
+final HttpClient client = HttpClient.newHttpClient();
+final ProgressTracker tracker =
+    ProgressTracker.newBuilder()
+        .timePassedThreshold(Duration.ofSeconds(1))
+        .build();
+
+Path download() throws IOException, InterruptedException {
+  MutableRequest request = MutableRequest.GET("https://norvig.com/big.txt");
+  HttpResponse<Path> response =
+      client.send(request, tracker.tracking(BodyHandlers.ofFile(Path.of("big.txt")), this::logProgress));
+
+  return response.body();
+}
+
+void logProgress(Progress progress) {
+  var record = "Downloaded: " + progress.totalBytesTransferred() + " bytes";
+
+  // log percentage if possible
+  if (progress.contentLength() > 0L) {
+    record += " (" + round(100.d * progress.value()) + "%)";
+  }
+
+  // log download speed
+  long millis = progress.timePassed().toMillis();
+  if (millis > 0L) {
+    float bytesPerSecond = (1.f * progress.bytesTransferred() / millis);
+    record += " (" + round(bytesPerSecond * (1000.f / 1024)) + " KB/s)";
+  }
+
+  System.out.println(record);
+}
+
+static float round(double value) {
+  return Math.round(100.f * value) / 100.f;
+}
+```
+
 ## Documentation
 
 * [User Guide](UserGuide.md)

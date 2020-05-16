@@ -26,6 +26,7 @@
   * [Multipart bodies](#multipart-bodies)
   * [WritableBodyPublisher](#writablebodypublisher)
   * [Interruptible reading](#interruptible-reading)
+  * [Tracking progress](#tracking-progress)
 
 ## Overview
 
@@ -605,6 +606,39 @@ class BodyProcessor {
 }
 ```
 
+### Tracking progress
+
+Methanol introduces a simple API for tracking the progress of single upload or download operations.
+You do that by attaching a [`Listener`][Listener] to a `BodyPublisher` or `BodyHandler` using a
+configured [`ProgressTracker`][ProgressTracker]. To avoid getting too many events, you can configure
+a tracker to signal progress only when a byte count or time threshold is exceeded. You can also set
+a custom `Executor` for invoking listener callbacks. If the listener updates GUI for example, this
+can be used to make sure it is executed in the GUI thread.
+
+```java
+ProgressTracker tracker = ProgressTracker.newBuilder()
+    .bytesTransferredThreshold(5 * 1024) // at least 5KB is downloaded before any events
+    .timePassedThreshold(Duration.ofSeconds(1)) // at least 1 second passes before any events
+    .executor(SwingUtilities::invokeLater) // invoke in event dispatcher thread if updating UI
+    .build();
+
+// Track upload
+BodyPublisher requestBody =
+    tracker.tracking(BodyPublishers.ofString(...), p -> logUploadProgress(p));
+MutableRequest request = MutableRequest.POST(url, requestBody);
+
+// Track download
+HttpResponse<String> response =
+    client.send(request, tracker.tracking(BodyHandlers.ofString(), p -> logDownloadProgress(p)));
+```
+
+In case of [compressed responses](#response-decompression), the `Content-Length` header becomes
+invalidated, which prevents calculation of progress percentage. On such case you can first send a
+`HEAD` request with `Accept-Encoding: identity` to get the correct length. Then use that to track
+download from a downstream `BodySubscriber`. See 
+[this JavaFX sample](methanol-samples/src/main/java/com/github/mizosoft/methanol/samples/ProgressJavaFx.java)
+for an example.
+
 [tck]: <https://github.com/reactive-streams/reactive-streams-jvm/tree/master/tck-flow>
 [httpclient_recipies]: <https://openjdk.java.net/groups/net/httpclient/recipes.html>
 [so_question]: <https://stackoverflow.com/questions/53502626/does-java-http-client-handle-compression>
@@ -632,3 +666,5 @@ class BodyProcessor {
 [WritableBodyPublisher]: <https://mizosoft.github.io/methanol/1.x/doc/methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html>
 [InterruptibleChannel]: <https://docs.oracle.com/javase/7/docs/api/java/nio/channels/InterruptibleChannel.html>
 [MoreBodySubscribers]: <https://mizosoft.github.io/methanol/1.x/doc/methanol/com/github/mizosoft/methanol/MoreBodySubscribers.html>
+[ProgressTracker]: <https://mizosoft.github.io/methanol/1.x/doc/methanol/com/github/mizosoft/methanol/ProgressTracker.html>
+[Listener]: <https://mizosoft.github.io/methanol/1.x/doc/methanol/com/github/mizosoft/methanol/Listener.html>
