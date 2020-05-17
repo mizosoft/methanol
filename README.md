@@ -217,7 +217,7 @@ JdkFlowAdapter.flowPublisherToFlux(publisher)
 
 ### Tracking progress
 
-A response application needs a method to provide progression feedback for long-running tasks.
+A responsive application needs a method to provide progression feedback for long-running tasks.
 `ProgressTracker` comes in handy in such case. This example logs progress events of a large
 file download.
 
