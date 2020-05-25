@@ -1,7 +1,7 @@
 plugins {
-  id 'org.checkerframework' version '0.5.2' apply false
-  id 'org.javamodularity.moduleplugin' version '1.6.0' apply false
-  id 'net.ltgt.errorprone' version '1.1.1' apply false
+  id 'org.checkerframework' version '0.5.4' apply false
+  id 'org.javamodularity.moduleplugin' version '1.7.0' apply false
+  id 'net.ltgt.errorprone' version '1.2.1' apply false
   id 'net.ltgt.nullaway' version '1.0.1' apply false
   id 'jacoco' // apply to root
   id 'com.github.kt3k.coveralls' version '2.10.1' // apply to root
@@ -13,16 +13,16 @@ ext {
       'junitJupiter'    : '5.6.1',
       'junitPlatform'   : '1.6.1',
       'reactiveStreams' : '1.0.3',
-      'checkerFramework': '3.3.0',
+      'checkerFramework': '3.4.1',
       'gson'            : '2.8.6',
-      'jackson'         : '2.10.2',
-      'protobuf'        : '3.11.4',
-      'errorprone'      : '2.3.4',
+      'jackson'         : '2.11.0',
+      'protobuf'        : '3.12.2',
+      'errorprone'      : '2.4.0',
       'brotliDec'       : '0.1.2',
-      'okhttp'          : '4.5.0',
+      'okhttp'          : '4.7.2',
       'jmh'             : '1.23',
       'jacoco'          : '0.8.5',
-      'reactor'         : '3.3.4.RELEASE',
+      'reactor'         : '3.3.6.RELEASE',
       'nullAway'        : '0.7.9',
       'jaxb'            : '2.3.1',
       'jaxbRuntime'     : '2.7.6'
@@ -324,25 +324,27 @@ tasks.coveralls {
 
 /** This task generates an aggregate Javadoc for all published modules (except benchmarks). */
 task rootJavadoc(type: Javadoc) {
-  def modulePath = files() // --module-path
+  def lazyModulePath = files() // --module-path
   def moduleSrcPaths = [:] // --module-source-path for multi-module compilation
   subprojects { subproject ->
     if (isPublished(subproject) && subproject != project(':methanol-benchmarks')) {
       source subproject.sourceSets.main.allJava
       afterEvaluate {
-        modulePath.from subproject.sourceSets.main.compileClasspath
+        lazyModulePath.from subproject.sourceSets.main.compileClasspath
         if (subproject.extensions.findByName('moduleName')) {
           moduleSrcPaths[subproject.moduleName] = subproject.file('src/main/java')
         }
       }
     }
   }
+
   options {
     links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
     addBooleanOption('Xdoclint:-missing', true)
     addStringOption('doctitle', "Methanol ${project.version} API")
     addStringOption('windowtitle', "Methanol ${project.version} API")
   }
+
   destinationDir = file("${project.buildDir}/docs/javadoc")
 
   doFirst {
@@ -355,7 +357,7 @@ task rootJavadoc(type: Javadoc) {
 
     // these would otherwise be in gradlew.projectsEvaluated {} but it complains
     options {
-      addStringOption('-module-path', modulePath.asPath)
+      modulePath lazyModulePath.files.toList()
       addMultilineStringsOption('-module-source-path').with {
         value = moduleSrcPaths.collect { entry ->
           "${entry.key}=${entry.value}" as String
