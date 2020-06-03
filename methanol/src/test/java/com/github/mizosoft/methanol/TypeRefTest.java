@@ -208,8 +208,8 @@ class TypeRefTest {
 
   @Test
   <T> void exactRawType_notRaw() {
-    assertThrows(IllegalStateException.class, () -> new TypeRef<T>() {}.exactRawType());
-    assertThrows(IllegalStateException.class, () -> new TypeRef<List<String>>() {}.exactRawType());
+    assertThrows(UnsupportedOperationException.class, () -> new TypeRef<T>() {}.exactRawType());
+    assertThrows(UnsupportedOperationException.class, () -> new TypeRef<List<String>>() {}.exactRawType());
   }
 
   interface StringList extends List<String> {

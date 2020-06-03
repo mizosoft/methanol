@@ -50,8 +50,8 @@ ext {
       'okhttpTls'              : "com.squareup.okhttp3:okhttp-tls:${versions.okhttp}",
       'reactorCore'            : "io.projectreactor:reactor-core:${versions.reactor}",
       'nullAway'               : "com.uber.nullaway:nullaway:${versions.nullAway}",
-      'jaxbApi': "javax.xml.bind:jaxb-api:${versions.jaxb}",
-      'jaxbRuntime'         :  "org.eclipse.persistence:org.eclipse.persistence.moxy:${versions.jaxbRuntime}"
+      'jaxbApi'                : "javax.xml.bind:jaxb-api:${versions.jaxb}",
+      'jaxbRuntime'            :  "org.eclipse.persistence:org.eclipse.persistence.moxy:${versions.jaxbRuntime}"
   ]
 
   // querying properties about subprojects

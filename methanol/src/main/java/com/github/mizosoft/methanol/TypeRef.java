@@ -97,11 +97,13 @@ public abstract class TypeRef<T> {
    * Returns the underlying type as a {@code Class<T>} for when it is known that {@link T} is
    * already raw. Similar to {@code (Class<T>) typeRef.type()}.
    *
-   * @throws IllegalStateException if the underlying type is not a raw type
+   * @throws UnsupportedOperationException if the underlying type is not a raw type
    */
   @SuppressWarnings("unchecked")
   public final Class<T> exactRawType() {
-    requireState(type instanceof Class<?>, "%s is not a raw type", type);
+    if (!(type instanceof Class<?>)) {
+      throw new UnsupportedOperationException("<" + type + "> is not a raw type");
+    }
     return (Class<T>) type;
   }
 
@@ -136,8 +138,7 @@ public abstract class TypeRef<T> {
   private static Class<?> findRawType(Type type) {
     if (type instanceof Class) {
       return (Class<?>) type;
-    }
-    if (type instanceof ParameterizedType) {
+    } else if (type instanceof ParameterizedType) {
       Type rawType = ((ParameterizedType) type).getRawType();
       requireArgument(
           rawType instanceof Class,
@@ -145,19 +146,17 @@ public abstract class TypeRef<T> {
           type,
           rawType);
       return (Class<?>) rawType;
-    }
-    if (type instanceof GenericArrayType) {
+    } else if (type instanceof GenericArrayType) {
       // Here, the raw type is the type of the array created with the generic-component's raw type
       Class<?> rawComponentType = findRawType(((GenericArrayType) type).getGenericComponentType());
       return Array.newInstance(rawComponentType, 0).getClass();
-    }
-    if (type instanceof TypeVariable) {
+    } else if (type instanceof TypeVariable) {
       return rawUpperBound(((TypeVariable<?>) type).getBounds());
-    }
-    if (type instanceof WildcardType) {
+    } else if (type instanceof WildcardType) {
       return rawUpperBound(((WildcardType) type).getUpperBounds());
     }
-    throw new IllegalArgumentException("unsupported specialization of Type: " + type);
+    throw new IllegalArgumentException(
+        "unsupported specialization of java.lang.reflect.Type: " + type);
   }
 
   private static Class<?> rawUpperBound(Type[] upperBounds) {

@@ -29,16 +29,16 @@ import java.util.List;
 /** Utility class for loading/caching {@code Encoder/Decoder} providers. */
 public class BodyAdapterFinder {
 
-  private static final ServiceCache<Encoder> REQUEST_SERVICE = new ServiceCache<>(Encoder.class);
-  private static final ServiceCache<Decoder> RESPONSE_SERVICE = new ServiceCache<>(Decoder.class);
+  private static final ServiceCache<Encoder> encodersServiceCache = new ServiceCache<>(Encoder.class);
+  private static final ServiceCache<Decoder> decodersServiceCache = new ServiceCache<>(Decoder.class);
 
   private BodyAdapterFinder() {} // non-instantiable
 
   public static List<Encoder> findInstalledEncoders() {
-    return REQUEST_SERVICE.getProviders();
+    return encodersServiceCache.getProviders();
   }
 
   public static List<Decoder> findInstalledDecoders() {
-    return RESPONSE_SERVICE.getProviders();
+    return decodersServiceCache.getProviders();
   }
 }
