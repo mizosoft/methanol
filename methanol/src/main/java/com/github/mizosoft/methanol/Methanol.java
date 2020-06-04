@@ -42,6 +42,7 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.time.Duration;
 import java.util.Locale;
@@ -50,6 +51,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.net.ssl.SSLContext;
@@ -77,6 +79,8 @@ public final class Methanol extends HttpClient {
   private final Optional<String> userAgent;
   private final Optional<URI> baseUri;
   private final Optional<Duration> requestTimeout;
+  private final Optional<Duration> readTimeout;
+  private final @Nullable ScheduledExecutorService readTimeoutScheduler;
   private final HttpHeaders defaultHeaders;
   private final boolean autoAcceptEncoding;
 
@@ -85,6 +89,8 @@ public final class Methanol extends HttpClient {
     userAgent = Optional.ofNullable(builder.userAgent);
     baseUri = Optional.ofNullable(builder.baseUri);
     requestTimeout = Optional.ofNullable(builder.requestTimeout);
+    readTimeout = Optional.ofNullable(builder.readTimeout);
+    readTimeoutScheduler = builder.readTimeoutScheduler;
     defaultHeaders = builder.headersBuilder.build();
     autoAcceptEncoding = builder.autoAcceptEncoding;
   }
@@ -286,7 +292,19 @@ public final class Methanol extends HttpClient {
   }
 
   private <T> BodyHandler<T> decorateHandler(BodyHandler<T> baseHandler) {
-    return autoAcceptEncoding ? MoreBodyHandlers.decoding(baseHandler) : baseHandler;
+    var decoratedHandler = baseHandler;
+    if (autoAcceptEncoding) {
+      decoratedHandler = MoreBodyHandlers.decoding(decoratedHandler);
+    }
+    // timeout interceptor should to be "closer" to the HTTP client for better accuracy
+    if (readTimeout.isPresent()) {
+      decoratedHandler =
+          readTimeoutScheduler != null
+              ? MoreBodyHandlers.withReadTimeout(
+              baseHandler, readTimeout.get(), readTimeoutScheduler)
+              : MoreBodyHandlers.withReadTimeout(baseHandler, readTimeout.get());
+    }
+    return decoratedHandler;
   }
 
   /** Uses {@link #decorateHandler(BodyHandler)} for each accepted push promise. */
@@ -326,6 +344,8 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull String userAgent;
     @MonotonicNonNull URI baseUri;
     @MonotonicNonNull Duration requestTimeout;
+    @MonotonicNonNull Duration readTimeout;
+    @MonotonicNonNull ScheduledExecutorService readTimeoutScheduler;
     boolean autoAcceptEncoding;
 
     BaseBuilder() {
@@ -349,7 +369,8 @@ public final class Methanol extends HttpClient {
 
     /**
      * Sets the base {@code URI} with which each outgoing requests' {@code URI} is {@link
-     * URI#resolve(URI) resolved}. */
+     * URI#resolve(URI) resolved}.
+     */
     public B baseUri(String uri) {
       return baseUri(URI.create(uri));
     }
@@ -390,6 +411,30 @@ public final class Methanol extends HttpClient {
     public B requestTimeout(Duration requestTimeout) {
       requirePositiveDuration(requestTimeout);
       this.requestTimeout = requestTimeout;
+      return self();
+    }
+
+    /**
+     * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration)
+     * readtimeout}. Timeout events are scheduled using a system-wide {@code
+     * ScheduledExecutorService}.
+     */
+    public B readTimeout(Duration readTimeout) {
+      requirePositiveDuration(readTimeout);
+      this.readTimeout = readTimeout;
+      return self();
+    }
+
+    /**
+     * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration,
+     * ScheduledExecutorService) readtimeout} using the given {@code ScheduledExecutorService} for
+     * scheduling timeout events.
+     */
+    public B readTimeout(Duration readTimeout, ScheduledExecutorService scheduler) {
+      requirePositiveDuration(readTimeout);
+      requireNonNull(scheduler);
+      this.readTimeout = readTimeout;
+      this.readTimeoutScheduler = scheduler;
       return self();
     }
 
