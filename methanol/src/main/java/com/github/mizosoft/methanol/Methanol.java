@@ -45,15 +45,18 @@ import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -69,6 +72,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *   <li>Specify a default {@link HttpRequest#timeout() request timeout}.
  *   <li>Add a set of default HTTP headers for inclusion in requests if absent.
  *   <li>{@link BaseBuilder#autoAcceptEncoding(boolean) Transparent} response decompression.
+ *   <li>Intercept requests and responses going through this client.
  *   <li>Get {@code Publisher<HttpResponse<T>>} for asynchronous requests.
  * </ul>
  */
@@ -83,6 +87,8 @@ public final class Methanol extends HttpClient {
   private final @Nullable ScheduledExecutorService readTimeoutScheduler;
   private final HttpHeaders defaultHeaders;
   private final boolean autoAcceptEncoding;
+  private final List<Interceptor> preDecorationInterceptors;
+  private final List<Interceptor> postDecorationInterceptors;
 
   private Methanol(BaseBuilder<?> builder) {
     client = builder.buildDelegateClient();
@@ -93,22 +99,19 @@ public final class Methanol extends HttpClient {
     readTimeoutScheduler = builder.readTimeoutScheduler;
     defaultHeaders = builder.headersBuilder.build();
     autoAcceptEncoding = builder.autoAcceptEncoding;
+    preDecorationInterceptors = List.copyOf(builder.preDecorationInterceptors);
+    postDecorationInterceptors = List.copyOf(builder.postDecorationInterceptors);
   }
 
   /**
    * Returns a {@code Publisher} for the {@code HttpResponse<T>} resulting from asynchronously
    * sending the given request.
    */
-  public <T> Publisher<HttpResponse<T>> exchange(HttpRequest request, BodyHandler<T> handler) {
+  public <T> Publisher<HttpResponse<T>> exchange(HttpRequest request, BodyHandler<T> bodyHandler) {
     requireNonNull(request, "request");
-    requireNonNull(handler, "handler");
+    requireNonNull(bodyHandler, "bodyHandler");
     return new HttpResponsePublisher<>(
-        client,
-        decorateRequest(request),
-        decorateHandler(handler),
-        null,
-        this::decorateHandler,
-        executor().orElse(FlowSupport.SYNC_EXECUTOR));
+        this, request, bodyHandler, null, executor().orElse(FlowSupport.SYNC_EXECUTOR));
   }
 
   /**
@@ -123,17 +126,16 @@ public final class Methanol extends HttpClient {
    */
   public <T> Publisher<HttpResponse<T>> exchange(
       HttpRequest request,
-      BodyHandler<T> handler,
+      BodyHandler<T> bodyHandler,
       Function<HttpRequest, @Nullable BodyHandler<T>> pushPromiseAcceptor) {
     requireNonNull(request, "request");
-    requireNonNull(handler, "handler");
+    requireNonNull(bodyHandler, "bodyHandler");
     requireNonNull(pushPromiseAcceptor, "pushPromiseAcceptor");
     return new HttpResponsePublisher<>(
-        client,
-        decorateRequest(request),
-        decorateHandler(handler),
+        this,
+        request,
+        bodyHandler,
         pushPromiseAcceptor,
-        this::decorateHandler,
         executor().orElse(FlowSupport.SYNC_EXECUTOR));
   }
 
@@ -155,6 +157,24 @@ public final class Methanol extends HttpClient {
   /** Returns the default request timeout used when not set in an {@code HttpRequest}. */
   public Optional<Duration> requestTimeout() {
     return requestTimeout;
+  }
+
+  /**
+   * Returns the {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration) read timeout}
+   * used for each request.
+   */
+  public Optional<Duration> readTimeout() {
+    return readTimeout;
+  }
+
+  /** Returns the list of interceptors invoked before request decoration. */
+  public List<Interceptor> interceptors() {
+    return preDecorationInterceptors;
+  }
+
+  /** Returns the list of interceptors invoked after request decoration. */
+  public List<Interceptor> postDecorationInterceptors() {
+    return postDecorationInterceptors;
   }
 
   /** Returns this client's default headers. */
@@ -213,108 +233,43 @@ public final class Methanol extends HttpClient {
   }
 
   @Override
-  public <T> HttpResponse<T> send(HttpRequest request, BodyHandler<T> handler)
+  public <T> HttpResponse<T> send(HttpRequest request, BodyHandler<T> bodyHandler)
       throws IOException, InterruptedException {
     requireNonNull(request, "request");
-    requireNonNull(handler, "handler");
-    return client.send(decorateRequest(request), decorateHandler(handler));
+    requireNonNull(bodyHandler, "bodyHandler");
+    return InterceptorChain.sendWithInterceptors(
+        client, request, bodyHandler, buildInterceptorQueue());
   }
 
   @Override
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(
-      HttpRequest request, BodyHandler<T> handler) {
+      HttpRequest request, BodyHandler<T> bodyHandler) {
     requireNonNull(request, "request");
-    requireNonNull(handler, "handler");
-    return client.sendAsync(decorateRequest(request), decorateHandler(handler));
+    requireNonNull(bodyHandler, "bodyHandler");
+    return InterceptorChain.sendAsyncWithInterceptors(
+        client, request, bodyHandler, null, buildInterceptorQueue());
   }
 
   @Override
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(
       HttpRequest request,
-      BodyHandler<T> handler,
+      BodyHandler<T> bodyHandler,
       @Nullable PushPromiseHandler<T> pushPromiseHandler) {
     requireNonNull(request, "request");
-    requireNonNull(handler, "responseBodyHandler");
-    // HttpClient allows null pushPromiseHandler
-    return client.sendAsync(
-        decorateRequest(request),
-        decorateHandler(handler),
-        pushPromiseHandler != null ? decoratePushPromiseHandler(pushPromiseHandler) : null);
+    requireNonNull(bodyHandler, "bodyHandler");
+    return InterceptorChain.sendAsyncWithInterceptors(
+        client, request, bodyHandler, pushPromiseHandler, buildInterceptorQueue());
   }
 
-  private HttpRequest decorateRequest(HttpRequest request) {
-    MutableRequest decoratedRequest = MutableRequest.copyOf(request);
-    HttpRequest originalRequest =
-        request instanceof MutableRequest ? ((MutableRequest) request).build() : request;
-    addRequestDecorations(originalRequest, decoratedRequest);
-    return decoratedRequest;
-  }
-
-  private void addRequestDecorations(HttpRequest original, HttpRequest.Builder builder) {
-    // resolve with base URI
-    if (baseUri.isPresent()) {
-      URI resolvedUri = baseUri.get().resolve(original.uri());
-      validateUri(resolvedUri);
-      builder.uri(resolvedUri);
-    }
-
-    // add default headers without overwriting
-    var originalHeadersMap = original.headers().map();
-    var defaultHeadersMap = defaultHeaders.map();
-    for (var entry : defaultHeadersMap.entrySet()) {
-      String headerName = entry.getKey();
-      if (!originalHeadersMap.containsKey(headerName)) {
-        entry.getValue().forEach(v -> builder.header(headerName, v));
-      }
-    }
-
-    // add Accept-Encoding without overwriting if enabled
-    if (autoAcceptEncoding
-        && !originalHeadersMap.containsKey("Accept-Encoding")
-        && !defaultHeadersMap.containsKey("Accept-Encoding")) {
-      Set<String> supportedEncodings = BodyDecoder.Factory.installedBindings().keySet();
-      if (!supportedEncodings.isEmpty()) {
-        builder.header("Accept-Encoding", String.join(", ", supportedEncodings));
-      }
-    }
-
-    // overwrite Content-Type if request body is MimeBodyPublisher
-    original
-        .bodyPublisher()
-        .filter(MimeBodyPublisher.class::isInstance)
-        .map(body -> ((MimeBodyPublisher) body).mediaType())
-        .ifPresent(mt -> builder.setHeader("Content-Type", mt.toString()));
-
-    // add default timeout if not already present
-    if (original.timeout().isEmpty()) {
-      requestTimeout.ifPresent(builder::timeout);
-    }
-  }
-
-  private <T> BodyHandler<T> decorateHandler(BodyHandler<T> baseHandler) {
-    var decoratedHandler = baseHandler;
-    if (autoAcceptEncoding) {
-      decoratedHandler = MoreBodyHandlers.decoding(decoratedHandler);
-    }
-    // timeout interceptor should to be "closer" to the HTTP client for better accuracy
-    if (readTimeout.isPresent()) {
-      decoratedHandler =
-          readTimeoutScheduler != null
-              ? MoreBodyHandlers.withReadTimeout(
-              baseHandler, readTimeout.get(), readTimeoutScheduler)
-              : MoreBodyHandlers.withReadTimeout(baseHandler, readTimeout.get());
-    }
-    return decoratedHandler;
-  }
-
-  /** Uses {@link #decorateHandler(BodyHandler)} for each accepted push promise. */
-  private <T> PushPromiseHandler<T> decoratePushPromiseHandler(PushPromiseHandler<T> base) {
-    return (initial, push, acceptor) ->
-        base.applyPushPromise(initial, push, handler -> acceptor.apply(decorateHandler(handler)));
+  private List<Interceptor> buildInterceptorQueue() {
+    var interceptors = new ArrayList<>(this.preDecorationInterceptors);
+    interceptors.add(new RequestDecorationInterceptor(this));
+    interceptors.addAll(postDecorationInterceptors);
+    return Collections.unmodifiableList(interceptors);
   }
 
   private static void validateUri(URI uri) {
-    String scheme = uri.getScheme();
+    var scheme = uri.getScheme();
     requireArgument(scheme != null, "uri has no scheme: %s", uri);
     scheme = scheme.toLowerCase(Locale.ENGLISH);
     requireArgument(
@@ -337,6 +292,73 @@ public final class Methanol extends HttpClient {
     return newBuilder().build();
   }
 
+  /** An object that intercepts requests being sent over a {@code Methanol} client. */
+  public interface Interceptor {
+
+    /**
+     * Intercepts given request and returns the resulting response, normally by forwarding to the
+     * chain.
+     */
+    <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+        throws IOException, InterruptedException;
+
+    /**
+     * Intercepts the given request and returns a {@code CompletableFuture} for the resulting
+     * response, normally by forwarding to the chain.
+     */
+    <T> CompletableFuture<HttpResponse<T>> interceptAsync(HttpRequest request, Chain<T> chain);
+
+    /** Returns an interceptor that forwards the request decorated by the given operator. */
+    static Interceptor create(UnaryOperator<HttpRequest> decorator) {
+      return new Interceptor() {
+        @Override
+        public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+            throws IOException, InterruptedException {
+          return chain.forward(decorator.apply(request));
+        }
+
+        @Override
+        public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+            HttpRequest request, Chain<T> chain) {
+          return chain.forwardAsync(decorator.apply(request));
+        }
+      };
+    }
+
+    /**
+     * An object that gives an interceptor the ability to relay requests to following interceptors, till
+     * eventually being sent by the underlying {@code HttpClient}.
+     *
+     * <p>{@param T the response body type}
+     */
+    interface Chain<T> {
+
+      /** Returns the {@code BodyHandler} this chain uses for handling the response. */
+      BodyHandler<T> bodyHandler();
+
+      /** Returns the {@code PushPromiseHandler} this chain uses for handling push promises. */
+      Optional<PushPromiseHandler<T>> pushPromiseHandler();
+
+      /** Returns a new chain that uses the given {@code BodyHandler}. */
+      Chain<T> withBodyHandler(BodyHandler<T> bodyHandler);
+
+      /** Returns a new chain that uses the given {@code PushPromiseHandler}. */
+      Chain<T> withPushPromiseHandler(@Nullable PushPromiseHandler<T> pushPromiseHandler);
+
+      /**
+       * Forwards the request to the next interceptor, or to the underlying {@code HttpClient} if
+       * called by the last interceptor.
+       */
+      HttpResponse<T> forward(HttpRequest request) throws IOException, InterruptedException;
+
+      /**
+       * Forwards the request to the next interceptor, or asynchronously to the underlying {@code
+       * HttpClient} if called by the last interceptor.
+       */
+      CompletableFuture<HttpResponse<T>> forwardAsync(HttpRequest request);
+    }
+  }
+
   /** A base {@code Methanol} builder allowing to set the non-standard properties. */
   public abstract static class BaseBuilder<B extends BaseBuilder<B>> {
 
@@ -347,6 +369,9 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull Duration readTimeout;
     @MonotonicNonNull ScheduledExecutorService readTimeoutScheduler;
     boolean autoAcceptEncoding;
+
+    final List<Interceptor> preDecorationInterceptors = new ArrayList<>();
+    final List<Interceptor> postDecorationInterceptors = new ArrayList<>();
 
     BaseBuilder() {
       headersBuilder = new HeadersBuilder();
@@ -448,6 +473,26 @@ public final class Methanol extends HttpClient {
      */
     public B autoAcceptEncoding(boolean autoAcceptEncoding) {
       this.autoAcceptEncoding = autoAcceptEncoding;
+      return self();
+    }
+
+    /**
+     * Adds an interceptor that is invoked before request decoration (i.e. before default properties
+     * or {@code BodyHandler} transformations are applied).
+     */
+    public B interceptor(Interceptor interceptor) {
+      requireNonNull(interceptor);
+      preDecorationInterceptors.add(interceptor);
+      return self();
+    }
+
+    /**
+     * Adds an interceptor that is invoked after request decoration (i.e. after default properties
+     * or {@code BodyHandler transformations are applied).
+     */
+    public B postDecorationInterceptor(Interceptor interceptor) {
+      requireNonNull(interceptor);
+      postDecorationInterceptors.add(interceptor);
       return self();
     }
 
@@ -561,6 +606,230 @@ public final class Methanol extends HttpClient {
     @Override
     HttpClient buildDelegateClient() {
       return delegateBuilder.build();
+    }
+  }
+
+  private static final class InterceptorChain<T> implements Interceptor.Chain<T> {
+
+    private final HttpClient baseClient;
+    private final BodyHandler<T> bodyHandler;
+    private final @Nullable PushPromiseHandler<T> pushPromiseHandler;
+    private final List<Interceptor> interceptors;
+    private final int currentInterceptorIndex;
+
+    private InterceptorChain(
+        HttpClient baseClient,
+        BodyHandler<T> bodyHandler,
+        @Nullable PushPromiseHandler<T> pushPromiseHandler,
+        List<Interceptor> interceptors) {
+      this(baseClient, bodyHandler, pushPromiseHandler, interceptors, 0);
+    }
+
+    private InterceptorChain(
+        HttpClient baseClient,
+        BodyHandler<T> bodyHandler,
+        @Nullable PushPromiseHandler<T> pushPromiseHandler,
+        List<Interceptor> interceptors,
+        int currentInterceptorIndex) {
+      this.baseClient = baseClient;
+      this.bodyHandler = bodyHandler;
+      this.pushPromiseHandler = pushPromiseHandler;
+      this.interceptors = interceptors;
+      this.currentInterceptorIndex = currentInterceptorIndex;
+    }
+
+    @Override
+    public BodyHandler<T> bodyHandler() {
+      return bodyHandler;
+    }
+
+    @Override
+    public Optional<PushPromiseHandler<T>> pushPromiseHandler() {
+      return Optional.ofNullable(pushPromiseHandler);
+    }
+
+    @Override
+    public Interceptor.Chain<T> withBodyHandler(BodyHandler<T> bodyHandler) {
+      return new InterceptorChain<>(
+          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
+    }
+
+    @Override
+    public Interceptor.Chain<T> withPushPromiseHandler(
+        @Nullable PushPromiseHandler<T> pushPromiseHandler) {
+      return new InterceptorChain<>(
+          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
+    }
+
+    @Override
+    public HttpResponse<T> forward(HttpRequest request) throws IOException, InterruptedException {
+      requireNonNull(request);
+      if (currentInterceptorIndex >= interceptors.size()) {
+        return baseClient.send(request, bodyHandler);
+      }
+
+      var interceptor = interceptors.get(currentInterceptorIndex);
+      return requireNonNull(
+          interceptor.intercept(request, copyForNextInterceptor()),
+          () -> interceptor + "::intercept returned a null response");
+    }
+
+    @Override
+    public CompletableFuture<HttpResponse<T>> forwardAsync(HttpRequest request) {
+      requireNonNull(request);
+      if (currentInterceptorIndex >= interceptors.size()) {
+        // sendAsync accepts nullable pushPromiseHandler
+        return baseClient.sendAsync(request, bodyHandler, pushPromiseHandler);
+      }
+
+      var interceptor = interceptors.get(currentInterceptorIndex);
+      return interceptor
+          .interceptAsync(request, copyForNextInterceptor())
+          .thenApply(
+              res ->
+                  requireNonNull(
+                      res, () -> interceptor + "::interceptAsync completed with a null response"));
+    }
+
+    private InterceptorChain<T> copyForNextInterceptor() {
+      return new InterceptorChain<>(
+          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex + 1);
+    }
+
+    static <T> HttpResponse<T> sendWithInterceptors(
+        HttpClient baseClient,
+        HttpRequest request,
+        BodyHandler<T> bodyHandler,
+        List<Interceptor> interceptors)
+        throws IOException, InterruptedException {
+      return new InterceptorChain<>(baseClient, bodyHandler, null, interceptors).forward(request);
+    }
+
+    static <T> CompletableFuture<HttpResponse<T>> sendAsyncWithInterceptors(
+        HttpClient baseClient,
+        HttpRequest request,
+        BodyHandler<T> bodyHandler,
+        @Nullable PushPromiseHandler<T> pushPromiseHandler,
+        List<Interceptor> interceptors) {
+      return new InterceptorChain<>(baseClient, bodyHandler, pushPromiseHandler, interceptors)
+          .forwardAsync(request);
+    }
+  }
+
+  /** Applies client-configured decoration to each ongoing request. */
+  private static final class RequestDecorationInterceptor implements Interceptor {
+
+    private final Optional<URI> baseUri;
+    private final Optional<Duration> requestTimeout;
+    private final Optional<Duration> readTimeout;
+    private final @Nullable ScheduledExecutorService readTimeoutScheduler;
+    private final HttpHeaders defaultHeaders;
+    private final boolean autoAcceptEncoding;
+
+    RequestDecorationInterceptor(Methanol client) {
+      baseUri = client.baseUri;
+      requestTimeout = client.requestTimeout;
+      readTimeout = client.readTimeout;
+      readTimeoutScheduler = client.readTimeoutScheduler;
+      defaultHeaders = client.defaultHeaders;
+      autoAcceptEncoding = client.autoAcceptEncoding;
+    }
+
+    @Override
+    public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+        throws IOException, InterruptedException {
+      return decorateChain(chain).forward(decorateRequest(request));
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+        HttpRequest request, Chain<T> chain) {
+      return decorateChain(chain).forwardAsync(decorateRequest(request));
+    }
+
+    private <T> Chain<T> decorateChain(Chain<T> chain) {
+      var decoratedChain = chain;
+      if (autoAcceptEncoding || readTimeout.isPresent()) { // has body handler decoration
+        decoratedChain = chain.withBodyHandler(decorateBodyHandler(chain.bodyHandler()));
+
+        var pushPromiseHandler = chain.pushPromiseHandler();
+        if (pushPromiseHandler.isPresent()) {
+          decoratedChain =
+              decoratedChain.withPushPromiseHandler(
+                  decoratePushPromiseHandler(pushPromiseHandler.get()));
+        }
+      }
+      return decoratedChain;
+    }
+
+    /** Uses {@link #decorateBodyHandler(BodyHandler)} for each accepted push promise. */
+    private <T> PushPromiseHandler<T> decoratePushPromiseHandler(
+        PushPromiseHandler<T> pushPromiseHandler) {
+      return (initial, push, acceptor) ->
+          pushPromiseHandler.applyPushPromise(
+              initial, push, acceptor.compose(this::decorateBodyHandler));
+    }
+
+    private <T> BodyHandler<T> decorateBodyHandler(BodyHandler<T> bodyHandler) {
+      var decoratedBodyHandler = bodyHandler;
+
+      if (autoAcceptEncoding) {
+        decoratedBodyHandler = MoreBodyHandlers.decoding(decoratedBodyHandler);
+      }
+
+      // timeout interceptor should to be "closer" to the HTTP client for better accuracy
+      if (readTimeout.isPresent()) {
+        decoratedBodyHandler =
+            readTimeoutScheduler != null
+                ? MoreBodyHandlers.withReadTimeout(
+                    decoratedBodyHandler, readTimeout.get(), readTimeoutScheduler)
+                : MoreBodyHandlers.withReadTimeout(decoratedBodyHandler, readTimeout.get());
+      }
+
+      return decoratedBodyHandler;
+    }
+
+    private HttpRequest decorateRequest(HttpRequest request) {
+      var decoratedRequest = MutableRequest.copyOf(request);
+
+      // resolve with base URI
+      if (baseUri.isPresent()) {
+        var resolvedUri = baseUri.get().resolve(request.uri());
+        validateUri(resolvedUri);
+        decoratedRequest.uri(resolvedUri);
+      }
+
+      var originalHeadersMap = request.headers().map();
+      var defaultHeadersMap = defaultHeaders.map();
+
+      // add default headers without overwriting
+      defaultHeadersMap.entrySet().stream()
+          .filter(e -> !originalHeadersMap.containsKey(e.getKey()))
+          .forEach(e -> e.getValue().forEach(v -> decoratedRequest.header(e.getKey(), v)));
+
+      // add Accept-Encoding without overwriting if enabled
+      if (autoAcceptEncoding
+          && !originalHeadersMap.containsKey("Accept-Encoding")
+          && !defaultHeadersMap.containsKey("Accept-Encoding")) {
+        var supportedEncodings = BodyDecoder.Factory.installedBindings().keySet();
+        if (!supportedEncodings.isEmpty()) {
+          decoratedRequest.header("Accept-Encoding", String.join(", ", supportedEncodings));
+        }
+      }
+
+      // overwrite Content-Type if request body is MimeBodyPublisher
+      request
+          .bodyPublisher()
+          .filter(MimeBodyPublisher.class::isInstance)
+          .map(body -> ((MimeBodyPublisher) body).mediaType())
+          .ifPresent(mediaType -> decoratedRequest.setHeader("Content-Type", mediaType.toString()));
+
+      // add default timeout if not already present
+      if (request.timeout().isEmpty()) {
+        requestTimeout.ifPresent(decoratedRequest::timeout);
+      }
+
+      return decoratedRequest;
     }
   }
 }

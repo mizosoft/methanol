@@ -16,8 +16,9 @@ and easier to use with Methanol.
 
 * Automatic response decompression.
 * Special `BodyPublisher` implementations for form submission.
-* An extensible object conversion mechanism, with optional support for JSON, XML and Protocol Buffers.
-* A custom `HttpClient` that allows request decoration and async `Publisher<HttpResponse<T>>` dispatches.
+* Extensible object conversion mechanism, with support for JSON, XML and Protocol Buffers out of the box.
+* Enhanced `HttpClient` with interceptors, request decoration and async `Publisher<HttpResponse<T>>` dispatches.
+* Tracking the progress of upload or download operations.
 * Additional `BodyPublisher`, `BodySubscriber` and `BodyHandler` implementations.
 
 ## Installation

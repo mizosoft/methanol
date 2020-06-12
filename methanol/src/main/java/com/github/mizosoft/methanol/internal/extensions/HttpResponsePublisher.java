@@ -53,9 +53,8 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
 
   private final HttpClient client;
   private final HttpRequest request;
-  private final BodyHandler<T> handler;
+  private final BodyHandler<T> bodyHandler;
   private final @Nullable Function<HttpRequest, @Nullable BodyHandler<T>> pushPromiseAcceptor;
-  private final Function<BodyHandler<T>, BodyHandler<T>> handlerDecorator;
   private final Executor executor;
 
   /**
@@ -65,15 +64,13 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
   public HttpResponsePublisher(
       HttpClient client,
       HttpRequest request,
-      BodyHandler<T> handler,
+      BodyHandler<T> bodyHandler,
       @Nullable Function<HttpRequest, @Nullable BodyHandler<T>> pushPromiseAcceptor,
-      Function<BodyHandler<T>, BodyHandler<T>> handlerDecorator,
       Executor executor) {
     this.client = client;
     this.request = request;
-    this.handler = handler;
+    this.bodyHandler = bodyHandler;
     this.pushPromiseAcceptor = pushPromiseAcceptor;
-    this.handlerDecorator = handlerDecorator;
     this.executor = executor;
   }
 
@@ -106,7 +103,6 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
     private final BodyHandler<V> handler;
     // not null if accepting push promises
     private final @Nullable Function<HttpRequest, @Nullable BodyHandler<V>> pushPromiseAcceptor;
-    private final Function<BodyHandler<V>, BodyHandler<V>> handlerDecorator;
     private final ConcurrentLinkedQueue<HttpResponse<V>> receivedResponses;
     // track when to stop expecting more push promises
     private volatile boolean receivedInitialResponseBody;
@@ -119,9 +115,8 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
       super(downstream, parent.executor);
       client = parent.client;
       initialRequest = parent.request;
-      handler = parent.handler;
+      handler = parent.bodyHandler;
       pushPromiseAcceptor = parent.pushPromiseAcceptor;
-      handlerDecorator = parent.handlerDecorator;
       receivedResponses = new ConcurrentLinkedQueue<>();
     }
 
@@ -155,10 +150,11 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         signalError(t);
         return;
       }
+
       if (pushedResponseHandler != null) {
         ONGOING.getAndAdd(this, 1);
         completer
-            .apply(handlerDecorator.apply(pushedResponseHandler))
+            .apply(pushedResponseHandler)
             .whenComplete(this::onCompletion);
       }
     }
@@ -172,7 +168,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         try {
           CompletableFuture<HttpResponse<V>> responseFuture =
               pushPromiseAcceptor != null
-                  ? client.sendAsync(initialRequest, this::notifyOnCompletion, this)
+                  ? client.sendAsync(initialRequest, this::notifyOnBodyCompletion, this)
                   : client.sendAsync(initialRequest, handler);
           responseFuture.whenComplete(this::onCompletion);
         } catch (Throwable t) {
@@ -240,7 +236,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
       return port;
     }*/
 
-    private BodySubscriber<V> notifyOnCompletion(ResponseInfo info) {
+    private BodySubscriber<V> notifyOnBodyCompletion(ResponseInfo info) {
       return new NotifyingBodySubscriber<>(handler.apply(info), this::initialResponseBodyReceived);
     }
   }
