@@ -30,23 +30,30 @@ import static java.net.http.HttpResponse.BodyHandlers.ofString;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import java.util.zip.Deflater;
 import okhttp3.Headers;
 import okhttp3.mockwebserver.MockResponse;
@@ -64,6 +71,8 @@ import org.junit.jupiter.api.Test;
 
 class MethanolMockServerTest {
 
+  private static final int SERVICE_UNAVAILABLE = 503;
+
   private static ServiceLoggerHelper loggerHelper;
 
   @BeforeAll
@@ -79,19 +88,19 @@ class MethanolMockServerTest {
   }
 
   private MockWebServer server;
-  private Executor executor;
+  private ScheduledExecutorService scheduler;
 
   @BeforeEach
   void setUp() throws IOException {
     server = new MockWebServer();
     server.start();
-    executor = Executors.newFixedThreadPool(8);
+    scheduler = Executors.newScheduledThreadPool(8);
   }
 
   @AfterEach
   void tearDown() throws IOException {
     server.shutdown();
-    TestUtils.shutdown(executor);
+    TestUtils.shutdown(scheduler);
   }
 
   @Test
@@ -210,6 +219,36 @@ class MethanolMockServerTest {
   }
 
   @Test
+  void readTimeout() {
+    server.enqueue(new MockResponse().setBody("Bruh").throttleBody(3, 150, TimeUnit.MILLISECONDS));
+
+    var client = Methanol.newBuilder()
+        .readTimeout(Duration.ofMillis(100))
+        .baseUri(server.url("/").uri())
+        .build();
+    var timeout = assertThrows(
+        CompletionException.class,
+        () -> client.sendAsync(GET(""), ofString()).join());
+    assertNotNull(timeout.getCause());
+    assertSame(HttpReadTimeoutException.class, timeout.getCause().getClass());
+  }
+
+  @Test
+  void readTimeoutCustomScheduler() {
+    server.enqueue(new MockResponse().setBody("Bruh").throttleBody(3, 150, TimeUnit.MILLISECONDS));
+
+    var client = Methanol.newBuilder()
+        .readTimeout(Duration.ofMillis(100), scheduler)
+        .baseUri(server.url("/").uri())
+        .build();
+    var timeout = assertThrows(
+        CompletionException.class,
+        () -> client.sendAsync(GET(""), ofString()).join());
+    assertNotNull(timeout.getCause());
+    assertSame(HttpReadTimeoutException.class, timeout.getCause().getClass());
+  }
+
+  @Test
   void exchange() {
     server.enqueue(new MockResponse()
         .setBody(gzip("unzip me!"))
@@ -243,7 +282,7 @@ class MethanolMockServerTest {
     server.enqueue(mockResponse);
 
     var client = useHttps(Methanol.newBuilder())
-        .executor(executor)
+        .executor(scheduler)
         .baseUri(server.url("/").uri())
         .build();
     var rejectFirstPush = new AtomicBoolean();
@@ -264,6 +303,35 @@ class MethanolMockServerTest {
         assertEquals("Recardo is coming!", res.body());
       }
     }
+  }
+
+  @Test
+  void retryWithInterceptor() throws Exception {
+    int maxRetries = 3;
+
+    var interceptor = new RetryingInterceptor(maxRetries);
+    var client = Methanol.newBuilder()
+        .baseUri(server.url("/").uri())
+        .interceptor(interceptor)
+        .build();
+
+    for (int i = 0; i < maxRetries; i++) {
+      server.enqueue(new MockResponse().setResponseCode(SERVICE_UNAVAILABLE));
+    }
+    server.enqueue(new MockResponse().setBody("I'm back!"));
+
+    var response = client.send(GET(""), BodyHandlers.ofString());
+    assertEquals(200, response.statusCode());
+    assertEquals("I'm back!", response.body());
+
+    for (int i = 0; i < maxRetries; i++) {
+      server.enqueue(new MockResponse().setResponseCode(SERVICE_UNAVAILABLE));
+    }
+    server.enqueue(new MockResponse().setBody("I'm back!"));
+
+    var responseAsync = client.sendAsync(GET(""), BodyHandlers.ofString()).join();
+    assertEquals(200, responseAsync.statusCode());
+    assertEquals("I'm back!", responseAsync.body());
   }
 
   private Methanol.Builder useHttps(Methanol.Builder builder) throws IOException {
@@ -294,5 +362,49 @@ class MethanolMockServerTest {
 
   private static String acceptEncodingValue() {
     return String.join(", ", BodyDecoder.Factory.installedBindings().keySet());
+  }
+
+  private static final class RetryingInterceptor implements Interceptor {
+
+    private final int maxRetries;
+
+    RetryingInterceptor(int maxRetries) {
+      this.maxRetries = maxRetries;
+    }
+
+    @Override
+    public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+        throws IOException, InterruptedException {
+      HttpResponse<T> response = chain.forward(request);
+      for (int retries = 0;
+          response.statusCode() == SERVICE_UNAVAILABLE && retries < maxRetries;
+          retries++) {
+        response = chain.forward(request);
+      }
+      return response;
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+        HttpRequest request, Chain<T> chain) {
+      var responseCf = chain.forwardAsync(request);
+      for (int i = 0; i < maxRetries; i++) {
+        final int _i = i;
+        responseCf = responseCf.thenCompose(
+            res -> handleRetry(res, () -> chain.forwardAsync(request), _i));
+      }
+      return responseCf;
+    }
+
+    private <R> CompletableFuture<HttpResponse<R>> handleRetry(
+        HttpResponse<R> response,
+        Supplier<CompletableFuture<HttpResponse<R>>> callOnRetry,
+        int retry) {
+      if (response.statusCode() == SERVICE_UNAVAILABLE
+          && retry < maxRetries) {
+        return callOnRetry.get();
+      }
+      return CompletableFuture.completedFuture(response);
+    }
   }
 }

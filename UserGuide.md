@@ -20,6 +20,8 @@
     * [BodyAdapter](#bodyadapter)
     * [Installation](#installation)
     * [Deferred conversion](#deferred-conversion)
+  * [Interceptors](#interceptors)
+    * [Invocation order](#invocation-order)
   * [Reactive request dispatches](#reactive-request-dispatches)
     * [Push promises](#push-promises)
   * [Sending forms](#sending-forms)
@@ -426,6 +428,163 @@ small sizes. Use [`MoreBodyHandlers::ofDeferredObject`][MoreBodyHandlers_ofDefer
 *deferring* body processing till `Supplier::get` is called. This has better memory efficiency as it
 reads from a streaming source, suiting cases where loading the whole body might cause problems. Be
 aware however that processing in that case is done by the thread invoking the supplier.
+
+### Interceptors
+
+Interceptors allow you to monitor, mutate, retry or even short-circuit ongoing exchanges. You can 
+register one or more interceptors with `Methanol` to be invoked in order for each `send` or
+`sendAsync` call. Here's an interceptor that logs each ongoing blocking or asynchronous exchange.
+
+```java
+class LoggingInterceptor implements Interceptor {
+  private static final Logger LOG = Logger.getLogger(LoggingInterceptor.class.getName());
+
+  @Override
+  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+      throws IOException, InterruptedException {
+    logRequest(request);
+
+    return chain.withBodyHandler(loggingBodyHandler(request, chain.bodyHandler()))
+        .forward(request);
+  }
+
+  @Override
+  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+      HttpRequest request, Chain<T> chain) {
+    logRequest(request);
+
+    return chain.withBodyHandler(loggingBodyHandler(request, chain.bodyHandler()))
+        .forwardAsync(request);
+  }
+
+  private static void logRequest(HttpRequest request) {
+    LOG.info(() -> String.format("Sending %s%n%s", request, headersToString(request.headers())));
+  }
+
+  private static <T> BodyHandler<T> loggingBodyHandler(
+      HttpRequest request, BodyHandler<T> bodyHandler) {
+    var beforeSend = Instant.now();
+    return info -> {
+      LOG.info(() -> String.format(
+          "Completed %s %s with %d in %s%n%s",
+          request.method(),
+          request.uri(),
+          info.statusCode(),
+          Duration.between(beforeSend, Instant.now()),
+          headersToString(info.headers())));
+
+      return bodyHandler.apply(info);
+    };
+  }
+
+  private static String headersToString(HttpHeaders headers) {
+    return headers.map().entrySet().stream()
+        .map(entry -> entry.getKey() + ": " + String.join(", ", entry.getValue()))
+        .collect(Collectors.joining(System.lineSeparator()));
+  }
+}
+```
+
+You then register the interceptor with `Methanol.Builder` as follows:
+
+```java
+var client = Methanol.newBuilder()
+     ...
+    .interceptor(new LoggingInterceptor())
+    .build();
+```
+
+Because the HTTP client has both blocking and asynchronous APIs, we must implement two
+`Interceptor` methods matching each. An interceptor is given a `Chain<T>` so that it can forward
+requests to its sibling, or to the underlying HTTP client in case it's the last interceptor. The
+chain can also be used to perform `BodyHandler` and `PushPromiseHandler` transformations before
+forwarding. 
+
+You can use `Interceptor::create` to easily rewrite or decorate requests. For example, you may want
+to enable the expect-continue feature for each ongoing POST request for a specific host.
+
+```java
+var myHost = ...;
+var interceptor = Interceptor.create(
+    req -> req.uri().getHost().equals(myHost) && req.method().equalsIgnoreCase("POST")
+        ? MutableRequest.copyOf(req).expectContinue(true)
+        : req);
+var client = Methanol.newBuilder()
+     ...
+    .interceptor(interceptor)
+    .build();
+```
+
+Interceptors can forward to the chain as many times as they want. Here's an interceptor that retries
+each request up to 3 times in case of timeout.
+
+```java
+static class RetryingInterceptor implements Interceptor {
+  private static final int MAX_RETRIES = 3;
+
+  @Override
+  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+      throws IOException, InterruptedException {
+    for (int retries = 0; ; retries++) {
+      try {
+        return chain.forward(request);
+      } catch(HttpTimeoutException e) {
+        if (retries >= MAX_RETRIES) throw e;
+      }
+    }
+  }
+
+  @Override
+  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+      HttpRequest request, Chain<T> chain) {
+    return withRetries(() -> chain.forwardAsync(request), new AtomicInteger());
+  }
+
+  private <T> CompletableFuture<HttpResponse<T>> withRetries(
+      Supplier<CompletableFuture<HttpResponse<T>>> callOnRetry,
+      AtomicInteger retryCount) {
+    return callOnRetry.get()
+        .handle((r, x) -> handleRetry(r, x, callOnRetry, retryCount))
+        .thenCompose(Function.identity());
+  }
+
+  private <T> CompletableFuture<HttpResponse<T>> handleRetry(
+      HttpResponse<T> response, Throwable error,
+      Supplier<CompletableFuture<HttpResponse<T>>> callOnRetry, AtomicInteger retryCount) {
+    if (response != null) return CompletableFuture.completedFuture(response);
+
+    if (error instanceof CompletionException) error = error.getCause();
+
+    return error instanceof HttpTimeoutException && retryCount.incrementAndGet() <= MAX_RETRIES
+        ? withRetries(callOnRetry, retryCount)
+        : CompletableFuture.failedFuture(error);
+  }
+}
+```
+
+The async version looks a bit awkward as we have to perform some recursive lambda magic for retries.
+
+> Small note: if you're on JDK 12+, `handle(...).thenCompse(Function.identity())` can be replaced
+> with `exceptionallyCompose(...)` API.
+
+#### Invocation order
+
+Due to the fact that the client itself does request decoration and response body
+transformation (i.e. decompression), interceptors are separated into two groups: *pre decoration*
+and *post decoration* interceptors. The only difference is that the former gets invoked before any
+default request properties or handler transformations are applied, while the latter gets invoked
+right before relaying to the underlying HTTP client. Order of invocation for each group matches
+addition order. You should be aware of this if you intend to do checksums or request/response body
+transformation (i.e. encryption/decryption).
+
+You can add post decoration interceptors as follows:
+
+```java
+var client = Methanol.newBuilder()
+     ...
+    .postDecorationInterceptor(new LoggingInterceptor())
+    .build();
+```
 
 ### Reactive request dispatches
 

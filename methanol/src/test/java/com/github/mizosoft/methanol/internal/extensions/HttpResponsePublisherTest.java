@@ -372,7 +372,7 @@ class HttpResponsePublisherTest {
       BodyHandler<T> handler,
       @Nullable Function<HttpRequest, BodyHandler<T>> func) {
     return new HttpResponsePublisher<>(
-        client, request, handler, func, Function.identity(), executor());
+        client, request, handler, func, executor());
   }
 
   private static class PushAcceptor<T>

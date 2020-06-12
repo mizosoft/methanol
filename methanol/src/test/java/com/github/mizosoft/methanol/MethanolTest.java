@@ -47,9 +47,11 @@ import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.PushPromiseHandler;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -380,16 +382,32 @@ class MethanolTest {
     return String.join(", ", BodyDecoder.Factory.installedBindings().keySet());
   }
 
-  private static final class RecordingClient extends HttpClientStub {
+  static final class RecordingClient extends HttpClientStub {
 
     HttpRequest request;
     BodyHandler<?> handler;
+    PushPromiseHandler<?> pushHandler;
 
     @Override
     public <T> HttpResponse<T> send(HttpRequest request, BodyHandler<T> responseBodyHandler) {
       this.request = request;
       this.handler = responseBodyHandler;
       return new HttpResponseStub<>();
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request,
+        BodyHandler<T> responseBodyHandler, PushPromiseHandler<T> pushPromiseHandler) {
+      this.request = request;
+      this.handler = responseBodyHandler;
+      this.pushHandler = pushPromiseHandler;
+      return CompletableFuture.completedFuture(new HttpResponseStub<>());
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request,
+        BodyHandler<T> responseBodyHandler) {
+      return sendAsync(request, responseBodyHandler, null);
     }
   }
 }

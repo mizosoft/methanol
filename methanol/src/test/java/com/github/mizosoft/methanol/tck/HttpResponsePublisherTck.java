@@ -38,7 +38,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-import java.util.function.Function;
 import okhttp3.Headers;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -104,7 +103,6 @@ public class HttpResponsePublisherTck extends FlowPublisherVerification<Response
             request,
             BodyHandlers.ofString(),
             req -> BodyHandlers.ofString(),
-            Function.identity(),
             executor());
     return subscriber -> publisher.subscribe(subscriber != null ? mapSubscriber(subscriber) : null);
   }
