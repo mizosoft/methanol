@@ -444,8 +444,7 @@ class LoggingInterceptor implements Interceptor {
       throws IOException, InterruptedException {
     logRequest(request);
 
-    return chain
-        .withBodyHandler(loggingBodyHandler(request, chain.bodyHandler()))
+    return chain.withBodyHandler(loggingBodyHandler(request, chain.bodyHandler()))
         .forward(request);
   }
 
@@ -454,8 +453,7 @@ class LoggingInterceptor implements Interceptor {
       HttpRequest request, Chain<T> chain) {
     logRequest(request);
 
-    return chain
-        .withBodyHandler(loggingBodyHandler(request, chain.bodyHandler()))
+    return chain.withBodyHandler(loggingBodyHandler(request, chain.bodyHandler()))
         .forwardAsync(request);
   }
 
@@ -576,7 +574,7 @@ transformation (i.e. decompression), interceptors are separated into two groups:
 and *post decoration* interceptors. The only difference is that the former gets invoked before any
 default request properties or handler transformations are applied, while the latter gets invoked
 right before relaying to the underlying HTTP client. Order of invocation for each group matches
-addition order. You should be aware of this if you intend to do request or response body
+addition order. You should be aware of this if you intend to do checksums or request/response body
 transformation (i.e. encryption/decryption).
 
 You can add post decoration interceptors as follows:

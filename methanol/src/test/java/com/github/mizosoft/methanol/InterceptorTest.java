@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
@@ -41,6 +42,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
@@ -170,7 +172,7 @@ class InterceptorTest {
   }
 
   @Test
-  void fallThroughInterceptorAsync() throws Exception {
+  void fallThroughInterceptorAsync() {
     var baseClient = new RecordingClient();
     var preDecoration = new RecordingInterceptor();
     var postDecoration = new RecordingInterceptor();
@@ -217,7 +219,7 @@ class InterceptorTest {
   }
 
   @Test
-  void rewritingInterceptorAsync() throws Exception {
+  void rewritingInterceptorAsync() {
     var baseClient = new RecordingClient();
     var client = Methanol.newBuilder(baseClient)
         .interceptor(Interceptor.create(
@@ -239,6 +241,32 @@ class InterceptorTest {
     assertEquals(Optional.of("identity"), headers.firstValue("Accept-Encoding"));
     assertFalse(headers.map().containsKey("X-Secret"));
     assertEquals(Optional.of("text/html"), headers.firstValue("Accept"));
+  }
+
+  @Test
+  void completeWithNullResponse() {
+    var interceptor = new Interceptor() {
+      @Override
+      public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain) {
+        return null;
+      }
+
+      @Override
+      public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+          HttpRequest request, Chain<T> chain) {
+        return CompletableFuture.completedFuture(null);
+      }
+    };
+    var client = Methanol.newBuilder(new RecordingClient())
+        .interceptor(interceptor)
+        .build();
+    var request = MutableRequest.GET("https://localhost");
+
+    assertThrows(NullPointerException.class, () -> client.send(request, BodyHandlers.discarding()));
+
+    var ex = assertThrows(CompletionException.class,
+        () -> client.sendAsync(request, BodyHandlers.discarding()).join());
+    assertSame(NullPointerException.class, ex.getCause().getClass());
   }
 
   private static PushPromiseHandler<Void> discardingPushHandler() {
