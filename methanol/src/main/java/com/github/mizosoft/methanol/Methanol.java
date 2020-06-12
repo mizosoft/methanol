@@ -326,8 +326,8 @@ public final class Methanol extends HttpClient {
     }
 
     /**
-     * An object that gives an interceptor the ability to relay requests to following interceptors, till
-     * eventually being sent by the underlying {@code HttpClient}.
+     * An object that gives an interceptor the ability to relay requests to following interceptors,
+     * till eventually being sent by the underlying {@code HttpClient}.
      *
      * <p>{@param T the response body type}
      */
