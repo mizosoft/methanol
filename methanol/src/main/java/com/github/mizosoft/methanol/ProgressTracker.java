@@ -167,7 +167,7 @@ public final class ProgressTracker {
    * {@code onNext}, allowing it to be used as a functional interface in most cases. Override
    * default methods if you want to handle other subscriber notifications. Note that if progress
    * is {@link #enclosedProgress() enclosed}, {@code onSubscribe} and {@code onComplete} can still
-   * be detected by {@code onNext} as {@code 0%} or {@link Progress#completed() 100%} progress
+   * be detected by {@code onNext} as {@code 0%} or {@link Progress#done() 100%} progress
    * events respectively.
    */
   @FunctionalInterface
@@ -203,12 +203,12 @@ public final class ProgressTracker {
     /** Returns the total time passed since the upload or download operation has begun. */
     Duration totalTimePassed();
 
-    /** Returns {@code true} if the upload or download operation is complete. */
-    boolean completed();
+    /** Returns {@code true} if the upload or download operation is done. */
+    boolean done();
 
     /**
      * Returns a double between {@code 0} and {@code 1} indicating progress, or {@link Double#NaN}
-     * if content length is not known.
+     * if not {@link #determinate()}.
      */
     default double value() {
       long length = contentLength();
@@ -217,6 +217,11 @@ public final class ProgressTracker {
         return length == 0L ? 1.d : Double.NaN;
       }
       return 1.d * totalBytesTransferred() / length;
+    }
+
+    /** Returns {@code true} if this progress is determinate (i.e. content length is known). */
+    default boolean determinate() {
+      return contentLength() >= 0;
     }
 
     @Override
@@ -230,7 +235,7 @@ public final class ProgressTracker {
     private boolean enclosedProgress;
     private @MonotonicNonNull Duration timePassedThreshold;
     private @MonotonicNonNull Executor executor;
-    public Clock clock;
+    private Clock clock;
 
     Builder() {
       enclosedProgress = true;
@@ -339,8 +344,8 @@ public final class ProgressTracker {
     }
 
     @Override
-    public boolean completed() {
-      return lastlyEnclosing || (contentLength >= 0 && totalBytesTransferred >= contentLength);
+    public boolean done() {
+      return lastlyEnclosing || (determinate() && totalBytesTransferred >= contentLength);
     }
 
     @Override
@@ -351,8 +356,8 @@ public final class ProgressTracker {
           totalBytesTransferred,
           timePassed,
           totalTimePassed,
-          contentLength >= 0L ? contentLength : "UNKNOWN",
-          contentLength >= 0L ? " " + Math.round(10000 * value()) / 100.d + "%" : "");
+          determinate() ? contentLength : "UNKNOWN",
+          determinate() ? " " + Math.round(10000 * value()) / 100.d + "%" : "");
     }
   }
 
@@ -436,8 +441,8 @@ public final class ProgressTracker {
         subscription.updateProgress(bytesTransferred);
         if (subscription.shouldSignalProgress()) {
           var progress = subscription.currentProgress(false);
-          signalledCompletedProgress = progress.completed();
-          subscription.reset();
+          signalledCompletedProgress = progress.done();
+          subscription.resetProgress();
           subscription.signalProgress(progress);
         }
       }
@@ -515,7 +520,7 @@ public final class ProgressTracker {
                 || updateTime.compareTo(lastUpdateTime.plus(timePassedThreshold)) >= 0);
       }
 
-      void reset() {
+      void resetProgress() {
         bytesTransferred = 0L;
         lastUpdateTime = updateTime;
       }

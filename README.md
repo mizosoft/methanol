@@ -241,7 +241,7 @@ void logProgress(Progress progress) {
   var record = "Downloaded: " + progress.totalBytesTransferred() + " bytes";
 
   // log percentage if possible
-  if (progress.contentLength() > 0L) {
+  if (progress.determinate()) {
     record += " (" + round(100.d * progress.value()) + "%)";
   }
 

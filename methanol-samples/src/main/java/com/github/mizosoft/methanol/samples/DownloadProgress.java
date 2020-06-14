@@ -119,10 +119,7 @@ public class DownloadProgress extends Application {
 
   /** Tracks a {@code BodySubscriber} with a predefined length.  */
   private BodySubscriber<Void> trackingWithLength(long length) {
-    return tracker.tracking(discarding(), p -> {
-      System.out.println(p);
-      progressBar.setProgress(p.value());
-    }, length);
+    return tracker.tracking(discarding(), p -> progressBar.setProgress(p.value()), length);
   }
 
   private static BodySubscriber<OptionalLong> ofContentLength(ResponseInfo info) {

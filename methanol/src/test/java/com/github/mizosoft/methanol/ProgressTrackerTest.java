@@ -413,7 +413,7 @@ class ProgressTrackerTest {
       assertEquals(contentLength, progress.contentLength());
       assertEquals(time, progress.timePassed());
       assertEquals(totalTime, progress.totalTimePassed());
-      assertEquals(completed, progress.completed());
+      assertEquals(completed, progress.done());
     }
   }
 

@@ -308,7 +308,7 @@ public final class Methanol extends HttpClient {
      */
     <T> CompletableFuture<HttpResponse<T>> interceptAsync(HttpRequest request, Chain<T> chain);
 
-    /** Returns an interceptor that forwards the request decorated by the given operator. */
+    /** Returns an interceptor that forwards the request after applying the given operator. */
     static Interceptor create(UnaryOperator<HttpRequest> decorator) {
       return new Interceptor() {
         @Override
