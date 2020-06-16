@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
 import java.net.Authenticator;
@@ -50,8 +51,10 @@ import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.UnaryOperator;
 import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -79,26 +82,37 @@ class MethanolTest {
     assertTrue(client.baseUri().isEmpty());
     assertTrue(client.userAgent().isEmpty());
     assertTrue(client.requestTimeout().isEmpty());
+    assertTrue(client.readTimeout().isEmpty());
+    assertTrue(client.interceptors().isEmpty());
+    assertTrue(client.postDecorationInterceptors().isEmpty());
     assertEquals(headers(/* empty */), client.defaultHeaders());
     assertTrue(client.autoAcceptEncoding());
   }
 
   @Test
   void setExtraFields() {
+    var interceptor1 = Interceptor.create(UnaryOperator.identity());
+    var interceptor2 = Interceptor.create((UnaryOperator.identity()));
     var client = Methanol.newBuilder()
         .userAgent("Mr Potato")
         .baseUri(URI.create("https://localhost"))
         .requestTimeout(Duration.ofSeconds(69))
+        .readTimeout(Duration.ofSeconds(420))
         .defaultHeader("Accept", "text/html")
         .autoAcceptEncoding(true)
+        .interceptor(interceptor1)
+        .postDecorationInterceptor(interceptor2)
         .build();
     assertEquals(Optional.of("Mr Potato"), client.userAgent());
     assertEquals(Optional.of(URI.create("https://localhost")), client.baseUri());
     assertEquals(Optional.of(Duration.ofSeconds(69)), client.requestTimeout());
+    assertEquals(Optional.of(Duration.ofSeconds(420)), client.readTimeout());
     assertEquals(
         headers("Accept", "text/html", "User-Agent", "Mr Potato"),
         client.defaultHeaders());
     assertTrue(client.autoAcceptEncoding());
+    assertEquals(List.of(interceptor1), client.interceptors());
+    assertEquals(List.of(interceptor2), client.postDecorationInterceptors());
   }
 
   @Test

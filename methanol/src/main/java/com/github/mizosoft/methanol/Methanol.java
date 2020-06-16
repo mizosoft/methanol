@@ -79,7 +79,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
 
-  private final HttpClient client;
+  private final HttpClient delegate;
   private final Optional<String> userAgent;
   private final Optional<URI> baseUri;
   private final Optional<Duration> requestTimeout;
@@ -91,7 +91,7 @@ public final class Methanol extends HttpClient {
   private final List<Interceptor> postDecorationInterceptors;
 
   private Methanol(BaseBuilder<?> builder) {
-    client = builder.buildDelegateClient();
+    delegate = builder.buildDelegateClient();
     userAgent = Optional.ofNullable(builder.userAgent);
     baseUri = Optional.ofNullable(builder.baseUri);
     requestTimeout = Optional.ofNullable(builder.requestTimeout);
@@ -141,7 +141,7 @@ public final class Methanol extends HttpClient {
 
   /** Returns the underlying {@code HttpClient} used for sending requests. */
   public HttpClient underlyingClient() {
-    return client;
+    return delegate;
   }
 
   /** Returns this client's {@code User-Agent}. */
@@ -189,47 +189,47 @@ public final class Methanol extends HttpClient {
 
   @Override
   public Optional<CookieHandler> cookieHandler() {
-    return client.cookieHandler();
+    return delegate.cookieHandler();
   }
 
   @Override
   public Optional<Duration> connectTimeout() {
-    return client.connectTimeout();
+    return delegate.connectTimeout();
   }
 
   @Override
   public Redirect followRedirects() {
-    return client.followRedirects();
+    return delegate.followRedirects();
   }
 
   @Override
   public Optional<ProxySelector> proxy() {
-    return client.proxy();
+    return delegate.proxy();
   }
 
   @Override
   public SSLContext sslContext() {
-    return client.sslContext();
+    return delegate.sslContext();
   }
 
   @Override
   public SSLParameters sslParameters() {
-    return client.sslParameters();
+    return delegate.sslParameters();
   }
 
   @Override
   public Optional<Authenticator> authenticator() {
-    return client.authenticator();
+    return delegate.authenticator();
   }
 
   @Override
   public Version version() {
-    return client.version();
+    return delegate.version();
   }
 
   @Override
   public Optional<Executor> executor() {
-    return client.executor();
+    return delegate.executor();
   }
 
   @Override
@@ -238,7 +238,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return InterceptorChain.sendWithInterceptors(
-        client, request, bodyHandler, buildInterceptorQueue());
+        delegate, request, bodyHandler, buildInterceptorQueue());
   }
 
   @Override
@@ -247,7 +247,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return InterceptorChain.sendAsyncWithInterceptors(
-        client, request, bodyHandler, null, buildInterceptorQueue());
+        delegate, request, bodyHandler, null, buildInterceptorQueue());
   }
 
   @Override
@@ -258,7 +258,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return InterceptorChain.sendAsyncWithInterceptors(
-        client, request, bodyHandler, pushPromiseHandler, buildInterceptorQueue());
+        delegate, request, bodyHandler, pushPromiseHandler, buildInterceptorQueue());
   }
 
   private List<Interceptor> buildInterceptorQueue() {
@@ -310,6 +310,7 @@ public final class Methanol extends HttpClient {
 
     /** Returns an interceptor that forwards the request after applying the given operator. */
     static Interceptor create(UnaryOperator<HttpRequest> decorator) {
+      requireNonNull(decorator);
       return new Interceptor() {
         @Override
         public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
