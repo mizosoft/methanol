@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
-import java.util.ServiceLoader.Provider;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -76,7 +75,7 @@ public final class ServiceCache<S> {
     return Collections.unmodifiableList(providers);
   }
 
-  private void addProviderLenient(Provider<S> provider, List<S> providers) {
+  private void addProviderLenient(ServiceLoader.Provider<S> provider, List<S> providers) {
     try {
       providers.add(provider.get());
     } catch (ServiceConfigurationError error) {

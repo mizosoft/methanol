@@ -65,6 +65,8 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
   }
 
   /**
+   * Requires that the given type is supported by this adapter.
+   *
    * @throws UnsupportedOperationException if this adapter doesn't {@link
    *     BodyAdapter#supportsType(TypeRef) support} the given type.
    */
@@ -75,6 +77,8 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
   }
 
   /**
+   * Requires that the given class is supported by this adapter.
+   *
    * @throws UnsupportedOperationException if this adapter doesn't {@link
    *     BodyAdapter#supportsType(TypeRef) support} the given raw type.
    */
@@ -83,6 +87,8 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
   }
 
   /**
+   * Requires that the given media type is either {@code null} or is compatible with this adapter.
+   *
    * @throws UnsupportedOperationException if this adapter is not {@link
    *     BodyAdapter#isCompatibleWith(MediaType) compatible} the given type.
    */

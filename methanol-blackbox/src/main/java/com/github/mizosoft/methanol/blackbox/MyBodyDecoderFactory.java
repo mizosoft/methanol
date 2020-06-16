@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol.blackbox;
 
 import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.io.IOException;
@@ -49,8 +48,7 @@ public abstract class MyBodyDecoderFactory implements BodyDecoder.Factory {
   }
 
   static AsyncDecoder getDefaultAsyncDecoder(String encoding) {
-    return Factory.installedFactories()
-        .stream()
+    return BodyDecoder.Factory.installedFactories().stream()
         .filter(f -> !(f instanceof MyBodyDecoderFactory) && encoding.equals(f.encoding()))
         .map(f -> ((AsyncBodyDecoder<?>) f.create(BodySubscribers.discarding())).asyncDecoder())
         .findFirst()

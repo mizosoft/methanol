@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol.internal.spi;
 
 import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
 import java.util.Collections;
 import java.util.List;
@@ -34,7 +33,8 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 /** Utility class for finding decoder factories. */
 public class DecoderFactoryFinder {
 
-  private static final ServiceCache<Factory> CACHE = new ServiceCache<>(BodyDecoder.Factory.class);
+  private static final ServiceCache<BodyDecoder.Factory> CACHE =
+      new ServiceCache<>(BodyDecoder.Factory.class);
 
   private static volatile @MonotonicNonNull Map<String, BodyDecoder.Factory> bindings;
 

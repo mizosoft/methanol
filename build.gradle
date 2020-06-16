@@ -166,6 +166,8 @@ subprojects { subproject ->
       enabled = subproject.hasProperty('enableErrorprone')
 
       disable('FutureReturnValueIgnored') // https://github.com/google/error-prone/issues/1157
+      error('NullAway')
+
       nullaway {
         annotatedPackages.add('com.github.mizosoft.methanol')
         excludedFieldAnnotations = ['org.checkerframework.checker.nullness.qual.MonotonicNonNull']
