@@ -32,10 +32,10 @@ import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An object that uses a defined format for converting high level objects to or from {@code
- * ByteBuffer} streams. The two specializations are {@link Encoder} and {@link Decoder},
- * implementations of which are normally registered as service-providers by means described in the
- * {@link java.util.ServiceLoader} class.
+ * An object that uses a defined format for converting high level objects to or from request or
+ * response {@code ByteBuffer} streams. The two specializations are {@link Encoder} and {@link
+ * Decoder}, implementations of which are normally registered as service-providers by means
+ * described in the {@link java.util.ServiceLoader} class.
  *
  * <p>A {@code BodyAdapter} communicates the format it uses and the set of types it supports through
  * {@link #isCompatibleWith(MediaType)} and {@link #supportsType(TypeRef)} respectively. For
@@ -103,8 +103,9 @@ public interface BodyAdapter {
   /**
    * {@code BodyAdapter} specialization for converting response bodies into objects.
    *
-   * @see <a href="https://github.com/mizosoft/methanol/blob/master/UserGuide.md#deferred-conversion">
-   *   {@code T} vs {@code Supplier<}{@code T>}</a>
+   * @see <a
+   *     href="https://github.com/mizosoft/methanol/blob/master/UserGuide.md#deferred-conversion">
+   *     {@code T} vs {@code Supplier<}{@code T>}</a>
    */
   interface Decoder extends BodyAdapter {
 
@@ -125,10 +126,10 @@ public interface BodyAdapter {
      * mediaType} is {@code null}, the decoder's default format settings will be used.
      *
      * <p>The default implementation returns a subscriber completed with a supplier that blocks
-     * (uninterruptedly) on the subscriber returned by {@link #toObject(TypeRef, MediaType)}.
-     * Any completion exception raised while blocking is rethrown from the supplier as a
-     * {@code CompletionException}. Encoders that support reading from a blocking source should
-     * override this method to defer reading from such a source until the supplier is called.
+     * (uninterruptedly) on the subscriber returned by {@link #toObject(TypeRef, MediaType)}. Any
+     * completion exception raised while blocking is rethrown from the supplier as a {@code
+     * CompletionException}. Encoders that support reading from a blocking source should override
+     * this method to defer reading from such a source until the supplier is called.
      *
      * @param type the object type
      * @param mediaType the media type

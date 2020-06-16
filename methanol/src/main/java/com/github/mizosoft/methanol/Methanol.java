@@ -63,7 +63,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An {@code HttpClient} with request decoration and reactive extensions.
+ * An {@code HttpClient} with interceptors, request decoration and reactive extensions.
  *
  * <p>In addition to implementing the {@link HttpClient} interface, this class also allows to:
  *
