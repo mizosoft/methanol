@@ -562,10 +562,11 @@ static class RetryingInterceptor implements Interceptor {
 }
 ```
 
-The async version looks a bit awkward as we have to perform some recursive lambda magic for retries.
+The async version looks a bit awkward as we have to perform some async recursive lambda magic for
+retries.
 
-> Small note: if you're on JDK 12+, `handle(...).thenCompse(Function.identity())` can be replaced
-> with `exceptionallyCompose(...)` API.
+> If you're on JDK 12+, `handle(...).thenCompse(Function.identity())` can be replaced with 
+> `exceptionallyCompose(...)` API.
 
 #### Invocation order
 
