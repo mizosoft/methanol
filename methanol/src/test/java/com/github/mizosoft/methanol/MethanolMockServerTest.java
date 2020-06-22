@@ -220,10 +220,11 @@ class MethanolMockServerTest {
 
   @Test
   void readTimeout() {
-    server.enqueue(new MockResponse().setBody("Bruh").throttleBody(3, 150, TimeUnit.MILLISECONDS));
+    server.enqueue(new MockResponse().setBody("Bruh".repeat(1000))
+        .throttleBody(2048, 200, TimeUnit.MILLISECONDS));
 
     var client = Methanol.newBuilder()
-        .readTimeout(Duration.ofMillis(100))
+        .readTimeout(Duration.ofMillis(50))
         .baseUri(server.url("/").uri())
         .build();
     var timeout = assertThrows(
@@ -235,10 +236,11 @@ class MethanolMockServerTest {
 
   @Test
   void readTimeoutCustomScheduler() {
-    server.enqueue(new MockResponse().setBody("Bruh").throttleBody(3, 150, TimeUnit.MILLISECONDS));
+    server.enqueue(new MockResponse().setBody("Bruh".repeat(1000))
+        .throttleBody(2048, 200, TimeUnit.MILLISECONDS));
 
     var client = Methanol.newBuilder()
-        .readTimeout(Duration.ofMillis(100), scheduler)
+        .readTimeout(Duration.ofMillis(50), scheduler)
         .baseUri(server.url("/").uri())
         .build();
     var timeout = assertThrows(
