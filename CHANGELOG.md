@@ -1,5 +1,13 @@
 # Change Log
 
+## Version 1.3.0
+
+*22-6-2020*
+
+* Default read timeout in `Methanol` client.
+* API for tracking upload/download progress.
+* High-level client interceptors.
+
 ## Version 1.2.0
 
 *1-5-2020*

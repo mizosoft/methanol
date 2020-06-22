@@ -27,7 +27,7 @@ and easier to use with Methanol.
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol:1.2.0'
+  implementation 'com.github.mizosoft.methanol:methanol:1.3.0'
 }
 ```
 
@@ -38,7 +38,7 @@ dependencies {
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
   </dependency>
 </dependencies>
 ```
@@ -259,6 +259,10 @@ static float round(double value) {
   return Math.round(100.f * value) / 100.f;
 }
 ```
+
+## Contributing 
+
+See [CONTRIBUTING](/CONTRIBUTING.md)
 
 ## License
 
