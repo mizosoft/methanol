@@ -1,0 +1,18 @@
+plugins {
+  id 'org.openjfx.javafxplugin' version '0.0.8'
+}
+
+javafx {
+  version = "14"
+  modules 'javafx.controls'
+}
+
+task runDownloadProgress(type: org.javamodularity.moduleplugin.tasks.ModularJavaExec) {
+  classpath = sourceSets.main.runtimeClasspath
+  main = "$moduleName/com.github.mizosoft.methanol.samples.DownloadProgress"
+}
+
+task runMultipartUploadProgress(type: org.javamodularity.moduleplugin.tasks.ModularJavaExec) {
+  classpath = sourceSets.main.runtimeClasspath
+  main = "$moduleName/com.github.mizosoft.methanol.samples.MultipartUploadProgress"
+}

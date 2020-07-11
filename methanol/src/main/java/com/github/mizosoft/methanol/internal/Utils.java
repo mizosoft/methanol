@@ -96,4 +96,9 @@ public class Utils {
     src.limit(srcLimit);
     return toCopy;
   }
+
+  @SuppressWarnings({"TypeParameterUnusedInFormals", "unused"})
+  public static <T> T TODO() {
+    throw new UnsupportedOperationException("not implemented");
+  }
 }

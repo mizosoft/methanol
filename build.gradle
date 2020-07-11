@@ -62,12 +62,14 @@ ext {
   isPublished = { project ->
     isJavaProject(project) &&
         project.name != 'methanol-blackbox' &&
-        project.name != 'methanol-samples'
+        project.name != 'methanol-samples' &&
+        project.name != 'progress'
   }
   // project has tests that contribute to coverage ?
   contributesToTests = { project ->
     isJavaProject(project) &&
-        !(project.name in ['methanol-benchmarks', 'methanol-testutils', 'methanol-samples'])
+        !(project.name in
+            ['methanol-benchmarks', 'methanol-testutils', 'methanol-samples', 'progress'])
   }
   // project is included in coverage report ?
   contributesToCoverageReport = { project ->

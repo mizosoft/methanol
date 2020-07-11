@@ -79,7 +79,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
 
-  private final HttpClient delegate;
+  private final HttpClient baseClient;
   private final Optional<String> userAgent;
   private final Optional<URI> baseUri;
   private final Optional<Duration> requestTimeout;
@@ -91,7 +91,7 @@ public final class Methanol extends HttpClient {
   private final List<Interceptor> postDecorationInterceptors;
 
   private Methanol(BaseBuilder<?> builder) {
-    delegate = builder.buildDelegateClient();
+    baseClient = builder.buildBaseClient();
     userAgent = Optional.ofNullable(builder.userAgent);
     baseUri = Optional.ofNullable(builder.baseUri);
     requestTimeout = Optional.ofNullable(builder.requestTimeout);
@@ -141,7 +141,7 @@ public final class Methanol extends HttpClient {
 
   /** Returns the underlying {@code HttpClient} used for sending requests. */
   public HttpClient underlyingClient() {
-    return delegate;
+    return baseClient;
   }
 
   /** Returns this client's {@code User-Agent}. */
@@ -189,47 +189,47 @@ public final class Methanol extends HttpClient {
 
   @Override
   public Optional<CookieHandler> cookieHandler() {
-    return delegate.cookieHandler();
+    return baseClient.cookieHandler();
   }
 
   @Override
   public Optional<Duration> connectTimeout() {
-    return delegate.connectTimeout();
+    return baseClient.connectTimeout();
   }
 
   @Override
   public Redirect followRedirects() {
-    return delegate.followRedirects();
+    return baseClient.followRedirects();
   }
 
   @Override
   public Optional<ProxySelector> proxy() {
-    return delegate.proxy();
+    return baseClient.proxy();
   }
 
   @Override
   public SSLContext sslContext() {
-    return delegate.sslContext();
+    return baseClient.sslContext();
   }
 
   @Override
   public SSLParameters sslParameters() {
-    return delegate.sslParameters();
+    return baseClient.sslParameters();
   }
 
   @Override
   public Optional<Authenticator> authenticator() {
-    return delegate.authenticator();
+    return baseClient.authenticator();
   }
 
   @Override
   public Version version() {
-    return delegate.version();
+    return baseClient.version();
   }
 
   @Override
   public Optional<Executor> executor() {
-    return delegate.executor();
+    return baseClient.executor();
   }
 
   @Override
@@ -238,7 +238,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return InterceptorChain.sendWithInterceptors(
-        delegate, request, bodyHandler, buildInterceptorQueue());
+        baseClient, request, bodyHandler, buildInterceptorQueue());
   }
 
   @Override
@@ -247,7 +247,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return InterceptorChain.sendAsyncWithInterceptors(
-        delegate, request, bodyHandler, null, buildInterceptorQueue());
+        baseClient, request, bodyHandler, null, buildInterceptorQueue());
   }
 
   @Override
@@ -258,7 +258,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return InterceptorChain.sendAsyncWithInterceptors(
-        delegate, request, bodyHandler, pushPromiseHandler, buildInterceptorQueue());
+        baseClient, request, bodyHandler, pushPromiseHandler, buildInterceptorQueue());
   }
 
   private List<Interceptor> buildInterceptorQueue() {
@@ -442,7 +442,7 @@ public final class Methanol extends HttpClient {
 
     /**
      * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration)
-     * readtimeout}. Timeout events are scheduled using a system-wide {@code
+     * read timeout}. Timeout events are scheduled using a system-wide {@code
      * ScheduledExecutorService}.
      */
     public B readTimeout(Duration readTimeout) {
@@ -504,7 +504,7 @@ public final class Methanol extends HttpClient {
 
     abstract B self();
 
-    abstract HttpClient buildDelegateClient();
+    abstract HttpClient buildBaseClient();
   }
 
   /** A builder for {@code Methanol} instances with a predefined {@code HttpClient}. */
@@ -522,7 +522,7 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    HttpClient buildDelegateClient() {
+    HttpClient buildBaseClient() {
       return delegate;
     }
   }
@@ -605,7 +605,7 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    HttpClient buildDelegateClient() {
+    HttpClient buildBaseClient() {
       return delegateBuilder.build();
     }
   }

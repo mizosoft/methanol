@@ -428,6 +428,20 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
   }
 
+  /** Used by {@code ProgressTracker} to peek part info from a {@code MultipartSubscription}. */
+  interface PartPeeker {
+
+    int peekIndex();
+
+    Part at(int index);
+
+    static PartPeeker peeking(Subscription subscription) {
+      requireArgument(
+          subscription instanceof MultipartSubscription, "not a multipart subscription");
+      return ((MultipartSubscription) subscription).partPeeker();
+    }
+  }
+
   /** Strategy for appending the boundary across parts. */
   private enum BoundaryAppender {
     FIRST("--", "\r\n"),
@@ -466,7 +480,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     // A tombstone to protect against race conditions that would otherwise occur if a
-    // thread tries to abort() while another tries to peekNextPart(), which might lead
+    // thread tries to abort() while another tries to nextPartHeaders(), which might lead
     // to a newly subscribed part being missed by abort().
     private static final Subscriber<ByteBuffer> CANCELLED =
         new Subscriber<>() {
@@ -487,6 +501,23 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       super(downstream, FlowSupport.SYNC_EXECUTOR);
       boundary = upstream.boundary();
       parts = upstream.parts();
+    }
+
+    // The peeker is called serially (within downstream's onNext)
+    // by ProgressTracker so no need for synchronization.
+    PartPeeker partPeeker() {
+      return new PartPeeker() {
+        @Override
+        public int peekIndex() {
+          // subtract 1 as partIndex actually indicates the next part to subscribe, not the current
+          return Math.max(0, partIndex - 1);
+        }
+
+        @Override
+        public Part at(int index) {
+          return parts.get(index);
+        }
+      };
     }
 
     @Override
@@ -526,10 +557,10 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
           return next;
         }
       }
-      return subscriber != CANCELLED ? peekNextPart() : null;
+      return subscriber != CANCELLED ? nextPartHeaders() : null;
     }
 
-    private @Nullable ByteBuffer peekNextPart() {
+    private @Nullable ByteBuffer nextPartHeaders() {
       StringBuilder heading = new StringBuilder();
       BoundaryAppender.get(partIndex, parts.size()).append(heading, boundary);
       if (partIndex < parts.size()) {

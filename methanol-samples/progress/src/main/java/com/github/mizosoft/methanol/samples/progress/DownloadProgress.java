@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.samples;
+package com.github.mizosoft.methanol.samples.progress;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static java.net.http.HttpResponse.BodySubscribers.discarding;
@@ -72,10 +72,10 @@ public class DownloadProgress extends Application {
     gridPane.setVgap(10.d);
     gridPane.setPadding(new Insets(18.d));
 
-    var notGrowable = new ColumnConstraints();
-    notGrowable.setHgrow(Priority.NEVER);
     var growable = new ColumnConstraints();
     growable.setHgrow(Priority.ALWAYS);
+    var notGrowable = new ColumnConstraints();
+    notGrowable.setHgrow(Priority.NEVER);
     gridPane.getColumnConstraints().addAll(growable, notGrowable);
 
     gridPane.add(urlTextField, 0, 0);
@@ -127,6 +127,6 @@ public class DownloadProgress extends Application {
   }
 
   public static void main(String[] args) {
-    Application.launch(args);
+    launch(args);
   }
 }

@@ -20,27 +20,34 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.extensions;
+package com.github.mizosoft.methanol.internal.flow;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.MimeBodyPublisher;
-import com.github.mizosoft.methanol.internal.flow.ForwardingBodyPublisher;
 import java.net.http.HttpRequest.BodyPublisher;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Flow.Subscriber;
 
-public final class ForwardingMimeBodyPublisher extends ForwardingBodyPublisher
-    implements MimeBodyPublisher {
+public class ForwardingBodyPublisher implements BodyPublisher {
 
-  private final MediaType mediaType;
+  private final BodyPublisher upstream;
 
-  public ForwardingMimeBodyPublisher(BodyPublisher upstream, MediaType mediaType) {
-    super(upstream);
-    this.mediaType = requireNonNull(mediaType);
+  protected ForwardingBodyPublisher(BodyPublisher upstream) {
+    this.upstream = requireNonNull(upstream);
+  }
+
+  protected final BodyPublisher upstream() {
+    return upstream;
   }
 
   @Override
-  public MediaType mediaType() {
-    return mediaType;
+  public long contentLength() {
+    return upstream.contentLength();
+  }
+
+  @Override
+  public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
+    requireNonNull(subscriber);
+    upstream.subscribe(subscriber);
   }
 }
