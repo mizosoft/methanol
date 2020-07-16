@@ -29,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.github.mizosoft.methanol.ProgressTracker.Builder;
 import com.github.mizosoft.methanol.ProgressTracker.ImmutableProgress;
 import com.github.mizosoft.methanol.ProgressTracker.Listener;
+import com.github.mizosoft.methanol.ProgressTracker.MultipartListener;
+import com.github.mizosoft.methanol.ProgressTracker.MultipartProgress;
 import com.github.mizosoft.methanol.ProgressTracker.Progress;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
@@ -54,6 +56,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Flow;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -172,6 +175,73 @@ class ProgressTrackerTest {
 
     listener.awaitComplete();
     assertEquals(1, listener.errors);
+  }
+
+  @Test
+  void trackMultipartUploadProgressNoThreshold() {
+    int batchSize = 64;
+    int[] partCounts = {4, 2, 1};
+    int count = IntStream.of(partCounts).sum();
+    var tracker = withVirtualClock().build();
+    var listener = new TestMultipartListener();
+    var builder = MultipartBodyPublisher.newBuilder();
+    for (int i = 0; i < partCounts.length; i++) {
+      builder.formPart("part_" + i, bodyPublisher(batchSize, partCounts[i]));
+    }
+    var multipartBody = builder.build();
+    var trackedUpstream = tracker.trackingMultipart(multipartBody, listener);
+
+    trackedUpstream.subscribe(new TestSubscriber<>());
+
+    listener.awaitComplete();
+    // enclosed progress receives additional 0%
+    // 100% will already be received from onNext as there is no lastly missed progress
+    // also each part will account for an additional progress event for each headers
+    // and finally 1 for the ending boundary
+    int signalCount = count + 1 + partCounts.length + 1;
+    assertEquals(signalCount, listener.nexts);
+
+    // 0% progress
+    assertProgress(
+        listener.items.remove(),
+        0L,
+        0L,
+        multipartBody.contentLength(),
+        Duration.ZERO,
+        Duration.ZERO,
+        false);
+
+    for (int partIndex = 0; partIndex < partCounts.length; partIndex++) {
+      // for each part we get: part headers batch + batches representing part's body
+      int progressCountForPart = partCounts[partIndex] + 1;
+      for (int i = 0; i < progressCountForPart; i++) {
+        var progress = listener.items.remove();
+        assertEquals(multipartBody.parts().get(partIndex), progress.part());
+        assertEquals(i == 0, progress.partChanged(), i + ", " + partIndex);
+
+        long length = progress.part().bodyPublisher().contentLength();
+        assertProgress(
+            progress.partProgress(),
+            i > 0 ? batchSize : 0, // current
+            i * batchSize, // total
+            length,
+            i > 0 ? virtualTick : Duration.ZERO, // current
+            virtualTick.multipliedBy(i), // total
+            i * batchSize == length);
+      }
+    }
+
+    // end boundary
+    assertProgress(
+        listener.items.remove(),
+        -1, // ¯\_(ツ)_/¯
+        multipartBody.contentLength(),
+        multipartBody.contentLength(),
+        virtualTick,
+        virtualTick.multipliedBy(signalCount - 1),
+        true);
+
+    assertTrue(listener.items.isEmpty());
   }
 
   @Test
@@ -397,6 +467,21 @@ class ProgressTrackerTest {
     return items.stream().flatMap(Collection::stream).mapToLong(ByteBuffer::remaining).sum();
   }
 
+  private static void assertProgress(
+      Progress progress,
+      long transferred, long totalTransferred, long contentLength,
+      Duration time, Duration totalTime,
+      boolean completed) {
+    if (transferred >= 0) {
+      assertEquals(transferred, progress.bytesTransferred());
+    }
+    assertEquals(totalTransferred, progress.totalBytesTransferred());
+    assertEquals(contentLength, progress.contentLength());
+    assertEquals(time, progress.timePassed());
+    assertEquals(totalTime, progress.totalTimePassed());
+    assertEquals(completed, progress.done());
+  }
+
   private static final class TestListener
       extends TestSubscriber<Progress> implements Listener {
 
@@ -407,14 +492,17 @@ class ProgressTrackerTest {
         Duration time, Duration totalTime,
         boolean completed) {
       assertFalse(items.isEmpty());
-      var progress = items.poll();
-      assertEquals(transferred, progress.bytesTransferred());
-      assertEquals(totalTransferred, progress.totalBytesTransferred());
-      assertEquals(contentLength, progress.contentLength());
-      assertEquals(time, progress.timePassed());
-      assertEquals(totalTime, progress.totalTimePassed());
-      assertEquals(completed, progress.done());
+      assertProgress(
+          items.poll(),
+          transferred, totalTransferred, contentLength,
+          time, totalTime, completed);
     }
+  }
+
+  private static final class TestMultipartListener
+      extends TestSubscriber<MultipartProgress> implements MultipartListener {
+
+    TestMultipartListener() {}
   }
 
   private static final class VirtualClock extends Clock {

@@ -1,4 +1,4 @@
-open module methanol.samples {
+open module methanol.samples.progress {
   requires methanol;
   requires javafx.controls;
 }
