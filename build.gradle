@@ -25,7 +25,8 @@ ext {
       'reactor'         : '3.3.6.RELEASE',
       'nullAway'        : '0.7.9',
       'jaxb'            : '2.3.1',
-      'jaxbRuntime'     : '2.7.6'
+      'jaxbRuntime'     : '2.7.6',
+      'jsoup'           : '1.13.1'
   ]
 
   deps = [
@@ -51,7 +52,8 @@ ext {
       'reactorCore'            : "io.projectreactor:reactor-core:${versions.reactor}",
       'nullAway'               : "com.uber.nullaway:nullaway:${versions.nullAway}",
       'jaxbApi'                : "javax.xml.bind:jaxb-api:${versions.jaxb}",
-      'jaxbRuntime'            :  "org.eclipse.persistence:org.eclipse.persistence.moxy:${versions.jaxbRuntime}"
+      'jaxbRuntime'            : "org.eclipse.persistence:org.eclipse.persistence.moxy:${versions.jaxbRuntime}",
+      'jsoup'                  : "org.jsoup:jsoup:${versions.jsoup}"
   ]
 
   // querying properties about subprojects
@@ -63,13 +65,14 @@ ext {
     isJavaProject(project) &&
         project.name != 'methanol-blackbox' &&
         project.name != 'methanol-samples' &&
-        project.name != 'progress'
+        project.name != 'progress' &&
+        project.name != 'crawler'
   }
   // project has tests that contribute to coverage ?
   contributesToTests = { project ->
     isJavaProject(project) &&
         !(project.name in
-            ['methanol-benchmarks', 'methanol-testutils', 'methanol-samples', 'progress'])
+            ['methanol-benchmarks', 'methanol-testutils', 'methanol-samples', 'progress', 'crawler'])
   }
   // project is included in coverage report ?
   contributesToCoverageReport = { project ->
