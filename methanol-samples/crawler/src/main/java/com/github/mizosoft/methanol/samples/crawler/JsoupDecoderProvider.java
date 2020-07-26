@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.samples.crawler;
 import com.github.mizosoft.methanol.BodyAdapter;
 
 public class JsoupDecoderProvider {
+  private JsoupDecoderProvider() {}
 
   public static BodyAdapter.Decoder provider() {
     return new JsoupDecoder();

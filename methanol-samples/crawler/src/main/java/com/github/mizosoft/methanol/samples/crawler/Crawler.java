@@ -34,8 +34,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpResponse.BodySubscribers;
+import java.util.ArrayDeque;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 import org.jsoup.nodes.Document;
@@ -52,7 +52,7 @@ public class Crawler {
           .build();
 
   private final Set<URI> visited = new HashSet<>();
-  private final Queue<URI> toVisit = new LinkedList<>();
+  private final Queue<URI> toVisit = new ArrayDeque<>();
 
   Crawler(URI inceptionUri, int maxVisits) {
     this.inceptionUri = inceptionUri;
