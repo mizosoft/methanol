@@ -1,5 +1,11 @@
 # Change Log
 
+## Version 1.4.0
+
+*27-7-2020*
+
+* Multipart progress tracking
+
 ## Version 1.3.0
 
 *22-6-2020*

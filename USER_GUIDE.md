@@ -683,7 +683,7 @@ MultipartBodyPublisher.newBuilder()
     .formPart(
         "json_field",
         MoreBodyPublishers.ofMediaType(
-            BodyPublishers.ofString(dfd), MediaType.APPLICATION_JSON)) // explicitly specify part's Content-Type
+            BodyPublishers.ofString(...), MediaType.APPLICATION_JSON)) // explicitly specify part's Content-Type
     .part(Part.create(HttpHeaders.of(...), BodyPublishers.ofInputStream(...))) // can use custom headers/bodies
     .build();
 ```

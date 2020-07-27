@@ -11,7 +11,7 @@ Add this module as a dependency:
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-protobuf:1.3.0'
+  implementation 'com.github.mizosoft.methanol:methanol-protobuf:1.4.0'
 }
 ```
 
@@ -22,7 +22,7 @@ dependencies {
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol-protobuf</artifactId>
-    <version>1.3.0</version>
+    <version>1.4.0</version>
   </dependency>
 </dependencies>
 ```

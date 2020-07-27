@@ -89,7 +89,7 @@ ext {
 allprojects {
   group = 'com.github.mizosoft.methanol'
   ext.artifactId = getArtifactId(project)
-  version = '1.4.0-SNAPSHOT'
+  version = '1.4.0'
 
   repositories {
     jcenter()
@@ -228,11 +228,6 @@ subprojects { subproject ->
         artifactId = project.ext.artifactId
         version = project.version
         from components.java
-        if (artifactId == 'benchmarks') {
-          afterEvaluate {
-            artifact(jmhJar) // publish the runnable uber-jar for benchmarks
-          }
-        }
 
         pom {
           name = project.name

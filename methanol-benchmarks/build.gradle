@@ -1,5 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-
 plugins {
   id 'com.github.johnrengelman.shadow' version '6.0.0'
 }
@@ -15,20 +13,14 @@ dependencies {
   implementation deps.brotliDec
 }
 
-task jmhJar(type: ShadowJar) {
-  dependsOn compileJava
+shadowJar {
   archivesBaseName = rootProject.getArtifactId(project)
   archiveClassifier = 'all'
   mergeServiceFiles()
-  from sourceSets.main.runtimeClasspath
-  exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
-  manifest {
-    attributes 'Main-Class': 'org.openjdk.jmh.Main'
-  }
 }
 
 task jmh(type: JavaExec) {
-  classpath = files(jmhJar)
+  classpath = files(shadowJar)
   args('-foe', 'true')
   def additionalArgs = System.properties.jmhArgs
   if (additionalArgs) {

@@ -18,7 +18,7 @@ and easier to use with Methanol.
 * Special `BodyPublisher` implementations for form submission.
 * Extensible object conversion mechanism, with support for JSON, XML and Protocol Buffers out of the box.
 * Enhanced `HttpClient` with interceptors, request decoration and async `Publisher<HttpResponse<T>>` dispatches.
-* Tracking the progress of upload or download operations.
+* Progress tracking for upload and download operations.
 * Additional `BodyPublisher`, `BodySubscriber` and `BodyHandler` implementations.
 
 ## Installation
@@ -27,7 +27,7 @@ and easier to use with Methanol.
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol:1.3.0'
+  implementation 'com.github.mizosoft.methanol:methanol:1.4.0'
 }
 ```
 
@@ -38,14 +38,14 @@ dependencies {
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol</artifactId>
-    <version>1.3.0</version>
+    <version>1.4.0</version>
   </dependency>
 </dependencies>
 ```
 
 ## Documentation
 
-* [User Guide](UserGuide.md)
+* [User Guide](USER_GUIDE.md)
 * [Javadoc](https://mizosoft.github.io/methanol/1.x/doc/)
 
 ## Examples
