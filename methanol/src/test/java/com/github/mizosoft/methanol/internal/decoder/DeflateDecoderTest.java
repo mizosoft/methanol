@@ -23,6 +23,15 @@
 package com.github.mizosoft.methanol.internal.decoder;
 
 import static com.github.mizosoft.methanol.testutils.TestUtils.inflate;
+import static com.github.mizosoft.methanol.testutils.TestUtils.inflateNowrap;
+import static com.github.mizosoft.methanol.testutils.TestUtils.zlibUnwrap;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
+import com.github.mizosoft.methanol.testutils.dec.Decode;
+import com.github.mizosoft.methanol.testutils.dec.Decode.BuffSizeOption;
+import java.io.IOException;
+import org.junit.jupiter.api.Test;
 
 class DeflateDecoderTest extends ZLibDecoderTest {
 
@@ -42,12 +51,22 @@ class DeflateDecoderTest extends ZLibDecoderTest {
   }
 
   @Override
-  ZLibDecoder newDecoder() {
+  AsyncDecoder newDecoder() {
     return new DeflateDecoder();
   }
 
   @Override
   byte[] nativeDecode(byte[] compressed) {
     return inflate(compressed);
+  }
+
+  @Test
+  void decodesUnwrappedGoodStream() throws IOException {
+    byte[] goodStream = BASE64_DEC.decode(good());
+    byte[] goodStreamNowrap = zlibUnwrap(goodStream);
+    for (var so : BuffSizeOption.values()) {
+      byte[] decoded = Decode.decode(newDecoder(), goodStreamNowrap, so);
+      assertArrayEquals(inflateNowrap(goodStreamNowrap), decoded);
+    }
   }
 }

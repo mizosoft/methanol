@@ -32,6 +32,7 @@ import java.net.http.HttpHeaders;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -40,6 +41,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Flow.Subscription;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLContext;
 import okhttp3.tls.HandshakeCertificates;
@@ -83,9 +85,22 @@ public class TestUtils {
     }
   }
 
+  public static byte[] zlibUnwrap(byte[] zlibWrapped) {
+    assert zlibWrapped.length > Short.BYTES + Integer.BYTES;
+    return Arrays.copyOfRange(zlibWrapped, Short.BYTES, zlibWrapped.length - Integer.BYTES);
+  }
+
   public static byte[] inflate(byte[] data) {
+    return inflate0(data, new Inflater());
+  }
+
+  public static byte[] inflateNowrap(byte[] data) {
+    return inflate0(data, new Inflater(true));
+  }
+
+  private static byte[] inflate0(byte[] data, Inflater inflater) {
     try {
-      return new InflaterInputStream(new ByteArrayInputStream(data)).readAllBytes();
+      return new InflaterInputStream(new ByteArrayInputStream(data), inflater).readAllBytes();
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }

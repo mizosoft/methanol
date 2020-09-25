@@ -24,15 +24,15 @@ package com.github.mizosoft.methanol.internal.decoder;
 
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.concurrent.Executor;
 
 /** Convenient base class for deflate and gzip {@code BodyDecoder.Factory} providers. */
-abstract class ZLibBodyDecoderFactory implements BodyDecoder.Factory {
+abstract class AsyncBodyDecoderFactory implements BodyDecoder.Factory {
+  AsyncBodyDecoderFactory() {}
 
-  ZLibBodyDecoderFactory() {}
-
-  abstract ZLibDecoder newDecoder();
+  abstract AsyncDecoder newDecoder();
 
   @Override
   public <T> BodyDecoder<T> create(BodySubscriber<T> downstream) {

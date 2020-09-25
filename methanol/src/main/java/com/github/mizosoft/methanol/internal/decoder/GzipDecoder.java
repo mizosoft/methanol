@@ -24,15 +24,18 @@ package com.github.mizosoft.methanol.internal.decoder;
 
 import static java.lang.String.format;
 
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.zip.CRC32;
+import java.util.zip.Inflater;
 import java.util.zip.ZipException;
 
 /** {@code AsyncDecoder} for gzip. */
-final class GzipDecoder extends ZLibDecoder {
+final class GzipDecoder implements AsyncDecoder {
+  static final String ENCODING = "gzip";
 
   private static final int GZIP_MAGIC = 0x8B1F; // ID1 and ID2 as a little-endian ordered short
   private static final int CM_DEFLATE = 8;
@@ -45,6 +48,7 @@ final class GzipDecoder extends ZLibDecoder {
   private static final int SHORT_MASK = 0xFFFF;
   private static final long INT_MASK = 0xFFFFFFFFL;
 
+  private final Inflater inflater = new Inflater(true); // gzip has it's own wrapping method
   private final ByteBuffer tempBuffer;
   private final CRC32 crc;
   private boolean computeCrc; // Whether to compute crc (in case FHCRC is enabled)
@@ -56,12 +60,16 @@ final class GzipDecoder extends ZLibDecoder {
   private int fieldPosition;
 
   GzipDecoder() {
-    super(WrapMode.GZIP);
     tempBuffer =
         ByteBuffer.allocate(TEMP_BUFFER_SIZE)
             .order(ByteOrder.LITTLE_ENDIAN); // Multi-byte gzip values are little-endian/unsigned
     crc = new CRC32();
     state = State.BEGIN;
+  }
+
+  @Override
+  public String encoding() {
+    return ENCODING;
   }
 
   @Override
@@ -116,7 +124,7 @@ final class GzipDecoder extends ZLibDecoder {
           // fallthrough
 
         case DEFLATED:
-          inflateSource(source, sink);
+          InflaterUtils.inflateSourceWithChecksum(inflater, source, sink, crc);
           if (!inflater.finished()) {
             break outerLoop;
           }
@@ -175,6 +183,11 @@ final class GzipDecoder extends ZLibDecoder {
     if (state != State.END && source.finalSource()) {
       throw new EOFException("unexpected end of gzip stream");
     }
+  }
+
+  @Override
+  public void close() {
+    inflater.end();
   }
 
   private ByteBuffer fillTempBuffer(ByteSource source, int bytes) {
@@ -267,17 +280,6 @@ final class GzipDecoder extends ZLibDecoder {
     return false;
   }
 
-  // Override to compute crc32 of the inflated bytes
-  @Override
-  void inflateBlock(ByteBuffer in, ByteBuffer out) throws IOException {
-    int prePos = out.position();
-    super.inflateBlock(in, out);
-    int postPos = out.position();
-    int originalLimit = out.limit();
-    crc.update(out.position(prePos).limit(postPos));
-    out.limit(originalLimit);
-  }
-
   private static void checkValue(long expected, long found, String msg) throws IOException {
     if (expected != found) {
       throw new ZipException(format("%s; expected: %#x, found: %#x", msg, expected, found));
@@ -344,7 +346,6 @@ final class GzipDecoder extends ZLibDecoder {
   }
 
   /** Options in the FLG byte. */
-  @SuppressWarnings("unused") // Most are not explicitly used
   private enum FlagOption {
     // Order of declaration is important!
 

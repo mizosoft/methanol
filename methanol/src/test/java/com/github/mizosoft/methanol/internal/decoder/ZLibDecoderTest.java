@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.testutils.dec.Decode;
 import com.github.mizosoft.methanol.testutils.dec.Decode.BuffSizeOption;
 import java.io.EOFException;
@@ -48,7 +49,7 @@ abstract class ZLibDecoderTest {
 
   abstract String encoding();
 
-  abstract ZLibDecoder newDecoder();
+  abstract AsyncDecoder newDecoder();
 
   abstract byte[] nativeDecode(byte[] compressed);
 
