@@ -22,22 +22,23 @@
 
 package com.github.mizosoft.methanol.internal.decoder;
 
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
 
 /** {@code BodyDecoder.Factory} for "gzip". */
 @DefaultProvider
-public final class GzipBodyDecoderFactory extends ZLibBodyDecoderFactory {
+public final class GzipBodyDecoderFactory extends AsyncBodyDecoderFactory {
 
   /** Creates a new {@code GzipBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}. */
   public GzipBodyDecoderFactory() {}
 
   @Override
   public String encoding() {
-    return "gzip";
+    return GzipDecoder.ENCODING;
   }
 
   @Override
-  ZLibDecoder newDecoder() {
+  AsyncDecoder newDecoder() {
     return new GzipDecoder();
   }
 }

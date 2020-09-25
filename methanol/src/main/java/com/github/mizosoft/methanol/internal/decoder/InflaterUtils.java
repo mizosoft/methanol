@@ -24,42 +24,36 @@ package com.github.mizosoft.methanol.internal.decoder;
 
 import static java.util.Objects.requireNonNullElse;
 
-import com.github.mizosoft.methanol.decoder.AsyncDecoder;
-import java.io.IOException;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder.ByteSink;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder.ByteSource;
 import java.nio.ByteBuffer;
+import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 import java.util.zip.ZipException;
 
-/** Base class for deflate and gzip decoders. */
-abstract class ZLibDecoder implements AsyncDecoder {
+class InflaterUtils {
+  private InflaterUtils() {}
 
-  private final WrapMode wrapMode;
-  final Inflater inflater; // package-private for subclass access
-
-  ZLibDecoder(WrapMode wrapMode) {
-    this.wrapMode = wrapMode;
-    inflater = wrapMode.newInflater();
-  }
-
-  @Override
-  public String encoding() {
-    return wrapMode.encoding;
-  }
-
-  @Override
-  public void close() {
-    inflater.end(); // Inflate::end is thread-safe
-  }
-
-  void inflateSource(ByteSource source, ByteSink sink) throws IOException {
+  /** Keeps inflating source either till it's exhausted or the inflater is finished. */
+  static void inflateSource(Inflater inflater, ByteSource source, ByteSink sink)
+      throws ZipException {
     while (source.hasRemaining() && !inflater.finished()) {
-      inflateBlock(source.currentSource(), sink.currentSink());
+      inflateBlock(inflater, source.currentSource(), sink.currentSink());
+    }
+  }
+
+  /** Same as {@code inflateSource} but with computing the CRC32 checksum of inflated bytes. */
+  static void inflateSourceWithChecksum(
+      Inflater inflater, ByteSource source, ByteSink sink, CRC32 checksum) throws ZipException {
+    while (source.hasRemaining() && !inflater.finished()) {
+      inflateBlockWithChecksum(inflater, source.currentSource(), sink.currentSink(), checksum);
     }
   }
 
   // Inflate [in, out] block (`in` is swapped only if inflater needs input)
-  void inflateBlock(ByteBuffer in, ByteBuffer out) throws IOException {
+  private static void inflateBlock(Inflater inflater, ByteBuffer in, ByteBuffer out)
+      throws ZipException {
     if (inflater.needsInput()) {
       inflater.setInput(in);
     } else if (inflater.needsDictionary()) {
@@ -72,20 +66,14 @@ abstract class ZLibDecoder implements AsyncDecoder {
     }
   }
 
-  enum WrapMode {
-    DEFLATE("deflate", false),
-    GZIP("gzip", true); // gzip has it's own wrapping method
-
-    final String encoding;
-    final boolean nowrap;
-
-    WrapMode(String encoding, boolean nowrap) {
-      this.encoding = encoding;
-      this.nowrap = nowrap;
-    }
-
-    Inflater newInflater() {
-      return new Inflater(nowrap);
-    }
+  private static void inflateBlockWithChecksum(
+      Inflater inflater, ByteBuffer in, ByteBuffer out, CRC32 checksum) throws ZipException {
+    out.mark();
+    inflateBlock(inflater, in, out);
+    int originalLimit = out.limit();
+    int writtenLimit = out.position();
+    out.reset();
+    checksum.update(out.limit(writtenLimit)); // Consumes to written limit AKA original position
+    out.limit(originalLimit);
   }
 }

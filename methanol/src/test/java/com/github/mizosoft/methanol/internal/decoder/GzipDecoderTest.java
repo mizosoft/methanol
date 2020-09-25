@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.testutils.MockGzipMember;
 import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
 import com.github.mizosoft.methanol.testutils.dec.Decode;
@@ -67,7 +68,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
   }
 
   @Override
-  ZLibDecoder newDecoder() {
+  AsyncDecoder newDecoder() {
     return new GzipDecoder();
   }
 

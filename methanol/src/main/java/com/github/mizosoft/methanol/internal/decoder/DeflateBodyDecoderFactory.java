@@ -22,11 +22,12 @@
 
 package com.github.mizosoft.methanol.internal.decoder;
 
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
 
 /** {@code BodyDecoder.Factory} for "deflate". */
 @DefaultProvider
-public final class DeflateBodyDecoderFactory extends ZLibBodyDecoderFactory {
+public final class DeflateBodyDecoderFactory extends AsyncBodyDecoderFactory {
 
   /**
    * Creates a new {@code DeflateBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}.
@@ -35,11 +36,11 @@ public final class DeflateBodyDecoderFactory extends ZLibBodyDecoderFactory {
 
   @Override
   public String encoding() {
-    return "deflate";
+    return DeflateDecoder.ENCODING;
   }
 
   @Override
-  ZLibDecoder newDecoder() {
+  AsyncDecoder newDecoder() {
     return new DeflateDecoder();
   }
 }

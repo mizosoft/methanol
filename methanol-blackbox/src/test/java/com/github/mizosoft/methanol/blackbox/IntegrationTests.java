@@ -35,6 +35,7 @@ import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static com.github.mizosoft.methanol.testutils.TestUtils.load;
 import static com.github.mizosoft.methanol.testutils.TestUtils.loadAscii;
+import static com.github.mizosoft.methanol.testutils.TestUtils.zlibUnwrap;
 import static java.net.http.HttpRequest.BodyPublishers.fromPublisher;
 import static java.net.http.HttpResponse.BodyHandlers.discarding;
 import static java.net.http.HttpResponse.BodyHandlers.ofString;
@@ -229,22 +230,31 @@ class IntegrationTests {
     TestUtils.shutdown(executor, scheduler);
   }
 
-  private void assertDecodesSmall(String encoding) throws Exception {
+  private void assertDecodes(String encoding, String expected, byte[] compressed) throws Exception {
     server.enqueue(new MockResponse()
-        .setBody(okBuffer(BASE64_DEC.decode(poemEncodings.get(encoding))))
+        .setBody(okBuffer(compressed))
         .setHeader("Content-Encoding", encoding));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofString()));
-    assertEquals(poem, response.body());
+    assertLinesMatch(lines(expected), lines(response.body()));
+  }
+
+  private void assertDecodesSmall(String encoding) throws Exception {
+    var compressed = BASE64_DEC.decode(poemEncodings.get(encoding));
+    assertDecodes(encoding, poem, compressed);
+    // Test deflate body without zlib wrapping
+    if (encoding.equals("deflate")) {
+      assertDecodes(encoding, poem, zlibUnwrap(compressed));
+    }
   }
 
   private void assertDecodesLarge(String encoding) throws Exception {
-    server.enqueue(new MockResponse()
-        .setBody(okBuffer(lotsOfTextEncodings.get(encoding)))
-        .setHeader("Content-Encoding", encoding));
-    var request = HttpRequest.newBuilder(server.url("/").uri()).build();
-    var response = client.send(request, decoding(ofString()));
-    assertLinesMatch(lines(lotsOfText), lines(response.body()));
+    var compressed = lotsOfTextEncodings.get(encoding);
+    assertDecodes(encoding, lotsOfText,  compressed);
+    // Test deflate body without zlib wrapping
+    if (encoding.equals("deflate")) {
+      assertDecodes(encoding, lotsOfText, zlibUnwrap(compressed));
+    }
   }
 
   @Test
