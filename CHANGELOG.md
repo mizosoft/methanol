@@ -1,10 +1,18 @@
 # Change Log
 
+## Version 1.4.1
+
+*26-9-2020*
+
+* Updated dependencies.
+* Fix (#25): Autodetect if a deflated stream is zlib-wrapped or not to not crash when some servers
+  incorrectly send raw deflated bytes for the `deflate` encoding.
+
 ## Version 1.4.0
 
 *27-7-2020*
 
-* Multipart progress tracking
+* Multipart progress tracking.
 
 ## Version 1.3.0
 

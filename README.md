@@ -27,7 +27,7 @@ and easier to use with Methanol.
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol:1.4.0'
+  implementation 'com.github.mizosoft.methanol:methanol:1.4.1'
 }
 ```
 
@@ -38,7 +38,7 @@ dependencies {
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol</artifactId>
-    <version>1.4.0</version>
+    <version>1.4.1</version>
   </dependency>
 </dependencies>
 ```

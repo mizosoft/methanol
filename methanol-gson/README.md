@@ -10,7 +10,7 @@ Add this module as a dependency:
 
 ```gradle
 dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-gson:1.4.0'
+  implementation 'com.github.mizosoft.methanol:methanol-gson:1.4.1'
 }
 ```
 
@@ -21,7 +21,7 @@ dependencies {
   <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol-gson</artifactId>
-    <version>1.4.0</version>
+    <version>1.4.1</version>
   </dependency>
 </dependencies>
 ```

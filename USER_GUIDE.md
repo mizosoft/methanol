@@ -220,8 +220,8 @@ Methanol client = Methanol.newBuilder(baseClient)
 
 If transparent compression is enabled, the client will request a compressed response with all
 supported schemes (available `BodyDecoder` providers). For example, if gzip, deflate and brotli are
-supported, each request will have an `Accept-Encoding: brotli, deflate, gzip` header added.
-Of course, the response will be automatically decompressed as well.
+supported, each request will have an `Accept-Encoding: br, deflate, gzip` header added. Of course,
+the response will be automatically decompressed as well.
 
 #### No overwrites
 
