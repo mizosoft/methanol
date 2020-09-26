@@ -5,7 +5,7 @@
 *26-9-2020*
 
 * Updated dependencies.
-* Fix (#25): Autodetect if a deflated stream is zlib-wrapped or not to not crash when some servers
+* Fix: Autodetect if a deflated stream is zlib-wrapped or not to not crash when some servers 
   incorrectly send raw deflated bytes for the `deflate` encoding.
 
 ## Version 1.4.0
