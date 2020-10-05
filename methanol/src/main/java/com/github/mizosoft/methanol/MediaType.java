@@ -22,24 +22,19 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.internal.Utils.TOKEN_MATCHER;
-import static com.github.mizosoft.methanol.internal.Utils.isValidToken;
+import static com.github.mizosoft.methanol.internal.Utils.escapeAndQuoteValueIfNeeded;
+import static com.github.mizosoft.methanol.internal.Utils.normalizeToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.closedRange;
+import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.QUOTED_PAIR_MATCHER;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.text.CharMatcher;
-import java.nio.CharBuffer;
+import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -64,28 +59,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * charset parameter are converted into lower-case.
  */
 public final class MediaType {
-
-  // media-type     = type "/" subtype *( OWS ";" OWS parameter )
-  // type           = token
-  // subtype        = token
-  // parameter      = token "=" ( token / quoted-string )
-
-  // quoted-string  = DQUOTE *( qdtext / quoted-pair ) DQUOTE
-  // qdtext         = HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text
-  // obs-text       = %x80-FF
-  private static final CharMatcher QUOTED_TEXT_MATCHER =
-      chars("\t \u0021") // HTAB + SP + 0x21
-          .or(closedRange(0x23, 0x5B))
-          .or(closedRange(0x5D, 0x7E));
-
-  // quoted-pair    = "\" ( HTAB / SP / VCHAR / obs-text )
-  private static final CharMatcher QUOTED_PAIR_MATCHER =
-      chars("\t ") // HTAB + SP
-          .or(closedRange(0x21, 0x7E)); // VCHAR
-
-  //  OWS = *( SP / HTAB )
-  private static final CharMatcher OWS_MATCHER = chars("\t ");
-
   private static final String CHARSET_ATTRIBUTE = "charset";
   private static final String WILDCARD = "*";
 
@@ -334,7 +307,7 @@ public final class MediaType {
     if (!parameters.isEmpty()) {
       String joinedParameters =
           parameters.entrySet().stream()
-              .map(e -> e.getKey() + "=" + escapeAndQuoteValue(e.getValue()))
+              .map(e -> e.getKey() + "=" + escapeAndQuoteValueIfNeeded(e.getValue()))
               .collect(Collectors.joining("; "));
       str += "; " + joinedParameters;
     }
@@ -401,188 +374,29 @@ public final class MediaType {
    * @throws IllegalArgumentException if the given string is an invalid media type
    */
   public static MediaType parse(String value) {
+    // media-type     = type "/" subtype *( OWS ";" OWS parameter )
+    // type           = token
+    // subtype        = token
+    // parameter      = token "=" ( token / quoted-string )
+
     try {
-      List<String> components = Component.parseComponents(value);
-      Map<String, String> parameters = new LinkedHashMap<>();
-      for (int i = 2; i < components.size(); i += 2) {
-        parameters.put(components.get(i), components.get(i + 1));
+      var tokenizer = new HeaderValueTokenizer(value);
+      var type = tokenizer.nextToken();
+      tokenizer.requireCharacter('/');
+      var subtype = tokenizer.nextToken();
+
+      Map<String, String> parameters = null;
+      while (tokenizer.consumeDelimiter(';')) {
+        if (parameters == null) {
+          parameters = new LinkedHashMap<>();
+        }
+        var name = tokenizer.nextToken();
+        tokenizer.requireCharacter('=');
+        parameters.put(name, tokenizer.nextTokenOrQuotedString());
       }
-      return of(components.get(0), components.get(1), parameters);
+      return parameters != null ? of(type, subtype, parameters) : of(type, subtype);
     } catch (IllegalArgumentException | IllegalStateException e) {
       throw new IllegalArgumentException(format("couldn't parse: '%s'", value), e);
-    }
-  }
-
-  /**
-   * From RFC 7230 section 3.2.6:
-   *
-   * <p>"A sender SHOULD NOT generate a quoted-pair in a quoted-string except where necessary to
-   * quote DQUOTE and backslash octets occurring within that string."
-   */
-  private static String escapeAndQuoteValue(String value) {
-    // If value is already a token then it doesn't need quoting
-    // special case: if the value is empty then it is not a token
-    if (isValidToken(value)) {
-      return value;
-    }
-    StringBuilder escaped = new StringBuilder();
-    CharBuffer buffer = CharBuffer.wrap(value);
-    escaped.append('"');
-    while (buffer.hasRemaining()) {
-      char c = buffer.get();
-      if (c == '"' || c == '\\') {
-        escaped.append('\\');
-      }
-      escaped.append(c);
-    }
-    escaped.append('"');
-    return escaped.toString();
-  }
-
-  private static String normalizeToken(String token) {
-    requireArgument(isValidToken(token), "illegal token: '%s'", token);
-    return toAsciiLowerCase(token);
-  }
-
-  private static String toAsciiLowerCase(CharSequence value) {
-    StringBuilder lower = new StringBuilder(value.length());
-    for (int i = 0; i < value.length(); i++) {
-      lower.append(Character.toLowerCase(value.charAt(i)));
-    }
-    return lower.toString();
-  }
-
-  /** A parse component in a media type string. */
-  private enum Component {
-    TYPE {
-      @Override
-      String read(CharBuffer buff) {
-        return readToken(buff);
-      }
-
-      @Override
-      Component next(CharBuffer buff) {
-        requireCharacter(buff, '/');
-        return SUBTYPE;
-      }
-    },
-
-    SUBTYPE {
-      @Override
-      String read(CharBuffer buff) {
-        return readToken(buff);
-      }
-
-      @Override
-      @Nullable
-      Component next(CharBuffer buff) {
-        return consumeDelimiter(buff) ? NAME : null;
-      }
-    },
-
-    NAME {
-      @Override
-      String read(CharBuffer buff) {
-        return readToken(buff);
-      }
-
-      @Override
-      Component next(CharBuffer buff) {
-        requireCharacter(buff, '=');
-        return VALUE;
-      }
-    },
-
-    VALUE {
-      @Override
-      String read(CharBuffer buff) {
-        if (consumeCharIfPresent(buff, '"')) { // quoted-string rule
-          StringBuilder unescaped = new StringBuilder();
-          while (!consumeCharIfPresent(buff, '"')) {
-            char c = getCharacter(buff);
-            requireArgument(
-                QUOTED_TEXT_MATCHER.matches(c) || c == '\\',
-                "illegal char %#x in a quoted-string",
-                (int) c);
-            if (c == '\\') { // quoted-pair
-              c = getCharacter(buff);
-              requireArgument(
-                  QUOTED_PAIR_MATCHER.matches(c), "illegal char %#x in a quoted-pair", (int) c);
-            }
-            unescaped.append(c);
-          }
-          return unescaped.toString();
-        }
-        return readToken(buff);
-      }
-
-      @Override
-      @Nullable
-      Component next(CharBuffer buff) {
-        return consumeDelimiter(buff) ? NAME : null;
-      }
-    };
-
-    abstract String read(CharBuffer buff);
-
-    abstract @Nullable Component next(CharBuffer buff);
-
-    char getCharacter(CharBuffer buff) {
-      requireState(buff.hasRemaining(), "expected more: %s", toString());
-      return buff.get();
-    }
-
-    void requireCharacter(CharBuffer buff, char c) {
-      requireState(getCharacter(buff) == c, "expected a %c after: %s", c, toString());
-    }
-
-    String readToken(CharBuffer buff) {
-      int begin = buff.position();
-      consumeIfPresent(buff, TOKEN_MATCHER);
-      int end = buff.position();
-      requireState(end > begin, "expected a token after: %s", toString());
-      int originalPos = buff.position();
-      CharBuffer subSequence = buff.position(begin).subSequence(0, end - begin);
-      buff.position(originalPos);
-      return subSequence.toString();
-    }
-
-    boolean consumeDelimiter(CharBuffer buff) {
-      // 1*( OWS ";" OWS )
-      if (buff.hasRemaining()) {
-        consumeIfPresent(buff, OWS_MATCHER);
-        requireCharacter(buff, ';'); // First delimiter must exist
-        // Ignore dangling semicolons, see https://github.com/google/guava/issues/1726
-        do {
-          consumeIfPresent(buff, OWS_MATCHER);
-        } while (consumeCharIfPresent(buff, ';'));
-      }
-      return buff.hasRemaining();
-    }
-
-    static void consumeIfPresent(CharBuffer buff, CharMatcher matcher) {
-      while (buff.hasRemaining() && matcher.matches(buff.get(buff.position()))) {
-        buff.get(); // consume
-      }
-    }
-
-    static boolean consumeCharIfPresent(CharBuffer buff, char c) {
-      if (buff.hasRemaining()) {
-        if (buff.get(buff.position()) == c) {
-          buff.get(); // consume
-          return true;
-        }
-      }
-      return false;
-    }
-
-    static List<String> parseComponents(String value) {
-      CharBuffer valueBuff = CharBuffer.wrap(value);
-      List<String> components = new ArrayList<>();
-      for (Component c = TYPE; c != null; c = c.next(valueBuff)) {
-        components.add(c.read(valueBuff));
-      }
-      return components;
     }
   }
 }

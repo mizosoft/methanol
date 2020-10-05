@@ -23,47 +23,25 @@
 package com.github.mizosoft.methanol.internal;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.alphaNum;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.closedRange;
+import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_VALUE_MATCHER;
+import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.text.CharMatcher;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.time.Duration;
 
 /** Miscellaneous utilities. */
 public class Utils {
-
-  // header-field   = field-name ":" OWS field-value OWS
-  //
-  // field-name     = token
-  // field-value    = *( field-content / obs-fold )
-
-  // token          = 1*tchar
-  // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
-  //                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
-  //                    / DIGIT / ALPHA
-  //                    ; any VCHAR, except delimiters
-  public static final CharMatcher TOKEN_MATCHER =
-      chars("!#$%&'*+-.^_`|~")
-          .or(alphaNum());
-
-  // field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
-  // field-vchar    = VCHAR / obs-text
-  //
-  // obs-fold       = CRLF 1*( SP / HTAB )
-  //                ; obsolete line folding
-  //                ; see Section 3.2.4
-  // (obs-fold & obs-test will be forbidden)
-  public static final CharMatcher FIELD_VALUE_MATCHER =
-      closedRange(0x21, 0x7E) // VCHAR
-          .or(chars(" \t"));  // ( SP / HTAB )
-
   private Utils() {} // non-instantiable
 
   public static boolean isValidToken(String token) {
     return !token.isEmpty() && TOKEN_MATCHER.allMatch(token);
+  }
+
+  public static String normalizeToken(String token) {
+    requireArgument(isValidToken(token), "illegal token: '%s'", token);
+    return toAsciiLowerCase(token);
   }
 
   public static void validateHeaderName(String name) {
@@ -97,8 +75,38 @@ public class Utils {
     return toCopy;
   }
 
-  @SuppressWarnings({"TypeParameterUnusedInFormals", "unused"})
-  public static <T> T TODO() {
-    throw new UnsupportedOperationException("not implemented");
+  /**
+   * From RFC 7230 section 3.2.6:
+   *
+   * <p>"A sender SHOULD NOT generate a quoted-pair in a quoted-string except where necessary to
+   * quote DQUOTE and backslash octets occurring within that string."
+   */
+  public static String escapeAndQuoteValueIfNeeded(String value) {
+    // If value is already a token then it doesn't need quoting
+    // special case: if the value is empty then it is not a token
+    return isValidToken(value) ? value : escapeAndQuote(value);
+  }
+
+  private static String escapeAndQuote(String value) {
+    var escaped = new StringBuilder();
+    var buffer = CharBuffer.wrap(value);
+    escaped.append('"');
+    while (buffer.hasRemaining()) {
+      char c = buffer.get();
+      if (c == '"' || c == '\\') {
+        escaped.append('\\');
+      }
+      escaped.append(c);
+    }
+    escaped.append('"');
+    return escaped.toString();
+  }
+
+  private static String toAsciiLowerCase(CharSequence value) {
+    var lower = new StringBuilder(value.length());
+    for (int i = 0; i < value.length(); i++) {
+      lower.append(Character.toLowerCase(value.charAt(i)));
+    }
+    return lower.toString();
   }
 }
