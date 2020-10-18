@@ -33,7 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.internal.cache.Store.Entry;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testutils.BuffIterator;
 import java.io.ByteArrayOutputStream;
@@ -51,21 +50,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 abstract class StoreTest {
-  private static final String METADATA_1 = "MetadataAlpha";
-  private static final String DATA_1 = "DataAlpha".repeat(10);
+  static final String METADATA_1 = "MetadataAlpha";
+  static final String DATA_1 = "DataAlpha".repeat(10);
 
-  private static final String METADATA_2 = "MetadataBeta";
-  private static final String DATA_2 = "DataBeta".repeat(10);
+  static final String METADATA_2 = "MetadataBeta";
+  static final String DATA_2 = "DataBeta".repeat(10);
 
-  Store store;
+  @MonotonicNonNull Store store;
   private final List<AutoCloseable> closeables = new ArrayList<>();
 
   abstract Store newStore(long maxSize);
@@ -102,48 +102,39 @@ abstract class StoreTest {
   }
 
   @Test
-  void entryOpenCreateEvict() {
-    assertNull(store.open("e1"));
-    assertNotNull(store.openOrCreate("e1"));
-    assertNotNull(store.open("e1"));
-    assertNull(store.open("e2"));
+  void openCreateEvict() {
+    assertNull(store.view("e1"));
+    assertNotNull(newManaged(() -> store.edit("e1")));
+    assertNull(store.view("e2"));
     assertTrue(store.evict("e1"));
-    assertNull(store.open("e1"));
-    assertNotNull(store.openOrCreate("e1"));
-    assertNotNull(store.openOrCreate("e2"));
+    assertNull(store.view("e1"));
+    assertNotNull(newManaged(() -> store.edit("e1")));
+    assertNotNull(newManaged(() -> store.edit("e2")));
     store.evictAll();
-    assertNull(store.open("e1"));
-    assertNull(store.open("e2"));
+    assertNull(store.view("e1"));
+    assertNull(store.view("e2"));
   }
 
   @Test
   void entryWriteRead() {
-    try (var entry = store.openOrCreate("e1")) {
-      assertNull(entry.view()); // No viewer is present as no data should be written
-      writeEntry(entry, METADATA_1, DATA_1);
-      assertEntryContains(entry, METADATA_1, DATA_1);
-      assertEquals(utf8Length(METADATA_1, DATA_1), store.size());
-    }
-
-    // Re-check after closing written entry
+    writeEntry("e1", METADATA_1, DATA_1);
     assertEntryContains("e1", METADATA_1, DATA_1);
+    assertEquals(utf8Length(METADATA_1, DATA_1), store.size());
   }
 
   @Test
   void entryWriteRead_concurrentViewers() {
     writeEntry("e1", METADATA_1, DATA_1);
-    try (var entry = notNull(store.open("e1"))) {
-      int viewerCount = 10;
-      var begin = new CountDownLatch(1);
-      var cfs = IntStream.range(0, viewerCount)
-          .mapToObj(__ -> CompletableFuture.runAsync(() -> {
-            awaitUninterruptibly(begin);
-            assertEntryContains(entry, METADATA_1, DATA_1);
-          }))
-          .collect(Collectors.toUnmodifiableList());
-      begin.countDown();
-      assertAll(cfs.stream().map(cf -> cf::join));
-    }
+    int viewerCount = 10;
+    var begin = new CountDownLatch(1);
+    var cfs = IntStream.range(0, viewerCount)
+        .mapToObj(__ -> CompletableFuture.runAsync(() -> {
+          awaitUninterruptibly(begin);
+          assertEntryContains("e1", METADATA_1, DATA_1);
+        }))
+        .collect(Collectors.toUnmodifiableList());
+    begin.countDown();
+    assertAll(cfs.stream().map(cf -> cf::join));
   }
 
   @Test
@@ -179,24 +170,20 @@ abstract class StoreTest {
 
   @Test
   void mutateMetadataBufferAfterPassingToEditor() {
-    try (var entry = store.openOrCreate("e1")) {
-      var metadata = ByteBuffer.wrap("420".getBytes(UTF_8));
-      try (var editor = notNull(entry.edit())) {
-        editor.metadata(metadata);
-        metadata.rewind().put(new byte[] {'6', '9'});
-      }
-      assertEntryContains(entry, "420", "");
+    var metadata = ByteBuffer.wrap("420".getBytes(UTF_8));
+    try (var editor = notNull(store.edit("e1"))) {
+      editor.metadata(metadata);
+      metadata.rewind().put(new byte[] {'6', '9'});
     }
+    assertEntryContains("e1", "420", "");
   }
 
   @Test
   void metadataBufferReturnedFromViewerIsReadOnly() {
-    try (var entry = store.openOrCreate("e1")) {
-      writeEntry(entry, "555", "");
-      try (var viewer = notNull(entry.view())) {
-        assertThrows(
-            ReadOnlyBufferException.class, () -> viewer.metadata().put(new byte[] {'6', '9'}));
-      }
+    writeEntry("e1", "555", "");
+    try (var viewer = notNull(store.view("e1"))) {
+      assertThrows(
+          ReadOnlyBufferException.class, () -> viewer.metadata().put(new byte[] {'6', '9'}));
     }
   }
 
@@ -209,69 +196,57 @@ abstract class StoreTest {
 
   @Test
   void discardEdit() {
-    try (var entry = store.openOrCreate("e1")) {
-      try (var editor = notNull(entry.edit())) {
-        writeEntry(editor, METADATA_1, DATA_1);
-        editor.discard();
-      }
-      assertNull(entry.view()); // No readable data
-      assertEquals(0, store.size());
+    try (var editor = notNull(store.edit("e1"))) {
+      writeEntry(editor, METADATA_1, DATA_1);
+      editor.discard();
     }
-
-    // Entry remains created but has no data
-    // TODO is this behaviour justifiable? why not evict the entry if a first edit is discarded?
-    try (var entry = notNull(store.open("e1"))) {
-      assertNull(entry.view());
-    }
+    assertNull(store.view("e1"));
+    assertEquals(0, store.size());
+    assertFalse(store.evict("e1")); // Entry shouldn't be present
   }
 
   @Test
   void discardSecondEdit() {
-    try (var entry = store.openOrCreate("e1")) {
-      writeEntry(entry, METADATA_1, DATA_1);
-      try (var editor = notNull(entry.edit())) {
-        writeEntry(editor, METADATA_2, DATA_2);
-        editor.discard();
-      }
-
-      // Second edit data is discarded
-      assertEntryContains(entry, METADATA_1, DATA_1);
-      assertEquals(utf8Length(METADATA_1, DATA_1), store.size());
+    writeEntry("e1", METADATA_1, DATA_1);
+    try (var editor = notNull(store.edit("e1"))) {
+      writeEntry(editor, METADATA_2, DATA_2);
+      editor.discard();
     }
+    // Second edit data is discarded
+    assertEntryContains("e1", METADATA_1, DATA_1);
+    assertEquals(utf8Length(METADATA_1, DATA_1), store.size());
   }
 
   @Test
   void contendedEdit() {
-    try (var entry = store.openOrCreate("e1")) {
-      int threadCount = 10;
-      var gotEditor = new AtomicBoolean();
-      var begin = new CountDownLatch(1);
-      var end = new CountDownLatch(threadCount);
-      var executor = Executors.newCachedThreadPool();
-      var cfs = IntStream.range(0, threadCount)
-          .mapToObj(__ -> CompletableFuture.runAsync(() -> {
-            awaitUninterruptibly(begin);
-            var editor = entry.edit();
-            try {
-              assertTrue(editor == null || gotEditor.compareAndSet(false, true));
-              if (editor != null) {
-                writeEntry(editor, METADATA_1, DATA_1);
-              }
-            } finally {
-              // Keep ownership of the editor till all threads reach here
-              end.countDown();
-              awaitUninterruptibly(end);
-              if (editor != null) {
-                editor.close();
-              }
+    int threadCount = 10;
+    var gotEditor = new AtomicBoolean();
+    var begin = new CountDownLatch(1);
+    var end = new CountDownLatch(threadCount);
+    var executor = Executors.newCachedThreadPool();
+    var cfs = IntStream.range(0, threadCount)
+        .mapToObj(__ -> CompletableFuture.runAsync(() -> {
+          awaitUninterruptibly(begin);
+          var editor = store.edit("e1");
+          try {
+            assertTrue(editor == null || gotEditor.compareAndSet(false, true));
+            if (editor != null) {
+              writeEntry(editor, METADATA_1, DATA_1);
             }
-          }, executor))
-          .collect(Collectors.toUnmodifiableList());
-      executor.shutdown();
-      begin.countDown();
-      assertAll(cfs.stream().map(cf -> cf::join));
-      assertEntryContains(entry, METADATA_1, DATA_1);
-    }
+          } finally {
+            // Keep ownership of the editor (if owned) till all threads reach here
+            end.countDown();
+            awaitUninterruptibly(end);
+            if (editor != null) {
+              editor.close();
+            }
+          }
+        }, executor))
+        .collect(Collectors.toUnmodifiableList());
+    executor.shutdown();
+    begin.countDown();
+    assertAll(cfs.stream().map(cf -> cf::join));
+    assertEntryContains("e1", METADATA_1, DATA_1);
   }
 
   @Test
@@ -282,10 +257,10 @@ abstract class StoreTest {
     }
     assertEquals(entryCount * (utf8Length("metadata$", "data$")), store.size());
     assertEquals(entryCount, count(store));
-    for (var entry : store) {
-      try (entry) {
-        var index = entry.key().charAt(1) - '0';
-        assertEntryContains(entry, "metadata" + index, "data" + index);
+    for (var viewer : iterable(store)) {
+      try (viewer) {
+        var index = viewer.key().charAt(1) - '0';
+        assertEntryContains(viewer, "metadata" + index, "data" + index);
       }
     }
     store.evictAll();
@@ -295,25 +270,25 @@ abstract class StoreTest {
 
   /**
    * Iterator doesn't throw ConcurrentModificationException when the store is "concurrently"
-   * mutated (fail-safe). The iterator is typically implemented as a weakly consistent iterator but
-   * no string guarantees are made.
+   * mutated (fail-safe). The iterator is typically implemented as a weakly-consistent iterator but
+   * no strong guarantees are made.
    */
   @Test
   void iteratorNoCMEThrown() {
     writeEntry("e1", "metadata1", "data1");
     writeEntry("e2", "metadata2", "data2");
     writeEntry("e3", "metadata3", "data3");
-    var iter = store.iterator();
-    try (var entry = iter.next()) {
-      int index = entry.key().charAt(1) - '0';
-      assertEntryContains(entry, "metadata" + index, "data" + index);
+    var iter = store.viewAll();
+    try (var viewer = iter.next()) {
+      int index = viewer.key().charAt(1) - '0';
+      assertEntryContains(viewer, "metadata" + index, "data" + index);
     }
     writeEntry("e4", "metadata4", "data4");
     writeEntry("e5", "metadata5", "data5");
     while (iter.hasNext()) {
-      try (var entry = iter.next()) {
-        int index = entry.key().charAt(1) - '0';
-        assertEntryContains(entry, "metadata" + index, "data" + index);
+      try (var viewer = iter.next()) {
+        int index = viewer.key().charAt(1) - '0';
+        assertEntryContains(viewer, "metadata" + index, "data" + index);
       }
     }
   }
@@ -323,57 +298,36 @@ abstract class StoreTest {
     writeEntry("e1", "metadata1", "data1");
     writeEntry("e2", "metadata2", "data2");
     writeEntry("e3", "metadata3", "data3");
-    var iter = store.iterator();
+    var iter = store.viewAll();
     boolean removedE2 = false;
     while (iter.hasNext()) {
-      try (var entry = iter.next()) {
-        if ("e2".equals(entry.key())) {
+      try (var viewer = iter.next()) {
+        if ("e2".equals(viewer.key())) {
           assertFalse(removedE2);
           iter.remove();
           removedE2 = true;
         }
       }
     }
-    assertNull(store.open("e2"));
+    assertNull(store.view("e2"));
     assertEquals(2, count(store));
   }
 
-  /** Closing an editor for an evicted entry discards the edit. */
+  /** Closing an editor of an evicted entry discards the edit. */
   @Test
   void evictBeforeClosingEditorDiscardsData() {
-    try (var entry = store.openOrCreate("e1")) {
-      try (var editor = notNull(entry.edit())) {
-        writeEntry(editor, METADATA_1, DATA_1);
-        assertTrue(store.evict("e1"));
-      }
-      assertNull(store.open("e1"));
-      assertEquals(0, store.size());
-      // An editor after eviction is openable, but no data should ever be committed
-      try (var editor = notNull(entry.edit())) {
-        writeEntry(editor, METADATA_2, DATA_2);
-      }
-      assertNull(store.open("e1"));
-      assertEquals(0, store.size());
+    try (var editor = notNull(store.edit("e1"))) {
+      writeEntry(editor, METADATA_1, DATA_1);
+      assertTrue(store.evict("e1"));
     }
-    assertNull(store.open("e1"));
+    assertNull(store.view("e1"));
     assertEquals(0, store.size());
+    assertEquals(0, count(store));
   }
 
   @Test
   void evictNonExistingEntry() {
-    writeEntry("e1", METADATA_1, DATA_1);
-    assertFalse(store.evict("e2"));
-  }
-
-  @Test
-  void evictOpenedEntry() {
-    try (var entry = store.openOrCreate("e1")) {
-      writeEntry(entry, METADATA_1, DATA_1);
-      entry.evict();
-    }
-    assertNull(store.open("e1"));
-    assertEquals(0, store.size());
-    assertEquals(0, count(store));
+    assertFalse(store.evict("e1"));
   }
 
   @Test
@@ -390,7 +344,7 @@ abstract class StoreTest {
     writeEntry("e1", "aa", "bbb");
     assertEquals(5, store.size());
     writeEntry("e2", "ccc", "ddd");
-    assertNull(store.open("e1"));
+    assertNull(store.view("e1"));
     assertEquals(6, store.size());
     assertEquals(1, count(store));
     assertEntryContains("e2", "ccc", "ddd");
@@ -403,12 +357,12 @@ abstract class StoreTest {
     assertEquals(5, store.size());
     writeEntry("e2", "ccc", "ddd");
     assertEntryContains("e2", "ccc", "ddd");
-    assertNull(store.open("e1"));
+    assertNull(store.view("e1"));
     assertEquals(6, store.size());
     assertEquals(1, count(store));
     writeEntry("e3", "22", "333");
     assertEntryContains("e3", "22", "333");
-    assertNull(store.open("e2"));
+    assertNull(store.view("e2"));
     assertEquals(5, store.size());
     assertEquals(1, count(store));
   }
@@ -426,8 +380,8 @@ abstract class StoreTest {
       assertEntryContains(key1, "aa", "bbb");
       assertEntryContains(key2, "ccc", "ddd");
       if (i >= 3) {
-        assertNull(store.open("e" + (i - 2)));
-        assertNull(store.open("e" + (i - 1)));
+        assertNull(store.view("e" + (i - 2)));
+        assertNull(store.view("e" + (i - 1)));
       }
     }
     assertEquals(11, store.size());
@@ -450,21 +404,21 @@ abstract class StoreTest {
     assertEntryContains("e1", "aaa", "bbb"); // e2, e3, e1
     writeEntry("e4", "ggg", "hhh");          // e3, e1, e4
     assertEquals(18, store.size());
-    assertNull(store.open("e2"));
+    assertNull(store.view("e2"));
 
     assertEntryContains("e3", "eee", "fff"); // e1, e4, e3
     writeEntry("e5", "iii", "jjj");          // e4, e3, e5
     assertEquals(18, store.size());
-    assertNull(store.open("e1"));
+    assertNull(store.view("e1"));
 
     writeEntry("e6", "lll", "mmm");          // e3, e5, e6
     assertEquals(18, store.size());
-    assertNull(store.open("e4"));
+    assertNull(store.view("e4"));
 
     writeEntry("e7", "nnn", "opqrstuvw");    // e6, e7
     assertEquals(18, store.size());
-    assertNull(store.open("e3"));
-    assertNull(store.open("e5"));
+    assertNull(store.view("e3"));
+    assertNull(store.view("e5"));
 
     assertEntryContains("e6", "lll", "mmm"); // e7, e6
     writeEntry("e8", "xxx", "yyy");          // e6, e8
@@ -473,9 +427,9 @@ abstract class StoreTest {
     assertEquals(18, store.size());
 
     var expectedRemaining = new HashSet<>(Set.of("e6", "e8", "e9"));
-    for (var entry : store) {
-      try (entry ){
-        assertTrue(expectedRemaining.remove(entry.key()), expectedRemaining.toString());
+    for (var viewer : iterable(store)) {
+      try (viewer) {
+        assertTrue(expectedRemaining.remove(viewer.key()), expectedRemaining.toString());
       }
     }
     assertTrue(expectedRemaining.isEmpty(), expectedRemaining.toString());
@@ -486,7 +440,7 @@ abstract class StoreTest {
     store = newManagedStore(12);
     writeEntry("e1", "aaa", "bbb");
     writeEntry("e2", "ccc", "ddd");
-    try (var entry = store.openOrCreate("e3"); var editor = notNull(entry.edit())) {
+    try (var editor = notNull(store.edit("e3"))) {
       writeEntry(editor, "eee", "fff");
       editor.discard();
     }
@@ -496,7 +450,7 @@ abstract class StoreTest {
   }
 
   @Test
-  @Ignore("not yet implemented")
+  @Disabled("not yet implemented")
   void resetMaxSize_expanding() {
     store = newManagedStore(12);
     writeEntry("e1", "aaa", "ccc");
@@ -511,84 +465,93 @@ abstract class StoreTest {
   }
 
   @Test
-  @Ignore("not yet implemented")
+  @Disabled("not yet implemented")
   void resetMaxSize_truncating() {
     store = newManagedStore(12);
     writeEntry("e1", "aaa", "ccc");          // e1
     writeEntry("e2", "ccc", "ddd");          // e1, e2
     assertEntryContains("e1", "aaa", "ccc"); // e2, e1
     store.truncateTo(6);
-    assertNull(store.open("e2"));
+    assertNull(store.view("e2"));
     assertEquals(6, store.size());
   }
 
-  private void writeEntry(String key, String metadata, String data) {
-    try (var entry = store.openOrCreate(key)) {
-      writeEntry(entry, metadata, data);
+  @Test
+  void viewDataBeingWritten() {
+    try (var editor = notNull(store.edit("e1")); var viewer = editor.view()) {
+      assertEntryContains(viewer, "", "");
+      editor.metadata(UTF_8.encode(METADATA_1));
+      assertEntryContains(viewer, METADATA_1, "");
+      var dataBytes = UTF_8.encode(DATA_1);
+      editor.writeAsync(0, dataBytes);
+      assertEntryContains(viewer, METADATA_1, DATA_1);
+      editor.writeAsync(viewer.dataSize(), dataBytes.rewind());
+      assertEntryContains(viewer, METADATA_1, DATA_1.repeat(2));
     }
   }
 
-  private void assertEntryContains(String key, String metadata, String data) {
-    try (var entry = notNull(store.open(key)); var viewer = notNull(entry.view())) {
+  void writeEntry(String key, String metadata, String data) {
+    try (var editor = notNull(store.edit(key))) {
+      writeEntry(editor, metadata, data);
+    }
+  }
+
+  void assertEntryContains(String key, String metadata, String data) {
+    try (var viewer = notNull(store.view(key))) {
       assertEntryContains(viewer, metadata, data);
     }
   }
 
-  private static void assertEntryContains(Entry entry, String metadata, String data) {
-    try (var viewer = notNull(entry.view())) {
-      assertEntryContains(viewer, metadata, data);
-    }
-  }
-
-  private static void assertEntryContains(Viewer viewer, String metadata, String data) {
+  static void assertEntryContains(Viewer viewer, String metadata, String data) {
     assertEquals(metadata, UTF_8.decode(viewer.metadata()).toString());
     assertEquals(data, readString(viewer));
+    assertEquals(utf8Length(data), viewer.dataSize());
+    assertEquals(utf8Length(metadata, data), viewer.entrySize());
   }
 
-  private static int utf8Length(String... values) {
+  static int utf8Length(String... values) {
     return Stream.of(values)
         .map(UTF_8::encode)
         .mapToInt(ByteBuffer::remaining)
         .sum();
   }
 
-  private static int count(Iterable<?> iterable) {
+  static int count(Store store) {
     int count = 0;
-    for (var __ : iterable) {
+    for (var viewer : iterable(store)) {
+      viewer.close();
       count++;
     }
     return count;
   }
 
-  private static <T> @NonNull T notNull(@Nullable T value) {
+  static Iterable<Viewer> iterable(Store store) {
+    return store::viewAll;
+  }
+
+  static <T> @NonNull T notNull(@Nullable T value) {
     assertNotNull(value);
     return value;
   }
 
-  private static void writeEntry(Entry entry, String metadata, String data) {
-    try (var editor = notNull(entry.edit())) {
-      writeEntry(editor, metadata, data);
-    }
-  }
-
-  private static void writeEntry(Editor editor, String metadata, String data) {
+  static void writeEntry(Editor editor, String metadata, String data) {
     editor.metadata(UTF_8.encode(metadata));
     writeString(editor, data);
   }
 
-  private static void writeString(Editor editor, String data) {
+  static void writeString(Editor editor, String data) {
     writeBytes(editor, UTF_8.encode(data));
   }
 
-  private static String readString(Viewer viewer) {
+  static String readString(Viewer viewer) {
     return UTF_8.decode(readBytes(viewer)).toString();
   }
 
-  private static void writeBytes(Editor editor, ByteBuffer data) {
+  static void writeBytes(Editor editor, ByteBuffer data) {
     writeBytes(editor, data, 16);
   }
 
-  private static void writeBytes(Editor editor, ByteBuffer data, int buffSize) {
+  static void writeBytes(Editor editor, ByteBuffer data, int buffSize) {
     int pos = 0;
     for (var buffer : tokenize(data, buffSize)) {
       int toWrite = buffer.remaining();
@@ -599,18 +562,18 @@ abstract class StoreTest {
     }
   }
 
-  private static List<ByteBuffer> tokenize(ByteBuffer data, int buffSize) {
+  static List<ByteBuffer> tokenize(ByteBuffer data, int buffSize) {
     var iter = new BuffIterator(data, Math.max(1, buffSize));
     var list = new ArrayList<ByteBuffer>();
     iter.forEachRemaining(list::add);
     return List.copyOf(list);
   }
 
-  private static ByteBuffer readBytes(Viewer viewer) {
+  static ByteBuffer readBytes(Viewer viewer) {
     return readBytes(viewer, 16);
   }
 
-  private static ByteBuffer readBytes(Viewer viewer, int buffSize) {
+  static ByteBuffer readBytes(Viewer viewer, int buffSize) {
     var output = new ByteArrayOutputStream() {
       void write(ByteBuffer buffer) {
         var array = new byte[buffer.remaining()];
