@@ -46,12 +46,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * uses for indexing purposes. Thus, a store's {@code maxSize()} is not exact and might be slightly
  * exceeded as necessary.
  *
- * A {@code Store} is thread-safe and is suitable for concurrent use.
+ * <p>A {@code Store} is thread-safe and is suitable for concurrent use.
  */
-public interface Store extends Iterable<Store.Entry>, AutoCloseable {
+public interface Store extends AutoCloseable {
 
   // TODO most of these method should be able to throw IOException (use UncheckedIOException?)
-  // TODO is Entry really needed? why not just have view(string key) / edit(String key)?
+  // TODO document IllegalStateException thrown when the store is closed
 
   /** Returns this store's max size in bytes. */
   long maxSize();
@@ -59,18 +59,28 @@ public interface Store extends Iterable<Store.Entry>, AutoCloseable {
   /** Returns the optional executor used for background operations. */
   Optional<Executor> executor();
 
-  /** Returns the entry associated with the given key if present, otherwise returns {@code null}. */
+  /**
+   * Returns a {@code Viewer} for the entry associated with the given key, or {@code null} if
+   * there's no such entry.
+   */
   @Nullable
-  Entry open(String key);
+  Viewer view(String key);
 
-  /** Returns either the entry associated with the given key or a new one created atomically. */
-  Entry openOrCreate(String key);
+  /**
+   * Returns an {@code Editor} for the entry associated with given key, atomically creating a new
+   * entry if necessary, or {@code null} if such entry is currently being edited.
+   */
+  @Nullable
+  Editor edit(String key);
 
-  /** Async version of {@link #open(String)}. */
-  CompletableFuture<@Nullable Entry> openAsync(String key);
+  /**
+   * Version of {@link #view(String)} that opens the entry and reads it's metadata block
+   * asynchronously.
+   */
+  CompletableFuture<@Nullable Viewer> viewAsync(String key);
 
-  /** Async version of {@link #openOrCreate(String)} (String)}. */
-  CompletableFuture<Entry> openOrCreateAsync(String key);
+  /** Returns a <em>fail-safe</em> iterator of {@code Viewers} over the entries in this store. */
+  Iterator<Viewer> viewAll();
 
   /** Evicts the entry associated with the given key. */
   boolean evict(String key);
@@ -79,66 +89,72 @@ public interface Store extends Iterable<Store.Entry>, AutoCloseable {
   void evictAll();
 
   /**
-   * Returns the size in bytes all entries in this store consume. Actual consumed size might exceed
+   * Returns the size in bytes all entries in this store consume. Exact consumed size might exceed
    * the returned value.
    */
   long size();
 
-  /** Resets this store's max size. Might evict any excessive entries as needed. */
+  /** Resets this store's max size. Might evict any excessive entries as necessary. */
   default void truncateTo(long maxSize) {
     TODO();
   }
 
-  /** Returns a <em>fail-safe</em> iterator over the entries in this store. */
-  @Override
-  Iterator<Entry> iterator();
-
+  /** Closes this store. */
+  // TODO specify what is closed exactly
   @Override
   void close();
 
-  // TODO complete docs
+  /** Reads this entry's metadata block and data stream. */
+  interface Viewer extends Closeable {
 
-  interface Entry extends Closeable {
+    /** Returns entry's key. */
     String key();
 
-    @Nullable
-    Viewer view();
-
-    @Nullable
-    Editor edit();
-
-    void evict();
-
-    @Override
-    void close();
-  }
-
-  interface Viewer extends Closeable {
-    Entry entry();
-
+    /** Returns a readonly buffer containing this entry's metadata. */
     ByteBuffer metadata();
 
+    /**
+     * Asynchronously copies this entry's data from the given position to the given destination
+     * buffer, returning either the number of read bytes or {@code -1} if end-of-file is reached.
+     */
     CompletableFuture<Integer> readAsync(long position, ByteBuffer dst);
 
+    /** Returns the size in bytes of the data stream. */
     long dataSize();
 
+    /** Returns the size in bytes the metadata block and data stream occupy. */
     long entrySize();
 
+    /** Closes this viewer. */
     @Override
     void close();
   }
 
+  /** Writes this entry's metadata block and data stream. */
   interface Editor extends Closeable {
-    Entry entry();
 
+    /** Returns entry's key. */
+    String key();
+
+    /** Sets the metadata block. */
     void metadata(ByteBuffer metadata);
 
-    CompletableFuture<Integer> writeAsync(long position, ByteBuffer dst);
+    /**
+     * Asynchronously writes the given source buffer to this entry's data at the given position,
+     * returning either the number of read bytes or {@code -1} if end-of-file is reached.
+     */
+    CompletableFuture<Integer> writeAsync(long position, ByteBuffer src);
 
+    /** Returns a {@code Viewer} that reflects the metadata/data being written by this editor. */
     Viewer view();
 
+    /** Discards anything written. */
     void discard();
 
+    /**
+     * Closes this editor. Unless the edit is discarded, previous entry data, if any, will be
+     * overwritten by changes made by this editor.
+     */
     @Override
     void close();
   }
