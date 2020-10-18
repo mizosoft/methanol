@@ -58,7 +58,7 @@ public class TestUtils {
         public void cancel() {}
       };
 
-  public static void awaitUninterruptedly(CountDownLatch latch) {
+  public static void awaitUninterruptibly(CountDownLatch latch) {
     while (true) {
       try {
         latch.await();

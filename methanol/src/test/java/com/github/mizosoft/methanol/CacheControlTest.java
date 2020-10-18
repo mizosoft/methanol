@@ -125,6 +125,18 @@ class CacheControlTest {
   }
 
   @Test
+  void deltaSecondsLargerThanIntIsTruncated() {
+    var cacheControl = CacheControl.parse("max-age=2147483648");
+    assertEquals(Integer.MAX_VALUE, cacheControl.maxAgeSeconds());
+  }
+
+  @Test
+  void multipleValuesReplaceEachOther() {
+    var cacheControl = CacheControl.parse("max-age=1, max-age=2");
+    assertEquals(2, cacheControl.maxAgeSeconds());
+  }
+
+  @Test
   void equalsAndHashcode() {
     var cacheControl1 = CacheControl.parse("max-age=1, no-transform, max-stale=2");
     var cacheControl2 = CacheControl.parse("max-age=\"1\", max-stale=\"2\", no-transform");
