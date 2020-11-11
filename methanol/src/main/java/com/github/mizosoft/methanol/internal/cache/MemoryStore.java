@@ -45,8 +45,8 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * {@link Store} implementation that buffers entries in memory. Each entry can have at most
- * about 2GB of data.
+ * {@link Store} implementation that buffers entries in memory. Each entry can have at most about
+ * 2GB of data.
  */
 public final class MemoryStore implements Store {
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
@@ -158,8 +158,8 @@ public final class MemoryStore implements Store {
 
   private final class ViewerIterator implements Iterator<Viewer> {
     /**
-     * Iterator over a snapshot of currently available keys to avoid CMEs. This however will
-     * miss keys added after this iterator is returned, which is OK.
+     * Iterator over a snapshot of currently available keys to avoid CMEs. This however will miss
+     * keys added after this iterator is returned, which is OK.
      */
     private final Iterator<String> keysIterator;
 
@@ -173,7 +173,7 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    @EnsuresNonNullIf(expression="nextEntry", result=true)
+    @EnsuresNonNullIf(expression = "nextEntry", result = true)
     public boolean hasNext() {
       return nextViewer != null || (nextViewer = viewNextEntry()) != null;
     }
@@ -209,14 +209,16 @@ public final class MemoryStore implements Store {
   }
 
   private final class Entry {
+    private static final int ANY_VERSION = -1;
+
     final String key;
     private ByteBuffer metadata = EMPTY_BUFFER;
     private ByteBuffer data = EMPTY_BUFFER;
     private @Nullable Editor currentEditor;
     private boolean evicted;
 
-    /** True until this entry has it's first committed edit. */
-    private boolean virgin = true;
+    /** The number of committed edits. 0 means the entry can't be viewed. */
+    private int version;
 
     /** Guards non-final fields on edits but allows concurrent reads on views. */
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -225,22 +227,34 @@ public final class MemoryStore implements Store {
       this.key = key;
     }
 
-
-    @Nullable Viewer view() {
+    @Nullable
+    Viewer view() {
       lock.readLock().lock();
       try {
-        return virgin ? null : new SnapshotViewer(key, metadata.duplicate(), data.duplicate());
+        return version > 0
+            ? new SnapshotViewer(this, version, metadata.duplicate(), data.duplicate())
+            : null;
       } finally {
         lock.readLock().unlock();
       }
     }
 
-    @Nullable Editor edit() {
+    @Nullable
+    Editor edit() {
+      return edit(ANY_VERSION);
+    }
+
+    @Nullable
+    Editor edit(int targetVersion) {
       lock.writeLock().lock();
       try {
-        if (currentEditor != null) { // Ongoing edit
+        if (currentEditor != null
+            || (targetVersion != ANY_VERSION && targetVersion != version)
+            || evicted) {
+          // Ongoing edit or entry is modified
           return null;
         }
+
         var editor = new Editor(this);
         currentEditor = editor;
         return editor;
@@ -271,14 +285,14 @@ public final class MemoryStore implements Store {
 
         currentEditor = null;
         if (writtenData == null || evicted) { // Edit is discarded or entry was evicted
-          evictAfterDiscardedFirstEdit = !evicted && virgin;
+          evictAfterDiscardedFirstEdit = !evicted && version == 0;
           return;
         }
 
+        version++;
         previousEntrySize = (long) metadata.remaining() + data.remaining();
         metadata = editor.metadata.asReadOnlyBuffer();
         data = writtenData.asReadOnlyBuffer();
-        virgin = false;
         currentEntrySize = (long) metadata.remaining() + data.remaining();
       } finally {
         lock.writeLock().unlock();
@@ -289,7 +303,7 @@ public final class MemoryStore implements Store {
           synchronized (entries) {
             lock.writeLock().lock();
             try {
-              if (virgin) { // Recheck as another edit might have been made successfully
+              if (version == 0) { // Recheck as another edit might have been made successfully
                 entries.remove(key);
               }
             } finally {
@@ -306,31 +320,23 @@ public final class MemoryStore implements Store {
     }
   }
 
-  private abstract static class AbstractViewer implements Viewer {
-    private final String key;
-
-    AbstractViewer(String key) {
-      this.key = key;
-    }
-
-    @Override
-    public final String key() {
-      return key;
-    }
-
-    @Override
-    public final void close() {}
-  }
-
-  /** Views a snapshot of committed entry metadata/data. */
-  private static final class SnapshotViewer extends AbstractViewer {
+  /** Views a snapshot of committed entry's metadata/data. */
+  private static final class SnapshotViewer implements Store.Viewer {
+    private final Entry entry;
+    private final int snapshotVersion;
     private final ByteBuffer data;
     private final ByteBuffer metadata;
 
-    SnapshotViewer(String key, ByteBuffer metadata, ByteBuffer data) {
-      super(key);
+    SnapshotViewer(Entry entry, int snapshotVersion, ByteBuffer metadata, ByteBuffer data) {
+      this.entry = entry;
+      this.snapshotVersion = snapshotVersion;
       this.data = data;
       this.metadata = metadata;
+    }
+
+    @Override
+    public String key() {
+      return entry.key;
     }
 
     @Override
@@ -342,7 +348,7 @@ public final class MemoryStore implements Store {
     public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
       int readCount;
       if (position < data.limit()) {
-        // duplicate to change position independently in case concurrent reads
+        // duplicate to change position independently in case of concurrent reads
         var duplicateData = data.duplicate();
         readCount = Utils.copyRemaining(duplicateData.position((int) position), dst);
       } else {
@@ -360,9 +366,17 @@ public final class MemoryStore implements Store {
     public long entrySize() {
       return metadata.remaining() + data.remaining();
     }
+
+    @Override
+    public Store.@Nullable Editor edit() {
+      return entry.edit(snapshotVersion);
+    }
+
+    @Override
+    public void close() {}
   }
 
-  private final static class Editor implements Store.Editor {
+  private static final class Editor implements Store.Editor {
     private final Entry entry;
     private final GrowableBuffer buffer = new GrowableBuffer();
 
@@ -394,7 +408,7 @@ public final class MemoryStore implements Store {
         }
         Utils.copyRemaining(metadata, myMetadata.clear());
         myMetadata.flip();
-      } finally{
+      } finally {
         lock.writeLock().unlock();
       }
     }
@@ -434,9 +448,12 @@ public final class MemoryStore implements Store {
     }
 
     /** Views data currently being edited. */
-    private final class LiveViewer extends AbstractViewer {
-      LiveViewer() {
-        super(entry.key);
+    private final class LiveViewer implements Store.Viewer {
+      LiveViewer() {}
+
+      @Override
+      public String key() {
+        return entry.key;
       }
 
       @Override
@@ -478,6 +495,15 @@ public final class MemoryStore implements Store {
           lock.readLock().unlock();
         }
       }
+
+      @Override
+      public Store.@Nullable Editor edit() {
+        // An edit is always still in progress (by the editor that created this viewer)
+        return null;
+      }
+
+      @Override
+      public void close() {}
     }
   }
 
