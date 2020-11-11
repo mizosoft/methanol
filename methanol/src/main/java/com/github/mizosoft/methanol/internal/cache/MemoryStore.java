@@ -273,7 +273,8 @@ public final class MemoryStore implements Store {
       }
     }
 
-    void finishEdit(Editor editor, @Nullable ByteBuffer writtenData) {
+    void finishEdit(
+        Editor editor, @Nullable ByteBuffer newMetadata, @Nullable ByteBuffer newData) {
       long previousEntrySize;
       long currentEntrySize;
       boolean evictAfterDiscardedFirstEdit = false;
@@ -284,15 +285,19 @@ public final class MemoryStore implements Store {
         }
 
         currentEditor = null;
-        if (writtenData == null || evicted) { // Edit is discarded or entry was evicted
+        if ((newMetadata == null && newData == null) || evicted) { // Discarded edit or evicted
           evictAfterDiscardedFirstEdit = !evicted && version == 0;
           return;
         }
 
         version++;
         previousEntrySize = (long) metadata.remaining() + data.remaining();
-        metadata = editor.metadata.asReadOnlyBuffer();
-        data = writtenData.asReadOnlyBuffer();
+        if (newMetadata != null) {
+          metadata = newMetadata.asReadOnlyBuffer();
+        }
+        if (newData != null) {
+          data = newData.asReadOnlyBuffer();
+        }
         currentEntrySize = (long) metadata.remaining() + data.remaining();
       } finally {
         lock.writeLock().unlock();
@@ -378,7 +383,7 @@ public final class MemoryStore implements Store {
 
   private static final class Editor implements Store.Editor {
     private final Entry entry;
-    private final GrowableBuffer buffer = new GrowableBuffer();
+    private final GrowableBuffer data = new GrowableBuffer();
 
     private ByteBuffer metadata = EMPTY_BUFFER;
 
@@ -417,7 +422,7 @@ public final class MemoryStore implements Store {
     public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
       lock.writeLock().lock();
       try {
-        return CompletableFuture.completedFuture(buffer.write(position, src));
+        return CompletableFuture.completedFuture(data.write(position, src));
       } finally {
         lock.writeLock().unlock();
       }
@@ -430,21 +435,20 @@ public final class MemoryStore implements Store {
 
     @Override
     public void discard() {
-      entry.finishEdit(this, null);
+      entry.finishEdit(this, null, null);
     }
 
     @Override
     public void close() {
-      entry.finishEdit(this, copyWrittenData());
-    }
-
-    private ByteBuffer copyWrittenData() {
+      var newMetadata = metadata.hasRemaining() ? metadata : null;
+      ByteBuffer newData;
       lock.readLock().lock();
       try {
-        return buffer.copyWritten();
+        newData = data.writtenCount() > 0 ? data.copyWritten() : null;
       } finally {
         lock.readLock().unlock();
       }
+      entry.finishEdit(this, newMetadata, newData);
     }
 
     /** Views data currently being edited. */
@@ -470,7 +474,7 @@ public final class MemoryStore implements Store {
       public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
         lock.readLock().lock();
         try {
-          return CompletableFuture.completedFuture(buffer.read(position, dst));
+          return CompletableFuture.completedFuture(data.read(position, dst));
         } finally {
           lock.readLock().unlock();
         }
@@ -480,7 +484,7 @@ public final class MemoryStore implements Store {
       public long dataSize() {
         lock.readLock().lock();
         try {
-          return buffer.writtenCount();
+          return data.writtenCount();
         } finally {
           lock.readLock().unlock();
         }
@@ -490,7 +494,7 @@ public final class MemoryStore implements Store {
       public long entrySize() {
         lock.readLock().lock();
         try {
-          return metadata.remaining() + buffer.writtenCount();
+          return metadata.remaining() + data.writtenCount();
         } finally {
           lock.readLock().unlock();
         }
