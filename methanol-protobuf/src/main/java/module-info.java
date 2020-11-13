@@ -25,7 +25,7 @@ import com.github.mizosoft.methanol.adapter.protobuf.ProtobufAdapterFactory;
 /**
  * Provides {@link com.github.mizosoft.methanol.BodyAdapter.Encoder} and {@link
  * com.github.mizosoft.methanol.BodyAdapter.Decoder} implementations for Google's
- * <ahref="https://developers.google.com/protocol-buffers">Protocol Buffers</a>. Note that, for the
+ * <a href="https://developers.google.com/protocol-buffers">Protocol Buffers</a>. Note that, for the
  * sake of configurability, the adapters are not service-provided by default. You will need to
  * explicitly declare service-providers that delegate to the instances created by {@link
  * ProtobufAdapterFactory}.

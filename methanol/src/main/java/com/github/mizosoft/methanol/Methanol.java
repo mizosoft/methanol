@@ -330,7 +330,7 @@ public final class Methanol extends HttpClient {
      * An object that gives an interceptor the ability to relay requests to following interceptors,
      * till eventually being sent by the underlying {@code HttpClient}.
      *
-     * <p>{@param T the response body type}
+     * @param <T> the response body type
      */
     interface Chain<T> {
 
@@ -489,7 +489,7 @@ public final class Methanol extends HttpClient {
 
     /**
      * Adds an interceptor that is invoked after request decoration (i.e. after default properties
-     * or {@code BodyHandler transformations are applied).
+     * or {@code BodyHandler} transformations are applied).
      */
     public B postDecorationInterceptor(Interceptor interceptor) {
       requireNonNull(interceptor);
