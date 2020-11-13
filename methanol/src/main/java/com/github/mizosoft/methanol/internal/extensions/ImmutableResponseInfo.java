@@ -24,8 +24,10 @@ package com.github.mizosoft.methanol.internal.extensions;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.errorprone.annotations.Immutable;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.ResponseInfo;
 
 /** Basic implementation of {@code ResponseInfo}. */
@@ -54,5 +56,9 @@ public final class ImmutableResponseInfo implements ResponseInfo {
   @Override
   public Version version() {
     return version;
+  }
+
+  public static ResponseInfo from(HttpResponse<?> response) {
+    return new ImmutableResponseInfo(response.statusCode(), response.headers(), response.version());
   }
 }
