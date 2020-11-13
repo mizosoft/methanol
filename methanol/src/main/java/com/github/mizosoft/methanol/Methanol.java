@@ -27,9 +27,11 @@ import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
 
 import com.github.mizosoft.methanol.BodyDecoder.Factory;
-import com.github.mizosoft.methanol.MutableRequest.HeadersBuilder;
+import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
+import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
@@ -389,7 +391,7 @@ public final class Methanol extends HttpClient {
     public B userAgent(String userAgent) {
       validateHeaderValue(userAgent);
       this.userAgent = userAgent;
-      headersBuilder.setHeader("User-Agent", userAgent); // overwrite previous if any
+      headersBuilder.set("User-Agent", userAgent); // overwrite previous if any
       return self();
     }
 
@@ -418,7 +420,7 @@ public final class Methanol extends HttpClient {
       if (name.equalsIgnoreCase("User-Agent")) {
         userAgent = value;
       }
-      headersBuilder.addHeader(name, value);
+      headersBuilder.add(name, value);
       return self();
     }
 
@@ -441,9 +443,8 @@ public final class Methanol extends HttpClient {
     }
 
     /**
-     * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration)
-     * read timeout}. Timeout events are scheduled using a system-wide {@code
-     * ScheduledExecutorService}.
+     * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration) read
+     * timeout}. Timeout events are scheduled using a system-wide {@code ScheduledExecutorService}.
      */
     public B readTimeout(Duration readTimeout) {
       requirePositiveDuration(readTimeout);
@@ -651,6 +652,7 @@ public final class Methanol extends HttpClient {
 
     @Override
     public Interceptor.Chain<T> withBodyHandler(BodyHandler<T> bodyHandler) {
+      requireNonNull(bodyHandler);
       return new InterceptorChain<>(
           baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
     }
