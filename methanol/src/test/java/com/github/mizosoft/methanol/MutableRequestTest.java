@@ -155,13 +155,6 @@ class MutableRequestTest {
   }
 
   @Test
-  void testToString() {
-    var request = GET("https://google.com");
-    assertEquals("https://google.com GET", request.toString());
-    assertEquals("https://google.com GET", request.build().toString());
-  }
-
-  @Test
   void staticFactories() {
     assertEquals(uri, create(uri).uri());
     var getRequest = GET(uri);
