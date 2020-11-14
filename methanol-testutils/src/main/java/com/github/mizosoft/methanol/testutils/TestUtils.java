@@ -32,6 +32,9 @@ import java.net.http.HttpHeaders;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -109,7 +112,7 @@ public class TestUtils {
   public static HttpHeaders headers(String... pairs) {
     var headers = new LinkedHashMap<String, List<String>>();
     for (int i = 0, len = pairs.length; i < len; i += 2) {
-      headers.put(pairs[i], List.of(pairs[i + 1]));
+      headers.computeIfAbsent(pairs[i], __ -> new ArrayList<>()).add(pairs[i + 1]);
     }
     return HttpHeaders.of(headers, (n, v) -> true);
   }
@@ -149,11 +152,18 @@ public class TestUtils {
     }
   }
 
+  public static X509Certificate localhostCert() {
+    return new HeldCertificate.Builder()
+        .addSubjectAlternativeName(InetAddress.getLoopbackAddress().getCanonicalHostName())
+        .build()
+        .certificate();
+  }
+
   /** Build {@code SSLContext} that trusts a self-assigned certificate for localhost in tests. */
-  public static SSLContext localhostSslContext() throws IOException {
+  public static SSLContext localhostSslContext() {
     var heldCertificate =
         new HeldCertificate.Builder()
-            .addSubjectAlternativeName(InetAddress.getByName("localhost").getCanonicalHostName())
+            .addSubjectAlternativeName(InetAddress.getLoopbackAddress().getCanonicalHostName())
             .build();
     return new HandshakeCertificates.Builder()
         .heldCertificate(heldCertificate)
