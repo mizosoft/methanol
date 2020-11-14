@@ -67,8 +67,8 @@ public interface Store extends AutoCloseable {
   Viewer view(String key);
 
   /**
-   * Returns an {@code Editor} for the entry associated with given key, atomically creating a new
-   * entry if necessary, or {@code null} if such entry is currently being edited.
+   * Returns an {@code Editor} for the entry associated with given key (atomically creating a new
+   * entry if necessary), or {@code null} if such entry is currently being edited.
    */
   @Nullable
   Editor edit(String key);
@@ -94,7 +94,7 @@ public interface Store extends AutoCloseable {
    */
   long size();
 
-  /** Resets this store's max size. Might evict any excessive entries as necessary. */
+  /** Resets this store's max size. Evicts any excessive entries as necessary. */
   default void resetMaxSize(long maxSize) {
     TODO();
   }
@@ -109,7 +109,7 @@ public interface Store extends AutoCloseable {
   @Override
   void close();
 
-  /** Reads this entry's metadata block and data stream. */
+  /** Reads an entry's metadata block and data stream. */
   interface Viewer extends Closeable {
 
     /** Returns entry's key. */
@@ -154,19 +154,17 @@ public interface Store extends AutoCloseable {
 
     /**
      * Asynchronously writes the given source buffer to this entry's data at the given position,
-     * returning either the number of read bytes or {@code -1} if end-of-file is reached.
+     * returning the number of written bytes.
      */
     CompletableFuture<Integer> writeAsync(long position, ByteBuffer src);
 
-    /** Returns a {@code Viewer} that reflects the metadata/data being written by this editor. */
+    /** Returns a {@code Viewer} that reflects the changes made by this editor. */
     Viewer view();
 
     /** Discards anything written. */
     void discard();
 
-    /**
-     * Closes this editor. Unless the edit is discarded, changes made by this editor are committed.
-     */
+    /** Closes this editor. Unless the edit is discarded, any made changes are committed. */
     @Override
     void close();
   }
