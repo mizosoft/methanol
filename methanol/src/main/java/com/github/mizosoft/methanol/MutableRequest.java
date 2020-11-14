@@ -294,7 +294,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
 
   @Override
   public String toString() {
-    return uri.toString() + " " + method;
+    return method + " " + uri + " " + headers().map();
   }
 
   private MutableRequest setMethod(String method, @Nullable BodyPublisher bodyPublisher) {
@@ -318,9 +318,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
 
   public static MutableRequest copyOf(HttpRequest other) {
     requireNonNull(other);
-    return other instanceof MutableRequest
-        ? ((MutableRequest) other).copy()
-        : createCopy(other);
+    return other instanceof MutableRequest ? ((MutableRequest) other).copy() : createCopy(other);
   }
 
   /** Returns a new {@code MutableRequest}. */
@@ -451,7 +449,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
 
     @Override
     public String toString() {
-      return uri.toString() + " " + method;
+      return method + " " + uri + " " + headers.map();
     }
   }
 }
