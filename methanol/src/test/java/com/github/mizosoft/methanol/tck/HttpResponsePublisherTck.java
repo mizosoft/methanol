@@ -115,11 +115,7 @@ public class HttpResponsePublisherTck extends FlowPublisherVerification<Response
 
   @Override
   public long maxElementsFromPublisher() {
-    // Items are buffered in memory before submission so a large # of elements
-    // will cause OME when createFlowPublisher() is called (currently happens with
-    // required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue) so return
-    // an small arbitrary num that allows other tests to pass
-    return 1 << 15;
+    return TckUtils.MAX_PRECOMPUTED_ELEMENTS;
   }
 
   private Subscriber<HttpResponse<String>> mapSubscriber(

@@ -22,6 +22,9 @@
 
 package com.github.mizosoft.methanol.tck;
 
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import org.reactivestreams.tck.TestEnvironment;
 
 /** Reads TestEnvironment timeouts from system properties and not env. */
@@ -35,6 +38,32 @@ public class TckUtils {
       getTimeout("TCK_NO_SIGNAL_TIMEOUT_MILLIS", TIMEOUT_MILLIS);
   private static final long POLL_TIMEOUT_MILLIS =
       getTimeout("TCK_POLL_TIMEOUT_MILLIS", TIMEOUT_MILLIS);
+
+  private static final int FIXED_POOL_SIZE = 8;
+
+  /**
+   * An arbitrary max for the # of elements needed to be precomputed for creating the test
+   * publisher. This avoids OMEs when createFlowPublisher() is called with a large # of elements
+   * (currently happens with required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue)
+   */
+  static final int MAX_PRECOMPUTED_ELEMENTS = 1 << 10;
+
+  enum ExecutorFactory {
+    SYNC {
+      @Override
+      Executor create() {
+        return FlowSupport.SYNC_EXECUTOR;
+      }
+    },
+    FIXED_POOL {
+      @Override
+      Executor create() {
+        return Executors.newFixedThreadPool(FIXED_POOL_SIZE);
+      }
+    };
+
+    abstract Executor create();
+  }
 
   static TestEnvironment testEnvironment() {
     return new TestEnvironment(TIMEOUT_MILLIS, NO_SIGNAL_TIMEOUT_MILLIS, POLL_TIMEOUT_MILLIS);

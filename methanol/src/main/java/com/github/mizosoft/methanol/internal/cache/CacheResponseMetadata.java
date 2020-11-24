@@ -41,7 +41,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class CacheResponseMetadata {
   private static final int VARINT_SHIFT = 7;
   private static final int VARINT_MASK = 0x7F;
-  private static final int VARINT_HAS_MORE_BIT = 0xFF & ~VARINT_MASK;
+  private static final int VARINT_HAS_MORE_MASK = 0xFF & ~VARINT_MASK;
   private static final long INT_MASK = 0xFFFFFFFFL;
 
   private static final int FLAG_HAS_SSL_INFO = 0x1;
@@ -210,7 +210,7 @@ public final class CacheResponseMetadata {
       for (int shift = 0; shift < sizeInBits; shift += VARINT_SHIFT) {
         long currentByte = requireByte() & 0xFF; // Use long as shift might exceed 32
         value |= (currentByte & VARINT_MASK) << shift;
-        if ((currentByte & VARINT_HAS_MORE_BIT) == 0) {
+        if ((currentByte & VARINT_HAS_MORE_MASK) == 0) {
           return value;
         }
       }
@@ -350,7 +350,7 @@ public final class CacheResponseMetadata {
 
     private void writeVarint(long value) {
       while ((value & ~VARINT_MASK) != 0) { // Value requires more than one varint byte?
-        buffer.write(((int) value & VARINT_MASK) | VARINT_HAS_MORE_BIT);
+        buffer.write(((int) value & VARINT_MASK) | VARINT_HAS_MORE_MASK);
         value >>>= VARINT_SHIFT;
       }
       buffer.write((int) value); // Last varint byte

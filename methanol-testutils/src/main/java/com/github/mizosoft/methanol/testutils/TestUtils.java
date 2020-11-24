@@ -32,7 +32,6 @@ import java.net.http.HttpHeaders;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -150,6 +149,12 @@ public class TestUtils {
     try (var stream = Files.list(dir)) {
       return stream.collect(Collectors.toUnmodifiableList());
     }
+  }
+
+  public static byte[] toByteArray(ByteBuffer buffer) {
+    var bytes = new byte[buffer.remaining()];
+    buffer.get(bytes);
+    return bytes;
   }
 
   public static X509Certificate localhostCert() {

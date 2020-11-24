@@ -27,7 +27,8 @@ ext {
       'jaxb'            : '2.3.1',
       'jaxbRuntime'     : '2.7.6',
       'jsoup'           : '1.13.1',
-      'testng'          : '7.3.0'
+      'testng'          : '7.3.0',
+      'junitParams'     : '5.7.0'
   ]
 
   deps = [
@@ -54,7 +55,9 @@ ext {
       'nullAway'               : "com.uber.nullaway:nullaway:${versions.nullAway}",
       'jaxbApi'                : "javax.xml.bind:jaxb-api:${versions.jaxb}",
       'jaxbRuntime'            : "org.eclipse.persistence:org.eclipse.persistence.moxy:${versions.jaxbRuntime}",
-      'jsoup'                  : "org.jsoup:jsoup:${versions.jsoup}"
+      'jsoup'                  : "org.jsoup:jsoup:${versions.jsoup}",
+      'testng'                 : "org.testng:testng:${versions.testng}",
+      'junitParams'            : "org.junit.jupiter:junit-jupiter-params:${versions.junitParams}"
   ]
 
   // querying properties about subprojects
