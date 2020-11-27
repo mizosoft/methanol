@@ -83,7 +83,8 @@ public final class ResponseBuilder<T> {
   }
 
   public ResponseBuilder<T> dropBody() {
-    return body(null);
+    this.body = null;
+    return this;
   }
 
   public ResponseBuilder<T> sslSession(@Nullable SSLSession sslSession) {
@@ -234,7 +235,7 @@ public final class ResponseBuilder<T> {
     }
 
     @Override
-    public T body() {
+    public @Nullable T body() {
       return body;
     }
 
