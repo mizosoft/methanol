@@ -26,7 +26,8 @@ ext {
       'nullAway'        : '0.7.9',
       'jaxb'            : '2.3.1',
       'jaxbRuntime'     : '2.7.6',
-      'jsoup'           : '1.13.1'
+      'jsoup'           : '1.13.1',
+      'testng'          : '7.3.0'
   ]
 
   deps = [
