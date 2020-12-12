@@ -124,7 +124,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   }
 
   @DataProvider
-  public Object[][] provider() {
+  public static Object[][] provider() {
     return new Object[][] {
       {ViewerFactory.ON_MEMORY, ExecutorFactory.SYNC},
       {ViewerFactory.ON_MEMORY, ExecutorFactory.FIXED_POOL},
