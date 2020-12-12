@@ -53,6 +53,17 @@ public final class CacheWritingBodySubscriber
     }
   }
 
+  /** Whether to propagate cancellation by downstream to upstream. Intended for TCK tests. */
+  private static final boolean PROPAGATE_CANCELLATION =
+      Boolean.getBoolean(
+          "com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber.propagateCancellation");
+
+  /**
+   * Metadata of the response being cached. Will be set when the body stream is completed and the
+   * editor is to be closed.
+   */
+  private final ByteBuffer metadata;
+
   private final Editor editor;
   private final Upstream upstream = new Upstream();
 
@@ -65,8 +76,9 @@ public final class CacheWritingBodySubscriber
 
   private volatile @MonotonicNonNull CacheWritingSubscription downstreamSubscription;
 
-  public CacheWritingBodySubscriber(Editor editor) {
+  public CacheWritingBodySubscriber(Editor editor, ByteBuffer metadata) {
     this.editor = editor;
+    this.metadata = metadata;
   }
 
   @Override
@@ -76,7 +88,7 @@ public final class CacheWritingBodySubscriber
 
   private void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
-    var subscription = new CacheWritingSubscription(editor, upstream, subscriber);
+    var subscription = new CacheWritingSubscription(editor, metadata, upstream, subscriber);
     boolean upstreamIsSet = upstream.isSet();
     if (DOWNSTREAM_SUBSCRIPTION.compareAndSet(this, null, subscription)) {
       if (upstreamIsSet) { // Upstream subscription arrived first
@@ -146,6 +158,7 @@ public final class CacheWritingBodySubscriber
     }
 
     private final Editor editor;
+    private final ByteBuffer metadata;
     private final Upstream upstream;
     private final ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
 
@@ -164,9 +177,11 @@ public final class CacheWritingBodySubscriber
 
     CacheWritingSubscription(
         Editor editor,
+        ByteBuffer metadata,
         Upstream upstream,
         @SuppressWarnings("NullableProblems") Subscriber<? super List<ByteBuffer>> downstream) {
       this.editor = editor;
+      this.metadata = metadata;
       this.upstream = upstream;
       this.downstream = downstream;
     }
@@ -187,11 +202,10 @@ public final class CacheWritingBodySubscriber
       // background since downstream is probably completed by now.
       if (getAndClearDownstream() != null) {
         assert upstream.isSet();
-        if (state != DISPOSED) {
-          upstream.request(Long.MAX_VALUE); // Drain the response body
+        if (state == DISPOSED || PROPAGATE_CANCELLATION) {
+          upstream.cancel(); // Nothing is being written or propagating cancellation is allowed
         } else {
-          // Nothing is being written so propagate cancellation
-          upstream.cancel();
+          upstream.request(Long.MAX_VALUE); // Drain the whole body
         }
       }
     }
@@ -250,7 +264,9 @@ public final class CacheWritingBodySubscriber
           && ((maintainWritingState && state == WRITING)
               || STATE.compareAndSet(this, IDLE, WRITING))) {
         if (buffer == COMPLETE) {
-          editor.close(); // TODO close quietly
+          try (editor) {
+            editor.metadata(metadata);
+          }
         } else {
           scheduleWrite(buffer);
         }
