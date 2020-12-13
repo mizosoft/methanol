@@ -23,9 +23,7 @@ import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
-@Test
 public class CacheWritingBodySubscriberTck
     extends IdentityFlowProcessorVerification<List<ByteBuffer>> {
   private ExecutorService publisherExecutorService;
@@ -101,7 +99,7 @@ public class CacheWritingBodySubscriberTck
 
     @Override
     public Viewer view() {
-      return null;
+      throw new AssertionError();
     }
 
     @Override
