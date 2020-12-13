@@ -1,7 +1,6 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
-import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber.CacheWritingSubscription.WritingState.DISPOSED;
 import static com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber.CacheWritingSubscription.WritingState.IDLE;
 import static com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber.CacheWritingSubscription.WritingState.WRITING;
@@ -21,10 +20,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -38,16 +39,23 @@ public final class CacheWritingBodySubscriber
     implements BodySubscriber<Publisher<List<ByteBuffer>>> {
   private static final Logger LOGGER = Logger.getLogger(CacheWritingBodySubscriber.class.getName());
 
+  private static final int AVAILABLE = 0x1; // Downstream is available to receive signals
+  private static final int RUN = 0x2; // Drain task is running
+  private static final int KEEP_ALIVE = 0x4; // Drain task should keep running (avoid missed signal)
+  private static final int DONE = 0x8; // Downstream completed
+
+  private static final VarHandle SYNC;
   private static final VarHandle DOWNSTREAM_SUBSCRIPTION;
 
   static {
     try {
+      var lookup = MethodHandles.lookup();
+      SYNC = lookup.findVarHandle(CacheWritingBodySubscriber.class, "sync", int.class);
       DOWNSTREAM_SUBSCRIPTION =
-          MethodHandles.lookup()
-              .findVarHandle(
-                  CacheWritingBodySubscriber.class,
-                  "downstreamSubscription",
-                  CacheWritingSubscription.class);
+          lookup.findVarHandle(
+              CacheWritingBodySubscriber.class,
+              "downstreamSubscription",
+              CacheWritingSubscription.class);
     } catch (NoSuchFieldException | IllegalAccessException e) {
       throw new ExceptionInInitializerError(e);
     }
@@ -66,13 +74,17 @@ public final class CacheWritingBodySubscriber
 
   private final Editor editor;
   private final Upstream upstream = new Upstream();
+  private final ConcurrentLinkedQueue<Consumer<CacheWritingSubscription>> signals =
+      new ConcurrentLinkedQueue<>();
 
   /**
-   * Future used to schedule onComplete and onError as these can occur before downstream subscribes
-   * to use (before downstreamSubscription is set).
+   * Control field used to synchronize calls to onNext & (onError | onComplete) so that they are
+   * called serially strictly after onSubscribe.
    */
-  private final CompletableFuture<CacheWritingSubscription> downstreamSubscriptionCompletion =
-      new CompletableFuture<>();
+  private volatile int sync;
+
+  /** Schedules calling downstream's onSubscribe after upstream subscription arrives. */
+  private final CompletableFuture<Void> upstreamAvailable = new CompletableFuture<>();
 
   private volatile @MonotonicNonNull CacheWritingSubscription downstreamSubscription;
 
@@ -89,38 +101,42 @@ public final class CacheWritingBodySubscriber
   private void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
     var subscription = new CacheWritingSubscription(editor, metadata, upstream, subscriber);
-    boolean upstreamIsSet = upstream.isSet();
     if (DOWNSTREAM_SUBSCRIPTION.compareAndSet(this, null, subscription)) {
-      if (upstreamIsSet) { // Upstream subscription arrived first
-        subscription.onSubscribe();
-      }
-      downstreamSubscriptionCompletion.complete(subscription);
+      // Apply downstream's onSubscribe when upstream arrives so it can start requesting items
+      upstreamAvailable.thenRun(
+          () -> {
+            try {
+              subscription.onSubscribe();
+            } catch (Throwable t) {
+              upstream.cancel();
+              subscription.onError(t);
+              return;
+            }
+            SYNC.getAndBitwiseOr(this, AVAILABLE);
+            tryDrain(subscription);
+          });
     } else {
       FlowSupport.refuse(subscriber, FlowSupport.multipleSubscribersToUnicast());
     }
   }
 
   @Override
-  public void onSubscribe(Subscription upstreamSubscription) {
-    var subscription = downstreamSubscription;
-    if (upstream.setOrCancel(upstreamSubscription)) {
-      if (subscription != null) { // Downstream subscribed first
-        subscription.onSubscribe();
-      }
+  public void onSubscribe(Subscription subscription) {
+    requireNonNull(subscription);
+    if (upstream.setOrCancel(subscription)) {
+      upstreamAvailable.complete(null);
     }
   }
 
   @Override
   public void onNext(List<ByteBuffer> item) {
     requireNonNull(item);
-    try {
-      var subscription = downstreamSubscription;
+    if (downstreamSubscription != null) {
+      putSignal(subscription -> subscription.onNext(item));
+    } else {
       // Downstream must subscribe first and start requesting elements before any arrives
-      requireState(subscription != null, "items are arriving before requesting anything");
-      castNonNull(subscription).onNext(item);
-    } catch (IllegalStateException e) {
       upstream.cancel();
-      onError(e);
+      onError(new IllegalStateException("items are arriving before requesting anything"));
     }
   }
 
@@ -128,13 +144,52 @@ public final class CacheWritingBodySubscriber
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
     upstream.clear();
-    downstreamSubscriptionCompletion.thenAccept(s -> s.onError(throwable));
+    putTerminalSignal(subscription -> subscription.onError(throwable));
   }
 
   @Override
   public void onComplete() {
     upstream.clear();
-    downstreamSubscriptionCompletion.thenAccept(CacheWritingSubscription::onComplete);
+    putTerminalSignal(CacheWritingSubscription::onComplete);
+  }
+
+  private void putSignal(Consumer<CacheWritingSubscription> signal) {
+    signals.offer(signal);
+    var subscription = downstreamSubscription;
+    if (subscription != null) {
+      tryDrain(subscription);
+    }
+  }
+
+  private void putTerminalSignal(Consumer<CacheWritingSubscription> signal) {
+    putSignal(signal.andThen(__ -> SYNC.getAndBitwiseOr(this, DONE)));
+  }
+
+  private void tryDrain(CacheWritingSubscription subscription) {
+    for (int s; ((s = sync) & AVAILABLE) != 0 && (s & DONE) == 0; ) {
+      int bit = (s & RUN) == 0 ? RUN : KEEP_ALIVE; // Run or keep-alive
+      if (SYNC.compareAndSet(this, s, (s | bit))) {
+        if (bit == RUN) {
+          drainSignals(subscription);
+        }
+        break;
+      }
+    }
+  }
+
+  private void drainSignals(CacheWritingSubscription subscription) {
+    for (int s; ((s = sync) & DONE) == 0; ) {
+      var signal = signals.poll();
+      if (signal != null) {
+        signal.accept(subscription);
+      } else {
+        // Exit or consume keep-alive bit
+        int bit = (s & KEEP_ALIVE) != 0 ? KEEP_ALIVE : RUN;
+        if (SYNC.compareAndSet(this, s, s & ~bit) && bit == RUN) {
+          break;
+        }
+      }
+    }
   }
 
   // Package-Private for static import
@@ -166,7 +221,7 @@ public final class CacheWritingBodySubscriber
     private volatile @Nullable Subscriber<? super List<ByteBuffer>> downstream;
 
     private volatile long position;
-    private volatile WritingState state = WritingState.IDLE;
+    private volatile WritingState state = IDLE;
 
     // Package-Private for static import
     enum WritingState {
@@ -179,7 +234,7 @@ public final class CacheWritingBodySubscriber
         Editor editor,
         ByteBuffer metadata,
         Upstream upstream,
-        @SuppressWarnings("NullableProblems") Subscriber<? super List<ByteBuffer>> downstream) {
+        @NonNull Subscriber<? super List<ByteBuffer>> downstream) {
       this.editor = editor;
       this.metadata = metadata;
       this.upstream = upstream;
@@ -216,7 +271,7 @@ public final class CacheWritingBodySubscriber
     }
 
     void onNext(List<ByteBuffer> buffers) {
-      // Duplicate buffers since they're operated upon concurrently
+      // Duplicate buffers since they'll be operated upon concurrently
       var duplicateBuffers =
           buffers.stream().map(ByteBuffer::duplicate).collect(Collectors.toUnmodifiableList());
       writeQueue.addAll(duplicateBuffers);
@@ -229,16 +284,11 @@ public final class CacheWritingBodySubscriber
     }
 
     void onError(Throwable error) {
-      // Discard anything written as the body might not have been completed
-      state = DISPOSED;
-      writeQueue.clear();
-      try (editor) {
-        editor.discard();
-      } finally {
-        var subscriber = getAndClearDownstream();
-        if (subscriber != null) {
-          subscriber.onError(error);
-        }
+      discardEdit(null); // Discard anything written as the body might not have been completed
+
+      var subscriber = getAndClearDownstream();
+      if (subscriber != null) {
+        subscriber.onError(error);
       }
     }
 
@@ -260,47 +310,60 @@ public final class CacheWritingBodySubscriber
     @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel
     private boolean tryScheduleWrite(boolean maintainWritingState) {
       var buffer = writeQueue.poll();
-      if (buffer != null
+      if (buffer == COMPLETE) {
+        commitEdit();
+        return true;
+      } else if (buffer != null
           && ((maintainWritingState && state == WRITING)
               || STATE.compareAndSet(this, IDLE, WRITING))) {
-        if (buffer == COMPLETE) {
-          try (editor) {
-            editor.metadata(metadata);
-          }
-        } else {
-          scheduleWrite(buffer);
-        }
+        scheduleWrite(buffer);
         return true;
       }
       return false;
     }
 
     private void scheduleWrite(ByteBuffer buffer) {
-      editor
-          .writeAsync((long) POSITION.getAndAdd(this, buffer.remaining()), buffer)
-          .whenComplete((__, error) -> onWriteCompletion(error));
+      try {
+        editor
+            .writeAsync((long) POSITION.getAndAdd(this, buffer.remaining()), buffer)
+            .whenComplete((__, error) -> onWriteCompletion(error));
+      } catch (Throwable t) {
+        discardEdit(t);
+      }
     }
 
-    private void onWriteCompletion(@Nullable Throwable error) {
-      if (error != null) {
+    private void commitEdit() {
+      state = DISPOSED;
+      try (editor) {
+        editor.metadata(metadata);
+      }
+    }
+
+    private void discardEdit(@Nullable Throwable cause) {
+      if (cause != null) {
         LOGGER.log(
             Level.WARNING,
-            error,
+            cause,
             () ->
                 "caching response with key <"
                     + editor.key()
                     + "> will be discarded as a problem occurred while writing");
+      }
 
+      state = DISPOSED;
+      writeQueue.clear();
+      try (editor) {
+        editor.discard();
+      }
+    }
+
+    private void onWriteCompletion(@Nullable Throwable error) {
+      if (error != null) {
         // Cancel upstream if downstream was disposed
         if (downstream == null) {
           upstream.cancel();
         }
-
-        state = DISPOSED;
-        writeQueue.clear();
-        try (editor) {
-          editor.discard();
-        }
+        discardEdit(error);
       } else if (!tryScheduleWrite(true) && STATE.compareAndSet(this, WRITING, IDLE)) {
         // There might be signals missed just before CASing to IDLE
         tryScheduleWrite(false);
