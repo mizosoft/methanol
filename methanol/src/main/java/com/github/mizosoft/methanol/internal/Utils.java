@@ -83,6 +83,52 @@ public class Utils {
   }
 
   /**
+   * Tries to rethrow {@code cause} with the current stack trace or rethrows an {@code IOException}
+   * if not possible. Return type is only declared for this method to be used in a {@code throw}
+   * statement.
+   */
+  public static RuntimeException rethrowAsyncIOFailure(Throwable cause)
+      throws IOException, InterruptedException {
+    var rethrownCause = tryGetRethrownCause(cause);
+    if (rethrownCause instanceof RuntimeException) {
+      throw (RuntimeException) rethrownCause;
+    } else if (rethrownCause instanceof Error) {
+      throw (Error) rethrownCause;
+    } else if (rethrownCause instanceof IOException) {
+      throw (IOException) rethrownCause;
+    } else if (rethrownCause instanceof InterruptedException) {
+      throw (InterruptedException) rethrownCause;
+    } else {
+      throw new IOException(cause.getMessage(), cause);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static @Nullable Throwable tryGetRethrownCause(Throwable cause) {
+    var message = cause.getMessage();
+    var causeType = cause.getClass();
+    try {
+      for (var constructor : (Constructor<? extends Throwable>[]) causeType.getConstructors()) {
+        var paramTypes = constructor.getParameterTypes();
+        int len = paramTypes.length;
+        if (len == 2 && paramTypes[0] == String.class && paramTypes[1] == Throwable.class) {
+          return constructor.newInstance(message, cause);
+        } else if (len == 1 && paramTypes[0] == String.class) {
+          return constructor.newInstance(message).initCause(cause);
+        } else if (len == 1 && paramTypes[0] == Throwable.class) {
+          return constructor.newInstance(cause);
+        } else if (len == 0) {
+          return constructor.newInstance().initCause(cause);
+        }
+      }
+    } catch (ReflectiveOperationException ignored) {
+      // Ignore and return null
+    }
+
+    return null;
+  }
+
+  /**
    * From RFC 7230 section 3.2.6:
    *
    * <p>"A sender SHOULD NOT generate a quoted-pair in a quoted-string except where necessary to

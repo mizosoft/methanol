@@ -165,7 +165,7 @@ public final class CacheResponseMetadata {
         response.sslSession().orElse(null));
   }
 
-  private static Set<String> varyFields(HttpHeaders headers) {
+  public static Set<String> varyFields(HttpHeaders headers) {
     var values = headers.allValues("Vary");
     if (values.isEmpty()) {
       return Collections.emptySet();
@@ -324,6 +324,10 @@ public final class CacheResponseMetadata {
     private EOFException endOfInput() {
       return new EOFException("unexpected end of input (position = " + buffer.position() + ")");
     }
+  }
+
+  public static void main(String[] args) {
+
   }
 
   private static final class MetadataWriter {
