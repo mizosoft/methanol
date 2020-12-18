@@ -38,6 +38,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @param <T> item's type
  */
+// TODO log failure when executor throws bec it may be swallowed when rethrown
+//      causing us to start pulling out hair when nothing completes
+@SuppressWarnings("unused") // VarHandle indirection
 public abstract class AbstractSubscription<T> implements Subscription {
 
   /*

@@ -22,9 +22,12 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
+import static java.util.Objects.requireNonNull;
+
 import java.lang.invoke.VarHandle;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow;
+import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 
 /** Helpers for implementing reactive streams subscriptions and the like. */
@@ -53,6 +56,19 @@ public class FlowSupport {
         @Override
         public void cancel() {}
       };
+
+  private static final Publisher<?> EMPTY_PUBLISHER =
+      (Publisher<Object>)
+          subscriber -> {
+            requireNonNull(subscriber);
+            try {
+              subscriber.onSubscribe(NOOP_SUBSCRIPTION);
+            } catch (Throwable t) {
+              subscriber.onError(t);
+              return;
+            }
+            subscriber.onComplete();
+          };
 
   // An executor that executes the runnable in the calling thread.
   public static final Executor SYNC_EXECUTOR = Runnable::run;
@@ -113,6 +129,11 @@ public class FlowSupport {
   /** Subtracts given count from demand. Caller ensures result won't be negative. */
   public static long subtractAndGetDemand(Object owner, VarHandle demand, long n) {
     return (long) demand.getAndAdd(owner, -n) - n;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> Publisher<T> emptyPublisher() {
+    return (Publisher<T>) EMPTY_PUBLISHER;
   }
 
   public static IllegalStateException multipleSubscribersToUnicast() {

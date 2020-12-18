@@ -138,6 +138,11 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
     return this;
   }
 
+  /** Sets the {@code Cache-Control} header. */
+  public MutableRequest cacheControl(CacheControl cacheControl) {
+    return header("Cache-Control", cacheControl.toString());
+  }
+
   /** Calls the given consumer against this request. */
   public MutableRequest apply(Consumer<? super MutableRequest> consumer) {
     consumer.accept(this);
