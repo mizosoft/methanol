@@ -912,6 +912,123 @@ class HttpCacheTest {
     assertEquals("b", assertMiss(getString(uri2)).body());
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"private", "public"})
+  void cacheControlPublicOrPrivateIsCacheableByDefault(String directive) throws Exception {
+    // Last-Modified:      30 seconds from date
+    // Heuristic lifetime: 3 seconds
+    var lastModifiedInstant = clock.instant();
+    clock.advanceSeconds(30);
+    var dateInstant = clock.instant();
+    server.enqueue(new MockResponse()
+        .addHeader("Cache-Control", directive)
+        .addHeader("Last-Modified", formatHttpDate(toUtcDateTime(lastModifiedInstant)))
+        .addHeader("Date", formatHttpDate(toUtcDateTime(dateInstant)))
+        .setBody("Mew"));
+    getString(uri(server)); // Put in cache
+    server.takeRequest(); // Drop network request
+
+    clock.advanceSeconds(2); // Retain freshness (lifetime = 1 seconds)
+
+    assertEquals("Mew", assertHit(getString(uri(server))).body());
+
+    clock.advanceSeconds(2); // Make stale
+
+    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+    assertEquals("Mew", assertConditionalHit(getString(uri(server))).body());
+
+    var sentRequest = server.takeRequest();
+    assertEquals(lastModifiedInstant, sentRequest.getHeaders().getInstant("If-Modified-Since"));
+  }
+
+  @Test
+  void recordStats() throws Exception {
+    server.setDispatcher(new Dispatcher() {
+      @NotNull @Override public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
+        var path = recordedRequest.getRequestUrl().pathSegments().get(0);
+        switch (path) {
+          case "hit":
+            return new MockResponse().addHeader("Cache-Control", "max-age=60");
+          case "miss":
+            return new MockResponse().addHeader("Cache-Control", "no-store");
+          default:
+            return fail("unexpected path: " + path);
+        }
+      }
+    });
+
+    var hitUri = uri(server, "/hit");
+    var missUri = uri(server, "/miss");
+    assertMiss(getString(hitUri));  // requestCount = 1, missCount = 1, networkUseCount = 1
+    assertHit(getString(hitUri));   // requestCount = 2, hitCount = 1
+    assertMiss(getString(missUri)); // requestCount = 3, missCount = 2, networkUseCount = 2
+    for (int i = 0; i < 10; i++) {  // requestCount = 13, missCount = 12, networkUseCount = 12
+      assertMiss(getString(missUri));
+    }
+
+    cache.remove(hitUri);
+
+    assertMiss(getString(hitUri));  // requestCount = 14, missCount = 13, networkUseCount = 13
+    for (int i = 0; i < 10; i++) {  // requestCount = 24, hitCount = 11
+      assertHit(getString(hitUri));
+    }
+
+    // requestCount = 25, missCount = 14 (no network)
+    assertLocallyGenerated(getString(GET(missUri).header("Cache-Control", "only-if-cached")));
+
+    var stats = cache.stats();
+    assertEquals(25, stats.requestCount());
+    assertEquals(11, stats.hitCount());
+    assertEquals(14, stats.missCount());
+    assertEquals(13, stats.networkUseCount());
+    assertEquals(11 / 25.0, stats.hitRate());
+    assertEquals(14 / 25.0, stats.missRate());
+  }
+
+  @Test
+  void perUriStats() throws Exception {
+    var uri1 = uri(server, "/a");
+    var uri2 = uri(server, "/b");
+    server.setDispatcher(new Dispatcher() {
+      @NotNull @Override public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
+        return new MockResponse().addHeader("Cache-Control", "max-age=2");
+      }
+    });
+
+    assertMiss(getString(uri1)); // a.requestCount = 1, a.missCount = 1, a.networkUseCount = 1
+    assertHit(getString(uri1));  // a.requestCount = 2, a.hitCount = 1
+    // a.requestCount = 3, a.missCount = 2, a.networkUseCount = 2
+    assertConditionalMiss(getString(GET(uri1).header("Cache-Control", "no-cache")));
+    assertHit(getString(uri1)); // a.requestCount = 4, a.hitCount = 2
+    cache.remove(uri1);
+    // a.requestCount = 5, a.missCount = 3 (no network)
+    assertLocallyGenerated(getString(GET(uri1).header("Cache-Control", "only-if-cached")));
+
+    assertMiss(getString(uri2)); // b.requestCount = 1, b.missCount = 1, b.networkUseCount = 1
+    for (int i = 0; i < 5; i++) { // b.requestCount = 6, b.missCount = 6, b.networkUseCount = 6
+      assertConditionalMiss(getString(GET(uri2).header("Cache-Control", "no-cache")));
+    }
+    assertHit(getString(uri2)); // b.requestCount = 7, b.hitCount = 1
+
+    var stats1 = cache.stats(uri1);
+    assertEquals(5, stats1.requestCount());
+    assertEquals(2, stats1.hitCount());
+    assertEquals(3, stats1.missCount());
+    assertEquals(2, stats1.networkUseCount());
+
+    var stats2 = cache.stats(uri2);
+    assertEquals(7, stats2.requestCount());
+    assertEquals(1, stats2.hitCount());
+    assertEquals(6, stats2.missCount());
+    assertEquals(6, stats2.networkUseCount());
+
+    var emptyStats = cache.stats(uri(server, "/c"));
+    assertEquals(0, emptyStats.requestCount());
+    assertEquals(0, emptyStats.hitCount());
+    assertEquals(0, emptyStats.missCount());
+    assertEquals(0, emptyStats.networkUseCount());
+  }
+
   private CacheAwareResponse<String> getString(URI uri) throws IOException, InterruptedException {
     return getString(GET(uri));
   }
