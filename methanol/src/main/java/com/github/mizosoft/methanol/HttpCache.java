@@ -31,6 +31,7 @@ import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
@@ -68,16 +69,20 @@ import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -98,6 +103,7 @@ public final class HttpCache implements AutoCloseable {
   private final Executor executor;
   private final boolean ownedExecutor;
   private final boolean userVisibleExecutor;
+  private final StatsRecorder statsRecorder;
   private final Clock clock;
 
   public HttpCache(Builder builder) {
@@ -116,6 +122,8 @@ public final class HttpCache implements AutoCloseable {
       ownedExecutor = true;
       userVisibleExecutor = false;
     }
+    statsRecorder =
+        requireNonNullElseGet(builder.statsRecorder, StatsRecorder::createConcurrentRecorder);
     clock = builder.clock;
   }
 
@@ -168,6 +176,16 @@ public final class HttpCache implements AutoCloseable {
     store.destroy();
   }
 
+  /** Returns a snapshot of the statistics accumulated so far. */
+  public Stats stats() {
+    return statsRecorder.snapshot();
+  }
+
+  /** Returns a snapshot of the statistics accumulated so far for the given {@code URI}. */
+  public Stats stats(URI uri) {
+    return statsRecorder.snapshot(uri);
+  }
+
   /** Closes this cache. */
   // TODO specify what is closed exactly
   @Override
@@ -178,6 +196,7 @@ public final class HttpCache implements AutoCloseable {
     }
   }
 
+  /** Called by {@code Methanol} when building interceptor chain. */
   Interceptor interceptor(@Nullable Executor clientExecutor) {
     return new CacheInterceptor(this, clientExecutor);
   }
@@ -208,6 +227,61 @@ public final class HttpCache implements AutoCloseable {
     return new CacheResponse(metadata, viewer, executor);
   }
 
+  private void updateMetadata(CacheResponse servedCacheResponse) {
+    var response = servedCacheResponse.get();
+    try (var editor = servedCacheResponse.edit()) {
+      if (editor != null) {
+        editor.metadata(CacheResponseMetadata.from(response).encode());
+      }
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  private @Nullable RawResponse updating(
+      RawResponse networkResponse, @Nullable CacheResponse cacheResponse) {
+    var editor =
+        cacheResponse != null
+            ? cacheResponse.edit()
+            : store.edit(key(networkResponse.get().request()));
+    var metadata = tryEncodeMetadata(networkResponse);
+    if (editor == null || metadata == null) {
+      return null;
+    }
+
+    var cacheWritingResponse =
+        networkResponse
+            .handleAsync(
+                __ -> new CacheWritingBodySubscriber(editor, metadata), FlowSupport.SYNC_EXECUTOR)
+            .join(); // CacheWritingBodySubscriber completes immediately and never throws
+    return RawResponse.from(cacheWritingResponse);
+  }
+
+  private void onRequest(HttpRequest request) {
+    statsRecorder.recordRequest(request.uri());
+  }
+
+  private void onNetworkUse(HttpRequest request) {
+    statsRecorder.recordNetworkUse(request.uri());
+  }
+
+  private void onStatus(HttpRequest request, CacheStatus status) {
+    switch (status) {
+      case MISS:
+      case LOCALLY_GENERATED:
+        statsRecorder.recordMiss(request.uri());
+        break;
+
+      case HIT:
+      case CONDITIONAL_HIT:
+        statsRecorder.recordHit(request.uri());
+        break;
+
+      default:
+        throw new AssertionError("unexpected status: " + status);
+    }
+  }
+
   private static String key(HttpRequest request) {
     // Since the cache is restricted to GETs, only the URI is needed as a primary key
     return key(request.uri());
@@ -215,6 +289,24 @@ public final class HttpCache implements AutoCloseable {
 
   private static String key(URI uri) {
     return uri.toString();
+  }
+
+  private static @Nullable ByteBuffer tryEncodeMetadata(RawResponse response) {
+    try {
+      return CacheResponseMetadata.from(response.get()).encode();
+    } catch (IOException ioe) {
+      // TODO log
+      return null;
+    }
+  }
+
+  static Set<String> implicitlyAddedFieldsForTesting() {
+    return CacheInterceptor.IMPLICITLY_ADDED_FIELDS;
+  }
+
+  /** Returns a new {@code HttpCache.Builder}. */
+  public static Builder newBuilder() {
+    return new Builder();
   }
 
   /**
@@ -229,17 +321,17 @@ public final class HttpCache implements AutoCloseable {
       this.async = async;
     }
 
-    <T> CompletableFuture<HttpResponse<T>> send(Chain<T> chain, HttpRequest request) {
+    private static <T> CompletableFuture<T> adapt(IOSupplier<T> supplier) {
+      return CompletableFuture.supplyAsync(
+          supplier.toUncheckedForAsyncCompletion(), FlowSupport.SYNC_EXECUTOR);
+    }
+
+    <T> CompletableFuture<HttpResponse<T>> forward(Chain<T> chain, HttpRequest request) {
       return async ? chain.forwardAsync(request) : adapt(() -> chain.forward(request));
     }
 
     CompletableFuture<@Nullable Viewer> view(Store store, String key) {
       return async ? store.viewAsync(key) : adapt(() -> store.view(key));
-    }
-
-    private static <T> CompletableFuture<T> adapt(IOSupplier<T> supplier) {
-      return CompletableFuture.supplyAsync(
-          supplier.toUncheckedForAsyncCompletion(), FlowSupport.SYNC_EXECUTOR);
     }
 
     @FunctionalInterface
@@ -256,10 +348,6 @@ public final class HttpCache implements AutoCloseable {
         };
       }
     }
-  }
-
-  static Set<String> implicitlyAddedFieldsForTesting() {
-    return CacheInterceptor.IMPLICITLY_ADDED_FIELDS;
   }
 
   /**
@@ -287,24 +375,24 @@ public final class HttpCache implements AutoCloseable {
      */
     private final Executor handlerExecutor;
 
-    private final Clock clock;
-
     CacheInterceptor(HttpCache cache, @Nullable Executor clientExecutor) {
       this.cache = cache;
       cacheExecutor = cache.executor;
       handlerExecutor = requireNonNullElse(clientExecutor, cacheExecutor);
-      clock = cache.clock;
     }
 
     // TODO figure out what to do with push promises
+    // TODO are resources held by CacheResponse handled correctly?
+    // TODO figure out what to do with HEADs
+    // TODO properly handle logging
+    // TODO merging headers doesn't quite work correctly,
+    //      for example Content-Length: 0 replaces original
+    // TODO consider implementing our own redirecting interceptor
+    //      to be above the caching layer so they get cached
 
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException {
-      if (chain.pushPromiseHandler().isPresent()) {
-        return chain.forward(request);
-      }
-
       try {
         return doIntercept(request, chain.with(BodyHandlers.ofPublisher(), null), false)
             .get()
@@ -317,10 +405,6 @@ public final class HttpCache implements AutoCloseable {
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      if (chain.pushPromiseHandler().isPresent()) {
-        return chain.forwardAsync(request);
-      }
-
       return doIntercept(request, chain.with(BodyHandlers.ofPublisher(), null), true)
           .thenCompose(rawResponse -> rawResponse.handleAsync(chain.bodyHandler(), handlerExecutor))
           .thenApply(Function.identity()); // Downcast from TrackedResponse<T> to HttpResponse<T>
@@ -328,14 +412,17 @@ public final class HttpCache implements AutoCloseable {
 
     private CompletableFuture<RawResponse> doIntercept(
         HttpRequest request, Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
+      cache.onRequest(request);
       var asyncAdapter = new AsyncAdapter(async);
-      var context = new ExchangeContext(clock, request, chain, asyncAdapter);
-
-      // Forward client's request to origin if it has preconditions
+      var context = new ExchangeContext(cache, request, chain, asyncAdapter);
+      if (chain.pushPromiseHandler().isPresent()) {
+        // Forward client's request to origin in case of HTTP2 push support as we
+        // don't know what might be pushed by the server
+        return context.forwardToNetwork().thenApply(ctx -> castNonNull(ctx.networkResponse));
+      }
       if (hasPreconditions(request.headers())) {
         return context.forwardToNetwork().thenApply(this::updateCacheAndServe);
       }
-
       return cache
           .getAsync(request, asyncAdapter::view)
           .thenApply(cacheResponse -> context.withResponse(cacheResponse, null))
@@ -347,7 +434,7 @@ public final class HttpCache implements AutoCloseable {
       var requestCacheControl = cacheControl(context.request.headers());
       var cacheResponse = context.cacheResponse;
       if (cacheResponse == null) {
-        // Don't forward the request if the client prohibits network use
+        // Don't forward the request if the client prohibits network
         return requestCacheControl.onlyIfCached()
             ? CompletableFuture.completedFuture(context)
             : context.forwardToNetwork();
@@ -360,7 +447,7 @@ public final class HttpCache implements AutoCloseable {
               cacheResponse.get().timeRequestSent(),
               cacheResponse.get().timeResponseReceived(),
               cacheResponse.get().headers());
-      var now = context.clock.instant();
+      var now = context.now();
       var age = computation.computeAge(now);
       var lifetime =
           computation.computeFreshnessLifetime().orElseGet(computation::computeHeuristicLifetime);
@@ -381,9 +468,7 @@ public final class HttpCache implements AutoCloseable {
         return CompletableFuture.completedFuture(context.withResponse(servableCacheResponse, null));
       }
 
-      // Must revalidate the response with the server
-
-      // Don't revalidate if the client prohibits network use
+      // Don't revalidate if the client prohibits network
       if (requestCacheControl.onlyIfCached()) {
         cacheResponse.close();
         return CompletableFuture.completedFuture(context.withResponse(null, null));
@@ -410,38 +495,6 @@ public final class HttpCache implements AutoCloseable {
       return networkContextFuture;
     }
 
-    private boolean canServeWithoutRevalidation(
-        CacheControl requestCacheControl, CacheControl responseCacheControl, Duration freshness) {
-      if (requestCacheControl.noCache() || responseCacheControl.noCache()) {
-        return false;
-      }
-
-      if (!freshness.isNegative()) {
-        // The response is fresh, but might not be fresh enough for the client
-        return requestCacheControl.minFresh().isEmpty()
-            || freshness.compareTo(requestCacheControl.minFresh().get()) >= 0;
-      }
-
-      // The server might impose network use for stale responses
-      if (responseCacheControl.mustRevalidate()) {
-        return false;
-      }
-
-      // The response is stale, but the client might be willing to accept it
-      var staleness = freshness.negated();
-      return (requestCacheControl.anyMaxStale()
-          || (requestCacheControl.maxStale().isPresent()
-              && staleness.compareTo(requestCacheControl.maxStale().get()) <= 0));
-    }
-
-    // TODO are resources held by CacheResponse handled correctly?
-    // TODO figure out what to do with HEADs
-    // TODO properly handle logging
-    // TODO merging headers doesn't quite work correctly,
-    //      for example Content-Length: 0 replaces original
-    // TODO consider implementing our own redirecting interceptor
-    //      to be above the caching layer so they get cached
-
     private RawResponse updateCacheAndServe(ExchangeContext context) {
       var request = context.request;
       var cacheResponse = context.cacheResponse;
@@ -450,6 +503,7 @@ public final class HttpCache implements AutoCloseable {
       // If neither the cache nor the network was applicable,
       // serve a 504 Gateway Timeout response as per rfc7234 5.2.1.7.
       if (cacheResponse == null && networkResponse == null) {
+        cache.onStatus(request, CacheStatus.LOCALLY_GENERATED);
         return RawResponse.from(
             new ResponseBuilder<>()
                 .uri(request.uri())
@@ -458,13 +512,14 @@ public final class HttpCache implements AutoCloseable {
                 .statusCode(HTTP_GATEWAY_TIMEOUT)
                 .version(Version.HTTP_1_1)
                 .timeRequestSent(context.requestTime)
-                .timeResponseReceived(context.clock.instant())
+                .timeResponseReceived(context.now())
                 .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
                 .build());
       }
 
       // Serve the cacheResponse directly if no network was used
       if (networkResponse == null) {
+        cache.onStatus(request, CacheStatus.HIT);
         return cacheResponse.with(
             builder ->
                 builder
@@ -472,7 +527,7 @@ public final class HttpCache implements AutoCloseable {
                     .cacheStatus(CacheStatus.HIT)
                     .cacheResponse(cacheResponse.get())
                     .timeRequestSent(context.requestTime)
-                    .timeResponseReceived(context.clock.instant()));
+                    .timeResponseReceived(context.now()));
       }
 
       // If the cacheResponse was successfully revalidated then
@@ -500,6 +555,7 @@ public final class HttpCache implements AutoCloseable {
                         .setHeaders(mergedHeaders.build())); // Replace original headers with merged
         // Update merged metadata in background
         cacheExecutor.execute(() -> cache.updateMetadata(servedCacheResponse));
+        cache.onStatus(request, CacheStatus.CONDITIONAL_HIT);
         return servedCacheResponse;
       }
 
@@ -522,6 +578,7 @@ public final class HttpCache implements AutoCloseable {
       if (cacheResponse != null) {
         cacheResponse.close();
       }
+      cache.onStatus(request, CacheStatus.MISS);
       return servedNetworkResponse;
     }
 
@@ -530,6 +587,30 @@ public final class HttpCache implements AutoCloseable {
           .firstValue("Cache-Control")
           .map(CacheControl::parse)
           .orElse(CacheControl.empty());
+    }
+
+    private boolean canServeWithoutRevalidation(
+        CacheControl requestCacheControl, CacheControl responseCacheControl, Duration freshness) {
+      if (requestCacheControl.noCache() || responseCacheControl.noCache()) {
+        return false;
+      }
+
+      if (!freshness.isNegative()) {
+        // The response is fresh, but might not be fresh enough for the client
+        return requestCacheControl.minFresh().isEmpty()
+            || freshness.compareTo(requestCacheControl.minFresh().get()) >= 0;
+      }
+
+      // The server might impose network use for stale responses
+      if (responseCacheControl.mustRevalidate()) {
+        return false;
+      }
+
+      // The response is stale, but the client might be willing to accept it
+      var staleness = freshness.negated();
+      return (requestCacheControl.anyMaxStale()
+          || (requestCacheControl.maxStale().isPresent()
+              && staleness.compareTo(requestCacheControl.maxStale().get()) <= 0));
     }
 
     private static boolean hasPreconditions(HttpHeaders headers) {
@@ -633,7 +714,7 @@ public final class HttpCache implements AutoCloseable {
     }
 
     private static final class ExchangeContext {
-      final Clock clock;
+      final HttpCache cache;
       final Instant requestTime;
       final HttpRequest request;
       final Chain<Publisher<List<ByteBuffer>>> chain;
@@ -642,22 +723,22 @@ public final class HttpCache implements AutoCloseable {
       final @Nullable RawResponse networkResponse;
 
       ExchangeContext(
-          Clock clock,
+          HttpCache cache,
           HttpRequest request,
           Chain<Publisher<List<ByteBuffer>>> chain,
           AsyncAdapter asyncAdapter) {
-        this(clock, clock.instant(), request, chain, asyncAdapter, null, null);
+        this(cache, cache.clock.instant(), request, chain, asyncAdapter, null, null);
       }
 
       private ExchangeContext(
-          Clock clock,
+          HttpCache cache,
           Instant requestTime,
           HttpRequest request,
           Chain<Publisher<List<ByteBuffer>>> chain,
           AsyncAdapter asyncAdapter,
           @Nullable CacheResponse cacheResponse,
           @Nullable RawResponse networkResponse) {
-        this.clock = clock;
+        this.cache = cache;
         this.requestTime = requestTime;
         this.request = request;
         this.chain = chain;
@@ -666,74 +747,278 @@ public final class HttpCache implements AutoCloseable {
         this.networkResponse = networkResponse;
       }
 
+      Instant now() {
+        return cache.clock.instant();
+      }
+
       ExchangeContext withResponse(
           @Nullable CacheResponse cacheResponse, @Nullable RawResponse networkResponse) {
         return new ExchangeContext(
-            clock, requestTime, request, chain, asyncAdapter, cacheResponse, networkResponse);
+            cache, requestTime, request, chain, asyncAdapter, cacheResponse, networkResponse);
       }
 
       ExchangeContext withRequest(HttpRequest request) {
         return new ExchangeContext(
-            clock, requestTime, request, chain, asyncAdapter, cacheResponse, networkResponse);
+            cache, requestTime, request, chain, asyncAdapter, cacheResponse, networkResponse);
       }
 
       CompletableFuture<ExchangeContext> forwardToNetwork() {
+        cache.onNetworkUse(request);
         return asyncAdapter
-            .send(chain, request)
+            .forward(chain, request)
             .thenApply(
                 response ->
                     RawResponse.from(
                         ResponseBuilder.newBuilder(response)
                             .timeRequestSent(requestTime)
-                            .timeResponseReceived(clock.instant())
+                            .timeResponseReceived(now())
                             .build()))
             .thenApply(networkResponse -> withResponse(this.cacheResponse, networkResponse));
       }
     }
   }
 
-  private void updateMetadata(CacheResponse servedCacheResponse) {
-    var response = servedCacheResponse.get();
-    try (var editor = servedCacheResponse.edit()) {
-      if (editor != null) {
-        editor.metadata(CacheResponseMetadata.from(response).encode());
+  /** Statistics of an {@code HttpCache}. */
+  public interface Stats {
+
+    /** Returns the number of requests intercepted by the cache. */
+    int requestCount();
+
+    /** Returns the number of requests resulting in a cache hit, including conditional hits. */
+    int hitCount();
+
+    /**
+     * Returns the number of requests resulting in a cache miss, including conditional misses
+     * (unsatisfied revalidation requests).
+     */
+    int missCount();
+
+    /** Returns the number of times the cache had to use the network. */
+    int networkUseCount();
+
+    /**
+     * Returns a value between {@code 0.0} and {@code 1.0} representing the ratio between the hit
+     * and request counts.
+     */
+    default double hitRate() {
+      return rate(hitCount(), requestCount());
+    }
+
+    /**
+     * Returns a value between {@code 0.0} and {@code 1.0} representing the ratio between the miss
+     * and request counts.
+     */
+    default double missRate() {
+      return rate(missCount(), requestCount());
+    }
+
+    private static double rate(long x, long y) {
+      return y == 0 || x >= y ? 1.0 : (double) x / y;
+    }
+  }
+
+  /**
+   * Strategy for recoding {@code HttpCache} statistics. Recording methods are given the {@code URI}
+   * of the request being intercepted by the cache.
+   *
+   * <p>{@code StatsRecorders} must be thread-safe.
+   */
+  public interface StatsRecorder {
+
+    /** Called when a request is intercepted. */
+    void recordRequest(URI uri);
+
+    /**
+     * Called when a request results in a cache hit, either directly or after successful
+     * revalidation with the server.
+     */
+    void recordHit(URI uri);
+
+    /**
+     * Called when a request results in a cache miss, either directly or after failed revalidation
+     * with the server.
+     */
+    void recordMiss(URI uri);
+
+    /** Called when the cache is about to use the network. */
+    void recordNetworkUse(URI uri);
+
+    /** Returns a {@code Stats} snapshot for the recorded statistics for all {@code URIs}. */
+    Stats snapshot();
+
+    /** Returns a {@code Stats} snapshot for the recorded statistics of the given {@code URI}. */
+    Stats snapshot(URI uri);
+
+    /**
+     * Creates a {@code StatsRecorder} that atomically increments each count. The recorder is
+     * thread-safe but there's a very slight chance that returned {@code Stats} has inconsistent
+     * counts due to concurrent increments (e.g. sum of hit and miss counts might be less than
+     * request count).
+     *
+     * <p>This is the {@code StatsRecorder} used by default.
+     */
+    static StatsRecorder createConcurrentRecorder() {
+      return new ConcurrentStatsRecorder();
+    }
+
+    /** Returns a disabled {@code StatsRecorder}. */
+    static StatsRecorder disabled() {
+      return DisabledStatsRecorder.INSTANCE;
+    }
+  }
+
+  private static final class ConcurrentStatsRecorder implements StatsRecorder {
+    private final StatsCounters globalCounters = new StatsCounters();
+    private final ConcurrentMap<URI, StatsCounters> perUriCounters = new ConcurrentHashMap<>();
+
+    ConcurrentStatsRecorder() {}
+
+    @Override
+    public void recordRequest(URI uri) {
+      requireNonNull(uri);
+      globalCounters.requestCounter.increment();
+      perUriCounters.computeIfAbsent(uri, __ -> new StatsCounters()).requestCounter.increment();
+    }
+
+    @Override
+    public void recordHit(URI uri) {
+      requireNonNull(uri);
+      globalCounters.hitCounter.increment();
+      perUriCounters.computeIfAbsent(uri, __ -> new StatsCounters()).hitCounter.increment();
+    }
+
+    @Override
+    public void recordMiss(URI uri) {
+      requireNonNull(uri);
+      globalCounters.missCounter.increment();
+      perUriCounters.computeIfAbsent(uri, __ -> new StatsCounters()).missCounter.increment();
+    }
+
+    @Override
+    public void recordNetworkUse(URI uri) {
+      requireNonNull(uri);
+      globalCounters.networkUseCounter.increment();
+      perUriCounters.computeIfAbsent(uri, __ -> new StatsCounters()).networkUseCounter.increment();
+    }
+
+    @Override
+    public Stats snapshot() {
+      return globalCounters.snapshot();
+    }
+
+    @Override
+    public Stats snapshot(URI uri) {
+      var counters = perUriCounters.get(uri);
+      return counters != null ? counters.snapshot() : StatsSnapshot.EMPTY;
+    }
+
+    private static final class StatsCounters {
+      final LongAdder requestCounter = new LongAdder();
+      final LongAdder hitCounter = new LongAdder();
+      final LongAdder missCounter = new LongAdder();
+      final LongAdder networkUseCounter = new LongAdder();
+
+      StatsCounters() {}
+
+      Stats snapshot() {
+        return new StatsSnapshot(
+            saturatedSum(requestCounter),
+            saturatedSum(hitCounter),
+            saturatedSum(missCounter),
+            saturatedSum(networkUseCounter));
       }
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+
+      private static int saturatedSum(LongAdder counter) {
+        return (int) Math.min(counter.sum(), Integer.MAX_VALUE);
+      }
     }
   }
 
-  private @Nullable RawResponse updating(
-      RawResponse networkResponse, @Nullable CacheResponse cacheResponse) {
-    var editor =
-        cacheResponse != null
-            ? cacheResponse.edit()
-            : store.edit(key(networkResponse.get().request()));
-    var metadata = tryEncodeMetadata(networkResponse);
-    if (editor == null || metadata == null) {
-      return null;
+  private enum DisabledStatsRecorder implements StatsRecorder {
+    INSTANCE;
+
+    @Override
+    public void recordRequest(URI uri) {}
+
+    @Override
+    public void recordHit(URI uri) {}
+
+    @Override
+    public void recordMiss(URI uri) {}
+
+    @Override
+    public void recordNetworkUse(URI uri) {}
+
+    @Override
+    public Stats snapshot() {
+      return StatsSnapshot.EMPTY;
     }
 
-    var cacheWritingResponse =
-        networkResponse
-            .handleAsync(
-                __ -> new CacheWritingBodySubscriber(editor, metadata), FlowSupport.SYNC_EXECUTOR)
-            .join(); // CacheWritingBodySubscriber completes immediately and never throws
-    return RawResponse.from(cacheWritingResponse);
-  }
-
-  private static @Nullable ByteBuffer tryEncodeMetadata(RawResponse response) {
-    try {
-      return CacheResponseMetadata.from(response.get()).encode();
-    } catch (IOException ioe) {
-      // TODO log
-      return null;
+    @Override
+    public Stats snapshot(URI uri) {
+      return StatsSnapshot.EMPTY;
     }
   }
 
-  /** Returns a new {@code HttpCache.Builder}. */
-  public static Builder newBuilder() {
-    return new Builder();
+  private static final class StatsSnapshot implements Stats {
+    static final Stats EMPTY = new StatsSnapshot(0, 0, 0, 0);
+
+    private final int requestCount;
+    private final int hitCount;
+    private final int missCount;
+    private final int networkUseCount;
+
+    StatsSnapshot(int requestCount, int hitCount, int missCount, int networkUseCount) {
+      this.requestCount = requestCount;
+      this.hitCount = hitCount;
+      this.missCount = missCount;
+      this.networkUseCount = networkUseCount;
+    }
+
+    @Override
+    public int requestCount() {
+      return requestCount;
+    }
+
+    @Override
+    public int hitCount() {
+      return hitCount;
+    }
+
+    @Override
+    public int missCount() {
+      return missCount;
+    }
+
+    @Override
+    public int networkUseCount() {
+      return networkUseCount;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(requestCount, hitCount, missCount, networkUseCount);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof Stats)) {
+        return false;
+      }
+
+      var other = (Stats) obj;
+      return requestCount == other.requestCount()
+          && hitCount == other.hitCount()
+          && missCount == other.missCount()
+          && networkUseCount == other.networkUseCount();
+    }
+
+    @Override
+    public String toString() {
+      return String.format(
+          "Stats[requestCount=%d, hitCount=%d, missCount=%d, networkUseCount=%d, hitRate=%f]",
+          requestCount, hitCount, missCount, networkUseCount, hitRate());
+    }
   }
 
   /** A builder of {@code HttpCaches}. */
@@ -743,6 +1028,7 @@ public final class HttpCache implements AutoCloseable {
 
     @MonotonicNonNull Store store;
     @MonotonicNonNull Executor executor;
+    @MonotonicNonNull StatsRecorder statsRecorder;
 
     // Use a clock that ticks in millis under UTC, which suffices for freshness
     // calculations and makes saving Instants more compact (no nanos-of-second part
@@ -771,6 +1057,12 @@ public final class HttpCache implements AutoCloseable {
     /** Sets the executor to be used by the cache. */
     public Builder executor(Executor executor) {
       this.executor = requireNonNull(executor);
+      return this;
+    }
+
+    /** Sets the {@code StatsRecorder}. */
+    public Builder statsRecorder(StatsRecorder statsRecorder) {
+      this.statsRecorder = requireNonNull(statsRecorder);
       return this;
     }
 
