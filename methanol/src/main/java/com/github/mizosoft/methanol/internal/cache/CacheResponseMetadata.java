@@ -130,7 +130,7 @@ public final class CacheResponseMetadata {
             MutableRequest.create(uri)
                 .method(requestMethod, BodyPublishers.noBody())
                 .headers(varyHeaders)
-                .build())
+                .toImmutableRequest())
         .statusCode(statusCode)
         .headers(headers)
         .timeRequestSent(timeRequestSent)
@@ -324,10 +324,6 @@ public final class CacheResponseMetadata {
     private EOFException endOfInput() {
       return new EOFException("unexpected end of input (position = " + buffer.position() + ")");
     }
-  }
-
-  public static void main(String[] args) {
-
   }
 
   private static final class MetadataWriter {

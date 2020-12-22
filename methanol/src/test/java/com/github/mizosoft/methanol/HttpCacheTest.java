@@ -74,8 +74,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 @ExtendWith(MockWebServerProvider.class)
 class HttpCacheTest {
-  @RegisterExtension
-  final TestExecutorProvider executorProvider = new TestExecutorProvider();
+  @RegisterExtension final TestExecutorProvider executorProvider = new TestExecutorProvider();
 
   private AdvancableClock clock;
   private HttpCache cache;
