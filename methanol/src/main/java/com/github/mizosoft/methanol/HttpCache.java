@@ -106,14 +106,19 @@ public final class HttpCache implements AutoCloseable {
   private final StatsRecorder statsRecorder;
   private final Clock clock;
 
-  public HttpCache(Builder builder) {
-    this.store = castNonNull(builder.store);
-    var userExecutor = builder.executor;
+  private HttpCache(
+      StoreFactory storeFactory,
+      @Nullable Executor userExecutor,
+      @Nullable Path cacheDirectory,
+      long maxSize,
+      @Nullable StatsRecorder statsRecorder,
+      Clock clock) {
     if (userExecutor != null) {
       executor = userExecutor;
       ownedExecutor = false;
       userVisibleExecutor = true;
-    } else if (store instanceof MemoryStore) { // Can use common ForkJoinPool as there's no IO
+    } else if (storeFactory
+        == StoreFactory.MEMORY) { // Can use common ForkJoinPool as there's no IO
       executor = ForkJoinPool.commonPool();
       ownedExecutor = false;
       userVisibleExecutor = false;
@@ -122,9 +127,10 @@ public final class HttpCache implements AutoCloseable {
       ownedExecutor = true;
       userVisibleExecutor = false;
     }
-    statsRecorder =
-        requireNonNullElseGet(builder.statsRecorder, StatsRecorder::createConcurrentRecorder);
-    clock = builder.clock;
+    store = storeFactory.create(cacheDirectory, maxSize, executor);
+    this.statsRecorder =
+        requireNonNullElseGet(statsRecorder, StatsRecorder::createConcurrentRecorder);
+    this.clock = clock;
   }
 
   /**
@@ -238,7 +244,7 @@ public final class HttpCache implements AutoCloseable {
     }
   }
 
-  private @Nullable RawResponse updating(
+  private @Nullable RawResponse update(
       RawResponse networkResponse, @Nullable CacheResponse cacheResponse) {
     var editor =
         cacheResponse != null
@@ -567,7 +573,7 @@ public final class HttpCache implements AutoCloseable {
                       .cacheResponse(cacheResponse != null ? cacheResponse.get() : null)
                       .networkResponse(networkResponse.get()));
       if (isCacheable(request, servedNetworkResponse.get())) {
-        var cacheUpdatingResponse = cache.updating(servedNetworkResponse, cacheResponse);
+        var cacheUpdatingResponse = cache.update(servedNetworkResponse, cacheResponse);
         if (cacheUpdatingResponse != null) {
           servedNetworkResponse = cacheUpdatingResponse;
         }
@@ -782,19 +788,19 @@ public final class HttpCache implements AutoCloseable {
   public interface Stats {
 
     /** Returns the number of requests intercepted by the cache. */
-    int requestCount();
+    long requestCount();
 
     /** Returns the number of requests resulting in a cache hit, including conditional hits. */
-    int hitCount();
+    long hitCount();
 
     /**
      * Returns the number of requests resulting in a cache miss, including conditional misses
      * (unsatisfied revalidation requests).
      */
-    int missCount();
+    long missCount();
 
     /** Returns the number of times the cache had to use the network. */
-    int networkUseCount();
+    long networkUseCount();
 
     /**
      * Returns a value between {@code 0.0} and {@code 1.0} representing the ratio between the hit
@@ -853,7 +859,10 @@ public final class HttpCache implements AutoCloseable {
      * Creates a {@code StatsRecorder} that atomically increments each count. The recorder is
      * thread-safe but there's a very slight chance that returned {@code Stats} has inconsistent
      * counts due to concurrent increments (e.g. sum of hit and miss counts might be less than
-     * request count).
+     * request count). Additionally, independence of per-{@code URI} stats is dictated by {@link
+     * URI#equals(Object)}. That is, stats of {@code https://example.com/a} and {@code
+     * https://example.com/a?x=y} are recorded independently as they are not equal although they
+     * have the same host and path.
      *
      * <p>This is the {@code StatsRecorder} used by default.
      */
@@ -922,14 +931,7 @@ public final class HttpCache implements AutoCloseable {
 
       Stats snapshot() {
         return new StatsSnapshot(
-            saturatedSum(requestCounter),
-            saturatedSum(hitCounter),
-            saturatedSum(missCounter),
-            saturatedSum(networkUseCounter));
-      }
-
-      private static int saturatedSum(LongAdder counter) {
-        return (int) Math.min(counter.sum(), Integer.MAX_VALUE);
+            requestCounter.sum(), hitCounter.sum(), missCounter.sum(), networkUseCounter.sum());
       }
     }
   }
@@ -961,14 +963,14 @@ public final class HttpCache implements AutoCloseable {
   }
 
   private static final class StatsSnapshot implements Stats {
-    static final Stats EMPTY = new StatsSnapshot(0, 0, 0, 0);
+    static final Stats EMPTY = new StatsSnapshot(0L, 0L, 0L, 0L);
 
-    private final int requestCount;
-    private final int hitCount;
-    private final int missCount;
-    private final int networkUseCount;
+    private final long requestCount;
+    private final long hitCount;
+    private final long missCount;
+    private final long networkUseCount;
 
-    StatsSnapshot(int requestCount, int hitCount, int missCount, int networkUseCount) {
+    StatsSnapshot(long requestCount, long hitCount, long missCount, long networkUseCount) {
       this.requestCount = requestCount;
       this.hitCount = hitCount;
       this.missCount = missCount;
@@ -976,22 +978,22 @@ public final class HttpCache implements AutoCloseable {
     }
 
     @Override
-    public int requestCount() {
+    public long requestCount() {
       return requestCount;
     }
 
     @Override
-    public int hitCount() {
+    public long hitCount() {
       return hitCount;
     }
 
     @Override
-    public int missCount() {
+    public long missCount() {
       return missCount;
     }
 
     @Override
-    public int networkUseCount() {
+    public long networkUseCount() {
       return networkUseCount;
     }
 
@@ -1026,9 +1028,11 @@ public final class HttpCache implements AutoCloseable {
     // Guard against ridiculously small values
     private static final int MAX_SIZE_THRESHOLD = 2 * 1024;
 
-    @MonotonicNonNull Store store;
+    @MonotonicNonNull StoreFactory storeFactory;
+    @MonotonicNonNull Path cacheDirectory;
     @MonotonicNonNull Executor executor;
     @MonotonicNonNull StatsRecorder statsRecorder;
+    long maxSize;
 
     // Use a clock that ticks in millis under UTC, which suffices for freshness
     // calculations and makes saving Instants more compact (no nanos-of-second part
@@ -1040,7 +1044,8 @@ public final class HttpCache implements AutoCloseable {
     /** Specifies that HTTP responses are to be cached on memory with the given size bound. */
     public Builder cacheOnMemory(long maxSize) {
       checkMaxSize(maxSize);
-      store = new MemoryStore(maxSize);
+      this.maxSize = maxSize;
+      storeFactory = StoreFactory.MEMORY;
       return this;
     }
 
@@ -1050,7 +1055,9 @@ public final class HttpCache implements AutoCloseable {
      */
     public Builder cacheOnDisk(Path directory, long maxSize) {
       checkMaxSize(maxSize);
-      store = new DiskStore(directory, maxSize);
+      this.cacheDirectory = requireNonNull(directory);
+      this.maxSize = maxSize;
+      storeFactory = StoreFactory.DISK;
       return this;
     }
 
@@ -1073,8 +1080,10 @@ public final class HttpCache implements AutoCloseable {
 
     /** Builds a new {@code HttpCache}. */
     public HttpCache build() {
-      requireState(store != null, "caching method must be specified");
-      return new HttpCache(this);
+      var appliedStoreFactory = storeFactory;
+      requireState(appliedStoreFactory != null, "caching method must be specified");
+      return new HttpCache(
+          appliedStoreFactory, executor, cacheDirectory, maxSize, statsRecorder, clock);
     }
 
     private void checkMaxSize(long maxSize) {
@@ -1084,5 +1093,22 @@ public final class HttpCache implements AutoCloseable {
           maxSize,
           MAX_SIZE_THRESHOLD);
     }
+  }
+
+  private enum StoreFactory {
+    MEMORY {
+      @Override
+      Store create(@Nullable Path directory, long maxSize, Executor executor) {
+        return new MemoryStore(maxSize);
+      }
+    },
+    DISK {
+      @Override
+      Store create(@Nullable Path directory, long maxSize, Executor executor) {
+        return new DiskStore(requireNonNull(directory), maxSize, executor);
+      }
+    };
+
+    abstract Store create(@Nullable Path directory, long maxSize, Executor executor);
   }
 }
