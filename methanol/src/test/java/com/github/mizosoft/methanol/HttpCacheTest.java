@@ -7,11 +7,12 @@ import static com.github.mizosoft.methanol.internal.extensions.CacheAwareRespons
 import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.HIT;
 import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.LOCALLY_GENERATED;
 import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.MISS;
+import static com.github.mizosoft.methanol.testutils.TestUtils.deflate;
+import static com.github.mizosoft.methanol.testutils.TestUtils.gzip;
 import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.Duration.ofDays;
 import static java.time.Duration.ofHours;
 import static java.time.Duration.ofSeconds;
@@ -27,9 +28,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.MockWebServerProvider.UseHttps;
 import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
@@ -52,8 +51,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
-import java.util.zip.DeflaterOutputStream;
-import java.util.zip.GZIPOutputStream;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import okhttp3.Headers;
@@ -1052,30 +1049,6 @@ class HttpCacheTest {
 
   private static LocalDateTime toUtcDateTime(Instant instant) {
     return LocalDateTime.ofInstant(instant, UTC);
-  }
-
-  private static byte[] gzip(String s) {
-    try {
-      var outBuff = new ByteArrayOutputStream();
-      try (var gzipOut = new GZIPOutputStream(outBuff)) {
-        gzipOut.write(s.getBytes(UTF_8));
-      }
-      return outBuff.toByteArray();
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-  }
-
-  private static byte[] deflate(String s) {
-    try {
-      var outBuff = new ByteArrayOutputStream();
-      try (var gzipOut = new DeflaterOutputStream(outBuff)) {
-        gzipOut.write(s.getBytes(UTF_8));
-      }
-      return outBuff.toByteArray();
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
   }
 
   private static <T> CacheAwareResponse<T> assertHit(CacheAwareResponse<T> response) {
