@@ -23,8 +23,10 @@
 package com.github.mizosoft.methanol.testutils;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
@@ -42,7 +44,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Flow.Subscription;
 import java.util.stream.Collectors;
+import java.util.zip.DeflaterInputStream;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLContext;
@@ -81,11 +85,21 @@ public class TestUtils {
   }
 
   public static byte[] gunzip(byte[] data) {
-    try {
-      return new GZIPInputStream(new ByteArrayInputStream(data)).readAllBytes();
+    try (var in = new GZIPInputStream(new ByteArrayInputStream(data))) {
+      return in.readAllBytes();
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  public static byte[] gzip(String s) {
+    var buffer = new ByteArrayOutputStream();
+    try (var out = new GZIPOutputStream(buffer)) {
+      out.write(s.getBytes(UTF_8));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    return buffer.toByteArray();
   }
 
   public static byte[] zlibUnwrap(byte[] zlibWrapped) {
@@ -102,8 +116,18 @@ public class TestUtils {
   }
 
   private static byte[] inflate0(byte[] data, Inflater inflater) {
-    try {
-      return new InflaterInputStream(new ByteArrayInputStream(data), inflater).readAllBytes();
+    try (var in = new InflaterInputStream(new ByteArrayInputStream(data), inflater)) {
+      return in.readAllBytes();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    } finally {
+      inflater.end();
+    }
+  }
+
+  public static byte[] deflate(String s) {
+    try (var in = new DeflaterInputStream(new ByteArrayInputStream(s.getBytes(UTF_8)))) {
+      return in.readAllBytes();
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
