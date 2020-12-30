@@ -77,6 +77,7 @@ public final class MemoryStore implements Store {
 
   @Override
   public @Nullable Viewer view(String key) {
+    requireNonNull(key);
     synchronized (entries) {
       var entry = entries.get(key);
       return entry != null ? entry.view() : null;
@@ -85,6 +86,7 @@ public final class MemoryStore implements Store {
 
   @Override
   public @Nullable Editor edit(String key) {
+    requireNonNull(key);
     synchronized (entries) {
       return entries.computeIfAbsent(key, Entry::new).edit();
     }
@@ -92,6 +94,7 @@ public final class MemoryStore implements Store {
 
   @Override
   public CompletableFuture<@Nullable Viewer> viewAsync(String key) {
+    requireNonNull(key);
     return CompletableFuture.completedFuture(view(key));
   }
 
@@ -104,6 +107,7 @@ public final class MemoryStore implements Store {
 
   @Override
   public boolean remove(String key) {
+    requireNonNull(key);
     synchronized (entries) {
       var entry = entries.get(key);
       if (entry != null) {
@@ -307,7 +311,7 @@ public final class MemoryStore implements Store {
       } finally {
         lock.writeLock().unlock();
 
-        // Evict the entry if it's first edit ever was discarded. This would be
+        // Evict the entry if its first edit ever was discarded. This would be
         // inside the try block above but that risks a deadlock as lock.writeLock()
         // and entries lock are held in reverse order in evict(String key).
         if (evictAfterDiscardedFirstEdit) {
@@ -357,6 +361,7 @@ public final class MemoryStore implements Store {
 
     @Override
     public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
+      requireNonNull(dst);
       int readCount;
       if (position < data.limit()) {
         // duplicate to change position independently in case of concurrent reads
@@ -392,6 +397,7 @@ public final class MemoryStore implements Store {
     private final GrowableBuffer data = new GrowableBuffer();
 
     private ByteBuffer metadata = EMPTY_BUFFER;
+    private boolean metadataIsUpdated;
 
     /** Guards writes to {@code buffer} but allows concurrent reads by viewers. */
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
@@ -419,6 +425,7 @@ public final class MemoryStore implements Store {
         }
         Utils.copyRemaining(metadata, myMetadata.clear());
         myMetadata.flip();
+        metadataIsUpdated = true;
       } finally {
         lock.writeLock().unlock();
       }
@@ -426,6 +433,7 @@ public final class MemoryStore implements Store {
 
     @Override
     public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
+      requireNonNull(src);
       lock.writeLock().lock();
       try {
         return CompletableFuture.completedFuture(data.write(position, src));
@@ -446,10 +454,15 @@ public final class MemoryStore implements Store {
 
     @Override
     public void close() {
-      var newMetadata = metadata.hasRemaining() ? metadata : null;
+      ByteBuffer newMetadata;
       ByteBuffer newData;
       lock.readLock().lock();
       try {
+        // Make a defensive metadata copy
+        newMetadata =
+            metadataIsUpdated
+                ? ByteBuffer.allocate(metadata.remaining()).put(metadata).flip()
+                : null;
         newData = data.writtenCount() > 0 ? data.snapshot() : null;
       } finally {
         lock.readLock().unlock();
