@@ -9,7 +9,6 @@ import java.net.http.HttpResponse.BodyHandler;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Consumer;
@@ -28,11 +27,7 @@ public abstract class RawResponse {
 
   public <T> TrackedResponse<T> handle(BodyHandler<T> handler)
       throws IOException, InterruptedException {
-    try {
-      return handleAsync(handler, FlowSupport.SYNC_EXECUTOR).get();
-    } catch (ExecutionException e) {
-      throw Utils.rethrowAsyncIOFailure(e.getCause());
-    }
+    return Utils.block(handleAsync(handler, FlowSupport.SYNC_EXECUTOR));
   }
 
   public abstract <T> CompletableFuture<TrackedResponse<T>> handleAsync(

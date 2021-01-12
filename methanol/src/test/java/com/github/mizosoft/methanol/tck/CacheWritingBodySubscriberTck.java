@@ -5,7 +5,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
 import com.github.mizosoft.methanol.testutils.TestException;
@@ -98,12 +97,7 @@ public class CacheWritingBodySubscriberTck
     }
 
     @Override
-    public Viewer view() {
-      throw new AssertionError();
-    }
-
-    @Override
-    public void discard() {}
+    public void commit() {}
 
     @Override
     public void close() {}

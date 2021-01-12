@@ -93,7 +93,7 @@ class HttpCacheTest {
   }
 
   @AfterEach
-  void tearDown() {
+  void tearDown() throws IOException {
     if (cache != null) {
       cache.close(); // TODO destroy when implemented
     }
