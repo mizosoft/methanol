@@ -5,6 +5,7 @@ import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import java.io.Closeable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -37,7 +38,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
     viewer.close(); // TODO close quietly
   }
 
-  public @Nullable Editor edit() {
+  public @Nullable Editor edit() throws IOException {
     return viewer.edit();
   }
 }

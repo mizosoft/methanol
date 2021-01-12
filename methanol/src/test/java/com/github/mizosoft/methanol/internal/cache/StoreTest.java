@@ -31,11 +31,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testutils.BuffIterator;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.util.ArrayList;
@@ -44,6 +46,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -102,7 +105,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void openCreateRemove() {
+  void openCreateRemove() throws IOException {
     assertNull(store.view("e1"));
     assertNotNull(newManaged(() -> store.edit("e1")));
     assertNull(store.view("e2"));
@@ -150,34 +153,37 @@ abstract class StoreTest {
   }
 
   @Test
-  void onlyWriteMetadataOnSecondEdit() {
+  void onlyWriteMetadataOnSecondEdit() throws IOException {
     writeEntry("e1", METADATA_1, DATA_1);
     try (var editor = notNull(store.edit("e1"))) {
       editor.metadata(UTF_8.encode(METADATA_2));
+      editor.commit();
     }
     assertEntryContains("e1", METADATA_2, DATA_1);
   }
 
   @Test
-  void onlyWriteEmptyMetadataOnSecondEdit() {
+  void onlyWriteEmptyMetadataOnSecondEdit() throws IOException {
     writeEntry("e1", METADATA_1, DATA_1);
     try (var editor = notNull(store.edit("e1"))) {
       editor.metadata(ByteBuffer.allocate(0));
+      editor.commit();
     }
     assertEntryContains("e1", "", DATA_1);
   }
 
   @Test
-  void onlyWriteDataOnSecondEdit() {
+  void onlyWriteDataOnSecondEdit() throws IOException {
     writeEntry("e1", METADATA_1, DATA_1);
     try (var editor = notNull(store.edit("e1"))) {
       writeString(editor, DATA_2);
+      editor.commit();
     }
     assertEntryContains("e1", METADATA_1, DATA_2);
   }
 
   @Test
-  void writeThenRemove() {
+  void writeThenRemove() throws IOException {
     writeEntry("e1", METADATA_1, DATA_1);
     assertEquals(utf8Length(METADATA_1, DATA_1), store.size());
     assertTrue(store.remove("e1"));
@@ -185,7 +191,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void writeTwoEntriesThenClear() {
+  void writeTwoEntriesThenClear() throws IOException {
     writeEntry("e1", METADATA_1, DATA_1);
     writeEntry("e2", METADATA_2, DATA_2);
     assertEquals(utf8Length(METADATA_1, DATA_1, METADATA_2, DATA_2), store.size());
@@ -196,17 +202,18 @@ abstract class StoreTest {
   }
 
   @Test
-  void mutateMetadataBufferAfterPassingToEditor() {
+  void mutateMetadataBufferAfterPassingToEditor() throws IOException {
     var metadata = ByteBuffer.wrap("420".getBytes(UTF_8));
     try (var editor = notNull(store.edit("e1"))) {
       editor.metadata(metadata);
+      editor.commit();
       metadata.rewind().put(new byte[] {'6', '9'});
     }
     assertEntryContains("e1", "420", "");
   }
 
   @Test
-  void metadataBufferReturnedFromViewerIsReadOnly() {
+  void metadataBufferReturnedFromViewerIsReadOnly() throws IOException {
     writeEntry("e1", "555", "");
     try (var viewer = notNull(store.view("e1"))) {
       assertThrows(
@@ -222,10 +229,10 @@ abstract class StoreTest {
   }
 
   @Test
-  void discardEdit() {
+  void discardEdit() throws IOException {
     try (var editor = notNull(store.edit("e1"))) {
       writeEntry(editor, METADATA_1, DATA_1);
-      editor.discard();
+      // Don't commit
     }
     assertNull(store.view("e1"));
     assertEquals(0, store.size());
@@ -233,11 +240,11 @@ abstract class StoreTest {
   }
 
   @Test
-  void discardSecondEdit() {
+  void discardSecondEdit() throws IOException {
     writeEntry("e1", METADATA_1, DATA_1);
     try (var editor = notNull(store.edit("e1"))) {
       writeEntry(editor, METADATA_2, DATA_2);
-      editor.discard();
+      // Don't commit
     }
     // Second edit data is discarded
     assertEntryContains("e1", METADATA_1, DATA_1);
@@ -254,19 +261,25 @@ abstract class StoreTest {
     var cfs = IntStream.range(0, threadCount)
         .mapToObj(__ -> CompletableFuture.runAsync(() -> {
           awaitUninterruptibly(begin);
-          var editor = store.edit("e1");
-          try {
+          var countDownEndLatchAndRetainEditor =
+              new AutoCloseable() {
+                @Override
+                public void close() {
+                  // Keep ownership of the editor (if owned) till all threads
+                  // reach here via try-with-resources
+                  end.countDown();
+                  awaitUninterruptibly(end);
+                }
+              };
+          try (countDownEndLatchAndRetainEditor; // Ran before closing the editor
+              var editor = store.edit("e1")) {
             assertTrue(editor == null || gotEditor.compareAndSet(false, true));
             if (editor != null) {
               writeEntry(editor, METADATA_1, DATA_1);
+              editor.commit();
             }
-          } finally {
-            // Keep ownership of the editor (if owned) till all threads reach here
-            end.countDown();
-            awaitUninterruptibly(end);
-            if (editor != null) {
-              editor.close();
-            }
+          } catch (IOException e) {
+            throw new CompletionException(e);
           }
         }, executor))
         .collect(Collectors.toUnmodifiableList());
@@ -277,7 +290,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void iterateEntries() {
+  void iterateEntries() throws IOException {
     int entryCount = 9;
     for (int i = 1; i <= entryCount; i++) {
       writeEntry("e" + i, "metadata" + i, "data" + i);
@@ -321,7 +334,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void iteratorRemove() {
+  void iteratorRemove() throws IOException {
     writeEntry("e1", "metadata1", "data1");
     writeEntry("e2", "metadata2", "data2");
     writeEntry("e3", "metadata3", "data3");
@@ -342,9 +355,11 @@ abstract class StoreTest {
 
   /** Closing an editor of an evicted entry discards the edit. */
   @Test
-  void removeBeforeClosingEditorDiscardsData() {
+  void removeBeforeClosingEditorDiscardsData() throws IOException {
     try (var editor = notNull(store.edit("e1"))) {
       writeEntry(editor, METADATA_1, DATA_1);
+      editor.commit();
+
       assertTrue(store.remove("e1"));
     }
     assertNull(store.view("e1"));
@@ -353,7 +368,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void removeNonExistingEntry() {
+  void removeNonExistingEntry() throws IOException {
     assertFalse(store.remove("e1"));
   }
 
@@ -366,7 +381,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void writeBeyondMaxSize() {
+  void writeBeyondMaxSize() throws IOException {
     store = newManagedStore(6);
     writeEntry("e1", "aa", "bbb");
     assertEquals(5, store.size());
@@ -378,7 +393,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void writeBeyondMaxSizeTwice() {
+  void writeBeyondMaxSizeTwice() throws IOException {
     store = newManagedStore(6);
     writeEntry("e1", "aa", "bbb");
     assertEquals(5, store.size());
@@ -395,7 +410,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void keepWritingBeyondMaxSize() {
+  void keepWritingBeyondMaxSize() throws IOException {
     store = newManagedStore(12);
     for (int i = 1; i <= 11; i += 2) {
       var key1 = "e" + i;
@@ -416,7 +431,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void evictionIsInLruOrder() {
+  void evictionIsInLruOrder() throws IOException {
     store = newManagedStore(18);
     writeEntry("e1", "aaa", "bbb");          // e1
     assertEquals(6, store.size());
@@ -463,13 +478,13 @@ abstract class StoreTest {
   }
 
   @Test
-  void discardWriteBeyondBound() {
+  void discardWriteBeyondBound() throws IOException {
     store = newManagedStore(12);
     writeEntry("e1", "aaa", "bbb");
     writeEntry("e2", "ccc", "ddd");
     try (var editor = notNull(store.edit("e3"))) {
       writeEntry(editor, "eee", "fff");
-      editor.discard();
+      // Don't commit
     }
     assertEquals(12, store.size());
     assertEntryContains("e1", "aaa", "bbb");
@@ -478,7 +493,7 @@ abstract class StoreTest {
 
   @Test
   @Disabled("not yet implemented")
-  void resetMaxSize_expanding() {
+  void resetMaxSize_expanding() throws IOException {
     store = newManagedStore(12);
     writeEntry("e1", "aaa", "ccc");
     writeEntry("e2", "ccc", "ddd");
@@ -493,7 +508,7 @@ abstract class StoreTest {
 
   @Test
   @Disabled("not yet implemented")
-  void resetMaxSize_truncating() {
+  void resetMaxSize_truncating() throws IOException {
     store = newManagedStore(12);
     writeEntry("e1", "aaa", "ccc");          // e1
     writeEntry("e2", "ccc", "ddd");          // e1, e2
@@ -504,28 +519,13 @@ abstract class StoreTest {
   }
 
   @Test
-  void viewDataBeingWritten() {
-    try (var editor = notNull(store.edit("e1")); var viewer = editor.view()) {
-      assertEntryContains(viewer, "", "");
-      editor.metadata(UTF_8.encode(METADATA_1));
-      assertEntryContains(viewer, METADATA_1, "");
-
-      var dataBytes = UTF_8.encode(DATA_1);
-      editor.writeAsync(0, dataBytes);
-      assertEntryContains(viewer, METADATA_1, DATA_1);
-
-      editor.writeAsync(viewer.dataSize(), dataBytes.rewind());
-      assertEntryContains(viewer, METADATA_1, DATA_1.repeat(2));
-    }
-  }
-
-  @Test
-  void editFromViewer() {
+  void editFromViewer() throws IOException {
     writeEntry("e1", METADATA_1, DATA_1);
     try (var viewer = notNull(store.view("e1"))) {
       assertEntryContains(viewer, METADATA_1, DATA_1);
       try (var editor = notNull(viewer.edit())) {
         writeEntry(editor, METADATA_2, DATA_2);
+        editor.commit();
       }
       // Committed edit is not visible
       assertEntryContains(viewer, METADATA_1, DATA_1);
@@ -534,7 +534,7 @@ abstract class StoreTest {
   }
 
   @Test
-  void editFromStaleViewer() {
+  void editFromStaleViewer() throws IOException {
     writeEntry("e1", METADATA_1, DATA_1);
     try (var viewer = notNull(store.view("e1"))) {
       assertEntryContains(viewer, METADATA_1, DATA_1);
@@ -544,19 +544,9 @@ abstract class StoreTest {
   }
 
   @Test
-  void editFromViewerDuringOngoingEdit() {
+  void editFromViewerDuringOngoingEdit() throws IOException {
     writeEntry("e1", METADATA_1, DATA_1);
     try (var viewer = notNull(store.view("e1")); var editor = notNull(store.edit("e1"))) {
-      assertNull(viewer.edit());
-      editor.discard();
-    }
-  }
-
-  @Test
-  void editFromLiveViewer() {
-    try (var editor = notNull(store.edit("e1")); var viewer = editor.view()) {
-      editor.metadata(UTF_8.encode(METADATA_1));
-      assertEntryContains(viewer, METADATA_1, "");
       assertNull(viewer.edit());
     }
   }
@@ -564,12 +554,17 @@ abstract class StoreTest {
   void writeEntry(String key, String metadata, String data) {
     try (var editor = notNull(store.edit(key))) {
       writeEntry(editor, metadata, data);
+      editor.commit();
+    } catch (IOException ioe) {
+      fail(ioe);
     }
   }
 
   void assertEntryContains(String key, String metadata, String data) {
     try (var viewer = notNull(store.view(key))) {
       assertEntryContains(viewer, metadata, data);
+    } catch (IOException ioe) {
+      fail(ioe);
     }
   }
 

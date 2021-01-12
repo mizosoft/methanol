@@ -11,7 +11,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import com.github.mizosoft.methanol.TestExecutorProvider;
 import com.github.mizosoft.methanol.TestExecutorProvider.TestWithExecutor;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
@@ -280,6 +279,7 @@ class CacheWritingBodySubscriberTest {
     @MonotonicNonNull ByteBuffer metadata;
     volatile boolean discarded;
     volatile boolean closed;
+    volatile boolean committed;
 
     @Override
     public String key() {
@@ -298,17 +298,13 @@ class CacheWritingBodySubscriberTest {
     }
 
     @Override
-    public Viewer view() {
-      throw new AssertionError();
-    }
-
-    @Override
-    public void discard() {
-      discarded = true;
+    public void commit() {
+      committed = true;
     }
 
     @Override
     public synchronized void close() {
+      discarded = !committed;
       closed = true;
       notifyAll();
     }

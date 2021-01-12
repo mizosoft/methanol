@@ -11,6 +11,7 @@ import com.github.mizosoft.methanol.TestExecutorProvider.ExecutorSource;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -30,11 +31,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 class CacheReadingPublisherTest {
   @ParameterizedTest
   @ExecutorSource
-  void cacheString(Executor executor) {
+  void cacheString(Executor executor) throws IOException {
     // TODO parameterize also with DiskStore when implemented
     var store = new MemoryStore(Long.MAX_VALUE);
     try (var editor = notNull(store.edit("e1"))) {
       editor.writeAsync(0, UTF_8.encode("Cache me please!"));
+      editor.commit();
     }
 
     var publisher = new CacheReadingPublisher(store.view("e1"), executor);

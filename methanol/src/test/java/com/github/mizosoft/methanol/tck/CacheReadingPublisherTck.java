@@ -52,6 +52,9 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
           // Set metadata to prevent the entry from being discarded if data is empty
           editor.metadata(ByteBuffer.wrap(new byte[] {1}));
           editor.writeAsync(0, BodyCollector.collect(data)).join();
+          editor.commit();
+        } catch (IOException ioe) {
+          throw new AssertionError(ioe);
         }
         return new ForwardingViewer(requireNonNull(store.view("e1")));
       }
@@ -240,7 +243,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
     @Override
     public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
       var future = new CompletableFuture<Integer>();
-      channel.read(dst, position, dst, new ReadCompletionHandler(0, channel, future));
+      channel.read(dst, position, dst, new ReadCompletionHandler(channel, future, position));
       return future;
     }
 
@@ -255,33 +258,43 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
     /** A completion handler that ensures the buffer is filled before completing the future. */
     private static final class ReadCompletionHandler
         implements CompletionHandler<Integer, ByteBuffer> {
-      private final long position;
       private final AsynchronousFileChannel channel;
       private final CompletableFuture<Integer> future;
+      private final long position;
+      private final int totalRead;
 
       ReadCompletionHandler(
-          long position, AsynchronousFileChannel channel, CompletableFuture<Integer> future) {
-        this.position = position;
+          AsynchronousFileChannel channel, CompletableFuture<Integer> future, long position) {
+        this(channel, future, position, 0);
+      }
+
+      private ReadCompletionHandler(
+          AsynchronousFileChannel channel,
+          CompletableFuture<Integer> future,
+          long position,
+          int totalRead) {
         this.channel = channel;
         this.future = future;
+        this.position = position;
+        this.totalRead = totalRead;
       }
 
       @Override
-      public void completed(Integer result, ByteBuffer buffer) {
-        if (result < 0 || !buffer.hasRemaining()) {
-          future.complete(result);
-        } else {
-          long nextPosition = position + result;
+      public void completed(Integer read, ByteBuffer dst) {
+        if (read >= 0 && dst.hasRemaining()) {
+          long nextPosition = position + read;
           channel.read(
-              buffer,
+              dst,
               nextPosition,
-              buffer,
-              new ReadCompletionHandler(nextPosition, channel, future));
+              dst,
+              new ReadCompletionHandler(channel, future, nextPosition, totalRead + read));
+        } else {
+          future.complete(totalRead + Math.max(read, 0));
         }
       }
 
       @Override
-      public void failed(Throwable exc, ByteBuffer buffer) {
+      public void failed(Throwable exc, ByteBuffer dst) {
         future.completeExceptionally(exc);
       }
     }

@@ -9,6 +9,7 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -336,6 +337,9 @@ public final class CacheWritingBodySubscriber
       state = DISPOSED;
       try (editor) {
         editor.metadata(metadata);
+        editor.commit();
+      } catch (IOException ioe) {
+        // TODO handle properly
       }
     }
 
@@ -352,8 +356,10 @@ public final class CacheWritingBodySubscriber
 
       state = DISPOSED;
       writeQueue.clear();
-      try (editor) {
-        editor.discard();
+      try {
+        editor.close();
+      } catch (IOException ioe) {
+        // TODO handle properly
       }
     }
 
