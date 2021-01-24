@@ -21,6 +21,7 @@ import static java.util.function.Predicate.not;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -28,6 +29,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.MockWebServerProvider.UseHttps;
 import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
+import com.github.mizosoft.methanol.testutils.MockClock;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient.Redirect;
@@ -37,12 +39,9 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.security.cert.Certificate;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.temporal.TemporalAmount;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -73,7 +72,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class HttpCacheTest {
   @RegisterExtension final TestExecutorProvider executorProvider = new TestExecutorProvider();
 
-  private AdvancableClock clock;
+  private MockClock clock;
   private HttpCache cache;
   private Methanol.Builder clientBuilder;
   private Methanol client;
@@ -81,7 +80,7 @@ class HttpCacheTest {
 
   @BeforeEach
   void setUp(Methanol.Builder builder, MockWebServer server) {
-    clock = new AdvancableClock();
+    clock = new MockClock();
     cache = HttpCache.newBuilder()
         .cacheOnMemory(Long.MAX_VALUE)
         .executor(executorProvider.newExecutor(FIXED_POOL))
@@ -1173,42 +1172,11 @@ class HttpCacheTest {
     return (CacheAwareResponse<T>) response;
   }
 
-  private static final class AdvancableClock extends Clock {
-    private Instant instant;
-
-    AdvancableClock() {
-      this.instant = Instant.ofEpochMilli(0);
-    }
-
-    void advance(TemporalAmount amount) {
-      instant = instant.plus(amount);
-    }
-
-    void advanceSeconds(int seconds) {
-      instant = instant.plus(ofSeconds(seconds));
-    }
-
-    @Override
-    public Instant instant() {
-      return instant;
-    }
-
-    @Override
-    public ZoneId getZone() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Clock withZone(ZoneId zone) {
-      throw new UnsupportedOperationException();
-    }
-  }
-
   private static final class ClockAdvancingInterceptor implements Interceptor {
-    private final AdvancableClock clock;
+    private final MockClock clock;
     private Duration advanceOnSend;
 
-    ClockAdvancingInterceptor(AdvancableClock clock) {
+    ClockAdvancingInterceptor(MockClock clock) {
       this.clock = clock;
       this.advanceOnSend = Duration.ZERO;
     }

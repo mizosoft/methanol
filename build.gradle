@@ -28,7 +28,8 @@ ext {
       'jaxbRuntime'     : '2.7.6',
       'jsoup'           : '1.13.1',
       'testng'          : '7.3.0',
-      'junitParams'     : '5.7.0'
+      'junitParams'     : '5.7.0',
+      'jimfs'           : '1.2'
   ]
 
   deps = [
@@ -57,7 +58,8 @@ ext {
       'jaxbRuntime'            : "org.eclipse.persistence:org.eclipse.persistence.moxy:${versions.jaxbRuntime}",
       'jsoup'                  : "org.jsoup:jsoup:${versions.jsoup}",
       'testng'                 : "org.testng:testng:${versions.testng}",
-      'junitParams'            : "org.junit.jupiter:junit-jupiter-params:${versions.junitParams}"
+      'junitParams'            : "org.junit.jupiter:junit-jupiter-params:${versions.junitParams}",
+      'jimfs'                  : "com.google.jimfs:jimfs:${versions.jimfs}"
   ]
 
   // querying properties about subprojects
@@ -72,13 +74,13 @@ ext {
         project.name != 'progress' &&
         project.name != 'crawler'
   }
-  // project has tests that contribute to coverage ?
+  // project has tests that contribute to coverage?
   contributesToTests = { project ->
     isJavaProject(project) &&
         !(project.name in
             ['methanol-benchmarks', 'methanol-testutils', 'methanol-samples', 'progress', 'crawler'])
   }
-  // project is included in coverage report ?
+  // project is included in coverage report?
   contributesToCoverageReport = { project ->
     isPublished(project) && project.name != 'methanol-benchmarks'
   }

@@ -29,6 +29,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -60,6 +61,14 @@ public final class MemoryStore implements Store {
   @Override
   public Optional<Executor> executor() {
     return Optional.empty();
+  }
+
+  @Override
+  public void initialize() throws IOException {}
+
+  @Override
+  public CompletableFuture<Void> initializeAsync() {
+    return CompletableFuture.completedFuture(null);
   }
 
   @Override
@@ -143,7 +152,7 @@ public final class MemoryStore implements Store {
   public void flush() {}
 
   /**
-   * Marks entry for eviction and decrements it's last committed size. Called before removal from
+   * Marks entry for eviction and decrements its last committed size. Called before removal from
    * the LRU map. Returns the current size after decrementing the evicted entry's size.
    */
   private long evict(Entry entry) {
@@ -153,9 +162,8 @@ public final class MemoryStore implements Store {
 
     entry.markEvicted(); // Prevent the entry from increasing size if an edit is yet to be committed
     var viewer = entry.view();
-    return viewer != null // Entry has committed data
-        ? size.addAndGet(-viewer.entrySize())
-        : size.get();
+    long evictedSize = viewer != null ? viewer.entrySize() : 0L;
+    return size.addAndGet(-evictedSize);
   }
 
   /** Keeps evicting entries in LRU order till size becomes <= maxSize. */
@@ -163,7 +171,7 @@ public final class MemoryStore implements Store {
     synchronized (entries) {
       long currentSize = size.get();
       var iter = entries.values().iterator();
-      while (iter.hasNext() && currentSize > maxSize) {
+      while (currentSize > maxSize && iter.hasNext()) {
         currentSize = evict(iter.next());
         iter.remove();
       }
@@ -216,6 +224,7 @@ public final class MemoryStore implements Store {
       }
     }
 
+    @EnsuresNonNullIf(expression = "nextViewer", result = true)
     private boolean findNextViewer() {
       assert nextViewer == null;
       synchronized (entries) {
@@ -284,7 +293,7 @@ public final class MemoryStore implements Store {
       }
     }
 
-    /** Prevents any ongoing edit from committing it's data. */
+    /** Prevents any ongoing edit from committing its data. */
     void markEvicted() {
       lock.lock();
       try {
@@ -296,28 +305,26 @@ public final class MemoryStore implements Store {
 
     void commitEdit(
         MemoryEditor editor, @Nullable ByteBuffer newMetadata, @Nullable ByteBuffer newData) {
-      long entrySize;
-      long previousEntrySize;
+      long oldEntrySize;
+      long newEntrySize;
       boolean evictAfterDiscardedFirstEdit = false;
       lock.lock();
       try {
-        if (currentEditor != editor) { // Unowned editor
-          return;
-        }
+        assert currentEditor == editor;
         currentEditor = null;
         if ((newMetadata == null && newData == null) || evicted) { // Discarded edit or evicted
-          evictAfterDiscardedFirstEdit = !evicted && version == 0;
+          evictAfterDiscardedFirstEdit = version == 0 && !evicted;
           return;
         }
 
-        previousEntrySize = (long) metadata.remaining() + data.remaining();
+        oldEntrySize = (long) metadata.remaining() + data.remaining();
         if (newMetadata != null) {
           metadata = newMetadata.asReadOnlyBuffer();
         }
         if (newData != null) {
           data = newData.asReadOnlyBuffer();
         }
-        entrySize = (long) metadata.remaining() + data.remaining();
+        newEntrySize = (long) metadata.remaining() + data.remaining();
         version++;
       } finally {
         lock.unlock();
@@ -339,7 +346,7 @@ public final class MemoryStore implements Store {
         }
       }
 
-      long netEntrySize = entrySize - previousEntrySize; // Might be negative
+      long netEntrySize = newEntrySize - oldEntrySize; // Might be negative
       if (size.addAndGet(netEntrySize) > maxSize) {
         evictExcessiveEntries();
       }
@@ -408,7 +415,8 @@ public final class MemoryStore implements Store {
     private final Lock lock = new ReentrantLock();
 
     private ByteBuffer metadata = EMPTY_BUFFER;
-    private boolean metadataIsUpdated;
+    private boolean editedMetadata;
+    private boolean editedData;
     private boolean committed;
 
     MemoryEditor(Entry entry) {
@@ -427,7 +435,7 @@ public final class MemoryStore implements Store {
       try {
         requireNotCommitted();
         this.metadata = Utils.copy(metadata, this.metadata);
-        metadataIsUpdated = true;
+        editedMetadata = true;
       } finally {
         lock.unlock();
       }
@@ -439,6 +447,7 @@ public final class MemoryStore implements Store {
       lock.lock();
       try {
         requireNotCommitted();
+        editedData = true;
         return CompletableFuture.completedFuture(data.write(position, src));
       } finally {
         lock.unlock();
@@ -446,7 +455,7 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public void commit() {
+    public void commitOnClose() {
       lock.lock();
       try {
         committed = true;
@@ -457,16 +466,14 @@ public final class MemoryStore implements Store {
 
     @Override
     public void close() {
-      ByteBuffer newMetadata;
-      ByteBuffer newData;
+      ByteBuffer newMetadata = null;
+      ByteBuffer newData = null;
       lock.lock();
       try {
+        // TODO that'll not work if metadata is written to nothing
         if (committed) {
-          newMetadata = metadataIsUpdated ? Utils.copy(metadata) : null;
-          newData = data.writtenCount() > 0 ? data.snapshot() : null;
-        } else {
-          newMetadata = null;
-          newData = null;
+          newMetadata = editedMetadata ? Utils.copy(metadata) : null;
+          newData = editedData ? data.snapshot() : null;
         }
       } finally {
         lock.unlock();
@@ -495,10 +502,6 @@ public final class MemoryStore implements Store {
         output.write(srcCopy);
       }
       return writeCount;
-    }
-
-    int writtenCount() {
-      return output.fence();
     }
 
     ByteBuffer snapshot() {
