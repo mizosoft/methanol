@@ -298,7 +298,7 @@ class CacheWritingBodySubscriberTest {
     }
 
     @Override
-    public void commit() {
+    public void commitOnClose() {
       committed = true;
     }
 

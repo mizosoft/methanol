@@ -36,7 +36,7 @@ class CacheReadingPublisherTest {
     var store = new MemoryStore(Long.MAX_VALUE);
     try (var editor = notNull(store.edit("e1"))) {
       editor.writeAsync(0, UTF_8.encode("Cache me please!"));
-      editor.commit();
+      editor.commitOnClose();
     }
 
     var publisher = new CacheReadingPublisher(store.view("e1"), executor);

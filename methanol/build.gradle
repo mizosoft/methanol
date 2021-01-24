@@ -1,27 +1,28 @@
 dependencies {
   // Use latest version of TestNG as the one used by tck-flow is really old.
-  // A recent feature currently in use is CONSTRUCTOR target for @Factory
+  // A recent feature currently in use is CONSTRUCTOR target for @Factory.
   testImplementation deps.testng
   testImplementation deps.junitParams
   testImplementation deps.reactiveStreamsTckFlow
   testImplementation deps.mockWebServer
+  testImplementation deps.jimfs
   testImplementation project(':methanol-testutils')
 }
 
-// TestNG transitively brings an old checkerframework artifact
-// which causes it's packages to be read from two modules
+// TestNG transitively brings an old checkerframework artifact,
+// which causes its packages to be read from two modules.
 configurations.testImplementation {
   exclude group: 'org.checkerframework', module: 'checker-compat-qual'
 }
 
 compileJava {
-  // suppress exporting to module unresolvable on compilation
+  // Suppress exporting to modules unresolvable on compilation
   options.compilerArgs += '-Xlint:-module'
 }
 
 test {
   exclude '**/tck/**'
-  // run from classpath to use META-INF/services which doesn't work from module path
+  // Run from classpath to use META-INF/services which doesn't work from module path
   moduleOptions {
     runOnClasspath = true
   }
@@ -48,18 +49,18 @@ check.dependsOn tckTest
 addReads(compileTestJava, 'methanol.testutils')
 addReads(compileTestJava, 'org.junit.jupiter.params')
 
-// The TestNG explicit dep causes java modularity plugin to insert --add-module testng,
-// which only works with older versions of TestNG (TestNG version >= 7.0.0 have org.testng
-// Automatic-Module-Name). So till https://github.com/java9-modularity/gradle-modules-plugin/issues/172
-// is fixed, this dance is made to correct the module name after the plugin inserts it
+// The TestNG explicit dep causes java modularity plugin to insert '--add-module testng',
+// which only works with older versions of TestNG (TestNG versions >= 7.0.0 have an
+// Automatic-Module-Name of org.testng). So till https://github.com/java9-modularity/gradle-modules-plugin/issues/172
+// is fixed, this dance is made to correct the module name after the plugin inserts it.
 compileTestJava {
   def mutatorIndex = indexOfArgsMutator(actions, 'org.javamodularity.moduleplugin')
   if (mutatorIndex < 0) {
-    throw new GradleException("couldn't find org.javamodularity.moduleplugin arguments mutator task for compileTestJava")
+    throw new GradleException("couldn't find org.javamodularity.moduleplugin arguments mutator action for compileTestJava")
   }
 
   actions.add(mutatorIndex + 1, {
-    options.compilerArgs = correctTestNGModule(options.compilerArgs)
+    options.compilerArgs = correctTestNGModuleName(options.compilerArgs)
   } as Action<? super Task>)
 }
 
@@ -74,7 +75,7 @@ def indexOfArgsMutator(actions, packagePrefix) {
 }
 
 // Replaces testng with org.testng in --add-modules and --add-reads
-def correctTestNGModule(List<String> args) {
+def correctTestNGModuleName(List<String> args) {
   def correctedArgs = []
   for (int i = 0; i < args.size(); i++) {
     correctedArgs += args[i]

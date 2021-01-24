@@ -337,7 +337,7 @@ public final class CacheWritingBodySubscriber
       if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
         try (editor) {
           editor.metadata(metadata);
-          editor.commit();
+          editor.commitOnClose();
         } catch (IOException ioe) {
           // TODO handle properly
         }

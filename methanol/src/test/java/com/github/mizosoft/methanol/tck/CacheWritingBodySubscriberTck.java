@@ -97,7 +97,7 @@ public class CacheWritingBodySubscriberTck
     }
 
     @Override
-    public void commit() {}
+    public void commitOnClose() {}
 
     @Override
     public void close() {}

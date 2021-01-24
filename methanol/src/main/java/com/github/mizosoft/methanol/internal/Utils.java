@@ -32,13 +32,17 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
+import java.time.Clock;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
+import java.time.ZoneOffset;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Miscellaneous utilities. */
 public class Utils {
+  private static final Clock SYSTEM_MILLIS_UTC = Clock.tickMillis(ZoneOffset.UTC);
+
   private Utils() {} // non-instantiable
 
   public static boolean isValidToken(String token) {
@@ -91,6 +95,10 @@ public class Utils {
 
   public static ByteBuffer copy(ByteBuffer source, ByteBuffer target) {
     return target.capacity() >= source.capacity() ? target.put(source) : copy(source);
+  }
+
+  public static Clock systemMillisUtc() {
+    return SYSTEM_MILLIS_UTC;
   }
 
   /**
@@ -147,11 +155,29 @@ public class Utils {
     return null;
   }
 
-  public static <T> T block(CompletableFuture<T> future) throws IOException, InterruptedException {
+  public static <T> T block(Future<T> future) throws IOException, InterruptedException {
     try {
       return future.get();
     } catch (ExecutionException failed) {
       throw rethrowAsyncIOFailure(failed.getCause(), false);
+    }
+  }
+
+  /**
+   * Same as {@link #block(Future)} but throws {@code InterruptedIOException} instead of {@code
+   * InterruptedException}.
+   */
+  public static <T> T blockOnIO(Future<T> future) throws IOException {
+    try {
+      return future.get();
+    } catch (ExecutionException failed) {
+      try {
+        throw rethrowAsyncIOFailure(failed.getCause(), true);
+      } catch (InterruptedException unexpected) {
+        throw new AssertionError(unexpected); // Can't happen
+      }
+    } catch (InterruptedException interrupted) {
+      throw new InterruptedIOException();
     }
   }
 
