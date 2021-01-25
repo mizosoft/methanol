@@ -6,8 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.github.mizosoft.methanol.TestExecutorProvider;
-import com.github.mizosoft.methanol.TestExecutorProvider.ExecutorSource;
+import com.github.mizosoft.methanol.ExecutorProvider;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
@@ -25,12 +26,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
 
-@ExtendWith(TestExecutorProvider.class)
+@ExtendWith(ExecutorProvider.class)
 class CacheReadingPublisherTest {
-  @ParameterizedTest
-  @ExecutorSource
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void cacheString(Executor executor) throws IOException {
     // TODO parameterize also with DiskStore when implemented
     var store = new MemoryStore(Long.MAX_VALUE);
@@ -45,8 +45,8 @@ class CacheReadingPublisherTest {
     assertEquals("Cache me please!", getBody(subscriber));
   }
 
-  @ParameterizedTest
-  @ExecutorSource
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void failureInAsyncRead(Executor executor) {
     var failedViewer = new TestViewer() {
       @Override
@@ -67,8 +67,8 @@ class CacheReadingPublisherTest {
   }
 
   /** No new reads should be scheduled when the subscription is cancelled. */
-  @ParameterizedTest
-  @ExecutorSource
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void cancelSubscriptionWhileReadIsPending(Executor executor) throws InterruptedException {
     var firstRead = new CountDownLatch(1);
     var subscriptionCancelled = new CountDownLatch(1);
@@ -104,8 +104,8 @@ class CacheReadingPublisherTest {
     assertEquals(0, subscriber.errors);
   }
 
-  @ParameterizedTest
-  @ExecutorSource
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void completionWithoutDemandOnEmptyViewer(Executor executor) {
     var emptyViewer = new TestViewer() {
       @Override

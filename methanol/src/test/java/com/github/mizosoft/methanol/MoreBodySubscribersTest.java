@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
+import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.SCHEDULER;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.fromAsyncSubscriber;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofByteChannel;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofDeferredObject;
@@ -41,11 +43,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
-import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -61,7 +63,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.RejectedExecutionException;
@@ -74,26 +75,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.LongStream;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
+@Timeout(60)
+@ExtendWith(ExecutorProvider.class)
 class MoreBodySubscribersTest {
-
-  private Executor executor;
+  private Executor threadPool;
   private ScheduledExecutorService scheduler;
 
   @BeforeEach
-  void setupExecutor() {
-    executor = Executors.newFixedThreadPool(8);
-    scheduler = Executors.newSingleThreadScheduledExecutor();
-  }
-
-  @AfterEach
-  void shutdownExecutor() {
-    TestUtils.shutdown(executor, scheduler);
+  @ExecutorConfig({FIXED_POOL, SCHEDULER})
+  void setupExecutor(Executor threadPool, ScheduledExecutorService scheduler) {
+    this.threadPool = threadPool;
+    this.scheduler = scheduler;
   }
 
   @Test
@@ -466,7 +465,7 @@ class MoreBodySubscribersTest {
   private Publisher<List<ByteBuffer>> asciiPublisherOf(
       String str, int buffSize, int buffsPerList) {
     return FlowAdapters.toFlowPublisher(new AsyncIterablePublisher<>(
-        iterableOf(US_ASCII.encode(str), buffSize, buffsPerList), executor));
+        iterableOf(US_ASCII.encode(str), buffSize, buffsPerList), threadPool));
   }
 
   private static void assertReadTimeout(

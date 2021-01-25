@@ -1,18 +1,20 @@
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.github.mizosoft.methanol.ExecutorProvider;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.testutils.MockExecutor;
 import com.github.mizosoft.methanol.testutils.TestException;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,6 +25,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 class SerialExecutorTest {
   private @MonotonicNonNull MockExecutor mockExecutor;
@@ -167,8 +170,9 @@ class SerialExecutorTest {
   }
 
   @RepeatedTest(10)
-  void executionFromMultipleThreads() throws InterruptedException {
-    var threadPool = Executors.newCachedThreadPool();
+  @ExtendWith(ExecutorProvider.class)
+  @ExecutorConfig(CACHED_POOL)
+  void executionFromMultipleThreads(Executor threadPool) throws InterruptedException {
     executor = new SerialExecutor(threadPool);
 
     var stochasticLatch = new Object() {
@@ -204,7 +208,5 @@ class SerialExecutorTest {
 
     assertTrue(endLatch.await(10, TimeUnit.SECONDS));
     assertEquals(threadCount, calls.get());
-
-    threadPool.shutdown();
   }
 }

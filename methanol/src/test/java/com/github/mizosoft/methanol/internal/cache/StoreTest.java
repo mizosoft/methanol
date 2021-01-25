@@ -1,5 +1,6 @@
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertAbsent;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertUnreadable;
@@ -20,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.github.mizosoft.methanol.ExecutorProvider;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider;
@@ -34,14 +37,14 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 
-@ExtendWith(StoreProvider.class)
 @Timeout(60)
+@ExtendWith({StoreProvider.class, ExecutorProvider.class})
 class StoreTest {
   @ParameterizedTest
   @StoreConfig
@@ -64,12 +67,12 @@ class StoreTest {
 
   @ParameterizedTest
   @StoreConfig
-  void concurrentViewers(Store store) throws IOException {
+  @ExecutorConfig(CACHED_POOL)
+  void concurrentViewers(Store store, Executor threadPool) throws IOException {
     writeEntry(store, "e1", "Pockemon", "Charmander");
 
     // Create viewerCount concurrent viewers
     int viewerCount = 10;
-    var threadPool = Executors.newFixedThreadPool(viewerCount);
     var arrival = new CyclicBarrier(viewerCount);
     var tasks = new ArrayList<CompletableFuture<Void>>();
     for (int i = 0; i < viewerCount; i++) {
@@ -81,7 +84,6 @@ class StoreTest {
       tasks.add(task);
     }
 
-    threadPool.shutdown();
     assertAll(tasks.stream().map(cf -> cf::join));
   }
 
@@ -238,12 +240,12 @@ class StoreTest {
 
   @ParameterizedTest
   @StoreConfig
-  void contendedEdit(Store store) throws IOException {
+  @ExecutorConfig(CACHED_POOL)
+  void contendedEdit(Store store, Executor threadPool) throws IOException {
     // Create 10 threads that contend over an edit
     int threadCount = 10;
     var arrival = new CyclicBarrier(threadCount);
     var endLatch = new CountDownLatch(threadCount);
-    var threadPool = Executors.newCachedThreadPool();
     var acquired = new AtomicBoolean();
     var tasks = new ArrayList<CompletableFuture<Void>>();
     for (int i = 0; i < threadCount; i++) {
@@ -274,7 +276,6 @@ class StoreTest {
       tasks.add(task);
     }
 
-    threadPool.shutdown();
     assertAll(tasks.stream().map(cf -> cf::join));
     assertEntryEquals(store, "e1", "Jigglypuff", "Psyduck");
   }

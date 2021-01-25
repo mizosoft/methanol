@@ -22,24 +22,25 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.ProgressTracker.Builder;
 import com.github.mizosoft.methanol.ProgressTracker.ImmutableProgress;
 import com.github.mizosoft.methanol.ProgressTracker.Listener;
 import com.github.mizosoft.methanol.ProgressTracker.MultipartListener;
 import com.github.mizosoft.methanol.ProgressTracker.MultipartProgress;
 import com.github.mizosoft.methanol.ProgressTracker.Progress;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BuffIterator;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.FailedPublisher;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
-import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscribers;
@@ -52,17 +53,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Flow;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
+@ExtendWith(ExecutorProvider.class)
 class ProgressTrackerTest {
 
   // Virtual tick between each onXXXX method
@@ -71,18 +72,9 @@ class ProgressTrackerTest {
   private Executor upstreamExecutor;
 
   @BeforeEach
-  void setupUpstreamExecutor() {
-    upstreamExecutor = Executors.newFixedThreadPool(8);
-  }
-
-  @AfterEach
-  void shutdownUpstreamExecutor() {
-    TestUtils.shutdown(upstreamExecutor);
-  }
-
-  // Overridden by ProgressTrackerWithExecutorTest for async version
-  Executor trackerExecutor() {
-    return FlowSupport.SYNC_EXECUTOR;
+  @ExecutorConfig(FIXED_POOL)
+  void setupUpstreamExecutor(Executor executor) {
+    upstreamExecutor = executor;
   }
 
   @Test
@@ -146,11 +138,12 @@ class ProgressTrackerTest {
     assertTrue(Double.isNaN(progressNaN.value()));
   }
 
-  @Test
-  void trackUploadProgressNoThreshold() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void trackUploadProgressNoThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;
-    var tracker = withVirtualClock().build();
+    var tracker = withVirtualClock(executor).build();
     var listener = new TestListener();
     var trackedUpstream = tracker.tracking(bodyPublisher(batchSize, count), listener);
 
@@ -161,9 +154,10 @@ class ProgressTrackerTest {
     testProgressSequenceNoThreshold(listener, batchSize, count);
   }
 
-  @Test
-  void trackUploadProgressWithError() {
-    var tracker = withExecutor().build();
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void trackUploadProgressWithError(Executor executor) {
+    var tracker = withExecutor(executor).build();
     var listener = new TestListener();
     var trackedUpstream = tracker.tracking(
         BodyPublishers.fromPublisher(new FailedPublisher<>(TestException::new)), listener);
@@ -177,12 +171,13 @@ class ProgressTrackerTest {
     assertEquals(1, listener.errors);
   }
 
-  @Test
-  void trackMultipartUploadProgressNoThreshold() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void trackMultipartUploadProgressNoThreshold(Executor executor) {
     int batchSize = 64;
     int[] partCounts = {4, 2, 1};
     int count = IntStream.of(partCounts).sum();
-    var tracker = withVirtualClock().build();
+    var tracker = withVirtualClock(executor).build();
     var listener = new TestMultipartListener();
     var builder = MultipartBodyPublisher.newBuilder();
     for (int i = 0; i < partCounts.length; i++) {
@@ -244,34 +239,45 @@ class ProgressTrackerTest {
     assertTrue(listener.items.isEmpty());
   }
 
-  @Test
-  void trackUploadProgressWithByteThreshold() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void trackUploadProgressWithByteThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;
     for (int scale = 1; scale <= count; scale++) {
       int finalScale = scale;
       testUploadWithThreshold(
-          batchSize, count, scale, b -> b.bytesTransferredThreshold(batchSize * finalScale));
+          batchSize,
+          count,
+          scale,
+          b -> b.bytesTransferredThreshold(batchSize * finalScale),
+          executor);
     }
   }
 
-  @Test
-  void trackUploadProgressWithTimeThreshold() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void trackUploadProgressWithTimeThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;
     for (int scale = 1; scale <= count; scale++) {
       int finalScale = scale;
       testUploadWithThreshold(
-          batchSize, count, scale, b -> b.timePassedThreshold(virtualTick.multipliedBy(finalScale)));
+          batchSize,
+          count,
+          scale,
+          b -> b.timePassedThreshold(virtualTick.multipliedBy(finalScale)),
+          executor);
     }
   }
 
-  @Test
-  void trackDownloadProgressNoThresholds() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void trackDownloadProgressNoThresholds(Executor executor) {
     int batchSize = 64;
     int count = 20;
     int length = batchSize * count;
-    var tracker = withVirtualClock().build();
+    var tracker = withVirtualClock(executor).build();
     var listener = new TestListener();
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     var trackedDownstream = tracker.tracking(
@@ -286,9 +292,10 @@ class ProgressTrackerTest {
     testProgressSequenceNoThreshold(listener, batchSize, count);
   }
 
-  @Test
-  void trackDownloadProgressWithError() {
-    var tracker = withExecutor().build();
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void trackDownloadProgressWithError(Executor executor) {
+    var tracker = withExecutor(executor).build();
     var listener = new TestListener();
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     var trackedDownstream = tracker.tracking(
@@ -302,25 +309,35 @@ class ProgressTrackerTest {
     assertEquals(1, listener.errors);
   }
 
-  @Test
-  void trackDownloadProgressWithByteThreshold() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void trackDownloadProgressWithByteThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;
     for (int scale = 1; scale <= count; scale++) {
       int finalScale = scale;
       testDownloadWithThreshold(
-          batchSize, count, scale, b -> b.bytesTransferredThreshold(batchSize * finalScale));
+          batchSize,
+          count,
+          scale,
+          b -> b.bytesTransferredThreshold(batchSize * finalScale),
+          executor);
     }
   }
 
-  @Test
-  void trackDownloadProgressWithTimeThreshold() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void trackDownloadProgressWithTimeThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;
     for (int scale = 1; scale <= count; scale++) {
       int finalScale = scale;
       testDownloadWithThreshold(
-          batchSize, count, scale, b -> b.timePassedThreshold(virtualTick.multipliedBy(finalScale)));
+          batchSize,
+          count,
+          scale,
+          b -> b.timePassedThreshold(virtualTick.multipliedBy(finalScale)),
+          executor);
     }
   }
 
@@ -348,8 +365,12 @@ class ProgressTrackerTest {
    */
 
   private void testUploadWithThreshold(
-      int batchSize, int count, int thresholdScale, Consumer<Builder> thresholdApplier) {
-    var builder = withVirtualClock();
+      int batchSize,
+      int count,
+      int thresholdScale,
+      Consumer<Builder> thresholdApplier,
+      Executor executor) {
+    var builder = withVirtualClock(executor);
     thresholdApplier.accept(builder);
     var tracker = builder.build();
     var listener = new TestListener();
@@ -368,8 +389,12 @@ class ProgressTrackerTest {
   }
 
   private void testDownloadWithThreshold(
-      int batchSize, int count, int thresholdScale, Consumer<Builder> thresholdApplier) {
-    var builder = withVirtualClock();
+      int batchSize,
+      int count,
+      int thresholdScale,
+      Consumer<Builder> thresholdApplier,
+      Executor executor) {
+    var builder = withVirtualClock(executor);
     thresholdApplier.accept(builder);
     var tracker = builder.build();
     var listener = new TestListener();
@@ -444,7 +469,7 @@ class ProgressTrackerTest {
     return BodyPublishers.fromPublisher(
         FlowAdapters.toFlowPublisher(
             new AsyncIterablePublisher<>(
-                () -> new BuffIterator(ByteBuffer.allocate(length), batchSize), trackerExecutor())),
+                () -> new BuffIterator(ByteBuffer.allocate(length), batchSize), upstreamExecutor)),
         length);
   }
 
@@ -452,15 +477,16 @@ class ProgressTrackerTest {
     int length = batchSize * count;
     return FlowAdapters.toFlowPublisher(
         new AsyncIterablePublisher<>(
-            () -> new BuffListIterator(ByteBuffer.allocate(length), batchSize, 1), trackerExecutor()));
+            () -> new BuffListIterator(ByteBuffer.allocate(length), batchSize, 1),
+            upstreamExecutor));
   }
 
-  private ProgressTracker.Builder withExecutor() {
-    return  ProgressTracker.newBuilder().executor(trackerExecutor());
+  private ProgressTracker.Builder withExecutor(Executor executor) {
+    return  ProgressTracker.newBuilder().executor(executor);
   }
 
-  private ProgressTracker.Builder withVirtualClock() {
-    return withExecutor().clock(new VirtualClock(virtualTick));
+  private ProgressTracker.Builder withVirtualClock(Executor executor) {
+    return withExecutor(executor).clock(new VirtualClock(virtualTick));
   }
 
   private static long countBytes(Collection<List<ByteBuffer>> items) {
