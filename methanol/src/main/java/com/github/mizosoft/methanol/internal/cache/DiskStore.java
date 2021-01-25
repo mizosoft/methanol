@@ -1208,7 +1208,7 @@ public final class DiskStore implements Store {
     }
 
     void writeTo(ByteBuffer buffer) {
-      assert buffer.remaining() > BYTES;
+      assert buffer.remaining() >= BYTES;
       buffer.putLong(upper64Bits);
       buffer.putShort(lower16Bits);
     }

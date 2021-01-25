@@ -1,6 +1,7 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.testutils.TestUtils.EMPTY_BUFFER;
+import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -8,15 +9,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.TestExecutorProvider;
-import com.github.mizosoft.methanol.TestExecutorProvider.TestWithExecutor;
+import com.github.mizosoft.methanol.ExecutorProvider;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
-import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -36,24 +37,24 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(TestExecutorProvider.class)
+@ExtendWith(ExecutorProvider.class)
 class CacheWritingBodySubscriberTest {
-  @TestWithExecutor
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void writeString(Executor executor) {
     var editor = new TestEditor();
     var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     getBody(subscriber).subscribe(downstream);
 
-    var body = "Cache me if you can!";
     try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor)) {
       publisher.subscribe(subscriber);
-      publisher.submitAll(() -> new BuffListIterator(UTF_8.encode(body), 1, 1));
+      publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cache me if you can!"), 1, 1));
     }
 
     downstream.awaitComplete();
-    assertEquals(body, UTF_8.decode(collect(downstream.items)).toString());
-    assertEquals(body, UTF_8.decode(editor.written()).toString());
+    assertEquals("Cache me if you can!", UTF_8.decode(collect(downstream.items)).toString());
+    assertEquals("Cache me if you can!", UTF_8.decode(editor.written()).toString());
 
     editor.awaitClose();
     assertFalse(editor.discarded);
@@ -73,7 +74,8 @@ class CacheWritingBodySubscriberTest {
   }
 
   /** The subscriber should ignore cancellation and prefer to complete caching the body. */
-  @TestWithExecutor
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void cancellationIsIgnoredWhileWriting(Executor executor) {
     var editor = new TestEditor();
     var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
@@ -85,18 +87,18 @@ class CacheWritingBodySubscriberTest {
     downstream.awaitSubscribe();
     downstream.subscription.cancel();
 
-    var body = "Cancel me if you can!";
     try (publisher) {
-      publisher.submitAll(() -> new BuffListIterator(UTF_8.encode(body), 1, 1));
+      publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cancel me if you can!"), 1, 1));
     }
 
     editor.awaitClose();
     assertFalse(editor.discarded);
     assertFalse(subscription.flowInterrupted);
-    assertEquals(body, UTF_8.decode(editor.written()).toString());
+    assertEquals("Cancel me if you can!", UTF_8.decode(editor.written()).toString());
   }
 
-  @TestWithExecutor
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void cancellationIsPropagatedIfNotWriting(Executor executor) {
     var failingEditor = new TestEditor() {
       @Override
@@ -115,7 +117,7 @@ class CacheWritingBodySubscriberTest {
     publisher.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
     // Don't complete publisher
 
-    // Wait till error is handled and editor is closed
+    // Wait till error is handled and failingEditor is closed
     failingEditor.awaitClose();
 
     // This cancellation is propagated as there's nothing being written anymore
@@ -126,14 +128,15 @@ class CacheWritingBodySubscriberTest {
     assertTrue(subscription.flowInterrupted);
   }
 
-  @TestWithExecutor
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void cancellationIsPropagatedLaterOnFailedWrite(Executor executor) {
     var cancelledSubscription = new CountDownLatch(1);
     var failingEditor = new TestEditor() {
       @Override
       public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
         return CompletableFuture.supplyAsync(() -> {
-          TestUtils.awaitUninterruptibly(cancelledSubscription);
+          awaitUninterruptibly(cancelledSubscription);
           // This failure causes cancellation to be propagated
           throw new TestException();
         });
@@ -156,7 +159,8 @@ class CacheWritingBodySubscriberTest {
     assertTrue(subscription.flowInterrupted);
   }
 
-  @TestWithExecutor
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void errorFromUpstreamDiscardsEdit(Executor executor) {
     var editor = new TestEditor();
     var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
@@ -173,7 +177,8 @@ class CacheWritingBodySubscriberTest {
     assertTrue(editor.discarded);
   }
 
-  @TestWithExecutor
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void failedWriteDiscardsEdit(Executor executor) {
     var failingEditor = new TestEditor() {
       @Override
@@ -194,7 +199,8 @@ class CacheWritingBodySubscriberTest {
     assertTrue(failingEditor.discarded);
   }
 
-  @TestWithExecutor
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void failedWriteDoesNotInterruptStream(Executor executor) {
     var failingEditor = new TestEditor() {
       @Override
@@ -206,20 +212,20 @@ class CacheWritingBodySubscriberTest {
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     getBody(subscriber).subscribe(downstream);
 
-    var body = "Cache me if you can!";
     try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor)) {
       publisher.subscribe(subscriber);
-      publisher.submitAll(() -> new BuffListIterator(UTF_8.encode(body), 1, 1));
+      publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cache me if you can!"), 1, 1));
     }
 
     failingEditor.awaitClose();
     assertTrue(failingEditor.discarded);
 
     downstream.awaitComplete();
-    assertEquals(body, UTF_8.decode(collect(downstream.items)).toString());
+    assertEquals("Cache me if you can!", UTF_8.decode(collect(downstream.items)).toString());
   }
 
-  @TestWithExecutor
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void metadataIsSaved(Executor executor) {
     var editor = new TestEditor();
     var metadata = UTF_8.encode("bababooey");
@@ -236,7 +242,8 @@ class CacheWritingBodySubscriberTest {
     assertEquals("bababooey", UTF_8.decode(editor.metadata).toString());
   }
 
-  @TestWithExecutor
+  @ExecutorParameterizedTest
+  @ExecutorConfig
   void subscribeToUpstreamFirst(Executor executor) {
     var editor = new TestEditor();
     var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);

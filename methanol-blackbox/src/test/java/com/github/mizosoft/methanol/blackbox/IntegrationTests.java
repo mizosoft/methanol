@@ -117,11 +117,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 import reactor.core.publisher.Flux;
 
+@Timeout(60)
 class IntegrationTests {
 
   private static final Base64.Decoder BASE64_DEC = Base64.getDecoder();

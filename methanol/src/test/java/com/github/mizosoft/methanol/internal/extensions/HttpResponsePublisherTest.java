@@ -30,6 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+import com.github.mizosoft.methanol.ExecutorProvider;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.HttpClientStub;
 import com.github.mizosoft.methanol.HttpResponseStub;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -51,25 +54,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(ExecutorProvider.class)
 class HttpResponsePublisherTest {
-
   private static final long DELAY_MILLIS = 100L;
   private static final Executor delayer = CompletableFuture.delayedExecutor(
       DELAY_MILLIS, TimeUnit.MILLISECONDS, FlowSupport.SYNC_EXECUTOR);
 
-  // overridden by HttpResponsePublisherWithExecutorTest for async version
-  Executor executor() {
-    return FlowSupport.SYNC_EXECUTOR;
-  }
-
-  @Test
-  void sendNoPush() throws Exception {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void sendNoPush(Executor executor) throws Exception {
     var request = GET("https://localhost");
     var handler = replacing(null);
     var client = new FakeHttpClient();
-    var publisher = createPublisher(client, request, handler, null);
+    var publisher = createPublisher(client, request, handler, null, executor);
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     subscriber.request = 0L;
     publisher.subscribe(subscriber);
@@ -94,11 +93,12 @@ class HttpResponsePublisherTest {
     assertEquals(response, subscriber.items.poll());
   }
 
-  @Test
-  void sendNoPush_completeExceptionally() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void sendNoPush_completeExceptionally(Executor executor) {
     var request = GET("https://localhost");
     var client = new FakeHttpClient();
-    var publisher = createPublisher(client, request, replacing(null), null);
+    var publisher = createPublisher(client, request, replacing(null), null, executor);
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     publisher.subscribe(subscriber);
     delayer.execute(() -> client.responseCf.completeExceptionally(new TestException()));
@@ -109,14 +109,15 @@ class HttpResponsePublisherTest {
     assertEquals(TestException.class, subscriber.lastError.getCause().getClass());
   }
 
-  @Test
-  void sendWithPush() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void sendWithPush(Executor executor) {
     var request = GET("https://localhost/push");
     var mainResponseHandler = replacing("");
     var pushResponseHandler = replacing("gibe that push");
     var client = new FakeHttpClient();
     var pushAcceptor = new PushAcceptor<>(path -> path.endsWith("accept"), pushResponseHandler);
-    var publisher = createPublisher(client, request, mainResponseHandler, pushAcceptor);
+    var publisher = createPublisher(client, request, mainResponseHandler, pushAcceptor, executor);
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     publisher.subscribe(subscriber);
 
@@ -165,8 +166,9 @@ class HttpResponsePublisherTest {
     assertEquals(1, client.calls.get());
   }
 
-  @Test
-  void throwFromPushReceiver() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void throwFromPushReceiver(Executor executor) {
     // accepts one push then throws
     var pushAcceptor = new PushAcceptor<>(s -> true, replacing("gibe dat push")) {
       final AtomicInteger calls = new AtomicInteger();
@@ -180,7 +182,7 @@ class HttpResponsePublisherTest {
     };
     var request = GET("https://localhost");
     var client = new FakeHttpClient();
-    var publisher = createPublisher(client, request, replacing(""), pushAcceptor);
+    var publisher = createPublisher(client, request, replacing(""), pushAcceptor, executor);
     var subscriber = new TestSubscriber<HttpResponse<String>>();
     publisher.subscribe(subscriber); // initiates sendAsync
 
@@ -210,8 +212,9 @@ class HttpResponsePublisherTest {
     assertSame(TestException.class, subscriber.lastError.getClass());
   }
 
-  @Test
-  void throwFromSendAsync() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void throwFromSendAsync(Executor executor) {
     var request = GET("https://localhost");
     var client = new HttpClientStub() {
       @Override
@@ -220,7 +223,7 @@ class HttpResponsePublisherTest {
         throw new TestException();
       }
     };
-    var publisher = createPublisher(client, request, replacing(null), null);
+    var publisher = createPublisher(client, request, replacing(null), null, executor);
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     publisher.subscribe(subscriber);
     subscriber.awaitError();
@@ -232,12 +235,13 @@ class HttpResponsePublisherTest {
    * Check that the publisher refuses pushes after initial response body completion, which is not
    * allowed by the spec.
    */
-  @Test
-  void handlesPushesAfterInitialCompletion() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void handlesPushesAfterInitialCompletion(Executor executor) {
     var request = GET("https://localhost");
     var client = new FakeHttpClient();
     var publisher = createPublisher(
-        client, request, replacing(""), req -> replacing("gibe that push")); // accept all pushes
+        client, request, replacing(""), req -> replacing("gibe that push"), executor); // accept all pushes
     var subscriber = new TestSubscriber<HttpResponse<String>>();
     publisher.subscribe(subscriber);
 
@@ -268,12 +272,13 @@ class HttpResponsePublisherTest {
     assertSame(IllegalStateException.class, subscriber.lastError.getClass());
   }
 
-  @Test
-  void completePushExceptionally() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void completePushExceptionally(Executor executor) {
     var request = GET("https://localhost");
     var client = new FakeHttpClient();
     var publisher = createPublisher(
-        client, request, replacing(""), req -> replacing("gibe that push")); // accept all pushes
+        client, request, replacing(""), req -> replacing("gibe that push"), executor); // accept all pushes
     var subscriber = new TestSubscriber<HttpResponse<String>>();
     publisher.subscribe(subscriber);
 
@@ -303,11 +308,12 @@ class HttpResponsePublisherTest {
     assertSame(TestException.class, subscriber.lastError.getClass());
   }
 
-  @Test
-  void request1NoPush() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void request1NoPush(Executor executor) {
     var client = new FakeHttpClient();
     var publisher = createPublisher(
-        client, GET("https://localhost"), replacing(null), null);
+        client, GET("https://localhost"), replacing(null), null, executor);
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     subscriber.request = 0L;
     publisher.subscribe(subscriber);
@@ -324,12 +330,13 @@ class HttpResponsePublisherTest {
     assertEquals(0, subscriber.errors);
   }
 
-  @Test
-  void request3WithPush() {
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void request3WithPush(Executor executor) {
     var request = GET("https://localhost");
     var client = new FakeHttpClient();
     var publisher = createPublisher(
-        client, request, replacing(""), push -> replacing("gibe that push"));
+        client, request, replacing(""), push -> replacing("gibe that push"), executor);
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     subscriber.request = 0L;
     publisher.subscribe(subscriber);
@@ -370,9 +377,10 @@ class HttpResponsePublisherTest {
       HttpClient client,
       HttpRequest request,
       BodyHandler<T> handler,
-      @Nullable Function<HttpRequest, BodyHandler<T>> func) {
+      @Nullable Function<HttpRequest, BodyHandler<T>> func,
+      Executor executor) {
     return new HttpResponsePublisher<>(
-        client, request, handler, func, executor());
+        client, request, handler, func, executor);
   }
 
   private static class PushAcceptor<T>
@@ -412,7 +420,6 @@ class HttpResponsePublisherTest {
   }
 
   private static class FakeHttpClient extends HttpClientStub {
-
     HttpRequest request;
     BodyHandler<?> handler;
     PushPromiseHandler<?> pushPromiseHandler;
