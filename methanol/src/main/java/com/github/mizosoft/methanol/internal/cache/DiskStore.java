@@ -94,24 +94,28 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 // TODO Add more logging
 /**
- * A persistent {@link Store} implementation that saves entries into a specified directory. Each
- * {@code DiskStore} instance assumes exclusive ownership of its directory; only a single {@code
- * DiskStore} from a single JVM process can safely operate on a given directory. This assumption is
- * cooperatively enforced among different {@code DisStores} such that attempting to initialize a
- * store with a directory that is in use by another store in the same or a different JVM process
- * will cause an {@code IOException} to be thrown.
+ * A persistent {@link Store} implementation that saves entries into a specified directory. A {@code
+ * DiskStore} instance assumes exclusive ownership of its directory; only a single {@code DiskStore}
+ * from a single JVM process can safely operate on a given directory. This assumption is
+ * cooperatively enforced among {@code DisStores} such that attempting to initialize a store with a
+ * directory that is in use by another store in the same or a different JVM process will cause an
+ * {@code IOException} to be thrown.
  *
  * <p>The store keeps track of entries known to it across sessions by maintaining an on-disk
- * hashtable called the index. As changes are made to the store, the index is atomically replaced
- * with an updated index in a time-limited manner; every 4 seconds there's at most one index update.
- * This rate can be changed by setting the system property: {@code
- * com.github.mizosoft.methanol.internal.cache.DiskStore.indexUpdateDelayMillis}.
+ * hashtable called the index. As changes are made to the store by adding, accessing or removing
+ * entries, the index is transparently updated in a time-limited manner. By default, there's at most
+ * one index update every 4 seconds. This rate can be changed by setting the system property: {@code
+ * com.github.mizosoft.methanol.internal.cache.DiskStore.indexUpdateDelayMillis}. Setting a small
+ * delay can result in too often index updates, which extracts a noticeable toll on IO & CPU
+ * (updating entails reconstructing then rewriting the whole index). On the other hand, scarcely
+ * updating the index provides less durability against crashes. Calling the {@code flush} method
+ * forces an index update, regardless of the time limit.
  *
  * <p>To ensure entries are not lost across sessions, a store must be {@link #close() closed} after
- * it has been with. The {@link #dispose()} method can be called to atomically close the store and
- * clear its directory if persistence isn't needed (e.g. caching in a temp directory). A closed
- * store will throw an {@code IllegalStateException} when either of {@code initialize} (if not yet
- * initialized), {@code view}, {@code edit}, {@code remove} or {@code clear} is invoked.
+ * it has been done with. The {@link #dispose()} method can be called to atomically close the store
+ * and clear its directory if persistence isn't needed (e.g. using temp directories for storage). A
+ * closed store throws an {@code IllegalStateException} when either of {@code initialize} (if not
+ * yet initialized), {@code view}, {@code edit}, {@code remove} or {@code clear} is invoked.
  */
 public final class DiskStore implements Store {
   /*
@@ -146,10 +150,10 @@ public final class DiskStore implements Store {
    *                     4-bytes-metadata-size
    *                     8-bytes-data-size
    *
-   * Having the key, metadata & their sizes at the end of the file makes it easy and quick to update
-   * an entry when only its metadata block changes (and possibly its key in case there's a hash
-   * collision). In such case, an entry update only overwrites <entry-footer> next to an existing
-   * <data>, truncating the file if necessary. Having an <entry-trailer> instead of an
+   * Having the key, metadata & their sizes at the end of the file makes it easier and quicker to
+   * update an entry when only its metadata block changes (and possibly its key in case there's a
+   * hash collision). In such case, an entry update only overwrites <entry-footer> next to an
+   * existing <data>, truncating the file if necessary. Having an <entry-trailer> instead of an
    * <entry-header> allows validating the entry file and knowing its key & metadata sizes in a
    * single read.
    *
@@ -1324,10 +1328,10 @@ public final class DiskStore implements Store {
 
     /**
      * This entry's key as known from the last open/edit. Used to minimize removals of the wrong
-     * entry in case of hash collisions, only if the entry knows its key. If it doesn't however,
-     * the entry is evicted either ways, which is considered better than having to read the entry
-     * file in each remove(String), bearing in mind that collisions under the used hasher are
-     * extremely rare in practice.
+     * entry in case of hash collisions, only if the entry knows its key. If it doesn't however, the
+     * entry is evicted either ways, which is considered better than having to read the entry file
+     * in each remove(String), bearing in mind that collisions under the used hasher are extremely
+     * rare in practice.
      */
     volatile @MonotonicNonNull String cachedKey;
 
@@ -1603,6 +1607,8 @@ public final class DiskStore implements Store {
         int keySize = getNonNegativeInt(trailer);
         int metadataSize = getNonNegativeInt(trailer);
         long dataSize = getNonNegativeLong(trailer);
+        checkValue(entrySize, metadataSize + dataSize, "unexpected entry size");
+
         var keyAndMetadata =
             StoreIO.readNBytes(channel, keySize + metadataSize, /* position */ dataSize);
         var key = UTF_8.decode(keyAndMetadata.limit(keySize)).toString();
