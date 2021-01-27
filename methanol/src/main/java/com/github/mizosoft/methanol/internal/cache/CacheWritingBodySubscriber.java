@@ -32,8 +32,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /**
  * A {@code BodySubscriber} that writes the response body into cache while it's being forwarded to
  * downstream. The subscriber attempts to write the whole body even if downstream cancels the
- * subscription midway transmission. If an error is encountered while writing, the cache entry is
- * silently discarded.
+ * subscription midway transmission. Writing and signalling downstream items are progressed
+ * independently at different rates. This affords the downstream not having to unnecessarily wait
+ * for the body till it's fully cached. If an error is encountered while writing, the cache entry
+ * will be silently discarded.
  */
 @SuppressWarnings("unused") // VarHandle indirection
 public final class CacheWritingBodySubscriber
@@ -68,8 +70,8 @@ public final class CacheWritingBodySubscriber
           "com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber.propagateCancellation");
 
   /**
-   * Metadata of the response being cached. Will be set when the body stream is completed and the
-   * editor is to be closed.
+   * Metadata of the response being cached. Will be set when the body is fully written the editor is
+   * to be closed.
    */
   private final ByteBuffer metadata;
 
@@ -80,7 +82,7 @@ public final class CacheWritingBodySubscriber
 
   /**
    * Control field used to synchronize calls to onNext & (onError | onComplete) so that they are
-   * called serially strictly after onSubscribe.
+   * called serially, strictly after onSubscribe.
    */
   private volatile int sync;
 
@@ -195,8 +197,6 @@ public final class CacheWritingBodySubscriber
 
   // Package-Private for static import
   static final class CacheWritingSubscription implements Subscription {
-    private static final ByteBuffer COMPLETE = ByteBuffer.allocate(0);
-
     private static final VarHandle DOWNSTREAM;
     private static final VarHandle STATE;
     private static final VarHandle POSITION;
@@ -223,6 +223,12 @@ public final class CacheWritingBodySubscriber
 
     private volatile long position;
     private volatile WritingState state = IDLE;
+
+    /**
+     * Set to true when onComplete() is called, after then the edit is to be committed as soon as
+     * writeQueue becomes empty.
+     */
+    private volatile boolean receivedBodyCompletion;
 
     // Package-Private for static import
     enum WritingState {
@@ -294,7 +300,7 @@ public final class CacheWritingBodySubscriber
     }
 
     void onComplete() {
-      writeQueue.offer(COMPLETE);
+      receivedBodyCompletion = true;
       tryScheduleWrite(false);
 
       var subscriber = getAndClearDownstream();
@@ -308,16 +314,22 @@ public final class CacheWritingBodySubscriber
       return (Subscriber<? super List<ByteBuffer>>) DOWNSTREAM.getAndSet(this, null);
     }
 
-    @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel
+    /**
+     * @param maintainWritingState whether the write is to be scheduled directly after a previous
+     *     write is completed, allowing to leave the WRITING state as is
+     */
     private boolean tryScheduleWrite(boolean maintainWritingState) {
-      var buffer = writeQueue.poll();
-      if (buffer == COMPLETE) {
-        commitEdit();
-        return true;
-      } else if (buffer != null
+      var buffer = writeQueue.peek();
+      if (buffer != null
           && ((maintainWritingState && state == WRITING)
               || STATE.compareAndSet(this, IDLE, WRITING))) {
+        writeQueue.poll(); // Consume
         scheduleWrite(buffer);
+        return true;
+      } else if (buffer == null
+          && (maintainWritingState || state == IDLE) // No write is currently scheduled?
+          && receivedBodyCompletion) {
+        commitEdit();
         return true;
       }
       return false;
@@ -339,7 +351,7 @@ public final class CacheWritingBodySubscriber
           editor.metadata(metadata);
           editor.commitOnClose();
         } catch (IOException ioe) {
-          // TODO handle properly
+          LOGGER.log(Level.WARNING, "failed to commit the edit", ioe);
         }
       }
     }
@@ -349,30 +361,26 @@ public final class CacheWritingBodySubscriber
         if (cause != null) {
           LOGGER.log(
               Level.WARNING,
-              cause,
-              () ->
-                  "caching response with key <"
-                      + editor.key()
-                      + "> will be discarded as a problem occurred while writing");
+              "aborting the cache operation as a problem occurred while writing",
+              cause);
         }
 
-        state = DISPOSED;
         writeQueue.clear();
         try {
           editor.close();
         } catch (IOException ioe) {
-          // TODO handle properly
+          LOGGER.log(Level.WARNING, "failed to discard the edit", ioe);
         }
       }
     }
 
     private void onWriteCompletion(@Nullable Throwable error) {
       if (error != null) {
-        // Cancel upstream if downstream was disposed
+        discardEdit(error);
+        // Cancel upstream if downstream was disposed and we're only caching the body
         if (downstream == null) {
           upstream.cancel();
         }
-        discardEdit(error);
       } else if (!tryScheduleWrite(true) && STATE.compareAndSet(this, WRITING, IDLE)) {
         // There might be signals missed just before CASing to IDLE
         tryScheduleWrite(false);
