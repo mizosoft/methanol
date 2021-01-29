@@ -44,12 +44,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hasher;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreContext;
+import com.github.mizosoft.methanol.testutils.MockClock;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -63,7 +63,7 @@ final class MockDiskStore {
   private final Path lockFile;
   private final Hasher hasher;
   private final int appVersion;
-  private final Clock clock;
+  private final MockClock clock;
   private final Index workIndex;
 
   MockDiskStore(StoreContext context) {

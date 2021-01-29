@@ -31,6 +31,7 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeData
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntry;
 import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.Execution.QUEUED;
 import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.Execution.SAME_THREAD;
+import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.FileSystemType.SYSTEM;
 import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -51,18 +52,21 @@ import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreContext;
+import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreParameterizedTest;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
 
 /** DiskStore specific tests that are complementary to {@link StoreTest}. */
 @Timeout(60)
@@ -70,11 +74,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 class DiskStoreTest {
   private @MonotonicNonNull MockDiskStore mockStore;
 
-  void setUp(StoreContext context) {
+  private void setUp(StoreContext context) {
     mockStore = new MockDiskStore(context);
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void initializeWithNonExistentDirectory(Store store, StoreContext context)
       throws IOException {
@@ -86,7 +90,7 @@ class DiskStoreTest {
     mockStore.assertEmptyIndex();
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void persistenceOnInitialization(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -100,13 +104,15 @@ class DiskStoreTest {
     assertEquals(sizeOf("Ditto", "Eevee", "Mew", "Mewtwo"), store.size());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void persistenceAcrossSessions(StoreContext context) throws IOException {
     setUp(context);
     var store1 = context.newStore();
     writeEntry(store1, "e1", "Mewtwo", "Charmander");
     writeEntry(store1, "e2", "Psyduck", "Pickachu");
+
+    context.drainQueuedTasks();
     store1.close();
 
     var store2 = context.newStore();
@@ -115,7 +121,7 @@ class DiskStoreTest {
     assertEquals(sizeOf("Mewtwo", "Charmander", "Psyduck", "Pickachu"), store2.size());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   @ExecutorConfig(CACHED_POOL)
   void concurrentInitializers(Store store, StoreContext context, Executor threadPool)
@@ -143,7 +149,7 @@ class DiskStoreTest {
   }
 
   /** Dirty entry files of untracked entries found during initialization are deleted. */
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void initializeWithIncompleteEditsForUntrackedEntries(Store store, StoreContext context)
       throws IOException {
@@ -164,7 +170,7 @@ class DiskStoreTest {
   }
 
   /** Dirty entry files of tracked entries found during initialization are deleted. */
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void initializeWithIncompleteEditsForTrackedEntries(Store store, StoreContext context)
       throws IOException {
@@ -188,7 +194,7 @@ class DiskStoreTest {
     assertEntryEquals(store, "e3", "Psyduck", "Raichu");
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void initializeWithDirtyFileForTrackedEntry(Store store, StoreContext context)
       throws IOException {
@@ -207,7 +213,7 @@ class DiskStoreTest {
     assertEquals(0, store.size());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void untrackedEntriesFoundOnDiskAreDeleted(Store store, StoreContext context)
       throws IOException {
@@ -227,7 +233,7 @@ class DiskStoreTest {
     assertEquals(sizeOf("Psyduck", "Pickachu"), store.size());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void deleteTrackedEntriesBeforeInitialization(Store store, StoreContext context)
       throws IOException {
@@ -244,16 +250,17 @@ class DiskStoreTest {
     assertEquals(sizeOf("Mew", "Eevee"), store.size());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
-  void storeContentsIsDroppedOnCorruptIndex(StoreContext context) throws IOException {
+  void storeContentIsDroppedOnCorruptIndex(StoreContext context) throws IOException {
     setUp(context);
     for (var corruptMode : IndexCorruptionMode.values()) {
       try {
         var store = context.newStore();
-        assertStoreContentsIsDroppedOnCorruptIndex(store, context, corruptMode);
+        assertStoreContentIsDroppedOnCorruptIndex(store, context, corruptMode);
 
-        // Clean the store directory
+        // Clean workspace for next mode
+        context.drainQueuedTasks();
         store.close();
         mockStore.delete();
       } catch (AssertionError e) {
@@ -262,7 +269,7 @@ class DiskStoreTest {
     }
   }
 
-  private void assertStoreContentsIsDroppedOnCorruptIndex(
+  private void assertStoreContentIsDroppedOnCorruptIndex(
       Store store, StoreContext context, IndexCorruptionMode corruptionMode) throws IOException {
     mockStore.write("e1", "Ditto", "Eevee");
     mockStore.write("e2", "Jynx", "Snorlax");
@@ -279,7 +286,38 @@ class DiskStoreTest {
     assertTrue(mockStore.lockFileExists());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK, autoInit = false)
+  void entryCorruption(StoreContext context) throws IOException {
+    setUp(context);
+    for (var corruptMode : EntryCorruptionMode.values()) {
+      try {
+        var store = context.newStore();
+        assertEntryCorruption(store, corruptMode);
+
+        // Clean workspace for next mode
+        context.drainQueuedTasks();
+        store.close();
+        mockStore.delete();
+      } catch (AssertionError e) {
+        fail(corruptMode.toString(), e);
+      }
+    }
+  }
+
+  private void assertEntryCorruption(
+      Store store, EntryCorruptionMode corruptionMode) throws IOException {
+    mockStore.write("e1", "Pickachu", "Mew", corruptionMode);
+    mockStore.writeWorkIndex();
+
+    store.initialize();
+    assertThrows(StoreCorruptionException.class, () -> view(store, "e1"));
+
+    // Currently the entry is not automatically removed
+    assertTrue(mockStore.entryFileExists("e1"));
+  }
+
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void unreadableEntriesAreNotTrackedByTheIndex(Store store, StoreContext context)
       throws IOException {
@@ -302,7 +340,7 @@ class DiskStoreTest {
     assertTrue(index2.contains(context.hasher().hash("e1")));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void removeBeforeFlush(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -315,7 +353,7 @@ class DiskStoreTest {
     assertFalse(index.contains(context.hasher().hash("e1")));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void clearBeforeFlush(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -331,7 +369,7 @@ class DiskStoreTest {
     assertFalse(index.contains(context.hasher().hash("e2")));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(
       store = DISK,
       maxSize = 10,
@@ -349,7 +387,7 @@ class DiskStoreTest {
     assertTrue(index.contains(context.hasher().hash("e2")));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void closingTheStoreDiscardsIncompleteFirstEdit(Store store, StoreContext context)
       throws IOException {
@@ -357,6 +395,7 @@ class DiskStoreTest {
     var editor = edit(store, "e1");
     writeEntry(editor, "Jynx", "Ditto");
 
+    context.drainQueuedTasks();
     store.close();
 
     // Closing the store deletes the editor's work file
@@ -374,7 +413,7 @@ class DiskStoreTest {
     assertFalse(mockStore.dirtyEntryFileExists("e1"));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void closingTheStoreDiscardsIncompleteSecondEdit(Store store, StoreContext context)
       throws IOException {
@@ -384,6 +423,7 @@ class DiskStoreTest {
     var editor = edit(store, "e1");
     writeEntry(editor, "Jynx", "Ditto");
 
+    context.drainQueuedTasks();
     store.close();
 
     // Closing the store deletes the editor's work file
@@ -398,7 +438,7 @@ class DiskStoreTest {
     assertEquals(sizeOf("Pickachu", "Eevee"), store.size());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   @ExecutorConfig(CACHED_POOL)
   void concurrentRemovals(Store store, StoreContext context, Executor threadPool)
@@ -423,7 +463,7 @@ class DiskStoreTest {
     assertAll(tasks.stream().map(cf -> cf::join));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void removeIsAppliedOnDisk(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -433,7 +473,7 @@ class DiskStoreTest {
     assertFalse(mockStore.entryFileExists("e1"));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void clearIsAppliedOnDisk(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -445,7 +485,7 @@ class DiskStoreTest {
     mockStore.assertHasNoEntriesOnDisk();
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void discardedEditIsAppliedOnDisk(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -458,7 +498,7 @@ class DiskStoreTest {
     assertFalse(mockStore.dirtyEntryFileExists("e1"));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void editorWorkFileIsCreatedLazily(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -469,8 +509,8 @@ class DiskStoreTest {
     }
   }
 
-  @ParameterizedTest
-  @StoreConfig(store = DISK, maxSize = 5, execution = QUEUED, indexFlushDelaySeconds = 1000)
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK, maxSize = 5, execution = QUEUED, indexUpdateDelaySeconds = 1000)
   void evictionRunsSequentially(Store store, StoreContext context) throws IOException {
     setUp(context);
 
@@ -505,7 +545,7 @@ class DiskStoreTest {
     assertEquals(5, store.size());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, maxSize = 10, execution = SAME_THREAD, autoInit = false)
   void storeIsInitializedWithinBounds(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -519,7 +559,7 @@ class DiskStoreTest {
     assertEquals(6, store.size());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, maxSize = 10, execution = SAME_THREAD)
   void lruOrderIsPersisted(StoreContext context) throws IOException {
     // LRU queue: e1, e2, e2
@@ -538,6 +578,7 @@ class DiskStoreTest {
 
     // LRU queue: e3, e1, e4, e2
     view(store1, "e2").close();
+    context.drainQueuedTasks();
     store1.close();
 
     var store2 = context.newStore();
@@ -547,7 +588,7 @@ class DiskStoreTest {
     assertEquals(10, store2.size());
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void externallyDeletedEntryFile(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -556,7 +597,7 @@ class DiskStoreTest {
     assertAbsent(store, context, "e1");
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void externallyDeletedEntryFileWhileIterating(Store store, StoreContext context)
       throws IOException {
@@ -567,14 +608,14 @@ class DiskStoreTest {
     assertFalse(iter.hasNext());
   }
 
-  @ParameterizedTest
-  @StoreConfig(store = DISK, maxSize = 5, execution = QUEUED, indexFlushDelaySeconds = 0)
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK, maxSize = 5, execution = QUEUED, indexUpdateDelaySeconds = 0)
   void indexUpdateEvents(Store store, StoreContext context) throws IOException {
     setUp(context);
 
     var executor = context.mockExecutor();
 
-    // Editing a previously non-existent entry doesn't issue an index write
+    // Opening an editor for a previously non-existent entry doesn't issue an index write
     var editor = edit(store, "e1");
     assertEquals(0, executor.taskCount());
 
@@ -647,56 +688,87 @@ class DiskStoreTest {
     executor.runNext();
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(
       store = DISK,
       execution = QUEUED,
       autoAdvanceClock = false,
-      indexFlushDelaySeconds = 2)
+      indexUpdateDelaySeconds = 2)
   void indexUpdatesAreTimeLimited(Store store, StoreContext context) throws IOException {
     setUp(context);
-    setMetadata(store, "e1", "a");
 
     var clock = context.clock();
     var executor = context.mockExecutor();
+    var delayer = context.delayer();
 
-    // First index write is executed immediately
-    view(store, "e1").close();
+    // t = 0
+    // First index write is dispatched immediately
+    setMetadata(store, "e1", "a");
     assertEquals(1, executor.taskCount());
     executor.runNext();
 
-    // An index write is schedule to run 2 seconds
-    // in the future as one has just run.
+    // t = 0
+    // An index write is scheduled to run in 2 seconds as one has just run
     view(store, "e1").close();
+    assertEquals(1, delayer.taskCount());
     assertEquals(0, executor.taskCount());
 
-    // An index write is not scheduled since one is going
-    // to run in 1 second.
     clock.advanceSeconds(1);
-    view(store, "e1").close();
+    // t = 1
+    // 1 second is still remaining till the scheduled write is dispatched to the executor
     assertEquals(0, executor.taskCount());
 
-    // An index write is scheduled since 2 seconds have
-    // passed since the last write.
-    clock.advanceSeconds(3);
-    view(store, "e1").close();
+    clock.advanceSeconds(1);
+    // t = 2
+    // Now the write is dispatched to the executor
     assertEquals(1, executor.taskCount());
-    executor.runAll();
+    executor.runNext();
 
-    // An index write is scheduled since 2 seconds have
-    // passed since the last write.
-    clock.advanceSeconds(2);
+    // t = 2
+    // An index write is scheduled to run in 2 seconds as one has just run
     view(store, "e1").close();
+    assertEquals(1, delayer.taskCount());
+    assertEquals(0, executor.taskCount());
+
+    clock.advanceSeconds(1);
+    // t = 3
+    // An index write is not scheduled since one is still going to run in 1 second
+    view(store, "e1").close();
+    assertEquals(1, delayer.taskCount());
+    assertEquals(0, executor.taskCount());
+
+    clock.advanceSeconds(1);
+    // t = 4
+    // The scheduled write is dispatched and a new write is scheduled to run
+    // in 2 seconds as one has just run.
     assertEquals(1, executor.taskCount());
-    executor.runAll();
+    executor.runNext();
+    view(store, "e1").close();
+    assertEquals(1, delayer.taskCount());
+
+    clock.advanceSeconds(4);
+    // t = 8
+    // An index write is dispatched immediately as two seconds have passed since the last write
+    view(store, "e1").close();
+    assertEquals(0, delayer.taskCount());
+    assertEquals(1, executor.taskCount());
+    executor.runNext();
+
+    clock.advanceSeconds(2);
+    // t = 10
+    // An index write is dispatched immediately as two seconds have passed since the last write
+    view(store, "e1").close();
+    assertEquals(0, delayer.taskCount());
+    assertEquals(1, executor.taskCount());
+    executor.runNext();
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(
       store = DISK,
       execution = SAME_THREAD,
       autoAdvanceClock = false,
-      indexFlushDelaySeconds = 1000)
+      indexUpdateDelaySeconds = 1000)
   void indexIsFlushedOnClosure(Store store, StoreContext context) throws IOException {
     setUp(context);
     var clock = context.clock();
@@ -720,12 +792,13 @@ class DiskStoreTest {
         "e3", start.plusSeconds(2), sizeOf("Jynx", "Snorlax"));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void closedStoreIsInoperable(StoreContext context) throws IOException {
     setUp(context);
 
     var store1 = context.newStore();
+    context.drainQueuedTasks();
     store1.close();
     assertInoperable(store1);
 
@@ -736,7 +809,7 @@ class DiskStoreTest {
   }
 
   /** Closing the store while iterating silently terminates iteration. */
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void closeWhileIterating(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -746,12 +819,13 @@ class DiskStoreTest {
     var iter = store.viewAll();
     assertTrue(iter.hasNext());
     iter.next(); // Consume next
+    context.drainQueuedTasks();
     store.close();
     assertFalse(iter.hasNext());
     assertThrows(NoSuchElementException.class, iter::next);
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void disposeClearsStoreContent(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -759,44 +833,45 @@ class DiskStoreTest {
 
     store.dispose();
     assertInoperable(store);
-    assertEquals(0, store.size());
     assertFalse(store.viewAll().hasNext());
-    assertFalse(mockStore.indexFileExists());
-    assertFalse(mockStore.lockFileExists());
-    mockStore.assertHasNoEntriesOnDisk();
+    assertEquals(0, store.size());
+    assertEmptyDirectory(context.directory());
   }
 
-  @ParameterizedTest
-  @StoreConfig(store = DISK, autoInit = false)
-  void entryCorruption(StoreContext context) throws IOException {
+  @RepeatedTest(10)
+  @StoreConfig(store = DISK, fileSystem = SYSTEM, execution = QUEUED, indexUpdateDelaySeconds = 0)
+  @ExecutorConfig(CACHED_POOL)
+  void disposeDuringIndexWrite(
+      Store store, StoreContext context, Executor threadPool) throws IOException {
     setUp(context);
-    for (var corruptMode : EntryCorruptionMode.values()) {
-      try {
-        var store = context.newStore();
-        assertEntryCorruption(store, corruptMode);
 
-        // Clean the store directory
-        store.close();
-        mockStore.delete();
-      } catch (AssertionError e) {
-        fail(corruptMode.toString(), e);
-      }
+    var executor = context.mockExecutor();
+    setMetadata(store, "e1", "Jynx");
+    assertEquals(1, executor.taskCount());
+    executor.runNext();
+
+    for (int i = 0; i < 10; i++) {
+      view(store, "e1").close(); // Trigger IndexWriteScheduler
     }
+    // Since index is written with a SerialExecutor, only one drain task is dispatched
+    assertEquals(1, executor.taskCount());
+
+    var arrival = new CyclicBarrier(2);
+    var triggerWrite = Unchecked.runAsync(() -> {
+      awaitUninterruptibly(arrival);
+      executor.runNext();
+    }, threadPool);
+    var invokeDispose = Unchecked.runAsync(() -> {
+      awaitUninterruptibly(arrival);
+      store.dispose();
+    }, threadPool);
+
+    assertAll(Stream.of(triggerWrite, invokeDispose).map(cf -> cf::join));
+    assertEquals(0, executor.taskCount());
+    assertEmptyDirectory(context.directory());
   }
 
-  private void assertEntryCorruption(
-      Store store, EntryCorruptionMode corruptionMode) throws IOException {
-    mockStore.write("e1", "Pickachu", "Mew", corruptionMode);
-    mockStore.writeWorkIndex();
-
-    store.initialize();
-    assertThrows(StoreCorruptionException.class, () -> view(store, "e1"));
-
-    // Currently the entry is not automatically removed
-    assertTrue(mockStore.entryFileExists("e1"));
-  }
-
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void hashCollisionOnViewing(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -808,7 +883,7 @@ class DiskStoreTest {
     assertEntryEquals(store, "e1", "Jynx", "Psyduck");
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void hashCollisionOnViewingRecoveredEntry(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -823,7 +898,7 @@ class DiskStoreTest {
     assertEntryEquals(store, "e1", "Jynx", "Psyduck");
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void hashCollisionOnRemoval(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -838,7 +913,7 @@ class DiskStoreTest {
     assertTrue(store.remove("e2"));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void hashCollisionOnRemovalAfterView(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -855,7 +930,7 @@ class DiskStoreTest {
     assertFalse(store.remove("e2"));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void hashCollisionOnRemovalAfterEdit(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -869,7 +944,7 @@ class DiskStoreTest {
     assertFalse(store.remove("e2"));
   }
 
-  @ParameterizedTest
+  @StoreParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
   void hashCollisionOnCompletedEdit(Store store, StoreContext context) throws IOException {
     setUp(context);
@@ -893,5 +968,13 @@ class DiskStoreTest {
     assertThrows(IllegalStateException.class, () -> store.edit("e1"));
     assertThrows(IllegalStateException.class, () -> store.remove("e1"));
     assertThrows(IllegalStateException.class, store::clear);
+  }
+
+  private static void assertEmptyDirectory(Path dir) throws IOException {
+    try (var stream = Files.newDirectoryStream(dir)) {
+      var entries = new ArrayList<>();
+      stream.forEach(entries::add);
+      assertTrue(entries.isEmpty(), entries::toString);
+    }
   }
 }
