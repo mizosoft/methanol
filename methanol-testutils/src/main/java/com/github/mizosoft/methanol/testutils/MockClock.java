@@ -19,12 +19,15 @@
 
 package com.github.mizosoft.methanol.testutils;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A {@code Clock} that can be advanced manually or automatically with a specified duration. */
@@ -32,7 +35,11 @@ public final class MockClock extends Clock {
   private final ZoneId zoneId;
   private final Instant inception;
   private final AtomicReference<Instant[]> now;
-  private volatile @Nullable Duration autoAdvance;
+  private volatile Duration autoAdvance = Duration.ZERO;
+
+  /** Listener invoked with when the clock advances itself. */
+  private volatile @Nullable BiConsumer<Instant /* beforeAdvance */, Duration /* ticks */>
+      tickListener;
 
   public MockClock() {
     this(Instant.parse("2021-01-01T00:00:00.00Z"));
@@ -64,6 +71,15 @@ public final class MockClock extends Clock {
     return ticks != null ? getAndAdvance(ticks) : now.get()[0];
   }
 
+  public void onTick(@Nullable BiConsumer<Instant, Duration> listener) {
+    tickListener = listener;
+  }
+
+  /** Returns the clock's time without advancing it. */
+  public Instant peekInstant() {
+    return now.get()[0];
+  }
+
   public Instant inception() {
     return inception;
   }
@@ -76,6 +92,10 @@ public final class MockClock extends Clock {
     while (true) {
       var instant = now.get();
       if (now.compareAndSet(instant, new Instant[] {instant[0].plus(ticks)})) {
+        var listener = tickListener;
+        if (listener != null) {
+          listener.accept(instant[0], ticks);
+        }
         return instant[0];
       }
     }
@@ -85,7 +105,7 @@ public final class MockClock extends Clock {
     advance(Duration.ofSeconds(seconds));
   }
 
-  public void autoAdvance(@Nullable Duration ticks) {
-    this.autoAdvance = ticks;
+  public void autoAdvance(Duration ticks) {
+    this.autoAdvance = requireNonNull(ticks);
   }
 }
