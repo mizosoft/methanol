@@ -142,15 +142,23 @@ public final class CacheResponseMetadata {
   public static CacheResponseMetadata decode(ByteBuffer metadataBuffer) throws IOException {
     var reader = new MetadataReader(metadataBuffer);
     int flags = reader.readInt();
+    var uri = URI.create(reader.readUtf8String());
+    var requestMethod = reader.readUtf8String();
+    var varyHeaders = reader.readHeaders();
+    int statusCode = reader.readInt();
+    var headers = reader.readHeaders();
+    var timeRequestSent = reader.readInstant();
+    var timeResponseReceived = reader.readInstant();
+    var sslSession = (flags & FLAG_HAS_SSL_INFO) != 0 ? reader.readSSLSession() : null;
     return new CacheResponseMetadata(
-        URI.create(reader.readUtf8String()), // uri
-        reader.readUtf8String(), // requestMethod
-        reader.readHeaders(), // varyHeaders
-        reader.readInt(), // statusCode
-        reader.readHeaders(), // headers
-        reader.readInstant(), // timeRequestSent
-        reader.readInstant(), // timeResponseReceived
-        (flags & FLAG_HAS_SSL_INFO) != 0 ? reader.readSSLSession() : null);
+        uri,
+        requestMethod,
+        varyHeaders,
+        statusCode,
+        headers,
+        timeRequestSent,
+        timeResponseReceived,
+        sslSession);
   }
 
   public static CacheResponseMetadata from(TrackedResponse<?> response) {
@@ -194,7 +202,8 @@ public final class CacheResponseMetadata {
     private final ByteBuffer buffer;
 
     MetadataReader(ByteBuffer buffer) {
-      this.buffer = buffer;
+      // Start with position = 0 to report read bytes when EOF is reached prematurely
+      this.buffer = buffer.slice();
     }
 
     int readInt() throws IOException {
@@ -254,11 +263,11 @@ public final class CacheResponseMetadata {
       int separatorIndex = indexOfHeaderSeparator(header, 0);
       if (separatorIndex == 0) {
         // Colon is the first character, this can occur in two cases:
-        // - The header is an HTTP2 pseudo-header
-        // - The header has an empty name
-        // #2 is never expected as it's not allowed (header names must be non-empty tokens)
+        //   - The header is an HTTP2 pseudo-header
+        //   - The header has an empty name
+        // #2 is never expected as it's not allowed (header names must be non-empty tokens).
         // AFAIK the client ignores these so they are never written to the cache and hence
-        // are treated as cache corruption
+        // are treated as cache corruption.
         separatorIndex = indexOfHeaderSeparator(header, 1);
       }
 
@@ -287,7 +296,8 @@ public final class CacheResponseMetadata {
       try {
         buffer.get(array);
       } catch (BufferUnderflowException e) {
-        throw new EOFException("expected " + length + " bytes");
+        throw new EOFException(
+            "expected " + length + " bytes (position = " + buffer.position() + ")");
       }
       return array;
     }
