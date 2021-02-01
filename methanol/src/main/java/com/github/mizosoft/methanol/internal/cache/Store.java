@@ -22,8 +22,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.Validate.TODO;
-
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;

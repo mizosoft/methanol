@@ -95,7 +95,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * A persistent {@link Store} implementation that saves entries into a specified directory. A {@code
  * DiskStore} instance assumes exclusive ownership of its directory; only a single {@code DiskStore}
  * from a single JVM process can safely operate on a given directory. This assumption is
- * cooperatively enforced among {@code DisStores} such that attempting to initialize a store with a
+ * cooperatively enforced among {@code DiskStores} such that attempting to initialize a store with a
  * directory that is in use by another store in the same or a different JVM process will cause an
  * {@code IOException} to be thrown.
  *
@@ -104,10 +104,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * entries, the index is transparently updated in a time-limited manner. By default, there's at most
  * one index update every 4 seconds. This rate can be changed by setting the system property: {@code
  * com.github.mizosoft.methanol.internal.cache.DiskStore.indexUpdateDelayMillis}. Setting a small
- * delay can result in too often index updates, which extracts a noticeable toll on IO & CPU
- * (updating entails reconstructing then rewriting the whole index). On the other hand, scarcely
- * updating the index affords less durability against crashes. Calling the {@code flush} method
- * forces an index update, regardless of the time limit.
+ * delay can result in too often index updates, which extracts a noticeable toll on IO & CPU,
+ * especially if there's a relatively large number of entries (updating entails reconstructing then
+ * rewriting the whole index). On the other hand, scarcely updating the index affords less
+ * durability against crashes as entries that aren't indexed are dropped on initialization. Calling
+ * the {@code flush} method forces an index update, regardless of the time limit.
  *
  * <p>To ensure entries are not lost across sessions, a store must be {@link #close() closed} after
  * it has been done with. The {@link #dispose()} method can be called to atomically close the store
@@ -407,31 +408,25 @@ public final class DiskStore implements Store {
 
   @Override
   public void dispose() throws IOException {
-    long stamp = closeLock.writeLock();
-    try {
-      doClose(true);
-      size.set(0); // There's no contention on size at this point so there's no need to CAS
-    } finally {
-      closeLock.unlockWrite(stamp);
-    }
+    doClose(true);
+    size.set(0); // There's no contention on size at this point so there's no need to CAS
   }
 
   @Override
   public void close() throws IOException {
-    long stamp = closeLock.writeLock();
-    try {
-      doClose(false);
-    } finally {
-      closeLock.unlockWrite(stamp);
-    }
+    doClose(false);
   }
 
   private void doClose(boolean disposing) throws IOException {
-    assert closeLock.isWriteLocked();
-    if (closed) {
-      return;
+    long stamp = closeLock.writeLock();
+    try {
+      if (closed) {
+        return;
+      }
+      closed = true;
+    } finally {
+      closeLock.unlockWrite(stamp);
     }
-    closed = true;
 
     // Make entries unmodifiable from now on
     for (var entry : entries.values()) {
@@ -537,8 +532,6 @@ public final class DiskStore implements Store {
    * true} if at least one entry was evicted.
    */
   private boolean evictExcessiveEntries() throws IOException {
-    assert holdsCloseLock();
-
     boolean evictedAtLeastOneEntry = false;
     Iterator<Entry> lruIterator = null;
     for (long currentSize = size.get(); currentSize > maxSize; ) {

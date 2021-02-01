@@ -137,7 +137,7 @@ public final class StoreProvider
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
     var element = parameterContext.getDeclaringExecutable();
-    if (AnnotationSupport.findAnnotation(element, StoreConfig.class).isEmpty()) {
+    if (!AnnotationSupport.isAnnotated(element, StoreConfig.class)) {
       return false;
     }
 

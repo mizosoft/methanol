@@ -75,7 +75,7 @@ public final class ExecutorProvider
     var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
     if (argSource.isPresent()
         && argSource.get().value() == ExecutorProvider.class
-        && AnnotationSupport.findAnnotation(element, ParameterizedTest.class).isPresent()) {
+        && AnnotationSupport.isAnnotated(element, ParameterizedTest.class)) {
       return false;
     }
     return Stream.of(config.get().value())
