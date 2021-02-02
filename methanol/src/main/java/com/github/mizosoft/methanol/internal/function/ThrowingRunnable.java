@@ -12,6 +12,7 @@ public interface ThrowingRunnable {
       try {
         run();
       } catch (Exception e) {
+        Unchecked.propagateIfUnchecked(e);
         throw new CompletionException(e);
       }
     };
