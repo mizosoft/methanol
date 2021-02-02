@@ -50,7 +50,7 @@ class RawResponseTest {
     var response = ResponseBuilder.newBuilder(responseTemplate)
         .body(strPublisher("Indiana Jones", UTF_8, threadPool))
         .build();
-    var rawResponse = RawResponse.from(response);
+    var rawResponse = NetworkResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
     var handledResponse = rawResponse.handleAsync(BodyHandlers.ofString(), threadPool).join();
@@ -74,7 +74,7 @@ class RawResponseTest {
         .header("Content-Type", "text/plain; charset=UTF-16")
         .body(strPublisher("Hans Solo", UTF_16, threadPool))
         .build();
-    var rawResponse = RawResponse.from(response);
+    var rawResponse = NetworkResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
     var handledResponse = rawResponse.handle(BodyHandlers.ofString());
@@ -87,7 +87,7 @@ class RawResponseTest {
     var response = ResponseBuilder.newBuilder(responseTemplate)
         .body((Publisher<List<ByteBuffer>>) EmptyPublisher.<List<ByteBuffer>>instance())
         .build();
-    var rawResponse = RawResponse.from(response);
+    var rawResponse = NetworkResponse.from(response);
     var mutated =
         rawResponse.with(builder -> builder.statusCode(369).header("X-My-Header", "Hello!"));
     var expected = ResponseBuilder.newBuilder(response)
@@ -128,7 +128,7 @@ class RawResponseTest {
   }
 
   private RawResponse failingWith(Supplier<Throwable> supplier) {
-    return RawResponse.from(
+    return NetworkResponse.from(
         ResponseBuilder.newBuilder(responseTemplate)
             .body((Publisher<List<ByteBuffer>>) new FailedPublisher<List<ByteBuffer>>(supplier))
             .build());

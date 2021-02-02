@@ -6,11 +6,8 @@ import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodyHandler;
-import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Flow.Publisher;
 import java.util.function.Consumer;
 
 /** A response with a "raw" body that is yet to be handled. */
@@ -34,8 +31,4 @@ public abstract class RawResponse {
       BodyHandler<T> handler, Executor executor);
 
   public abstract RawResponse with(Consumer<ResponseBuilder<?>> mutator);
-
-  public static RawResponse from(TrackedResponse<Publisher<List<ByteBuffer>>> response) {
-    return new PublisherResponse(response, response.body());
-  }
 }

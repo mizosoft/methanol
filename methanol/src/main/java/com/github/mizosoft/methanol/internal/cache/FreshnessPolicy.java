@@ -12,7 +12,7 @@ import java.util.Optional;
 
 /** Policy for computing freshness and age values as defined by RFC 7234 4.2. */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-public final class FreshnessComputation {
+public final class FreshnessPolicy {
 
   /** Value of max-age directive as set by the response or overridden by the request. */
   private final Optional<Duration> maxAge;
@@ -45,7 +45,7 @@ public final class FreshnessComputation {
    */
   private final Optional<LocalDateTime> expires;
 
-  public FreshnessComputation(
+  public FreshnessPolicy(
       Optional<Duration> maxAge,
       Instant requestTime,
       Instant responseTime,
@@ -91,7 +91,7 @@ public final class FreshnessComputation {
    */
   public Duration computeHeuristicLifetime() {
     // Use 10% of the time the response hasn't been modified
-    // as encouraged by rfc7234 4.2.2 and implemented by most browsers
+    // as encouraged by rfc7234 4.2.2 and implemented by browsers
     return Duration.between(lastModified, date).dividedBy(10);
   }
 

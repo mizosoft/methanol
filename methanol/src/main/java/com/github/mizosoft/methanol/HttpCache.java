@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.cache.DateUtils.formatHttpDate;
@@ -36,11 +37,11 @@ import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.CacheResponse;
 import com.github.mizosoft.methanol.internal.cache.CacheResponseMetadata;
-import com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber;
 import com.github.mizosoft.methanol.internal.cache.DateUtils;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
-import com.github.mizosoft.methanol.internal.cache.FreshnessComputation;
+import com.github.mizosoft.methanol.internal.cache.FreshnessPolicy;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
+import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.RawResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
@@ -54,6 +55,7 @@ import com.github.mizosoft.methanol.internal.function.ThrowingSupplier;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.Flushable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
@@ -66,6 +68,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -73,6 +76,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -271,8 +275,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
   }
 
-  private @Nullable RawResponse update(
-      RawResponse networkResponse, @Nullable CacheResponse cacheResponse) {
+  private @Nullable NetworkResponse update(
+      NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse) {
     ByteBuffer metadata;
     Editor editor;
     try {
@@ -289,12 +293,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return null;
     }
 
-    var cacheWritingResponse =
-        networkResponse
-            .handleAsync(
-                __ -> new CacheWritingBodySubscriber(editor, metadata), FlowSupport.SYNC_EXECUTOR)
-            .join(); // CacheWritingBodySubscriber completes immediately and never throws
-    return RawResponse.from(cacheWritingResponse);
+    return networkResponse.cachingWith(editor, metadata);
   }
 
   private void onRequest(HttpRequest request) {
@@ -398,7 +397,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     // TODO figure out what to do with HEADs
     // TODO consider implementing our own redirecting interceptor
-    //      to be above the caching layer so they get cached
+    //      to be above the caching layer so redirects get cached
 
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
@@ -418,79 +417,109 @@ public final class HttpCache implements AutoCloseable, Flushable {
     private CompletableFuture<RawResponse> doIntercept(
         HttpRequest request, Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
       cache.onRequest(request);
+      return initiateExchange(request, chain, async)
+          .thenCompose(this::performExchange)
+          .thenApply(this::updateCache)
+          .thenApply(this::serveResponse);
+    }
+
+    private CompletableFuture<ExchangeContext> initiateExchange(
+        HttpRequest request, Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
       var asyncAdapter = new AsyncAdapter(async);
       var context = new ExchangeContext(cache, request, chain, asyncAdapter);
       // Requests accepting HTTP/2 pushes are forwarded as
       // we don't know what might be pushed by the server.
       if (chain.pushPromiseHandler().isPresent() || hasPreconditions(request.headers())) {
-        return context.forwardToNetwork().thenApply(this::updateCacheAndServe);
+        return context.forward();
       }
-
-      return cache
-          .get(request, asyncAdapter::view)
-          .thenApply(cacheResponse -> context.withResponse(cacheResponse, null))
-          .thenCompose(this::exchangeAsync)
-          .thenApply(this::updateCacheAndServe);
+      return cache.get(request, asyncAdapter::view).thenApply(context::withCacheResponse);
     }
 
-    private CompletableFuture<ExchangeContext> exchangeAsync(ExchangeContext context) {
+    private CompletableFuture<ExchangeContext> performExchange(ExchangeContext context) {
       var requestCacheControl = cacheControl(context.request.headers());
       var cacheResponse = context.cacheResponse;
       if (cacheResponse == null) {
         // Don't forward the request if network is prohibited
         return requestCacheControl.onlyIfCached()
             ? CompletableFuture.completedFuture(context)
-            : context.forwardToNetwork();
+            : context.forward();
       }
 
       var responseCacheControl = cacheControl(cacheResponse.get().headers());
-      var freshnessComputation =
-          new FreshnessComputation(
+      var freshnessPolicy =
+          new FreshnessPolicy(
               requestCacheControl.maxAge().or(responseCacheControl::maxAge),
               cacheResponse.get().timeRequestSent(),
               cacheResponse.get().timeResponseReceived(),
               cacheResponse.get().headers());
       var now = context.now();
-      var age = freshnessComputation.computeAge(now);
+      var age = freshnessPolicy.computeAge(now);
       var lifetime =
-          freshnessComputation
+          freshnessPolicy
               .computeFreshnessLifetime()
-              .orElseGet(freshnessComputation::computeHeuristicLifetime);
+              .orElseGet(freshnessPolicy::computeHeuristicLifetime);
       var freshness = lifetime.minus(age);
-      if (canServeWithoutRevalidation(requestCacheControl, responseCacheControl, freshness)) {
-        // Network entirely avoided! Hooray!
+      var staleness = freshness.negated();
+      boolean heuristicFreshness = !freshnessPolicy.hasExplicitExpiration();
+      if (canServeFromCache(requestCacheControl, responseCacheControl, freshness, staleness)) {
+        // Revalidate the response asynchronously if required by the server.
+        // stale-while-revalidate's applicability is rechecked as a more tolerating
+        // max-stale shouldn't cause revalidation if response's stale-while-revalidate
+        // isn't satisfied.
+        var staleWhileRevalidate = responseCacheControl.staleWhileRevalidate();
+        if (staleWhileRevalidate.isPresent()
+            && freshness.isNegative() // Response is stale
+            && staleness.compareTo(staleWhileRevalidate.get()) <= 0 // Staleness is acceptable
+            && !requestCacheControl.onlyIfCached()) { // Network isn't prohibited
+          // TODO implement a bounding policy on asynchronous revalidation
+          // TODO find a mechanism to notify caller for revalidation's completion
+          context
+              .forwardWithRevalidation(freshnessPolicy.computeEffectiveLastModified())
+              .thenApply(this::updateCache)
+              .thenApply(networkContext -> castNonNull(networkContext.networkResponse))
+              .thenAccept(networkResponse -> networkResponse.drainInBackground(handlerExecutor));
+        }
+
         var servableCacheResponse =
             cacheResponse.with(
-                builder -> {
-                  // Add additional cache headers as advised by rfc7234
-                  builder.setHeader("Age", Long.toString(age.toSeconds()));
-                  if (!freshnessComputation.hasExplicitExpiration() && age.compareTo(ONE_DAY) > 0) {
-                    builder.header("Warning", "113 - \"Heuristic Expiration\"");
-                  }
-                  if (freshness.isNegative()) {
-                    builder.header("Warning", "110 - \"Response is Stale\"");
-                  }
-                });
-        return CompletableFuture.completedFuture(context.withResponse(servableCacheResponse, null));
+                builder -> addAdditionalCacheHeaders(builder, age, freshness, heuristicFreshness));
+        return CompletableFuture.completedFuture(context.withCacheResponse(servableCacheResponse));
       }
 
       // Don't revalidate if network is prohibited
       if (requestCacheControl.onlyIfCached()) {
         cacheResponse.close();
-        return CompletableFuture.completedFuture(context.withResponse(null, null));
+        return CompletableFuture.completedFuture(context.withCacheResponse(null));
       }
 
-      // rfc7232 2.4 encourages sending both If-None-Match & If-Modified-Since validators
-      var conditionalRequest = MutableRequest.copyOf(context.request);
-      cacheResponse
-          .get()
-          .headers()
-          .firstValue("ETag")
-          .ifPresent(etag -> conditionalRequest.header("If-None-Match", etag));
-      conditionalRequest.header(
-          "If-Modified-Since", formatHttpDate(freshnessComputation.computeEffectiveLastModified()));
       var networkContextFuture =
-          context.withRequest(conditionalRequest.toImmutableRequest()).forwardToNetwork();
+          context.forwardWithRevalidation(freshnessPolicy.computeEffectiveLastModified());
+
+      // Try recovering from network failures if stale-if-error is set
+      var staleIfError = requestCacheControl.staleIfError().or(responseCacheControl::staleIfError);
+      if (staleIfError.isPresent()) {
+        networkContextFuture =
+            networkContextFuture.handle(
+                (networkContext, error) -> {
+                  if (isApplicableToStaleIfError(networkContext, error)
+                      && staleness.compareTo(staleIfError.get()) <= 0) {
+                    // Serve the stale cache response we've got
+                    var servableCacheResponse =
+                        cacheResponse.with(
+                            builder ->
+                                addAdditionalCacheHeaders(
+                                    builder, age, freshness, heuristicFreshness));
+                    return context.withCacheResponse(servableCacheResponse);
+                  }
+
+                  // stale-if-error isn't satisfied, forward error or networkContext as is
+                  if (error != null) {
+                    throw new CompletionException(error);
+                  }
+                  return networkContext;
+                });
+      }
+
       // Let's not forget to release the cacheResponse if network fails
       networkContextFuture.whenComplete(
           (__, error) -> {
@@ -501,7 +530,62 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return networkContextFuture;
     }
 
-    private RawResponse updateCacheAndServe(ExchangeContext context) {
+    private ExchangeContext updateCache(ExchangeContext context) {
+      var cacheResponse = context.cacheResponse;
+      var networkResponse = context.networkResponse;
+      if (networkResponse == null) { // Nothing to update
+        return context;
+      }
+
+      // Update the stored response as specified in rfc7234 4.3.4
+      // if cacheResponse was successfully revalidated.
+      if (cacheResponse != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
+        var storedHeaders = cacheResponse.get().headers();
+        var mergedHeaders = new HeadersBuilder();
+        mergedHeaders.addAll(storedHeaders);
+        // Remove Warning headers with a 1xx warn code in the stored response
+        mergedHeaders.removeIf(
+            (name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
+        // Use the 304 response fields to replace those with corresponding
+        // names in the stored response. The Content-Length of the stored
+        // response however is restored to avoid replacing it with the
+        // Content-Length: 0 some servers incorrectly send with their 304 responses.
+        mergedHeaders.setAll(networkResponse.get().headers());
+        storedHeaders
+            .firstValue("Content-Length")
+            .ifPresent(value -> mergedHeaders.set("Content-Length", value));
+
+        // Update headers & request/response timestamps
+        var updatedCacheResponse =
+            cacheResponse.with(
+                builder ->
+                    builder
+                        .setHeaders(mergedHeaders.build())
+                        .timeRequestSent(networkResponse.get().timeRequestSent())
+                        .timeResponseReceived(networkResponse.get().timeResponseReceived()));
+        // Update cache in background
+        cacheExecutor.execute(() -> cache.updateMetadata(updatedCacheResponse));
+        return context.withCacheResponse(updatedCacheResponse);
+      }
+
+      var request = context.request;
+      if (isCacheable(request, networkResponse.get())) {
+        var cacheUpdatingNetworkResponse = cache.update(networkResponse, cacheResponse);
+        if (cacheUpdatingNetworkResponse != null) {
+          // The cache is updated as the cacheUpdatingNetworkResponse is consumed
+          return context.withNetworkResponse(cacheUpdatingNetworkResponse);
+        }
+      } else if (invalidatesCache(request, networkResponse.get())) {
+        try {
+          cache.remove(request.uri());
+        } catch (IOException e) {
+          LOGGER.log(Level.WARNING, "failed to remove invalidated cache response", e);
+        }
+      }
+      return context;
+    }
+
+    private RawResponse serveResponse(ExchangeContext context) {
       var request = context.request;
       var cacheResponse = context.cacheResponse;
       var networkResponse = context.networkResponse;
@@ -510,7 +594,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       // serve a 504 Gateway Timeout response as per rfc7234 5.2.1.7.
       if (cacheResponse == null && networkResponse == null) {
         cache.onStatus(request, CacheStatus.LOCALLY_GENERATED);
-        return RawResponse.from(
+        return NetworkResponse.from(
             new ResponseBuilder<>()
                 .uri(request.uri())
                 .request(request)
@@ -536,81 +620,57 @@ public final class HttpCache implements AutoCloseable, Flushable {
                     .timeResponseReceived(context.now()));
       }
 
-      // If the cacheResponse was successfully revalidated then
-      // serve it after freshening as specified in rfc7234 4.3.4.
+      // If a revalidation request was sent, the precondition fields shouldn't be
+      // present in the served response's request. This doesn't remove any user-set
+      // fields since requests with preconditions are forwarded to network so they
+      // won't have a cacheResponse.
+      var initiatingRequest =
+          cacheResponse != null
+              ? MutableRequest.copyOf(request)
+                  .removeHeadersIf((name, __) -> isPreconditionField(name))
+                  .toImmutableRequest()
+              : request;
+
+      // Serve the cacheResponse if it was successfully revalidated
       if (cacheResponse != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
-        // Make sure networkResponse is consumed properly
+        // Make sure networkResponse is properly consumed
         networkResponse.handleAsync(BodyHandlers.discarding(), handlerExecutor);
 
-        // Update the stored response as specified in rfc7234 4.3.4
-        var storedHeaders = cacheResponse.get().headers();
-        var mergedHeaders = new HeadersBuilder();
-        mergedHeaders.addAll(storedHeaders);
-        // Remove Warning headers with a 1xx warn code in the stored response
-        mergedHeaders.removeIf(
-            (name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
-        // Use the 304 response fields to replace those with corresponding
-        // names in the stored response. The Content-Length of the stored
-        // response however is restored to avoid replacing it with the
-        // Content-Length: 0 that some servers incorrectly add to 304 responses.
-        mergedHeaders.setAll(networkResponse.get().headers());
-        storedHeaders
-            .firstValue("Content-Length")
-            .ifPresent(value -> mergedHeaders.set("Content-Length", value));
-
-        var servedCacheResponse =
-            cacheResponse.with(
-                builder ->
-                    builder
-                        .request(request)
-                        .cacheStatus(CacheStatus.CONDITIONAL_HIT)
-                        .cacheResponse(cacheResponse.get())
-                        .networkResponse(networkResponse.get())
-                        .timeRequestSent(networkResponse.get().timeRequestSent())
-                        .timeResponseReceived(networkResponse.get().timeResponseReceived())
-                        .setHeaders(mergedHeaders.build())); // Replace original headers with merged
-        // Update merged metadata in background
-        cacheExecutor.execute(() -> cache.updateMetadata(servedCacheResponse));
         cache.onStatus(request, CacheStatus.CONDITIONAL_HIT);
-        return servedCacheResponse;
+        return cacheResponse.with(
+            builder ->
+                builder
+                    .request(initiatingRequest)
+                    .cacheStatus(CacheStatus.CONDITIONAL_HIT)
+                    .cacheResponse(cacheResponse.get())
+                    .networkResponse(networkResponse.get())
+                    .timeRequestSent(networkResponse.get().timeRequestSent())
+                    .timeResponseReceived(networkResponse.get().timeResponseReceived()));
       }
 
-      var servedNetworkResponse =
-          networkResponse.with(
-              builder ->
-                  builder
-                      .cacheStatus(CacheStatus.MISS)
-                      .cacheResponse(cacheResponse != null ? cacheResponse.get() : null)
-                      .networkResponse(networkResponse.get()));
-      if (isCacheable(request, servedNetworkResponse.get())) {
-        var cacheUpdatingResponse = cache.update(servedNetworkResponse, cacheResponse);
-        if (cacheUpdatingResponse != null) {
-          servedNetworkResponse = cacheUpdatingResponse;
-        }
-      } else if (invalidatesCache(request, servedNetworkResponse.get())) {
-        try {
-          cache.remove(request.uri());
-        } catch (IOException e) {
-          LOGGER.log(Level.WARNING, "failed to remove invalidated cache response", e);
-        }
-      }
-
+      // Release the inapplicable cache response if there is one
       if (cacheResponse != null) {
         cacheResponse.close();
       }
       cache.onStatus(request, CacheStatus.MISS);
-      return servedNetworkResponse;
+      return networkResponse.with(
+          builder ->
+              builder
+                  .request(initiatingRequest)
+                  .cacheStatus(CacheStatus.MISS)
+                  .cacheResponse(cacheResponse != null ? cacheResponse.get() : null)
+                  .networkResponse(networkResponse.get()));
     }
 
     private static CacheControl cacheControl(HttpHeaders headers) {
-      return headers
-          .firstValue("Cache-Control")
-          .map(CacheControl::parse)
-          .orElse(CacheControl.empty());
+      return CacheControl.parse(headers.allValues("Cache-Control"));
     }
 
-    private boolean canServeWithoutRevalidation(
-        CacheControl requestCacheControl, CacheControl responseCacheControl, Duration freshness) {
+    private boolean canServeFromCache(
+        CacheControl requestCacheControl,
+        CacheControl responseCacheControl,
+        Duration freshness,
+        Duration staleness) {
       if (requestCacheControl.noCache() || responseCacheControl.noCache()) {
         return false;
       }
@@ -626,31 +686,62 @@ public final class HttpCache implements AutoCloseable, Flushable {
         return false;
       }
 
-      // The response is stale, but the client might be willing to accept it
-      var staleness = freshness.negated();
-      return (requestCacheControl.anyMaxStale()
-          || (requestCacheControl.maxStale().isPresent()
-              && staleness.compareTo(requestCacheControl.maxStale().get()) <= 0));
+      // The response is stale, but some staleness might be acceptable
+      var toleratedStaleness =
+          requestCacheControl.maxStale().or(responseCacheControl::staleWhileRevalidate);
+      return requestCacheControl.anyMaxStale()
+          || (toleratedStaleness.isPresent() && staleness.compareTo(toleratedStaleness.get()) <= 0);
+    }
+
+    /** Add the additional cache headers advised by rfc7234. */
+    private static void addAdditionalCacheHeaders(
+        ResponseBuilder<?> builder, Duration age, Duration freshness, boolean heuristicFreshness) {
+      builder.setHeader("Age", Long.toString(age.toSeconds()));
+      if (freshness.isNegative()) {
+        builder.header("Warning", "110 - \"Response is Stale\"");
+      }
+      if (heuristicFreshness && age.compareTo(ONE_DAY) > 0) {
+        builder.header("Warning", "113 - \"Heuristic Expiration\"");
+      }
+    }
+
+    private static boolean isApplicableToStaleIfError(
+        @Nullable ExchangeContext networkContext, @Nullable Throwable error) {
+      if (networkContext != null) {
+        int code = castNonNull(networkContext.networkResponse).get().statusCode();
+        return code >= 500 && code <= 599; // Only accept server error codes
+      }
+      // It seems silly to regard an IllegalArgumentException or something as a
+      // candidate for stale-if-error treatment. IOException and subclasses are
+      // regarded as so since they're usually situational errors for network usage,
+      // similar to 5xx response codes, which are themselves perfect candidates for
+      // stale-if-error.
+      var cause = Utils.getDeepCompletionCause(error); // Might be a CompletionException
+      return cause instanceof IOException || cause instanceof UncheckedIOException;
     }
 
     private static boolean hasPreconditions(HttpHeaders headers) {
-      for (var name : headers.map().keySet()) {
-        switch (name) {
-          case "If-Match":
-          case "If-Unmodified-Since":
-            // These are meant for the origin and must be forwarded to it
-            return true;
+      return headers.map().keySet().stream().anyMatch(CacheInterceptor::isPreconditionField);
+    }
 
-          case "If-None-Match":
-          case "If-Modified-Since":
-          case "If-Range":
-            // rfc7234 allows us to evaluate these, but the added complexity
-            // is discouraging, particularly considering that preconditions
-            // are usually intended to be seen by the origin.
-            return true;
-        }
+    private static boolean isPreconditionField(String name) {
+      switch (name) {
+        case "If-Match":
+        case "If-Unmodified-Since":
+          // These are meant for the origin and must be forwarded to it
+          return true;
+
+        case "If-None-Match":
+        case "If-Modified-Since":
+        case "If-Range":
+          // rfc7234 allows us to evaluate these, but the added complexity
+          // is discouraging, particularly considering that preconditions
+          // are usually intended to be seen by the origin.
+          return true;
+
+        default:
+          return false;
       }
-      return false;
     }
 
     /** Returns whether the network response can be cached as specified by rfc7234 section 3. */
@@ -739,8 +830,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
       final HttpRequest request;
       final Chain<Publisher<List<ByteBuffer>>> chain;
       final AsyncAdapter asyncAdapter;
+      final @Nullable NetworkResponse networkResponse;
       final @Nullable CacheResponse cacheResponse;
-      final @Nullable RawResponse networkResponse;
 
       ExchangeContext(
           HttpCache cache,
@@ -756,44 +847,64 @@ public final class HttpCache implements AutoCloseable, Flushable {
           HttpRequest request,
           Chain<Publisher<List<ByteBuffer>>> chain,
           AsyncAdapter asyncAdapter,
-          @Nullable CacheResponse cacheResponse,
-          @Nullable RawResponse networkResponse) {
+          @Nullable NetworkResponse networkResponse,
+          @Nullable CacheResponse cacheResponse) {
         this.cache = cache;
         this.requestTime = requestTime;
         this.request = request;
         this.chain = chain;
         this.asyncAdapter = asyncAdapter;
-        this.cacheResponse = cacheResponse;
         this.networkResponse = networkResponse;
+        this.cacheResponse = cacheResponse;
       }
 
       Instant now() {
         return cache.clock.instant();
       }
 
-      ExchangeContext withResponse(
-          @Nullable CacheResponse cacheResponse, @Nullable RawResponse networkResponse) {
-        return new ExchangeContext(
-            cache, requestTime, request, chain, asyncAdapter, cacheResponse, networkResponse);
+      ExchangeContext withCacheResponse(CacheResponse cacheResponse) {
+        return withResponses(networkResponse, cacheResponse);
       }
 
-      ExchangeContext withRequest(HttpRequest request) {
-        return new ExchangeContext(
-            cache, requestTime, request, chain, asyncAdapter, cacheResponse, networkResponse);
+      ExchangeContext withNetworkResponse(NetworkResponse networkResponse) {
+        return withResponses(networkResponse, cacheResponse);
       }
 
-      CompletableFuture<ExchangeContext> forwardToNetwork() {
+      private ExchangeContext withResponses(
+          @Nullable NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse) {
+        return new ExchangeContext(
+            cache, requestTime, request, chain, asyncAdapter, networkResponse, cacheResponse);
+      }
+
+      CompletableFuture<ExchangeContext> forward() {
         cache.onNetworkUse(request);
         return asyncAdapter
             .forward(chain, request)
             .thenApply(
                 response ->
-                    RawResponse.from(
+                    NetworkResponse.from(
                         ResponseBuilder.newBuilder(response)
                             .timeRequestSent(requestTime)
                             .timeResponseReceived(now())
                             .build()))
-            .thenApply(networkResponse -> withResponse(this.cacheResponse, networkResponse));
+            .thenApply(this::withNetworkResponse);
+      }
+
+      CompletableFuture<ExchangeContext> forwardWithRevalidation(LocalDateTime lastModified) {
+        return withRevalidation(lastModified).forward();
+      }
+
+      private ExchangeContext withRevalidation(LocalDateTime lastModified) {
+        requireState(cacheResponse != null, "must have a cacheResponse");
+        // rfc7232 2.4 encourages sending both If-None-Match & If-Modified-Since validators
+        var etag = castNonNull(cacheResponse).get().headers().firstValue("ETag");
+        var request =
+            MutableRequest.copyOf(this.request)
+                .setHeader("If-Modified-Since", formatHttpDate(lastModified))
+                .apply(
+                    builder -> etag.ifPresent(value -> builder.setHeader("If-None-Match", value)));
+        return new ExchangeContext(
+            cache, requestTime, request, chain, asyncAdapter, networkResponse, cacheResponse);
       }
     }
   }

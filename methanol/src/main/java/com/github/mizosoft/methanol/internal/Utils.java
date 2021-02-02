@@ -36,6 +36,7 @@ import java.nio.CharBuffer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.ZoneOffset;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
@@ -83,6 +84,11 @@ public class Utils {
     requireNonNull(duration);
     requireArgument(
         !(duration.isNegative() || duration.isZero()), "non-positive duration: %s", duration);
+  }
+
+  public static void requireNonNegativeDuration(Duration duration) {
+    requireNonNull(duration);
+    requireArgument(!duration.isNegative(), "negative duration: %s", duration);
   }
 
   public static int copyRemaining(ByteBuffer src, ByteBuffer dst) {
@@ -160,11 +166,23 @@ public class Utils {
     return null;
   }
 
+  public static Throwable getDeepCompletionCause(Throwable t) {
+    var cause = t;
+    while (cause instanceof CompletionException || cause instanceof ExecutionException) {
+      var deeperCause = cause.getCause();
+      if (deeperCause == null) {
+        break;
+      }
+      cause = deeperCause;
+    }
+    return cause;
+  }
+
   public static <T> T block(Future<T> future) throws IOException, InterruptedException {
     try {
       return future.get();
     } catch (ExecutionException failed) {
-      throw rethrowAsyncIOFailure(failed.getCause(), false);
+      throw rethrowAsyncIOFailure(getDeepCompletionCause(failed), false);
     }
   }
 
@@ -177,7 +195,7 @@ public class Utils {
       return future.get();
     } catch (ExecutionException failed) {
       try {
-        throw rethrowAsyncIOFailure(failed.getCause(), true);
+        throw rethrowAsyncIOFailure(getDeepCompletionCause(failed), true);
       } catch (InterruptedException unexpected) {
         throw new AssertionError(unexpected); // Can't happen
       }
