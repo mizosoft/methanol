@@ -21,4 +21,12 @@ public class Unchecked {
   public static CompletableFuture<Void> runAsync(ThrowingRunnable runnable, Executor executor) {
     return CompletableFuture.runAsync(runnable.toUnchecked(), executor);
   }
+
+  static void propagateIfUnchecked(Throwable t) {
+    if (t instanceof RuntimeException) {
+      throw (RuntimeException) t;
+    } else if (t instanceof Error) {
+      throw (Error) t;
+    }
+  }
 }

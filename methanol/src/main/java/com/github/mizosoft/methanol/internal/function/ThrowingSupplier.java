@@ -13,6 +13,7 @@ public interface ThrowingSupplier<T> {
       try {
         return get();
       } catch (Exception e) {
+        Unchecked.propagateIfUnchecked(e);
         throw new CompletionException(e);
       }
     };

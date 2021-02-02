@@ -56,6 +56,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/** Allows reading or writing DiskStore entries directly from/to disk. */
 final class MockDiskStore {
   private final Path directory;
   private final Path indexFile;
