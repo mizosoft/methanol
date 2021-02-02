@@ -45,9 +45,10 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     private static final int BUFFER_SIZE = 4 * 1024;
     private static final int MAX_BATCH_SIZE = 3;
 
-    private static final int PENDING_READ_MASK = 1 << 31;
-    private static final int DISPOSED_MASK = 1 << 30;
-    private static final int WINDOW_MASK = 0x3fffffff;
+    private static final int WINDOW_BITS = Integer.SIZE - 2; // There are 2 state bits
+    private static final int WINDOW_MASK = (1 << WINDOW_BITS) - 1;
+    private static final int PENDING_READ = 1 << WINDOW_BITS;
+    private static final int DISPOSED = 2 << WINDOW_BITS;
 
     private static final VarHandle STATE;
     private static final VarHandle POSITION;
@@ -60,6 +61,11 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       } catch (NoSuchFieldException | IllegalAccessException e) {
         throw new ExceptionInInitializerError(e);
       }
+
+      // Sanity check to ensure max prefetch is safely representable
+      if (PREFETCH > WINDOW_MASK) {
+        throw new UnsupportedOperationException("too large prefetch count");
+      }
     }
 
     private final Viewer viewer;
@@ -67,7 +73,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
 
     /**
      * The state field maintains the count of available buffers + 1 if a read is pending (referred
-     * to as window), along with pending read and disposed states at its first and second MSBs
+     * to as window), along with disposed and pending read states at its first and second MSBs
      * respectively.
      */
     private volatile int state;
@@ -83,7 +89,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
 
     @Override
     protected long emit(Subscriber<? super List<ByteBuffer>> downstream, long emit) {
-      // Fire a read if this is the first run, which guarantees completion
+      // Try firing a read if this might be the first run, which guarantees completion
       // regardless of demand in case of an empty data stream.
       if (state == 0) {
         tryScheduleReadOnDrain();
@@ -108,37 +114,38 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
 
     @Override
     protected void abort(boolean flowInterrupted) {
-      STATE.getAndBitwiseOr(this, DISPOSED_MASK);
-      viewer.close(); // TODO close quietly
+      STATE.getAndBitwiseOr(this, DISPOSED);
+      viewer.close();
     }
 
     private List<ByteBuffer> nextBatch() {
-      var batch = pollNextBatch();
+      var batch = collectNextBatch();
       updateStateOnPoll(batch.size());
       return batch;
     }
 
-    private List<ByteBuffer> pollNextBatch() {
+    private List<ByteBuffer> collectNextBatch() {
       List<ByteBuffer> batch = null;
-      int polled = 0;
-      ByteBuffer next;
-      while (polled < MAX_BATCH_SIZE && (next = available.poll()) != null) {
-        if (batch == null) {
-          batch = new ArrayList<>();
+      ByteBuffer buffer;
+      do {
+        buffer = available.poll();
+        if (buffer != null) {
+          if (batch == null) {
+            batch = new ArrayList<>();
+          }
+          batch.add(buffer);
         }
-        batch.add(next);
-        polled++;
-      }
+      } while (buffer != null && batch.size() < MAX_BATCH_SIZE);
       return batch != null ? Collections.unmodifiableList(batch) : List.of();
     }
 
     private void updateStateOnPoll(int polled) {
       // Decrease window while maintaining the pending read bit
       int window = -1;
-      for (int currentState; ((currentState = state) & DISPOSED_MASK) == 0; ) {
+      for (int currentState; ((currentState = state) & DISPOSED) == 0; ) {
         window = currentState & WINDOW_MASK;
         if (STATE.compareAndSet(
-            this, currentState, (window - polled) | (currentState & PENDING_READ_MASK))) {
+            this, currentState, (window - polled) | (currentState & PENDING_READ))) {
           break;
         }
       }
@@ -151,9 +158,9 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     /** Schedules a read if none is currently pending and the subscription is not disposed yet. */
     private void tryScheduleReadOnDrain() {
       for (int currentState, window;
-          ((currentState = state) & (PENDING_READ_MASK | DISPOSED_MASK)) == 0
+          ((currentState = state) & (PENDING_READ | DISPOSED)) == 0
               && (window = currentState & WINDOW_MASK) < PREFETCH; ) {
-        if (STATE.compareAndSet(this, currentState, (window + 1) | PENDING_READ_MASK)) {
+        if (STATE.compareAndSet(this, currentState, (window + 1) | PENDING_READ)) {
           scheduleRead();
           break;
         }
@@ -164,17 +171,17 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
      * Either schedules a read while retaining the pending read bit or unsets the bit if just enough
      * buffers are prefetched, all if not yet disposed.
      */
-    private void tryScheduleReadOnTaskCompletion() {
-      for (int currentState; ((currentState = state) & DISPOSED_MASK) == 0; ) {
-        assert (currentState & PENDING_READ_MASK) != 0;
+    private void tryScheduleReadOnReadCompletion() {
+      for (int currentState; ((currentState = state) & DISPOSED) == 0; ) {
+        assert (currentState & PENDING_READ) != 0;
 
         int window = currentState & WINDOW_MASK;
         int nextState =
             window < PREFETCH
-                ? (window + 1) | PENDING_READ_MASK
-                : currentState & ~PENDING_READ_MASK;
+                ? (window + 1) | PENDING_READ
+                : currentState & ~PENDING_READ;
         if (STATE.compareAndSet(this, currentState, nextState)) {
-          if ((nextState & PENDING_READ_MASK) != 0) {
+          if ((nextState & PENDING_READ) != 0) {
             scheduleRead();
           }
           break;
@@ -186,31 +193,31 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       var buffer = ByteBuffer.allocate(BUFFER_SIZE);
       viewer
           .readAsync(position, buffer)
-          .whenComplete((result, error) -> onCompletion(buffer, result, error));
+          .whenComplete((result, error) -> onReadCompletion(buffer, result, error));
     }
 
-    private void onCompletion(
+    private void onReadCompletion(
         ByteBuffer buffer, @Nullable Integer result, @Nullable Throwable error) {
-      // The subscription could be cancelled while a read is pending
-      if ((state & DISPOSED_MASK) != 0) {
+      // The subscription could've been cancelled while a read is pending
+      if ((state & DISPOSED) != 0) {
         return;
       }
 
       if (error != null) {
-        STATE.getAndBitwiseOr(this, DISPOSED_MASK);
+        STATE.getAndBitwiseOr(this, DISPOSED);
         signalError(error);
         return;
       }
 
       int read = castNonNull(result);
       if (read < 0) { // EOF
-        STATE.getAndBitwiseOr(this, DISPOSED_MASK);
+        STATE.getAndBitwiseOr(this, DISPOSED);
         endOfFile = true;
         signal(true); // Force completion signal
       } else {
         available.offer(buffer.flip().asReadOnlyBuffer());
         POSITION.getAndAdd(this, read);
-        tryScheduleReadOnTaskCompletion();
+        tryScheduleReadOnReadCompletion();
         signal(false);
       }
     }

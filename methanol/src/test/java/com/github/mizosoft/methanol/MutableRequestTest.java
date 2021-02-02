@@ -197,6 +197,27 @@ class MutableRequestTest {
   }
 
   @Test
+  void removeHeadersIf() {
+    var request = MutableRequest.create()
+        .headers(
+            "X-My-First-Header", "val1",
+            "X-My-First-Header", "val2",
+            "X-My-Second-Header", "val1",
+            "X-My-Second-Header", "val2");
+
+    request.removeHeadersIf((name, __) -> "X-My-First-Header".equals(name));
+    assertEquals(
+        headers("X-My-Second-Header", "val1", "X-My-Second-Header", "val2"), request.headers());
+
+    request.removeHeadersIf(
+        (name, value) -> "X-My-Second-Header".equals(name) && "val1".equals(value));
+    assertEquals(headers("X-My-Second-Header", "val2"), request.headers());
+
+    request.removeHeadersIf((__, ___) -> true);
+    assertEquals(headers(/* empty */), request.headers());
+  }
+
+  @Test
   void headers_invalidLength() {
     assertThrows(IllegalArgumentException.class, () -> create().headers(new String[0]));
     assertThrows(
