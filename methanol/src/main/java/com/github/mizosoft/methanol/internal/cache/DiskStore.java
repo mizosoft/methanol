@@ -331,12 +331,6 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public CompletableFuture<@Nullable Viewer> viewAsync(String key) {
-    requireNonNull(key);
-    return Unchecked.supplyAsync(() -> view(key), executor);
-  }
-
-  @Override
   public @Nullable Editor edit(String key) throws IOException {
     requireNonNull(key);
     initialize();
@@ -352,12 +346,6 @@ public final class DiskStore implements Store {
     } finally {
       closeLock.unlockRead(stamp);
     }
-  }
-
-  @Override
-  public CompletableFuture<@Nullable Editor> editAsync(String key) {
-    requireNonNull(key);
-    return Unchecked.supplyAsync(() -> edit(key), executor);
   }
 
   @Override

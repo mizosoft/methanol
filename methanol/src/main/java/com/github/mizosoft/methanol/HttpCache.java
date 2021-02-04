@@ -51,7 +51,6 @@ import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.function.ThrowingSupplier;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.Flushable;
 import java.io.IOException;
@@ -341,26 +340,28 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   /**
    * A dirty hack that masks synchronous operations as {@code CompletableFuture} calls that are
-   * always completed when returned. This is important in order to share major logic between {@code
-   * intercept} and {@code interceptAsync}, which facilitates implementation & maintenance.
+   * executed on the caller thread and hence are always completed when returned. This is important
+   * in order to share major logic between {@code intercept} and {@code interceptAsync}, which
+   * facilitates implementation & maintenance.
    */
   private static final class AsyncAdapter {
     private final boolean async;
+    private final Executor executor;
 
-    AsyncAdapter(boolean async) {
+    AsyncAdapter(boolean async, Executor executor) {
       this.async = async;
-    }
-
-    private static <T> CompletableFuture<T> adapt(ThrowingSupplier<T> supplier) {
-      return Unchecked.supplyAsync(supplier, FlowSupport.SYNC_EXECUTOR);
+      this.executor = executor;
     }
 
     <T> CompletableFuture<HttpResponse<T>> forward(Chain<T> chain, HttpRequest request) {
-      return async ? chain.forwardAsync(request) : adapt(() -> chain.forward(request));
+      return async
+          ? chain.forwardAsync(request)
+          : Unchecked.supplyAsync(() -> chain.forward(request), FlowSupport.SYNC_EXECUTOR);
     }
 
     CompletableFuture<@Nullable Viewer> view(Store store, String key) {
-      return async ? store.viewAsync(key) : adapt(() -> store.view(key));
+      return Unchecked.supplyAsync(
+          () -> store.view(key), async ? executor : FlowSupport.SYNC_EXECUTOR);
     }
   }
 
@@ -425,7 +426,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     private CompletableFuture<ExchangeContext> initiateExchange(
         HttpRequest request, Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
-      var asyncAdapter = new AsyncAdapter(async);
+      var asyncAdapter = new AsyncAdapter(async, cacheExecutor);
       var context = new ExchangeContext(cache, request, chain, asyncAdapter);
       // Requests accepting HTTP/2 pushes are forwarded as
       // we don't know what might be pushed by the server.
