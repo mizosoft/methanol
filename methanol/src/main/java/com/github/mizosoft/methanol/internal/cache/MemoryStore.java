@@ -460,7 +460,6 @@ public final class MemoryStore implements Store {
       ByteBuffer newData = null;
       lock.lock();
       try {
-        // TODO that'll not work if metadata is written to nothing
         if (committed) {
           newMetadata = editedMetadata ? Utils.copy(metadata) : null;
           newData = editedData ? data.snapshot() : null;

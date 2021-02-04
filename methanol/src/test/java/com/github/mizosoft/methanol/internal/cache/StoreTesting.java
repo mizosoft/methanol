@@ -19,7 +19,7 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreContext;
+import com.github.mizosoft.methanol.testing.StoreContext;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.stream.Stream;

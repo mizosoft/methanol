@@ -1,4 +1,26 @@
-package com.github.mizosoft.methanol;
+/*
+ * Copyright (c) 2019-2021 Moataz Abdelnasser
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+package com.github.mizosoft.methanol.testing;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testutils.TestUtils;
@@ -32,13 +54,13 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.platform.commons.support.AnnotationSupport;
 
 /** {@code Extension} that provides {@code Executors} and terminates them after tests. */
-public final class ExecutorProvider
+public final class ExecutorExtension
     implements AfterEachCallback, AfterAllCallback, ArgumentsProvider, ParameterResolver {
-  private static final Namespace EXTENSION_NAMESPACE = Namespace.create(ExecutorProvider.class);
+  private static final Namespace EXTENSION_NAMESPACE = Namespace.create(ExecutorExtension.class);
 
   private static final int FIXED_POOL_SIZE = 8;
 
-  public ExecutorProvider() {}
+  public ExecutorExtension() {}
 
   @Override
   public void afterEach(ExtensionContext context) throws Exception {
@@ -74,7 +96,7 @@ public final class ExecutorProvider
     // Do not complete with our ArgumentsProvider side
     var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
     if (argSource.isPresent()
-        && argSource.get().value() == ExecutorProvider.class
+        && argSource.get().value() == ExecutorExtension.class
         && AnnotationSupport.isAnnotated(element, ParameterizedTest.class)) {
       return false;
     }
@@ -101,7 +123,7 @@ public final class ExecutorProvider
 
   @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
-  @ArgumentsSource(ExecutorProvider.class)
+  @ArgumentsSource(ExecutorExtension.class)
   public @interface ExecutorSource {}
 
   @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
@@ -119,7 +141,7 @@ public final class ExecutorProvider
   public enum ExecutorType {
     SAME_THREAD(Executor.class) {
       @Override
-      Executor createExecutor() {
+      public Executor createExecutor() {
         return FlowSupport.SYNC_EXECUTOR;
       }
     },
@@ -127,7 +149,7 @@ public final class ExecutorProvider
       private final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
 
       @Override
-      Executor createExecutor() {
+      public Executor createExecutor() {
         return Executors.newFixedThreadPool(
             FIXED_POOL_SIZE,
             r -> {
@@ -139,7 +161,7 @@ public final class ExecutorProvider
     },
     CACHED_POOL(ThreadPoolExecutor.class) {
       @Override
-      Executor createExecutor() {
+      public Executor createExecutor() {
         return Executors.newCachedThreadPool();
       }
     },
@@ -156,7 +178,7 @@ public final class ExecutorProvider
       this.executorSubtype = executorSubtype;
     }
 
-    abstract Executor createExecutor();
+    public abstract Executor createExecutor();
 
     boolean matches(Class<?> paramType) {
       return paramType.isAssignableFrom(executorSubtype);

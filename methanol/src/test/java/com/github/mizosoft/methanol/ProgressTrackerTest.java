@@ -22,19 +22,20 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.ProgressTracker.Builder;
 import com.github.mizosoft.methanol.ProgressTracker.ImmutableProgress;
 import com.github.mizosoft.methanol.ProgressTracker.Listener;
 import com.github.mizosoft.methanol.ProgressTracker.MultipartListener;
 import com.github.mizosoft.methanol.ProgressTracker.MultipartProgress;
 import com.github.mizosoft.methanol.ProgressTracker.Progress;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BuffIterator;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
@@ -63,7 +64,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
-@ExtendWith(ExecutorProvider.class)
+@ExtendWith(ExecutorExtension.class)
 class ProgressTrackerTest {
 
   // Virtual tick between each onXXXX method

@@ -1,14 +1,22 @@
 package com.github.mizosoft.methanol.tck;
 
+import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
 import static com.github.mizosoft.methanol.testutils.TestUtils.EMPTY_BUFFER;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
+import com.github.mizosoft.methanol.testing.ResolvedStoreConfig;
+import com.github.mizosoft.methanol.testing.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.StoreContext;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestUtils;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -22,13 +30,20 @@ import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Factory;
 
 public class CacheWritingBodySubscriberTck
     extends IdentityFlowProcessorVerification<List<ByteBuffer>> {
-  private ExecutorService publisherExecutorService;
+  private final ResolvedStoreConfig storeConfig;
 
-  public CacheWritingBodySubscriberTck() {
+  private ExecutorService publisherExecutorService;
+  private StoreContext storeContext;
+
+  @Factory(dataProvider = "provider")
+  public CacheWritingBodySubscriberTck(StoreType storeType) {
     super(TckUtils.testEnvironment());
+    storeConfig = ResolvedStoreConfig.createDefault(storeType);
   }
 
   // Some tests go nuts if cancellation is not forwarded upstream
@@ -45,8 +60,11 @@ public class CacheWritingBodySubscriberTck
   }
 
   @AfterMethod
-  public void shutdownPublisherExecutor() {
+  public void tearDown() throws Exception {
     TestUtils.shutdown(publisherExecutorService);
+    if (storeContext != null) {
+      storeContext.close();
+    }
   }
 
   @Override
@@ -61,7 +79,16 @@ public class CacheWritingBodySubscriberTck
   @Override
   protected Processor<List<ByteBuffer>, List<ByteBuffer>> createIdentityFlowProcessor(
       int bufferSize) {
-    return new ProcessorView(new CacheWritingBodySubscriber(DisabledEditor.INSTANCE, EMPTY_BUFFER));
+    Editor editor;
+    try {
+      storeContext = storeConfig.createContext();
+
+      var store = storeContext.newStore();
+      editor = requireNonNull(store.edit("e1"));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    return new ProcessorView(new CacheWritingBodySubscriber(editor, EMPTY_BUFFER));
   }
 
   @Override
@@ -78,6 +105,24 @@ public class CacheWritingBodySubscriberTck
   @Override
   public long maxSupportedSubscribers() {
     return 1; // Only bound to one subscriber
+  }
+
+  @DataProvider
+  public static Object[][] provider() {
+    return new Object[][] {{DISK}, {MEMORY}};
+  }
+
+  private static final class ProcessorView
+      extends ForwardingBodySubscriber<Publisher<List<ByteBuffer>>>
+      implements Processor<List<ByteBuffer>, List<ByteBuffer>> {
+    ProcessorView(CacheWritingBodySubscriber bodySubscriber) {
+      super(bodySubscriber);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
+      getBody().toCompletableFuture().join().subscribe(subscriber);
+    }
   }
 
   private enum DisabledEditor implements Editor {
@@ -101,18 +146,5 @@ public class CacheWritingBodySubscriberTck
 
     @Override
     public void close() {}
-  }
-
-  private static final class ProcessorView
-      extends ForwardingBodySubscriber<Publisher<List<ByteBuffer>>>
-      implements Processor<List<ByteBuffer>, List<ByteBuffer>> {
-    ProcessorView(CacheWritingBodySubscriber bodySubscriber) {
-      super(bodySubscriber);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
-      getBody().toCompletableFuture().join().subscribe(subscriber);
-    }
   }
 }

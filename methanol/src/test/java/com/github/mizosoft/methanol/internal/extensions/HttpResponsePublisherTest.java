@@ -30,9 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-import com.github.mizosoft.methanol.ExecutorProvider;
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.HttpClientStub;
 import com.github.mizosoft.methanol.HttpResponseStub;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -56,7 +56,7 @@ import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(ExecutorProvider.class)
+@ExtendWith(ExecutorExtension.class)
 class HttpResponsePublisherTest {
   private static final long DELAY_MILLIS = 100L;
   private static final Executor delayer = CompletableFuture.delayedExecutor(
