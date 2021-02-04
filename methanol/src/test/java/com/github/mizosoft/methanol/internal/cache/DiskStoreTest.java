@@ -19,7 +19,7 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.CACHED_POOL;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertAbsent;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertUnreadable;
@@ -29,10 +29,10 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeData;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntry;
-import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.Execution.QUEUED;
-import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.Execution.SAME_THREAD;
-import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.QUEUED;
+import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.SAME_THREAD;
+import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
+import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,17 +42,17 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.ExecutorProvider;
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.DiskEntry;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.EntryCorruptionMode;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.Index;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexCorruptionMode;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
-import com.github.mizosoft.methanol.testing.extensions.StoreProvider;
-import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig;
-import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreContext;
-import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreParameterizedTest;
+import com.github.mizosoft.methanol.testing.StoreContext;
+import com.github.mizosoft.methanol.testing.StoreExtension;
+import com.github.mizosoft.methanol.testing.StoreConfig;
+import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,7 +70,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 /** DiskStore specific tests that are complementary to {@link StoreTest}. */
 @Timeout(60)
-@ExtendWith({StoreProvider.class, ExecutorProvider.class})
+@ExtendWith({StoreExtension.class, ExecutorExtension.class})
 class DiskStoreTest {
   private @MonotonicNonNull MockDiskStore mockStore;
 

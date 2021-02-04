@@ -22,8 +22,8 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.SCHEDULER;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.fromAsyncSubscriber;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofByteChannel;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofDeferredObject;
@@ -43,7 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.TestException;
@@ -83,7 +84,7 @@ import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
 @Timeout(60)
-@ExtendWith(ExecutorProvider.class)
+@ExtendWith(ExecutorExtension.class)
 class MoreBodySubscribersTest {
   private Executor threadPool;
   private ScheduledExecutorService scheduler;

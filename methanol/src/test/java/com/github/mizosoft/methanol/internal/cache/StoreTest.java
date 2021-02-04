@@ -1,6 +1,5 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertAbsent;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertUnreadable;
@@ -10,7 +9,8 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeData;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntry;
-import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.Execution.SAME_THREAD;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
+import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.SAME_THREAD;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -21,14 +21,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.github.mizosoft.methanol.ExecutorProvider;
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
-import com.github.mizosoft.methanol.testing.extensions.StoreProvider;
-import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig;
-import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreContext;
-import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreParameterizedTest;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.StoreConfig;
+import com.github.mizosoft.methanol.testing.StoreContext;
+import com.github.mizosoft.methanol.testing.StoreExtension;
+import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
@@ -44,7 +44,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @Timeout(60)
-@ExtendWith({StoreProvider.class, ExecutorProvider.class})
+@ExtendWith({StoreExtension.class, ExecutorExtension.class})
 class StoreTest {
   @StoreParameterizedTest
   @StoreConfig

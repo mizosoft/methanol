@@ -190,6 +190,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     private void scheduleRead() {
+      System.out.println("Scheduling read");
       var buffer = ByteBuffer.allocate(BUFFER_SIZE);
       viewer
           .readAsync(position, buffer)
@@ -198,6 +199,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
 
     private void onReadCompletion(
         ByteBuffer buffer, @Nullable Integer result, @Nullable Throwable error) {
+      System.out.println("on read completion: " + result + ", " + error);
       // The subscription could've been cancelled while a read is pending
       if ((state & DISPOSED) != 0) {
         return;
