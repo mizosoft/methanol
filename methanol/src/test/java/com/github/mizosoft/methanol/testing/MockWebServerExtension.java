@@ -84,7 +84,9 @@ public final class MockWebServerExtension
     var type = parameterContext.getParameter().getType();
     var servers = ManagedServers.get(extensionContext);
     var executable = parameterContext.getDeclaringExecutable();
-    boolean useHttps = AnnotationSupport.isAnnotated(executable, UseHttps.class);
+    boolean useHttps =
+        AnnotationSupport.isAnnotated(executable, UseHttps.class)
+            || AnnotationSupport.isAnnotated(extensionContext.getElement(), UseHttps.class);
     if (type == MockWebServer.class) {
       try {
         return servers.newServer(executable, useHttps);

@@ -69,8 +69,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -165,6 +167,66 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return store.size();
   }
 
+  /** Returns a snapshot of statistics accumulated so far. */
+  public Stats stats() {
+    return statsRecorder.snapshot();
+  }
+
+  /** Returns a snapshot of statistics accumulated so far for the given {@code URI}. */
+  public Stats stats(URI uri) {
+    return statsRecorder.snapshot(uri);
+  }
+
+  /** Returns an {@code Iterator} that for the {@code URIs} of responses known to this cache. */
+  public Iterator<URI> uris() throws IOException {
+    return new Iterator<>() {
+      private final Iterator<Viewer> storeIterator = store.iterator();
+
+      private @Nullable URI nextUri;
+      private boolean canRemove;
+
+      @Override
+      public boolean hasNext() {
+        // Prevent any later remove() from remove the wrong entry as hasNext
+        // causes the underlying store iterator to advance.
+        canRemove = false;
+        return nextUri != null || findNextUri();
+      }
+
+      @Override
+      public URI next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        var uri = castNonNull(nextUri);
+        nextUri = null;
+        canRemove = true;
+        return uri;
+      }
+
+      @Override
+      public void remove() {
+        requireState(canRemove, "next() must be called before remove()");
+        canRemove = false;
+        storeIterator.remove();
+      }
+
+      private boolean findNextUri() {
+        while (nextUri == null && storeIterator.hasNext()) {
+          try (var viewer = storeIterator.next()) {
+            nextUri = CacheResponseMetadata.decode(viewer.metadata()).uri();
+            return true;
+          } catch (IOException ioe) {
+            LOGGER.log(Level.WARNING, "unrecoverable cache entry", ioe);
+
+            // Try next entry...
+          }
+        }
+        return false;
+      }
+    };
+  }
+
   /** Removes all entries from this cache. */
   public void clear() throws IOException {
     store.clear();
@@ -195,16 +257,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
    */
   public void dispose() throws IOException {
     store.dispose();
-  }
-
-  /** Returns a snapshot of statistics accumulated so far. */
-  public Stats stats() {
-    return statsRecorder.snapshot();
-  }
-
-  /** Returns a snapshot of statistics accumulated so far for the given {@code URI}. */
-  public Stats stats(URI uri) {
-    return statsRecorder.snapshot(uri);
   }
 
   @Override

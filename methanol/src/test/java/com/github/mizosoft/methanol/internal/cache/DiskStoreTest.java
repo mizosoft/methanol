@@ -603,7 +603,7 @@ class DiskStoreTest {
       throws IOException {
     setUp(context);
     writeEntry(store, "e1", "Ditto", "Jynx");
-    var iter = store.viewAll();
+    var iter = store.iterator();
     mockStore.delete("e1");
     assertFalse(iter.hasNext());
   }
@@ -658,7 +658,7 @@ class DiskStoreTest {
     setMetadata(store, "e1", "Jynx"); // 4 bytes
     assertEquals(1, executor.taskCount());
     executor.runNext();
-    var iter = store.viewAll();
+    var iter = store.iterator();
     assertEquals(0, executor.taskCount());
     assertTrue(iter.hasNext());
     iter.next();
@@ -816,7 +816,7 @@ class DiskStoreTest {
     writeEntry(store, "e1", "Ditto", "Charmander");
     writeEntry(store, "e2", "Eevee", "Jynx");
 
-    var iter = store.viewAll();
+    var iter = store.iterator();
     assertTrue(iter.hasNext());
     iter.next(); // Consume next
     context.drainQueuedTasks();
@@ -833,7 +833,7 @@ class DiskStoreTest {
 
     store.dispose();
     assertInoperable(store);
-    assertFalse(store.viewAll().hasNext());
+    assertFalse(store.iterator().hasNext());
     assertEquals(0, store.size());
     assertEmptyDirectory(context.directory());
   }

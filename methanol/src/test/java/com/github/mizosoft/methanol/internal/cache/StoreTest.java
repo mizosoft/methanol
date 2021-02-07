@@ -189,7 +189,7 @@ class StoreTest {
     store.clear();
     assertAbsent(store, context, "e1");
     assertAbsent(store, context, "e2");
-    assertFalse(store.viewAll().hasNext());
+    assertFalse(store.iterator().hasNext());
     assertEquals(0, store.size());
   }
 
@@ -570,7 +570,7 @@ class StoreTest {
       writeEntry(store, entry.getKey(), entry.getValue().get(0), entry.getValue().get(1));
     }
 
-    var iter = store.viewAll();
+    var iter = store.iterator();
     for (int i = 0; i < entries.size(); i++) {
       assertTrue(iter.hasNext());
 
@@ -589,7 +589,7 @@ class StoreTest {
     writeEntry(store, "e2", "Charmander", "Pickachu");
 
     // Remove e2 with Iterator::remove
-    var iter = store.viewAll();
+    var iter = store.iterator();
     for (int i = 0; i < 2; i++) {
       assertTrue(iter.hasNext());
 

@@ -349,7 +349,7 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public Iterator<Viewer> viewAll() throws IOException {
+  public Iterator<Viewer> iterator() throws IOException {
     initialize();
     return new ConcurrentViewerIterator();
   }
