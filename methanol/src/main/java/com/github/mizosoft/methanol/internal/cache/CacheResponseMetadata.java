@@ -78,6 +78,10 @@ public final class CacheResponseMetadata {
     return varyHeaders;
   }
 
+  public URI uri() {
+    return uri;
+  }
+
   public boolean matches(HttpRequest request) {
     return uri.equals(request.uri())
         && requestMethod.equalsIgnoreCase(request.method())
