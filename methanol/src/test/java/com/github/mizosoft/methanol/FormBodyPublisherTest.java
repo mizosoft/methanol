@@ -33,7 +33,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class FormBodyPublisherTest {
-
   @Test
   void buildMultiQueries() {
     var queries = new LinkedHashMap<String, List<String>>(); // preserve order
@@ -88,5 +87,6 @@ class FormBodyPublisherTest {
     assertEquals(expectedContent.remaining(), body.contentLength());
     assertEquals(expectedContent, bodyContent,
         format("expected <%s> found <%s>", expected, US_ASCII.decode(bodyContent.duplicate())));
+    assertEquals(expected, body.encodedString());
   }
 }

@@ -44,7 +44,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  * request type.
  */
 public final class FormBodyPublisher implements MimeBodyPublisher {
-
   private final Map<String, List<String>> queries;
   private @MonotonicNonNull String encodedString;
 
@@ -126,7 +125,6 @@ public final class FormBodyPublisher implements MimeBodyPublisher {
 
   /** A builder of {@code FormBodyPublisher} instances. */
   public static final class Builder {
-
     private final Map<String, List<String>> queries;
 
     Builder() {
@@ -140,7 +138,9 @@ public final class FormBodyPublisher implements MimeBodyPublisher {
      * @param value the query's value
      */
     public Builder query(String name, String value) {
-      queries.computeIfAbsent(name, n -> new ArrayList<>()).add(value);
+      requireNonNull(name, "name");
+      requireNonNull(value, "value");
+      queries.computeIfAbsent(name, __ -> new ArrayList<>()).add(value);
       return this;
     }
 
