@@ -29,10 +29,10 @@ import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static java.net.http.HttpRequest.BodyPublishers.noBody;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
 import static java.net.http.HttpResponse.BodyHandlers.discarding;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -84,6 +84,7 @@ class MethanolTest {
     assertTrue(client.requestTimeout().isEmpty());
     assertTrue(client.readTimeout().isEmpty());
     assertTrue(client.interceptors().isEmpty());
+    assertTrue(client.networkInterceptors().isEmpty());
     assertTrue(client.postDecorationInterceptors().isEmpty());
     assertEquals(headers(/* empty */), client.defaultHeaders());
     assertTrue(client.autoAcceptEncoding());
@@ -92,7 +93,7 @@ class MethanolTest {
   @Test
   void setExtraFields() {
     var interceptor1 = Interceptor.create(UnaryOperator.identity());
-    var interceptor2 = Interceptor.create((UnaryOperator.identity()));
+    var interceptor2 = Interceptor.create(UnaryOperator.identity());
     var client = Methanol.newBuilder()
         .userAgent("Mr Potato")
         .baseUri(URI.create("https://localhost"))
@@ -101,7 +102,7 @@ class MethanolTest {
         .defaultHeader("Accept", "text/html")
         .autoAcceptEncoding(true)
         .interceptor(interceptor1)
-        .postDecorationInterceptor(interceptor2)
+        .networkInterceptor(interceptor2)
         .build();
     assertEquals(Optional.of("Mr Potato"), client.userAgent());
     assertEquals(Optional.of(URI.create("https://localhost")), client.baseUri());
