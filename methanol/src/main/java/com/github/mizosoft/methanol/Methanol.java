@@ -89,8 +89,8 @@ public final class Methanol extends HttpClient {
   private final Optional<Duration> readTimeout;
   private final @Nullable ScheduledExecutorService readTimeoutScheduler;
   private final boolean autoAcceptEncoding;
-  private final List<Interceptor> preDecorationInterceptors;
-  private final List<Interceptor> postDecorationInterceptors;
+  private final List<Interceptor> interceptors;
+  private final List<Interceptor> networkInterceptors;
 
   private Methanol(BaseBuilder<?> builder) {
     baseClient = builder.buildBaseClient();
@@ -102,8 +102,8 @@ public final class Methanol extends HttpClient {
     readTimeout = Optional.ofNullable(builder.readTimeout);
     readTimeoutScheduler = builder.readTimeoutScheduler;
     autoAcceptEncoding = builder.autoAcceptEncoding;
-    preDecorationInterceptors = List.copyOf(builder.preDecorationInterceptors);
-    postDecorationInterceptors = List.copyOf(builder.postDecorationInterceptors);
+    interceptors = List.copyOf(builder.interceptors);
+    networkInterceptors = List.copyOf(builder.networkInterceptors);
   }
 
   /**
@@ -170,14 +170,30 @@ public final class Methanol extends HttpClient {
     return readTimeout;
   }
 
-  /** Returns the list of interceptors invoked before request decoration. */
+  /**
+   * Returns an immutable list of this client's {@link BaseBuilder#interceptor(Interceptor)
+   * interceptors}.
+   */
   public List<Interceptor> interceptors() {
-    return preDecorationInterceptors;
+    return interceptors;
   }
 
-  /** Returns the list of interceptors invoked after request decoration. */
+  /**
+   * Returns an immutable list of this client's {@link BaseBuilder#networkInterceptor(Interceptor)
+   * network interceptors}.
+   */
+  public List<Interceptor> networkInterceptors() {
+    return networkInterceptors;
+  }
+
+  /**
+   * Returns the list of interceptors invoked after request decoration.
+   *
+   * @deprecated Use {@link #networkInterceptors()}
+   */
+  @Deprecated(since = "1.5.0")
   public List<Interceptor> postDecorationInterceptors() {
-    return postDecorationInterceptors;
+    return networkInterceptors;
   }
 
   /** Returns this client's default headers. */
@@ -265,11 +281,11 @@ public final class Methanol extends HttpClient {
   }
 
   private List<Interceptor> buildInterceptorQueue() {
-    var interceptors = new ArrayList<>(this.preDecorationInterceptors);
+    var interceptors = new ArrayList<>(this.interceptors);
     interceptors.add(new RequestDecorationInterceptor(this));
     // Add cache interceptor if one is installed
     cache.ifPresent(cache -> interceptors.add(cache.interceptor(executor().orElse(null))));
-    interceptors.addAll(postDecorationInterceptors);
+    interceptors.addAll(networkInterceptors);
     return Collections.unmodifiableList(interceptors);
   }
 
@@ -382,8 +398,8 @@ public final class Methanol extends HttpClient {
     // This field is put here for convenience, it's only writable by Builder
     @MonotonicNonNull HttpCache cache;
 
-    final List<Interceptor> preDecorationInterceptors = new ArrayList<>();
-    final List<Interceptor> postDecorationInterceptors = new ArrayList<>();
+    final List<Interceptor> interceptors = new ArrayList<>();
+    final List<Interceptor> networkInterceptors = new ArrayList<>();
 
     BaseBuilder() {
       headersBuilder = new HeadersBuilder();
@@ -426,7 +442,7 @@ public final class Methanol extends HttpClient {
     /** Adds the given header as default. */
     public B defaultHeader(String name, String value) {
       validateHeader(name, value);
-      if (name.equalsIgnoreCase("User-Agent")) {
+      if ("User-Agent".equalsIgnoreCase(name)) {
         userAgent = value;
       }
       headersBuilder.add(name, value);
@@ -475,10 +491,10 @@ public final class Methanol extends HttpClient {
     }
 
     /**
-     * If enabled, each request will have an {@code Accept-Encoding} header appended the value of
+     * If enabled, each request will have an {@code Accept-Encoding} header appended, the value of
      * which is the set of {@link Factory#installedBindings() supported encodings}. Additionally,
-     * each received response will be transparently decompressed by wrapping it's {@code
-     * BodyHandler} with {@link MoreBodyHandlers#decoding(BodyHandler)}.
+     * each received response will be transparently decompressed by wrapping its {@code BodyHandler}
+     * with {@link MoreBodyHandlers#decoding(BodyHandler)}.
      *
      * <p>The default value of this setting is {@code true}.
      */
@@ -488,23 +504,41 @@ public final class Methanol extends HttpClient {
     }
 
     /**
-     * Adds an interceptor that is invoked before request decoration (i.e. before default properties
-     * or {@code BodyHandler} transformations are applied).
+     * Adds an interceptor that is invoked right after the client receives a request. The
+     * interceptor receives the request before it is decorated (its {@code URI} resolved with the
+     * base {@code URI}, default headers added, etc...) or handled by the {@link HttpCache}, if one
+     * is installed.
      */
     public B interceptor(Interceptor interceptor) {
       requireNonNull(interceptor);
-      preDecorationInterceptors.add(interceptor);
+      interceptors.add(interceptor);
+      return self();
+    }
+
+    /**
+     * Adds an interceptor that is invoked right before the request is forwarded to the underlying
+     * {@code HttpClient}. The interceptor receives the request after it is handled by all {@link
+     * #interceptor(Interceptor) non-network interceptors}, is decorated (its {@code URI} resolved
+     * with the base {@code URI}, default headers added, etc...) and finally handled by the {@link
+     * HttpCache}, if one is installed. This means that network interceptors aren't called if
+     * network isn't used, normally due to the presence of an {@code HttpCache} that is capable of
+     * serving a stored response.
+     */
+    public B networkInterceptor(Interceptor interceptor) {
+      requireNonNull(interceptor);
+      interceptors.add(interceptor);
       return self();
     }
 
     /**
      * Adds an interceptor that is invoked after request decoration (i.e. after default properties
      * or {@code BodyHandler} transformations are applied).
+     *
+     * @deprecated Use {@link #networkInterceptor(Interceptor)}
      */
+    @Deprecated(since = "1.5.0")
     public B postDecorationInterceptor(Interceptor interceptor) {
-      requireNonNull(interceptor);
-      postDecorationInterceptors.add(interceptor);
-      return self();
+      return networkInterceptor(interceptor);
     }
 
     /** Returns a new {@code Methanol} with a snapshot of the current builder's state. */
@@ -519,10 +553,10 @@ public final class Methanol extends HttpClient {
 
   /** A builder for {@code Methanol} instances with a predefined {@code HttpClient}. */
   public static final class WithClientBuilder extends BaseBuilder<WithClientBuilder> {
-    private final HttpClient delegate;
+    private final HttpClient baseClient;
 
-    WithClientBuilder(HttpClient delegate) {
-      this.delegate = requireNonNull(delegate);
+    WithClientBuilder(HttpClient baseClient) {
+      this.baseClient = requireNonNull(baseClient);
     }
 
     @Override
@@ -532,7 +566,7 @@ public final class Methanol extends HttpClient {
 
     @Override
     HttpClient buildBaseClient() {
-      return delegate;
+      return baseClient;
     }
   }
 
