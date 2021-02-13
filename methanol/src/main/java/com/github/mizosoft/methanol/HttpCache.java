@@ -81,10 +81,8 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -110,7 +108,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   private final Store store;
   private final Executor executor;
-  private final boolean ownedExecutor;
   private final boolean userVisibleExecutor;
   private final StatsRecorder statsRecorder;
   private final Clock clock;
@@ -120,16 +117,9 @@ public final class HttpCache implements AutoCloseable, Flushable {
     var storeFactory = builder.storeFactory;
     if (userExecutor != null) {
       executor = userExecutor;
-      ownedExecutor = false;
       userVisibleExecutor = true;
-    } else if (storeFactory
-        == StoreFactory.MEMORY) { // Can use common ForkJoinPool as there's no IO
-      executor = ForkJoinPool.commonPool();
-      ownedExecutor = false;
-      userVisibleExecutor = false;
     } else {
       executor = Executors.newCachedThreadPool();
-      ownedExecutor = true;
       userVisibleExecutor = false;
     }
     store =
@@ -265,16 +255,13 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   /**
-   * Closes this cache. An HTTP cache becomes unusable once it has been closed. Attempting to access
-   * a closed cache's content either directly or indirectly (by sending requests over a client that
-   * uses this cache) will likely cause an {@code IllegalStateException} to be thrown.
+   * Closes this cache. Attempting to operate on a closed cache either directly (e.g. removing an
+   * entry) or indirectly (e.g. sending requests over a client that uses this cache) will likely
+   * cause an {@code IllegalStateException} to be thrown.
    */
   @Override
   public void close() throws IOException {
     store.close();
-    if (ownedExecutor && executor instanceof ExecutorService) {
-      ((ExecutorService) executor).shutdown();
-    }
   }
 
   /** Called by {@code Methanol} when building the interceptor chain. */
@@ -438,7 +425,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     /**
      * The {@code Executor} used for handling responses. Will be either the client executor or the
-     * cache executor if the former is not present.
+     * cache executor if the former is not accessible.
      */
     private final Executor handlerExecutor;
 
