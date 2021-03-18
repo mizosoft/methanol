@@ -42,14 +42,14 @@ class RawResponseTest {
           .version(Version.HTTP_1_1)
           .timeRequestSent(Instant.ofEpochMilli(0))
           .timeResponseReceived(Instant.ofEpochMilli(1))
-          .build();
+          .buildTracked();
 
   @Test
   @ExecutorConfig(FIXED_POOL)
   void handleAsync(Executor threadPool) {
     var response = ResponseBuilder.newBuilder(responseTemplate)
         .body(strPublisher("Indiana Jones", UTF_8, threadPool))
-        .build();
+        .buildTracked();
     var rawResponse = NetworkResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
@@ -73,7 +73,7 @@ class RawResponseTest {
     var response = ResponseBuilder.newBuilder(responseTemplate)
         .header("Content-Type", "text/plain; charset=UTF-16")
         .body(strPublisher("Hans Solo", UTF_16, threadPool))
-        .build();
+        .buildTracked();
     var rawResponse = NetworkResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
@@ -86,14 +86,14 @@ class RawResponseTest {
   void with() {
     var response = ResponseBuilder.newBuilder(responseTemplate)
         .body((Publisher<List<ByteBuffer>>) EmptyPublisher.<List<ByteBuffer>>instance())
-        .build();
+        .buildTracked();
     var rawResponse = NetworkResponse.from(response);
     var mutated =
         rawResponse.with(builder -> builder.statusCode(369).header("X-My-Header", "Hello!"));
     var expected = ResponseBuilder.newBuilder(response)
         .statusCode(369)
         .header("X-My-Header", "Hello!")
-        .build();
+        .buildTracked();
     assertEqualResponses(expected, mutated.get());
   }
 
@@ -131,7 +131,7 @@ class RawResponseTest {
     return NetworkResponse.from(
         ResponseBuilder.newBuilder(responseTemplate)
             .body((Publisher<List<ByteBuffer>>) new FailedPublisher<List<ByteBuffer>>(supplier))
-            .build());
+            .buildTracked());
   }
 
   private static Publisher<List<ByteBuffer>> strPublisher(

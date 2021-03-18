@@ -644,7 +644,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
                 .timeRequestSent(context.requestTime)
                 .timeResponseReceived(context.now())
                 .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
-                .build());
+                .buildTracked());
       }
 
       // Serve the cacheResponse directly if no network was used
@@ -926,7 +926,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
                         ResponseBuilder.newBuilder(response)
                             .timeRequestSent(requestTime)
                             .timeResponseReceived(now())
-                            .build()))
+                            .buildTracked()))
             .thenApply(this::withNetworkResponse);
       }
 
