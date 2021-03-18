@@ -28,12 +28,12 @@ abstract class PublisherResponse extends RawResponse {
     subscriberFuture.thenAcceptAsync(publisher::subscribe, executor);
     return subscriberFuture
         .thenComposeAsync(BodySubscriber::getBody, executor)
-        .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).build());
+        .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).buildTracked());
   }
 
   private static TrackedResponse<?> dropBody(TrackedResponse<?> response) {
     return response.body() != null
-        ? ResponseBuilder.newBuilder(response).dropBody().build()
+        ? ResponseBuilder.newBuilder(response).dropBody().buildTracked()
         : response;
   }
 }
