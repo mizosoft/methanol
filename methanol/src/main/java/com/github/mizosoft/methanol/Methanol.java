@@ -25,15 +25,24 @@ package com.github.mizosoft.methanol;
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
+import com.github.mizosoft.methanol.internal.extensions.ImmutableResponseInfo;
+import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
 import java.net.ProxySelector;
@@ -41,10 +50,13 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.PushPromiseHandler;
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -53,8 +65,10 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -81,6 +95,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
   private final HttpClient baseClient;
+  private final Redirect redirectPolicy;
   private final HttpHeaders defaultHeaders;
   private final Optional<HttpCache> cache;
   private final Optional<String> userAgent;
@@ -94,6 +109,7 @@ public final class Methanol extends HttpClient {
 
   private Methanol(BaseBuilder<?> builder) {
     baseClient = builder.buildBaseClient();
+    redirectPolicy = requireNonNullElse(builder.redirectPolicy, Redirect.NEVER);
     defaultHeaders = builder.headersBuilder.build();
     cache = Optional.ofNullable(builder.cache);
     userAgent = Optional.ofNullable(builder.userAgent);
@@ -218,7 +234,7 @@ public final class Methanol extends HttpClient {
 
   @Override
   public Redirect followRedirects() {
-    return baseClient.followRedirects();
+    return redirectPolicy;
   }
 
   @Override
@@ -283,8 +299,13 @@ public final class Methanol extends HttpClient {
   private List<Interceptor> buildInterceptorQueue() {
     var interceptors = new ArrayList<>(this.interceptors);
     interceptors.add(new RequestDecorationInterceptor(this));
-    // Add cache interceptor if one is installed
-    cache.ifPresent(cache -> interceptors.add(cache.interceptor(executor().orElse(null))));
+    // Add redirect & cache interceptors if a cache is installed
+    cache.ifPresent(
+        cache -> {
+          var executor = executor().orElse(null);
+          interceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
+          interceptors.add(cache.interceptor(executor));
+        });
     interceptors.addAll(networkInterceptors);
     return Collections.unmodifiableList(interceptors);
   }
@@ -395,8 +416,9 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull ScheduledExecutorService readTimeoutScheduler;
     boolean autoAcceptEncoding;
 
-    // This field is put here for convenience, it's only writable by Builder
+    // These fields are put here for convenience, they're only writable by Builder
     @MonotonicNonNull HttpCache cache;
+    @MonotonicNonNull Redirect redirectPolicy;
 
     final List<Interceptor> interceptors = new ArrayList<>();
     final List<Interceptor> networkInterceptors = new ArrayList<>();
@@ -619,7 +641,9 @@ public final class Methanol extends HttpClient {
 
     @Override
     public Builder followRedirects(Redirect policy) {
-      delegateBuilder.followRedirects(policy);
+      // Defer applying policy to base client till build() is called to know whether
+      // a RedirectingInterceptor is to be installed in case a cache is installed.
+      redirectPolicy = requireNonNull(policy);
       return this;
     }
 
@@ -654,6 +678,11 @@ public final class Methanol extends HttpClient {
 
     @Override
     HttpClient buildBaseClient() {
+      // Apply redirectPolicy if a cache is not set.
+      // In such case we let the base client handle redirects.
+      if (cache == null && redirectPolicy != null) {
+        delegateBuilder.followRedirects(redirectPolicy);
+      }
       return delegateBuilder.build();
     }
   }
@@ -886,6 +915,251 @@ public final class Methanol extends HttpClient {
       }
 
       return decoratedRequest;
+    }
+  }
+
+  /**
+   * An {@link Interceptor} that follows redirects. The interceptor's behaviour follows that of the
+   * HttpClient. The interceptor is applied prior to the cache interceptor, provided that one is
+   * installed. Allowing the cache to intercept redirects increases its efficiency as network access
+   * can be avoided in case a redirected URI is accessed repeatedly (provided the redirecting
+   * response is cacheable). Additionally, this ensures correctness in case a cacheable response is
+   * received for a redirected request. In such case, the response should be cached for the URI the
+   * request was redirected to, not the initiating URI as it would've been possible if the cache
+   * isn't able to intercept redirection.
+   */
+  private static final class RedirectingInterceptor implements Interceptor {
+    private static final int DEFAULT_MAX_REDIRECTS = 5;
+    private static final int MAX_REDIRECTS =
+        Integer.getInteger("jdk.httpclient.redirects.retrylimit", DEFAULT_MAX_REDIRECTS);
+
+    private final Redirect policy;
+
+    /** The executor used for invoking the response handler. */
+    private final Executor handlerExecutor;
+
+    RedirectingInterceptor(Redirect policy, @Nullable Executor handlerExecutor) {
+      this.policy = policy;
+      // Use a cached thread-pool of daemon threads if we can't access HttpClient's executor
+      this.handlerExecutor =
+          requireNonNullElseGet(
+              handlerExecutor,
+              () ->
+                  Executors.newCachedThreadPool(
+                      runnable -> {
+                        var thread = new Thread(runnable);
+                        thread.setDaemon(true);
+                        return thread;
+                      }));
+    }
+
+    @Override
+    public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+        throws IOException, InterruptedException {
+      if (policy == Redirect.NEVER) {
+        return chain.forward(request);
+      }
+      return Utils.block(doIntercept(request, chain, false));
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+        HttpRequest request, Chain<T> chain) {
+      if (policy == Redirect.NEVER) {
+        return chain.forwardAsync(request);
+      }
+      return doIntercept(request, chain, true);
+    }
+
+    private <T> CompletableFuture<HttpResponse<T>> doIntercept(
+        HttpRequest request, Chain<T> chain, boolean async) {
+      var publisherChain = chain.with(BodyHandlers.ofPublisher(), screenPushPromiseHandler(chain));
+      return new Redirector(request, new SendAdapter(publisherChain, async))
+          .sendAndFollowUp()
+          .thenApply(Redirector::result)
+          .thenCompose(response -> handleAsync(response, chain.bodyHandler()));
+    }
+
+    // FIXME this code is identical to PublisherResponse::handlerAsync
+    private <T> CompletableFuture<HttpResponse<T>> handleAsync(
+        HttpResponse<Publisher<List<ByteBuffer>>> response, BodyHandler<T> handler) {
+      var publisher = response.body();
+      var subscriberFuture =
+          CompletableFuture.supplyAsync(
+              () -> handler.apply(ImmutableResponseInfo.from(response)), handlerExecutor);
+      subscriberFuture.thenAcceptAsync(publisher::subscribe, handlerExecutor);
+      return subscriberFuture
+          .thenComposeAsync(BodySubscriber::getBody, handlerExecutor)
+          .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).build());
+    }
+
+    /**
+     * Returns a publisher-based {@code PushPromiseHandler} that invokes the handler with the
+     * correct response type as specified by the interceptor chain.
+     */
+    private <T> @Nullable PushPromiseHandler<Publisher<List<ByteBuffer>>> screenPushPromiseHandler(
+        Chain<T> chain) {
+      return chain
+          .pushPromiseHandler()
+          .<PushPromiseHandler<Publisher<List<ByteBuffer>>>>map(
+              pushPromiseHandler ->
+                  (initiatingRequest, pushPromiseRequest, acceptor) -> {
+                    Function<BodyHandler<T>, CompletableFuture<HttpResponse<T>>>
+                        downstreamAcceptor =
+                            bodyHandler -> {
+                              var publisherResponseFuture =
+                                  acceptor.apply(BodyHandlers.ofPublisher());
+                              return publisherResponseFuture.thenCompose(
+                                  response -> handleAsync(response, bodyHandler));
+                            };
+                    pushPromiseHandler.applyPushPromise(
+                        initiatingRequest, pushPromiseRequest, downstreamAcceptor);
+                  })
+          .orElse(null);
+    }
+
+    private static final class SendAdapter {
+      private final Chain<Publisher<List<ByteBuffer>>> chain;
+      private final boolean async;
+
+      private SendAdapter(Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
+        this.chain = chain;
+        this.async = async;
+      }
+
+      CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> send(HttpRequest request) {
+        return async
+            ? chain.forwardAsync(request)
+            : Unchecked.supplyAsync(() -> chain.forward(request), FlowSupport.SYNC_EXECUTOR);
+      }
+    }
+
+    private final class Redirector {
+      private final HttpRequest request;
+      private final SendAdapter sendAdapter;
+      private final AtomicInteger redirectCount;
+      private final @Nullable HttpResponse<Publisher<List<ByteBuffer>>> response;
+      private final @Nullable HttpResponse<Publisher<List<ByteBuffer>>> previousResponse;
+
+      Redirector(HttpRequest request, SendAdapter sendAdapter) {
+        this(request, sendAdapter, new AtomicInteger(), null, null);
+      }
+
+      private Redirector(
+          HttpRequest request,
+          SendAdapter sendAdapter,
+          AtomicInteger redirectCount,
+          @Nullable HttpResponse<Publisher<List<ByteBuffer>>> response,
+          @Nullable HttpResponse<Publisher<List<ByteBuffer>>> previousResponse) {
+        this.request = request;
+        this.sendAdapter = sendAdapter;
+        this.redirectCount = redirectCount;
+        this.response = response;
+        this.previousResponse = previousResponse;
+      }
+
+      HttpResponse<Publisher<List<ByteBuffer>>> result() {
+        requireState(response != null, "absent response");
+        return castNonNull(response);
+      }
+
+      private Redirector withResponse(HttpResponse<Publisher<List<ByteBuffer>>> response) {
+        var newResponse = response;
+        if (previousResponse != null) {
+          var previousResponseWithoutBody =
+              ResponseBuilder.newBuilder(previousResponse).dropBody().build();
+          newResponse =
+              ResponseBuilder.newBuilder(response)
+                  .previousResponse(previousResponseWithoutBody)
+                  .build();
+        }
+        return new Redirector(request, sendAdapter, redirectCount, newResponse, null);
+      }
+
+      CompletableFuture<Redirector> sendAndFollowUp() {
+        return sendAdapter
+            .send(request)
+            .thenApply(this::withResponse)
+            .thenCompose(Redirector::followUp);
+      }
+
+      CompletableFuture<Redirector> followUp() {
+        var response = result();
+        var redirectedRequest = redirectedRequest(response);
+        if (redirectedRequest == null || redirectCount.incrementAndGet() > MAX_REDIRECTS) {
+          // Reached destination or exceeded allowed redirects
+          return CompletableFuture.completedFuture(this);
+        }
+
+        // Discard the body of the redirecting response
+        handleAsync(response, BodyHandlers.discarding());
+
+        // Follow redirected request
+        return new Redirector(
+                redirectedRequest,
+                sendAdapter,
+                redirectCount,
+                null, /* previousResponse */
+                response)
+            .sendAndFollowUp();
+      }
+
+      public @Nullable HttpRequest redirectedRequest(HttpResponse<?> response) {
+        if (policy == Redirect.NEVER) {
+          return null;
+        }
+
+        int statusCode = response.statusCode();
+        if (HttpStatus.isRedirection(statusCode)) {
+          var redirectedUri =
+              response
+                  .headers()
+                  .firstValue("Location")
+                  .map(URI::create)
+                  .orElseThrow(
+                      () -> new UncheckedIOException(new IOException("invalid redirection")));
+          var newMethod = redirectedMethod(response.statusCode());
+          if (canRedirectTo(redirectedUri)) {
+            return MutableRequest.copyOf(request)
+                .uri(redirectedUri)
+                .method(newMethod, request.bodyPublisher().orElseGet(BodyPublishers::noBody))
+                .toImmutableRequest();
+          }
+        }
+        return null;
+      }
+
+      // Follows implementation of jdk.internal.net.http.RedirectFilter.redirectedMethod
+      private String redirectedMethod(int statusCode) {
+        var originalMethod = request.method();
+        switch (statusCode) {
+          case 301:
+          case 302:
+            return originalMethod.equals("POST") ? "GET" : originalMethod;
+          case 303:
+            return "GET";
+          case 307:
+          case 308:
+          default:
+            return originalMethod;
+        }
+      }
+
+      // Follows implementation of jdk.internal.net.http.RedirectFilter.canRedirect
+      private boolean canRedirectTo(URI redirectedUri) {
+        var oldScheme = request.uri().getScheme();
+        var newScheme = redirectedUri.getScheme();
+        switch (policy) {
+          case ALWAYS:
+            return true;
+          case NEVER:
+            return false;
+          case NORMAL:
+            return newScheme.equalsIgnoreCase(oldScheme) || newScheme.equalsIgnoreCase("https");
+          default:
+            throw new AssertionError("unexpected policy: " + policy);
+        }
+      }
     }
   }
 }
