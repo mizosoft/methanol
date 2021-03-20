@@ -76,6 +76,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -415,8 +416,13 @@ public final class HttpCache implements AutoCloseable, Flushable {
      * Authenticator or a CookieHandler is installed. If the response varies with these (unlikely
      * but possible) they're not accepted as we can't access their values.
      */
-    static final Set<String> IMPLICITLY_ADDED_FIELDS =
-        Set.of("Cookie", "Cookie2", "Authorization", "Proxy-Authorization");
+    static final Set<String> IMPLICITLY_ADDED_FIELDS;
+
+    static {
+      var fields = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+      fields.addAll(Set.of("Cookie", "Cookie2", "Authorization", "Proxy-Authorization"));
+      IMPLICITLY_ADDED_FIELDS = fields;
+    }
 
     private static final Duration ONE_DAY = Duration.ofDays(1);
 
