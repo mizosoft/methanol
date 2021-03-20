@@ -1,349 +1,384 @@
-///*
-// * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
-// * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
-// *
-// * This code is free software; you can redistribute it and/or modify it
-// * under the terms of the GNU General Public License version 2 only, as
-// * published by the Free Software Foundation.
-// *
-// * This code is distributed in the hope that it will be useful, but WITHOUT
-// * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-// * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-// * version 2 for more details (a copy is included in the LICENSE file that
-// * accompanied this code).
-// *
-// * You should have received a copy of the GNU General Public License version
-// * 2 along with this work; if not, write to the Free Software Foundation,
-// * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
-// *
-// * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
-// * or visit www.oracle.com if you need additional information or have any
-// * questions.
-// */
-//
-///*
-// * @test
-// * @summary Basic test for redirect and redirect policies
-// * @modules java.base/sun.net.www.http
-// *          java.net.http/jdk.internal.net.http.common
-// *          java.net.http/jdk.internal.net.http.frame
-// *          java.net.http/jdk.internal.net.http.hpack
-// *          java.logging
-// *          jdk.httpserver
-// * @library /test/lib http2/server
-// * @build Http2TestServer
-// * @build jdk.test.lib.net.SimpleSSLContext
-// * @run testng/othervm
-// *       -Djdk.httpclient.HttpClient.log=trace,headers,requests
-// *       BasicRedirectTest
-// */
-//
-//import com.sun.net.httpserver.HttpServer;
-//import com.sun.net.httpserver.HttpsConfigurator;
-//import com.sun.net.httpserver.HttpsServer;
-//import java.io.IOException;
-//import java.io.InputStream;
-//import java.io.OutputStream;
-//import java.net.InetAddress;
-//import java.net.InetSocketAddress;
-//import java.net.URI;
-//import java.net.http.HttpClient;
-//import java.net.http.HttpClient.Redirect;
-//import java.net.http.HttpRequest;
-//import java.net.http.HttpResponse;
-//import java.net.http.HttpResponse.BodyHandlers;
-//import javax.net.ssl.SSLContext;
-//import jdk.test.lib.net.SimpleSSLContext;
-//import org.testng.annotations.AfterTest;
-//import org.testng.annotations.BeforeTest;
-//import org.testng.annotations.DataProvider;
-//import org.testng.annotations.Test;
-//import static java.lang.System.out;
-//import static java.nio.charset.StandardCharsets.UTF_8;
-//import static org.testng.Assert.assertEquals;
-//import static org.testng.Assert.assertFalse;
-//import static org.testng.Assert.assertTrue;
-//
-//public class BasicRedirectTest implements HttpServerAdapters {
-//
-//    SSLContext sslContext;
-//    HttpTestServer httpTestServer;        // HTTP/1.1    [ 4 servers ]
-//    HttpTestServer httpsTestServer;       // HTTPS/1.1
-//    HttpTestServer http2TestServer;       // HTTP/2 ( h2c )
-//    HttpTestServer https2TestServer;      // HTTP/2 ( h2  )
-//    String httpURI;
-//    String httpURIToMoreSecure; // redirects HTTP to HTTPS
-//    String httpsURI;
-//    String httpsURIToLessSecure; // redirects HTTPS to HTTP
-//    String http2URI;
-//    String http2URIToMoreSecure; // redirects HTTP to HTTPS
-//    String https2URI;
-//    String https2URIToLessSecure; // redirects HTTPS to HTTP
-//
-//    static final String MESSAGE = "Is fearr Gaeilge briste, na Bearla cliste";
-//    static final int ITERATIONS = 3;
-//
-//    @DataProvider(name = "positive")
-//    public Object[][] positive() {
-//        return new Object[][] {
-//                { httpURI,               Redirect.ALWAYS        },
-//                { httpsURI,              Redirect.ALWAYS        },
-//                { http2URI,              Redirect.ALWAYS        },
-//                { https2URI,             Redirect.ALWAYS        },
-//                { httpURIToMoreSecure,   Redirect.ALWAYS        },
-//                { http2URIToMoreSecure,  Redirect.ALWAYS        },
-//                { httpsURIToLessSecure,  Redirect.ALWAYS        },
-//                { https2URIToLessSecure, Redirect.ALWAYS        },
-//
-//                { httpURI,               Redirect.NORMAL        },
-//                { httpsURI,              Redirect.NORMAL        },
-//                { http2URI,              Redirect.NORMAL        },
-//                { https2URI,             Redirect.NORMAL        },
-//                { httpURIToMoreSecure,   Redirect.NORMAL        },
-//                { http2URIToMoreSecure,  Redirect.NORMAL        },
-//        };
-//    }
-//
-//    @Test(dataProvider = "positive")
-//    void test(String uriString, Redirect redirectPolicy) throws Exception {
-//        out.printf("%n---- starting positive (%s, %s) ----%n", uriString, redirectPolicy);
-//        HttpClient client = HttpClient.newBuilder()
-//                .followRedirects(redirectPolicy)
-//                .sslContext(sslContext)
-//                .build();
-//
-//        URI uri = URI.create(uriString);
-//        HttpRequest request = HttpRequest.newBuilder(uri).build();
-//        out.println("Initial request: " + request.uri());
-//
-//        for (int i=0; i< ITERATIONS; i++) {
-//            out.println("iteration: " + i);
-//            HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
-//
-//            out.println("  Got response: " + response);
-//            out.println("  Got body Path: " + response.body());
-//            out.println("  Got response.request: " + response.request());
-//
-//            assertEquals(response.statusCode(), 200);
-//            assertEquals(response.body(), MESSAGE);
-//            // asserts redirected URI in response.request().uri()
-//            assertTrue(response.uri().getPath().endsWith("message"));
-//            assertPreviousRedirectResponses(request, response);
-//        }
-//    }
-//
-//    static void assertPreviousRedirectResponses(HttpRequest initialRequest,
-//                                                HttpResponse<?> finalResponse) {
-//        // there must be at least one previous response
-//        finalResponse.previousResponse()
-//                .orElseThrow(() -> new RuntimeException("no previous response"));
-//
-//        HttpResponse<?> response = finalResponse;
-//        do {
-//            URI uri = response.uri();
-//            response = response.previousResponse().get();
-//            assertTrue(300 <= response.statusCode() && response.statusCode() <= 309,
-//                       "Expected 300 <= code <= 309, got:" + response.statusCode());
-//            assertEquals(response.body(), null, "Unexpected body: " + response.body());
-//            String locationHeader = response.headers().firstValue("Location")
-//                      .orElseThrow(() -> new RuntimeException("no previous Location"));
-//            assertTrue(uri.toString().endsWith(locationHeader),
-//                      "URI: " + uri + ", Location: " + locationHeader);
-//
-//        } while (response.previousResponse().isPresent());
-//
-//        // initial
-//        assertEquals(initialRequest, response.request(),
-//                String.format("Expected initial request [%s] to equal last prev req [%s]",
-//                              initialRequest, response.request()));
-//    }
-//
-//    // --  negatives
-//
-//    @DataProvider(name = "negative")
-//    public Object[][] negative() {
-//        return new Object[][] {
-//                { httpURI,               Redirect.NEVER         },
-//                { httpsURI,              Redirect.NEVER         },
-//                { http2URI,              Redirect.NEVER         },
-//                { https2URI,             Redirect.NEVER         },
-//                { httpURIToMoreSecure,   Redirect.NEVER         },
-//                { http2URIToMoreSecure,  Redirect.NEVER         },
-//                { httpsURIToLessSecure,  Redirect.NEVER         },
-//                { https2URIToLessSecure, Redirect.NEVER         },
-//
-//                { httpsURIToLessSecure,  Redirect.NORMAL        },
-//                { https2URIToLessSecure, Redirect.NORMAL        },
-//        };
-//    }
-//
-//    @Test(dataProvider = "negative")
-//    void testNegatives(String uriString,Redirect redirectPolicy) throws Exception {
-//        out.printf("%n---- starting negative (%s, %s) ----%n", uriString, redirectPolicy);
-//        HttpClient client = HttpClient.newBuilder()
-//                .followRedirects(redirectPolicy)
-//                .sslContext(sslContext)
-//                .build();
-//
-//        URI uri = URI.create(uriString);
-//        HttpRequest request = HttpRequest.newBuilder(uri).build();
-//        out.println("Initial request: " + request.uri());
-//
-//        for (int i=0; i< ITERATIONS; i++) {
-//            out.println("iteration: " + i);
-//            HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
-//
-//            out.println("  Got response: " + response);
-//            out.println("  Got body Path: " + response.body());
-//            out.println("  Got response.request: " + response.request());
-//
-//            assertEquals(response.statusCode(), 302);
-//            assertEquals(response.body(), "XY");
-//            // asserts original URI in response.request().uri()
-//            assertTrue(response.uri().equals(uri));
-//            assertFalse(response.previousResponse().isPresent());
-//        }
-//    }
-//
-//
-//    // -- Infrastructure
-//
-//    @BeforeTest
-//    public void setup() throws Exception {
-//        sslContext = new SimpleSSLContext().get();
-//        if (sslContext == null)
-//            throw new AssertionError("Unexpected null sslContext");
-//
-//        InetSocketAddress sa = new InetSocketAddress(InetAddress.getLoopbackAddress(), 0);
-//
-//        httpTestServer = HttpTestServer.of(HttpServer.create(sa, 0));
-//        httpTestServer.addHandler(new BasicHttpRedirectHandler(), "/http1/same/");
-//        httpURI = "http://" + httpTestServer.serverAuthority() + "/http1/same/redirect";
-//        HttpsServer httpsServer = HttpsServer.create(sa, 0);
-//        httpsServer.setHttpsConfigurator(new HttpsConfigurator(sslContext));
-//        httpsTestServer = HttpTestServer.of(httpsServer);
-//        httpsTestServer.addHandler(new BasicHttpRedirectHandler(),"/https1/same/");
-//        httpsURI = "https://" + httpsTestServer.serverAuthority() + "/https1/same/redirect";
-//
-//        http2TestServer = HttpTestServer.of(new Http2TestServer("localhost", false, 0));
-//        http2TestServer.addHandler(new BasicHttpRedirectHandler(), "/http2/same/");
-//        http2URI = "http://" + http2TestServer.serverAuthority() + "/http2/same/redirect";
-//        https2TestServer = HttpTestServer.of(new Http2TestServer("localhost", true, sslContext));
-//        https2TestServer.addHandler(new BasicHttpRedirectHandler(), "/https2/same/");
-//        https2URI = "https://" + https2TestServer.serverAuthority() + "/https2/same/redirect";
-//
-//
-//        // HTTP to HTTPS redirect handler
-//        httpTestServer.addHandler(new ToSecureHttpRedirectHandler(httpsURI), "/http1/toSecure/");
-//        httpURIToMoreSecure = "http://" + httpTestServer.serverAuthority()+ "/http1/toSecure/redirect";
-//        // HTTP2 to HTTP2S redirect handler
-//        http2TestServer.addHandler(new ToSecureHttpRedirectHandler(https2URI), "/http2/toSecure/");
-//        http2URIToMoreSecure = "http://" + http2TestServer.serverAuthority() + "/http2/toSecure/redirect";
-//
-//        // HTTPS to HTTP redirect handler
-//        httpsTestServer.addHandler(new ToLessSecureRedirectHandler(httpURI), "/https1/toLessSecure/");
-//        httpsURIToLessSecure = "https://" + httpsTestServer.serverAuthority() + "/https1/toLessSecure/redirect";
-//        // HTTPS2 to HTTP2 redirect handler
-//        https2TestServer.addHandler(new ToLessSecureRedirectHandler(http2URI), "/https2/toLessSecure/");
-//        https2URIToLessSecure = "https://" + https2TestServer.serverAuthority() + "/https2/toLessSecure/redirect";
-//
-//        httpTestServer.start();
-//        httpsTestServer.start();
-//        http2TestServer.start();
-//        https2TestServer.start();
-//    }
-//
-//    @AfterTest
-//    public void teardown() throws Exception {
-//        httpTestServer.stop();
-//        httpsTestServer.stop();
-//        http2TestServer.stop();
-//        https2TestServer.stop();
-//    }
-//
-//    // Redirects to same protocol
-//    static class BasicHttpRedirectHandler implements HttpTestHandler {
-//        // flip-flop between chunked/variable and fixed length redirect responses
-//        volatile int count;
-//
-//        @Override
-//        public void handle(HttpTestExchange t) throws IOException {
-//            System.out.println("BasicHttpRedirectHandler for: " + t.getRequestURI());
-//            readAllRequestData(t);
-//
-//            if (t.getRequestURI().getPath().endsWith("redirect")) {
-//                String url = t.getRequestURI().resolve("message").toString();
-//                t.getResponseHeaders().addHeader("Location", url);
-//                int len = count % 2 == 0 ? 2 : -1;
-//                t.sendResponseHeaders(302, len);
-//                try (OutputStream os = t.getResponseBody()) {
-//                    os.write(new byte[]{'X', 'Y'});  // stuffing some response body
-//                }
-//            } else {
-//                try (OutputStream os = t.getResponseBody()) {
-//                    byte[] bytes = MESSAGE.getBytes(UTF_8);
-//                    t.sendResponseHeaders(200, bytes.length);
-//                    os.write(bytes);
-//                }
-//            }
-//        }
-//    }
-//
-//    // Redirects to a, possibly, more secure protocol, (HTTP to HTTPS)
-//    static class ToSecureHttpRedirectHandler implements HttpTestHandler {
-//        final String targetURL;
-//        ToSecureHttpRedirectHandler(String targetURL) {
-//            this.targetURL = targetURL;
-//        }
-//        @Override
-//        public void handle(HttpTestExchange t) throws IOException {
-//            System.out.println("ToSecureHttpRedirectHandler for: " + t.getRequestURI());
-//            readAllRequestData(t);
-//
-//            if (t.getRequestURI().getPath().endsWith("redirect")) {
-//                t.getResponseHeaders().addHeader("Location", targetURL);
-//                System.out.println("ToSecureHttpRedirectHandler redirecting to: " + targetURL);
-//                t.sendResponseHeaders(302, 2); // fixed-length
-//                try (OutputStream os = t.getResponseBody()) {
-//                    os.write(new byte[]{'X', 'Y'});
-//                }
-//            } else {
-//                Throwable ex = new RuntimeException("Unexpected request");
-//                ex.printStackTrace();
-//                t.sendResponseHeaders(500, 0);
-//            }
-//        }
-//    }
-//
-//    // Redirects to a, possibly, less secure protocol (HTTPS to HTTP)
-//    static class ToLessSecureRedirectHandler implements HttpTestHandler {
-//        final String targetURL;
-//        ToLessSecureRedirectHandler(String targetURL) {
-//            this.targetURL = targetURL;
-//        }
-//        @Override
-//        public void handle(HttpTestExchange t) throws IOException {
-//            System.out.println("ToLessSecureRedirectHandler for: " + t.getRequestURI());
-//            readAllRequestData(t);
-//
-//            if (t.getRequestURI().getPath().endsWith("redirect")) {
-//                t.getResponseHeaders().addHeader("Location", targetURL);
-//                System.out.println("ToLessSecureRedirectHandler redirecting to: " + targetURL);
-//                t.sendResponseHeaders(302, -1);  // chunked/variable
-//                try (OutputStream os = t.getResponseBody()) {
-//                    os.write(new byte[]{'X', 'Y'});
-//                }
-//            } else {
-//                Throwable ex = new RuntimeException("Unexpected request");
-//                ex.printStackTrace();
-//                t.sendResponseHeaders(500, 0);
-//            }
-//        }
-//    }
-//
-//    static void readAllRequestData(HttpTestExchange t) throws IOException {
-//        try (InputStream is = t.getRequestBody()) {
-//            is.readAllBytes();
-//        }
-//    }
-//}
+/*
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package com.github.mizosoft.methanol;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.github.mizosoft.methanol.Methanol.RedirectingInterceptor;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
+import com.github.mizosoft.methanol.testing.MockWebServerExtension;
+import com.github.mizosoft.methanol.testutils.TestUtils;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpClient.Redirect;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
+import javax.net.ssl.SSLContext;
+import okhttp3.Protocol;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
+import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+@ExtendWith({MockWebServerExtension.class, ExecutorExtension.class})
+@TestInstance(Lifecycle.PER_CLASS)
+class BasicRedirectTest {
+  SSLContext sslContext;
+
+  MockWebServer httpTestServer; // HTTP/1.1    [ 4 servers ]
+  MockWebServer httpsTestServer; // HTTPS/1.1
+  MockWebServer http2TestServer; // HTTP/2 ( h2c )
+  MockWebServer https2TestServer; // HTTP/2 ( h2  )
+
+  String httpURI;
+  String httpURIToMoreSecure; // redirects HTTP to HTTPS
+  String httpsURI;
+  String httpsURIToLessSecure; // redirects HTTPS to HTTP
+  String http2URI;
+  String http2URIToMoreSecure; // redirects HTTP to HTTPS
+  String https2URI;
+  String https2URIToLessSecure; // redirects HTTPS to HTTP
+
+  static final String MESSAGE = "Is fearr Gaeilge briste, na Bearla cliste";
+  static final int ITERATIONS = 3;
+
+  /**
+   * Defers getting the URI to test invocation as JUnit 5 invokes arguments provider before setup
+   * method so URIs never get the chance to get initialized when the provider is invoked.
+   */
+  private Supplier<String> uri(String fieldName) {
+    return new Supplier<>() {
+      @Override
+      public String get() {
+        try {
+          var field = BasicRedirectTest.class.getDeclaredField(fieldName);
+          field.setAccessible(true);
+          return (String) field.get(BasicRedirectTest.this);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+          throw new RuntimeException(e);
+        }
+      }
+
+      @Override
+      public String toString() {
+        return fieldName;
+      }
+    };
+  }
+
+  Object[][] positive() {
+    return new Object[][] {
+      {uri("httpURI"), Redirect.ALWAYS},
+      {uri("httpsURI"), Redirect.ALWAYS},
+      {uri("http2URI"), Redirect.ALWAYS},
+      {uri("https2URI"), Redirect.ALWAYS},
+      {uri("httpURIToMoreSecure"), Redirect.ALWAYS},
+      {uri("http2URIToMoreSecure"), Redirect.ALWAYS},
+      {uri("httpsURIToLessSecure"), Redirect.ALWAYS},
+      {uri("https2URIToLessSecure"), Redirect.ALWAYS},
+      {uri("httpURI"), Redirect.NORMAL},
+      {uri("httpsURI"), Redirect.NORMAL},
+      {uri("http2URI"), Redirect.NORMAL},
+      {uri("https2URI"), Redirect.NORMAL},
+      {uri("httpURIToMoreSecure"), Redirect.NORMAL},
+      {uri("http2URIToMoreSecure"), Redirect.NORMAL},
+    };
+  }
+
+  @ParameterizedTest
+  @MethodSource("positive")
+  @ExecutorConfig(ExecutorType.FIXED_POOL)
+  void test(Supplier<String> uriString, Redirect redirectPolicy, Executor handlerExecutor)
+      throws Exception {
+    //    out.printf("%n---- starting positive (%s, %s) ----%n", uriString, redirectPolicy);
+    HttpClient client =
+        Methanol.newBuilder()
+            .followRedirects(Redirect.NEVER)
+            .networkInterceptor(new RedirectingInterceptor(redirectPolicy, handlerExecutor))
+            .autoAcceptEncoding(false) // Don't add Accept-Encoding as it messes with the tests
+            .sslContext(sslContext)
+            .build();
+
+    URI uri = URI.create(uriString.get());
+    HttpRequest request = HttpRequest.newBuilder(uri).build();
+    //    out.println("Initial request: " + request.uri());
+
+    for (int i = 0; i < ITERATIONS; i++) {
+      //      out.println("iteration: " + i);
+      HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
+
+      //      out.println("  Got response: " + response);
+      //      out.println("  Got body Path: " + response.body());
+      //      out.println("  Got response.request: " + response.request());
+
+      assertEquals(200, response.statusCode());
+      assertEquals(MESSAGE, response.body());
+      // asserts redirected URI in response.request().uri()
+      assertTrue(response.uri().getPath().endsWith("message"));
+      assertPreviousRedirectResponses(request, response);
+    }
+  }
+
+  private static void assertPreviousRedirectResponses(
+      HttpRequest initialRequest, HttpResponse<?> finalResponse) {
+    // there must be at least one previous response
+    finalResponse
+        .previousResponse()
+        .orElseThrow(() -> new RuntimeException("no previous response"));
+
+    HttpResponse<?> response = finalResponse;
+    do {
+      URI uri = response.uri();
+      response = response.previousResponse().get();
+      assertTrue(
+          300 <= response.statusCode() && response.statusCode() <= 309,
+          "Expected 300 <= code <= 309, got:" + response.statusCode());
+      assertNull(response.body(), "Unexpected body: " + response.body());
+      String locationHeader =
+          response
+              .headers()
+              .firstValue("Location")
+              .orElseThrow(() -> new RuntimeException("no previous Location"));
+      assertTrue(
+          uri.toString().endsWith(locationHeader), "URI: " + uri + ", Location: " + locationHeader);
+
+    } while (response.previousResponse().isPresent());
+
+    // initial
+    assertEquals(
+        initialRequest,
+        response.request(),
+        String.format(
+            "Expected initial request [%s] to equal last prev req [%s]",
+            initialRequest, response.request()));
+  }
+
+  // --  negatives
+
+  Object[][] negative() {
+    return new Object[][] {
+      {uri("httpURI"), Redirect.NEVER},
+      {uri("httpsURI"), Redirect.NEVER},
+      {uri("http2URI"), Redirect.NEVER},
+      {uri("https2URI"), Redirect.NEVER},
+      {uri("httpURIToMoreSecure"), Redirect.NEVER},
+      {uri("http2URIToMoreSecure"), Redirect.NEVER},
+      {uri("httpsURIToLessSecure"), Redirect.NEVER},
+      {uri("https2URIToLessSecure"), Redirect.NEVER},
+      {uri("httpsURIToLessSecure"), Redirect.NORMAL},
+      {uri("https2URIToLessSecure"), Redirect.NORMAL},
+    };
+  }
+
+  @ParameterizedTest
+  @MethodSource("negative")
+  @ExecutorConfig(ExecutorType.FIXED_POOL)
+  void testNegatives(Supplier<String> uriString, Redirect redirectPolicy, Executor handlerExecutor)
+      throws Exception {
+    //    out.printf("%n---- starting negative (%s, %s) ----%n", uriString, redirectPolicy);
+    HttpClient client =
+        Methanol.newBuilder()
+            .followRedirects(Redirect.NEVER)
+            .networkInterceptor(new RedirectingInterceptor(redirectPolicy, handlerExecutor))
+            .autoAcceptEncoding(false) // Don't add Accept-Encoding as it messes with the tests
+            .sslContext(sslContext)
+            .build();
+
+    URI uri = URI.create(uriString.get());
+    HttpRequest request = HttpRequest.newBuilder(uri).build();
+    //    out.println("Initial request: " + request.uri());
+
+    for (int i = 0; i < ITERATIONS; i++) {
+      //      out.println("iteration: " + i);
+      HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
+
+      //      out.println("  Got response: " + response);
+      //      out.println("  Got body Path: " + response.body());
+      //      out.println("  Got response.request: " + response.request());
+
+      assertEquals(302, response.statusCode());
+      assertEquals("XY", response.body());
+      // asserts original URI in response.request().uri()
+      assertEquals(uri, response.uri());
+      assertFalse(response.previousResponse().isPresent());
+    }
+  }
+
+  // -- Infrastructure
+
+  @BeforeEach
+  void setUp(
+      MockWebServer httpTestServer,
+      MockWebServer httpsTestServer,
+      MockWebServer http2TestServer,
+      MockWebServer https2TestServer) {
+    sslContext = TestUtils.localhostSslContext();
+
+    // Prevent upgrading protocol for non-HTTP/2 servers
+    httpTestServer.setProtocols(List.of(Protocol.HTTP_1_1));
+    httpsTestServer.setProtocols(List.of(Protocol.HTTP_1_1));
+
+    this.httpTestServer = httpTestServer;
+    var httpTestServerDispatcher = new ScopedDispatcher();
+    httpTestServerDispatcher.put("/http1/same/", new BasicHttpRedirectDispatcher());
+    httpTestServer.setDispatcher(httpTestServerDispatcher);
+    httpURI = httpTestServer.url("/http1/same/redirect").toString();
+    httpsTestServer.useHttps(sslContext.getSocketFactory(), false);
+    this.httpsTestServer = httpsTestServer;
+    var httpsTestServerDispatcher = new ScopedDispatcher();
+    httpsTestServerDispatcher.put("/https1/same/", new BasicHttpRedirectDispatcher());
+    httpsTestServer.setDispatcher(httpsTestServerDispatcher);
+    httpsURI = httpsTestServer.url("/https1/same/redirect").toString();
+
+    this.http2TestServer = http2TestServer;
+    var http2TestServerDispatcher = new ScopedDispatcher();
+    http2TestServerDispatcher.put("/http2/same/", new BasicHttpRedirectDispatcher());
+    http2TestServer.setDispatcher(http2TestServerDispatcher);
+    http2URI = http2TestServer.url("/http2/same/redirect").toString();
+    https2TestServer.useHttps(sslContext.getSocketFactory(), false);
+    this.https2TestServer = https2TestServer;
+    var https2TestServerDispatcher = new ScopedDispatcher();
+    https2TestServerDispatcher.put("/https2/same/", new BasicHttpRedirectDispatcher());
+    https2TestServer.setDispatcher(https2TestServerDispatcher);
+    https2URI = https2TestServer.url("/https2/same/redirect").toString();
+
+    // HTTP to HTTPS redirect handler
+    httpTestServerDispatcher.put("/http1/toSecure/", new ToSecureHttpRedirectDispatcher(httpsURI));
+    httpURIToMoreSecure = httpTestServer.url("/http1/toSecure/redirect").toString();
+    // HTTP2 to HTTP2S redirect handler
+    http2TestServerDispatcher.put(
+        "/http2/toSecure/", new ToSecureHttpRedirectDispatcher(https2URI));
+    http2URIToMoreSecure = http2TestServer.url("/http2/toSecure/redirect").toString();
+
+    // HTTPS to HTTP redirect handler
+    httpsTestServerDispatcher.put(
+        "/https1/toLessSecure/", new ToLessSecureRedirectDispatcher(httpURI, true));
+    httpsURIToLessSecure = httpsTestServer.url("/https1/toLessSecure/redirect").toString();
+    // HTTPS2 to HTTP2 redirect handler
+    https2TestServerDispatcher.put(
+        "/https2/toLessSecure/", new ToLessSecureRedirectDispatcher(http2URI, false));
+    https2URIToLessSecure = https2TestServer.url("/https2/toLessSecure/redirect").toString();
+  }
+
+  // Redirects to same protocol
+  private static class BasicHttpRedirectDispatcher extends Dispatcher {
+    BasicHttpRedirectDispatcher() {}
+
+    @NotNull
+    @Override
+    public MockResponse dispatch(@NotNull RecordedRequest t) {
+      //      System.out.println("BasicHttpRedirectHandler for: " + t.getRequestURI());
+
+      var mockResponse = new MockResponse();
+      if (t.getRequestUrl().encodedPath().endsWith("redirect")) {
+        String url = t.getRequestUrl().resolve("message").toString();
+        mockResponse.setHeader("Location", url);
+        mockResponse.setResponseCode(302);
+        // stuffing some response body
+        mockResponse.setBody("XY");
+      } else {
+        mockResponse.setBody(MESSAGE);
+      }
+      return mockResponse;
+    }
+  }
+
+  // Redirects to a, possibly, more secure protocol, (HTTP to HTTPS)
+  private static class ToSecureHttpRedirectDispatcher extends Dispatcher {
+    private final String targetURL;
+
+    ToSecureHttpRedirectDispatcher(String targetURL) {
+      this.targetURL = targetURL;
+    }
+
+    @NotNull
+    @Override
+    public MockResponse dispatch(@NotNull RecordedRequest t) {
+      //      System.out.println("ToSecureHttpRedirectHandler for: " + t.getRequestURI());
+
+      MockResponse response = new MockResponse();
+      if (t.getRequestUrl().encodedPath().endsWith("redirect")) {
+        response.setHeader("Location", targetURL);
+        //        System.out.println("ToSecureHttpRedirectHandler redirecting to: " + targetURL);
+        response.setResponseCode(302);
+        response.setBody("XY");
+      } else {
+        Throwable ex = new RuntimeException("Unexpected request");
+        ex.printStackTrace();
+        response.setResponseCode(500);
+      }
+      return response;
+    }
+  }
+
+  // Redirects to a, possibly, less secure protocol (HTTPS to HTTP)
+  private static class ToLessSecureRedirectDispatcher extends Dispatcher {
+    private final String targetURL;
+    private final boolean chunked;
+
+    ToLessSecureRedirectDispatcher(String targetURL, boolean chunked) {
+      this.targetURL = targetURL;
+      this.chunked = chunked;
+    }
+
+    @NotNull
+    @Override
+    public MockResponse dispatch(@NotNull RecordedRequest t) {
+      //      System.out.println("ToLessSecureRedirectHandler for: " + t.getRequestURI());
+
+      MockResponse response = new MockResponse();
+      if (t.getRequestUrl().encodedPath().endsWith("redirect")) {
+        response.setHeader("Location", targetURL);
+        //        System.out.println("ToLessSecureRedirectHandler redirecting to: " + targetURL);
+        response.setResponseCode(302);
+        if (chunked) {
+          response.setChunkedBody("XY", 1); // chunked/variable
+        } else {
+          response.setBody("XY");
+        }
+      } else {
+        Throwable ex = new RuntimeException("Unexpected request");
+        ex.printStackTrace();
+        response.setResponseCode(500);
+      }
+      return response;
+    }
+  }
+}
