@@ -47,6 +47,7 @@ import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus;
+import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
@@ -183,7 +184,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   /** Asynchronously {@link #initialize() initializes} this cache. */
-  public CompletableFuture<Void> initializeAsync() throws IOException {
+  public CompletableFuture<Void> initializeAsync() {
     return store.initializeAsync();
   }
 
@@ -461,28 +462,25 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     // TODO figure out what to do with HEADs
-    // TODO consider implementing our own redirecting interceptor
-    //      to be above the caching layer so redirects get cached
 
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException {
-      return Utils.block(doIntercept(request, chain.with(BodyHandlers.ofPublisher(), null), false))
-          .handle(chain.bodyHandler());
+      return Utils.block(doIntercept(request, chain, false)).handle(chain.bodyHandler());
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      return doIntercept(request, chain.with(BodyHandlers.ofPublisher(), null), true)
+      return doIntercept(request, chain, true)
           .thenCompose(rawResponse -> rawResponse.handleAsync(chain.bodyHandler(), handlerExecutor))
           .thenApply(Function.identity()); // Downcast from TrackedResponse<T> to HttpResponse<T>
     }
 
-    private CompletableFuture<RawResponse> doIntercept(
-        HttpRequest request, Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
+    private <T> CompletableFuture<RawResponse> doIntercept(
+        HttpRequest request, Chain<T> chain, boolean async) {
       cache.onRequest(request);
-      return initiateExchange(request, chain, async)
+      return initiateExchange(request, Handlers.toPublisherChain(chain, handlerExecutor), async)
           .thenCompose(this::performExchange)
           .thenApply(this::updateCache)
           .thenApply(this::serveResponse);
@@ -495,7 +493,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       // Requests accepting HTTP/2 pushes are forwarded as
       // we don't know what might be pushed by the server.
       if (chain.pushPromiseHandler().isPresent() || hasPreconditions(request.headers())) {
-        return context.forward();
+        return CompletableFuture.completedFuture(context);
       }
       return cache.get(request, asyncAdapter::view).thenApply(context::withCacheResponse);
     }
