@@ -168,6 +168,25 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return statsRecorder.snapshot(uri);
   }
 
+  /**
+   * Initializes this cache. A cache that operates on disk needs to initialize its in-memory data
+   * structures before usage to restore indexing data from previous sessions. Initialization entails
+   * reading index files, iterating over entries available in its directory and possibly creating
+   * new index files.
+   *
+   * <p>The cache initializes itself automatically on first use. An application might choose to call
+   * this method (or {@link #initializeAsync()}) during its startup sequence to allow the cache to
+   * operate directly when it's first used.
+   */
+  public void initialize() throws IOException {
+    store.initialize();
+  }
+
+  /** Asynchronously {@link #initialize() initializes} this cache. */
+  public CompletableFuture<Void> initializeAsync() throws IOException {
+    return store.initializeAsync();
+  }
+
   /** Returns an {@code Iterator} that for the {@code URIs} of responses known to this cache. */
   public Iterator<URI> uris() throws IOException {
     return new Iterator<>() {
