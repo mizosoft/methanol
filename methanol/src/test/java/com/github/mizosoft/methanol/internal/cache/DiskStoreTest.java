@@ -19,7 +19,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertAbsent;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertUnreadable;
@@ -29,11 +28,13 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeData;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntry;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.QUEUED;
 import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.SAME_THREAD;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -42,16 +43,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.DiskEntry;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.EntryCorruptionMode;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.Index;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexCorruptionMode;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.StoreConfig;
 import com.github.mizosoft.methanol.testing.StoreContext;
 import com.github.mizosoft.methanol.testing.StoreExtension;
-import com.github.mizosoft.methanol.testing.StoreConfig;
 import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -670,15 +671,20 @@ class DiskStoreTest {
     assertEquals(1, executor.taskCount());
     executor.runNext();
 
-    // Eviction due to exceeding the size bound issues an index write
-    setMetadata(store, "e3", "Jynx"); // 4 bytes
+    // Writing a new entry issues an index write.
+    // Writing is serialized, so only SerialExecutor' drain task is submitted.
+    setMetadata(store, "e3", "abc"); // 3 bytes
+    setMetadata(store, "e4", "xy"); // 2 bytes
     assertEquals(1, executor.taskCount());
-    executor.runNext();
-    try (var editor2 = edit(store, "e3")) {
+    executor.runAll();
+
+    assertEquals(5, store.size());
+
+    // Eviction due to exceeding the size bound issues an index write
+    try (var editor2 = edit(store, "e4")) {
       assertEquals(1, executor.taskCount());
       executor.runNext();
-
-      setMetadata(editor2, "Jigglypuff"); // Grow to 10 bytes
+      setMetadata(editor2, "xyz"); // Growing e4 to 3 bytes causes e3 to get evicted
       editor2.commitOnClose();
 
       // Eviction isn't scheduled until the edit is committed
@@ -686,6 +692,7 @@ class DiskStoreTest {
     }
     assertEquals(1, executor.taskCount());
     executor.runNext();
+    assertAbsent(store, context, "e3");
   }
 
   @StoreParameterizedTest
@@ -820,6 +827,83 @@ class DiskStoreTest {
     long sizeAfterShrinking = Files.size(mockStore.entryFile("e1"));
     assertEquals(sizeBeforeShrinking - 1, sizeAfterShrinking,
         String.format("%d -> %d", sizeBeforeShrinking, sizeAfterShrinking));
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK, maxSize = 10, execution = SAME_THREAD)
+  void entryExceedingMaxSizeIsIgnored(Store store, StoreContext context) throws IOException {
+    setUp(context);
+
+    writeEntry(store, "e1", "12", "abc"); // 5 bytes
+    writeEntry(store, "e2", "123", "abc"); // 6 bytes -> e1 is evicted to accommodate e2
+    assertAbsent(store, context, "e1");
+    assertEntryEquals(store, "e2", "123", "abc");
+    assertEquals(6, store.size());
+    assertFalse(mockStore.dirtyEntryFileExists("e3"));
+
+    writeEntry(store, "e3", "12345", "abcxyz"); // 11 bytes -> e3 is ignored & e2 remains untouched
+    assertAbsent(store, context, "e3");
+    assertEntryEquals(store, "e2", "123", "abc");
+    assertEquals(6, store.size());
+    assertFalse(mockStore.dirtyEntryFileExists("e3"));
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK, maxSize = 5)
+  void editExceedingMaxSizeByWritingIsSilentlyRefused(Store store, StoreContext context)
+      throws IOException {
+    setUp(context);
+
+    // Exercise exceeding maxSize by writing data
+    try (var editor = edit(store, "e1")) {
+      setMetadata(editor, "12");
+      writeData(editor, "abcd"); // Exceed limit by 1 byte
+
+      editor.commitOnClose();
+    }
+    assertAbsent(store, context, "e1");
+    assertFalse(mockStore.dirtyEntryFileExists("e1"));
+    assertEquals(0, store.size());
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK, maxSize = 5)
+  void editExceedingMaxSizeBySettingMetadataIsSilentlyRefused(Store store, StoreContext context)
+      throws IOException {
+    setUp(context);
+
+    // Exercise exceeding maxSize by setting metadata
+    try (var editor = edit(store, "e1")) {
+      writeData(editor, "abcd");
+      setMetadata(editor, "12"); // Exceed limit by 1 bytes
+
+      editor.commitOnClose();
+    }
+    assertAbsent(store, context, "e1");
+    assertFalse(mockStore.dirtyEntryFileExists("e1"));
+    assertEquals(0, store.size());
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK, maxSize = 5)
+  void editorExceedingMaxSizeIsSilentlyRefused(Store store, StoreContext context) throws IOException {
+    setUp(context);
+
+    // Exercise exceeding maxSize multiple times
+    try (var editor = edit(store, "e1")) {
+      // Don't exceed size limit
+      setMetadata(editor, "12");
+      editor.writeAsync(0, UTF_8.encode("aaa")).join();
+
+      // Exceed size limit by 2 bytes twice
+      setMetadata(editor, "1234");
+      editor.writeAsync(3, UTF_8.encode("aa")).join();
+
+      editor.commitOnClose();
+    }
+    assertAbsent(store, context, "e1");
+    assertFalse(mockStore.dirtyEntryFileExists("e1"));
+    assertEquals(0, store.size());
   }
 
   @StoreParameterizedTest
