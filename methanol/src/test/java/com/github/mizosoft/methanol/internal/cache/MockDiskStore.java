@@ -216,11 +216,11 @@ final class MockDiskStore {
     }
   }
 
-  private Path entryFile(String key) {
+  Path entryFile(String key) {
     return directory.resolve(hasher.hash(key).toHexString() + ENTRY_FILE_SUFFIX);
   }
 
-  private Path tempEntryFile(String key) {
+  Path tempEntryFile(String key) {
     return directory.resolve(hasher.hash(key).toHexString() + TEMP_ENTRY_FILE_SUFFIX);
   }
 
