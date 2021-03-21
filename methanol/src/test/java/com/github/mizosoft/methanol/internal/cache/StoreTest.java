@@ -891,4 +891,17 @@ class StoreTest {
     writeData(editor, "Mewtwo");
     assertAbsent(store, context, "e1");
   }
+
+  @StoreParameterizedTest
+  @StoreConfig
+  void randomAccess(Store store) throws IOException {
+    writeEntry(store, "e1", "", "1234");
+    try (var viewer = view(store, "e1")) {
+      var buffer = ByteBuffer.allocate(1);
+      for (int i = 3; i >= 0; i--) {
+        assertEquals(1, viewer.readAsync(i, buffer.clear()).join());
+        assertEquals(i + 1, buffer.flip().get() - '0');
+      }
+    }
+  }
 }
