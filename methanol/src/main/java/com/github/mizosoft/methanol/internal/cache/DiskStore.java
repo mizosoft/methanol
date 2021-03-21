@@ -390,7 +390,8 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public long size() {
+  public long size() throws IOException {
+    initialize();
     return size.get();
   }
 

@@ -155,7 +155,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   /** Returns the size this cache occupies in bytes. */
-  public long size() {
+  public long size() throws IOException {
     return store.size();
   }
 
