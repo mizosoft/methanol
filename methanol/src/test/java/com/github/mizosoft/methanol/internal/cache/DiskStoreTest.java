@@ -805,6 +805,25 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreConfig(store = DISK)
+  void entryFileIsTruncatedWhenMetadataShrinks(Store store, StoreContext context)
+      throws IOException {
+    setUp(context);
+
+    writeEntry(store, "e1", "123", "abc");
+    long sizeBeforeShrinking = Files.size(mockStore.entryFile("e1"));
+
+    // Shrink metadata
+    try (var editor = edit(store, "e1")) {
+      setMetadata(editor, "12");
+      editor.commitOnClose();
+    }
+    long sizeAfterShrinking = Files.size(mockStore.entryFile("e1"));
+    assertEquals(sizeBeforeShrinking - 1, sizeAfterShrinking,
+        String.format("%d -> %d", sizeBeforeShrinking, sizeAfterShrinking));
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK)
   void closedStoreIsInoperable(StoreContext context) throws IOException {
     setUp(context);
 
