@@ -1,9 +1,9 @@
 package com.github.mizosoft.methanol.internal.cache;
 
+import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
