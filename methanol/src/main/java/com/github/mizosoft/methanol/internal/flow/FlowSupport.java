@@ -29,6 +29,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Helpers for implementing reactive streams subscriptions and the like. */
 public class FlowSupport {
@@ -147,6 +148,29 @@ public class FlowSupport {
       error.addSuppressed(t);
     } finally {
       subscriber.onError(error);
+    }
+  }
+
+  public static <T> Publisher<T> toUnicastPublisher(Publisher<T> upstream) {
+    return new UnicastForwardingPublisher<>(upstream);
+  }
+
+  private static final class UnicastForwardingPublisher<T> implements Publisher<T> {
+    private final Publisher<T> upstream;
+    private final AtomicBoolean subscribed = new AtomicBoolean();
+
+    UnicastForwardingPublisher(Publisher<T> upstream) {
+      this.upstream = upstream;
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber) {
+      requireNonNull(subscriber);
+      if (subscribed.compareAndSet(false, true)) {
+        upstream.subscribe(subscriber);
+      } else {
+        refuse(subscriber, multipleSubscribersToUnicast());
+      }
     }
   }
 }
