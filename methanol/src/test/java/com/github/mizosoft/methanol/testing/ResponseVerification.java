@@ -22,10 +22,10 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.CONDITIONAL_HIT;
-import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.HIT;
-import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.LOCALLY_GENERATED;
-import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.MISS;
+import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.CONDITIONAL_HIT;
+import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.HIT;
+import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.LOCALLY_GENERATED;
+import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.MISS;
 import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
@@ -36,9 +36,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse;
-import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus;
-import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
+import com.github.mizosoft.methanol.CacheAwareResponse;
+import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
+import com.github.mizosoft.methanol.TrackedResponse;
 import java.net.URI;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse;

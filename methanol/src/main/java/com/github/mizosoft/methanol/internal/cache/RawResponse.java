@@ -2,7 +2,7 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
+import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodyHandler;

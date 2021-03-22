@@ -26,7 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
+import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.ResponseInfo;
