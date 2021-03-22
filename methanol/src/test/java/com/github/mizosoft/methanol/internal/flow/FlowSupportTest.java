@@ -23,8 +23,13 @@
 package com.github.mizosoft.methanol.internal.flow;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.util.List;
+import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
@@ -79,5 +84,22 @@ class FlowSupportTest {
   void loadPrefetchFactor_usesDefaultOnNonIntegerValue() {
     System.setProperty("com.github.mizosoft.methanol.flow.prefetchFactor", "12.123f");
     assertEquals(50, FlowSupport.loadPrefetchFactor());
+  }
+
+  @Test
+  void unicastPublisher() {
+    var calls = new AtomicInteger();
+    Publisher<Object> publisher = __ -> calls.getAndIncrement();
+    var unicastPublisher = FlowSupport.toUnicastPublisher(publisher);
+
+    unicastPublisher.subscribe(new TestSubscriber<>());
+    assertEquals(1, calls.get());
+
+    var subscriber = new TestSubscriber<>();
+    unicastPublisher.subscribe(subscriber);
+    assertEquals(1, calls.get()); // Upstream doesn't get called
+    assertEquals(1, subscriber.errors);
+    assertNotNull(subscriber.lastError);
+    assertThrows(IllegalStateException.class, () -> { throw subscriber.lastError; });
   }
 }
