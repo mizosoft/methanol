@@ -131,7 +131,7 @@ class BasicRedirectTest {
     HttpClient client =
         Methanol.newBuilder()
             .followRedirects(Redirect.NEVER)
-            .networkInterceptor(new RedirectingInterceptor(redirectPolicy, handlerExecutor))
+            .backendInterceptor(new RedirectingInterceptor(redirectPolicy, handlerExecutor))
             .autoAcceptEncoding(false) // Don't add Accept-Encoding as it messes with the tests
             .sslContext(sslContext)
             .build();
@@ -216,7 +216,7 @@ class BasicRedirectTest {
     HttpClient client =
         Methanol.newBuilder()
             .followRedirects(Redirect.NEVER)
-            .networkInterceptor(new RedirectingInterceptor(redirectPolicy, handlerExecutor))
+            .backendInterceptor(new RedirectingInterceptor(redirectPolicy, handlerExecutor))
             .autoAcceptEncoding(false) // Don't add Accept-Encoding as it messes with the tests
             .sslContext(sslContext)
             .build();

@@ -79,7 +79,8 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An {@code HttpClient} with interceptors, request decoration and reactive extensions.
+ * An {@code HttpClient} with interceptors, request decoration, HTTP caching and reactive
+ * extensions.
  *
  * <p>In addition to implementing the {@link HttpClient} interface, this class allows to:
  *
@@ -92,10 +93,17 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *   <li>Intercept requests and responses going through this client.
  *   <li>Get {@code Publisher<HttpResponse<T>>} for asynchronous requests.
  * </ul>
+ *
+ * <p>A {@code Methanol} client relies on a standard {@code HttpClient} instance for sending
+ * requests, referred to as it's backend. You can obtain builders for {@code Methanol} using either
+ * {@link #newBuilder()} or {@link #newBuilder(HttpClient)}. The latter takes a prebuilt backend,
+ * while the former allows configuring a backend to be newly created each time {@link
+ * BaseBuilder#build()} is invoked. Note that {@code HttpCaches} are not usable with a prebuilt
+ * backend.
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
-  private final HttpClient baseClient;
+  private final HttpClient backend;
   private final Redirect redirectPolicy;
   private final HttpHeaders defaultHeaders;
   private final Optional<HttpCache> cache;
@@ -106,11 +114,11 @@ public final class Methanol extends HttpClient {
   private final @Nullable ScheduledExecutorService readTimeoutScheduler;
   private final boolean autoAcceptEncoding;
   private final List<Interceptor> interceptors;
-  private final List<Interceptor> networkInterceptors;
+  private final List<Interceptor> backendInterceptors;
 
   private Methanol(BaseBuilder<?> builder) {
-    baseClient = builder.buildBaseClient();
-    redirectPolicy = requireNonNullElse(builder.redirectPolicy, baseClient.followRedirects());
+    backend = builder.buildBackend();
+    redirectPolicy = requireNonNullElse(builder.redirectPolicy, backend.followRedirects());
     defaultHeaders = builder.headersBuilder.build();
     cache = Optional.ofNullable(builder.cache);
     userAgent = Optional.ofNullable(builder.userAgent);
@@ -120,7 +128,7 @@ public final class Methanol extends HttpClient {
     readTimeoutScheduler = builder.readTimeoutScheduler;
     autoAcceptEncoding = builder.autoAcceptEncoding;
     interceptors = List.copyOf(builder.interceptors);
-    networkInterceptors = List.copyOf(builder.networkInterceptors);
+    backendInterceptors = List.copyOf(builder.backendInterceptors);
   }
 
   /**
@@ -161,7 +169,7 @@ public final class Methanol extends HttpClient {
 
   /** Returns the underlying {@code HttpClient} used for sending requests. */
   public HttpClient underlyingClient() {
-    return baseClient;
+    return backend;
   }
 
   /** Returns this client's {@code User-Agent}. */
@@ -196,21 +204,21 @@ public final class Methanol extends HttpClient {
   }
 
   /**
-   * Returns an immutable list of this client's {@link BaseBuilder#networkInterceptor(Interceptor)
-   * network interceptors}.
+   * Returns an immutable list of this client's {@link BaseBuilder#backendInterceptor(Interceptor)
+   * backend interceptors}.
    */
-  public List<Interceptor> networkInterceptors() {
-    return networkInterceptors;
+  public List<Interceptor> backendInterceptors() {
+    return backendInterceptors;
   }
 
   /**
    * Returns the list of interceptors invoked after request decoration.
    *
-   * @deprecated Use {@link #networkInterceptors()}
+   * @deprecated Use {@link #backendInterceptors()}
    */
   @Deprecated(since = "1.5.0")
   public List<Interceptor> postDecorationInterceptors() {
-    return networkInterceptors;
+    return backendInterceptors;
   }
 
   /** Returns this client's default headers. */
@@ -225,12 +233,12 @@ public final class Methanol extends HttpClient {
 
   @Override
   public Optional<CookieHandler> cookieHandler() {
-    return baseClient.cookieHandler();
+    return backend.cookieHandler();
   }
 
   @Override
   public Optional<Duration> connectTimeout() {
-    return baseClient.connectTimeout();
+    return backend.connectTimeout();
   }
 
   @Override
@@ -240,32 +248,32 @@ public final class Methanol extends HttpClient {
 
   @Override
   public Optional<ProxySelector> proxy() {
-    return baseClient.proxy();
+    return backend.proxy();
   }
 
   @Override
   public SSLContext sslContext() {
-    return baseClient.sslContext();
+    return backend.sslContext();
   }
 
   @Override
   public SSLParameters sslParameters() {
-    return baseClient.sslParameters();
+    return backend.sslParameters();
   }
 
   @Override
   public Optional<Authenticator> authenticator() {
-    return baseClient.authenticator();
+    return backend.authenticator();
   }
 
   @Override
   public Version version() {
-    return baseClient.version();
+    return backend.version();
   }
 
   @Override
   public Optional<Executor> executor() {
-    return baseClient.executor();
+    return backend.executor();
   }
 
   @Override
@@ -274,7 +282,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return InterceptorChain.sendWithInterceptors(
-        baseClient, request, bodyHandler, buildInterceptorQueue());
+        backend, request, bodyHandler, buildInterceptorQueue());
   }
 
   @Override
@@ -283,7 +291,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return InterceptorChain.sendAsyncWithInterceptors(
-        baseClient, request, bodyHandler, null, buildInterceptorQueue());
+        backend, request, bodyHandler, null, buildInterceptorQueue());
   }
 
   @Override
@@ -294,7 +302,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return InterceptorChain.sendAsyncWithInterceptors(
-        baseClient, request, bodyHandler, pushPromiseHandler, buildInterceptorQueue());
+        backend, request, bodyHandler, pushPromiseHandler, buildInterceptorQueue());
   }
 
   private List<Interceptor> buildInterceptorQueue() {
@@ -307,7 +315,7 @@ public final class Methanol extends HttpClient {
           interceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
           interceptors.add(cache.interceptor(executor));
         });
-    interceptors.addAll(networkInterceptors);
+    interceptors.addAll(backendInterceptors);
     return Collections.unmodifiableList(interceptors);
   }
 
@@ -325,9 +333,9 @@ public final class Methanol extends HttpClient {
     return new Builder();
   }
 
-  /** Returns a new {@link Methanol.WithClientBuilder} that uses the given client. */
-  public static WithClientBuilder newBuilder(HttpClient client) {
-    return new WithClientBuilder(client);
+  /** Returns a new {@link Methanol.WithClientBuilder} with a prebuilt backend. */
+  public static WithClientBuilder newBuilder(HttpClient backend) {
+    return new WithClientBuilder(backend);
   }
 
   /** Creates a default {@code Methanol} instance. */
@@ -339,39 +347,39 @@ public final class Methanol extends HttpClient {
   public interface Interceptor {
 
     /**
-     * Intercepts given request and returns the resulting response, normally by forwarding to the
-     * chain.
+     * Intercepts given request and returns the resulting response, usually by forwarding to the
+     * given chain.
      */
     <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException;
 
     /**
      * Intercepts the given request and returns a {@code CompletableFuture} for the resulting
-     * response, normally by forwarding to the chain.
+     * response, usually by forwarding to the given chain.
      */
     <T> CompletableFuture<HttpResponse<T>> interceptAsync(HttpRequest request, Chain<T> chain);
 
     /** Returns an interceptor that forwards the request after applying the given operator. */
-    static Interceptor create(UnaryOperator<HttpRequest> decorator) {
-      requireNonNull(decorator);
+    static Interceptor create(UnaryOperator<HttpRequest> operator) {
+      requireNonNull(operator);
       return new Interceptor() {
         @Override
         public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
             throws IOException, InterruptedException {
-          return chain.forward(decorator.apply(request));
+          return chain.forward(operator.apply(request));
         }
 
         @Override
         public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
             HttpRequest request, Chain<T> chain) {
-          return chain.forwardAsync(decorator.apply(request));
+          return chain.forwardAsync(operator.apply(request));
         }
       };
     }
 
     /**
-     * An object that gives an interceptor the ability to relay requests to following interceptors,
-     * till eventually being sent by the underlying {@code HttpClient}.
+     * An object that gives interceptors the ability to relay requests to sibling interceptors, till
+     * eventually being sent by the client's backend.
      *
      * @param <T> the response body type
      */
@@ -394,14 +402,14 @@ public final class Methanol extends HttpClient {
           BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler);
 
       /**
-       * Forwards the request to the next interceptor, or to the underlying {@code HttpClient} if
-       * called by the last interceptor.
+       * Forwards the request to the next interceptor, or to the client's backend if called by the
+       * last interceptor.
        */
       HttpResponse<T> forward(HttpRequest request) throws IOException, InterruptedException;
 
       /**
-       * Forwards the request to the next interceptor, or asynchronously to the underlying {@code
-       * HttpClient} if called by the last interceptor.
+       * Forwards the request to the next interceptor, or asynchronously to the client's backend if
+       * called by the last interceptor.
        */
       CompletableFuture<HttpResponse<T>> forwardAsync(HttpRequest request);
     }
@@ -422,7 +430,7 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull Redirect redirectPolicy;
 
     final List<Interceptor> interceptors = new ArrayList<>();
-    final List<Interceptor> networkInterceptors = new ArrayList<>();
+    final List<Interceptor> backendInterceptors = new ArrayList<>();
 
     BaseBuilder() {
       headersBuilder = new HeadersBuilder();
@@ -529,8 +537,7 @@ public final class Methanol extends HttpClient {
     /**
      * Adds an interceptor that is invoked right after the client receives a request. The
      * interceptor receives the request before it is decorated (its {@code URI} resolved with the
-     * base {@code URI}, default headers added, etc...) or handled by the {@link HttpCache}, if one
-     * is installed.
+     * base {@code URI}, default headers added, etc...) or handled by an {@link HttpCache}.
      */
     public B interceptor(Interceptor interceptor) {
       requireNonNull(interceptor);
@@ -539,17 +546,17 @@ public final class Methanol extends HttpClient {
     }
 
     /**
-     * Adds an interceptor that is invoked right before the request is forwarded to the underlying
-     * {@code HttpClient}. The interceptor receives the request after it is handled by all {@link
-     * #interceptor(Interceptor) non-network interceptors}, is decorated (its {@code URI} resolved
-     * with the base {@code URI}, default headers added, etc...) and finally handled by the {@link
-     * HttpCache}, if one is installed. This means that network interceptors aren't called if
-     * network isn't used, normally due to the presence of an {@code HttpCache} that is capable of
-     * serving a stored response.
+     * Adds an interceptor that is invoked right before the request is forwarded to the client's
+     * backend. The interceptor receives the request after it is handled by all {@link
+     * #interceptor(Interceptor) client interceptors}, is decorated (its {@code URI} resolved with
+     * the base {@code URI}, default headers added, etc...) and finally handled by an {@link
+     * HttpCache}. This means that backend interceptors aren't called if network isn't used,
+     * normally due to the presence of an {@code HttpCache} that is capable of serving a stored
+     * response.
      */
-    public B networkInterceptor(Interceptor interceptor) {
+    public B backendInterceptor(Interceptor interceptor) {
       requireNonNull(interceptor);
-      networkInterceptors.add(interceptor);
+      backendInterceptors.add(interceptor);
       return self();
     }
 
@@ -557,11 +564,11 @@ public final class Methanol extends HttpClient {
      * Adds an interceptor that is invoked after request decoration (i.e. after default properties
      * or {@code BodyHandler} transformations are applied).
      *
-     * @deprecated Use {@link #networkInterceptor(Interceptor)}
+     * @deprecated Use {@link #backendInterceptor(Interceptor)}
      */
     @Deprecated(since = "1.5.0")
     public B postDecorationInterceptor(Interceptor interceptor) {
-      return networkInterceptor(interceptor);
+      return backendInterceptor(interceptor);
     }
 
     /** Returns a new {@code Methanol} with a snapshot of the current builder's state. */
@@ -571,15 +578,15 @@ public final class Methanol extends HttpClient {
 
     abstract B self();
 
-    abstract HttpClient buildBaseClient();
+    abstract HttpClient buildBackend();
   }
 
-  /** A builder for {@code Methanol} instances with a predefined {@code HttpClient}. */
+  /** A builder for {@code Methanol} instances with a predefined backend {@code HttpClient}. */
   public static final class WithClientBuilder extends BaseBuilder<WithClientBuilder> {
-    private final HttpClient baseClient;
+    private final HttpClient backend;
 
-    WithClientBuilder(HttpClient baseClient) {
-      this.baseClient = requireNonNull(baseClient);
+    WithClientBuilder(HttpClient backend) {
+      this.backend = requireNonNull(backend);
     }
 
     @Override
@@ -588,20 +595,17 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    HttpClient buildBaseClient() {
-      return baseClient;
+    HttpClient buildBackend() {
+      return backend;
     }
   }
 
-  /**
-   * A builder of {@code Methanol} instances allowing to configure the underlying {@code
-   * HttpClient}.
-   */
+  /** A builder of {@code Methanol} instances. */
   public static final class Builder extends BaseBuilder<Builder> implements HttpClient.Builder {
-    private final HttpClient.Builder delegateBuilder;
+    private final HttpClient.Builder backendBuilder;
 
     Builder() {
-      delegateBuilder = HttpClient.newBuilder();
+      backendBuilder = HttpClient.newBuilder();
     }
 
     /** Sets the {@link HttpCache} to be used by the client. */
@@ -612,31 +616,31 @@ public final class Methanol extends HttpClient {
 
     @Override
     public Builder cookieHandler(CookieHandler cookieHandler) {
-      delegateBuilder.cookieHandler(cookieHandler);
+      backendBuilder.cookieHandler(cookieHandler);
       return this;
     }
 
     @Override
     public Builder connectTimeout(Duration duration) {
-      delegateBuilder.connectTimeout(duration);
+      backendBuilder.connectTimeout(duration);
       return this;
     }
 
     @Override
     public Builder sslContext(SSLContext sslContext) {
-      delegateBuilder.sslContext(sslContext);
+      backendBuilder.sslContext(sslContext);
       return this;
     }
 
     @Override
     public Builder sslParameters(SSLParameters sslParameters) {
-      delegateBuilder.sslParameters(sslParameters);
+      backendBuilder.sslParameters(sslParameters);
       return this;
     }
 
     @Override
     public Builder executor(Executor executor) {
-      delegateBuilder.executor(executor);
+      backendBuilder.executor(executor);
       return this;
     }
 
@@ -650,25 +654,25 @@ public final class Methanol extends HttpClient {
 
     @Override
     public Builder version(Version version) {
-      delegateBuilder.version(version);
+      backendBuilder.version(version);
       return this;
     }
 
     @Override
     public Builder priority(int priority) {
-      delegateBuilder.priority(priority);
+      backendBuilder.priority(priority);
       return this;
     }
 
     @Override
     public Builder proxy(ProxySelector proxySelector) {
-      delegateBuilder.proxy(proxySelector);
+      backendBuilder.proxy(proxySelector);
       return this;
     }
 
     @Override
     public Builder authenticator(Authenticator authenticator) {
-      delegateBuilder.authenticator(authenticator);
+      backendBuilder.authenticator(authenticator);
       return this;
     }
 
@@ -678,38 +682,38 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    HttpClient buildBaseClient() {
+    HttpClient buildBackend() {
       // Apply redirectPolicy if a cache is not set.
-      // In such case we let the base client handle redirects.
+      // In such case we let the backend handle redirects.
       if (cache == null && redirectPolicy != null) {
-        delegateBuilder.followRedirects(redirectPolicy);
+        backendBuilder.followRedirects(redirectPolicy);
       }
-      return delegateBuilder.build();
+      return backendBuilder.build();
     }
   }
 
   private static final class InterceptorChain<T> implements Interceptor.Chain<T> {
-    private final HttpClient baseClient;
+    private final HttpClient backend;
     private final BodyHandler<T> bodyHandler;
     private final @Nullable PushPromiseHandler<T> pushPromiseHandler;
     private final List<Interceptor> interceptors;
     private final int currentInterceptorIndex;
 
     private InterceptorChain(
-        HttpClient baseClient,
+        HttpClient backend,
         BodyHandler<T> bodyHandler,
         @Nullable PushPromiseHandler<T> pushPromiseHandler,
         List<Interceptor> interceptors) {
-      this(baseClient, bodyHandler, pushPromiseHandler, interceptors, 0);
+      this(backend, bodyHandler, pushPromiseHandler, interceptors, 0);
     }
 
     private InterceptorChain(
-        HttpClient baseClient,
+        HttpClient backend,
         BodyHandler<T> bodyHandler,
         @Nullable PushPromiseHandler<T> pushPromiseHandler,
         List<Interceptor> interceptors,
         int currentInterceptorIndex) {
-      this.baseClient = baseClient;
+      this.backend = backend;
       this.bodyHandler = bodyHandler;
       this.pushPromiseHandler = pushPromiseHandler;
       this.interceptors = interceptors;
@@ -730,14 +734,14 @@ public final class Methanol extends HttpClient {
     public Interceptor.Chain<T> withBodyHandler(BodyHandler<T> bodyHandler) {
       requireNonNull(bodyHandler);
       return new InterceptorChain<>(
-          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
+          backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
     }
 
     @Override
     public Interceptor.Chain<T> withPushPromiseHandler(
         @Nullable PushPromiseHandler<T> pushPromiseHandler) {
       return new InterceptorChain<>(
-          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
+          backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
     }
 
     @Override
@@ -745,14 +749,14 @@ public final class Methanol extends HttpClient {
         BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler) {
       requireNonNull(bodyHandler);
       return new InterceptorChain<>(
-          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
+          backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
     }
 
     @Override
     public HttpResponse<T> forward(HttpRequest request) throws IOException, InterruptedException {
       requireNonNull(request);
       if (currentInterceptorIndex >= interceptors.size()) {
-        return baseClient.send(request, bodyHandler);
+        return backend.send(request, bodyHandler);
       }
 
       var interceptor = interceptors.get(currentInterceptorIndex);
@@ -766,7 +770,7 @@ public final class Methanol extends HttpClient {
       requireNonNull(request);
       if (currentInterceptorIndex >= interceptors.size()) {
         // sendAsync accepts nullable pushPromiseHandler
-        return baseClient.sendAsync(request, bodyHandler, pushPromiseHandler);
+        return backend.sendAsync(request, bodyHandler, pushPromiseHandler);
       }
 
       var interceptor = interceptors.get(currentInterceptorIndex);
@@ -780,25 +784,25 @@ public final class Methanol extends HttpClient {
 
     private InterceptorChain<T> copyForNextInterceptor() {
       return new InterceptorChain<>(
-          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex + 1);
+          backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex + 1);
     }
 
     static <T> HttpResponse<T> sendWithInterceptors(
-        HttpClient baseClient,
+        HttpClient backend,
         HttpRequest request,
         BodyHandler<T> bodyHandler,
         List<Interceptor> interceptors)
         throws IOException, InterruptedException {
-      return new InterceptorChain<>(baseClient, bodyHandler, null, interceptors).forward(request);
+      return new InterceptorChain<>(backend, bodyHandler, null, interceptors).forward(request);
     }
 
     static <T> CompletableFuture<HttpResponse<T>> sendAsyncWithInterceptors(
-        HttpClient baseClient,
+        HttpClient backend,
         HttpRequest request,
         BodyHandler<T> bodyHandler,
         @Nullable PushPromiseHandler<T> pushPromiseHandler,
         List<Interceptor> interceptors) {
-      return new InterceptorChain<>(baseClient, bodyHandler, pushPromiseHandler, interceptors)
+      return new InterceptorChain<>(backend, bodyHandler, pushPromiseHandler, interceptors)
           .forwardAsync(request);
     }
   }

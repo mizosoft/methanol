@@ -84,7 +84,7 @@ class MethanolTest {
     assertTrue(client.requestTimeout().isEmpty());
     assertTrue(client.readTimeout().isEmpty());
     assertTrue(client.interceptors().isEmpty());
-    assertTrue(client.networkInterceptors().isEmpty());
+    assertTrue(client.backendInterceptors().isEmpty());
     assertTrue(client.postDecorationInterceptors().isEmpty());
     assertEquals(headers(/* empty */), client.defaultHeaders());
     assertTrue(client.autoAcceptEncoding());
@@ -102,7 +102,7 @@ class MethanolTest {
         .defaultHeader("Accept", "text/html")
         .autoAcceptEncoding(true)
         .interceptor(interceptor1)
-        .networkInterceptor(interceptor2)
+        .backendInterceptor(interceptor2)
         .build();
     assertEquals(Optional.of("Mr Potato"), client.userAgent());
     assertEquals(Optional.of(URI.create("https://localhost")), client.baseUri());
