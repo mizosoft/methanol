@@ -100,7 +100,7 @@ class InterceptorTest {
     var baseClient = new RecordingClient();
     var client = Methanol.newBuilder(baseClient)
         .baseUri("https://localhost")
-        .networkInterceptor(interceptor)
+        .backendInterceptor(interceptor)
         .build();
     var request = MutableRequest.GET("/secret")
         .header("Accept", "text/html");
@@ -128,7 +128,7 @@ class InterceptorTest {
     var baseClient = new RecordingClient();
     var client = Methanol.newBuilder(baseClient)
         .baseUri("https://localhost")
-        .networkInterceptor(interceptor)
+        .backendInterceptor(interceptor)
         .build();
     var request = MutableRequest.GET("/secret")
         .header("Accept", "text/html");
@@ -159,7 +159,7 @@ class InterceptorTest {
     var networkInterceptor = new RecordingInterceptor();
     var client = Methanol.newBuilder(baseClient)
         .interceptor(interceptor)
-        .networkInterceptor(networkInterceptor)
+        .backendInterceptor(networkInterceptor)
         .build();
     var request = MutableRequest.GET("https://localhost");
 
@@ -178,7 +178,7 @@ class InterceptorTest {
     var networkInterceptor = new RecordingInterceptor();
     var client = Methanol.newBuilder(baseClient)
         .interceptor(interceptor)
-        .networkInterceptor(networkInterceptor)
+        .backendInterceptor(networkInterceptor)
         .build();
     var request = MutableRequest.GET("https://localhost");
 
