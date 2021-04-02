@@ -142,7 +142,7 @@ public final class ResolvedStoreConfig {
         this, tempDirectory, fileSystem, execution.newExecutor(), new MockHasher(), clock);
   }
 
-  static ResolvedStoreConfig create(List<Object> tuple) {
+  static ResolvedStoreConfig create(List<?> tuple) {
     int i = 0;
     long maxSize = (long) tuple.get(i++);
     var storeType = (StoreType) tuple.get(i++);
