@@ -294,7 +294,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
 
   @Override
   public String toString() {
-    return method + " " + uri + " " + headers().map();
+    return uri + " " + method;
   }
 
   private MutableRequest setMethod(String method, @Nullable BodyPublisher bodyPublisher) {
@@ -449,7 +449,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
 
     @Override
     public String toString() {
-      return method + " " + uri + " " + headers.map();
+      return uri + " " + method;
     }
   }
 }
