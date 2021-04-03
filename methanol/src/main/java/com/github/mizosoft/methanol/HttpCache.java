@@ -770,9 +770,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
     private static boolean isApplicableToStaleIfError(
         @Nullable ExchangeContext networkContext, @Nullable Throwable error) {
       if (networkContext != null) {
-        int code = castNonNull(networkContext.networkResponse).get().statusCode();
-        return code >= 500 && code <= 599; // Only accept server error codes
+        // Only accept server error codes
+        return HttpStatus.isServerError(castNonNull(networkContext.networkResponse).get());
       }
+
       // It seems silly to regard an IllegalArgumentException or something as a
       // candidate for stale-if-error treatment. IOException and subclasses are
       // regarded as so since they're usually situational errors for network usage,
@@ -924,11 +925,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
         return cache.clock.instant();
       }
 
-      ExchangeContext withCacheResponse(CacheResponse cacheResponse) {
+      ExchangeContext withCacheResponse(@Nullable CacheResponse cacheResponse) {
         return withResponses(networkResponse, cacheResponse);
       }
 
-      ExchangeContext withNetworkResponse(NetworkResponse networkResponse) {
+      ExchangeContext withNetworkResponse(@Nullable NetworkResponse networkResponse) {
         return withResponses(networkResponse, cacheResponse);
       }
 
@@ -1286,6 +1287,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     DISK {
       @Override
       Store create(@Nullable Path directory, long maxSize, Executor executor) {
+        requireNonNull(directory, "DiskStore requires a directory");
         return DiskStore.newBuilder()
             .directory(directory)
             .maxSize(maxSize)
