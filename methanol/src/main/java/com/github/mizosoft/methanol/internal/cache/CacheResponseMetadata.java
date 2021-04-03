@@ -310,9 +310,9 @@ public final class CacheResponseMetadata {
         throws IOException, CertificateException {
       var certificates = new ArrayList<X509Certificate>();
       for (int i = 0, count = readInt(); i < count; i++) {
-        var bytes = readByteArray();
+        var certBytes = readByteArray();
         certificates.add(
-            (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(bytes)));
+            (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(certBytes)));
       }
       return Collections.unmodifiableList(certificates);
     }
