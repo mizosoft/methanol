@@ -1937,7 +1937,6 @@ public final class DiskStore implements Store {
         }
         closed = true;
         closeQuietly(lazyChannel);
-        lazyChannel = null;
         Files.deleteIfExists(entry.tempEntryFile());
       } finally {
         lock.unlock();
