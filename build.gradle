@@ -219,7 +219,9 @@ subprojects { subproject ->
   test {
     useJUnitPlatform()
     testLogging {
-      events = ['skipped', 'failed']
+      events 'skipped', 'failed'
+      exceptionFormat 'full'
+      showCauses true
     }
   }
 }
