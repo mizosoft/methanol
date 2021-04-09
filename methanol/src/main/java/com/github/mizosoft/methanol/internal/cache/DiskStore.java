@@ -619,7 +619,12 @@ public final class DiskStore implements Store {
     var filter = Predicate.not(lockFile::equals);
     try (var stream = Files.newDirectoryStream(directory, filter::test)) {
       for (var file : stream) {
-        Files.delete(file);
+        var filename = file.getFileName().toString();
+        if (filename.endsWith(ENTRY_FILE_SUFFIX)) {
+          isolatedDelete(file);
+        } else {
+          Files.deleteIfExists(file);
+        }
       }
     } catch (DirectoryIteratorException e) {
       throw e.getCause();
