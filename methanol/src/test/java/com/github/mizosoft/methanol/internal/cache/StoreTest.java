@@ -574,10 +574,11 @@ class StoreTest {
     for (int i = 0; i < entries.size(); i++) {
       assertTrue(iter.hasNext());
 
-      var viewer = iter.next();
-      var entry = entries.get(viewer.key());
-      assertNotNull(entry, "entry came from nowhere: " + viewer.key());
-      assertEntryEquals(store, viewer.key(), entry.get(0), entry.get(1));
+      try (var viewer = iter.next()) {
+        var entry = entries.get(viewer.key());
+        assertNotNull(entry, "entry came from nowhere: " + viewer.key());
+        assertEntryEquals(store, viewer.key(), entry.get(0), entry.get(1));
+      }
     }
     assertFalse(iter.hasNext());
   }
@@ -593,12 +594,13 @@ class StoreTest {
     for (int i = 0; i < 2; i++) {
       assertTrue(iter.hasNext());
 
-      var viewer = iter.next();
-      if (viewer.key().equals("e2")) {
-        iter.remove();
-      } else {
-        assertEquals("e1", viewer.key());
-        assertEntryEquals(viewer, "Mew", "Mewtwo");
+      try (var viewer = iter.next()) {
+        if (viewer.key().equals("e2")) {
+          iter.remove();
+        } else {
+          assertEquals("e1", viewer.key());
+          assertEntryEquals(viewer, "Mew", "Mewtwo");
+        }
       }
     }
     assertFalse(iter.hasNext());

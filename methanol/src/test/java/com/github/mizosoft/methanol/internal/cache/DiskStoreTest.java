@@ -662,7 +662,7 @@ class DiskStoreTest {
     var iter = store.iterator();
     assertEquals(0, executor.taskCount());
     assertTrue(iter.hasNext());
-    iter.next();
+    iter.next().close();
     assertEquals(1, executor.taskCount());
     executor.runNext();
 
@@ -932,7 +932,7 @@ class DiskStoreTest {
 
     var iter = store.iterator();
     assertTrue(iter.hasNext());
-    iter.next(); // Consume next
+    iter.next().close(); // Consume next
     context.drainQueuedTasks();
     store.close();
     assertFalse(iter.hasNext());
