@@ -32,6 +32,7 @@ import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorTyp
 import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.QUEUED;
 import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.SAME_THREAD;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
+import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.WINDOWS;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -952,10 +953,25 @@ class DiskStoreTest {
     assertEmptyDirectory(context.directory());
   }
 
+  // Using two tests as JUnit 5 doesn't allow RepeatedTest + ParameterizedTest
+
   @RepeatedTest(10)
   @StoreConfig(store = DISK, fileSystem = SYSTEM, execution = QUEUED, indexUpdateDelaySeconds = 0)
   @ExecutorConfig(CACHED_POOL)
-  void disposeDuringIndexWrite(
+  void disposeDuringIndexWrite_systemFileSystem(
+      Store store, StoreContext context, Executor threadPool) throws IOException {
+    testDisposeDuringIndexWrite(store, context, threadPool);
+  }
+
+  @RepeatedTest(10)
+  @StoreConfig(store = DISK, fileSystem = WINDOWS, execution = QUEUED, indexUpdateDelaySeconds = 0)
+  @ExecutorConfig(CACHED_POOL)
+  void disposeDuringIndexWrite_windowsEmulatingFilesystem(
+      Store store, StoreContext context, Executor threadPool) throws IOException {
+    testDisposeDuringIndexWrite(store, context, threadPool);
+  }
+
+  private void testDisposeDuringIndexWrite(
       Store store, StoreContext context, Executor threadPool) throws IOException {
     setUp(context);
 

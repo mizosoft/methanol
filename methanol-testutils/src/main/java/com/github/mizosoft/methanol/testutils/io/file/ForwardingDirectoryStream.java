@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,44 @@
  * SOFTWARE.
  */
 
-/** Miscellaneous test utilities used internally. */
-module methanol.testutils {
-  requires transitive methanol;
-  requires okhttp3.tls;
-  requires java.logging;
-  requires static org.checkerframework.checker.qual;
+package com.github.mizosoft.methanol.testutils.io.file;
 
-  exports com.github.mizosoft.methanol.testutils;
-  exports com.github.mizosoft.methanol.testutils.dec;
-  exports com.github.mizosoft.methanol.testutils.io.file;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.function.Consumer;
+
+public class ForwardingDirectoryStream<T>
+    implements DirectoryStream<T>, ForwardingObject<DirectoryStream<T>> {
+  private final DirectoryStream<T> delegate;
+
+  ForwardingDirectoryStream(DirectoryStream<T> delegate) {
+    this.delegate = delegate;
+  }
+
+  @Override
+  public DirectoryStream<T> delegate() {
+    return delegate;
+  }
+
+  @Override
+  public Iterator<T> iterator() {
+    return delegate.iterator();
+  }
+
+  @Override
+  public void close() throws IOException {
+    delegate.close();
+  }
+
+  @Override
+  public void forEach(Consumer<? super T> action) {
+    delegate.forEach(action);
+  }
+
+  @Override
+  public Spliterator<T> spliterator() {
+    return delegate.spliterator();
+  }
 }
