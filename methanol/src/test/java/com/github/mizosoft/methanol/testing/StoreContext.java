@@ -160,13 +160,13 @@ public final class StoreContext implements AutoCloseable {
   }
 
   void initializeAll() throws IOException {
-    executeOnSameThreadIfQueuedExecution();
+    executeOnSameThreadIfExecutionIsQueued();
     for (var store : createdStores) {
       if (config().autoInit()) {
         store.initialize();
       }
     }
-    resetExecuteOnSameThreadIfQueued();
+    unsetExecuteOnSameThreadIfExecutionIsQueued();
   }
 
   @Override
@@ -176,7 +176,7 @@ public final class StoreContext implements AutoCloseable {
     // First make sure no more tasks are queued
     if (delayer != null) {
       // Ignore rejected tasks as the test might have caused an executor to shutdown
-      delayer.dispatchExpiredTasks(Instant.MAX, true);
+      delayer.dispatchExpiredTasks(Instant.MAX, /* ignoreRejected */ true);
     }
     if (executor instanceof MockExecutor) {
       try {
@@ -192,11 +192,11 @@ public final class StoreContext implements AutoCloseable {
     for (var store : createdStores) {
       try {
         store.close();
-      } catch (IOException ioe) {
+      } catch (Exception e) {
         if (caughtException != null) {
-          caughtException.addSuppressed(ioe);
+          caughtException.addSuppressed(e);
         } else {
-          caughtException = ioe;
+          caughtException = e;
         }
       }
     }
@@ -209,7 +209,7 @@ public final class StoreContext implements AutoCloseable {
         if (!service.awaitTermination(20, TimeUnit.SECONDS)) {
           throw new TimeoutException("timed-out while waiting for pool's termination: " + service);
         }
-      } catch (InterruptedException | TimeoutException e) {
+      } catch (Exception e) {
         if (caughtException != null) {
           caughtException.addSuppressed(e);
         } else {
@@ -243,11 +243,11 @@ public final class StoreContext implements AutoCloseable {
             });
       } catch (NoSuchFileException | ClosedFileSystemException ignored) {
         // OK
-      } catch (IOException ioe) {
+      } catch (Exception e) {
         if (caughtException != null) {
-          caughtException.addSuppressed(ioe);
+          caughtException.addSuppressed(e);
         } else {
-          caughtException = ioe;
+          caughtException = e;
         }
       }
     }
@@ -256,11 +256,11 @@ public final class StoreContext implements AutoCloseable {
     if (fileSystem != null) {
       try {
         fileSystem.close();
-      } catch (IOException ioe) {
+      } catch (Exception e) {
         if (caughtException != null) {
-          caughtException.addSuppressed(ioe);
+          caughtException.addSuppressed(e);
         } else {
-          throw ioe;
+          throw e;
         }
       }
     }
@@ -271,16 +271,15 @@ public final class StoreContext implements AutoCloseable {
   }
 
   /**
-   * If the execution is queued, configures it to run tasks on the same thread instead of queueing
-   * them.
+   * If execution is queued, configures it to run tasks on the same thread instead of queueing them.
    */
-  private void executeOnSameThreadIfQueuedExecution() {
+  private void executeOnSameThreadIfExecutionIsQueued() {
     if (config.execution() == Execution.QUEUED) {
       castNonNull((MockExecutor) executor).executeOnSameThread(true);
     }
   }
 
-  private void resetExecuteOnSameThreadIfQueued() {
+  private void unsetExecuteOnSameThreadIfExecutionIsQueued() {
     if (config.execution() == Execution.QUEUED) {
       castNonNull((MockExecutor) executor).executeOnSameThread(false);
     }

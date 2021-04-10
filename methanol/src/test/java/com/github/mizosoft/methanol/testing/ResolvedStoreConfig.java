@@ -25,15 +25,21 @@ package com.github.mizosoft.methanol.testing;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.JIMFS;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
+import static java.util.Objects.requireNonNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.testing.StoreConfig.Execution;
 import com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType;
 import com.github.mizosoft.methanol.testing.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testutils.MockClock;
+import com.github.mizosoft.methanol.testutils.io.file.LeakDetectingFileSystem;
+import com.github.mizosoft.methanol.testutils.io.file.WindowsEmulatingFileSystem;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import java.io.IOException;
 import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -43,11 +49,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /** A configuration resolved from a {@link StoreConfig}. */
 public final class ResolvedStoreConfig {
   private static final String TEMP_DIR_PREFIX = "methanol-store-extension-junit-";
+  private static final String SYSTEM_TEMP_DIR =
+      requireNonNull(System.getProperty("java.io.tmpdir"));
 
   private final long maxSize;
   private final StoreType storeType;
 
-  // DiskStore-only fields
+  // DiskStore-only config
 
   private final FileSystemType fileSystemType;
   private final Execution execution;
@@ -109,37 +117,57 @@ public final class ResolvedStoreConfig {
 
   boolean isCompatible() {
     // Memory store doesn't use a FileSystem, so ensure it's only generated
-    // once by only pairing it with FileSystemType.MEMORY (can't use empty
+    // once by only pairing it with FileSystemType.JIMFS (can't use empty
     // FileSystemType array as the cartesian product itself will be empty).
-    return storeType != StoreType.MEMORY || fileSystemType == JIMFS;
+    return storeType != MEMORY || fileSystemType == JIMFS;
   }
 
   public StoreContext createContext() throws IOException {
-    return storeType == StoreType.MEMORY
+    return storeType == MEMORY
         ? new StoreContext(this, null, null, null, null, null)
         : createDiskStoreContext();
   }
 
   private StoreContext createDiskStoreContext() throws IOException {
-    FileSystem fileSystem;
-    Path tempDirectory;
-    if (fileSystemType == SYSTEM) {
-      // Do not record the default filesystem to not attempt to close
-      // it (which will throw UnsupportedOperationException anyways).
-      fileSystem = null;
-      tempDirectory = Files.createTempDirectory(TEMP_DIR_PREFIX);
-    } else {
-      fileSystem = Jimfs.newFileSystem(Configuration.unix());
-      var root = fileSystem.getRootDirectories().iterator().next();
-      var tempDirectories = Files.createDirectories(root.resolve("temp"));
-      tempDirectory = Files.createTempDirectory(tempDirectories, TEMP_DIR_PREFIX);
-    }
+    var tempDir = createTempDir(fileSystemType);
     var clock = new MockClock();
     if (autoAdvanceClock) {
       clock.autoAdvance(Duration.ofSeconds(1));
     }
     return new StoreContext(
-        this, tempDirectory, fileSystem, execution.newExecutor(), new MockHasher(), clock);
+        this, tempDir, tempDir.getFileSystem(), execution.newExecutor(), new MockHasher(), clock);
+  }
+
+  private Path createTempDir(FileSystemType fileSystemType) throws IOException {
+    FileSystem fileSystem;
+    Path rootTempDir;
+    switch (fileSystemType) {
+      case JIMFS:
+        fileSystem = LeakDetectingFileSystem.wrap(Jimfs.newFileSystem(Configuration.unix()));
+        rootTempDir =
+            Files.createDirectories(
+                fileSystem.getRootDirectories().iterator().next().resolve("temp"));
+        break;
+
+      case SYSTEM:
+        fileSystem = LeakDetectingFileSystem.wrap(FileSystems.getDefault());
+        rootTempDir = fileSystem.getPath(SYSTEM_TEMP_DIR);
+        break;
+
+      case WINDOWS:
+        fileSystem =
+            LeakDetectingFileSystem.wrap(
+                WindowsEmulatingFileSystem.wrap(Jimfs.newFileSystem(Configuration.windows())));
+        rootTempDir =
+            Files.createDirectories(
+                fileSystem.getRootDirectories().iterator().next().resolve("temp"));
+        break;
+
+      default:
+        return fail("unknown FileSystemType: " + fileSystemType);
+    }
+
+    return Files.createTempDirectory(rootTempDir, TEMP_DIR_PREFIX);
   }
 
   static ResolvedStoreConfig create(List<?> tuple) {
