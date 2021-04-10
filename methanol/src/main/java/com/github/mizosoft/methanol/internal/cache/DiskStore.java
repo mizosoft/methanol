@@ -86,7 +86,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.StampedLock;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -427,7 +426,7 @@ public final class DiskStore implements Store {
     }
     if (disposing) {
       // Avoid overlapping an index write with store directory deletion
-      indexWriteScheduler.shutdown(true);
+      indexWriteScheduler.shutdown(/* awaitRunningTask */ true);
       deleteStoreContent(directory);
     } else {
       // Make sure we close within our size bound
@@ -511,6 +510,7 @@ public final class DiskStore implements Store {
         // Ignore eviction, the store ensures it's closed within bounds
         return false;
       }
+
       if (evictExcessiveEntries()) {
         indexWriteScheduler.trySchedule(); // Update entry set
       }
@@ -616,11 +616,12 @@ public final class DiskStore implements Store {
   private static void deleteStoreContent(Path directory) throws IOException {
     // Don't delete the lock file as we're still using the directory
     var lockFile = directory.resolve(LOCK_FILENAME);
-    var filter = Predicate.not(lockFile::equals);
-    try (var stream = Files.newDirectoryStream(directory, filter::test)) {
+    try (var stream =
+        Files.newDirectoryStream(directory, file -> !file.equals(lockFile))) {
       for (var file : stream) {
         var filename = file.getFileName().toString();
         if (filename.endsWith(ENTRY_FILE_SUFFIX)) {
+          // Make sure to entry files are deleted in isolation as they might have open viewers
           isolatedDelete(file);
         } else {
           Files.deleteIfExists(file);
@@ -1549,7 +1550,7 @@ public final class DiskStore implements Store {
     void commitEdit(
         DiskEditor editor,
         String key,
-        @Nullable ByteBuffer newMetadata, // null if no metadata was set
+        @Nullable ByteBuffer newMetadata, // null if no metadata was set or if the edit is discarded
         @Nullable AsynchronousFileChannel dataChannel, // null if no data was written
         long dataSize) // >= 0 only if the edit is committed
         throws IOException {
@@ -1654,7 +1655,7 @@ public final class DiskStore implements Store {
       }
 
       // Replacing deletes the target if it's there, so make sure it's deleted
-      // in isolation in case we have viewers. If the rename fails, we'll be tracking
+      // in isolation in case we have viewers. If the replace fails, we'll be tracking
       // an entry without its file. But that's taken care of by view(key).
       if (viewerCount > 0) {
         isolatedDelete(entryFile());
@@ -1751,6 +1752,15 @@ public final class DiskStore implements Store {
           Files.deleteIfExists(entryFile());
         }
         return entrySize; // 0 if the entry wasn't readable
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    void decrementViewerCount() {
+      lock.lock();
+      try {
+        viewerCount--;
       } finally {
         lock.unlock();
       }
@@ -1864,7 +1874,7 @@ public final class DiskStore implements Store {
     public void close() {
       closeQuietly(channel);
       if (closed.compareAndSet(false, true)) {
-        entry.viewerCount--;
+        entry.decrementViewerCount();
       }
     }
   }
