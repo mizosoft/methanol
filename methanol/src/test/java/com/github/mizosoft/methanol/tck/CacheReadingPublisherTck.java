@@ -12,6 +12,7 @@ import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
@@ -39,6 +40,14 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   private Executor executor;
   private StoreContext storeContext;
 
+  /**
+   * The list of viewers opened during a test method execution. CacheReadingPublisher already closes
+   * the viewer when the body is consumed or an error is signalled amid transmission. However, some
+   * tests don't lead to that (e.g. trying to subscribe with a null subscriber). So we double-check
+   * after each test.
+   */
+  private final List<Viewer> openedViewers = new ArrayList<>();
+
   @Factory(dataProvider = "provider")
   public CacheReadingPublisherTck(ExecutorType executorType, StoreType storeType) {
     super(TckUtils.testEnvironment());
@@ -54,6 +63,13 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   @AfterMethod
   public void tearDown() throws Exception {
     TestUtils.shutdown(executor);
+
+    // Make sure viewer is closed
+    for (var viewer : openedViewers) {
+      viewer.close();
+    }
+    openedViewers.clear();
+
     if (storeContext != null) {
       storeContext.close();
     }
@@ -61,8 +77,10 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
 
   @Override
   public Publisher<List<ByteBuffer>> createFlowPublisher(long elements) {
-    // Limit published items to `elements`
     var viewer = populateThenViewEntry(elements);
+    openedViewers.add(viewer);
+
+    // Limit published items to `elements`
     var publisher = new CacheReadingPublisher(viewer, executor);
     return subscriber ->
         publisher.subscribe(
