@@ -53,6 +53,7 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.DirectoryIteratorException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -77,13 +78,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Phaser;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.StampedLock;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -159,8 +161,8 @@ public final class DiskStore implements Store {
    *
    * An effort is made to ensure store operations on disk are atomic. Index and entry writers first
    * do their work on a temp file. After they're done, a channel::force is issued then the previous
-   * version of the file is atomically replaced. Viewers opened for an entry see a constant snapshot
-   * of that entry's data even if the entry is removed or edited one or more times.
+   * version of the file, if any, is atomically replaced. Viewers opened for an entry see a constant
+   * snapshot of that entry's data even if the entry is removed or edited one or more times.
    */
 
   private static final Logger LOGGER = Logger.getLogger(DiskStore.class.getName());
@@ -178,6 +180,7 @@ public final class DiskStore implements Store {
   static final String TEMP_INDEX_FILENAME = "index.tmp";
   static final String ENTRY_FILE_SUFFIX = ".ch3oh";
   static final String TEMP_ENTRY_FILE_SUFFIX = ".ch3oh.tmp";
+  static final String RIP_PREFIX = "rip_";
 
   /**
    * This caps on what to be read from the index so that an {@code OutOfMemoryError} is not thrown
@@ -423,7 +426,7 @@ public final class DiskStore implements Store {
     }
     if (disposing) {
       // Avoid overlapping an index write with store directory deletion
-      indexWriteScheduler.shutdown(true);
+      indexWriteScheduler.shutdown(/* awaitRunningTask */ true);
       deleteStoreContent(directory);
     } else {
       // Make sure we close within our size bound
@@ -507,6 +510,7 @@ public final class DiskStore implements Store {
         // Ignore eviction, the store ensures it's closed within bounds
         return false;
       }
+
       if (evictExcessiveEntries()) {
         indexWriteScheduler.trySchedule(); // Update entry set
       }
@@ -606,33 +610,60 @@ public final class DiskStore implements Store {
   }
 
   private static void replace(Path source, Path target) throws IOException {
-    try {
-      Files.move(source, target, ATOMIC_MOVE, REPLACE_EXISTING);
-    } catch (AccessDeniedException accessDenied) {
-      try {
-        // Even tough NIO uses FILE_SHARE_DELETE on windows, Files::move + ATOMIC_MOVE
-        // (on trails of MoveFileEx) behaves weirdly by throwing an AccessDeniedException
-        // when the target has open handles. Explicitly deleting the target file beforehand
-        // seems to fix this issue.
-        Files.deleteIfExists(target);
-        Files.move(source, target, ATOMIC_MOVE);
-      } catch (IOException ioe) {
-        ioe.addSuppressed(accessDenied);
-        throw ioe;
-      }
-    }
+    Files.move(source, target, ATOMIC_MOVE, REPLACE_EXISTING);
   }
 
   private static void deleteStoreContent(Path directory) throws IOException {
     // Don't delete the lock file as we're still using the directory
     var lockFile = directory.resolve(LOCK_FILENAME);
-    var filter = Predicate.not(lockFile::equals);
-    try (var stream = Files.newDirectoryStream(directory, filter::test)) {
+    try (var stream =
+        Files.newDirectoryStream(directory, file -> !file.equals(lockFile))) {
       for (var file : stream) {
-        Files.delete(file);
+        var filename = file.getFileName().toString();
+        if (filename.endsWith(ENTRY_FILE_SUFFIX)) {
+          // Make sure to entry files are deleted in isolation as they might have open viewers
+          isolatedDelete(file);
+        } else {
+          Files.deleteIfExists(file);
+        }
       }
     } catch (DirectoryIteratorException e) {
       throw e.getCause();
+    }
+  }
+
+  /**
+   * Deletes the given file in isolation from its original name. This is done by randomly renaming
+   * it beforehand.
+   *
+   * <p>Typically, Windows denys access to names of files deleted while having open handles (these
+   * are deletable when opened with FILE_SHARE_DELETE, which is NIO's case). The reason seems to be
+   * that 'deletion' in such case merely tags the file for physical deletion when all open handles
+   * are closed. However, it appears that handles in Windows are associated with the names of files
+   * they're opened for (https://devblogs.microsoft.com/oldnewthing/20040607-00/?p=38993).
+   *
+   * <p>This causes problems when an entry is deleted while being viewed. We're prevented from using
+   * that entry's file name in case it's recreated (i.e. by committing an edit) while at least one
+   * viewer is still open. The solution is to randomly rename these files before deletion, so the OS
+   * associates any open handles with that random name instead. The original name is reusable
+   * thereafter.
+   */
+  private static void isolatedDelete(Path file) throws IOException {
+    var parent = file.getParent();
+    for (boolean isolated = false; !isolated; ) {
+      var ripFile =
+          parent.resolve(RIP_PREFIX + Long.toHexString(ThreadLocalRandom.current().nextLong()));
+      try {
+        Files.move(file, ripFile);
+        isolated = true;
+      } catch (FileAlreadyExistsException | AccessDeniedException possiblyDuplicateRipFile) {
+        // The RIP file name is in use and is (or is yet to be) marked for deletion.
+        // This is unlikely, but we can then try again with a new random name.
+      } catch (NoSuchFileException e) {
+        // The file couldn't be found. It's already gone!
+        return;
+      }
+      Files.deleteIfExists(ripFile);
     }
   }
 
@@ -794,7 +825,7 @@ public final class DiskStore implements Store {
     }
 
     private Set<EntryDescriptor> readOrCreateIndexIfAbsent() throws IOException {
-      // Delete the temp index file if it exists as a result of a possible crash
+      // Delete the temp index file if it exists as a result of a previous crash
       Files.deleteIfExists(tempIndexFile);
       try {
         return readIndex();
@@ -850,8 +881,7 @@ public final class DiskStore implements Store {
           }
 
           Hash entryHash;
-          if (Files.isRegularFile(path)
-              && (filename.endsWith(ENTRY_FILE_SUFFIX) || filename.endsWith(TEMP_ENTRY_FILE_SUFFIX))
+          if ((filename.endsWith(ENTRY_FILE_SUFFIX) || filename.endsWith(TEMP_ENTRY_FILE_SUFFIX))
               && (entryHash = entryFileToHash(filename)) != null) {
             var files = scanResult.computeIfAbsent(entryHash, __ -> new EntryFiles());
             if (filename.endsWith(ENTRY_FILE_SUFFIX)) {
@@ -859,6 +889,9 @@ public final class DiskStore implements Store {
             } else {
               files.dirtyFile = path;
             }
+          } else if (filename.startsWith(RIP_PREFIX)) {
+            // Clean trails of isolatedDelete in case it failed in a previous session
+            Files.deleteIfExists(path);
           } else {
             LOGGER.warning(
                 "unrecognized file or directory found during initialization: "
@@ -900,8 +933,9 @@ public final class DiskStore implements Store {
       return CompletableFuture.runAsync(task, delayedExecutor(executor, delay));
     }
 
-    private Executor delayedExecutor(Executor delegate, Duration delay) {
-      return delay.compareTo(Duration.ZERO) <= 0
+    private static Executor delayedExecutor(Executor delegate, Duration delay) {
+      long millis = TimeUnit.MILLISECONDS.convert(delay);
+      return millis <= 0
           ? delegate // Execute immediately
           : CompletableFuture.delayedExecutor(
               TimeUnit.MILLISECONDS.convert(delay), TimeUnit.MILLISECONDS);
@@ -935,7 +969,7 @@ public final class DiskStore implements Store {
 
     /**
      * A barrier for shutdowns to await the currently running task. Scheduled WriteTasks normally
-     * have the following transitions:
+     * (if there's no flushes) have the following transitions:
      *
      * <pre>{@code
      * T1 -> T2 -> .... -> Tn
@@ -1382,12 +1416,15 @@ public final class DiskStore implements Store {
      */
     volatile @MonotonicNonNull String cachedKey;
 
+    /** The number of viewers with an open channel to the entry file. */
+    int viewerCount;
+
     private Instant lastUsed;
     private long entrySize;
 
     // Lazily initialized in a racy manner
-    @MonotonicNonNull Path entryFile;
-    @MonotonicNonNull Path tempEntryFile;
+    private @MonotonicNonNull Path entryFile;
+    private @MonotonicNonNull Path tempEntryFile;
 
     private @Nullable DiskEditor currentEditor;
 
@@ -1457,6 +1494,7 @@ public final class DiskStore implements Store {
         var viewer =
             new DiskViewer(
                 this, entryVersion, result.key, result.metadata, channel, result.dataSize);
+        viewerCount++;
         lastUsed = clock.instant();
         return viewer;
       } finally {
@@ -1512,9 +1550,9 @@ public final class DiskStore implements Store {
     void commitEdit(
         DiskEditor editor,
         String key,
-        @Nullable ByteBuffer newMetadata,
+        @Nullable ByteBuffer newMetadata, // null if no metadata was set or if the edit is discarded
         @Nullable AsynchronousFileChannel dataChannel, // null if no data was written
-        long dataSize)
+        long dataSize) // >= 0 only if the edit is committed
         throws IOException {
       long oldEntrySize;
       long newEntrySize;
@@ -1524,7 +1562,8 @@ public final class DiskStore implements Store {
         boolean ownedEditor = currentEditor == editor;
         currentEditor = null;
         if (!ownedEditor
-            || (newMetadata == null && dataChannel == null) // Edit isn't committed
+            || dataSize < 0 // Edit isn't committed
+            || (newMetadata == null && dataChannel == null) // Nothing is written
             || evicted) {
           refuseEdit(dataChannel);
           return;
@@ -1602,7 +1641,7 @@ public final class DiskStore implements Store {
         @Nullable AsynchronousFileChannel dataChannel, // null if no data was written
         long dataSize)
         throws IOException {
-      var footer = buildEntryFooter(UTF_8.encode(key), metadata, dataSize);
+      var footer = buildEntryFooter(key, metadata, dataSize);
       if (dataChannel != null) {
         try (dataChannel) {
           Utils.blockOnIO(StoreIO.writeBytesAsync(dataChannel, footer, dataSize));
@@ -1614,6 +1653,13 @@ public final class DiskStore implements Store {
           channel.force(false);
         }
       }
+
+      // Replacing deletes the target if it's there, so make sure it's deleted
+      // in isolation in case we have viewers. If the replace fails, we'll be tracking
+      // an entry without its file. But that's taken care of by view(key).
+      if (viewerCount > 0) {
+        isolatedDelete(entryFile());
+      }
       replace(tempEntryFile(), entryFile());
     }
 
@@ -1621,7 +1667,7 @@ public final class DiskStore implements Store {
       // Have the entry's temp file as our work file. This ensures a clean file
       // doesn't end up in a corrupt state in case of crashes.
       replace(entryFile(), tempEntryFile());
-      var footer = buildEntryFooter(UTF_8.encode(key), metadata, dataSize);
+      var footer = buildEntryFooter(key, metadata, dataSize);
       try (var channel = FileChannel.open(tempEntryFile(), WRITE)) {
         // Truncate in case the previous entry had a larger size
         channel.truncate(dataSize + footer.remaining());
@@ -1631,11 +1677,12 @@ public final class DiskStore implements Store {
       replace(tempEntryFile(), entryFile());
     }
 
-    private ByteBuffer buildEntryFooter(ByteBuffer key, ByteBuffer metadata, long dataSize) {
-      int keySize = key.remaining();
+    private ByteBuffer buildEntryFooter(String key, ByteBuffer metadata, long dataSize) {
+      var encodedKey = UTF_8.encode(key);
+      int keySize = encodedKey.remaining();
       int metadataSize = metadata.remaining();
       return ByteBuffer.allocate(keySize + metadataSize + ENTRY_TRAILER_SIZE)
-          .put(key)
+          .put(encodedKey)
           .put(metadata)
           .putLong(ENTRY_MAGIC)
           .putInt(STORE_VERSION)
@@ -1699,8 +1746,21 @@ public final class DiskStore implements Store {
 
         evicted = true;
         discardCurrentEdit();
-        Files.deleteIfExists(entryFile());
+        if (viewerCount > 0) {
+          isolatedDelete(entryFile());
+        } else {
+          Files.deleteIfExists(entryFile());
+        }
         return entrySize; // 0 if the entry wasn't readable
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    void decrementViewerCount() {
+      lock.lock();
+      try {
+        viewerCount--;
       } finally {
         lock.unlock();
       }
@@ -1751,6 +1811,7 @@ public final class DiskStore implements Store {
     private final ByteBuffer metadata;
     private final AsynchronousFileChannel channel;
     private final long dataSize;
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     DiskViewer(
         Entry entry,
@@ -1812,6 +1873,9 @@ public final class DiskStore implements Store {
     @Override
     public void close() {
       closeQuietly(channel);
+      if (closed.compareAndSet(false, true)) {
+        entry.decrementViewerCount();
+      }
     }
   }
 
@@ -1905,8 +1969,8 @@ public final class DiskStore implements Store {
 
     @Override
     public void close() throws IOException {
+      AsynchronousFileChannel channel;
       ByteBuffer newMetadata = null;
-      AsynchronousFileChannel channel = null;
       long dataSize = -1;
       lock.lock();
       try {
@@ -1915,9 +1979,9 @@ public final class DiskStore implements Store {
         }
         closed = true;
 
+        channel = lazyChannel;
         if (committed) {
           newMetadata = editedMetadata ? Utils.copy(metadata) : null;
-          channel = lazyChannel;
           dataSize = writtenCount;
         }
       } finally {

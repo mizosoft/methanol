@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,19 @@
  * SOFTWARE.
  */
 
-/** Miscellaneous test utilities used internally. */
-module methanol.testutils {
-  requires transitive methanol;
-  requires okhttp3.tls;
-  requires java.logging;
-  requires static org.checkerframework.checker.qual;
+package com.github.mizosoft.methanol.testutils.io.file;
 
-  exports com.github.mizosoft.methanol.testutils;
-  exports com.github.mizosoft.methanol.testutils.dec;
-  exports com.github.mizosoft.methanol.testutils.io.file;
+/** An object that forwards calls to another and allows retrieving the delegate object. */
+interface ForwardingObject<T> {
+  T delegate();
+
+  /** Returns the inner most delegate in a chain of one or more forwarding objects. */
+  @SuppressWarnings("unchecked")
+  static <T> T rootDelegate(T object) {
+    T delegate = object;
+    while (delegate instanceof ForwardingObject<?>) {
+      delegate = (T) ((ForwardingObject<?>) delegate).delegate();
+    }
+    return delegate;
+  }
 }
