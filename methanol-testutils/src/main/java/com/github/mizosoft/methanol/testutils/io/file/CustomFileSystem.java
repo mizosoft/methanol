@@ -36,8 +36,8 @@ import java.util.Spliterators;
 import java.util.stream.StreamSupport;
 
 /**
- * A {@code FileSystem} wrapper that ensures created {@code Paths} and {@code FileSystems} are
- * all associated with a wrapped {@code FileSystemProvider}.
+ * A {@code FileSystem} wrapper that ensures created {@code Paths} and {@code FileSystems} are all
+ * associated with a wrapped {@code FileSystemProvider}.
  */
 abstract class CustomFileSystem extends ForwardingFileSystem {
   /*
@@ -107,7 +107,9 @@ abstract class CustomFileSystem extends ForwardingFileSystem {
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, Filter<? super Path> filter)
         throws IOException {
-      return new ForwardingDirectoryStream<>(super.newDirectoryStream(dir, filter)) {
+      // Make sure filter receives a file associated with this provider
+      Filter<? super Path> wrappedFilter = file -> filter.accept(wrap(file));
+      return new ForwardingDirectoryStream<>(super.newDirectoryStream(dir, wrappedFilter)) {
         @Override
         public Iterator<Path> iterator() {
           return StreamSupport.stream(this.spliterator(), false)
