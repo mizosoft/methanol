@@ -22,9 +22,9 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.HIT;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.internal.cache.DateUtils.formatHttpDate;
-import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.HIT;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.ResponseVerification.verifying;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
@@ -118,6 +118,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 @Timeout(value = 5, unit = TimeUnit.MINUTES)
 @ExtendWith({MockWebServerExtension.class, StoreExtension.class, ExecutorExtension.class})
 class HttpCacheTest {
+  private static final int MAX_RETRY_COUNT = 60;
+
   private Executor threadPool;
   private Methanol.Builder clientBuilder;
   private Methanol client;
@@ -2494,13 +2496,17 @@ class HttpCacheTest {
     return get(request).assertMiss();
   }
 
-  private ResponseVerification<String> retryTillOfflineHit() throws IOException, InterruptedException {
+  /**
+   * Ensures requests to serverUri result in a cache hit, retrying if necessary in case a stale
+   * response is being updated in background.
+   */
+  private ResponseVerification<String> retryTillOfflineHit()
+      throws IOException, InterruptedException {
     int tries = 0;
-    int maxTries = 20;
     ResponseVerification<String> response;
     do {
       response = get(GET(serverUri).header("Cache-Control", "max-stale=0, only-if-cached"));
-    } while (response.getCacheAware().cacheStatus() != HIT && tries++ < maxTries);
+    } while (response.getCacheAware().cacheStatus() != HIT && ++tries <= MAX_RETRY_COUNT);
     return response.assertCacheStatus(HIT);
   }
 
