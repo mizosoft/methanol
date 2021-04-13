@@ -4,6 +4,9 @@ on: [ push, pull_request ]
 
 jobs:
   build:
+    # TODO remove when docs branch is merged
+    if: github.ref != 'refs/heads/docs'
+
     name: Test on ${{ matrix.os }} with Java ${{ matrix.java }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -48,6 +51,9 @@ jobs:
           path: ./*/build/test-results/**/*.xml
 
   coverage_report:
+    # TODO remove when docs branch is merged
+    if: github.ref != 'refs/heads/docs'
+
     name: Coverage report
     runs-on: ubuntu-latest
     needs: build
