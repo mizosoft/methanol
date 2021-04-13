@@ -1,6 +1,7 @@
 site_name: Methanol
 repo_name: mizosoft/methanol
-repo_url: https://github.com/mizosoft/methanol
+repo_url: https://github.com/mizosoft/methanol/
+site_url: https://mizosoft.github.io/methanol/
 site_description: 'Lightweight HTTP extensions for Java'
 site_author: Moataz Abdelnasser
 edit_uri: ""

@@ -20,7 +20,7 @@ python -m mkdocs build
 
 # Copy generated Javadoc site to main site directory
 mkdir -p site/$JAVADOC_SITE_PATH
-cp -rf build/docs/javadoc/ site/$JAVADOC_SITE_PATH
+cp -rf build/docs/javadoc/* site/$JAVADOC_SITE_PATH
 
 # Remove copied changelog, which is desirable when the script is run locally
 rm -f docs/CHANGELOG.md

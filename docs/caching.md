@@ -338,4 +338,4 @@ See [`HttpCache.Stats`][httpcache-stats] for all recorded statistics.
 [rfc7234]: https://tools.ietf.org/html/rfc7234
 [range-requests-mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
 [vary-mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary
-[httpcache-stats]: /api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Stats.html
+[httpcache-stats]: ../api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Stats.html
