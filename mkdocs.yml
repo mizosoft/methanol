@@ -1,0 +1,68 @@
+site_name: Methanol
+repo_name: mizosoft/methanol
+repo_url: https://github.com/mizosoft/methanol
+site_description: 'Lightweight HTTP extensions for Java'
+site_author: Moataz Abdelnasser
+edit_uri: ""
+
+extra_css:
+  - css/style.css
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - admonition
+  - pymdownx.details
+  - toc:
+      permalink: true
+
+copyright: Copyright &copy; 2021 Moataz Abdelnasser
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/mizosoft
+      name: mizosoft on GitHub
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/flask
+  favicon: images/flask.png
+  features:
+    - navigation.top
+    - navigation.sections
+  #    - navigation.expand
+  #    - navigation.tabs
+
+  palette:
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/lightbulb
+        name: Switch to light mode
+
+    # Light mode
+    - purple: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: indigo
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to dark mode
+
+nav:
+  - Overview: index.md
+  - Documentation:
+    - 'Caching': caching.md
+    - 'Object Mapping': object_mapping.md
+    - 'Interceptors': interceptors.md
+    # - 'Decompression' : decompression.md
+    - 'Interruptible Reading': interruptible_reading.md
+    - 'WritableBodyPublisher': writablebodypublisher.md
+  - Change Log: CHANGELOG.md

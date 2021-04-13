@@ -1,6 +1,7 @@
 .idea/
 .gradle/
 build/
+**/.vscode/
 
 *.iml
 TODO.txt
