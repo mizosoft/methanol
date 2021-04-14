@@ -68,6 +68,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -637,11 +638,13 @@ public final class HttpCache implements AutoCloseable, Flushable {
           // The cache is updated as the cacheUpdatingNetworkResponse is consumed
           return context.withNetworkResponse(cacheUpdatingNetworkResponse);
         }
-      } else if (invalidatesCache(request, networkResponse.get())) {
-        try {
-          cache.remove(request.uri());
-        } catch (IOException e) {
-          LOGGER.log(Level.WARNING, "failed to remove invalidated cache response", e);
+      } else {
+        for (var uri : invalidatedUris(request, networkResponse.get())) {
+          try {
+            cache.remove(uri);
+          } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "failed to remove invalidated cache response", e);
+          }
         }
       }
       return context;
@@ -728,7 +731,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return CacheControl.parse(headers.allValues("Cache-Control"));
     }
 
-    private boolean canServeFromCache(
+    private static boolean canServeFromCache(
         CacheControl requestCacheControl,
         CacheControl responseCacheControl,
         Duration freshness,
@@ -866,14 +869,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
       }
     }
 
-    /** Checks if the matching stored response should be invalidated as per rfc7234 4.4. */
-    private static boolean invalidatesCache(
-        HttpRequest initiatingRequest, TrackedResponse<?> response) {
-      return isUnsafe(initiatingRequest.method())
-          && response.statusCode() >= 200
-          && response.statusCode() < 400;
-    }
-
     /** rfc7231 4.2.1. */
     private static boolean isUnsafe(String method) {
       switch (method.toUpperCase(Locale.ENGLISH)) {
@@ -885,6 +880,32 @@ public final class HttpCache implements AutoCloseable, Flushable {
         default:
           return true;
       }
+    }
+
+    /** Returns the URIs invalidated by the given exchange as specified by rfc7234 section 4.4. */
+    private static List<URI> invalidatedUris(HttpRequest request, TrackedResponse<?> response) {
+      if (isUnsafe(request.method())
+          && (HttpStatus.isSuccessful(response) || HttpStatus.isRedirection(response))) {
+        var invalidatedUris = new ArrayList<URI>();
+        invalidatedUris.add(request.uri());
+
+        // Add the URIs referenced by Location & Content-Location
+        invalidatedLocationUri(request.uri(), response.headers(), "Location")
+            .ifPresent(invalidatedUris::add);
+        invalidatedLocationUri(request.uri(), response.headers(), "Content-Location")
+            .ifPresent(invalidatedUris::add);
+        return Collections.unmodifiableList(invalidatedUris);
+      } else {
+        return List.of(); // Nothing is invalidated
+      }
+    }
+
+    private static Optional<URI> invalidatedLocationUri(
+        URI requestUri, HttpHeaders responseHeaders, String locationHeader) {
+      return responseHeaders
+          .firstValue(locationHeader)
+          .map(requestUri::resolve)
+          .filter(resolvedUri -> Objects.equals(requestUri.getHost(), resolvedUri.getHost()));
     }
 
     private static final class ExchangeContext {
