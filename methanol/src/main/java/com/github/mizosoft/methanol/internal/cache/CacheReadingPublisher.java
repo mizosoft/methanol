@@ -10,18 +10,19 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Publisher for the response body read from a cached entry's {@code Viewer}. */
 public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> {
   private final Viewer viewer;
   private final Executor executor;
+  private final AtomicBoolean subscribed = new AtomicBoolean();
 
   public CacheReadingPublisher(Viewer viewer, Executor executor) {
     this.viewer = requireNonNull(viewer);
@@ -31,7 +32,11 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
   @Override
   public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
-    new CacheReadingSubscription(subscriber, executor, viewer).signal(true);
+    if (subscribed.compareAndSet(false, true)) {
+      new CacheReadingSubscription(subscriber, executor, viewer).signal(true);
+    } else {
+      FlowSupport.refuse(subscriber, FlowSupport.multipleSubscribersToUnicast());
+    }
   }
 
   @SuppressWarnings("unused") // VarHandle indirection

@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
@@ -135,6 +137,25 @@ class CacheReadingPublisherTest {
     publisher.subscribe(subscriber);
     subscriber.awaitComplete();
     assertEquals(0, subscriber.nexts);
+  }
+
+  @Test
+  void publisherIsUnicast() {
+    var emptyViewer = new TestViewer() {
+      @Override
+      public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
+        return CompletableFuture.completedFuture(-1);
+      }
+    };
+
+    var publisher = new CacheReadingPublisher(emptyViewer, FlowSupport.SYNC_EXECUTOR);
+    publisher.subscribe(new TestSubscriber<>());
+
+    var secondSubscriber = new TestSubscriber<>();
+    publisher.subscribe(secondSubscriber);
+    secondSubscriber.awaitComplete();
+    assertEquals(1, secondSubscriber.errors);
+    assertThrows(IllegalStateException.class, () -> { throw secondSubscriber.lastError; });
   }
 
   private static <T> @NonNull T notNull(T value) {
