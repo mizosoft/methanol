@@ -603,6 +603,60 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
+  void pastExpires(Store store) throws Exception {
+    setUpCache(store);
+
+    var date = toUtcDateTime(clock.instant());
+    server.enqueue(new MockResponse()
+        .addHeader("Date", formatHttpDate(date))
+        .addHeader("Expires", formatHttpDate(date.minusSeconds(10)))
+        .setBody("Pickachu"));
+    seedCache(serverUri);
+
+    // Negative freshness lifetime caused by past Expires triggers revalidation
+    server.enqueue(new MockResponse()
+        .addHeader("Cache-Control", "max-age=1")
+        .setBody("Psyduck"));
+    get(serverUri)
+        .assertConditionalMiss()
+        .assertBody("Psyduck");
+
+    get(serverUri)
+        .assertHit()
+        .assertBody("Psyduck");
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig
+  void futureLastModified(Store store) throws Exception {
+    setUpCache(store);
+
+    var date = toUtcDateTime(clock.instant());
+    var lastModified = date.plusSeconds(10);
+    // Don't include explicit freshness to trigger heuristics, which relies on Last-Modified
+    server.enqueue(new MockResponse()
+        .addHeader("Date", formatHttpDate(date))
+        .addHeader("Last-Modified", formatHttpDate(lastModified))
+        .setBody("Pickachu"));
+    seedCache(serverUri);
+
+    // Negative heuristic lifetime caused by future Last-Modified triggers revalidation
+    server.enqueue(new MockResponse()
+        .addHeader("Cache-Control", "max-age=1")
+        .setBody("Psyduck"));
+    get(serverUri)
+        .assertConditionalMiss()
+        .assertBody("Psyduck")
+        .networkResponse()
+        .assertRequestHeader("If-Modified-Since", formatHttpDate(lastModified));
+
+    get(serverUri)
+        .assertHit()
+        .assertBody("Psyduck");
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig
   void relaxMaxAgeWithRequest(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
