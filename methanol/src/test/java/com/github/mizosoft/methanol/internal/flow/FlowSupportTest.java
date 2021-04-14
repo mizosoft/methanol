@@ -85,21 +85,4 @@ class FlowSupportTest {
     System.setProperty("com.github.mizosoft.methanol.flow.prefetchFactor", "12.123f");
     assertEquals(50, FlowSupport.loadPrefetchFactor());
   }
-
-  @Test
-  void unicastPublisher() {
-    var calls = new AtomicInteger();
-    Publisher<Object> publisher = __ -> calls.getAndIncrement();
-    var unicastPublisher = FlowSupport.toUnicastPublisher(publisher);
-
-    unicastPublisher.subscribe(new TestSubscriber<>());
-    assertEquals(1, calls.get());
-
-    var subscriber = new TestSubscriber<>();
-    unicastPublisher.subscribe(subscriber);
-    assertEquals(1, calls.get()); // Upstream doesn't get called
-    assertEquals(1, subscriber.errors);
-    assertNotNull(subscriber.lastError);
-    assertThrows(IllegalStateException.class, () -> { throw subscriber.lastError; });
-  }
 }
