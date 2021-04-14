@@ -31,7 +31,6 @@ import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SY
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testutils.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testutils.TestUtils.gzip;
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static java.time.Duration.ofDays;
@@ -64,6 +63,7 @@ import com.github.mizosoft.methanol.testutils.TestException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.ConnectException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
@@ -1809,36 +1809,31 @@ class HttpCacheTest {
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
   @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  void unsafeMethodsInvalidateCache(String method, Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Pickachu"));
-    seedCache(serverUri);
-
-    get(serverUri)
-        .assertHit()
-        .assertBody("Pickachu");
-
-    server.enqueue(new MockResponse().setBody("Eevee"));
-    var unsafeRequest = MutableRequest.create(serverUri).method(method, BodyPublishers.noBody());
-    get(unsafeRequest) // Invalidates what's cached
-        .assertMiss()
-        .assertBody("Eevee");
-
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=2")
-        .setBody("Charmander"));
-    get(serverUri)
-        .assertMiss()
-        .assertBody("Charmander");
+  void unsafeMethodsInvalidateCache(String method, StoreContext storeContext) throws Exception {
+    assertUnsafeMethodInvalidatesCache(storeContext, method, 200, true);
+    assertUnsafeMethodInvalidatesCache(storeContext, method, 302, true);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
   @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  void unsafeMethodsOnlyInvalidateCacheIfSuccessful(String method, Store store) throws Exception {
-    setUpCache(store);
+  void unsafeMethodsDoNotInvalidateCacheWithErrorResponse(
+      String method, StoreContext storeContext) throws Exception {
+    assertUnsafeMethodInvalidatesCache(storeContext, method, 104, false);
+    assertUnsafeMethodInvalidatesCache(storeContext, method, 404, false);
+    assertUnsafeMethodInvalidatesCache(storeContext, method, 504, false);
+  }
+
+  private void assertUnsafeMethodInvalidatesCache(
+      StoreContext storeContext, String method, int code, boolean invalidationExpected)
+      throws Exception {
+    // Perform cleanup for previous call
+    if (cache != null) {
+      storeContext.drainQueuedTasks();
+      cache.dispose();
+    }
+    setUpCache(storeContext.newStore());
+
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .setBody("Pickachu"));
@@ -1848,14 +1843,69 @@ class HttpCacheTest {
         .assertHit()
         .assertBody("Pickachu");
 
-    server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR));
-    var unsafeRequest = MutableRequest.create(serverUri).method(method, BodyPublishers.noBody());
-    get(unsafeRequest).assertMiss(); // Shouldn't invalidate what's cached
+    server.enqueue(new MockResponse()
+        .setResponseCode(code)
+        .setBody("Charmander"));
+    var unsafeRequest = MutableRequest.create(serverUri)
+        .method(method, BodyPublishers.noBody());
+    get(unsafeRequest).assertMiss();
+
+    if (invalidationExpected) {
+      assertNotCached(serverUri);
+    } else {
+      get(serverUri)
+          .assertHit()
+          .assertCode(200)
+          .assertBody("Pickachu");
+    }
+  }
+
+  /**
+   * Test that an invalidated response causes the URIs referenced via Location & Content-Location
+   * to also get invalidated.
+   */
+  // TODO find a way to test referenced URIs aren't invalidated if they have different hosts
+  @ParameterizedTest
+  @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
+  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  void unsafeMethodsInvalidateReferencedUris(String method, Store store) throws Exception {
+    setUpCache(store);
+    client = clientBuilder.followRedirects(Redirect.NEVER).build();
+
+    server.enqueue(new MockResponse()
+        .setResponseCode(HttpURLConnection.HTTP_MOVED_TEMP)
+        .addHeader("Cache-Control", "max-age=1")
+        .setBody("Pickachu"));
+    server.enqueue(new MockResponse()
+        .addHeader("Cache-Control", "max-age=1")
+        .setBody("Ditto"));
+    server.enqueue(new MockResponse()
+        .addHeader("Cache-Control", "max-age=1")
+        .setBody("Eevee"));
+    seedCache(serverUri);
+    seedCache(serverUri.resolve("ditto")).assertBody("Ditto");
+    seedCache(serverUri.resolve("eevee")).assertBody("Eevee");
 
     get(serverUri)
         .assertHit()
-        .assertCode(200)
-        .assertBody("Pickachu"); // Hit!
+        .assertBody("Pickachu");
+    get(serverUri.resolve("ditto"))
+        .assertHit()
+        .assertBody("Ditto");
+    get(serverUri.resolve("eevee"))
+        .assertHit()
+        .assertBody("Eevee");
+
+    server.enqueue(new MockResponse()
+        .addHeader("Location", "ditto")
+        .addHeader("Content-Location", "eevee")
+        .setBody("Eevee"));
+    var unsafeRequest = MutableRequest.create(serverUri).method(method, BodyPublishers.noBody());
+    get(unsafeRequest) // Invalidates what's cached
+        .assertMiss()
+        .assertBody("Eevee");
+    assertNotCached(serverUri.resolve("ditto"));
+    assertNotCached(serverUri.resolve("eevee"));
   }
 
   @ParameterizedTest
@@ -2508,6 +2558,15 @@ class HttpCacheTest {
       response = get(GET(serverUri).header("Cache-Control", "max-stale=0, only-if-cached"));
     } while (response.getCacheAware().cacheStatus() != HIT && ++tries <= MAX_RETRY_COUNT);
     return response.assertCacheStatus(HIT);
+  }
+
+  private void assertNotCached(URI uri) throws Exception {
+    var cacheControl = CacheControl.newBuilder()
+        .onlyIfCached()
+        .anyMaxStale()
+        .build();
+    get(GET(uri).cacheControl(cacheControl))
+        .assertLocallyGenerated();
   }
 
   // Set timeout to not block indefinitely when response is mistakenly not enqueued to MockWebServer
