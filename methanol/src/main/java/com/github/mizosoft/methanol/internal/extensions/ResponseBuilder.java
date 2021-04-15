@@ -13,6 +13,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.function.Consumer;
 import javax.net.ssl.SSLSession;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -117,6 +118,11 @@ public final class ResponseBuilder<T> {
 
   public ResponseBuilder<T> cacheStatus(CacheStatus cacheStatus) {
     this.cacheStatus = cacheStatus;
+    return this;
+  }
+
+  public ResponseBuilder<T> apply(Consumer<ResponseBuilder<?>> consumer) {
+    consumer.accept(this);
     return this;
   }
 

@@ -2,7 +2,6 @@ package com.github.mizosoft.methanol.tck;
 
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
-import static com.github.mizosoft.methanol.testutils.TestUtils.EMPTY_BUFFER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -82,21 +81,21 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
     return new CacheWritingPublisher(
         FlowAdapters.toFlowPublisher(
             new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
-        editor,
-        EMPTY_BUFFER);
+        editor);
   }
 
   @Override
   public Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
     return new CacheWritingPublisher(
-        new FailedPublisher<>(TestException::new), DisabledEditor.INSTANCE, EMPTY_BUFFER);
+        new FailedPublisher<>(TestException::new), DisabledEditor.INSTANCE);
   }
 
   private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {
     return new Iterator<>() {
-      private final List<ByteBuffer> items = Stream.of("Lorem ipsum dolor sit amet".split("\\s"))
-          .map(UTF_8::encode)
-          .collect(Collectors.toUnmodifiableList());
+      private final List<ByteBuffer> items =
+          Stream.of("Lorem ipsum dolor sit amet".split("\\s"))
+              .map(UTF_8::encode)
+              .collect(Collectors.toUnmodifiableList());
 
       private int index;
       private int generated;

@@ -46,6 +46,7 @@ import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
+import java.net.http.HttpHeaders;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -56,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -272,6 +274,14 @@ public final class CacheControl {
       throw new IllegalArgumentException(
           format("couldn't parse: '%s'", String.join(", ", values)), e);
     }
+  }
+
+  /** Parses the cache directives specified by the given headers. */
+  public static CacheControl parse(HttpHeaders headers) {
+    return CacheControl.parse(
+        headers.allValues("Cache-Control").stream()
+            .filter(Predicate.not(String::isBlank))
+            .collect(Collectors.toUnmodifiableList()));
   }
 
   /** Returns a new {@code Builder}. */
