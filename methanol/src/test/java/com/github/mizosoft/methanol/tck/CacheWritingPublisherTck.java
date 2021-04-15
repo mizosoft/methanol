@@ -6,42 +6,42 @@ import static com.github.mizosoft.methanol.testutils.TestUtils.EMPTY_BUFFER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber;
+import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
 import com.github.mizosoft.methanol.testing.ResolvedStoreConfig;
 import com.github.mizosoft.methanol.testing.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.StoreContext;
+import com.github.mizosoft.methanol.testutils.FailedPublisher;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Flow.Processor;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
-import java.util.concurrent.Flow.Subscriber;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
+import org.reactivestreams.FlowAdapters;
+import org.reactivestreams.example.unicast.AsyncIterablePublisher;
+import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
 
-public class CacheWritingBodySubscriberTck
-    extends IdentityFlowProcessorVerification<List<ByteBuffer>> {
+public class CacheWritingPublisherTck extends FlowPublisherVerification<List<ByteBuffer>> {
   private final ResolvedStoreConfig storeConfig;
 
-  private ExecutorService publisherExecutorService;
+  private Executor executor;
   private StoreContext storeContext;
 
   @Factory(dataProvider = "provider")
-  public CacheWritingBodySubscriberTck(StoreType storeType) {
+  public CacheWritingPublisherTck(StoreType storeType) {
     super(TckUtils.testEnvironment());
     storeConfig = ResolvedStoreConfig.createDefault(storeType);
   }
@@ -50,35 +50,25 @@ public class CacheWritingBodySubscriberTck
   @BeforeClass
   static void configureUpstreamCancellation() {
     System.setProperty(
-        "com.github.mizosoft.methanol.internal.cache.CacheWritingBodySubscriber.propagateCancellation",
+        "com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.propagateCancellation",
         String.valueOf(true));
   }
 
   @BeforeMethod
-  public void setUpPublisherExecutor() {
-    publisherExecutorService = TckUtils.fixedThreadPool();
+  public void setUpExecutor() {
+    executor = TckUtils.fixedThreadPool();
   }
 
   @AfterMethod
   public void tearDown() throws Exception {
-    TestUtils.shutdown(publisherExecutorService);
+    TestUtils.shutdown(executor);
     if (storeContext != null) {
       storeContext.close();
     }
   }
 
   @Override
-  protected Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
-    var processor =
-        new ProcessorView(new CacheWritingBodySubscriber(DisabledEditor.INSTANCE, EMPTY_BUFFER));
-    processor.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    processor.onError(new TestException());
-    return processor;
-  }
-
-  @Override
-  protected Processor<List<ByteBuffer>, List<ByteBuffer>> createIdentityFlowProcessor(
-      int bufferSize) {
+  public Publisher<List<ByteBuffer>> createFlowPublisher(long elements) {
     Editor editor;
     try {
       storeContext = storeConfig.createContext();
@@ -88,41 +78,52 @@ public class CacheWritingBodySubscriberTck
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
-    return new ProcessorView(new CacheWritingBodySubscriber(editor, EMPTY_BUFFER));
+
+    return new CacheWritingPublisher(
+        FlowAdapters.toFlowPublisher(
+            new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
+        editor,
+        EMPTY_BUFFER);
   }
 
   @Override
-  public ExecutorService publisherExecutorService() {
-    return publisherExecutorService;
+  public Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
+    return new CacheWritingPublisher(
+        new FailedPublisher<>(TestException::new), DisabledEditor.INSTANCE, EMPTY_BUFFER);
   }
 
-  @Override
-  public List<ByteBuffer> createElement(int element) {
-    var buffer = UTF_8.encode("element_" + Integer.toHexString(element));
-    return Stream.generate(buffer::duplicate).limit(3).collect(Collectors.toUnmodifiableList());
-  }
+  private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {
+    return new Iterator<>() {
+      private final List<ByteBuffer> items = Stream.of("Lorem ipsum dolor sit amet".split("\\s"))
+          .map(UTF_8::encode)
+          .collect(Collectors.toUnmodifiableList());
 
-  @Override
-  public long maxSupportedSubscribers() {
-    return 1; // Only bound to one subscriber
+      private int index;
+      private int generated;
+
+      @Override
+      public boolean hasNext() {
+        return generated < elements;
+      }
+
+      @Override
+      public List<ByteBuffer> next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        generated++;
+        return List.of(item(index++), item(index++));
+      }
+
+      private ByteBuffer item(int index) {
+        return items.get(index % items.size());
+      }
+    };
   }
 
   @DataProvider
   public static Object[][] provider() {
     return new Object[][] {{DISK}, {MEMORY}};
-  }
-
-  private static final class ProcessorView
-      extends ForwardingBodySubscriber<Publisher<List<ByteBuffer>>>
-      implements Processor<List<ByteBuffer>, List<ByteBuffer>> {
-    ProcessorView(CacheWritingBodySubscriber bodySubscriber) {
-      super(bodySubscriber);
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
-      getBody().toCompletableFuture().join().subscribe(subscriber);
-    }
   }
 
   private enum DisabledEditor implements Editor {
