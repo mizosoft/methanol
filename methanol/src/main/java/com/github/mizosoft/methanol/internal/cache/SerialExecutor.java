@@ -167,7 +167,7 @@ class SerialExecutor implements Executor {
   private static int incrementDrainCount(int sync) {
     int count = sync & DRAIN_COUNT_MASK;
     int stateBits = sync & ~DRAIN_COUNT_MASK;
-    return (count + 1) | (stateBits << DRAIN_COUNT_BITS);
+    return (count + 1) | stateBits;
   }
 
   // For testing
@@ -182,6 +182,10 @@ class SerialExecutor implements Executor {
 
   boolean isSubmittedBitSet() {
     return (sync & SUBMITTED) != 0;
+  }
+
+  boolean isShutdownBitSet() {
+    return (sync & SHUTDOWN) != 0;
   }
 
   /**
