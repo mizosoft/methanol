@@ -4,7 +4,7 @@ import static com.github.mizosoft.methanol.internal.cache.DateUtils.max;
 import static com.github.mizosoft.methanol.internal.cache.DateUtils.toUtcDateTime;
 import static java.time.ZoneOffset.UTC;
 
-import java.net.http.HttpHeaders;
+import com.github.mizosoft.methanol.TrackedResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -12,18 +12,10 @@ import java.util.Optional;
 
 /** Policy for computing freshness and age values as defined by RFC 7234 4.2. */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-public final class FreshnessPolicy {
-
-  /** Value of max-age directive as set by the response or overridden by the request. */
+final class FreshnessPolicy {
   private final Optional<Duration> maxAge;
-
-  /** Time the request was sent. */
-  private final Instant requestTime;
-
-  /** Time the response was received. */
-  private final Instant responseTime;
-
-  /** Value of the Age header or zero if not set. */
+  private final Instant timeRequestSent;
+  private final Instant timeResponseReceived;
   private final Duration age;
 
   /**
@@ -34,68 +26,65 @@ public final class FreshnessPolicy {
   private final LocalDateTime date;
 
   /**
-   * The time the response was last modified. This is either the value of the {@code Last-Modified}
-   * header or {@link #date} if the header is not present (rfc7232 3.3).
+   * Either the value of the {@code Last-Modified} header or {@link #date} if the header is not
+   * present (rfc7232 3.3).
    */
   private final LocalDateTime lastModified;
 
   /**
-   * Response expiration date as specified by {@code Expires} header. This is only used in freshness
-   * calculations if no {@code max-age} directive is present in either the request or the response.
+   * Response expiration date as specified by {@code Expires} header. {@link #maxAge} has a higher
+   * precedence in calculating freshness lifetime.
    */
   private final Optional<LocalDateTime> expires;
 
-  public FreshnessPolicy(
-      Optional<Duration> maxAge,
-      Instant requestTime,
-      Instant responseTime,
-      HttpHeaders responseHeaders) {
+  FreshnessPolicy(Optional<Duration> maxAge, TrackedResponse<?> response) {
+    this.timeRequestSent = response.timeRequestSent();
+    this.timeResponseReceived = response.timeResponseReceived();
     this.maxAge = maxAge;
-    this.requestTime = requestTime;
-    this.responseTime = responseTime;
-    var dateServed = responseHeaders.firstValue("Date").map(DateUtils::toHttpDate);
-    date = dateServed.orElseGet(() -> toUtcDateTime(responseTime));
+
+    var dateServed = response.headers().firstValue("Date").map(DateUtils::toHttpDate);
+    date = dateServed.orElseGet(() -> toUtcDateTime(timeResponseReceived));
     lastModified =
-        responseHeaders.firstValue("Last-Modified").map(DateUtils::toHttpDate).orElse(date);
-    expires = responseHeaders.firstValue("Expires").map(DateUtils::toHttpDate);
+        response.headers().firstValue("Last-Modified").map(DateUtils::toHttpDate).orElse(date);
+    expires = response.headers().firstValue("Expires").map(DateUtils::toHttpDate);
     age =
-        responseHeaders
+        response
+            .headers()
             .firstValue("Age")
-            .map(DateUtils::toDeltaSecondsDurationLenient)
+            .map(DateUtils::toDeltaSecondsOrNull)
             .orElse(Duration.ZERO);
   }
 
-  /** Computes the effective value of {@code Last-Modified}. */
-  public LocalDateTime computeEffectiveLastModified() {
+  LocalDateTime lastModified() {
     return lastModified;
   }
 
-  /** Computes response's age relative to {@code now} as defined by rfc7324 4.2.3. */
-  public Duration computeAge(Instant now) {
-    var apparentAge = max(Duration.between(date.toInstant(UTC), responseTime), Duration.ZERO);
-    var responseDelay = Duration.between(requestTime, responseTime);
-    var correctedAge = age.plus(responseDelay);
-    var correctedInitialAge = max(apparentAge, correctedAge);
-    var residentTime = Duration.between(responseTime, now);
-    return correctedInitialAge.plus(residentTime);
-  }
-
   /** Computes response freshness lifetime as defined by rfc7324 4.2.1. */
-  public Optional<Duration> computeFreshnessLifetime() {
+  Optional<Duration> computeFreshnessLifetime() {
     return maxAge.or(() -> expires.map(expires -> Duration.between(date, expires)));
   }
 
   /**
-   * Returns a heuristic freshness lifetime to be used in case none is explicitly defined by the
-   * server.
+   * Returns a heuristic freshness lifetime to be used in case there's no explicit expiration.
    */
-  public Duration computeHeuristicLifetime() {
+  Duration computeHeuristicLifetime() {
     // Use 10% of the time the response hasn't been modified
     // as encouraged by rfc7234 4.2.2 and implemented by browsers
     return Duration.between(lastModified, date).dividedBy(10);
   }
 
-  public boolean hasExplicitExpiration() {
-    return maxAge.isPresent() || expires.isPresent();
+  boolean usesHeuristics() {
+    return maxAge.isEmpty() && expires.isEmpty();
+  }
+
+  /** Computes response's age relative to {@code now} as defined by rfc7324 4.2.3. */
+  Duration computeAge(Instant now) {
+    var apparentAge =
+        max(Duration.between(date.toInstant(UTC), timeResponseReceived), Duration.ZERO);
+    var responseDelay = Duration.between(timeRequestSent, timeResponseReceived);
+    var correctedAge = age.plus(responseDelay);
+    var correctedInitialAge = max(apparentAge, correctedAge);
+    var residentTime = Duration.between(timeResponseReceived, now);
+    return correctedInitialAge.plus(residentTime);
   }
 }

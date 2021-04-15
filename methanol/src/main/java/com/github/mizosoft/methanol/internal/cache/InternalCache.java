@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,17 +20,32 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol;
+package com.github.mizosoft.methanol.internal.cache;
 
-import java.net.http.HttpResponse;
-import java.time.Instant;
+import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.util.concurrent.CompletableFuture;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A response with recorded send/receive timestamps. */
-public interface TrackedResponse<T> extends HttpResponse<T> {
+/** An {@code HttpCache} view used internally. */
+public interface InternalCache {
+  @Nullable
+  CacheResponse get(HttpRequest request) throws IOException;
 
-  /** Returns the time the request resulting in this response was sent. */
-  Instant timeRequestSent();
+  CompletableFuture<@Nullable CacheResponse> getAsync(HttpRequest request);
 
-  /** Returns the time this response was received. */
-  Instant timeResponseReceived();
+  void update(CacheResponse cacheResponse);
+
+  @Nullable
+  NetworkResponse put(@Nullable CacheResponse cacheResponse, NetworkResponse networkResponse);
+
+  void remove(URI uri);
+
+  void onRequest(URI uri);
+
+  void onNetworkUse(URI uri);
+
+  void onStatus(URI uri, CacheStatus status);
 }

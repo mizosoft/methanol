@@ -616,8 +616,7 @@ public final class DiskStore implements Store {
   private static void deleteStoreContent(Path directory) throws IOException {
     // Don't delete the lock file as we're still using the directory
     var lockFile = directory.resolve(LOCK_FILENAME);
-    try (var stream =
-        Files.newDirectoryStream(directory, file -> !file.equals(lockFile))) {
+    try (var stream = Files.newDirectoryStream(directory, file -> !file.equals(lockFile))) {
       for (var file : stream) {
         var filename = file.getFileName().toString();
         if (filename.endsWith(ENTRY_FILE_SUFFIX)) {

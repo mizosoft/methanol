@@ -65,26 +65,18 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
   private final Publisher<List<ByteBuffer>> upstream;
   private final Editor editor;
 
-  /**
-   * Metadata of the response being cached. Will be set when the body is fully written and the
-   * editor is to be closed.
-   */
-  private final ByteBuffer metadata;
-
   private final AtomicBoolean subscribed = new AtomicBoolean();
 
-  public CacheWritingPublisher(
-      Publisher<List<ByteBuffer>> upstream, Editor editor, ByteBuffer metadata) {
+  public CacheWritingPublisher(Publisher<List<ByteBuffer>> upstream, Editor editor) {
     this.upstream = upstream;
     this.editor = editor;
-    this.metadata = metadata;
   }
 
   @Override
   public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      upstream.subscribe(new CacheWritingSubscriber(editor, metadata, subscriber));
+      upstream.subscribe(new CacheWritingSubscriber(editor, subscriber));
     } else {
       FlowSupport.refuse(subscriber, FlowSupport.multipleSubscribersToUnicast());
     }
@@ -93,9 +85,8 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
   private static final class CacheWritingSubscriber implements Subscriber<List<ByteBuffer>> {
     private final CacheWritingSubscription downstreamSubscription;
 
-    CacheWritingSubscriber(
-        Editor editor, ByteBuffer metadata, Subscriber<? super List<ByteBuffer>> downstream) {
-      downstreamSubscription = new CacheWritingSubscription(editor, metadata, downstream);
+    CacheWritingSubscriber(Editor editor, Subscriber<? super List<ByteBuffer>> downstream) {
+      downstreamSubscription = new CacheWritingSubscription(editor, downstream);
     }
 
     @Override
@@ -140,7 +131,6 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     private final Editor editor;
-    private final ByteBuffer metadata;
     private final Upstream upstream = new Upstream();
     private final ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
 
@@ -167,11 +157,8 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     CacheWritingSubscription(
-        Editor editor,
-        ByteBuffer metadata,
-        @NonNull Subscriber<? super List<ByteBuffer>> downstream) {
+        Editor editor, @NonNull Subscriber<? super List<ByteBuffer>> downstream) {
       this.editor = editor;
-      this.metadata = metadata;
       this.downstream = downstream;
     }
 
@@ -282,7 +269,6 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private void commitEdit() {
       if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
         try (editor) {
-          editor.metadata(metadata);
           editor.commitOnClose();
         } catch (IOException ioe) {
           LOGGER.log(Level.WARNING, "failed to commit the edit", ioe);
