@@ -1,14 +1,14 @@
 # Interceptors
 
-Interceptors allow you to inspect, mutate, retry and short-circuit request/response exchanges.
-Together, interceptors build an invocation chain that can apply capable
-transformations to requests moving forward and to responses in their way back.
+Interceptors allow you to inspect, mutate, retry and short-circuit HTTP calls. Together, interceptors
+build an invocation chain that's capable of applying powerful transformations to requests moving forward
+and to responses in their way back.
 
 ## Writing Interceptors
 
 Interceptors sit between a `Methanol` client and its underlying `HttpClient`, referred to as its
 backend. When registered, an interceptor is invoked each `send` or `sendAsync`
-call. Here's an interceptor that logs blocking and asynchronous exchanges.
+call. Here's an interceptor that logs requests and their responses.
 
 ```java
 public final class LoggingInterceptor implements Methanol.Interceptor {
@@ -62,11 +62,10 @@ its next sibling, or to the backend in case there's no more interceptors in the 
 where requests finally get sent. Typically, an interceptor calls its chain's `forward` or `forwardAsync`
 after it has done its job.
 
-If your interceptor only modifies requests, prefer passing a lambda to `Interceptor::create` to
-implementing `Interceptor`.
+If your interceptor only modifies requests, prefer passing a lambda to `Interceptor::create`.
 
 ```java
-// Enable Expect: continue for all POSTs to a particular host
+// Enable 'Expect: Continue' for all POSTs to a particular host
 var expectContinueInterceptor = Interceptor.create(request ->
     request.method().equalsIgnoreCase("POST") && request.uri().getHost().equals("api.imgur.com")
         ? MutableRequest.copyOf(request).expectContinue(true)
@@ -75,14 +74,11 @@ var expectContinueInterceptor = Interceptor.create(request ->
 
 ## Intercepting Bodies
 
-A powerful property of interceptors is their control over how responses are returned to their
-caller. Before it forwards the request, an interceptor can transform its chain's 
-`BodyHandler` using `Chain::withBodyHandler`. A transformed
-`BodyHandler` typically applies the handler the chain previously had, then wraps the resulted
-`BodySubscriber`, so it intercepts the
-response body as it's being received by the caller. This opens the door for interesting
-things like transparently decrypting a response or computing its digest. This is how
-`Methanol` does transparent decompression & cache writes.
+A powerful property of interceptors is their control over how responses are received by their
+caller. An interceptor can transform its chain's `BodyHandler` using
+`Chain::withBodyHandler` before it forwards requests. A transformed `BodyHandler` typically applies the handler the chain previously
+had, then wraps the resulted `BodySubscriber`, so it intercepts the response body as it's being received
+by the caller. This is how `Methanol` does transparent decompression & cache writes.
 
 Note that this applies to requests too. You can transform a request body by wrapping its 
 `BodyPublisher`, if it's got any. `BodyPublisher` & `BodySubscriber` APIs can be nicely layered to
@@ -117,23 +113,13 @@ of implications.
 !!! attention
     If a cache is installed, `Methanol` does automatic redirection by itself, which would otherwise
     be done by the backend. This allows redirects to be cached, 
-    increasing cache efficiency. As a consequence, backend interceptors are invoked more than
-    once when requests are redirected  in the presence of a cache.
-
-## Short-circuiting
-
-Both client & backend interceptors can refrain from forwarding the request. They're allowed to
-short-circuit a request's path to the backend by returning a fabricated response. This makes
-them good candidates for testing. Mock responses with client interceptors to
-investigate requests just as sent by your application. Mock responses with backend interceptors to
-explore requests as they get handed to the backend. This makes backend interceptors perfect for
-testing how your application interacts with the cache.
+    increasing cache efficiency. As a consequence, backend interceptors may be invoked more than
+    once in the presence of a cache.
 
 ## Registration
 
-You register client interceptors with the builder using `interceptor(...)`. Similarly,
-backend interceptors are registered with `backendInterceptor(...)`.
-Interceptors in each group get invoked in registration order.
+You can register client and backend interceptors with `interceptor(...)` and `backendInterceptor(...)`
+respectively. Interceptors in each group get invoked in registration order.
 
 === "Client Interceptors"
 
@@ -151,9 +137,17 @@ Interceptors in each group get invoked in registration order.
         .build();
     ```
 
+## Short-circuiting
+
+Both client & backend interceptors can refrain from forwarding a request. They're allowed to
+short-circuit a request's path by returning a fabricated response. This makes them good candidates
+for testing. You can mock responses with client interceptors to investigate requests just
+as sent by your application. Moreover, responses can be mocked with backend interceptors to explore
+requests as they get sent. This makes backend interceptors suitable for testing how your application
+interacts with the cache.
+
 ## Limitations
 
 Remember that `Methanol` is built atop a standard `HttpClient`, which can perform its own redirects,
 retries and other intermediate requests like authentications. These aren't interceptable. That's
-because `HttpClient` exports no API to do so. If you're coming from places like Apache HttpClient or
-OkHttp, there's no support for the fully fledged network interceptors available there.
+because `HttpClient` exports no API to do so.

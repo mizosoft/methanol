@@ -59,11 +59,15 @@ theme:
 
 nav:
   - Overview: index.md
-  - Documentation:
+  - User Guide:
+    - 'HttpClient++': enhanced_httpclient.md
     - 'Caching': caching.md
     - 'Object Mapping': object_mapping.md
     - 'Interceptors': interceptors.md
-    # - 'Decompression' : decompression.md
+    - 'Decompression' : decompression.md
+    - 'Meida Types': media_types.md
+    - 'Multipart & Forms': multipart_and_forms.md
+    - 'Progress Tracking': progress_tracking.md
     - 'Interruptible Reading': interruptible_reading.md
     - 'WritableBodyPublisher': writablebodypublisher.md
   - Change Log: CHANGELOG.md

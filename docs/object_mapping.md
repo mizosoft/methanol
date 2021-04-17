@@ -1,19 +1,14 @@
 # Object Mapping
 
-HTTP bodies are often mappable to high-level entities that your code understands.
-Java's HttpClient was designed with that in mind. However, available `BodyPublisher` & `BodySubscriber`
-implementations are too basic, and implementing your own can be very tricky. Methanol builds upon
-these APIs with an extensible and easy-to-use object mapping mechanism that treats your objects as
-first-citizen HTTP bodies.
+HTTP bodies are often mappable to high-level entities that your code understands. Java's HttpClient
+was designed with that in mind. However, available `BodyPublisher` & `BodySubscriber` implementations
+are too basic, and implementing your own can be tricky. Methanol builds upon these APIs with an extensible
+and easy-to-use object mapping mechanism that treats your objects as first-citizen HTTP bodies.
 
 ## Setup
 
-Before sending and receiving objects over HTTP, Methanol needs to adapt to your desired
-mapping schemes. Adapters for the most popular serialization libraries are provided in separate modules.
-
-<!-- Methanol first needs to adapt to your desired mapping schemes.
-Methanol needs to adapt to your desired mapping scheme before it can hydrate your objects. Adapters
-for the most popular serialization libraries are provided in separate modules. -->
+Before sending and receiving objects over HTTP, Methanol needs to adapt to your desired mapping schemes.
+Adapters for the most popular serialization libraries are provided in separate modules.
 
   * [`methanol-gson`](methanol_gson): JSON with Gson
   * [`methanol-jackson`](methanol_jackson): JSON with Jackson
@@ -21,9 +16,8 @@ for the most popular serialization libraries are provided in separate modules. -
   * [`methanol-protobuf`](methanol_protobuf): Google's Protocol Buffers
   * [`methanol-jaxb`](methanol_jaxb): XML with JAXB
 
-Adapters are dynamically located using Java's `java.util.ServiceLoader`. You can find
-clear installation steps in each module's README. We'll later see how to implement custom adapters
-as well.
+Adapters are dynamically located using Java's `ServiceLoader`. You can find clear installation steps
+in each module's README. We'll later see how to implement custom adapters as well.
 
 If you want to run examples presented here, get started by installing your favorite JSON adapter!
 
@@ -90,9 +84,8 @@ provides BodyAdapter.Decoder with GsonProviders.DecoderProvider;
 
 ### Classpath
 
-First, implement delegating
-`Encoder` & `Decoder` that forward to the instances created by the adapter factory. Use
-`ForwadingEncoder` & `ForwardingDecoder` to make this easier.
+First, implement delegating `Encoder` & `Decoder` that forward to the instances created by the adapter
+factory. Use `ForwardingEncoder` & `ForwardingDecoder` to make this easier.
 
 ```java
 class GsonHolder {
@@ -143,12 +136,8 @@ com.example.GsonDecoder
 
 ## Receiving Objects
 
-<!-- To get an `HttpResponse<T>`, give Methanol
- a `T.class` and it'll give you a `BodyHandler<T>`
-in return. -->
-
-To get an `HttpResponse<T>`, give `MoreBodyHandlers` a `T.class` and it'll give you a 
-`BodyHandler<T>` in return.
+To get an `HttpResponse<T>`, give `MoreBodyHandlers` a `T.class` and it'll give you a `BodyHandler<T>`
+in return.
 
 ```java hl_lines="8"
 final Methanol client = Methanol.newBuilder()
@@ -167,7 +156,8 @@ public static final class GitHubUser {
   public String login;
   public long id;
   public String url;
-   ...
+  
+  // Other fields omitted
 }
 ```
 
@@ -186,18 +176,19 @@ public static final class GitHubIssue {
   public String title;
   public GitHubUser user;
   public String body;
-   ...
+
+  // Other fields omitted
 }
 ```
 
-The right adapter is selected based on the response's `Content-Type`. For instance, a response with
-`Content-Type: application/json` will cause Methanol to look for a JSON adapter. If such lookup
+The right adapter is selected based on response's `Content-Type`. For instance, a response with
+`Content-Type: application/json` causes Methanol to look for a JSON adapter. If such lookup
 fails, an `UnsupportedOperationException` is thrown. 
 
 ## Sending Objects
 
-Get a `BodyPubilsher` for whatever object you've got by passing it in along with a `MediaType` 
-describing which adapter you prefer selected.
+Get a `BodyPubilsher` for whatever object you've got by passing it in along with a `MediaType` describing
+which adapter you prefer selected.
 
 ```java hl_lines="6"
 final Methanol client = Methanol.newBuilder()
@@ -214,36 +205,24 @@ String renderMarkdown(RenderRequest renderRequest) throws IOException, Interrupt
 }
 
 public static final class RenderRequest {
-  public String text;
-  public String mode;
-  public String context;
-   ...
+  public String text, mode, context;
 }
 ```
 
 ##  Adapters
 
-An adapter provides `Encoder` and/or `Decoder` implementations. Both interfaces implement
-`BodyAdapter`, which defines the methods necessary for Methanol to know which 
-object types the adapter believes it can handle, and in what scheme. An `Encoder` creates a
-`BodyPublisher` that streams a given object's serialized form. Similarly, a `Decoder` supplies 
-`BodySubscriber<T>` instances for a given `TypeRef<T>` that convert the response body into `T`. An
-optional `MediaType` is passed to encoders & decoders in order to further describe the desired mapping
-scheme (e.g. specify a character set).
-
-<!-- An adapter implements the `BodyAdapter` interface through one of its two specialized subtypes: 
-`Encoder` & `Decoder`. `BodyAdapter` defines the methods necessary for Methanol to know which 
-object types the adapter knows it can handle and in what scheme. 
-encoding). An `Encoder` creates a
-`BodyPublisher` that streams a given object's serialized form. Similarly, a `Decoder` supplies 
-`BodySubscriber<T>` instances for a given `TypeRef<T>`. An optional `MediaType` is passed to
-adapters in order to further describing the desired scheme (e.g. specifying the body's character -->
+An adapter provides `Encoder` and/or `Decoder` implementations. Both interfaces implement `BodyAdapter`,
+which defines the methods necessary for Methanol to know which  object types the adapter believes it
+can handle, and in what scheme. An `Encoder` creates a `BodyPublisher` that streams a given object's
+serialized form. Similarly, a `Decoder` supplies `BodySubscriber<T>` instances for a given `TypeRef<T>`
+that convert the response body into `T`. An optional `MediaType` is passed to encoders & decoders to
+further describe the desired mapping scheme (e.g. specify a character set).
 
 ### Example - An HTML Adapter
 
 Here's an adapter that uses [Jsoup][jsoup] to convert HTML bodies to parsed `Document` objects and
-vise versa. When you're writing adapters, extend from `AbstractBodyAdapter`
-to get free media type matching & other helpful functions.
+vise versa. When you're writing adapters, extend from `AbstractBodyAdapter` to get free media type
+matching & other helpful functions.
 
 ```java
 public abstract class JsoupAdapter extends AbstractBodyAdapter implements BodyAdapter {
@@ -273,11 +252,17 @@ public abstract class JsoupAdapter extends AbstractBodyAdapter implements BodyAd
       requireSupport(object.getClass());
       requireCompatibleOrNull(mediaType);
       var charset = charsetOrUtf8(mediaType);
-      return BodyPublishers.ofString(((Document) object).outerHtml(), charset);
+      var publisher = BodyPublishers.ofString(((Document) object).outerHtml(), charset);
+      return attachMediaType(pubisher, mediaType);
     }
   }
 }
 ```
+
+!!! tip
+    Make sure your encoders call `AbstractBodyAdapter::attachMediaType` so the created `BodyPublisher`
+    is converted to a `MimeBodyPublisher` if the given media type isn't null. That way, requests get
+    the correct `Content-Type` header added by `Methanol`.
 
 ### Registration
 
@@ -304,6 +289,7 @@ final Methanol client = Methanol.create();
 HttpResponse<Document> downloadHtml(String url) IOException, InterruptedException {
   var request = MutableRequest.GET(url)
       .header("Accept", "application/html");
+      
   return client.send(request, MoreBodyHandlers.ofObject(Document.class));
 }
 
@@ -311,38 +297,36 @@ HttpResponse<Document> downloadHtml(String url) IOException, InterruptedExceptio
     throws IOException, InterruptedException {
   var requestBody = MoreBodyPublishers.ofObject(htmlDoc, MediaType.TEXT_HTML);
   var request = MutableRequest.POST(url, requestBody);
+  
   return client.send(request, responseHandler);
 }
 ```
 
 ## Buffering vs Streaming
 
-`MoreBodyHandlers::ofObject` creates handlers that use `MoreBodySubscribers::ofObject` to obtain 
-the appropriate `BodySubscriber<T>`. Such subscriber typically buffers the whole response body in
-memory then decodes from there. This might not be ideal for you if your responses tend
-to have large bodies or you'd prefer the memory efficiency afforded by decoding from a streaming source. 
-If that fits you, `MoreBodyHandlers::ofDeferredObject` is the way to go.
+`MoreBodyHandlers::ofObject` creates handlers that use `MoreBodySubscribers::ofObject` to obtain the
+appropriate `BodySubscriber<T>` from a chosen adapter. Such subscriber typically loads the whole response
+into memory then decodes from there. If your responses tend to have large bodies, or you'd prefer the
+memory efficiency afforded by streaming sources, `MoreBodyHandlers::ofDeferredObject` is the way to go.
 
 ```java hl_lines="3"
 GitHubUser getUser(String username) throws IOException, InterruptedException {
   var request = MutableRequest.GET("/user/" + username);
   var response = client.send(request, MoreBodyHandlers.ofDeferredObject(GitHubUser.class));
 
-  HttpStatus.requireSuccessful(response);
   return response.body().get();
 }
 ```
 
-Such handler results in an `HttpResponse<Supplier<T>>`. The response is completed as
-soon as all headers are read. If the chosen decoder's `toDeferredObject` is implemented correctly, 
-processing is deferred till you invoke the supplier and the body is decoded from a streaming 
-source, typically an `InputStream` or a `Reader`.
+The handler results in an `HttpResponse<Supplier<T>>`. The response is completed as soon as all headers
+are read. If the chosen decoder's `toDeferredObject` is implemented correctly, processing is deferred
+till you invoke the supplier and the body is decoded from a streaming source, typically an `InputStream`
+or a `Reader`.
 
-The `Decoder` interface has a naive default implementation for `toDeferredObject` that doesn't read from
-a streaming source.
-Here's how it'd be properly implemented for our HTML adapter's decoder.
+The `Decoder` interface has a naive default implementation for `toDeferredObject` that doesn't read
+from a streaming source. Here's how it'd be properly implemented for our HTML adapter's decoder.
 
-```java
+```java hl_lines="9"
 @Override
 public <T> BodySubscriber<Supplier<T>> toDeferredObject(
     TypeRef<T> type, @Nullable MediaType mediaType) {
