@@ -221,6 +221,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
    * @throws IllegalStateException if closed
    */
   public boolean remove(URI uri) throws IOException {
+    requireNonNull(uri);
     return store.remove(key(uri));
   }
 
@@ -230,7 +231,13 @@ public final class HttpCache implements AutoCloseable, Flushable {
    * @throws IllegalStateException if closed
    */
   public boolean remove(HttpRequest request) throws IOException {
-    return store.remove(key(request));
+    requireNonNull(request);
+    try (var viewer = store.view(key(request))) {
+      if (viewer != null && CacheResponseMetadata.decode(viewer.metadata()).matches(request)) {
+        return viewer.removeEntry();
+      }
+    }
+    return false;
   }
 
   /**
