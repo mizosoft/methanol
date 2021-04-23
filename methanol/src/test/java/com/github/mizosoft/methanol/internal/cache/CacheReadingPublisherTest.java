@@ -200,6 +200,11 @@ class CacheReadingPublisherTest {
     }
 
     @Override
+    public boolean removeEntry() {
+      throw new AssertionError();
+    }
+
+    @Override
     public void close() {}
   }
 }

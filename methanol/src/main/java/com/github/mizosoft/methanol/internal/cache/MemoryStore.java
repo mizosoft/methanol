@@ -293,6 +293,15 @@ public final class MemoryStore implements Store {
       }
     }
 
+    boolean versionMatches(int targetVersion) {
+      lock.lock();
+      try {
+        return version == targetVersion;
+      } finally {
+        lock.unlock();
+      }
+    }
+
     void commitEdit(
         MemoryEditor editor, @Nullable ByteBuffer newMetadata, @Nullable ByteBuffer newData) {
       long oldEntrySize;
@@ -343,15 +352,15 @@ public final class MemoryStore implements Store {
     }
   }
 
-  private static final class MemoryViewer implements Viewer {
+  private final class MemoryViewer implements Viewer {
     final Entry entry;
-    private final int snapshotVersion;
+    private final int entryVersion;
     private final ByteBuffer data;
     private final ByteBuffer metadata;
 
-    MemoryViewer(Entry entry, int snapshotVersion, ByteBuffer metadata, ByteBuffer data) {
+    MemoryViewer(Entry entry, int entryVersion, ByteBuffer metadata, ByteBuffer data) {
       this.entry = entry;
-      this.snapshotVersion = snapshotVersion;
+      this.entryVersion = entryVersion;
       this.data = data;
       this.metadata = metadata;
     }
@@ -392,7 +401,18 @@ public final class MemoryStore implements Store {
 
     @Override
     public @Nullable Editor edit() {
-      return entry.edit(snapshotVersion);
+      return entry.edit(entryVersion);
+    }
+
+    @Override
+    public boolean removeEntry() {
+      synchronized (entries) {
+        if (entry.versionMatches(entryVersion) && entries.remove(entry.key, entry)) {
+          evict(entry);
+          return true;
+        }
+      }
+      return false;
     }
 
     @Override
