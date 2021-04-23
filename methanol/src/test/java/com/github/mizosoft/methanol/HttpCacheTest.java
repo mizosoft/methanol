@@ -2816,6 +2816,11 @@ class HttpCacheTest {
     }
 
     @Override
+    public boolean removeEntry() throws IOException {
+      return delegate.removeEntry();
+    }
+
+    @Override
     public void close() {
       delegate.close();
     }
