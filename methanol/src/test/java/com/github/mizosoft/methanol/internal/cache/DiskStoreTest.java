@@ -478,6 +478,18 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreConfig(store = DISK)
+  void removeFromViewerIsAppliedOnDisk(Store store, StoreContext context) throws IOException {
+    setUp(context);
+    writeEntry(store, "e1", "Jynx", "Ditto");
+
+    try (var viewer = view(store, "e1")) {
+      assertTrue(viewer.removeEntry());
+      assertFalse(mockStore.entryFileExists("e1"));
+    }
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK)
   void clearIsAppliedOnDisk(Store store, StoreContext context) throws IOException {
     setUp(context);
     writeEntry(store, "e1", "Jynx", "Ditto");
@@ -647,6 +659,16 @@ class DiskStoreTest {
     assertTrue(store.remove("e1"));
     assertEquals(1, executor.taskCount());
     executor.runNext();
+
+    // Removing an existing entry with a viewer issues an index write
+    setMetadata(store, "e1", "Steve");
+    assertEquals(1, executor.taskCount());
+    executor.runNext();
+    try (var viewer = view(store, "e1")) {
+      viewer.removeEntry();
+      assertEquals(1, executor.taskCount());
+      executor.runNext();
+    }
 
     // Removing a non-existent entry doesn't issue an index write
     assertFalse(store.remove("e2"));
