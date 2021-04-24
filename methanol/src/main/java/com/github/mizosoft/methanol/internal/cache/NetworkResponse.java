@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.cache;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
+import java.net.URI;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -34,12 +35,13 @@ import java.util.function.Consumer;
 
 /** A {@code RawResponse} that came from the network and may be written to cache. */
 public final class NetworkResponse extends PublisherResponse {
-  NetworkResponse(TrackedResponse<?> response, Publisher<List<ByteBuffer>> publisher) {
+  private NetworkResponse(TrackedResponse<?> response, Publisher<List<ByteBuffer>> publisher) {
     super(response, publisher);
   }
 
-  public NetworkResponse writingWith(Editor editor) {
-    return new NetworkResponse(response, new CacheWritingPublisher(publisher, editor));
+  public NetworkResponse writingWith(Editor editor, CacheWritingPublisher.Listener writeListener) {
+    return new NetworkResponse(
+        response, new CacheWritingPublisher(publisher, editor, writeListener));
   }
 
   /** Discards the response body in background. */

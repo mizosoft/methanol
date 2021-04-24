@@ -64,29 +64,74 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
   private final Publisher<List<ByteBuffer>> upstream;
   private final Editor editor;
-
+  private final Listener listener;
   private final AtomicBoolean subscribed = new AtomicBoolean();
 
   public CacheWritingPublisher(Publisher<List<ByteBuffer>> upstream, Editor editor) {
+    this(upstream, editor, DisabledListener.INSTANCE);
+  }
+
+  public CacheWritingPublisher(
+      Publisher<List<ByteBuffer>> upstream, Editor editor, Listener listener) {
     this.upstream = upstream;
     this.editor = editor;
+    this.listener = listener;
   }
 
   @Override
   public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      upstream.subscribe(new CacheWritingSubscriber(editor, subscriber));
+      upstream.subscribe(new CacheWritingSubscriber(subscriber, editor, listener));
     } else {
       FlowSupport.refuse(subscriber, FlowSupport.multipleSubscribersToUnicast());
     }
   }
 
+  public interface Listener {
+    void onWriteSuccess();
+
+    void onWriteFailure();
+
+    default Listener guarded() {
+      return new Listener() {
+        @Override
+        public void onWriteSuccess() {
+          try {
+            Listener.this.onWriteSuccess();
+          } catch (Throwable error) {
+            LOGGER.log(Level.WARNING, "Listener::onWriteSuccess unexpectedly failed", error);
+          }
+        }
+
+        @Override
+        public void onWriteFailure() {
+          try {
+            Listener.this.onWriteFailure();
+          } catch (Throwable error) {
+            LOGGER.log(Level.WARNING, "Listener::onWriteFailure unexpectedly failed", error);
+          }
+        }
+      };
+    }
+  }
+
+  private enum DisabledListener implements Listener {
+    INSTANCE;
+
+    @Override
+    public void onWriteSuccess() {}
+
+    @Override
+    public void onWriteFailure() {}
+  }
+
   private static final class CacheWritingSubscriber implements Subscriber<List<ByteBuffer>> {
     private final CacheWritingSubscription downstreamSubscription;
 
-    CacheWritingSubscriber(Editor editor, Subscriber<? super List<ByteBuffer>> downstream) {
-      downstreamSubscription = new CacheWritingSubscription(editor, downstream);
+    CacheWritingSubscriber(
+        Subscriber<? super List<ByteBuffer>> downstream, Editor editor, Listener listener) {
+      downstreamSubscription = new CacheWritingSubscription(downstream, editor, listener);
     }
 
     @Override
@@ -130,12 +175,13 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       }
     }
 
-    private final Editor editor;
-    private final Upstream upstream = new Upstream();
-    private final ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
-
     @SuppressWarnings("FieldMayBeFinal") // No it may not IDEA!
     private volatile @Nullable Subscriber<? super List<ByteBuffer>> downstream;
+
+    private final Editor editor;
+    private final Listener listener;
+    private final Upstream upstream = new Upstream();
+    private final ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
 
     @SuppressWarnings("FieldMayBeFinal") // No it may not IDEA!!
     private volatile WritingState state = IDLE;
@@ -157,9 +203,12 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     CacheWritingSubscription(
-        Editor editor, @NonNull Subscriber<? super List<ByteBuffer>> downstream) {
-      this.editor = editor;
+        @NonNull Subscriber<? super List<ByteBuffer>> downstream,
+        Editor editor,
+        Listener listener) {
       this.downstream = downstream;
+      this.editor = editor;
+      this.listener = listener.guarded(); // Ensure the listener doesn't throw
     }
 
     @Override
@@ -268,21 +317,31 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     private void commitEdit() {
       if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
+        boolean failedToCommitEdit = false;
         try (editor) {
           editor.commitOnClose();
         } catch (IOException ioe) {
+          failedToCommitEdit = true;
           LOGGER.log(Level.WARNING, "failed to commit the edit", ioe);
+        }
+
+        if (failedToCommitEdit) {
+          listener.onWriteFailure();
+        } else {
+          listener.onWriteSuccess();
         }
       }
     }
 
-    private void discardEdit(@Nullable Throwable cause) {
+    private void discardEdit(@Nullable Throwable writeFailureCause) {
       if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
-        if (cause != null) {
+        if (writeFailureCause != null) {
           LOGGER.log(
               Level.WARNING,
               "aborting the cache operation as a problem occurred while writing",
-              cause);
+              writeFailureCause);
+
+          listener.onWriteFailure();
         }
 
         writeQueue.clear();
