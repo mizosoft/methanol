@@ -678,17 +678,14 @@ public final class DiskStore implements Store {
     private final Iterator<Entry> entryIterator = entries.values().iterator();
 
     private @Nullable Viewer nextViewer;
-    private @Nullable Entry nextEntry;
-
-    /** The entry remove() would evict. */
-    private @Nullable Entry currentEntry;
+    private @Nullable Viewer currentViewer;
 
     ConcurrentViewerIterator() {}
 
     @Override
     @EnsuresNonNullIf(expression = "nextViewer", result = true)
     public boolean hasNext() {
-      return nextViewer != null || findNextEntry();
+      return nextViewer != null || findNextViewer();
     }
 
     @Override
@@ -698,34 +695,26 @@ public final class DiskStore implements Store {
       }
       var viewer = castNonNull(nextViewer);
       nextViewer = null;
-      currentEntry = nextEntry;
-      nextEntry = null;
+      currentViewer = viewer;
       return viewer;
     }
 
     @Override
     public void remove() {
-      var entry = currentEntry;
-      requireState(entry != null, "next() must be called before remove()");
-      currentEntry = null;
-      long stamp = closeLock.readLock();
+      var viewer = currentViewer;
+      requireState(viewer != null, "next() must be called before remove()");
+      currentViewer = null;
       try {
-        if (closed) {
-          return; // Silently fail
-        }
-
-        try {
-          removeEntry(entry, true);
-        } catch (IOException ioe) {
-          LOGGER.log(Level.WARNING, "failed to remove the entry", ioe);
-        }
-      } finally {
-        closeLock.unlockRead(stamp);
+        viewer.removeEntry();
+      } catch (IOException ioe) {
+        LOGGER.log(Level.WARNING, "failed to remove the entry", ioe);
+      } catch (IllegalStateException ignored) {
+        // Fail silently if the store is closed
       }
     }
 
     @EnsuresNonNullIf(expression = "nextViewer", result = true)
-    private boolean findNextEntry() {
+    private boolean findNextViewer() {
       long stamp = closeLock.readLock();
       try {
         if (closed) {
@@ -737,7 +726,6 @@ public final class DiskStore implements Store {
           try {
             var viewer = entry.openViewer(null); // Not expecting a specific key
             if (viewer != null) {
-              nextEntry = entry;
               nextViewer = viewer;
               indexWriteScheduler.trySchedule(); // Update LRU info
               return true;

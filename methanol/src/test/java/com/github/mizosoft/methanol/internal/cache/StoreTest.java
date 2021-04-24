@@ -553,7 +553,7 @@ class StoreTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void removeStaleEntryFromViewer(Store store) throws IOException {
+  void removeFromStaleViewer(Store store) throws IOException {
     writeEntry(store, "e1", "Pikachu", "Ditto");
 
     try (var viewer = view(store, "e1")) {
@@ -671,6 +671,26 @@ class StoreTest {
 
     assertAbsent(store, context, "e2");
     assertEquals(sizeOf("Mew", "Mewtwo"), store.size());
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig
+  void removeFromIteratorPointingAtStaleViewer(Store store) throws IOException {
+    writeEntry(store, "e1", "Ditto", "Jynx");
+
+    var iter = store.iterator();
+    assertTrue(iter.hasNext());
+    try (var viewer = iter.next()) {
+      // Rewrite the entry, making the viewer stale
+      writeEntry(store, "e1", "Pikachu", "Psyduck");
+
+      // Nothing is removed as the iterator is pointing at a stale viewer
+      iter.remove();
+      assertEntryEquals(store, "e1", "Pikachu", "Psyduck");
+
+      // Viewer continues operating normally with stale data
+      assertEntryEquals(viewer, "Ditto", "Jynx");
+    }
   }
 
   @StoreParameterizedTest
