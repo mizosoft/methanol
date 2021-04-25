@@ -31,6 +31,7 @@ import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_FILENA
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_HEADER_SIZE;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_MAGIC;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.LOCK_FILENAME;
+import static com.github.mizosoft.methanol.internal.cache.DiskStore.RIP_PREFIX;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.STORE_VERSION;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.TEMP_ENTRY_FILE_SUFFIX;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.TEMP_INDEX_FILENAME;
@@ -207,13 +208,16 @@ final class MockDiskStore {
 
   void assertHasNoEntriesOnDisk() throws IOException {
     try (var stream = Files.list(directory)) {
-      var entryFiles =
-          stream
-              .filter(
-                  not(f -> f.equals(indexFile) || f.equals(tempIndexFile) || f.equals(lockFile)))
-              .collect(Collectors.toSet());
+      var entryFiles = stream.filter(not(this::isNonEntryFile)).collect(Collectors.toSet());
       assertTrue(entryFiles.isEmpty(), entryFiles::toString);
     }
+  }
+
+  private boolean isNonEntryFile(Path file) {
+    return file.equals(indexFile)
+        || file.equals(tempIndexFile)
+        || file.equals(lockFile)
+        || file.getFileName().toString().startsWith(RIP_PREFIX);
   }
 
   Path entryFile(String key) {
