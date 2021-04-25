@@ -26,6 +26,8 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.net.URL;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
@@ -37,12 +39,11 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 /** Helper class for loading brotli JNI and setting bundled dictionary. */
 final class BrotliLoader {
+  private static final Logger logger = System.getLogger(BrotliLoader.class.getName());
 
   private static final String LINUX = "linux";
   private static final String WINDOWS = "windows";
@@ -76,8 +77,6 @@ final class BrotliLoader {
                 System.getProperty("java.io.tmpdir")));
     LOADER = new BrotliLoader(configuredTempDir);
   }
-
-  private static final Logger LOGGER = Logger.getLogger(BrotliLoader.class.getName());
 
   private final Path tempDir;
   private final String dictionaryPath;
@@ -163,12 +162,12 @@ final class BrotliLoader {
               try {
                 entry.deleteIfExists();
               } catch (IOException ioe) {
-                LOGGER.log(Level.WARNING, "couldn't delete stale entry: " + dir, ioe);
+                logger.log(Level.WARNING, "couldn't delete stale entry: " + dir, ioe);
               }
             }
           });
     } catch (IOException ioe) {
-      LOGGER.log(Level.WARNING, "couldn't perform cleanup routine for stale entries", ioe);
+      logger.log(Level.WARNING, "couldn't perform cleanup routine for stale entries", ioe);
     }
   }
 

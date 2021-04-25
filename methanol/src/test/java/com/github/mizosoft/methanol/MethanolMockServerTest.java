@@ -22,9 +22,9 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.MutableRequest.POST;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
 import static com.github.mizosoft.methanol.testutils.TestUtils.localhostSslContext;
 import static java.net.http.HttpResponse.BodyHandlers.ofByteArray;
 import static java.net.http.HttpResponse.BodyHandlers.ofString;
@@ -36,10 +36,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.Methanol.Interceptor;
-import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.IOException;
@@ -65,9 +64,7 @@ import okio.Buffer;
 import okio.DeflaterSink;
 import okio.GzipSink;
 import okio.Okio;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,20 +72,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(ExecutorExtension.class)
 class MethanolMockServerTest {
   private static final int SERVICE_UNAVAILABLE = 503;
-
-  private static ServiceLoggerHelper loggerHelper;
-
-  @BeforeAll
-  static void turnOffServiceLogger() {
-    // Do not log service loader failures.
-    loggerHelper = new ServiceLoggerHelper();
-    loggerHelper.turnOff();
-  }
-
-  @AfterAll
-  static void resetServiceLogger() {
-    loggerHelper.reset();
-  }
 
   private MockWebServer server;
   private ScheduledExecutorService scheduler;

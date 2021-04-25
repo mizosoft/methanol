@@ -64,10 +64,10 @@ import com.github.mizosoft.methanol.WritableBodyPublisher;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
 import com.github.mizosoft.methanol.testutils.BuffIterator;
+import com.github.mizosoft.methanol.testutils.Logging;
 import com.github.mizosoft.methanol.testutils.MockGzipMember;
 import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
 import com.github.mizosoft.methanol.testutils.RegistryFileTypeDetector;
-import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -111,7 +111,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okio.Buffer;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -125,6 +124,9 @@ import reactor.core.publisher.Flux;
 
 @Timeout(60)
 class IntegrationTests {
+  static {
+    Logging.disable("com.github.mizosoft.methanol.internal.spi.ServiceCache");
+  }
 
   private static final Base64.Decoder BASE64_DEC = Base64.getDecoder();
 
@@ -195,20 +197,6 @@ class IntegrationTests {
         .addMoments(1, BruhMoment.newBuilder().setMessage("bbruuuhhh"))
         .addMoments(2, BruhMoment.newBuilder().setMessage("bbrrruuuuuuuhhhhhhhh!!??"))
         .build();
-  }
-
-  private static ServiceLoggerHelper loggerHelper;
-
-  @BeforeAll
-  static void turnOffServiceLogger() {
-    // Do not log service loader failures.
-    loggerHelper = new ServiceLoggerHelper();
-    loggerHelper.turnOff();
-  }
-
-  @AfterAll
-  static void resetServiceLogger() {
-    loggerHelper.reset();
   }
 
   @BeforeAll
