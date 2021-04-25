@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.cache.CacheInterceptor;
+import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
@@ -59,6 +60,7 @@ import com.github.mizosoft.methanol.testing.StoreConfig;
 import com.github.mizosoft.methanol.testing.StoreContext;
 import com.github.mizosoft.methanol.testing.StoreExtension;
 import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
+import com.github.mizosoft.methanol.testutils.Logging;
 import com.github.mizosoft.methanol.testutils.MockClock;
 import com.github.mizosoft.methanol.testutils.TestException;
 import java.io.IOException;
@@ -118,6 +120,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 @Timeout(value = 5, unit = TimeUnit.MINUTES)
 @ExtendWith({MockWebServerExtension.class, StoreExtension.class, ExecutorExtension.class})
 class HttpCacheTest {
+  static {
+    Logging.disable(HttpCache.class, DiskStore.class, CacheWritingPublisher.class);
+  }
+
   private static final int MAX_RETRY_COUNT = 60;
 
   private Executor threadPool;

@@ -39,6 +39,8 @@ import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
@@ -61,8 +63,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -71,7 +71,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * as appropriate.
  */
 public final class CacheInterceptor implements Interceptor {
-  private static final Logger LOGGER = Logger.getLogger(CacheInterceptor.class.getName());
+  private static final Logger logger = System.getLogger(CacheInterceptor.class.getName());
 
   /**
    * Fields that can be added implicitly by HttpClient's own filters. This can happen if an
@@ -156,7 +156,7 @@ public final class CacheInterceptor implements Interceptor {
       // entry is committed.
       networkResponse.discard(handlerExecutor);
     } else {
-      LOGGER.log(Level.WARNING, "asynchronous revalidation failure", error);
+      logger.log(Level.WARNING, "asynchronous revalidation failure", error);
     }
   }
 

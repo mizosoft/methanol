@@ -38,7 +38,9 @@ class StoreTesting {
   private StoreTesting() {}
 
   static void assertUnreadable(Store store, String key) throws IOException {
-    assertNull(store.view(key), "expected entry <" + key + "> to be unreadable");
+    try (var viewer = store.view(key)) {
+      assertNull(viewer, "expected entry <" + key + "> to be unreadable");
+    }
   }
 
   static void assertAbsent(Store store, StoreContext context, String... keys) throws IOException {

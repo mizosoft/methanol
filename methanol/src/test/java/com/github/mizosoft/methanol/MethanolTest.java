@@ -36,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
 import java.net.Authenticator;
 import java.net.CookieManager;
 import java.net.InetSocketAddress;
@@ -56,26 +55,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.UnaryOperator;
 import javax.net.ssl.SSLContext;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class MethanolTest {
-
-  private static ServiceLoggerHelper loggerHelper;
-
-  @BeforeAll
-  static void turnOffServiceLogger() {
-    // Do not log service loader failures.
-    loggerHelper = new ServiceLoggerHelper();
-    loggerHelper.turnOff();
-  }
-
-  @AfterAll
-  static void resetServiceLogger() {
-    loggerHelper.reset();
-  }
-
   @Test
   void defaultExtraFields() {
     var client = Methanol.create();

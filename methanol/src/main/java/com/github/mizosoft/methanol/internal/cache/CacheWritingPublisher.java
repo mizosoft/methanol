@@ -32,6 +32,8 @@ import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
@@ -41,21 +43,19 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A {@code Publisher} operator that writes the body stream into cache while it's being forwarded to
+ * A {@code Publisher} that writes the body stream into cache while it's being forwarded to
  * downstream. The publisher prefers writing the whole stream if downstream cancels the subscription
  * midway transmission. Writing and forwarding downstream items are advanced independently at
  * different rates. This affords the downstream not having to unnecessarily wait for the whole body
  * to be cached. If an error occurs while writing, the entry is silently discarded.
  */
 public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> {
-  private static final Logger LOGGER = Logger.getLogger(CacheWritingPublisher.class.getName());
+  private static final Logger logger = System.getLogger(CacheWritingPublisher.class.getName());
 
   /** Whether to propagate cancellation by downstream to upstream. Intended for TCK tests. */
   private static final boolean PROPAGATE_CANCELLATION =
@@ -100,7 +100,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
           try {
             Listener.this.onWriteSuccess();
           } catch (Throwable error) {
-            LOGGER.log(Level.WARNING, "Listener::onWriteSuccess unexpectedly failed", error);
+            logger.log(Level.WARNING, "exception thrown by Listener::onWriteSuccess", error);
           }
         }
 
@@ -109,7 +109,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
           try {
             Listener.this.onWriteFailure();
           } catch (Throwable error) {
-            LOGGER.log(Level.WARNING, "Listener::onWriteFailure unexpectedly failed", error);
+            logger.log(Level.WARNING, "exception thrown by Listener::onWriteFailure", error);
           }
         }
       };
@@ -322,7 +322,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
           editor.commitOnClose();
         } catch (IOException ioe) {
           failedToCommitEdit = true;
-          LOGGER.log(Level.WARNING, "failed to commit the edit", ioe);
+          logger.log(Level.WARNING, "Editor::close failure while committing edit", ioe);
         }
 
         if (failedToCommitEdit) {
@@ -336,9 +336,9 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private void discardEdit(@Nullable Throwable writeFailureCause) {
       if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
         if (writeFailureCause != null) {
-          LOGGER.log(
+          logger.log(
               Level.WARNING,
-              "aborting the cache operation as a problem occurred while writing",
+              "aborting cache edit as a problem occurred while writing",
               writeFailureCause);
 
           listener.onWriteFailure();
@@ -348,7 +348,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         try {
           editor.close();
         } catch (IOException ioe) {
-          LOGGER.log(Level.WARNING, "failed to discard the edit", ioe);
+          logger.log(Level.WARNING, "Editor::close failure while aborting edit", ioe);
         }
       }
     }
