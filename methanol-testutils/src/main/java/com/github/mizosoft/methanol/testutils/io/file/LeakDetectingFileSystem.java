@@ -22,10 +22,9 @@
 
 package com.github.mizosoft.methanol.testutils.io.file;
 
+import com.github.mizosoft.methanol.testutils.io.file.ResourceRecord.ResourceType;
 import java.io.Closeable;
 import java.io.IOException;
-import java.lang.StackWalker.Option;
-import java.lang.StackWalker.StackFrame;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryStream;
@@ -37,13 +36,10 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 /**
  * A {@code FileSystem} that wraps another to detect unclosed resources when the file system is
@@ -51,46 +47,9 @@ import java.util.stream.Collectors;
  * DirectoryStreams}. An {@code IllegalStateException} is thrown when at least one of such resources
  * isn't closed prior to closing this file system.
  */
-public final class LeakDetectingFileSystem extends CustomFileSystem {
+public final class LeakDetectingFileSystem extends FileSystemWrapper {
   private final Map<Closeable, ResourceRecord> resources;
   private final AtomicBoolean closed = new AtomicBoolean();
-
-  private enum ResourceType {
-    FILE_CHANNEL,
-    ASYNC_FILE_CHANNEL,
-    DIRECTORY_STREAM
-  }
-
-  private static final class ResourceRecord {
-    final Path path;
-    final ResourceType type;
-    final List<StackFrame> trace;
-
-    ResourceRecord(Path path, ResourceType type) {
-      this.path = path;
-      this.type = type;
-
-      var trace =
-          StackWalker.getInstance(Option.RETAIN_CLASS_REFERENCE)
-              .walk(stream -> stream.collect(Collectors.toList()));
-      // Discard this constructor's frame
-      if (!trace.isEmpty() && trace.get(0).getDeclaringClass() == ResourceRecord.class) {
-        trace.remove(0);
-      }
-      this.trace = Collections.unmodifiableList(trace);
-    }
-
-    @Override
-    public String toString() {
-      return String.format(
-          "<%s>: %s, trace: %n%s",
-          path,
-          type,
-          trace.stream()
-              .map(Objects::toString)
-              .collect(Collectors.joining(System.lineSeparator(), "\tat ", "")));
-    }
-  }
 
   private LeakDetectingFileSystem(FileSystem delegate) {
     super(delegate);
@@ -124,15 +83,9 @@ public final class LeakDetectingFileSystem extends CustomFileSystem {
               new IllegalStateException(
                   "resource leaks detected; "
                       + "see suppressed exceptions for leaked resources & their creation sites");
-          leakedResources.forEach(
-              record -> {
-                var tracedLeak = new Throwable("<" + record.path + ">: " + record.type);
-                tracedLeak.setStackTrace(
-                    record.trace.stream()
-                        .map(StackFrame::toStackTraceElement)
-                        .toArray(StackTraceElement[]::new));
-                leaksDetected.addSuppressed(tracedLeak);
-              });
+          leakedResources.stream()
+              .map(ResourceRecord::toThrowableStackTrace)
+              .forEach(leaksDetected::addSuppressed);
 
           throw leaksDetected;
         }
@@ -141,7 +94,7 @@ public final class LeakDetectingFileSystem extends CustomFileSystem {
   }
 
   @Override
-  CustomFileSystemProvider wrap(FileSystemProvider provider) {
+  FileSystemProviderWrapper wrap(FileSystemProvider provider) {
     return new LeakDetectingFileSystemProvider(provider);
   }
 
@@ -150,7 +103,7 @@ public final class LeakDetectingFileSystem extends CustomFileSystem {
   }
 
   /** A {@code FileSystemProvider} that tracks created resources. */
-  private static final class LeakDetectingFileSystemProvider extends CustomFileSystemProvider {
+  private static final class LeakDetectingFileSystemProvider extends FileSystemProviderWrapper {
     final Map<Closeable, ResourceRecord> resources =
         Collections.synchronizedMap(new LinkedHashMap<>());
 
@@ -174,7 +127,7 @@ public final class LeakDetectingFileSystem extends CustomFileSystem {
               }
             }
           };
-      resources.put(channel, new ResourceRecord(path, ResourceType.FILE_CHANNEL));
+      resources.put(channel, new ResourceRecord(path, ResourceType.FILE_CHANNEL, options));
       return channel;
     }
 
@@ -201,7 +154,7 @@ public final class LeakDetectingFileSystem extends CustomFileSystem {
               }
             }
           };
-      resources.put(channel, new ResourceRecord(path, ResourceType.ASYNC_FILE_CHANNEL));
+      resources.put(channel, new ResourceRecord(path, ResourceType.ASYNC_FILE_CHANNEL, options));
       return channel;
     }
 
@@ -223,7 +176,7 @@ public final class LeakDetectingFileSystem extends CustomFileSystem {
               }
             }
           };
-      resources.put(stream, new ResourceRecord(dir, ResourceType.DIRECTORY_STREAM));
+      resources.put(stream, new ResourceRecord(dir, ResourceType.DIRECTORY_STREAM, Set.of()));
       return stream;
     }
 
@@ -233,7 +186,7 @@ public final class LeakDetectingFileSystem extends CustomFileSystem {
     }
 
     @Override
-    CustomFileSystem wrap(FileSystem fileSystem) {
+    FileSystemWrapper wrap(FileSystem fileSystem) {
       return new LeakDetectingFileSystem(fileSystem, this);
     }
   }

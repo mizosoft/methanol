@@ -39,7 +39,7 @@ import java.util.stream.StreamSupport;
  * A {@code FileSystem} wrapper that ensures created {@code Paths} and {@code FileSystems} are all
  * associated with a wrapped {@code FileSystemProvider}.
  */
-abstract class CustomFileSystem extends ForwardingFileSystem {
+abstract class FileSystemWrapper extends ForwardingFileSystem {
   /*
    * This is a bit tricky: anything that returns Path, FileSystem or FileSystemProvider must be
    * associated with our wrapped provider. This ensures all possible transformations to
@@ -47,20 +47,20 @@ abstract class CustomFileSystem extends ForwardingFileSystem {
    * relay to us. This applies recursively as well.
    */
 
-  private final CustomFileSystemProvider provider;
+  private final FileSystemProviderWrapper provider;
 
-  CustomFileSystem(FileSystem delegate) {
+  FileSystemWrapper(FileSystem delegate) {
     super(delegate);
     provider = wrap(delegate.provider());
   }
 
-  CustomFileSystem(FileSystem delegate, CustomFileSystemProvider provider) {
+  FileSystemWrapper(FileSystem delegate, FileSystemProviderWrapper provider) {
     super(delegate);
     this.provider = provider;
   }
 
   @Override
-  public CustomFileSystemProvider provider() {
+  public FileSystemProviderWrapper provider() {
     return provider;
   }
 
@@ -77,10 +77,10 @@ abstract class CustomFileSystem extends ForwardingFileSystem {
     return provider.wrap(super.getPath(first, more));
   }
 
-  abstract CustomFileSystemProvider wrap(FileSystemProvider provider);
+  abstract FileSystemProviderWrapper wrap(FileSystemProvider provider);
 
-  abstract static class CustomFileSystemProvider extends ForwardingFileSystemProvider {
-    CustomFileSystemProvider(FileSystemProvider delegate) {
+  abstract static class FileSystemProviderWrapper extends ForwardingFileSystemProvider {
+    FileSystemProviderWrapper(FileSystemProvider delegate) {
       super(delegate);
     }
 
@@ -113,7 +113,7 @@ abstract class CustomFileSystem extends ForwardingFileSystem {
         @Override
         public Iterator<Path> iterator() {
           return StreamSupport.stream(this.spliterator(), false)
-              .<Path>map(CustomFileSystemProvider.this::wrap)
+              .<Path>map(FileSystemProviderWrapper.this::wrap)
               .iterator();
         }
       };
@@ -124,17 +124,17 @@ abstract class CustomFileSystem extends ForwardingFileSystem {
       return wrap(super.readSymbolicLink(link));
     }
 
-    CustomPath wrap(Path path) {
-      return new CustomPath(path, wrap(path.getFileSystem()));
+    PathWrapper wrap(Path path) {
+      return new PathWrapper(path, wrap(path.getFileSystem()));
     }
 
-    abstract CustomFileSystem wrap(FileSystem fileSystem);
+    abstract FileSystemWrapper wrap(FileSystem fileSystem);
   }
 
-  static class CustomPath extends ForwardingPath {
-    private final CustomFileSystem fileSystem;
+  static class PathWrapper extends ForwardingPath {
+    private final FileSystemWrapper fileSystem;
 
-    CustomPath(Path delegate, CustomFileSystem fileSystem) {
+    PathWrapper(Path delegate, FileSystemWrapper fileSystem) {
       super(delegate);
       this.fileSystem = fileSystem;
     }
