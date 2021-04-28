@@ -136,7 +136,7 @@ public final class Methanol extends HttpClient {
     var chainInterceptors = new ArrayList<>(interceptors);
     chainInterceptors.add(
         new RequestRewritingInterceptor(
-            baseUri, requestTimeout, defaultHeaders, autoAcceptEncoding));
+            baseUri, defaultHeaders, requestTimeout, autoAcceptEncoding));
     if (autoAcceptEncoding) {
       chainInterceptors.add(AutoDecompressingInterceptor.INSTANCE);
     }
@@ -309,7 +309,7 @@ public final class Methanol extends HttpClient {
       throws IOException, InterruptedException {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
-    return InterceptorChain.sendWithInterceptors(backend, request, bodyHandler, chainInterceptors);
+    return new InterceptorChain<>(backend, bodyHandler, null, chainInterceptors).forward(request);
   }
 
   @Override
@@ -317,8 +317,8 @@ public final class Methanol extends HttpClient {
       HttpRequest request, BodyHandler<T> bodyHandler) {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
-    return InterceptorChain.sendAsyncWithInterceptors(
-        backend, request, bodyHandler, null, chainInterceptors);
+    return new InterceptorChain<>(backend, bodyHandler, null, chainInterceptors)
+        .forwardAsync(request);
   }
 
   @Override
@@ -328,8 +328,8 @@ public final class Methanol extends HttpClient {
       @Nullable PushPromiseHandler<T> pushPromiseHandler) {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
-    return InterceptorChain.sendAsyncWithInterceptors(
-        backend, request, bodyHandler, pushPromiseHandler, chainInterceptors);
+    return new InterceptorChain<>(backend, bodyHandler, pushPromiseHandler, chainInterceptors)
+        .forwardAsync(request);
   }
 
   private static URI validateUri(URI uri) {
@@ -719,7 +719,7 @@ public final class Methanol extends HttpClient {
     private final List<Interceptor> interceptors;
     private final int currentInterceptorIndex;
 
-    private InterceptorChain(
+    InterceptorChain(
         HttpClient backend,
         BodyHandler<T> bodyHandler,
         @Nullable PushPromiseHandler<T> pushPromiseHandler,
@@ -806,25 +806,6 @@ public final class Methanol extends HttpClient {
       return new InterceptorChain<>(
           backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex + 1);
     }
-
-    static <T> HttpResponse<T> sendWithInterceptors(
-        HttpClient backend,
-        HttpRequest request,
-        BodyHandler<T> bodyHandler,
-        List<Interceptor> interceptors)
-        throws IOException, InterruptedException {
-      return new InterceptorChain<>(backend, bodyHandler, null, interceptors).forward(request);
-    }
-
-    static <T> CompletableFuture<HttpResponse<T>> sendAsyncWithInterceptors(
-        HttpClient backend,
-        HttpRequest request,
-        BodyHandler<T> bodyHandler,
-        @Nullable PushPromiseHandler<T> pushPromiseHandler,
-        List<Interceptor> interceptors) {
-      return new InterceptorChain<>(backend, bodyHandler, pushPromiseHandler, interceptors)
-          .forwardAsync(request);
-    }
   }
 
   /** Rewrites requests as configured. */
@@ -836,8 +817,8 @@ public final class Methanol extends HttpClient {
 
     RequestRewritingInterceptor(
         Optional<URI> baseUri,
-        Optional<Duration> requestTimeout,
         HttpHeaders defaultHeaders,
+        Optional<Duration> requestTimeout,
         boolean autoAcceptEncoding) {
       this.baseUri = baseUri;
       this.requestTimeout = requestTimeout;
@@ -1109,12 +1090,7 @@ public final class Methanol extends HttpClient {
         Handlers.handleAsync(response, BodyHandlers.discarding(), handlerExecutor);
 
         // Follow redirected request
-        return new Redirector(
-                redirectedRequest,
-                sendAdapter,
-                redirectCount,
-                null, /* previousResponse */
-                response)
+        return new Redirector(redirectedRequest, sendAdapter, redirectCount, null, response)
             .sendAndFollowUp();
       }
 
