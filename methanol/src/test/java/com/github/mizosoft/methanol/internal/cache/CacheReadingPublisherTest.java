@@ -1,13 +1,37 @@
+/*
+ * Copyright (c) 2021 Moataz Abdelnasser
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
+import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntry;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.time.Duration.ofSeconds;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -19,23 +43,25 @@ import com.github.mizosoft.methanol.testing.StoreExtension;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.io.IOException;
-import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.awaitility.Awaitility;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
 class CacheReadingPublisherTest {
+  static {
+    Awaitility.setDefaultTimeout(ofSeconds(30));
+  }
+
   @ExecutorParameterizedTest
   @ExecutorConfig
   @StoreConfig(store = MEMORY)
@@ -51,21 +77,20 @@ class CacheReadingPublisherTest {
   }
 
   private void testCachingAString(Executor executor, Store store) throws IOException {
-    try (var editor = notNull(store.edit("e1"))) {
-      editor.writeAsync(0, UTF_8.encode("Cache me please!")).join();
-      editor.commitOnClose();
-    }
+    writeEntry(store, "e1", "", "Cache me please!");
 
-    var publisher = new CacheReadingPublisher(notNull(store.view("e1")), executor);
+    var publisher = new CacheReadingPublisher(view(store, "e1"), executor);
     var subscriber = BodySubscribers.ofString(UTF_8);
     publisher.subscribe(subscriber);
-    assertEquals("Cache me please!", getBody(subscriber));
+    assertThat(subscriber.getBody())
+        .succeedsWithin(ofSeconds(20))
+        .isEqualTo("Cache me please!");
   }
 
   @ExecutorParameterizedTest
   @ExecutorConfig
   void failureInAsyncRead(Executor executor) {
-    var failedViewer = new TestViewer() {
+    var failingViewer = new TestViewer() {
       @Override
       public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
         var future = new CompletableFuture<Integer>();
@@ -75,50 +100,51 @@ class CacheReadingPublisherTest {
       }
     };
 
-    var publisher = new CacheReadingPublisher(failedViewer, executor);
-    var subscriber = BodySubscribers.ofByteArray();
+    var publisher = new CacheReadingPublisher(failingViewer, executor);
+    var subscriber = new TestSubscriber<List<ByteBuffer>>();
     publisher.subscribe(subscriber);
 
-    var cause = assertThrows(CompletionException.class, toFuture(subscriber)::join).getCause();
-    assertEquals(TestException.class, cause.getClass());
+    subscriber.awaitComplete();
+    assertEquals(1, subscriber.errors);
+    assertThat(subscriber.errors).isOne();
+    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
   }
 
   /** No new reads should be scheduled when the subscription is cancelled. */
   @ExecutorParameterizedTest
   @ExecutorConfig
   void cancelSubscriptionWhileReadIsPending(Executor executor) throws InterruptedException {
-    var firstRead = new CountDownLatch(1);
-    var subscriptionCancelled = new CountDownLatch(1);
+    var firstReadLatch = new CountDownLatch(1);
+    var readAsyncFuture = new CompletableFuture<Integer>();
     var viewer = new TestViewer() {
-      private final AtomicInteger readAsyncCalls = new AtomicInteger();
+      final AtomicInteger readAsyncCalls = new AtomicInteger();
 
       @Override
       public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
         readAsyncCalls.incrementAndGet();
-        firstRead.countDown();
-        return CompletableFuture.supplyAsync(
-            () -> {
-              awaitUninterruptibly(subscriptionCancelled);
-              int count = dst.remaining();
-              dst.position(dst.limit()); // Simulate reading
-              return count;
-            });
+        firstReadLatch.countDown();
+        return readAsyncFuture;
       }
     };
 
     var publisher = new CacheReadingPublisher(viewer, executor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
-    publisher.subscribe(BodySubscribers.fromSubscriber(subscriber));
-    awaitUninterruptibly(firstRead);
+    publisher.subscribe(subscriber);
+    awaitUninterruptibly(firstReadLatch);
     subscriber.awaitSubscribe();
     subscriber.subscription.cancel();
-    subscriptionCancelled.countDown();
 
-    TimeUnit.MILLISECONDS.sleep(100);
+    // Trigger CacheReadingPublisher's read completion callback
+    readAsyncFuture.complete(null);
+
+    // No further reads are scheduled
     assertEquals(1, viewer.readAsyncCalls.get());
-    assertEquals(0, subscriber.nexts);
-    assertEquals(0, subscriber.completes);
-    assertEquals(0, subscriber.errors);
+    assertThat(viewer.readAsyncCalls.get()).isEqualTo(1);
+
+    // The subscriber receives no signals
+    assertThat(subscriber.nexts).isZero();
+    assertThat(subscriber.completes).isZero();
+    assertThat(subscriber.errors).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -136,7 +162,7 @@ class CacheReadingPublisherTest {
     subscriber.request = 0L; // Request nothing
     publisher.subscribe(subscriber);
     subscriber.awaitComplete();
-    assertEquals(0, subscriber.nexts);
+    assertThat(subscriber.nexts).isEqualTo(0);
   }
 
   @Test
@@ -153,22 +179,13 @@ class CacheReadingPublisherTest {
 
     var secondSubscriber = new TestSubscriber<>();
     publisher.subscribe(secondSubscriber);
-    secondSubscriber.awaitComplete();
-    assertEquals(1, secondSubscriber.errors);
-    assertThrows(IllegalStateException.class, () -> { throw secondSubscriber.lastError; });
+    secondSubscriber.awaitError();
+    assertThat(secondSubscriber.lastError).isInstanceOf(IllegalStateException.class);
   }
 
-  private static <T> @NonNull T notNull(T value) {
-    assertNotNull(value);
-    return value;
-  }
+  @Test
+  void bufferWithZeroSize() {
 
-  private static <T> CompletableFuture<T> toFuture(BodySubscriber<T> s) {
-    return s.getBody().toCompletableFuture();
-  }
-
-  private static <T> T getBody(BodySubscriber<T> s) {
-    return toFuture(s).join();
   }
 
   private abstract static class TestViewer implements Viewer {
