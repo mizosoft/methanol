@@ -36,7 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.net.ssl.SSLContext;
-import okhttp3.mockwebserver.MockWebServer;
+import mockwebserver3.MockWebServer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
