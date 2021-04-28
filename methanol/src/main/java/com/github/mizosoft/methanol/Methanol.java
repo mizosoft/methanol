@@ -419,8 +419,10 @@ public final class Methanol extends HttpClient {
       Chain<T> withPushPromiseHandler(@Nullable PushPromiseHandler<T> pushPromiseHandler);
 
       /** Returns a new chain that uses given handlers, possibly targeting another response type. */
-      <U> Chain<U> with(
-          BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler);
+      default <U> Chain<U> with(
+          BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler) {
+        throw new UnsupportedOperationException();
+      }
 
       /**
        * Forwards the request to the next interceptor, or to the client's backend if called by the
