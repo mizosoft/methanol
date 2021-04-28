@@ -498,12 +498,12 @@ public final class CacheInterceptor implements Interceptor {
 
         // If neither cache nor network was applicable, this is an unsatisfiable request.
         // So serve a 504 Gateway Timeout response as per rfc7234 5.2.1.7.
-        cache.onStatus(request.uri(), CacheStatus.UNSATISFIABLE_REQUEST);
+        cache.onStatus(request.uri(), CacheStatus.UNSATISFIABLE);
         return NetworkResponse.from(
             new ResponseBuilder<>()
                 .uri(request.uri())
                 .request(request)
-                .cacheStatus(CacheStatus.UNSATISFIABLE_REQUEST)
+                .cacheStatus(CacheStatus.UNSATISFIABLE)
                 .statusCode(HTTP_GATEWAY_TIMEOUT)
                 .version(Version.HTTP_1_1)
                 .timeRequestSent(requestTime)
