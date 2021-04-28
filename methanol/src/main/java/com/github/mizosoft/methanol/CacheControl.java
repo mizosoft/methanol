@@ -44,6 +44,7 @@ import static com.github.mizosoft.methanol.internal.Utils.validateToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Predicate.not;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import java.net.http.HttpHeaders;
@@ -57,17 +58,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A group of HTTP cache directives as defined by the <a
- * href="https://tools.ietf.org/html/rfc7234#section-5.2">{@code Cache-Control}</a> header. {@code
- * CacheControl} provides type-safe accessors for the directives mentioned in RFC 7234.
- * Additionally, there's support for the {@code stale-while-revalidate} & {@code stale-if-error}
- * extensions specified in <a href="https://tools.ietf.org/html/rfc5861">RFC 5861</a>. Other {@code
- * Cache-Control} extensions can be accessed using the {@link #directives()} map.
+ * A group of <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control">
+ * cache directives</a>.
+ *
+ * <p>{@code CacheControl} provides type-safe accessors for the directives specified in <a
+ * href="https://tools.ietf.org/html/rfc7234#section-5.2">RFC 7234</a>. Additionally, there's
+ * support for the {@code stale-while-revalidate} & {@code stale-if-error} extensions specified in
+ * <a href="https://tools.ietf.org/html/rfc5861">RFC 5861</a>. Other {@code Cache-Control}
+ * extensions can be accessed using the {@link #directives()} map.
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class CacheControl {
@@ -116,8 +118,8 @@ public final class CacheControl {
   }
 
   /**
-   * Returns a map of all the directives and their arguments. Directives that don't have arguments
-   * are mapped to an empty string.
+   * Returns a map of all directives and their arguments. Directives that don't have arguments are
+   * mapped to an empty string.
    */
   public Map<String, String> directives() {
     return directives;
@@ -276,11 +278,15 @@ public final class CacheControl {
     }
   }
 
-  /** Parses the cache directives specified by the given headers. */
+  /**
+   * Parses the cache directives specified by the given headers.
+   *
+   * @throws IllegalArgumentException if the given headers have any invalid cache directives
+   */
   public static CacheControl parse(HttpHeaders headers) {
     return CacheControl.parse(
         headers.allValues("Cache-Control").stream()
-            .filter(Predicate.not(String::isBlank))
+            .filter(not(String::isBlank))
             .collect(Collectors.toUnmodifiableList()));
   }
 
@@ -338,7 +344,7 @@ public final class CacheControl {
       if (directive != null) {
         var argumentValue = entry.getValue();
         requireArgument(
-            !(directive.requiresArgument() && argumentValue.isEmpty()),
+            !(directive.requiresArgument && argumentValue.isEmpty()),
             "directive %s requires an argument",
             directive.token);
         knownDirectives.put(directive, convertArgument(directive, argumentValue));
@@ -347,7 +353,7 @@ public final class CacheControl {
     return Collections.unmodifiableMap(knownDirectives);
   }
 
-  /** Converts the string argument to the typesafe argument corresponding to the directive. */
+  /** Converts a string argument to the typesafe argument corresponding to the directive. */
   private static @Nullable Object convertArgument(KnownDirective directive, String argumentValue) {
     switch (directive) {
       case MAX_STALE:
@@ -402,10 +408,6 @@ public final class CacheControl {
       this.requiresArgument = requiresArgument;
     }
 
-    boolean requiresArgument() {
-      return requiresArgument;
-    }
-
     static @Nullable KnownDirective get(String name) {
       for (var directive : DIRECTIVES) {
         if (directive.token.equalsIgnoreCase(name)) {
@@ -417,9 +419,10 @@ public final class CacheControl {
   }
 
   /**
-   * A builder of {@code CacheControl} instances for cache directives pertaining to requests.
-   * Methods that accept a {@code Duration} will drop any precision finer than that of a second,
-   * which is the only precision allowed by cache directives representing durations.
+   * A builder of {@code CacheControl} instances declaring request cache directives.
+   *
+   * <p>Methods that accept a {@code Duration} drop any precision finer than that of a second, which
+   * is the only precision allowed by cache directives representing durations.
    */
   public static final class Builder {
     private final Map<String, String> directives = new LinkedHashMap<>();
@@ -466,7 +469,7 @@ public final class CacheControl {
     /**
      * Sets the {@code min-fresh} directive to the given duration.
      *
-     * @throws IllegalArgumentException If {@code maxAge} doesn't contain a positive number of
+     * @throws IllegalArgumentException If {@code minFresh} doesn't contain a positive number of
      *     seconds
      */
     public Builder minFresh(Duration minFresh) {
@@ -476,7 +479,7 @@ public final class CacheControl {
     /**
      * Sets the {@code max-stale} directive to the given duration.
      *
-     * @throws IllegalArgumentException If {@code maxAge} doesn't contain a positive number of
+     * @throws IllegalArgumentException If {@code maxStale} doesn't contain a positive number of
      *     seconds
      */
     public Builder maxStale(Duration maxStale) {
@@ -491,7 +494,7 @@ public final class CacheControl {
     /**
      * Sets the {@code stale-if-error} directive to the given duration.
      *
-     * @throws IllegalArgumentException If {@code maxAge} doesn't contain a positive number of
+     * @throws IllegalArgumentException If {@code staleIfError} doesn't contain a positive number of
      *     seconds
      */
     public Builder staleIfError(Duration staleIfError) {
@@ -508,7 +511,7 @@ public final class CacheControl {
       return put(NO_STORE);
     }
 
-    /** Sets the {@code no-store} directive. */
+    /** Sets the {@code no-transform} directive. */
     public Builder noTransform() {
       return put(NO_TRANSFORM);
     }
@@ -519,6 +522,7 @@ public final class CacheControl {
     }
 
     private Builder putDuration(KnownDirective directive, Duration duration) {
+      requireNonNull(duration);
       var truncated = duration.truncatedTo(ChronoUnit.SECONDS);
       requireNonNegativeDuration(truncated);
       knownDirectives.put(directive, truncated);
@@ -534,9 +538,8 @@ public final class CacheControl {
 
     /** Builds a new {@code Cache-Control}. */
     public CacheControl build() {
-      return new CacheControl(
-          new LinkedHashMap<>(directives), // Copy directives map as it's stored
-          knownDirectives);
+      // Make a defensive directives copy
+      return new CacheControl(new LinkedHashMap<>(directives), knownDirectives);
     }
   }
 }
