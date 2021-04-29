@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import com.github.mizosoft.methanol.TrackedResponse;
+import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.EOFException;
 import java.io.IOException;

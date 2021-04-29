@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.internal.cache.DateUtils.formatHttpDate;
-import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.HIT;
+import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.HIT;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.ResponseVerification.verifying;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;

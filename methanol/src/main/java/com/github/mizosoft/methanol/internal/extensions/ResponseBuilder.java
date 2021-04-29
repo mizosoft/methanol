@@ -3,9 +3,7 @@ package com.github.mizosoft.methanol.internal.extensions;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 
-import com.github.mizosoft.methanol.CacheAwareResponse;
-import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
-import com.github.mizosoft.methanol.TrackedResponse;
+import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;

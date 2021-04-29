@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import com.github.mizosoft.methanol.TrackedResponse;
+import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;

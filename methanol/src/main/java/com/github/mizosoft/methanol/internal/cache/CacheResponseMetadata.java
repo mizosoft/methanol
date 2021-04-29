@@ -5,7 +5,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import com.github.mizosoft.methanol.TrackedResponse;
+import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
