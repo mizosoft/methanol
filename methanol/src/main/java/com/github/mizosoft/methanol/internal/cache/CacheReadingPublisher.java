@@ -31,6 +31,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
   @Override
   public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
+    // TODO the response body publisher is supposed to be unicast
     new CacheReadingSubscription(subscriber, executor, viewer).signal(true);
   }
 
