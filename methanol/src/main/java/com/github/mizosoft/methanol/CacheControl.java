@@ -51,12 +51,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * A group of HTTP cache directives as defined by the {@code Cache-Control} header. This class
- * provides type-safe accessors for the directives mentioned in <a
- * href="https://tools.ietf.org/html/rfc7234#section-5.2">RFC 7234 Section 5.2</a>. Other directives
- * ({@code Cache-Control} extensions) can be accessed using the {@link #directives()} map.
- */
+/** A group of cache directives for one or more values of a {@code Cache-Control} header. */
 public final class CacheControl {
   private static final int ABSENT_INT = -1;
 
@@ -99,10 +94,7 @@ public final class CacheControl {
     privateFields = getFieldSetIfPresent(standardDirectives, PRIVATE);
   }
 
-  /**
-   * Returns a map of all directives and their arguments. Directives that don't have arguments will
-   * have an empty string value.
-   */
+  /** Returns all cache directives. */
   public Map<String, String> directives() {
     return directives;
   }
