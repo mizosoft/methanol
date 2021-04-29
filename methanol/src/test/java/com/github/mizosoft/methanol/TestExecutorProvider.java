@@ -14,11 +14,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
@@ -27,19 +24,12 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-/** An extension that provides sync and async {@code Executors} and terminates them after tests. */
+/** An extensions that provides sync and async {@code Executors} and terminates them after tests. */
 public final class TestExecutorProvider
-    implements ArgumentsProvider,
-        BeforeAllCallback,
-        BeforeEachCallback,
-        AfterEachCallback,
-        AfterAllCallback {
+    implements ArgumentsProvider, AfterEachCallback, AfterAllCallback {
   private static final Namespace EXTENSION_NAMESPACE = Namespace.create(TestExecutorProvider.class);
 
   private static final int FIXED_POOL_SIZE = 8;
-
-  /** Executors created from {@code newExecutor}. */
-  private @MonotonicNonNull ManagedExecutors explicitExecutors;
 
   public TestExecutorProvider() {}
 
@@ -50,16 +40,6 @@ public final class TestExecutorProvider
   }
 
   @Override
-  public void beforeEach(ExtensionContext context) {
-    explicitExecutors = ManagedExecutors.get(context);
-  }
-
-  @Override
-  public void beforeAll(ExtensionContext context) {
-    explicitExecutors = ManagedExecutors.get(context);
-  }
-
-  @Override
   public void afterEach(ExtensionContext context) throws Exception {
     ManagedExecutors.get(context).shutdownAndTerminate();
   }
@@ -67,14 +47,6 @@ public final class TestExecutorProvider
   @Override
   public void afterAll(ExtensionContext context) throws Exception {
     ManagedExecutors.get(context).shutdownAndTerminate();
-  }
-
-  public Executor newExecutor(ExecutorType type) {
-    var executors = explicitExecutors;
-    if (executors == null) {
-      throw new IllegalStateException("expected beforeAll or beforeEach to be called");
-    }
-    return executors.newExecutor(type);
   }
 
   @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
@@ -88,7 +60,7 @@ public final class TestExecutorProvider
   @ExecutorSource
   public @interface TestWithExecutor {}
 
-  public enum ExecutorType {
+  private enum ExecutorType {
     SAME_THREAD {
       @Override
       Executor createExecutor() {
