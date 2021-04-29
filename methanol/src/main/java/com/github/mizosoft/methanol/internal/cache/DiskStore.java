@@ -13,10 +13,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** STUB! */
 public final class DiskStore implements Store {
-  public DiskStore(Path directory, long maxSize, Executor executor) {
+  public DiskStore(Path directory, long maxSize) {
     requireNonNull(directory);
     requireArgument(maxSize > 0, "non-positive maxSize: %s", maxSize);
-    requireNonNull(executor);
     TODO();
   }
 
