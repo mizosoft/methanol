@@ -55,7 +55,6 @@ import com.github.mizosoft.methanol.testing.StoreConfig;
 import com.github.mizosoft.methanol.testing.StoreContext;
 import com.github.mizosoft.methanol.testing.StoreExtension;
 import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
-import com.github.mizosoft.methanol.testutils.Logging;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,15 +69,12 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.ThrowingConsumer;
 
 /** DiskStore specific tests that are complementary to {@link StoreTest}. */
 @Timeout(60)
 @ExtendWith({StoreExtension.class, ExecutorExtension.class})
 class DiskStoreTest {
-  static {
-    Logging.disable(DiskStore.class);
-  }
-
   private @MonotonicNonNull MockDiskStore mockStore;
 
   private void setUp(StoreContext context) {

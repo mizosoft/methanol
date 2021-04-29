@@ -30,7 +30,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.System.Logger.Level;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -40,11 +39,13 @@ import java.time.ZoneOffset;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Miscellaneous utilities. */
 public class Utils {
-  private static final System.Logger logger = System.getLogger(Utils.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
 
   private static final Clock SYSTEM_MILLIS_UTC = Clock.tickMillis(ZoneOffset.UTC);
 
@@ -208,7 +209,7 @@ public class Utils {
       try {
         closeable.close();
       } catch (IOException ioe) {
-        logger.log(Level.WARNING, "exception while closing: " + closeable, ioe);
+        LOGGER.log(Level.WARNING, "exception while closing: " + closeable, ioe);
       }
     }
   }

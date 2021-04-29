@@ -1,7 +1,5 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -10,11 +8,13 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalQueries;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Static functions for handling HTTP dates. */
 public class DateUtils {
-  private static final Logger logger = System.getLogger(DateUtils.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(DateUtils.class.getName());
 
   private static final DateTimeFormatter PREFERRED_FORMATTER = DateTimeFormatter.RFC_1123_DATE_TIME;
   private static final List<DateTimeFormatter> FORMATTERS;
@@ -70,8 +70,9 @@ public class DateUtils {
       }
     }
 
+    // :(
     if (logFailure) {
-      logger.log(Level.WARNING, () -> "couldn't parse HTTP date: " + value, parseException);
+      LOGGER.log(Level.WARNING, parseException, () -> "couldn't parse HTTP date: " + value);
     }
     return null;
   }

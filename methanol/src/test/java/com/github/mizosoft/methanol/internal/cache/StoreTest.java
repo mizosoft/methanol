@@ -29,7 +29,6 @@ import com.github.mizosoft.methanol.testing.StoreConfig;
 import com.github.mizosoft.methanol.testing.StoreContext;
 import com.github.mizosoft.methanol.testing.StoreExtension;
 import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
-import com.github.mizosoft.methanol.testutils.Logging;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
@@ -47,10 +46,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @Timeout(60)
 @ExtendWith({StoreExtension.class, ExecutorExtension.class})
 class StoreTest {
-  static {
-    Logging.disable(DiskStore.class);
-  }
-
   @StoreParameterizedTest
   @StoreConfig
   void writeThenRead(Store store) throws IOException {
@@ -952,7 +947,7 @@ class StoreTest {
           IllegalArgumentException.class, () -> editor.writeAsync(-1, ByteBuffer.allocate(1)));
 
       // Editor prohibits gabs between writes
-      editor.writeAsync(0, ByteBuffer.allocate(1)).join();
+      editor.writeAsync(0, ByteBuffer.allocate(1));
       assertThrows(
           IllegalArgumentException.class, () -> editor.writeAsync(2, ByteBuffer.allocate(1)));
     }

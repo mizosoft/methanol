@@ -28,13 +28,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.blackbox.MyBodyDecoderFactory.MyDeflateBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.MyBodyDecoderFactory.MyGzipBodyDecoderFactory;
-import com.github.mizosoft.methanol.testutils.Logging;
+import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class BodyDecoderFactoryTest {
-  static {
-    // Do not log service loader failures
-    Logging.disable("com.github.mizosoft.methanol.internal.spi.ServiceCache");
+
+  private static ServiceLoggerHelper loggerHelper;
+
+  @BeforeAll
+  static void turnOffServiceLogger() {
+    // Do not log service loader failures.
+    loggerHelper = new ServiceLoggerHelper();
+    loggerHelper.turnOff();
+  }
+
+  @AfterAll
+  static void resetServiceLogger() {
+    loggerHelper.reset();
   }
 
   @Test

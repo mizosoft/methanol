@@ -44,8 +44,6 @@ import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
@@ -89,6 +87,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -118,6 +118,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * closed store throws an {@code IllegalStateException} when either of {@code initialize} (if not
  * yet initialized), {@code view}, {@code edit}, {@code remove} or {@code clear} is invoked.
  */
+// TODO consider logging more events
 public final class DiskStore implements Store {
   /*
    * The store's layout on disk is as follows:
@@ -164,7 +165,7 @@ public final class DiskStore implements Store {
    * snapshot of that entry's data even if the entry is removed or edited one or more times.
    */
 
-  private static final Logger logger = System.getLogger(DiskStore.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(DiskStore.class.getName());
 
   // Visible for testing
   static final long INDEX_MAGIC = 0x6d657468616e6f6cL;
@@ -318,10 +319,9 @@ public final class DiskStore implements Store {
           indexWriteScheduler.trySchedule(); // Update LRU info
         }
         return viewer;
-      } catch (NoSuchFileException entryFileIsMissing) {
+      } catch (NoSuchFileException e) {
         // The entry file disappeared! This means something is messing with our directory.
         // We'll handle this gracefully by just losing track of the entry.
-        logger.log(Level.WARNING, "dropping entry with missing file", entryFileIsMissing);
         try {
           removeEntry(entry, true);
         } catch (IOException ignored) {
@@ -706,8 +706,8 @@ public final class DiskStore implements Store {
       currentViewer = null;
       try {
         viewer.removeEntry();
-      } catch (IOException e) {
-        logger.log(Level.WARNING, "entry removal failure", e);
+      } catch (IOException ioe) {
+        LOGGER.log(Level.WARNING, "failed to remove the entry", ioe);
       } catch (IllegalStateException ignored) {
         // Fail silently if the store is closed
       }
@@ -831,7 +831,7 @@ public final class DiskStore implements Store {
       } catch (StoreCorruptionException | EOFException e) {
         // The index is not readable, drop store contents and start afresh
         // TODO consider trying to rebuild the index from a directory scan instead
-        logger.log(Level.WARNING, "dropping store contents due to unreadable index", e);
+        LOGGER.log(Level.WARNING, "dropping store contents due to an unreadable index", e);
 
         deleteStoreContent(directory);
         writeIndex(Set.of());
@@ -888,8 +888,7 @@ public final class DiskStore implements Store {
             // Clean trails of isolatedDelete in case it failed in a previous session
             Files.deleteIfExists(path);
           } else {
-            logger.log(
-                Level.WARNING,
+            LOGGER.warning(
                 "unrecognized file or directory found during initialization: "
                     + path
                     + System.lineSeparator()
@@ -1116,7 +1115,7 @@ public final class DiskStore implements Store {
           try {
             run();
           } catch (IOException e) {
-            logger.log(Level.ERROR, "index write failure", e);
+            LOGGER.log(Level.WARNING, "index write failed", e);
           }
         };
       }
@@ -1171,8 +1170,8 @@ public final class DiskStore implements Store {
             shutdown();
             break;
           }
-        } catch (IOException e) {
-          logger.log(Level.ERROR, "background eviction failure", e);
+        } catch (IOException ioe) {
+          LOGGER.log(Level.SEVERE, "exception while running background eviction", ioe);
         }
 
         // Exit or consume keep-alive bit
@@ -1242,10 +1241,10 @@ public final class DiskStore implements Store {
         return fileLock != null;
       } catch (OverlappingFileLockException e) {
         return false;
-      } catch (IOException e) {
+      } catch (IOException ioe) {
         // Make sure channel is closed if tryLock() throws
         closeQuietly(channel);
-        throw e;
+        throw ioe;
       }
     }
   }
@@ -1741,12 +1740,12 @@ public final class DiskStore implements Store {
         }
 
         evicted = true;
+        discardCurrentEdit();
         if (viewerCount > 0) {
           isolatedDelete(entryFile());
         } else {
           Files.deleteIfExists(entryFile());
         }
-        discardCurrentEdit();
         return entrySize; // 0 if the entry wasn't readable
       } finally {
         lock.unlock();
@@ -1945,8 +1944,8 @@ public final class DiskStore implements Store {
                   entry.tempEntryFile(), Set.of(WRITE, CREATE), entry.asyncChannelExecutor());
           lazyChannel = channel;
         }
-      } catch (IOException e) {
-        return CompletableFuture.failedFuture(e);
+      } catch (IOException ioe) {
+        return CompletableFuture.failedFuture(ioe);
       } finally {
         lock.unlock();
       }
@@ -2006,7 +2005,6 @@ public final class DiskStore implements Store {
           return;
         }
         closed = true;
-
         closeQuietly(lazyChannel);
         Files.deleteIfExists(entry.tempEntryFile());
       } finally {

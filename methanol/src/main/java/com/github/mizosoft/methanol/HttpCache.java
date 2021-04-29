@@ -45,8 +45,6 @@ import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.Flushable;
 import java.io.IOException;
-import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -62,6 +60,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -74,8 +74,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @see <a href="https://tools.ietf.org/html/rfc7234">RFC 7234: HTTP caching</a>
  */
+// TODO consider logging more events
 public final class HttpCache implements AutoCloseable, Flushable {
-  private static final Logger logger = System.getLogger(HttpCache.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(HttpCache.class.getName());
 
   private static final int CACHE_VERSION = 1;
 
@@ -197,11 +198,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
       private boolean findNextUri() {
         while (nextUri == null && storeIterator.hasNext()) {
           try (var viewer = storeIterator.next()) {
-            var metadata = tryRecoverMetadata(viewer);
-            if (metadata != null) {
-              nextUri = metadata.uri();
-              return true;
-            }
+            nextUri = CacheResponseMetadata.decode(viewer.metadata()).uri();
+            return true;
+          } catch (IOException ioe) {
+            LOGGER.log(Level.WARNING, "unrecoverable cache entry", ioe);
+
+            // Try next entry...
           }
         }
         return false;
@@ -278,15 +280,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return uri.toString();
   }
 
-  private static @Nullable CacheResponseMetadata tryRecoverMetadata(Viewer viewer) {
-    try {
-      return CacheResponseMetadata.decode(viewer.metadata());
-    } catch (IOException e) {
-      logger.log(Level.WARNING, "unrecoverable cache entry", e);
-      return null;
-    }
-  }
-
   /** Returns a new {@code HttpCache.Builder}. */
   public static Builder newBuilder() {
     return new Builder();
@@ -308,9 +301,13 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     private @Nullable CacheResponse createCacheResponse(HttpRequest request, Viewer viewer) {
-      var metadata = tryRecoverMetadata(viewer);
-      if (metadata != null && metadata.matches(request)) {
-        return new CacheResponse(metadata, viewer, executor, request, clock.instant());
+      try {
+        var metadata = CacheResponseMetadata.decode(viewer.metadata());
+        if (metadata.matches(request)) {
+          return new CacheResponse(metadata, viewer, executor, request, clock.instant());
+        }
+      } catch (IOException e) {
+        LOGGER.log(Level.WARNING, "unrecoverable cache entry", e);
       }
 
       viewer.close();
@@ -326,7 +323,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
           editor.commitOnClose();
         }
       } catch (IOException e) {
-        logger.log(Level.WARNING, "cache update failure", e);
+        LOGGER.log(Level.WARNING, "exception while updating the cache", e);
       }
     }
 
@@ -345,7 +342,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
               editor, new RecordingWriteListener(networkResponse.get().uri(), statsRecorder));
         }
       } catch (IOException e) {
-        logger.log(Level.WARNING, "failed to start cache edit", e);
+        LOGGER.log(Level.WARNING, "exception while opening a cache entry for writing", e);
       }
       return null;
     }
@@ -355,7 +352,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       try {
         HttpCache.this.remove(uri);
       } catch (IOException e) {
-        logger.log(Level.WARNING, "entry removal failure", e);
+        LOGGER.log(Level.WARNING, "failed to invalidate a cache entry", e);
       }
     }
 

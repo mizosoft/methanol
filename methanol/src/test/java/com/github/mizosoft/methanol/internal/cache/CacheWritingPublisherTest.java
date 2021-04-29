@@ -17,7 +17,6 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
-import com.github.mizosoft.methanol.testutils.Logging;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.nio.ByteBuffer;
@@ -39,10 +38,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(ExecutorExtension.class)
 class CacheWritingPublisherTest {
-  static {
-    Logging.disable(CacheWritingPublisher.class);
-  }
-
   @ExecutorParameterizedTest
   @ExecutorConfig
   void writeString(Executor executor) {
@@ -68,7 +63,8 @@ class CacheWritingPublisherTest {
 
   @Test
   void subscribeTwice() {
-    var publisher = new CacheWritingPublisher(FlowSupport.emptyPublisher(), new TestEditor());
+    var publisher = new CacheWritingPublisher(
+        FlowSupport.emptyPublisher(), new TestEditor());
     publisher.subscribe(new TestSubscriber<>());
 
     var secondSubscriber = new TestSubscriber<>();
@@ -76,11 +72,7 @@ class CacheWritingPublisherTest {
 
     secondSubscriber.awaitComplete();
     assertEquals(1, secondSubscriber.errors);
-    assertThrows(
-        IllegalStateException.class,
-        () -> {
-          throw secondSubscriber.lastError;
-        });
+    assertThrows(IllegalStateException.class, () -> { throw secondSubscriber.lastError; });
   }
 
   /**
@@ -116,15 +108,14 @@ class CacheWritingPublisherTest {
   @ExecutorParameterizedTest
   @ExecutorConfig
   void cancellationIsPropagatedIfNotWriting(Executor executor) {
-    var failingEditor =
-        new TestEditor() {
-          @Override
-          public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-            var future = new CompletableFuture<Integer>();
-            executeLaterMillis(() -> future.completeExceptionally(new TestException()), 100);
-            return future;
-          }
-        };
+    var failingEditor = new TestEditor() {
+      @Override
+      public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
+        var future = new CompletableFuture<Integer>();
+        executeLaterMillis(() -> future.completeExceptionally(new TestException()), 100);
+        return future;
+      }
+    };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, failingEditor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
@@ -150,18 +141,16 @@ class CacheWritingPublisherTest {
   @ExecutorConfig
   void cancellationIsPropagatedLaterOnFailedWrite(Executor executor) {
     var cancelledSubscription = new CountDownLatch(1);
-    var failingEditor =
-        new TestEditor() {
-          @Override
-          public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-            return CompletableFuture.supplyAsync(
-                () -> {
-                  awaitUninterruptibly(cancelledSubscription);
-                  // This failure causes cancellation to be propagated
-                  throw new TestException();
-                });
-          }
-        };
+    var failingEditor = new TestEditor() {
+      @Override
+      public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
+        return CompletableFuture.supplyAsync(() -> {
+          awaitUninterruptibly(cancelledSubscription);
+          // This failure causes cancellation to be propagated
+          throw new TestException();
+        });
+      }
+    };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, failingEditor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
@@ -196,11 +185,7 @@ class CacheWritingPublisherTest {
     }
 
     subscriber.awaitError();
-    assertThrows(
-        TestException.class,
-        () -> {
-          throw subscriber.lastError;
-        });
+    assertThrows(TestException.class, () -> { throw subscriber.lastError; });
 
     editor.awaitClose();
     assertTrue(editor.discarded);
@@ -209,13 +194,12 @@ class CacheWritingPublisherTest {
   @ExecutorParameterizedTest
   @ExecutorConfig
   void failedWriteDiscardsEdit(Executor executor) {
-    var failingEditor =
-        new TestEditor() {
-          @Override
-          public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-            return CompletableFuture.failedFuture(new TestException());
-          }
-        };
+    var failingEditor = new TestEditor() {
+      @Override
+      public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
+        return CompletableFuture.failedFuture(new TestException());
+      }
+    };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, failingEditor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
@@ -234,13 +218,12 @@ class CacheWritingPublisherTest {
   @ExecutorParameterizedTest
   @ExecutorConfig
   void failedWriteDoesNotInterruptStream(Executor executor) {
-    var failingEditor =
-        new TestEditor() {
-          @Override
-          public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-            return CompletableFuture.failedFuture(new TestException());
-          }
-        };
+    var failingEditor = new TestEditor() {
+      @Override
+      public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
+        return CompletableFuture.failedFuture(new TestException());
+      }
+    };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, failingEditor);
     var subscriber = new StringSubscriber();
@@ -268,15 +251,13 @@ class CacheWritingPublisherTest {
   @ExecutorConfig(CACHED_POOL)
   void writeLaggingBehindBodyCompletion(Executor threadPool) {
     var bodyCompletion = new CountDownLatch(1);
-    var editor =
-        new TestEditor() {
-          @Override
-          public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-            return CompletableFuture.runAsync(
-                    () -> awaitUninterruptibly(bodyCompletion), threadPool)
-                .thenCompose(__ -> super.writeAsync(position, src));
-          }
-        };
+    var editor = new TestEditor() {
+      @Override
+      public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
+        return CompletableFuture.runAsync(() -> awaitUninterruptibly(bodyCompletion), threadPool)
+            .thenCompose(__ -> super.writeAsync(position, src));
+      }
+    };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(threadPool);
     var publisher = new CacheWritingPublisher(upstream, editor);
     var subscriber = new StringSubscriber();

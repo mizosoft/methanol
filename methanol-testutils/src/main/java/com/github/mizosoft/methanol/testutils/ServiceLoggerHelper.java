@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2019, 2020 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,29 +22,30 @@
 
 package com.github.mizosoft.methanol.testutils;
 
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-/** Utility methods related to logging during tests. */
-public class Logging {
-  // Hold string references to disabled loggers so their configuration won't get GCed
-  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-  private static final Set<Logger> disabledLoggers = new CopyOnWriteArraySet<>();
+/** Turns off ServiceCache logger during tests. */
+public class ServiceLoggerHelper {
 
-  private Logging() {}
+  private static final String SERVICE_LOGGER_NAME =
+      "com.github.mizosoft.methanol.internal.spi.ServiceCache";
 
-  public static void disable(Class<?>... clazz) {
-    disable(Stream.of(clazz).map(Class::getName).toArray(String[]::new));
+  private final Logger logger;
+  private @MonotonicNonNull Level originalLevel;
+
+  public ServiceLoggerHelper() {
+    this.logger = Logger.getLogger(SERVICE_LOGGER_NAME);
   }
 
-  public static void disable(String... names) {
-    for (var name : names) {
-      var logger = java.util.logging.Logger.getLogger(name);
-      logger.setLevel(Level.OFF);
-      disabledLoggers.add(logger);
-    }
+  public void turnOff() {
+    // Do not log service loader failures.
+    originalLevel = logger.getLevel();
+    logger.setLevel(Level.OFF);
+  }
+
+  public void reset() {
+    logger.setLevel(originalLevel);
   }
 }

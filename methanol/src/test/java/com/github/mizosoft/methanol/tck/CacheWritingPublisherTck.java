@@ -11,7 +11,6 @@ import com.github.mizosoft.methanol.testing.ResolvedStoreConfig;
 import com.github.mizosoft.methanol.testing.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.StoreContext;
 import com.github.mizosoft.methanol.testutils.FailedPublisher;
-import com.github.mizosoft.methanol.testutils.Logging;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.IOException;
@@ -35,10 +34,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
 
 public class CacheWritingPublisherTck extends FlowPublisherVerification<List<ByteBuffer>> {
-  static {
-    Logging.disable(CacheWritingPublisher.class);
-  }
-
   private final ResolvedStoreConfig storeConfig;
 
   private Executor executor;
