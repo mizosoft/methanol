@@ -43,9 +43,7 @@ public @interface StoreConfig {
 
   StoreType[] store() default {StoreType.MEMORY, StoreType.DISK};
 
-  FileSystemType[] fileSystem() default {
-    FileSystemType.JIMFS, FileSystemType.SYSTEM, FileSystemType.WINDOWS
-  };
+  FileSystemType[] fileSystem() default {FileSystemType.JIMFS, FileSystemType.SYSTEM};
 
   Execution execution() default Execution.ASYNC;
 
