@@ -66,7 +66,7 @@ class SerialExecutor implements Executor {
   }
 
   private final Executor delegate;
-  private final ConcurrentLinkedQueue<Runnable> taskQueue = new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<Runnable> tasks = new ConcurrentLinkedQueue<>();
 
   /**
    * Field that maintains execution state at its first 4 MSBs along with the number of times the
@@ -90,21 +90,20 @@ class SerialExecutor implements Executor {
   @Override
   public void execute(Runnable command) {
     requireNonNull(command);
-    if ((sync & SHUTDOWN) != 0) {
-      throw new RejectedExecutionException(command.toString());
-    }
-
     var task = new RunnableDecorator(command);
-    taskQueue.offer(task);
     while (true) {
+      int s = sync;
+      if ((s & SHUTDOWN) != 0) {
+        throw new RejectedExecutionException(command.toString());
+      }
       // Try to execute drain task or keep it alive if it's already running or about
       // to run (submitted to delegate executor). In case of contention, multiple
       // threads might succeed to submit the drain task after observing  the absence
       // of RUNNING and SUBMITTED bits, but that's OK since the drain task itself ensures
       // it's only run once.
-      int s = sync;
       boolean drainIsIdle = (s & (SUBMITTED | RUNNING)) == 0;
       if (drainIsIdle || SYNC.compareAndSet(this, s, (s | KEEP_ALIVE))) {
+        tasks.offer(task);
         if (drainIsIdle) {
           try {
             delegate.execute(this::drainTaskQueue);
@@ -112,7 +111,7 @@ class SerialExecutor implements Executor {
             SYNC.compareAndSet(this, s, s | SUBMITTED);
           } catch (RejectedExecutionException e) {
             // Relay REE to caller after removing the rejected task so it doesn't run again later
-            taskQueue.remove(task);
+            tasks.remove(task);
             throw e;
           }
         }
@@ -132,7 +131,7 @@ class SerialExecutor implements Executor {
     }
 
     while (true) {
-      var task = taskQueue.poll();
+      var task = tasks.poll();
       if (task != null) {
         try {
           task.run();
