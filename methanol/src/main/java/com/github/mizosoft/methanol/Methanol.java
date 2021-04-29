@@ -28,7 +28,6 @@ import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
@@ -549,7 +548,7 @@ public final class Methanol extends HttpClient {
      */
     public B networkInterceptor(Interceptor interceptor) {
       requireNonNull(interceptor);
-      networkInterceptors.add(interceptor);
+      interceptors.add(interceptor);
       return self();
     }
 
@@ -926,9 +925,10 @@ public final class Methanol extends HttpClient {
    * can be avoided in case a redirected URI is accessed repeatedly (provided the redirecting
    * response is cacheable). Additionally, this ensures correctness in case a cacheable response is
    * received for a redirected request. In such case, the response should be cached for the URI the
-   * request was redirected to, not the initiating URI.
+   * request was redirected to, not the initiating URI as it would've been possible if the cache
+   * isn't able to intercept redirection.
    */
-  static final class RedirectingInterceptor implements Interceptor {
+  private static final class RedirectingInterceptor implements Interceptor {
     private static final int DEFAULT_MAX_REDIRECTS = 5;
     private static final int MAX_REDIRECTS =
         Integer.getInteger("jdk.httpclient.redirects.retrylimit", DEFAULT_MAX_REDIRECTS);
@@ -1110,24 +1110,26 @@ public final class Methanol extends HttpClient {
         }
 
         int statusCode = response.statusCode();
-        if (isRedirecting(statusCode) && statusCode != HTTP_NOT_MODIFIED) {
-          var redirectedUri = redirectedUri(response.headers());
+        if (HttpStatus.isRedirection(statusCode)) {
+          var redirectedUri =
+              response
+                  .headers()
+                  .firstValue("Location")
+                  .map(URI::create)
+                  .orElseThrow(
+                      () -> new UncheckedIOException(new IOException("invalid redirection")));
           var newMethod = redirectedMethod(response.statusCode());
           if (canRedirectTo(redirectedUri)) {
-            return createRedirectedRequest(redirectedUri, statusCode, newMethod);
+            return MutableRequest.copyOf(request)
+                .uri(redirectedUri)
+                .method(newMethod, request.bodyPublisher().orElseGet(BodyPublishers::noBody))
+                .toImmutableRequest();
           }
         }
         return null;
       }
 
-      private URI redirectedUri(HttpHeaders responseHeaders) {
-        return responseHeaders
-            .firstValue("Location")
-            .map(request.uri()::resolve)
-            .orElseThrow(() -> new UncheckedIOException(new IOException("invalid redirection")));
-      }
-
-      // jdk.internal.net.http.RedirectFilter.redirectedMethod
+      // Follows implementation of jdk.internal.net.http.RedirectFilter.redirectedMethod
       private String redirectedMethod(int statusCode) {
         var originalMethod = request.method();
         switch (statusCode) {
@@ -1143,7 +1145,7 @@ public final class Methanol extends HttpClient {
         }
       }
 
-      // jdk.internal.net.http.RedirectFilter.canRedirect
+      // Follows implementation of jdk.internal.net.http.RedirectFilter.canRedirect
       private boolean canRedirectTo(URI redirectedUri) {
         var oldScheme = request.uri().getScheme();
         var newScheme = redirectedUri.getScheme();
@@ -1156,37 +1158,6 @@ public final class Methanol extends HttpClient {
             return newScheme.equalsIgnoreCase(oldScheme) || newScheme.equalsIgnoreCase("https");
           default:
             throw new AssertionError("unexpected policy: " + policy);
-        }
-      }
-
-      private HttpRequest createRedirectedRequest(
-          URI redirectedUri, int statusCode, String newMethod) {
-        boolean retainBody = statusCode != 303 && request.method().equals(newMethod);
-        var newBody =
-            request.bodyPublisher().filter(__ -> retainBody).orElseGet(BodyPublishers::noBody);
-        return MutableRequest.copyOf(request).uri(redirectedUri).method(newMethod, newBody);
-      }
-
-      // jdk.internal.net.http.RedirectFilter.isRedirecting
-      private boolean isRedirecting(int statusCode) {
-        // 309-399 Unassigned => don't follow
-        if (!HttpStatus.isRedirection(statusCode) || statusCode > 308) {
-          return false;
-        }
-
-        switch (statusCode) {
-            // 300: MultipleChoice => don't follow
-            // 304: Not Modified => don't follow
-            // 305: Proxy Redirect => don't follow.
-            // 306: Unused => don't follow
-          case 300:
-          case 304:
-          case 305:
-          case 306:
-            return false;
-            // 301, 302, 303, 307, 308: OK to follow.
-          default:
-            return true;
         }
       }
     }

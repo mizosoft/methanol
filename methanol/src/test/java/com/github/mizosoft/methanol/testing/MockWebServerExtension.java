@@ -154,7 +154,7 @@ public final class MockWebServerExtension
           server.useHttps(sslContext.getSocketFactory(), false);
         }
         servers.add(server);
-//        server.start();
+        server.start();
         return server;
       }
 

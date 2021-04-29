@@ -140,9 +140,6 @@ public final class ResponseBuilder<T> {
 
   @SuppressWarnings("unchecked")
   public TrackedResponse<T> buildTracked() {
-    if (cacheStatus != null) {
-      return buildCacheAware();
-    }
     return new TrackedResponseImpl<>(
         statusCode,
         ensureSet(uri, "uri"),
