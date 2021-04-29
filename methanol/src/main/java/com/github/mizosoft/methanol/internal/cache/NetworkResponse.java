@@ -60,7 +60,7 @@ public final class NetworkResponse extends PublisherResponse {
   public NetworkResponse with(Consumer<ResponseBuilder<?>> mutator) {
     var builder = ResponseBuilder.newBuilder(response);
     mutator.accept(builder);
-    return new NetworkResponse(builder.buildTracked(), publisher);
+    return new NetworkResponse(builder.build(), publisher);
   }
 
   private static BodySubscriber<Void> draining(ResponseInfo unused) {

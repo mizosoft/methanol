@@ -46,12 +46,12 @@ class CacheResponseMetadataTest {
             "Accept", "text/html",
             "Accept-Language", "fr-CH",
             "Cookie", "foo=bar");
-    var metadata = metadata(builder.request(request()).buildTracked());
-    var metadataGzip = metadata(builder.request(request(gzip)).buildTracked());
-    var metadataGzipHtml = metadata(builder.request(request(gzipHtml)).buildTracked());
-    var metadataGzipHtmlFrench = metadata(builder.request(request(gzipHtmlFrench)).buildTracked());
+    var metadata = metadata(builder.request(request()).build());
+    var metadataGzip = metadata(builder.request(request(gzip)).build());
+    var metadataGzipHtml = metadata(builder.request(request(gzipHtml)).build());
+    var metadataGzipHtmlFrench = metadata(builder.request(request(gzipHtmlFrench)).build());
     var metadataGzipHtmlFrenchWithCookie =
-        metadata(builder.request(request(gzipHtmlFrenchWithCookie)).buildTracked());
+        metadata(builder.request(request(gzipHtmlFrenchWithCookie)).build());
     assertEquals(headers(), metadata.varyHeadersForTesting());
     assertEquals(gzip, metadataGzip.varyHeadersForTesting());
     assertEquals(gzipHtml, metadataGzipHtml.varyHeadersForTesting());
@@ -74,19 +74,19 @@ class CacheResponseMetadataTest {
   @Test
   void requestMatching() {
     var builder = response("Vary", "Accept-Encoding, Accept-Language");
-    var metadata = metadata(builder.request(request()).buildTracked());
-    var metadataGzip = metadata(builder.request(request("Accept-Encoding", "gzip")).buildTracked());
+    var metadata = metadata(builder.request(request()).build());
+    var metadataGzip = metadata(builder.request(request("Accept-Encoding", "gzip")).build());
     var metadataGzipFrench =
         metadata(
             builder
                 .request(request("Accept-Encoding", "gzip", "Accept-Language", "fr-CH"))
-                .buildTracked());
+                .build());
     var metadataWithCookies =
         metadata(
             builder
                 .setHeader("Vary", "Cookie")
                 .request(request("Cookie", "foo=bar", "Cookie", "abc=123"))
-                .buildTracked());
+                .build());
 
     assertTrue(metadata.matches(request()));
     assertTrue(metadata.matches(request("X-My-Header", ":)")));
@@ -110,7 +110,7 @@ class CacheResponseMetadataTest {
 
   @Test
   void endOfInput() throws IOException {
-    var response = response("Cache-Control", "max-age=4200").request(request()).buildTracked();
+    var response = response("Cache-Control", "max-age=4200").request(request()).build();
     var buffer = metadata(response).encode();
     buffer.limit(buffer.limit() - 10);
     assertThrows(EOFException.class, () -> metadata(buffer));
@@ -121,7 +121,7 @@ class CacheResponseMetadataTest {
     var response =
         response(":status", "200", "X-My-Empty-Header", "")
             .request(request())
-            .buildTracked();
+            .build();
     assertMetadataPersisted(response);
   }
 
@@ -138,14 +138,14 @@ class CacheResponseMetadataTest {
         response("Vary", "Accept-Encoding", "Cache-Control", "private; max-age=6969")
             .request(request("Accept-Encoding", "gzip", "Accept", "text/html"))
             .sslSession(session)
-            .buildTracked();
+            .build();
     assertMetadataPersisted(response);
   }
 
   private static void assertMetadataPersisted(TrackedResponse<?> response) throws IOException {
     var metadata = metadata(response);
     var buffer = metadata.encode();
-    var recovered = metadata(buffer).toResponseBuilder().buildTracked();
+    var recovered = metadata(buffer).toResponseBuilder().build();
     assertEqualResponses(response, recovered);
     assertEquals(response.request().uri(), recovered.request().uri());
     assertEquals(response.request().method(), recovered.request().method());

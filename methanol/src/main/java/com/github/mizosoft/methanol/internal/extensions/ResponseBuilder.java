@@ -119,42 +119,26 @@ public final class ResponseBuilder<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public HttpResponse<T> build() {
+  public TrackedResponse<T> build() {
     requireState(statusCode > 0, "statusCode is required");
     if (cacheStatus != null) {
       return buildCacheAware();
     }
-    if (timeRequestSent != null && timeResponseReceived != null) {
-      return buildTracked();
-    }
-    return new HttpResponseImpl<>(
-        statusCode,
-        ensureSet(uri, "uri"),
-        ensureSet(version, "version"),
-        headersBuilder.build(),
-        ensureSet(request, "request"),
-        (T) body,
-        sslSession,
-        previousResponse);
-  }
-
-  @SuppressWarnings("unchecked")
-  public TrackedResponse<T> buildTracked() {
     return new TrackedResponseImpl<>(
         statusCode,
         ensureSet(uri, "uri"),
         ensureSet(version, "version"),
         headersBuilder.build(),
         ensureSet(request, "request"),
+        ensureSet(timeRequestSent, "timeRequestSent"),
+        ensureSet(timeResponseReceived, "timeResponseReceived"),
         (T) body,
         sslSession,
-        previousResponse,
-        ensureSet(timeRequestSent, "timeRequestSent"),
-        ensureSet(timeResponseReceived, "timeResponseReceived"));
+        previousResponse);
   }
 
   @SuppressWarnings("unchecked")
-  private CacheAwareResponse<T> buildCacheAware() {
+  public CacheAwareResponse<T> buildCacheAware() {
     requireState(statusCode > 0, "statusCode is required");
     return new CacheAwareResponseImpl<>(
         statusCode,
@@ -162,11 +146,11 @@ public final class ResponseBuilder<T> {
         ensureSet(version, "version"),
         headersBuilder.build(),
         ensureSet(request, "request"),
+        ensureSet(timeRequestSent, "timeRequestSent"),
+        ensureSet(timeResponseReceived, "timeResponseReceived"),
         (T) body,
         sslSession,
         previousResponse,
-        ensureSet(timeRequestSent, "timeRequestSent"),
-        ensureSet(timeResponseReceived, "timeResponseReceived"),
         networkResponse,
         cacheResponse,
         ensureSet(cacheStatus, "cacheStatus"));
@@ -204,22 +188,26 @@ public final class ResponseBuilder<T> {
     return castNonNull(property);
   }
 
-  private static class HttpResponseImpl<T> implements HttpResponse<T> {
+  private static class TrackedResponseImpl<T> implements TrackedResponse<T> {
     private final int statusCode;
     private final URI uri;
     private final Version version;
     private final HttpHeaders headers;
     private final HttpRequest request;
+    private final Instant timeRequestSent;
+    private final Instant timeResponseReceived;
     private final @Nullable T body;
     private final @Nullable SSLSession sslSession;
     private final @Nullable HttpResponse<T> previousResponse;
 
-    HttpResponseImpl(
+    TrackedResponseImpl(
         int statusCode,
         URI uri,
         Version version,
         HttpHeaders headers,
         HttpRequest request,
+        Instant timeRequestSent,
+        Instant timeResponseReceived,
         @Nullable T body,
         @Nullable SSLSession sslSession,
         @Nullable HttpResponse<T> previousResponse) {
@@ -228,6 +216,8 @@ public final class ResponseBuilder<T> {
       this.version = version;
       this.headers = headers;
       this.request = request;
+      this.timeRequestSent = timeRequestSent;
+      this.timeResponseReceived = timeResponseReceived;
       this.body = body;
       this.sslSession = sslSession;
       this.previousResponse = previousResponse;
@@ -254,7 +244,7 @@ public final class ResponseBuilder<T> {
     }
 
     @Override
-    public T body() {
+    public @Nullable T body() {
       return body;
     }
 
@@ -274,33 +264,6 @@ public final class ResponseBuilder<T> {
     }
 
     @Override
-    public String toString() {
-      return '(' + request.method() + " " + request.uri() + ") " + statusCode;
-    }
-  }
-
-  private static class TrackedResponseImpl<T> extends HttpResponseImpl<T>
-      implements TrackedResponse<T> {
-    private final Instant timeRequestSent;
-    private final Instant timeResponseReceived;
-
-    TrackedResponseImpl(
-        int statusCode,
-        URI uri,
-        Version version,
-        HttpHeaders headers,
-        HttpRequest request,
-        @Nullable T body,
-        @Nullable SSLSession sslSession,
-        @Nullable HttpResponse<T> previousResponse,
-        Instant timeRequestSent,
-        Instant timeResponseReceived) {
-      super(statusCode, uri, version, headers, request, body, sslSession, previousResponse);
-      this.timeRequestSent = timeRequestSent;
-      this.timeResponseReceived = timeResponseReceived;
-    }
-
-    @Override
     public Instant timeRequestSent() {
       return timeRequestSent;
     }
@@ -308,6 +271,11 @@ public final class ResponseBuilder<T> {
     @Override
     public Instant timeResponseReceived() {
       return timeResponseReceived;
+    }
+
+    @Override
+    public String toString() {
+      return '(' + request.method() + " " + request.uri() + ") " + statusCode;
     }
   }
 
@@ -323,11 +291,11 @@ public final class ResponseBuilder<T> {
         Version version,
         HttpHeaders headers,
         HttpRequest request,
+        Instant timeRequestSent,
+        Instant timeResponseReceived,
         @Nullable T body,
         @Nullable SSLSession sslSession,
         @Nullable HttpResponse<T> previousResponse,
-        Instant timeRequestSent,
-        Instant timeResponseReceived,
         @Nullable TrackedResponse<?> networkResponse,
         @Nullable TrackedResponse<?> cacheResponse,
         CacheStatus cacheStatus) {
@@ -337,11 +305,11 @@ public final class ResponseBuilder<T> {
           version,
           headers,
           request,
+          timeRequestSent,
+          timeResponseReceived,
           body,
           sslSession,
-          previousResponse,
-          timeRequestSent,
-          timeResponseReceived);
+          previousResponse);
       this.networkResponse = networkResponse;
       this.cacheResponse = cacheResponse;
       this.cacheStatus = cacheStatus;
