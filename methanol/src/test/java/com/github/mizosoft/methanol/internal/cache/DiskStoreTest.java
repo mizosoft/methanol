@@ -69,7 +69,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.function.ThrowingConsumer;
 
 /** DiskStore specific tests that are complementary to {@link StoreTest}. */
 @Timeout(60)
@@ -918,40 +917,10 @@ class DiskStoreTest {
     store1.close();
     assertInoperable(store1);
 
+    // Closed by disposing
     var store2 = context.newStore();
-    context.drainQueuedTasks();
     store2.dispose();
     assertInoperable(store2);
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig(store = DISK)
-  void viewerRemoveIsDisallowedAfterClosingTheStore(Store store, StoreContext context)
-      throws IOException {
-    setUp(context);
-    writeEntry(store, "e1", "Eevee", "Jynx");
-
-    try (var viewer = view(store, "e1")) {
-      store.close();
-
-      assertThrows(IllegalStateException.class, viewer::removeEntry);
-      mockStore.assertEntryEquals("e1", "Eevee", "Jynx");
-      assertTrue(mockStore.readIndex().contains(context.hasher().hash("e1")));
-    }
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig(store = DISK)
-  void viewerRemoveIsDisallowedAfterDisposingTheStore(Store store, StoreContext context)
-      throws IOException {
-    setUp(context);
-    writeEntry(store, "e1", "Eevee", "Jynx");
-
-    try (var viewer = view(store, "e1")) {
-      store.dispose();
-
-      assertThrows(IllegalStateException.class, viewer::removeEntry);
-    }
   }
 
   /** Closing the store while iterating silently terminates iteration. */
@@ -969,19 +938,6 @@ class DiskStoreTest {
     store.close();
     assertFalse(iter.hasNext());
     assertThrows(NoSuchElementException.class, iter::next);
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig(store = DISK)
-  void closeStoreWhileReading(Store store, StoreContext context) throws IOException {
-    setUp(context);
-    writeEntry(store, "e1", "Jynx", "Ditto");
-
-    try (var viewer = view(store, "e1")) {
-      store.close();
-
-      assertEntryEquals(viewer, "Jynx", "Ditto");
-    }
   }
 
   @StoreParameterizedTest
@@ -1044,21 +1000,6 @@ class DiskStoreTest {
     assertEquals(0, executor.taskCount());
     assertEmptyDirectory(context.directory());
   }
-
-  @StoreParameterizedTest
-  @StoreConfig(store = DISK)
-  void disposeStoreWhileReading(Store store, StoreContext context) throws IOException {
-    setUp(context);
-    writeEntry(store, "e1", "Jynx", "Ditto");
-
-    try (var viewer = view(store, "e1")) {
-      store.dispose();
-      mockStore.assertHasNoEntriesOnDisk();
-
-      assertEntryEquals(viewer, "Jynx", "Ditto");
-    }
-  }
-
 
   @StoreParameterizedTest
   @StoreConfig(store = DISK)

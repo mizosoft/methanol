@@ -470,32 +470,24 @@ public final class DiskStore implements Store {
   }
 
   /**
-   * Atomically evicts the given entry if it matches the given version, returning its last committed
-   * size if evicted or -1 otherwise.
+   * Atomically evicts the given entry, returning its last committed size if evicted or -1
+   * otherwise.
    */
-  private long evict(Entry entry, int targetEntryVersion) throws IOException {
+  private long evict(Entry entry) throws IOException {
     assert holdsCloseLock();
 
-    long evictedSize = entry.evict(targetEntryVersion);
-    if (evictedSize >= 0 && entries.remove(entry.hash, entry)) {
-      return evictedSize;
-    }
-    return -1L;
-  }
-
-  private boolean removeEntry(Entry entry, boolean scheduleIndexWrite) throws IOException {
-    return removeEntry(entry, scheduleIndexWrite, Entry.ANY_ENTRY_VERSION);
+    long evictedSize = entry.evict();
+    return entries.remove(entry.hash, entry) ? evictedSize : -1L;
   }
 
   /**
    * Atomically evicts the given entry and decrements its size, returning {@code true} if the entry
-   * was actually removed by this call.
+   * was actually removed.
    */
-  private boolean removeEntry(Entry entry, boolean scheduleIndexWrite, int targetEntryVersion)
-      throws IOException {
+  private boolean removeEntry(Entry entry, boolean scheduleIndexWrite) throws IOException {
     assert holdsCloseLock();
 
-    long evictedSize = evict(entry, targetEntryVersion);
+    long evictedSize = evict(entry);
     if (evictedSize >= 0) {
       size.addAndGet(-evictedSize);
       if (scheduleIndexWrite) {
@@ -543,7 +535,7 @@ public final class DiskStore implements Store {
         break;
       }
 
-      long evictedSize = evict(lruIterator.next(), Entry.ANY_ENTRY_VERSION);
+      long evictedSize = evict(lruIterator.next());
       if (evictedSize >= 0) {
         currentSize = size.addAndGet(-evictedSize);
         evictedAtLeastOneEntry = true;
@@ -1440,7 +1432,7 @@ public final class DiskStore implements Store {
      * initialization, or 0 if newly created for opening an editor. On the latter case, the entry
      * won't be viewable until the edit is committed.
      */
-    private int version;
+    private int entryVersion;
 
     /**
      * True if this entry has been evicted. This is necessary since the entry temporarily lives as a
@@ -1464,13 +1456,13 @@ public final class DiskStore implements Store {
       this.hash = descriptor.hash;
       lastUsed = descriptor.lastUsed;
       entrySize = descriptor.size;
-      version = 1;
+      entryVersion = 1;
     }
 
     boolean isReadable() {
       lock.lock();
       try {
-        return version > 0 && !evicted;
+        return entryVersion > 0 && !evicted;
       } finally {
         lock.unlock();
       }
@@ -1499,7 +1491,8 @@ public final class DiskStore implements Store {
             AsynchronousFileChannel.open(
                 entryFile(), Set.of(READ), ExecutorServiceAdapter.adapt(executor));
         var viewer =
-            new DiskViewer(this, version, result.key, result.metadata, channel, result.dataSize);
+            new DiskViewer(
+                this, entryVersion, result.key, result.metadata, channel, result.dataSize);
         viewerCount++;
         lastUsed = clock.instant();
         return viewer;
@@ -1509,12 +1502,12 @@ public final class DiskStore implements Store {
     }
 
     @Nullable
-    Editor newEditor(String key, int targetVersion) {
+    Editor newEditor(String key, int targetEntryVersion) {
       lock.lock();
       try {
         if (currentEditor != null // An edit is already in progress
-            || (targetVersion != ANY_ENTRY_VERSION
-                && targetVersion != version) // Target version is stale
+            || (targetEntryVersion != entryVersion
+                && targetEntryVersion != ANY_ENTRY_VERSION) // Viewer is stale
             || evicted
             || frozen) {
           return null;
@@ -1610,8 +1603,8 @@ public final class DiskStore implements Store {
         oldEntrySize = entrySize;
         entrySize = newEntrySize;
         cachedKey = key; // Now we know what's our key
-        firstTimeReadable = version == 0;
-        version++;
+        firstTimeReadable = entryVersion == 0;
+        entryVersion++;
       } finally {
         lock.unlock();
       }
@@ -1632,7 +1625,7 @@ public final class DiskStore implements Store {
 
       closeQuietly(dataChannel);
       Files.deleteIfExists(tempEntryFile());
-      if (version == 0 && !evicted) {
+      if (entryVersion == 0 && !evicted) {
         // The entry's first ever edit wasn't committed, so remove it. It's safe
         // to directly remove it from the map since it's not visible to the outside
         // world at this point (no views/edits) and doesn't contribute to store size.
@@ -1743,12 +1736,11 @@ public final class DiskStore implements Store {
      * Evicts this entry and returns either -1 if this entry is already evicted, it's last committed
      * size if the entry was readable or 0 otherwise.
      */
-    long evict(int targetVersion) throws IOException {
+    long evict() throws IOException {
       lock.lock();
       try {
-        if (evicted || (targetVersion != ANY_ENTRY_VERSION && targetVersion != version)) {
-          // Already evicted or target version doesn't match
-          return -1L;
+        if (evicted) {
+          return -1L; // Already evicted
         }
 
         evicted = true;
@@ -1808,7 +1800,7 @@ public final class DiskStore implements Store {
     }
   }
 
-  private final class DiskViewer implements Viewer {
+  private static final class DiskViewer implements Viewer {
     private final Entry entry;
 
     /** Entry's version at the time of opening the viewer. */
@@ -1875,17 +1867,6 @@ public final class DiskStore implements Store {
     @Override
     public @Nullable Editor edit() throws IOException {
       return entry.newEditor(key(), entryVersion);
-    }
-
-    @Override
-    public boolean removeEntry() throws IOException {
-      long stamp = closeLock.readLock();
-      try {
-        requireNotClosed();
-        return DiskStore.this.removeEntry(entry, true, entryVersion);
-      } finally {
-        closeLock.unlockRead(stamp);
-      }
     }
 
     @Override

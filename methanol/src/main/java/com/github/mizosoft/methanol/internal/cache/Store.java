@@ -156,14 +156,6 @@ public interface Store extends AutoCloseable, Flushable {
     @Nullable
     Editor edit() throws IOException;
 
-    /**
-     * Removes the entry associated with this viewer only if it hasn't changed since this viewer was
-     * opened.
-     *
-     * @throws IllegalStateException if the store is closed
-     */
-    boolean removeEntry() throws IOException;
-
     /** Closes this viewer. */
     @Override
     void close();
