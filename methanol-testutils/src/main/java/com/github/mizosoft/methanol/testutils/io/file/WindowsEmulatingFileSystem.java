@@ -22,7 +22,8 @@
 
 package com.github.mizosoft.methanol.testutils.io.file;
 
-import com.github.mizosoft.methanol.testutils.io.file.ResourceRecord.ResourceType;
+import static java.util.Objects.requireNonNullElseGet;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.AsynchronousFileChannel;
@@ -34,14 +35,11 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.spi.FileSystemProvider;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A {@code FileSystem} that wraps another to emulate Windows behaviour regarding deletion of files
@@ -59,7 +57,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * throw {@code AccessDeniedException}. This file system emulates that behavior so we're sure these
  * cases are covered when interacting with files on Windows.
  */
-public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
+public final class WindowsEmulatingFileSystem extends CustomFileSystem {
   private WindowsEmulatingFileSystem(FileSystem delegate) {
     super(delegate);
   }
@@ -70,7 +68,7 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
   }
 
   @Override
-  FileSystemProviderWrapper wrap(FileSystemProvider provider) {
+  CustomFileSystemProvider wrap(FileSystemProvider provider) {
     return new WindowsEmulatingFileSystemProvider(provider);
   }
 
@@ -78,71 +76,16 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
     return new WindowsEmulatingFileSystem(fileSystem);
   }
 
-  private static final class WindowsEmulatingFileSystemProvider extends FileSystemProviderWrapper {
-    private final Map<Path, OpenFile> openFiles = new HashMap<>();
+  private static final class WindowsEmulatingFileSystemProvider extends CustomFileSystemProvider {
+    private final Map<Path, OpenFileRecord> openFiles = new HashMap<>();
 
-    private static final class OpenFile {
-      // resourceRecords & markedForDeletion are guarded by openFiles
-
-      final Path path;
-      final List<OpenFileResource> resources = new ArrayList<>();
-
+    private static final class OpenFileRecord {
+      Path path; // Can change if the file is moved
+      int openCount;
       boolean markedForDeletion;
 
-      OpenFile(Path path) {
+      OpenFileRecord(Path path) {
         this.path = path;
-      }
-
-      void addResource(ResourceRecord record, Closeable resourceObject) {
-        resources.add(new OpenFileResource(record, resourceObject));
-      }
-
-      boolean removeResource(Closeable resourceObject) {
-        var resource =
-            resources.stream()
-                .filter(
-                    openResource ->
-                        openResource.resourceObject == resourceObject) // Match by object identity
-                .findFirst();
-        return resource.map(resources::remove).orElse(false);
-      }
-
-      boolean hasNoResources() {
-        return resources.isEmpty();
-      }
-
-      OpenFile withPath(Path path) {
-        var result = new OpenFile(path);
-        for (var resource : resources) {
-          result.resources.add(resource.withPath(path));
-        }
-        return result;
-      }
-
-      void addResourceStackTraces(Throwable throwable) {
-        resources.stream()
-            .map(resource -> resource.record.toThrowableStackTrace())
-            .forEach(throwable::addSuppressed);
-      }
-    }
-
-    private static final class OpenFileResource {
-      final ResourceRecord record;
-
-      /**
-       * The actual opened resource. Used as an identifier so when the resource is closed, the
-       * correct resource entry is removed regardless of the file name. This allows closing to work
-       * properly even if open files are renamed.
-       */
-      final Closeable resourceObject;
-
-      OpenFileResource(ResourceRecord record, Closeable resourceObject) {
-        this.resourceObject = resourceObject;
-        this.record = record;
-      }
-
-      OpenFileResource withPath(Path target) {
-        return new OpenFileResource(record.withPath(target), resourceObject);
       }
     }
 
@@ -155,14 +98,14 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
         Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs)
         throws IOException {
       return openResource(
-          new ResourceRecord(path, ResourceType.FILE_CHANNEL, options),
+          path,
           onClose ->
               new ForwardingFileChannel(super.newFileChannel(path, options, attrs)) {
                 @Override
                 public void implCloseChannel() throws IOException {
                   // We don't need a guard as implCloseChannel is called atomically at most once
                   try (Closeable ignored = super::implCloseChannel) {
-                    onClose.accept(this);
+                    onClose.close();
                   }
                 }
               });
@@ -176,7 +119,7 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
         FileAttribute<?>... attrs)
         throws IOException {
       return openResource(
-          new ResourceRecord(path, ResourceType.ASYNC_FILE_CHANNEL, options),
+          path,
           onClose ->
               new ForwardingAsynchronousFileChannel(
                   super.newAsynchronousFileChannel(path, options, executor, attrs)) {
@@ -186,64 +129,48 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
                 public void close() throws IOException {
                   try (var ignored = delegate()) {
                     if (closed.compareAndSet(false, true)) {
-                      onClose.accept(this);
+                      onClose.close();
                     }
                   }
                 }
               });
     }
 
-    private interface IOConsumer<T> {
-      void accept(T t) throws IOException;
-    }
-
     @FunctionalInterface
-    private interface ResourceFactory<R extends Closeable> {
-      R create(IOConsumer<Closeable> onClose) throws IOException;
+    private interface ResourceFactory<R> {
+      R get(Closeable onClose) throws IOException;
     }
 
-    private <R extends Closeable> R openResource(
-        ResourceRecord resourceRecord, ResourceFactory<R> factory) throws IOException {
-      var path = resourceRecord.path;
+    private <T> T openResource(Path path, ResourceFactory<T> factory) throws IOException {
       synchronized (openFiles) {
-        var openFile = openFiles.get(path);
-        if (openFile != null && openFile.markedForDeletion) {
-          throw newAccessDeniedException(
-              path, null, "opening a resource for an open file marked for deletion");
+        var record = openFiles.get(path);
+        if (record != null && record.markedForDeletion) {
+          throw new AccessDeniedException(record.path.toString());
         }
 
-        var effectiveOpenFile = openFiles.computeIfAbsent(path, OpenFile::new);
-        try {
-          var resourceObject = factory.create(this::onClose);
-          effectiveOpenFile.addResource(resourceRecord, resourceObject);
-          return resourceObject;
-        } catch (IOException e) {
-          // Drop the open file record if it's newly created
-          if (effectiveOpenFile.hasNoResources()) {
-            openFiles.remove(path);
-          }
-
-          throw e;
-        }
+        var effectiveRecord = requireNonNullElseGet(record, () -> new OpenFileRecord(path));
+        var resource = factory.get(() -> onClose(effectiveRecord));
+        effectiveRecord.openCount++;
+        openFiles.putIfAbsent(path, effectiveRecord);
+        return resource;
       }
     }
 
-    private void onClose(Closeable resourceObject) throws IOException {
+    private void onClose(OpenFileRecord record) throws IOException {
       synchronized (openFiles) {
-        for (var openFile : openFiles.values()) {
-          if (openFile.removeResource(resourceObject)) {
-            if (openFile.hasNoResources()) {
-              openFiles.remove(openFile.path);
-              if (openFile.markedForDeletion) {
-                // Perform actual deletion form the file system
-                super.delete(openFile.path);
-              }
-            }
-            return;
-          }
+        if (!openFiles.containsValue(record)) {
+          throw new IllegalStateException(
+              "trying to close a resource for untracked path: " + record.path);
         }
 
-        throw new IllegalStateException("untracked resource: " + resourceObject);
+        record.openCount--;
+        if (record.openCount <= 0) {
+          openFiles.remove(record.path);
+          if (record.markedForDeletion) {
+            // Perform actual deletion form the file system
+            super.delete(ForwardingObject.rootDelegate(record.path));
+          }
+        }
       }
     }
 
@@ -255,12 +182,10 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
     @Override
     public void createDirectory(Path dir, FileAttribute<?>... attrs) throws IOException {
       // Files can be recycled to directories so deny access if target is an open file
-      // that's marked for deletion
       synchronized (openFiles) {
-        var openFile = openFiles.get(dir);
-        if (openFile != null && openFile.markedForDeletion) {
-          throw newAccessDeniedException(
-              dir, null, "recycling an open file marked for deletion to a directory");
+        var record = openFiles.get(dir);
+        if (record != null && record.markedForDeletion) {
+          throw new AccessDeniedException(dir.toString());
         }
       }
 
@@ -272,15 +197,14 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
     @Override
     public void delete(Path path) throws IOException {
       synchronized (openFiles) {
-        var openFile = openFiles.get(path);
-        if (openFile != null) {
+        var record = openFiles.get(path);
+        if (record != null) {
           // Deny access if file is already marked for deletion
-          if (openFile.markedForDeletion) {
-            throw newAccessDeniedException(
-                path, null, "deleting an open file that's already marked for deletion");
+          if (record.markedForDeletion) {
+            throw new AccessDeniedException(path.toString());
           }
 
-          openFile.markedForDeletion = true;
+          record.markedForDeletion = true;
         } else {
           super.delete(path);
         }
@@ -290,15 +214,14 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
     @Override
     public boolean deleteIfExists(Path path) throws IOException {
       synchronized (openFiles) {
-        var openFile = openFiles.get(path);
-        if (openFile != null) {
+        var record = openFiles.get(path);
+        if (record != null) {
           // Deny access if file is already marked for deletion
-          if (openFile.markedForDeletion) {
-            throw newAccessDeniedException(
-                path, null, "deleting an open file that's already marked for deletion");
+          if (record.markedForDeletion) {
+            throw new AccessDeniedException(path.toString());
           }
 
-          openFile.markedForDeletion = true;
+          record.markedForDeletion = true;
           return true;
         } else {
           return super.deleteIfExists(path);
@@ -310,52 +233,31 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
     public void move(Path source, Path target, CopyOption... options) throws IOException {
       synchronized (openFiles) {
         // MoveFileEx fails if target has open handles, even if MOVEFILE_REPLACE_EXISTING is used
-        var targetOpenFile = openFiles.get(target);
-        if (targetOpenFile != null) {
-          throw newAccessDeniedException(source, target, "target has open handles");
+        var targetRecord = openFiles.get(target);
+        if (targetRecord != null) {
+          throw new AccessDeniedException(source.toString(), targetRecord.toString(), "");
         }
 
         // MoveFileEx succeeds if source has open handles, but fails if its marked for deletion
-        var sourceOpenFile = openFiles.get(source);
-        if (sourceOpenFile != null && sourceOpenFile.markedForDeletion) {
-          throw newAccessDeniedException(
-              source, target, "source has open handles and marked for deletion");
+        var sourceRecord = openFiles.get(source);
+        if (sourceRecord != null && sourceRecord.markedForDeletion) {
+          throw new AccessDeniedException(source.toString(), target.toString(), "");
         }
 
         super.move(source, target, options);
 
-        // Now associate source open file with the new path
+        // Now associate source record with the new path
         openFiles.remove(source);
-        if (sourceOpenFile != null) {
-          openFiles.put(target, sourceOpenFile.withPath(target));
+        if (sourceRecord != null) {
+          sourceRecord.path = target;
+          openFiles.put(target, sourceRecord);
         }
       }
     }
 
     @Override
-    FileSystemWrapper wrap(FileSystem fileSystem) {
+    CustomFileSystem wrap(FileSystem fileSystem) {
       return new WindowsEmulatingFileSystem(fileSystem, this);
-    }
-
-    private AccessDeniedException newAccessDeniedException(
-        Path source, @Nullable Path target, String message) {
-      var accessDenied =
-          new AccessDeniedException(
-              source.toString(),
-              target != null ? target.toString() : null,
-              message + "; see suppressed exceptions for open resources & their creation sites");
-
-      var sourceOpenFile = openFiles.get(source);
-      if (sourceOpenFile != null) {
-        sourceOpenFile.addResourceStackTraces(accessDenied);
-      }
-
-      var targetOpenFile = openFiles.get(target);
-      if (targetOpenFile != null) {
-        targetOpenFile.addResourceStackTraces(accessDenied);
-      }
-
-      return accessDenied;
     }
   }
 }

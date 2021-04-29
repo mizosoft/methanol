@@ -39,7 +39,7 @@ import java.util.stream.StreamSupport;
  * A {@code FileSystem} wrapper that ensures created {@code Paths} and {@code FileSystems} are all
  * associated with a wrapped {@code FileSystemProvider}.
  */
-abstract class FileSystemWrapper extends ForwardingFileSystem {
+abstract class CustomFileSystem extends ForwardingFileSystem {
   /*
    * This is a bit tricky: anything that returns Path, FileSystem or FileSystemProvider must be
    * associated with our wrapped provider. This ensures all possible transformations to
@@ -47,20 +47,20 @@ abstract class FileSystemWrapper extends ForwardingFileSystem {
    * relay to us. This applies recursively as well.
    */
 
-  private final FileSystemProviderWrapper provider;
+  private final CustomFileSystemProvider provider;
 
-  FileSystemWrapper(FileSystem delegate) {
+  CustomFileSystem(FileSystem delegate) {
     super(delegate);
     provider = wrap(delegate.provider());
   }
 
-  FileSystemWrapper(FileSystem delegate, FileSystemProviderWrapper provider) {
+  CustomFileSystem(FileSystem delegate, CustomFileSystemProvider provider) {
     super(delegate);
     this.provider = provider;
   }
 
   @Override
-  public FileSystemProviderWrapper provider() {
+  public CustomFileSystemProvider provider() {
     return provider;
   }
 
@@ -77,10 +77,10 @@ abstract class FileSystemWrapper extends ForwardingFileSystem {
     return provider.wrap(super.getPath(first, more));
   }
 
-  abstract FileSystemProviderWrapper wrap(FileSystemProvider provider);
+  abstract CustomFileSystemProvider wrap(FileSystemProvider provider);
 
-  abstract static class FileSystemProviderWrapper extends ForwardingFileSystemProvider {
-    FileSystemProviderWrapper(FileSystemProvider delegate) {
+  abstract static class CustomFileSystemProvider extends ForwardingFileSystemProvider {
+    CustomFileSystemProvider(FileSystemProvider delegate) {
       super(delegate);
     }
 
@@ -113,7 +113,7 @@ abstract class FileSystemWrapper extends ForwardingFileSystem {
         @Override
         public Iterator<Path> iterator() {
           return StreamSupport.stream(this.spliterator(), false)
-              .<Path>map(FileSystemProviderWrapper.this::wrap)
+              .<Path>map(CustomFileSystemProvider.this::wrap)
               .iterator();
         }
       };
@@ -124,17 +124,17 @@ abstract class FileSystemWrapper extends ForwardingFileSystem {
       return wrap(super.readSymbolicLink(link));
     }
 
-    PathWrapper wrap(Path path) {
-      return new PathWrapper(path, wrap(path.getFileSystem()));
+    CustomPath wrap(Path path) {
+      return new CustomPath(path, wrap(path.getFileSystem()));
     }
 
-    abstract FileSystemWrapper wrap(FileSystem fileSystem);
+    abstract CustomFileSystem wrap(FileSystem fileSystem);
   }
 
-  static class PathWrapper extends ForwardingPath {
-    private final FileSystemWrapper fileSystem;
+  static class CustomPath extends ForwardingPath {
+    private final CustomFileSystem fileSystem;
 
-    PathWrapper(Path delegate, FileSystemWrapper fileSystem) {
+    CustomPath(Path delegate, CustomFileSystem fileSystem) {
       super(delegate);
       this.fileSystem = fileSystem;
     }
