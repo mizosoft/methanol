@@ -100,8 +100,8 @@ public final class CacheControl {
   }
 
   /**
-   * Returns a map of all directives and their arguments. Directives that don't have arguments have
-   * an empty string value in the returned map.
+   * Returns a map of all directives and their arguments. Directives that don't have arguments will
+   * have an empty string value.
    */
   public Map<String, String> directives() {
     return directives;
@@ -210,7 +210,7 @@ public final class CacheControl {
             entry ->
                 entry.getValue().isEmpty() // has no value
                     ? entry.getKey()
-                    : entry.getKey() + "=" + escapeAndQuoteValueIfNeeded(entry.getValue()))
+                    : (entry.getKey() + "=" + escapeAndQuoteValueIfNeeded(entry.getValue())))
         .collect(Collectors.joining(", "));
   }
 
@@ -299,19 +299,16 @@ public final class CacheControl {
             standardDirectives.put(MAX_STALE, ABSENT_INT);
             break;
           }
-          // fallthrough
         case MAX_AGE:
         case MIN_FRESH:
         case S_MAXAGE:
           standardDirectives.put(directive, parseDeltaSeconds(argumentValue));
           break;
-
         case NO_CACHE:
         case NO_STORE:
         case PRIVATE:
           standardDirectives.put(directive, parseFieldNames(argumentValue));
           break;
-
         default:
           standardDirectives.put(directive, null);
       }

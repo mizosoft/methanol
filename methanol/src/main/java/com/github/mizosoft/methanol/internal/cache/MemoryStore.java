@@ -195,17 +195,14 @@ public final class MemoryStore implements Store {
       var key = currentKey;
       requireState(key != null, "next() must be called before remove()");
       currentKey = null;
-      MemoryStore.this.remove(castNonNull(key));
+      MemoryStore.this.remove(key);
     }
 
     private @Nullable Viewer viewNextEntry() {
       Viewer nextViewer = null;
       synchronized (entries) {
         while (keysIterator.hasNext() && nextViewer == null) {
-          var entry = entries.get(keysIterator.next());
-          if (entry != null) {
-            nextViewer = entry.view();
-          }
+          nextViewer = entries.get(keysIterator.next()).view();
         }
       }
       return nextViewer;
@@ -374,7 +371,7 @@ public final class MemoryStore implements Store {
 
     @Override
     public long entrySize() {
-      return (long) metadata.remaining() + data.remaining();
+      return metadata.remaining() + data.remaining();
     }
 
     @Override
@@ -499,7 +496,7 @@ public final class MemoryStore implements Store {
       public long entrySize() {
         lock.readLock().lock();
         try {
-          return (long) metadata.remaining() + data.writtenCount();
+          return metadata.remaining() + data.writtenCount();
         } finally {
           lock.readLock().unlock();
         }
@@ -553,7 +550,6 @@ public final class MemoryStore implements Store {
     }
 
     /** ByteArrayOutputStream that exposes underlying array buffer & write position. */
-    @SuppressWarnings("UnsynchronizedOverridesSynchronized") // Synchronization is done by caller
     private static final class SeekableByteArrayOutputStream extends ByteArrayOutputStream {
       /** Position right after the last written byte. */
       private int fence;
