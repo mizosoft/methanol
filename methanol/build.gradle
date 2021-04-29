@@ -1,16 +1,7 @@
 dependencies {
-  // Use latest version of TestNG as the one used by tck-flow is really old.
-  // A recent feature currently in use is CONSTRUCTOR target for @Factory
-  testImplementation "org.testng:testng:${versions.testng}"
   testImplementation deps.reactiveStreamsTckFlow
   testImplementation deps.mockWebServer
   testImplementation project(':methanol-testutils')
-}
-
-// TestNG transitively brings an old checkerframework artifact
-// which causes it's packages to be read from two modules
-configurations.testImplementation {
-  exclude group: 'org.checkerframework', module: 'checker-compat-qual'
 }
 
 compileJava {
@@ -45,44 +36,3 @@ check.dependsOn tckTest
 
 // compileTestJava still compiles from the module path
 addReads(compileTestJava, 'methanol.testutils')
-
-// The TestNG explicit dep causes java modularity plugin to insert --add-module testng,
-// which only works with older versions of TestNG (TestNG version >= 7.0.0 have org.testng
-// Automatic-Module-Name). So till https://github.com/java9-modularity/gradle-modules-plugin/issues/172
-// is fixed, this dance is made to correct the module name after the plugin inserts it
-compileTestJava {
-  def mutatorIndex = indexOfArgsMutator(actions, 'org.javamodularity.moduleplugin')
-  if (mutatorIndex < 0) {
-    throw new GradleException("couldn't find org.javamodularity.moduleplugin arguments mutator task for compileTestJava")
-  }
-
-  actions.add(mutatorIndex + 1, {
-    options.compilerArgs = correctTestNGModule(options.compilerArgs)
-  } as Action<? super Task>)
-}
-
-def indexOfArgsMutator(actions, packagePrefix) {
-  return actions.findIndexOf {
-    it.class.name == 'org.gradle.api.internal.AbstractTask$TaskActionWrapper' &&
-        it.class.getDeclaredField('action').with { field ->
-          field.accessible = true
-          field.get(it).class.name.startsWith(packagePrefix)
-        }
-  }
-}
-
-// Replaces testng with org.testng in --add-modules and --add-reads
-def correctTestNGModule(List<String> args) {
-  def correctedArgs = []
-  for (int i = 0; i < args.size(); i++) {
-    correctedArgs += args[i]
-    if (args[i] == '--add-modules') {
-      def modules = args[++i].split(',').collect { it == 'testng' ? 'org.testng' : it }
-      correctedArgs += modules.join(',')
-    } else if (args[i] == '--add-reads') {
-      def (source, target) = args[++i].split('=').collect { it == 'testng' ? 'org.testng' : it }
-      correctedArgs += "$source=$target";
-    }
-  }
-  return correctedArgs
-}
