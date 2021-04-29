@@ -209,21 +209,4 @@ class SerialExecutorTest {
     assertTrue(endLatch.await(10, TimeUnit.SECONDS));
     assertEquals(threadCount, calls.get());
   }
-
-  @Test
-  void incrementingDrainCountMaintainsStateBits() {
-    executor.execute(() -> {});
-    assertEquals(1, mockExecutor.taskCount());
-
-    // Set SHUTDOWN bit
-    executor.shutdown();
-    assertTrue(executor.isShutdownBitSet());
-
-    // Execute drain to increment drain count
-    mockExecutor.runNext();
-    assertEquals(1, executor.drainCount());
-
-    // Shutdown bit isn't touched
-    assertTrue(executor.isShutdownBitSet());
-  }
 }
