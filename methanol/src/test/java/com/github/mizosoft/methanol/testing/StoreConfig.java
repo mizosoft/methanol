@@ -65,8 +65,7 @@ public @interface StoreConfig {
 
   enum FileSystemType {
     JIMFS,
-    SYSTEM,
-    WINDOWS // See WindowsEmulatingFileSystem
+    SYSTEM
   }
 
   enum Execution {

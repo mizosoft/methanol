@@ -250,21 +250,22 @@ public final class StoreExtension
 
     @Override
     public void close() throws Exception {
-      var thrown = new ArrayList<Throwable>();
+      var thrown = new ArrayList<Exception>();
       for (var contexts : contextMap.values()) {
         for (var context : contexts) {
           try {
             context.close();
-          } catch (Throwable t) {
-            thrown.add(t);
+          } catch (Exception e) {
+            thrown.add(e);
           }
         }
       }
+
       contextMap.clear();
 
       if (!thrown.isEmpty()) {
         var toThrow =
-            new IOException("encountered one or more exceptions while closing stores");
+            new IOException("encountered one or more exceptions while closing created stores");
         thrown.forEach(toThrow::addSuppressed);
         throw toThrow;
       }
