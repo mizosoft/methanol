@@ -7,20 +7,20 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.internal.cache.Store.Editor;
+import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -39,25 +39,23 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(ExecutorExtension.class)
-class CacheWritingPublisherTest {
+class CacheWritingBodySubscriberTest {
   @ExecutorParameterizedTest
   @ExecutorConfig
   void writeString(Executor executor) {
     var editor = new TestEditor();
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER);
-    var subscriber = new StringSubscriber();
+    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
+    var downstream = new TestSubscriber<List<ByteBuffer>>();
+    getBody(subscriber).subscribe(downstream);
 
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
-
-    try (upstream) {
-      upstream.submitAll(toResponseBody("Cache me if you can!"));
+    try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor)) {
+      publisher.subscribe(subscriber);
+      publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cache me if you can!"), 1, 1));
     }
 
-    subscriber.awaitComplete();
-    assertEquals("Cache me if you can!", subscriber.bodyToString());
-    assertEquals("Cache me if you can!", editor.writtenToString());
+    downstream.awaitComplete();
+    assertEquals("Cache me if you can!", UTF_8.decode(collect(downstream.items)).toString());
+    assertEquals("Cache me if you can!", UTF_8.decode(editor.written()).toString());
 
     editor.awaitClose();
     assertFalse(editor.discarded);
@@ -65,46 +63,39 @@ class CacheWritingPublisherTest {
 
   @Test
   void subscribeTwice() {
-    var publisher = new CacheWritingPublisher(
-        FlowSupport.emptyPublisher(), new TestEditor(), EMPTY_BUFFER);
-    publisher.subscribe(new TestSubscriber<>());
+    var subscriber = new CacheWritingBodySubscriber(new TestEditor(), EMPTY_BUFFER);
+    getBody(subscriber).subscribe(BodySubscribers.discarding());
 
-    var secondSubscriber = new TestSubscriber<>();
-    publisher.subscribe(secondSubscriber);
+    var downstream2 = new TestSubscriber<>();
+    getBody(subscriber).subscribe(downstream2);
 
-    secondSubscriber.awaitComplete();
-    assertEquals(1, secondSubscriber.errors);
-    assertThrows(IllegalStateException.class, () -> { throw secondSubscriber.lastError; });
+    downstream2.awaitComplete();
+    assertEquals(1, downstream2.errors);
+    assertEquals(IllegalStateException.class, downstream2.lastError.getClass());
   }
 
-  /**
-   * The subscriber shouldn't propagate cancellation upstream and prefer to complete caching the
-   * body.
-   */
+  /** The subscriber should ignore cancellation and prefer to complete caching the body. */
   @ExecutorParameterizedTest
   @ExecutorConfig
-  void cancellationIsNotPropagatedIfWriting(Executor executor) {
+  void cancellationIsIgnoredWhileWriting(Executor executor) {
     var editor = new TestEditor();
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER);
-    var subscriber = new StringSubscriber();
+    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
+    var downstream = new TestSubscriber<List<ByteBuffer>>();
+    getBody(subscriber).subscribe(downstream);
 
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
-    subscriber.subscription.cancel();
+    var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var subscription = publisher.subscribeWithAccess(subscriber);
+    downstream.awaitSubscribe();
+    downstream.subscription.cancel();
 
-    try (upstream) {
-      upstream.submitAll(toResponseBody("Cancel me if you can!"));
+    try (publisher) {
+      publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cancel me if you can!"), 1, 1));
     }
 
-    // Writing completes successfully and cancellation is propagated
     editor.awaitClose();
     assertFalse(editor.discarded);
-    assertFalse(upstream.firstSubscription().flowInterrupted);
-    assertEquals("Cancel me if you can!", editor.writtenToString());
-
-    // Subscriber's cancellation request is satisfied & body flow stops
-    assertTrue(subscriber.items.isEmpty(), () -> "Received: " + subscriber.bodyToString());
+    assertFalse(subscription.flowInterrupted);
+    assertEquals("Cancel me if you can!", UTF_8.decode(editor.written()).toString());
   }
 
   @ExecutorParameterizedTest
@@ -118,23 +109,22 @@ class CacheWritingPublisherTest {
         return future;
       }
     };
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = new CacheWritingBodySubscriber(failingEditor, EMPTY_BUFFER);
+    var downstream = new TestSubscriber<List<ByteBuffer>>();
+    getBody(subscriber).subscribe(downstream);
 
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
-
-    upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
-    // Don't complete upstream
+    var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var subscription = publisher.subscribeWithAccess(subscriber);
+    publisher.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
+    // Don't complete publisher
 
     // Wait till error is handled and failingEditor is closed
     failingEditor.awaitClose();
 
     // This cancellation is propagated as there's nothing being written anymore
-    subscriber.subscription.cancel();
+    downstream.awaitSubscribe();
+    downstream.subscription.cancel();
 
-    var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
     assertTrue(subscription.flowInterrupted);
   }
@@ -153,20 +143,19 @@ class CacheWritingPublisherTest {
         });
       }
     };
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = new CacheWritingBodySubscriber(failingEditor, EMPTY_BUFFER);
+    var downstream = new TestSubscriber<List<ByteBuffer>>();
+    getBody(subscriber).subscribe(downstream);
 
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var subscription = publisher.subscribeWithAccess(subscriber);
+    publisher.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
+    // Don't complete publisher
 
-    upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
-    // Don't complete upstream
-
-    subscriber.subscription.cancel();
+    downstream.awaitSubscribe();
+    downstream.subscription.cancel();
     cancelledSubscription.countDown();
 
-    var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
     assertTrue(subscription.flowInterrupted);
   }
@@ -175,20 +164,16 @@ class CacheWritingPublisherTest {
   @ExecutorConfig
   void errorFromUpstreamDiscardsEdit(Executor executor) {
     var editor = new TestEditor();
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
+    var downstream = new TestSubscriber<List<ByteBuffer>>();
+    getBody(subscriber).subscribe(downstream);
 
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
-
-    try (upstream) {
-      upstream.firstSubscription().signalError(new TestException());
+    try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor)) {
+      var subscription = publisher.subscribeWithAccess(subscriber);
+      subscription.signalError(new TestException());
     }
 
-    subscriber.awaitError();
-    assertThrows(TestException.class, () -> { throw subscriber.lastError; });
-
+    downstream.awaitError();
     editor.awaitClose();
     assertTrue(editor.discarded);
   }
@@ -202,15 +187,13 @@ class CacheWritingPublisherTest {
         return CompletableFuture.failedFuture(new TestException());
       }
     };
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = new CacheWritingBodySubscriber(failingEditor, EMPTY_BUFFER);
+    var downstream = new TestSubscriber<List<ByteBuffer>>();
+    getBody(subscriber).subscribe(downstream);
 
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
-
-    try (upstream) {
-      upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
+    try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor)) {
+      publisher.subscribe(subscriber);
+      publisher.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
     }
 
     failingEditor.awaitClose();
@@ -226,22 +209,20 @@ class CacheWritingPublisherTest {
         return CompletableFuture.failedFuture(new TestException());
       }
     };
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER);
-    var subscriber = new StringSubscriber();
+    var subscriber = new CacheWritingBodySubscriber(failingEditor, EMPTY_BUFFER);
+    var downstream = new TestSubscriber<List<ByteBuffer>>();
+    getBody(subscriber).subscribe(downstream);
 
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
-
-    try (upstream) {
-      upstream.submitAll(toResponseBody("Cache me if you can!"));
+    try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor)) {
+      publisher.subscribe(subscriber);
+      publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cache me if you can!"), 1, 1));
     }
 
     failingEditor.awaitClose();
     assertTrue(failingEditor.discarded);
 
-    subscriber.awaitComplete();
-    assertEquals("Cache me if you can!", subscriber.bodyToString());
+    downstream.awaitComplete();
+    assertEquals("Cache me if you can!", UTF_8.decode(collect(downstream.items)).toString());
   }
 
   @ExecutorParameterizedTest
@@ -249,15 +230,12 @@ class CacheWritingPublisherTest {
   void metadataIsSaved(Executor executor) {
     var editor = new TestEditor();
     var metadata = UTF_8.encode("bababooey");
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, editor, metadata);
-    var subscriber = new StringSubscriber();
+    var subscriber = new CacheWritingBodySubscriber(editor, metadata);
+    getBody(subscriber).subscribe(new TestSubscriber<>());
 
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
-
-    try (upstream) {
-      upstream.submit(List.of(ByteBuffer.allocate(1)));
+    try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor)) {
+      publisher.subscribe(subscriber);
+      publisher.submit(List.of(ByteBuffer.allocate(1)));
     }
 
     editor.awaitClose();
@@ -265,9 +243,30 @@ class CacheWritingPublisherTest {
     assertEquals("bababooey", UTF_8.decode(editor.metadata).toString());
   }
 
+  @ExecutorParameterizedTest
+  @ExecutorConfig
+  void subscribeToUpstreamFirst(Executor executor) {
+    var editor = new TestEditor();
+    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
+    var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    publisher.subscribe(subscriber);
+
+    executor.execute(() -> {
+      try (publisher) {
+        publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cache me if you can!"), 2, 1));
+      }
+    });
+
+    var downstream = new TestSubscriber<List<ByteBuffer>>();
+    getBody(subscriber).subscribe(downstream);
+
+    downstream.awaitComplete();
+    assertEquals("Cache me if you can!", UTF_8.decode(collect(downstream.items)).toString());
+  }
+
   /**
    * This test simulates the scenario where some (or all) of the writes don't have a chance to
-   * finish before upstream calls our onComplete(). In such case, completion is forwarded downstream
+   * finish before upstream calls our onComplete(). On such case, completion is forwarded downstream
    * and writing continues on background.
    */
   @ExecutorParameterizedTest
@@ -281,40 +280,43 @@ class CacheWritingPublisherTest {
             .thenCompose(__ -> super.writeAsync(position, src));
       }
     };
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(threadPool);
-    var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER);
-    var subscriber = new StringSubscriber();
 
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
+    var downstream = new TestSubscriber<List<ByteBuffer>>();
+    getBody(subscriber).subscribe(downstream);
 
     threadPool.execute(
         () -> {
-          try (upstream) {
-            upstream.submitAll(toResponseBody("Cyberpunk"));
+          try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(threadPool)) {
+            publisher.subscribe(subscriber);
+            publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cyberpunk"), 1, 1));
           }
         });
 
-    subscriber.awaitComplete();
+    downstream.awaitComplete();
     // Allow the editor to progress
     bodyCompletion.countDown();
-    assertEquals("Cyberpunk", subscriber.bodyToString());
+    assertEquals("Cyberpunk", UTF_8.decode(collect(downstream.items)).toString());
 
     editor.awaitClose();
-    assertEquals("Cyberpunk", editor.writtenToString());
+    assertEquals("Cyberpunk", UTF_8.decode(editor.written()).toString());
   }
 
   private static void executeLaterMillis(Runnable task, long millis) {
     CompletableFuture.delayedExecutor(millis, TimeUnit.MILLISECONDS).execute(task);
   }
 
+  private static <T> CompletableFuture<T> toFuture(BodySubscriber<T> s) {
+    return s.getBody().toCompletableFuture();
+  }
+
+  private static <T> T getBody(BodySubscriber<T> s) {
+    return toFuture(s).join();
+  }
+
   private static ByteBuffer collect(Collection<List<ByteBuffer>> buffers) {
     return BodyCollector.collect(
         buffers.stream().flatMap(Collection::stream).collect(Collectors.toUnmodifiableList()));
-  }
-
-  private static Iterable<List<ByteBuffer>> toResponseBody(String str) {
-    return () -> new BuffListIterator(UTF_8.encode(str), 2, 2);
   }
 
   private static class TestEditor implements Editor {
@@ -376,10 +378,6 @@ class CacheWritingPublisherTest {
       return BodyCollector.collect(buffers);
     }
 
-    String writtenToString() {
-      return UTF_8.decode(written()).toString();
-    }
-
     static final class WriteRequest {
       final long position;
       final ByteBuffer buffer;
@@ -388,14 +386,6 @@ class CacheWritingPublisherTest {
         this.position = position;
         this.buffer = buffer;
       }
-    }
-  }
-
-  private static final class StringSubscriber extends TestSubscriber<List<ByteBuffer>> {
-    StringSubscriber() {}
-
-    String bodyToString() {
-      return UTF_8.decode(collect(super.items)).toString();
     }
   }
 
@@ -413,14 +403,14 @@ class CacheWritingPublisherTest {
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
+      subscribeWithAccess(subscriber);
+    }
+
+    public SubmittableSubscription<T> subscribeWithAccess(Subscriber<? super T> subscriber) {
       var subscription = new SubmittableSubscription<T>(subscriber, executor);
       subscriptions.add(subscription);
       subscription.signal(true); // Apply onSubscribe
-    }
-
-    SubmittableSubscription<T> firstSubscription() {
-      assertFalse(subscriptions.isEmpty(), "nothing has subscribed yet");
-      return subscriptions.get(0);
+      return subscription;
     }
 
     void submit(T item) {
@@ -438,7 +428,6 @@ class CacheWritingPublisherTest {
 
     static final class SubmittableSubscription<T> extends AbstractSubscription<T> {
       private final ConcurrentLinkedQueue<T> items = new ConcurrentLinkedQueue<>();
-
       private volatile boolean complete;
       volatile boolean aborted;
       volatile boolean flowInterrupted;

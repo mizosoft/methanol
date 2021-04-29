@@ -24,9 +24,9 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
+import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.ResponseInfo;
@@ -46,7 +46,9 @@ public final class NetworkResponse extends PublisherResponse {
   }
 
   public NetworkResponse cachingWith(Editor editor, ByteBuffer metadata) {
-    return new NetworkResponse(response, new CacheWritingPublisher(publisher, editor, metadata));
+    var writingSubscriber = new CacheWritingBodySubscriber(editor, metadata);
+    publisher.subscribe(writingSubscriber);
+    return new NetworkResponse(response, writingSubscriber.getBody().toCompletableFuture().join());
   }
 
   /** Asynchronously drains the entire response body. */
