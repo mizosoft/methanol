@@ -213,7 +213,7 @@ public final class StoreExtension
 
   @Target(ElementType.METHOD)
   @Retention(RetentionPolicy.RUNTIME)
-  @ParameterizedTest(name = "{displayName}[{index}]: {argumentsWithNames}")
+  @ParameterizedTest
   @StoreSource
   public @interface StoreParameterizedTest {}
 
