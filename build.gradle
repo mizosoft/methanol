@@ -1,17 +1,6 @@
-// TODO get 1.8.0 from main upstream when released
-buildscript {
-  repositories {
-    maven { url "https://jitpack.io" }
-    mavenCentral()
-  }
-  dependencies {
-    classpath "com.github.beryx:gradle-modules-plugin:1.8.0-rc4"
-  }
-}
-
 plugins {
   id 'org.checkerframework' version '0.5.12' apply false
-//  id 'org.javamodularity.moduleplugin' version '1.7.0' apply false
+  id 'org.javamodularity.moduleplugin' version '1.7.0' apply false
   id 'net.ltgt.errorprone' version '1.3.0' apply false
   id 'net.ltgt.nullaway' version '1.0.2' apply false
   id 'jacoco' // apply to root
