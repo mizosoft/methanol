@@ -99,7 +99,7 @@ public final class MemoryStore implements Store {
   }
 
   @Override
-  public Iterator<Viewer> iterator() {
+  public Iterator<Viewer> viewAll() {
     synchronized (entries) {
       return new ViewerIterator(Set.copyOf(entries.keySet()));
     }

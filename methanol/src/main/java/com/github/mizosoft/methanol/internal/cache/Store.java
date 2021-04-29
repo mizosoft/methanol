@@ -85,7 +85,7 @@ public interface Store extends AutoCloseable, Flushable {
    * throw {@code ConcurrentModificationException} when the store is changed but might or might not
    * reflect these changes.
    */
-  Iterator<Viewer> iterator() throws IOException;
+  Iterator<Viewer> viewAll() throws IOException;
 
   /**
    * Removes the entry associated with the given key.

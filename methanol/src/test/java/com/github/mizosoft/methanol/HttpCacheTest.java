@@ -38,7 +38,6 @@ import static java.time.Duration.ofHours;
 import static java.time.Duration.ofSeconds;
 import static java.time.ZoneOffset.UTC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -76,7 +75,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -87,8 +85,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import okhttp3.Headers;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
@@ -1898,81 +1894,6 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void iteratorUris(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("a"));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("b"));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("c"));
-    seedCache(serverUri.resolve("/a"));
-    seedCache(serverUri.resolve("/b"));
-    seedCache(serverUri.resolve("/c"));
-
-    var uris = Stream.of("/a", "/b", "/c")
-        .map(serverUri::resolve)
-        .collect(Collectors.toSet());
-    var iter = cache.uris();
-    for (int i = 0; i < 3; i++) {
-      assertTrue(iter.hasNext());
-
-      var uri = iter.next();
-      assertTrue(uris.remove(uri), uri::toString);
-    }
-    assertFalse(iter.hasNext());
-    assertThrows(NoSuchElementException.class, iter::next);
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void iteratorRemove(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("a"));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("b"));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("c"));
-    seedCache(serverUri.resolve("/a"));
-    seedCache(serverUri.resolve("/b"));
-    seedCache(serverUri.resolve("/c"));
-
-    // Remove a & c
-    var iter = cache.uris();
-    assertThrows(IllegalStateException.class, iter::remove);
-    while (iter.hasNext()) {
-      assertThrows(IllegalStateException.class, iter::remove);
-
-      var uri = iter.next();
-      if (uri.equals(serverUri.resolve("/a")) || uri.equals(serverUri.resolve("/c"))) {
-        iter.remove();
-      }
-
-      // Check hasNext prohibits removing the wrong entry as it causes the iterator to advance
-      iter.hasNext();
-      assertThrows(IllegalStateException.class, iter::remove);
-    }
-
-    get(GET(serverUri.resolve("/a")).header("Cache-Control", "only-if-cached"))
-        .assertLocallyGenerated();
-    get(GET(serverUri.resolve("/c")).header("Cache-Control", "only-if-cached"))
-        .assertLocallyGenerated();
-
-    get(serverUri.resolve("/b"))
-        .assertHit()
-        .assertBody("b");
-  }
-
-
-  @StoreParameterizedTest
-  @StoreConfig
   void recordStats(Store store) throws Exception {
     setUpCache(store);
     server.setDispatcher(new Dispatcher() {
@@ -2153,8 +2074,8 @@ class HttpCacheTest {
     }
 
     @Override
-    public Iterator<Viewer> iterator() throws IOException {
-      return delegate.iterator();
+    public Iterator<Viewer> viewAll() throws IOException {
+      return delegate.viewAll();
     }
 
     @Override
