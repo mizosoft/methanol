@@ -36,9 +36,9 @@ import static java.util.Objects.requireNonNullElseGet;
 import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
+import com.github.mizosoft.methanol.internal.extensions.ImmutableResponseInfo;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
@@ -973,12 +973,49 @@ public final class Methanol extends HttpClient {
 
     private <T> CompletableFuture<HttpResponse<T>> doIntercept(
         HttpRequest request, Chain<T> chain, boolean async) {
-      return new Redirector(
-              request, new SendAdapter(Handlers.toPublisherChain(chain, handlerExecutor), async))
+      var publisherChain = chain.with(BodyHandlers.ofPublisher(), screenPushPromiseHandler(chain));
+      return new Redirector(request, new SendAdapter(publisherChain, async))
           .sendAndFollowUp()
           .thenApply(Redirector::result)
-          .thenCompose(
-              response -> Handlers.handleAsync(response, chain.bodyHandler(), handlerExecutor));
+          .thenCompose(response -> handleAsync(response, chain.bodyHandler()));
+    }
+
+    // FIXME this code is identical to PublisherResponse::handlerAsync
+    private <T> CompletableFuture<HttpResponse<T>> handleAsync(
+        HttpResponse<Publisher<List<ByteBuffer>>> response, BodyHandler<T> handler) {
+      var publisher = response.body();
+      var subscriberFuture =
+          CompletableFuture.supplyAsync(
+              () -> handler.apply(ImmutableResponseInfo.from(response)), handlerExecutor);
+      subscriberFuture.thenAcceptAsync(publisher::subscribe, handlerExecutor);
+      return subscriberFuture
+          .thenComposeAsync(BodySubscriber::getBody, handlerExecutor)
+          .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).build());
+    }
+
+    /**
+     * Returns a publisher-based {@code PushPromiseHandler} that invokes the handler with the
+     * correct response type as specified by the interceptor chain.
+     */
+    private <T> @Nullable PushPromiseHandler<Publisher<List<ByteBuffer>>> screenPushPromiseHandler(
+        Chain<T> chain) {
+      return chain
+          .pushPromiseHandler()
+          .<PushPromiseHandler<Publisher<List<ByteBuffer>>>>map(
+              pushPromiseHandler ->
+                  (initiatingRequest, pushPromiseRequest, acceptor) -> {
+                    Function<BodyHandler<T>, CompletableFuture<HttpResponse<T>>>
+                        downstreamAcceptor =
+                            bodyHandler -> {
+                              var publisherResponseFuture =
+                                  acceptor.apply(BodyHandlers.ofPublisher());
+                              return publisherResponseFuture.thenCompose(
+                                  response -> handleAsync(response, bodyHandler));
+                            };
+                    pushPromiseHandler.applyPushPromise(
+                        initiatingRequest, pushPromiseRequest, downstreamAcceptor);
+                  })
+          .orElse(null);
     }
 
     private static final class SendAdapter {
@@ -1055,7 +1092,7 @@ public final class Methanol extends HttpClient {
         }
 
         // Discard the body of the redirecting response
-        Handlers.handleAsync(response, BodyHandlers.discarding(), handlerExecutor);
+        handleAsync(response, BodyHandlers.discarding());
 
         // Follow redirected request
         return new Redirector(

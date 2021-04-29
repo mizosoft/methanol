@@ -71,21 +71,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.net.http.HttpResponse.PushPromiseHandler;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.RejectedExecutionException;
@@ -551,7 +545,7 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void preconditionFieldsAreNotVisibleOnServedResponse(Store store) throws Exception {
+  void revalidatedResponseDoesNotSeePreconditionFields(Store store) throws Exception {
     setUpCache(store);
     var lastModifiedString = formatHttpDate(toUtcDateTime(clock.instant().minusSeconds(1)));
     server.enqueue(new MockResponse()
@@ -1894,96 +1888,6 @@ class HttpCacheTest {
         .assertBody("Mewtwo");
   }
 
-  @UseHttps
-  @StoreParameterizedTest
-  @StoreConfig
-  void requestsWithPushPromiseHandlersBypassCache(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "max-age=1")
-        .setBody("Steppenwolf"));
-    seedCache(serverUri);
-    get(serverUri)
-        .assertHit()
-        .assertBody("Steppenwolf");
-
-    clock.advanceSeconds(2); // Make cached response stale
-
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "max-age=1")
-        .setBody("Darkseid"));
-    // The request isn't served by the cache as it doesn't know what might be pushed.
-    // The main response however still contributes to updating the cache.
-    getWithPushHandler(serverUri)
-        .assertCode(200)
-        .assertMiss()
-        .assertBody("Darkseid");
-
-    // Previously cached response is replaced
-    get(serverUri)
-        .assertCode(200)
-        .assertHit()
-        .assertBody("Darkseid");
-  }
-
-  private enum PreconditionKind {
-    DATE("If-Unmodified-Since", "If-Modified-Since") {
-      @Override
-      void add(MutableRequest request, String field, Clock clock) {
-        request.header(field, formatHttpDate(toUtcDateTime(clock.instant().minusSeconds(3))));
-      }
-    },
-    TAG("If-Match", "If-None-Match", "If-Range") { // If range can be both
-      @Override
-      void add(MutableRequest request, String field, Clock clock) {
-        request.header(field, "1");
-      }
-    };
-
-    private final Set<String> fields;
-
-    PreconditionKind(String... fields) {
-      var set = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-      set.addAll(Set.of(fields));
-      this.fields = Collections.unmodifiableSet(set);
-    }
-
-    abstract void add(MutableRequest request, String field, Clock clock);
-
-    static PreconditionKind get(String field) {
-      return Stream.of(PreconditionKind.values())
-          .filter(kind -> kind.fields.contains(field))
-          .findFirst()
-          .orElseThrow();
-    }
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"If-Match", "If-Unmodified-Since", "If-None-Match", "If-Range"})
-  @StoreConfig
-  void requestsWithPreconditionsAreForwarded(String preconditionField, Store store)
-      throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .setBody("For Darkseid"));
-    seedCache(serverUri);
-    get(serverUri)
-        .assertHit()
-        .assertBody("For Darkseid");
-
-    server.enqueue(new MockResponse()
-        .setBody("For Darkseid"));
-    var request = GET(serverUri);
-    PreconditionKind.get(preconditionField).add(request, preconditionField, clock);
-    get(request)
-        .assertMiss()
-        .assertBody("For Darkseid");
-
-    get(request.removeHeader(preconditionField))
-        .assertHit()
-        .assertBody("For Darkseid");
-  }
-
   @StoreParameterizedTest
   @StoreConfig
   void manuallyInvalidateEntries(Store store) throws Exception {
@@ -2473,15 +2377,6 @@ class HttpCacheTest {
     return verifying(response);
   }
 
-  private ResponseVerification<String> getWithPushHandler(URI uri) {
-    var response = client.sendAsync(
-        withTimeout(GET(uri)),
-        BodyHandlers.ofString(),
-        PushPromiseHandler.of(__ -> BodyHandlers.ofString(), new ConcurrentHashMap<>())).join();
-    editAwaiter.await();
-    return verifying(response);
-  }
-
   private ResponseVerification<String> seedCache(URI uri)
       throws IOException, InterruptedException {
     return get(uri).assertMiss();
@@ -2504,7 +2399,7 @@ class HttpCacheTest {
 
   // Set timeout to not block indefinitely when response is mistakenly not enqueued to MockWebServer
   private static MutableRequest withTimeout(HttpRequest request) {
-    return MutableRequest.copyOf(request).timeout(Duration.ofSeconds(90));
+    return MutableRequest.copyOf(request).timeout(Duration.ofSeconds(20));
   }
 
   private static LocalDateTime toUtcDateTime(Instant instant) {

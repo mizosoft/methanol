@@ -1,9 +1,10 @@
 package com.github.mizosoft.methanol.internal.cache;
 
+import com.github.mizosoft.methanol.internal.extensions.ImmutableResponseInfo;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -21,9 +22,13 @@ abstract class PublisherResponse extends RawResponse {
   @Override
   public <T> CompletableFuture<TrackedResponse<T>> handleAsync(
       BodyHandler<T> handler, Executor executor) {
-    // Result will be a TrackedResponse as source response is itself tracked
-    return Handlers.handleAsync(response, publisher, handler, executor)
-        .thenApply(response -> (TrackedResponse<T>) response);
+    var subscriberFuture =
+        CompletableFuture.supplyAsync(
+            () -> handler.apply(ImmutableResponseInfo.from(response)), executor);
+    subscriberFuture.thenAcceptAsync(publisher::subscribe, executor);
+    return subscriberFuture
+        .thenComposeAsync(BodySubscriber::getBody, executor)
+        .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).buildTracked());
   }
 
   private static TrackedResponse<?> dropBody(TrackedResponse<?> response) {
