@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.testing;
 
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
+import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -31,13 +32,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
@@ -160,7 +158,8 @@ public final class StoreExtension
   }
 
   private static Stream<ResolvedStoreConfig> resolveConfigs(StoreConfig config) {
-    return cartesianProduct(
+    // TODO add an explicit dep on Guava so this doesn't magically disappear
+    return Sets.<Object>cartesianProduct(
             Set.of(config.maxSize()),
             Set.of(config.store()),
             Set.of(config.fileSystem()),
@@ -172,39 +171,6 @@ public final class StoreExtension
         .stream()
         .map(ResolvedStoreConfig::create)
         .filter(ResolvedStoreConfig::isCompatible);
-  }
-
-  @SafeVarargs
-  private static Set<List<Object>> cartesianProduct(Set<Object>... sets) {
-    // Cover empty sets case
-    if (sets.length == 0) {
-      return Set.of(List.of());
-    }
-    return cartesianProduct(List.of(sets));
-  }
-
-  private static Set<List<Object>> cartesianProduct(List<Set<Object>> sets) {
-    // Cover base cases
-    if (sets.isEmpty()) {
-      return Set.of();
-    } else if (sets.size() == 1) {
-      return sets.get(0).stream()
-          .map(List::of)
-          .collect(Collectors.toCollection(LinkedHashSet::new));
-    }
-
-    // Generate a new product from a subproduct that is obtained recursively
-    var subproduct = cartesianProduct(sets.subList(1, sets.size()));
-    var product = new LinkedHashSet<List<Object>>();
-    for (var element : sets.get(0)) {
-      for (var subset : subproduct) {
-        var newSubset = new ArrayList<>();
-        newSubset.add(element);
-        newSubset.addAll(subset);
-        product.add(Collections.unmodifiableList(newSubset));
-      }
-    }
-    return Collections.unmodifiableSet(product);
   }
 
   @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
