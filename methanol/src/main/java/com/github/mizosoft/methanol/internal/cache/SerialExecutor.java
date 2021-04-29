@@ -36,7 +36,7 @@ import java.util.concurrent.RejectedExecutionException;
  * Guava's {@code SequentialExecutor} but completely relies on atomics for synchronization.
  */
 class SerialExecutor implements Executor {
-  private static final int DRAIN_COUNT_BITS = Long.SIZE - 4; // There're 4 state bits
+  private static final int DRAIN_COUNT_BITS = Long.SIZE - 4; // There's 4 state bits
 
   /** Mask for the drain count maintained in the lower 60 bits of {@link #sync} field. */
   private static final long DRAIN_COUNT_MASK = (1L << DRAIN_COUNT_BITS) - 1;

@@ -40,7 +40,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 // TODO log failure when executor throws bec it may be swallowed when rethrown
 //      causing us to start pulling out hair when nothing completes
-  // TODO ensure abort is called prior to onError | onComplete
 @SuppressWarnings("unused") // VarHandle indirection
 public abstract class AbstractSubscription<T> implements Subscription {
 
