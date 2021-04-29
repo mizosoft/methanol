@@ -35,7 +35,6 @@ import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.CacheInterceptor;
 import com.github.mizosoft.methanol.internal.cache.CacheResponse;
 import com.github.mizosoft.methanol.internal.cache.CacheResponseMetadata;
-import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.InternalCache;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
@@ -338,8 +337,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
         if (editor != null) {
           editor.metadata(CacheResponseMetadata.from(networkResponse.get()).encode());
-          return networkResponse.writingWith(
-              editor, new RecordingWriteListener(networkResponse.get().uri(), statsRecorder));
+          return networkResponse.writingWith(editor);
         }
       } catch (IOException e) {
         LOGGER.log(Level.WARNING, "exception while opening a cache entry for writing", e);
@@ -385,26 +383,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
   }
 
-  private static final class RecordingWriteListener implements CacheWritingPublisher.Listener {
-    private final URI uri;
-    private final StatsRecorder recorder;
-
-    RecordingWriteListener(URI uri, StatsRecorder recorder) {
-      this.uri = uri;
-      this.recorder = recorder;
-    }
-
-    @Override
-    public void onWriteSuccess() {
-      recorder.recordWriteSuccess(uri);
-    }
-
-    @Override
-    public void onWriteFailure() {
-      recorder.recordWriteFailure(uri);
-    }
-  }
-
   /** Statistics of an {@code HttpCache}. */
   public interface Stats {
 
@@ -422,12 +400,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     /** Returns the number of times the cache had to use the network. */
     long networkUseCount();
-
-    /** Returns the number of times a response was successfully written to cache. */
-    long writeSuccessCount();
-
-    /** Returns the number of times a response wasn't written to cache due to a write failure. */
-    long writeFailureCount();
 
     /**
      * Returns a value between {@code 0.0} and {@code 1.0} representing the ratio between the hit
@@ -475,12 +447,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     /** Called when the cache is about to use the network. */
     void recordNetworkUse(URI uri);
-
-    /** Called when a response is successfully written to cache. */
-    void recordWriteSuccess(URI uri);
-
-    /** Called when a write failure is encountered while writing a response to cache. */
-    void recordWriteFailure(URI uri);
 
     /** Returns a {@code Stats} snapshot for the recorded statistics for all {@code URIs}. */
     Stats snapshot();
@@ -544,26 +510,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public void recordWriteSuccess(URI uri) {
-      requireNonNull(uri);
-      globalCounters.writeSuccessCounter.increment();
-      perUriCounters
-          .computeIfAbsent(uri, __ -> new StatsCounters())
-          .writeSuccessCounter
-          .increment();
-    }
-
-    @Override
-    public void recordWriteFailure(URI uri) {
-      requireNonNull(uri);
-      globalCounters.writeFailureCounter.increment();
-      perUriCounters
-          .computeIfAbsent(uri, __ -> new StatsCounters())
-          .writeFailureCounter
-          .increment();
-    }
-
-    @Override
     public Stats snapshot() {
       return globalCounters.snapshot();
     }
@@ -579,19 +525,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
       final LongAdder hitCounter = new LongAdder();
       final LongAdder missCounter = new LongAdder();
       final LongAdder networkUseCounter = new LongAdder();
-      final LongAdder writeSuccessCounter = new LongAdder();
-      final LongAdder writeFailureCounter = new LongAdder();
 
       StatsCounters() {}
 
       Stats snapshot() {
         return new StatsSnapshot(
-            requestCounter.sum(),
-            hitCounter.sum(),
-            missCounter.sum(),
-            networkUseCounter.sum(),
-            writeSuccessCounter.sum(),
-            writeFailureCounter.sum());
+            requestCounter.sum(), hitCounter.sum(), missCounter.sum(), networkUseCounter.sum());
       }
     }
   }
@@ -612,12 +551,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
     public void recordNetworkUse(URI uri) {}
 
     @Override
-    public void recordWriteSuccess(URI uri) {}
-
-    @Override
-    public void recordWriteFailure(URI uri) {}
-
-    @Override
     public Stats snapshot() {
       return StatsSnapshot.EMPTY;
     }
@@ -629,28 +562,18 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   private static final class StatsSnapshot implements Stats {
-    static final Stats EMPTY = new StatsSnapshot(0L, 0L, 0L, 0L, 0L, 0L);
+    static final Stats EMPTY = new StatsSnapshot(0L, 0L, 0L, 0L);
 
     private final long requestCount;
     private final long hitCount;
     private final long missCount;
     private final long networkUseCount;
-    private final long writeSuccessCount;
-    private final long writeFailureCount;
 
-    StatsSnapshot(
-        long requestCount,
-        long hitCount,
-        long missCount,
-        long networkUseCount,
-        long writeSuccessCount,
-        long writeFailureCount) {
+    StatsSnapshot(long requestCount, long hitCount, long missCount, long networkUseCount) {
       this.requestCount = requestCount;
       this.hitCount = hitCount;
       this.missCount = missCount;
       this.networkUseCount = networkUseCount;
-      this.writeSuccessCount = writeSuccessCount;
-      this.writeFailureCount = writeFailureCount;
     }
 
     @Override
@@ -674,19 +597,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public long writeSuccessCount() {
-      return writeSuccessCount;
-    }
-
-    @Override
-    public long writeFailureCount() {
-      return writeFailureCount;
-    }
-
-    @Override
     public int hashCode() {
-      return Objects.hash(
-          requestCount, hitCount, missCount, networkUseCount, writeSuccessCount, writeFailureCount);
+      return Objects.hash(requestCount, hitCount, missCount, networkUseCount);
     }
 
     @Override
@@ -699,16 +611,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return requestCount == other.requestCount()
           && hitCount == other.hitCount()
           && missCount == other.missCount()
-          && networkUseCount == other.networkUseCount()
-          && writeSuccessCount == other.writeSuccessCount()
-          && writeFailureCount == other.writeFailureCount();
+          && networkUseCount == other.networkUseCount();
     }
 
     @Override
     public String toString() {
       return String.format(
-          "Stats[requestCount=%d, hitCount=%d, missCount=%d, networkUseCount=%d, writeSuccessCount=%d, writeFailureCount=%d]",
-          requestCount, hitCount, missCount, networkUseCount, writeSuccessCount, writeFailureCount);
+          "Stats[requestCount=%d, hitCount=%d, missCount=%d, networkUseCount=%d, hitRate=%f]",
+          requestCount, hitCount, missCount, networkUseCount, hitRate());
     }
   }
 

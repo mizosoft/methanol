@@ -105,6 +105,7 @@ import okhttp3.mockwebserver.QueueDispatcher;
 import okhttp3.mockwebserver.RecordedRequest;
 import okhttp3.mockwebserver.SocketPolicy;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -2106,7 +2107,7 @@ class HttpCacheTest {
     var uri2 = serverUri.resolve("/b");
     server.setDispatcher(new Dispatcher() {
       @Override
-      public MockResponse dispatch(RecordedRequest recordedRequest) {
+      public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
         var path = recordedRequest.getRequestUrl().pathSegments().get(0);
         switch (path) {
           case "a":
@@ -2526,12 +2527,13 @@ class HttpCacheTest {
         .assertBody("b");
   }
 
+
   @StoreParameterizedTest
   @StoreConfig
   void recordStats(Store store) throws Exception {
     setUpCache(store);
     server.setDispatcher(new Dispatcher() {
-      @Override public MockResponse dispatch(RecordedRequest recordedRequest) {
+      @NotNull @Override public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
         var path = recordedRequest.getRequestUrl().pathSegments().get(0);
         switch (path) {
           case "hit":
@@ -2580,7 +2582,7 @@ class HttpCacheTest {
     var uri1 = serverUri.resolve("/a");
     var uri2 = serverUri.resolve("/b");
     server.setDispatcher(new Dispatcher() {
-      @Override public MockResponse dispatch(RecordedRequest recordedRequest) {
+      @NotNull @Override public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
         return new MockResponse().addHeader("Cache-Control", "max-age=2");
       }
     });
@@ -2618,51 +2620,6 @@ class HttpCacheTest {
     assertEquals(0, emptyStats.hitCount());
     assertEquals(0, emptyStats.missCount());
     assertEquals(0, emptyStats.networkUseCount());
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void writeStats(Store store) throws Exception {
-    var failingStore = new FailingStore(store);
-    setUpCache(failingStore);
-    failingStore.allowReads = true;
-
-    server.setDispatcher(new Dispatcher() {
-      @Override
-      public MockResponse dispatch(RecordedRequest recordedRequest) {
-        return new MockResponse()
-            .addHeader("Cache-Control", "max-age=1")
-            .setBody("Pickachu");
-      }
-    });
-
-    failingStore.allowWrites = true;
-
-    seedCache(serverUri.resolve("/a"));
-    cache.remove(serverUri.resolve("/a")); // Reinsert
-    seedCache(serverUri.resolve("/a"));
-    seedCache(serverUri.resolve("/b"));
-
-    failingStore.allowWrites = false;
-    cache.remove(serverUri.resolve("/b")); // Reinsert
-    seedCache(serverUri.resolve("/b"));
-    seedCache(serverUri.resolve("/c"));
-
-    var stats = cache.stats();
-    assertEquals(3, stats.writeSuccessCount());
-    assertEquals(2, stats.writeFailureCount());
-
-    var stats_a = cache.stats(serverUri.resolve("/a"));
-    assertEquals(2, stats_a.writeSuccessCount());
-    assertEquals(0, stats_a.writeFailureCount());
-
-    var stats_b = cache.stats(serverUri.resolve("/b"));
-    assertEquals(1, stats_b.writeSuccessCount());
-    assertEquals(1, stats_b.writeFailureCount());
-
-    var stats_c = cache.stats(serverUri.resolve("/c"));
-    assertEquals(0, stats_c.writeSuccessCount());
-    assertEquals(1, stats_c.writeFailureCount());
   }
 
   private ResponseVerification<String> get(URI uri) throws IOException, InterruptedException {
