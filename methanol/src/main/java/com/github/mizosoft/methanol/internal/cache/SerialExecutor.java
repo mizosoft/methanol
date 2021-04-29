@@ -94,7 +94,7 @@ class SerialExecutor implements Executor {
     while (true) {
       int s = sync;
       if ((s & SHUTDOWN) != 0) {
-        throw new RejectedExecutionException(command.toString());
+        throw new RejectedExecutionException();
       }
       // Try to execute drain task or keep it alive if it's already running or about
       // to run (submitted to delegate executor). In case of contention, multiple

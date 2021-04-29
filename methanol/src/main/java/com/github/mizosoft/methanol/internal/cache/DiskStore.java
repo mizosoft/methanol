@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.Utils.closeQuietly;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
@@ -41,6 +40,7 @@ import static java.util.Objects.requireNonNullElseGet;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.function.ThrowingRunnable;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
+import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -74,10 +74,11 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
@@ -91,6 +92,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+// TODO Add more logging
 /**
  * A persistent {@link Store} implementation that saves entries into a specified directory. A {@code
  * DiskStore} instance assumes exclusive ownership of its directory; only a single {@code DiskStore}
@@ -106,7 +108,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * com.github.mizosoft.methanol.internal.cache.DiskStore.indexUpdateDelayMillis}. Setting a small
  * delay can result in too often index updates, which extracts a noticeable toll on IO & CPU
  * (updating entails reconstructing then rewriting the whole index). On the other hand, scarcely
- * updating the index affords less durability against crashes. Calling the {@code flush} method
+ * updating the index provides less durability against crashes. Calling the {@code flush} method
  * forces an index update, regardless of the time limit.
  *
  * <p>To ensure entries are not lost across sessions, a store must be {@link #close() closed} after
@@ -115,7 +117,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * closed store throws an {@code IllegalStateException} when either of {@code initialize} (if not
  * yet initialized), {@code view}, {@code edit}, {@code remove} or {@code clear} is invoked.
  */
-// TODO consider logging more events
 public final class DiskStore implements Store {
   /*
    * The store's layout on disk is as follows:
@@ -231,16 +232,11 @@ public final class DiskStore implements Store {
     indexWriteScheduler =
         new IndexWriteScheduler(
             indexOperator,
+            requireNonNullElse(builder.indexFlushDelay, INDEX_UPDATE_DELAY),
             indexExecutor,
             this::entrySetSnapshot,
-            requireNonNullElse(builder.indexUpdateDelay, INDEX_UPDATE_DELAY),
-            requireNonNullElseGet(builder.delayer, Delayer::systemDelayer),
             clock);
     evictionScheduler = new EvictionScheduler(this, executor);
-  }
-
-  public Path directory() {
-    return directory;
   }
 
   @Override
@@ -438,17 +434,17 @@ public final class DiskStore implements Store {
       entry.freeze();
     }
     if (disposing) {
-      // Avoid overlapping an index write with store directory deletion
-      indexWriteScheduler.shutdown(true);
+      // Avoid overlapping an index update with store directory deletion
+      indexWriteScheduler.abortOrAwaitCurrentlyScheduled();
       deleteStoreContent(directory);
     } else {
+      indexWriteScheduler.abortCurrentlyScheduled();
       // Make sure we close within our size bound
       evictExcessiveEntries();
       Utils.blockOnIO(indexWriteScheduler.scheduleNow());
-      indexWriteScheduler.shutdown(false);
     }
     indexExecutor.shutdown();
-    evictionScheduler.shutdown();
+    evictionScheduler.stop();
     entries.clear();
 
     // Finally release the directory
@@ -642,7 +638,7 @@ public final class DiskStore implements Store {
   }
 
   private static void deleteStoreContent(Path directory) throws IOException {
-    // Don't delete the lock file as we're still using the directory
+    // Don't delete the lock file as the directory is still being used
     var lockFile = directory.resolve(LOCK_FILENAME);
     var filter = Predicate.not(lockFile::equals);
     try (var stream = Files.newDirectoryStream(directory, filter::test)) {
@@ -651,6 +647,16 @@ public final class DiskStore implements Store {
       }
     } catch (DirectoryIteratorException e) {
       throw e.getCause();
+    }
+  }
+
+  private static void closeQuietly(@Nullable Closeable closeable) {
+    if (closeable != null) {
+      try {
+        closeable.close();
+      } catch (IOException e) {
+        LOGGER.log(Level.WARNING, "exception while closing: " + closeable, e);
+      }
     }
   }
 
@@ -697,7 +703,7 @@ public final class DiskStore implements Store {
         try {
           removeEntry(entry, true);
         } catch (IOException ioe) {
-          LOGGER.log(Level.WARNING, "failed to remove the entry", ioe);
+          LOGGER.log(Level.WARNING, "exception while removing an entry via Iterator::remove", ioe);
         }
       } finally {
         closeLock.unlockRead(stamp);
@@ -882,7 +888,7 @@ public final class DiskStore implements Store {
                 "unrecognized file or directory found during initialization: "
                     + path
                     + System.lineSeparator()
-                    + "it is generally not a good idea to let the store directory be used by other entities");
+                    + "it is generally not a good idea to let the cache directory be used by other entities");
           }
         }
       }
@@ -898,208 +904,136 @@ public final class DiskStore implements Store {
     }
   }
 
-  /** Delays the execution of a given task. */
-  public interface Delayer {
-
-    /** Arranges for the task to be submitted to the executor after the delay is evaluated. */
-    CompletableFuture<Void> delay(Executor executor, Runnable task, Duration delay);
-
-    /** A Delayer that uses the system-wide scheduler through CompletableFuture::delayedExecutor. */
-    static Delayer systemDelayer() {
-      return SystemDelayer.INSTANCE;
-    }
-  }
-
-  private enum SystemDelayer implements Delayer {
-    INSTANCE;
-
-    @Override
-    public CompletableFuture<Void> delay(Executor executor, Runnable task, Duration delay) {
-      return CompletableFuture.runAsync(task, delayedExecutor(executor, delay));
-    }
-
-    private Executor delayedExecutor(Executor delegate, Duration delay) {
-      return delay.compareTo(Duration.ZERO) <= 0
-          ? delegate // Execute immediately
-          : CompletableFuture.delayedExecutor(
-              TimeUnit.MILLISECONDS.convert(delay), TimeUnit.MILLISECONDS);
-    }
-  }
-
   /**
-   * A time-limited scheduler for index updates that arranges no more than 1 write each
-   * INDEX_UPDATE_DELAY.toMillis().
+   * A scheduler for index updates that time-limits writes such that no more than one write is
+   * performed each INDEX_UPDATE_DELAY.toMillis().
    */
   private static final class IndexWriteScheduler {
-    /** Terminal marker that is set when no more writes are to be scheduled. */
-    private static final WriteTaskView TOMBSTONE =
-        new WriteTaskView() {
-          @Override
-          Instant fireTime() {
-            return Instant.MIN;
-          }
-
-          @Override
-          void cancel() {}
-        };
-
     private final IndexOperator indexOperator;
+    private final Duration flushDelay;
     private final Executor indexExecutor;
     private final Supplier<Set<EntryDescriptor>> entrySetSnapshotSupplier;
-    private final Duration updateDelay;
-    private final Delayer delayer;
     private final Clock clock;
-    private final AtomicReference<WriteTaskView> scheduledWriteTask = new AtomicReference<>();
-
-    /**
-     * A barrier for shutdowns to await the currently running task. Scheduled WriteTasks normally
-     * have the following transitions:
-     *
-     * <pre>{@code
-     * T1 -> T2 -> .... -> Tn
-     * }</pre>
-     *
-     * Where Tn is the currently scheduled and hence the only referenced task, and the time between
-     * two consecutive Ts is at minimum the index update delay (note that Ts don't overlap since the
-     * executor is serialized). Ensuring no Ts are running after shutdown (currently needed by
-     * dispose) entails awaiting for the currently running task (if any) to finish then preventing
-     * ones following it from starting. If the update delay is small enough, or if the executor
-     * and/or the system-wide scheduler are busy, the currently running task might be lagging behind
-     * Tn by multiple Ts, so it's not ideal to somehow keep a reference to it in order to await it
-     * when needed. This Phaser solves this issue by having the currently running T to register
-     * itself then arriveAndDeregister when finished. During shutdown, the scheduler deregisters
-     * from, then attempts to await, the phaser, where it is only awaited if there is still one
-     * registered party (a running T). When registerers reach 0, the phaser is terminated,
-     * preventing yet to arrive tasks from registering, so they won't run.
-     */
-    private final Phaser runningTaskAwaiter = new Phaser(1); // Register self
+    private final AtomicReference<IndexWriteTask> scheduledWriteTask = new AtomicReference<>();
 
     IndexWriteScheduler(
         IndexOperator indexOperator,
+        Duration flushDelay,
         Executor indexExecutor,
         Supplier<Set<EntryDescriptor>> entrySetSnapshotSupplier,
-        Duration updateDelay,
-        Delayer delayer,
         Clock clock) {
       this.indexOperator = indexOperator;
+      this.flushDelay = flushDelay;
       this.indexExecutor = indexExecutor;
       this.entrySetSnapshotSupplier = entrySetSnapshotSupplier;
-      this.updateDelay = updateDelay;
-      this.delayer = delayer;
       this.clock = clock;
     }
 
     void trySchedule() {
       // Decide whether to schedule and when as follows:
-      //   - If TOMBSTONE is set, don't schedule anything.
-      //   - If scheduledWriteTask is null, then this is the first call,
-      //     so schedule immediately.
-      //   - If scheduledWriteTask is set to run in the future, then it'll
-      //     see the changes made so far and there's no need to schedule.
-      //   - If less than INDEX_UPDATE_DELAY time has passed since the last
-      //     write, then schedule a write to when INDEX_UPDATE_DELAY will be
-      //     evaluated from the last write.
-      //   - Otherwise, a timeslot is available, so schedule immediately.
+      // - If scheduledWriteTask is null, then this is the first call,
+      //   so schedule immediately.
+      // - If scheduledWriteTask is set to run in the future, then it'll
+      //   see the changes made so far and there's no need to schedule.
+      // - If less than INDEX_UPDATE_DELAY time has passed since the last
+      //   write, then schedule a write to when INDEX_UPDATE_DELAY will be
+      //   evaluated from the last write.
+      // - Otherwise, a timeslot is available, so schedule immediately.
       //
       // This is retried in case of contention.
 
       var now = clock.instant();
       while (true) {
-        var currentTask = scheduledWriteTask.get();
-        var nextFireTime = currentTask != null ? currentTask.fireTime() : null;
+        var task = scheduledWriteTask.get();
+        var nextFireTime = task != null ? task.fireTime : null;
         Duration delay;
         if (nextFireTime == null) {
           delay = Duration.ZERO;
-        } else if (currentTask == TOMBSTONE || nextFireTime.isAfter(now)) {
+        } else if (nextFireTime.isAfter(now)) {
           delay = null;
         } else {
           var idleness = Duration.between(nextFireTime, now);
-          var remainingUpdateDelay = updateDelay.minus(idleness);
+          var remainingUpdateDelay = flushDelay.minus(idleness);
           delay = max(remainingUpdateDelay, Duration.ZERO);
         }
 
-        if (delay == null) { // No writes are needed
-          break;
-        }
-
-        // Attempt to CAS to a new task that is run after the computed delay
-        var nextTask = new WriteTask(now.plus(delay));
-        if (scheduledWriteTask.compareAndSet(currentTask, nextTask)) {
-          delayer.delay(indexExecutor, nextTask.logOnFailure(), delay);
-          break;
-        }
-      }
-    }
-
-    /** Forcibly submits an index write to the index executor, ignoring the time rate. */
-    CompletableFuture<Void> scheduleNow() {
-      var now = clock.instant();
-      while (true) {
-        var currentTask = scheduledWriteTask.get();
-        if (currentTask == TOMBSTONE) {
-          return CompletableFuture.completedFuture(null); // Silently fail
-        }
-
-        var immediateTask = new WriteTask(now); // Firing now...
-        if (scheduledWriteTask.compareAndSet(currentTask, immediateTask)) {
-          if (currentTask != null) {
-            currentTask.cancel(); // OK if already ran or running
+        IndexWriteTask nextTask = null;
+        if (delay == null
+            || scheduledWriteTask.compareAndSet(
+                task, nextTask = new IndexWriteTask(now.plus(delay)))) {
+          if (nextTask != null) {
+            getDelayedExecutor(delay).execute(nextTask.logOnFailure());
           }
-          return Unchecked.runAsync(immediateTask, indexExecutor);
+          break;
         }
       }
     }
 
-    void shutdown(boolean awaitRunningTask) throws InterruptedIOException {
-      scheduledWriteTask.set(TOMBSTONE);
-      int phase = runningTaskAwaiter.arriveAndDeregister();
-      if (awaitRunningTask) {
-        try {
-          runningTaskAwaiter.awaitAdvanceInterruptibly(phase);
-          assert runningTaskAwaiter.isTerminated();
-        } catch (InterruptedException e) {
-          throw new InterruptedIOException();
-        }
+    /** Forcibly submit an index write to the index executor, ignoring the time rate. */
+    CompletableFuture<Void> scheduleNow() {
+      var newTask = new IndexWriteTask(clock.instant()); // Firing now...
+      var task = scheduledWriteTask.getAndSet(newTask);
+      if (task != null) {
+        task.abort(); // OK if already ran or running
+      }
+      return Unchecked.runAsync(newTask, indexExecutor);
+    }
+
+    private Executor getDelayedExecutor(Duration delay) {
+      return delay.equals(Duration.ZERO)
+          ? indexExecutor // Execute immediately
+          : CompletableFuture.delayedExecutor(
+              delay.toMillis(), TimeUnit.MILLISECONDS, indexExecutor);
+    }
+
+    void abortCurrentlyScheduled() {
+      var task = scheduledWriteTask.getAndSet(null);
+      if (task != null) {
+        task.abort();
       }
     }
 
-    private abstract static class WriteTaskView {
-      abstract Instant fireTime();
-
-      abstract void cancel();
+    void abortOrAwaitCurrentlyScheduled() throws InterruptedIOException {
+      var task = scheduledWriteTask.getAndSet(null);
+      if (task != null && !task.abort()) {
+        task.awaitDone();
+      }
     }
 
-    private final class WriteTask extends WriteTaskView implements ThrowingRunnable {
-      private final Instant fireTime;
-      private volatile boolean cancelled;
+    private final class IndexWriteTask implements ThrowingRunnable {
+      final Instant fireTime;
+      private final AtomicBoolean fence = new AtomicBoolean();
+      private final CountDownLatch done = new CountDownLatch(1);
 
-      WriteTask(Instant fireTime) {
+      IndexWriteTask(Instant fireTime) {
         this.fireTime = fireTime;
       }
 
       @Override
-      Instant fireTime() {
-        return fireTime;
-      }
-
-      @Override
-      void cancel() {
-        cancelled = true;
-      }
-
-      @Override
       public void run() throws IOException {
-        if (!cancelled && runningTaskAwaiter.register() >= 0) {
+        if (fence.compareAndSet(false, true)) {
           try {
             indexOperator.writeIndex(entrySetSnapshotSupplier.get());
           } finally {
-            runningTaskAwaiter.arriveAndDeregister();
+            done.countDown();
           }
         }
       }
 
+      boolean abort() {
+        return fence.compareAndSet(false, true);
+      }
+
+      void awaitDone() throws InterruptedIOException {
+        try {
+          done.await();
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException();
+        }
+      }
+
       Runnable logOnFailure() {
-        // TODO consider disabling the store if this happens too often
+        // TODO try instead to disable the store if this happens too often
         return () -> {
           try {
             run();
@@ -1115,7 +1049,7 @@ public final class DiskStore implements Store {
   private static final class EvictionScheduler {
     private static final int RUN = 0x1;
     private static final int KEEP_ALIVE = 0x2;
-    private static final int SHUTDOWN = 0x4;
+    private static final int STOP = 0x4;
 
     private static final VarHandle SYNC;
 
@@ -1140,7 +1074,7 @@ public final class DiskStore implements Store {
     }
 
     void schedule() {
-      for (int s; ((s = sync) & SHUTDOWN) == 0; ) {
+      for (int s; ((s = sync) & STOP) == 0; ) {
         int bit = (s & RUN) == 0 ? RUN : KEEP_ALIVE; // Run or keep-alive
         if (SYNC.compareAndSet(this, s, (s | bit))) {
           if (bit == RUN) {
@@ -1152,11 +1086,11 @@ public final class DiskStore implements Store {
     }
 
     private void runEviction() {
-      for (int s; ((s = sync) & SHUTDOWN) == 0; ) {
+      for (int s; ((s = sync) & STOP) == 0; ) {
         try {
           if (!store.runScheduledEviction()) {
             // The store is closed
-            shutdown();
+            stop();
             break;
           }
         } catch (IOException ioe) {
@@ -1171,8 +1105,8 @@ public final class DiskStore implements Store {
       }
     }
 
-    void shutdown() {
-      SYNC.getAndBitwiseOr(this, SHUTDOWN);
+    void stop() {
+      SYNC.getAndBitwiseOr(this, STOP);
     }
   }
 
@@ -1573,7 +1507,7 @@ public final class DiskStore implements Store {
           // Data is untouched
           updatedDataSize = readResult.dataSize;
         } else {
-          // The entry wasn't readable, meaning it's new
+          // The entry wasn't readable
           updatedDataSize = 0L;
         }
         newEntrySize = newMetadataSize + updatedDataSize;
@@ -1725,7 +1659,7 @@ public final class DiskStore implements Store {
       return file;
     }
 
-    ExecutorService asyncChannelExecutor() {
+    ExecutorService newChannelExecutor() {
       return ExecutorServiceAdapter.adapt(executor);
     }
   }
@@ -1872,7 +1806,7 @@ public final class DiskStore implements Store {
         if (channel == null) {
           channel =
               AsynchronousFileChannel.open(
-                  entry.tempEntryFile(), Set.of(WRITE, CREATE), entry.asyncChannelExecutor());
+                  entry.tempEntryFile(), Set.of(WRITE, CREATE), entry.newChannelExecutor());
           lazyChannel = channel;
         }
       } catch (IOException ioe) {
@@ -1962,8 +1896,7 @@ public final class DiskStore implements Store {
     private int appVersion = UNSET;
     public @MonotonicNonNull Hasher hasher;
     private @MonotonicNonNull Clock clock;
-    private @MonotonicNonNull Delayer delayer;
-    private @MonotonicNonNull Duration indexUpdateDelay;
+    private @MonotonicNonNull Duration indexFlushDelay;
 
     Builder() {}
 
@@ -1993,20 +1926,16 @@ public final class DiskStore implements Store {
       return this;
     }
 
-    public Builder clock(Clock clock) {
-      this.clock = requireNonNull(clock);
+    public Builder clock(@Nullable Clock clock) {
+      this.clock = clock;
       return this;
     }
 
-    public Builder delayer(Delayer delayer) {
-      this.delayer = requireNonNull(delayer);
-      return this;
-    }
-
-    public Builder indexUpdateDelay(Duration duration) {
-      requireNonNull(duration);
-      requireArgument(!duration.isNegative(), "negative duration");
-      this.indexUpdateDelay = duration;
+    public Builder indexFlushDelay(@Nullable Duration duration) {
+      if (duration != null) {
+        requireArgument(!duration.isNegative(), "negative duration");
+        this.indexFlushDelay = duration;
+      }
       return this;
     }
 

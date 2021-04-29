@@ -20,14 +20,13 @@
 package com.github.mizosoft.methanol.testing.extensions;
 
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
-import com.github.mizosoft.methanol.internal.cache.DiskStore.Delayer;
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.Execution;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.FileSystemType;
@@ -43,6 +42,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.FileSystem;
@@ -53,24 +53,19 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
@@ -79,14 +74,9 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolutionException;
-import org.junit.jupiter.api.extension.ParameterResolver;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.junit.platform.commons.support.AnnotationSupport;
 
 /** {@code Extension} that provides {@code Store} instances with multiple configurations. */
 public final class StoreProvider
@@ -94,18 +84,22 @@ public final class StoreProvider
         BeforeEachCallback,
         AfterAllCallback,
         AfterEachCallback,
-        ArgumentsProvider,
-        ParameterResolver {
+        // ParameterResolver,
+        ArgumentsProvider {
   private static final Namespace EXTENSION_NAMESPACE = Namespace.create(StoreProvider.class);
+
+  private @MonotonicNonNull ManagedStores stores;
 
   @Override
   public void beforeAll(ExtensionContext context) throws Exception {
-    ManagedStores.get(context).initializeAll();
+    stores = ManagedStores.get(context);
+    stores.initializeAll();
   }
 
   @Override
   public void beforeEach(ExtensionContext context) throws Exception {
-    ManagedStores.get(context).initializeAll();
+    stores = ManagedStores.get(context);
+    stores.initializeAll();
   }
 
   @Override
@@ -126,58 +120,21 @@ public final class StoreProvider
     return resolveConfigs(storeConfig)
         .map(
             Unchecked.func(
-                resolvedConfig ->
-                    resolveArguments(
-                        Set.of(testMethod.getParameterTypes()),
-                        stores.newContext(testMethod, resolvedConfig))));
-  }
-
-  @Override
-  public boolean supportsParameter(
-      ParameterContext parameterContext, ExtensionContext extensionContext)
-      throws ParameterResolutionException {
-    var element = parameterContext.getDeclaringExecutable();
-    if (AnnotationSupport.findAnnotation(element, StoreConfig.class).isEmpty()) {
-      return false;
-    }
-
-    // Do not complete with our ArgumentsProvider side
-    var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
-    if (argSource.isPresent() && argSource.get().value() == StoreProvider.class) {
-      return false;
-    }
-
-    var paramType = parameterContext.getParameter().getType();
-    return paramType == Store.class || paramType == StoreContext.class;
-  }
-
-  @Override
-  public Object resolveParameter(
-      ParameterContext parameterContext, ExtensionContext extensionContext)
-      throws ParameterResolutionException {
-    var executable = parameterContext.getDeclaringExecutable();
-    var storeConfig = findStoreConfig(executable);
-    var stores = ManagedStores.get(extensionContext);
-    var paramType = parameterContext.getParameter().getType();
-    return resolveConfigs(storeConfig)
-        .map(
-            Unchecked.func(
-                resolvedConfig ->
-                    resolveArguments(
-                        Set.of(paramType), stores.getFirstContext(executable, resolvedConfig))))
-        .flatMap(args -> Stream.of(args.get()))
-        .findFirst()
-        .orElseThrow(UnsupportedOperationException::new);
+                config -> resolveArguments(testMethod, stores.newContext(testMethod, config))));
   }
 
   private static StoreConfig findStoreConfig(AnnotatedElement element) {
-    return AnnotationSupport.findAnnotation(element, StoreConfig.class)
-        .orElseThrow(() -> new UnsupportedOperationException("@StoreConfig not found"));
+    var config = element.getAnnotation(StoreConfig.class);
+    if (config == null) {
+      throw new UnsupportedOperationException("@StoreConfig not found");
+    }
+    return config;
   }
 
-  private static Arguments resolveArguments(Set<Class<?>> params, StoreContext context)
+  private static Arguments resolveArguments(Method testMethod, StoreContext context)
       throws IOException {
     // Provide the StoreContext or a new Store or both
+    var params = Set.of(testMethod.getParameterTypes());
     if (params.containsAll(Set.of(Store.class, StoreContext.class))) {
       return Arguments.of(context.newStore(), context);
     } else if (params.contains(StoreContext.class)) {
@@ -197,7 +154,7 @@ public final class StoreProvider
             Set.of(config.fileSystem()),
             Set.of(config.execution()),
             Set.of(config.appVersion()),
-            Set.of(config.indexUpdateDelaySeconds()),
+            Set.of(config.indexFlushDelaySeconds()),
             Set.of(config.autoInit()),
             Set.of(config.autoAdvanceClock()))
         .stream()
@@ -205,20 +162,10 @@ public final class StoreProvider
         .filter(ResolvedConfig::isCompatible);
   }
 
-  @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
-  @Retention(RetentionPolicy.RUNTIME)
-  @ArgumentsSource(StoreProvider.class)
-  public @interface StoreSource {}
-
-  @Target(ElementType.METHOD)
-  @Retention(RetentionPolicy.RUNTIME)
-  @ParameterizedTest
-  @StoreSource
-  public @interface StoreParameterizedTest {}
-
   /** Specifies one or more {@code Store} configuration to be provided to a test case. */
   @Target(ElementType.METHOD)
   @Retention(RetentionPolicy.RUNTIME)
+  @ArgumentsSource(StoreProvider.class)
   public @interface StoreConfig {
     int DEFAULT_FLUSH_DELAY = -1;
 
@@ -233,7 +180,7 @@ public final class StoreProvider
     int appVersion() default 1;
 
     /** Delay between automatic index updates done by the disk store. */
-    long indexUpdateDelaySeconds() default DEFAULT_FLUSH_DELAY;
+    long indexFlushDelaySeconds() default DEFAULT_FLUSH_DELAY;
 
     /** Automatically initialize a created store. */
     boolean autoInit() default true;
@@ -261,7 +208,7 @@ public final class StoreProvider
       SAME_THREAD {
         @Override
         Executor newExecutor() {
-          return FlowSupport.SYNC_EXECUTOR;
+          return new MockExecutor().executeOnSameThread(true);
         }
       },
       ASYNC {
@@ -286,7 +233,7 @@ public final class StoreProvider
     final FileSystemType fileSystemType;
     final Execution execution;
     final int appVersion;
-    final @Nullable Duration indexUpdateDelay;
+    final @Nullable Duration indexFlushDelay;
     final boolean autoInit;
     final boolean autoAdvanceClock;
 
@@ -296,7 +243,7 @@ public final class StoreProvider
         FileSystemType fileSystemType,
         Execution execution,
         int appVersion,
-        @Nullable Duration indexUpdateDelay,
+        @Nullable Duration indexFlushDelay,
         boolean autoInit,
         boolean autoAdvanceClock) {
       this.maxSize = maxSize;
@@ -304,7 +251,7 @@ public final class StoreProvider
       this.fileSystemType = fileSystemType;
       this.execution = execution;
       this.appVersion = appVersion;
-      this.indexUpdateDelay = indexUpdateDelay;
+      this.indexFlushDelay = indexFlushDelay;
       this.autoInit = autoInit;
       this.autoAdvanceClock = autoAdvanceClock;
     }
@@ -329,8 +276,8 @@ public final class StoreProvider
       return appVersion;
     }
 
-    public @Nullable Duration indexUpdateDelay() {
-      return indexUpdateDelay;
+    public @Nullable Duration indexFlushDelay() {
+      return indexFlushDelay;
     }
 
     public boolean autoInit() {
@@ -383,10 +330,10 @@ public final class StoreProvider
       var fileSystemType = (FileSystemType) tuple.get(i++);
       var execution = (Execution) tuple.get(i++);
       var appVersion = (int) tuple.get(i++);
-      long indexUpdateDelaySeconds = (long) tuple.get(i++);
-      var indexUpdateDelay =
-          indexUpdateDelaySeconds != StoreConfig.DEFAULT_FLUSH_DELAY
-              ? Duration.ofSeconds(indexUpdateDelaySeconds)
+      long indexFlushDelaySeconds = (long) tuple.get(i++);
+      var indexFlushDelay =
+          indexFlushDelaySeconds != StoreConfig.DEFAULT_FLUSH_DELAY
+              ? Duration.ofSeconds(indexFlushDelaySeconds)
               : null;
       boolean autoInit = (boolean) tuple.get(i++);
       boolean autoAdvanceClock = (boolean) tuple.get(i);
@@ -396,7 +343,7 @@ public final class StoreProvider
           fileSystemType,
           execution,
           appVersion,
-          indexUpdateDelay,
+          indexFlushDelay,
           autoInit,
           autoAdvanceClock);
     }
@@ -423,74 +370,6 @@ public final class StoreProvider
     }
   }
 
-  /** A Delayer that delays tasks based on a MockClock's time. */
-  public static final class MockDelayer implements Delayer {
-    private final MockClock clock;
-    private final Queue<TimestampedTask> taskQueue =
-        new PriorityQueue<>(Comparator.comparing(task -> task.stamp));
-
-    MockDelayer(MockClock clock) {
-      this.clock = clock;
-      clock.onTick((instant, ticks) -> dispatchExpiredTasks(instant.plus(ticks), false));
-    }
-
-    @Override
-    public CompletableFuture<Void> delay(Executor executor, Runnable task, Duration delay) {
-      var now = clock.peekInstant(); // Do not advance clock
-      var timestampedTask = new TimestampedTask(executor, task, now.plus(delay));
-      synchronized (taskQueue) {
-        taskQueue.add(timestampedTask);
-      }
-
-      dispatchExpiredTasks(now, false);
-      return timestampedTask.future;
-    }
-
-    public int taskCount() {
-      synchronized (taskQueue) {
-        return taskQueue.size();
-      }
-    }
-
-    void dispatchExpiredTasks(Instant now, boolean ignoreRejected) {
-      TimestampedTask task;
-      synchronized (taskQueue) {
-        while ((task = taskQueue.peek()) != null && now.compareTo(task.stamp) >= 0) {
-          taskQueue.poll();
-          try {
-            task.dispatch();
-          } catch (RejectedExecutionException e) {
-            if (!ignoreRejected) {
-              throw e;
-            }
-          }
-        }
-      }
-    }
-
-    private static final class TimestampedTask {
-      final Executor executor;
-      final Runnable task;
-      final Instant stamp;
-      final CompletableFuture<Void> future = new CompletableFuture<>();
-
-      TimestampedTask(Executor executor, Runnable task, Instant stamp) {
-        this.task = task;
-        this.stamp = stamp;
-        this.executor = executor;
-      }
-
-      void dispatch() {
-        future.completeAsync(
-            () -> {
-              task.run();
-              return null;
-            },
-            executor);
-      }
-    }
-  }
-
   /** Context for a store configuration. */
   public static final class StoreContext {
     private final ResolvedConfig config;
@@ -499,7 +378,6 @@ public final class StoreProvider
     private final @Nullable Executor executor;
     private final @Nullable MockHasher hasher;
     private final @Nullable MockClock clock;
-    private final @Nullable MockDelayer delayer;
 
     private final List<Store> createdStores = new ArrayList<>();
 
@@ -516,7 +394,6 @@ public final class StoreProvider
       this.executor = executor;
       this.hasher = hasher;
       this.clock = clock;
-      this.delayer = clock != null ? new MockDelayer(clock) : null;
     }
 
     public long maxSize() {
@@ -544,13 +421,6 @@ public final class StoreProvider
       return clock;
     }
 
-    public MockDelayer delayer() {
-      if (delayer == null) {
-        throw new UnsupportedOperationException("unavailable delayer");
-      }
-      return delayer;
-    }
-
     public Path directory() {
       if (directory == null) {
         throw new UnsupportedOperationException("unavailable directory");
@@ -560,16 +430,6 @@ public final class StoreProvider
 
     public ResolvedConfig config() {
       return config;
-    }
-
-    /** If execution is mocked, makes sure all tasks queued so far are executed. */
-    public void drainQueuedTasks() {
-      if (delayer != null) {
-        delayer.dispatchExpiredTasks(Instant.MAX, false);
-      }
-      if (executor instanceof MockExecutor) {
-        ((MockExecutor) executor).runAll();
-      }
     }
 
     public Store newStore() throws IOException {
@@ -584,18 +444,15 @@ public final class StoreProvider
         case MEMORY:
           return new MemoryStore(config.maxSize);
         case DISK:
-          var builder =
-              DiskStore.newBuilder()
-                  .maxSize(config.maxSize)
-                  .directory(directory)
-                  .executor(executor)
-                  .hasher(hasher)
-                  .clock(clock)
-                  .delayer(delayer)
-                  .appVersion(config.appVersion);
-          return config.indexUpdateDelay != null
-              ? builder.indexUpdateDelay(config.indexUpdateDelay).build()
-              : builder.build();
+          return DiskStore.newBuilder()
+              .maxSize(config.maxSize)
+              .directory(requireNonNull(directory))
+              .executor(requireNonNull(executor))
+              .hasher(hasher)
+              .clock(clock)
+              .indexFlushDelay(config.indexFlushDelay)
+              .appVersion(config.appVersion)
+              .build();
         default:
           return fail("unexpected StoreType: " + config.storeType);
       }
@@ -615,10 +472,6 @@ public final class StoreProvider
       Exception caughtException = null;
 
       // First make sure no more tasks are queued
-      if (delayer != null) {
-        // Ignore rejected tasks as the test might have caused an executor to shutdown
-        delayer.dispatchExpiredTasks(Instant.MAX, true);
-      }
       if (executor instanceof MockExecutor) {
         try {
           var mockExecutor = (MockExecutor) executor;
@@ -740,18 +593,6 @@ public final class StoreProvider
       return context;
     }
 
-    /**
-     * Gets the first available context or creates a new one if none is available. Used by
-     * resolveParameters to associated provided params with the same context.
-     */
-    StoreContext getFirstContext(Object key, ResolvedConfig config) throws IOException {
-      var contexts = contextMap.computeIfAbsent(key, __ -> new ArrayList<>());
-      if (contexts.isEmpty()) {
-        contexts.add(config.createContext());
-      }
-      return contexts.get(0);
-    }
-
     void initializeAll() throws IOException {
       for (var contexts : contextMap.values()) {
         for (var context : contexts) {
@@ -763,10 +604,10 @@ public final class StoreProvider
     @Override
     public void close() throws Exception {
       var thrown = new ArrayList<Exception>();
-      for (var contexts : contextMap.values()) {
-        for (var context : contexts) {
+      for (var resources : contextMap.values()) {
+        for (var resource : resources) {
           try {
-            context.close();
+            resource.close();
           } catch (Exception e) {
             thrown.add(e);
           }
@@ -775,8 +616,8 @@ public final class StoreProvider
       contextMap.clear();
 
       if (!thrown.isEmpty()) {
-        var toThrow =
-            new IOException("encountered one or more exceptions while closing created stores");
+        var toThrow = new IOException(
+            "encountered one or more exceptions while closing created stores");
         thrown.forEach(toThrow::addSuppressed);
         throw toThrow;
       }

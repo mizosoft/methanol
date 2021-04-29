@@ -27,7 +27,6 @@ import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 import static java.util.Objects.requireNonNull;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
@@ -38,14 +37,10 @@ import java.time.Duration;
 import java.time.ZoneOffset;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Miscellaneous utilities. */
 public class Utils {
-  private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
-
   private static final Clock SYSTEM_MILLIS_UTC = Clock.tickMillis(ZoneOffset.UTC);
 
   private Utils() {} // non-instantiable
@@ -183,16 +178,6 @@ public class Utils {
       }
     } catch (InterruptedException interrupted) {
       throw new InterruptedIOException();
-    }
-  }
-
-  public static void closeQuietly(@Nullable Closeable closeable) {
-    if (closeable != null) {
-      try {
-        closeable.close();
-      } catch (IOException ioe) {
-        LOGGER.log(Level.WARNING, "exception while closing: " + closeable, ioe);
-      }
     }
   }
 

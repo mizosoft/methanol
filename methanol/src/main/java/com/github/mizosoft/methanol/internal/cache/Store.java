@@ -115,10 +115,7 @@ public interface Store extends AutoCloseable, Flushable {
   /** Atomically clears and closes this store. */
   void dispose() throws IOException;
 
-  /**
-   * Closes this store. Once the store is closed, all ongoing edits will silently fail to write or
-   * commit anything.
-   */
+  /** Closes this store. Once the store is closed, committing an edit will silently fail. */
   @Override
   void close() throws IOException;
 
