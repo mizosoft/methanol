@@ -176,7 +176,9 @@ public final class MemoryStore implements Store {
     private final Iterator<String> keysIterator;
 
     private @Nullable MemoryViewer nextViewer;
-    private @Nullable MemoryViewer currentViewer;
+
+    /** The entry remove() would evict. */
+    private @Nullable Entry currentEntry;
 
     ViewerIterator(Set<String> keysSnapshot) {
       keysIterator = keysSnapshot.iterator();
@@ -195,16 +197,21 @@ public final class MemoryStore implements Store {
       }
       var viewer = castNonNull(nextViewer);
       nextViewer = null;
-      currentViewer = viewer;
+      currentEntry = viewer.entry;
       return viewer;
     }
 
     @Override
     public void remove() {
-      var viewer = currentViewer;
-      requireState(viewer != null, "next() must be called before remove()");
-      currentViewer = null;
-      viewer.removeEntry();
+      var entry = currentEntry;
+      requireState(entry != null, "next() must be called before remove()");
+      currentEntry = null;
+      synchronized (entries) {
+        // Only apply eviction if entry was still in the map
+        if (entries.remove(entry.key, entry)) {
+          evict(entry);
+        }
+      }
     }
 
     @EnsuresNonNullIf(expression = "nextViewer", result = true)
