@@ -153,6 +153,11 @@ public final class HttpCache implements AutoCloseable {
     return userVisibleExecutor ? Optional.of(executor) : Optional.empty();
   }
 
+  /** Resets this cache's max size. Might evict any excessive entries as necessary. */
+  public void resetMaxSize(long maxSize) throws IOException {
+    store.resetMaxSize(maxSize);
+  }
+
   /** Returns the size this cache occupies in bytes. */
   public long size() {
     return store.size();

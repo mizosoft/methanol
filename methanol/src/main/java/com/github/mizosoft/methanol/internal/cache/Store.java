@@ -112,6 +112,15 @@ public interface Store extends AutoCloseable, Flushable {
   /** Returns the size in bytes of all entries in this store. */
   long size();
 
+  /**
+   * Resets this store's max size. Evicts any excessive entries as necessary.
+   *
+   * @throws IllegalStateException if the store is closed
+   */
+  default void resetMaxSize(long maxSize) throws IOException {
+    TODO();
+  }
+
   /** Atomically clears and closes this store. */
   void dispose() throws IOException;
 
