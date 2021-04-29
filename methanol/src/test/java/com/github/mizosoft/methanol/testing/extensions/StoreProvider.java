@@ -20,6 +20,7 @@
 package com.github.mizosoft.methanol.testing.extensions;
 
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -33,10 +34,13 @@ import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testutils.MockClock;
 import com.github.mizosoft.methanol.testutils.MockExecutor;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
+import com.google.common.jimfs.PathType;
 import java.io.IOException;
+import java.io.ObjectInputFilter.Config;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -54,6 +58,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -134,13 +139,13 @@ public final class StoreProvider
   private static Arguments resolveArguments(Method testMethod, StoreContext context)
       throws IOException {
     // Provide the StoreContext or a new Store or both
-    var params = Set.of(testMethod.getParameterTypes());
-    if (params.containsAll(Set.of(Store.class, StoreContext.class))) {
+    var params = testMethod.getParameterTypes();
+    if (Arrays.equals(params, new Class<?>[] {Store.class, StoreContext.class})) {
       return Arguments.of(context.newStore(), context);
-    } else if (params.contains(StoreContext.class)) {
-      return Arguments.of(context);
-    } else if (params.contains(Store.class)) {
+    } else if (Arrays.equals(params, new Class<?>[] {Store.class})) {
       return Arguments.of(context.newStore());
+    } else if (Arrays.equals(params, new Class<?>[] {StoreContext.class})) {
+      return Arguments.arguments(context);
     } else {
       return Arguments.of(); // Let JUnit handle that
     }
@@ -175,7 +180,7 @@ public final class StoreProvider
 
     FileSystemType[] fileSystem() default {FileSystemType.MEMORY, FileSystemType.SYSTEM};
 
-    Execution execution() default Execution.ASYNC;
+    Execution execution() default Execution.THREAD_POOL;
 
     int appVersion() default 1;
 
@@ -211,7 +216,7 @@ public final class StoreProvider
           return new MockExecutor().executeOnSameThread(true);
         }
       },
-      ASYNC {
+      THREAD_POOL {
         @Override
         Executor newExecutor() {
           return Executors.newFixedThreadPool(8);

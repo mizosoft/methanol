@@ -1,14 +1,13 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
+import static com.github.mizosoft.methanol.TestExecutorProvider.ExecutorType.FIXED_POOL;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.github.mizosoft.methanol.ExecutorProvider;
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.TestExecutorProvider;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
@@ -28,12 +27,14 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
-@ExtendWith(ExecutorProvider.class)
 class RawResponseTest {
+  @RegisterExtension
+  final TestExecutorProvider executorProvider = new TestExecutorProvider();
+
   final TrackedResponse<?> responseTemplate =
       new ResponseBuilder<>()
           .uri(URI.create("https://example.com"))
@@ -45,34 +46,33 @@ class RawResponseTest {
           .build();
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
-  void handleAsync(Executor threadPool) {
+  void handleAsync() {
+    var executor = executorProvider.newExecutor(FIXED_POOL);
     var response = ResponseBuilder.newBuilder(responseTemplate)
-        .body(strPublisher("Indiana Jones", UTF_8, threadPool))
+        .body(strPublisher("Indiana Jones", UTF_8, executor))
         .build();
     var rawResponse = RawResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
-    var handledResponse = rawResponse.handleAsync(BodyHandlers.ofString(), threadPool).join();
+    var handledResponse = rawResponse.handleAsync(BodyHandlers.ofString(), executor).join();
     assertEqualResponses(response, handledResponse);
     assertEquals("Indiana Jones", handledResponse.body());
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
-  void handleAsyncWithError(Executor threadPool) {
+  void handleAsyncWithError() {
+    var executor = executorProvider.newExecutor(FIXED_POOL);
     var rawResponse = failingWith(TestException::new);
-    var handledResponseFuture = rawResponse.handleAsync(BodyHandlers.ofString(), threadPool);
+    var handledResponseFuture = rawResponse.handleAsync(BodyHandlers.ofString(), executor);
     var ex = assertThrows(CompletionException.class, handledResponseFuture::join);
     assertThrows(TestException.class, () -> { throw ex.getCause(); });
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
-  void handleSync(Executor threadPool) throws IOException, InterruptedException {
+  void handleSync() throws IOException, InterruptedException {
     var response = ResponseBuilder.newBuilder(responseTemplate)
         .header("Content-Type", "text/plain; charset=UTF-16")
-        .body(strPublisher("Hans Solo", UTF_16, threadPool))
+        .body(strPublisher("Hans Solo", UTF_16, executorProvider.newExecutor(FIXED_POOL)))
         .build();
     var rawResponse = RawResponse.from(response);
     assertEqualResponses(response, rawResponse.get());

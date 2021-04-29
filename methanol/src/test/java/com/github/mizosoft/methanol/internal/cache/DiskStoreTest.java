@@ -19,7 +19,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertAbsent;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertUnreadable;
@@ -41,8 +40,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.ExecutorProvider;
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.DiskEntry;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.EntryCorruptionMode;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.Index;
@@ -57,7 +54,7 @@ import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.Timeout;
@@ -65,10 +62,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 
 /** DiskStore specific tests that are complementary to {@link StoreTest}. */
+@ExtendWith(StoreProvider.class)
 @Timeout(60)
-@ExtendWith({StoreProvider.class, ExecutorProvider.class})
 class DiskStoreTest {
-  private @MonotonicNonNull MockDiskStore mockStore;
+  @MonotonicNonNull MockDiskStore mockStore;
 
   void setUp(StoreContext context) {
     mockStore = new MockDiskStore(context);
@@ -117,15 +114,14 @@ class DiskStoreTest {
 
   @ParameterizedTest
   @StoreConfig(store = DISK, autoInit = false)
-  @ExecutorConfig(CACHED_POOL)
-  void concurrentInitializers(Store store, StoreContext context, Executor threadPool)
-      throws IOException {
+  void concurrentInitializers(Store store, StoreContext context) throws IOException {
     setUp(context);
     mockStore.write("e1", "Ditto", "Eevee");
     mockStore.writeWorkIndex();
 
     // Create initCount concurrent initializers
     int initCount = 10;
+    var threadPool = Executors.newFixedThreadPool(initCount);
     var arrival = new CyclicBarrier(initCount);
     var tasks = new ArrayList<CompletableFuture<Void>>();
     for (int i = 0; i < initCount; i++) {
@@ -139,6 +135,7 @@ class DiskStoreTest {
       tasks.add(task);
     }
 
+    threadPool.shutdown();
     assertAll(tasks.stream().map(cf -> cf::join));
   }
 
@@ -400,13 +397,12 @@ class DiskStoreTest {
 
   @ParameterizedTest
   @StoreConfig(store = DISK)
-  @ExecutorConfig(CACHED_POOL)
-  void concurrentRemovals(Store store, StoreContext context, Executor threadPool)
-      throws IOException {
+  void concurrentRemovals(Store store, StoreContext context) throws IOException {
     setUp(context);
     writeEntry(store, "e1", "Ditto", "Eevee");
 
     int removalCount = 10;
+    var threadPool = Executors.newFixedThreadPool(removalCount);
     var arrival = new CyclicBarrier(removalCount);
     var tasks = new ArrayList<CompletableFuture<Void>>();
     var removed = new AtomicBoolean();
@@ -420,6 +416,7 @@ class DiskStoreTest {
       tasks.add(task);
     }
 
+    threadPool.shutdown();
     assertAll(tasks.stream().map(cf -> cf::join));
   }
 
@@ -795,6 +792,7 @@ class DiskStoreTest {
     // Currently the entry is not automatically removed
     assertTrue(mockStore.entryFileExists("e1"));
   }
+
 
   @ParameterizedTest
   @StoreConfig(store = DISK)

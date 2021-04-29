@@ -199,10 +199,5 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
         }
       }
     }
-
-    @Override
-    public String toString() {
-      return runnable.toString();
-    }
   }
 }

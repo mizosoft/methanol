@@ -19,7 +19,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,24 +27,19 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.github.mizosoft.methanol.ExecutorProvider;
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.testutils.MockExecutor;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(ExecutorProvider.class)
 class ExecutorServiceAdapterTest {
   @Test
-  @ExecutorConfig(CACHED_POOL)
-  void adaptOnlyWrapsIfNotExecutorService(ExecutorService service) {
+  void adaptOnlyWrapsIfNotExecutorService() {
+    var service = Executors.newCachedThreadPool();
     assertSame(service, ExecutorServiceAdapter.adapt(service));
   }
 
@@ -86,8 +80,8 @@ class ExecutorServiceAdapterTest {
   }
 
   @Test
-  @ExecutorConfig(CACHED_POOL)
-  void termination(Executor threadPool) throws InterruptedException {
+  void termination() throws InterruptedException {
+    var threadPool = Executors.newCachedThreadPool();
     var service = new ExecutorServiceAdapter(threadPool);
 
     // Run threadCount waiting tasks
@@ -121,11 +115,13 @@ class ExecutorServiceAdapterTest {
     assertTrue(
         waitedSecs < 5,
         "waited for termination " + waitedSecs + " seconds after pool is already terminated");
+
+    threadPool.shutdown();
   }
 
   @Test
-  @ExecutorConfig(CACHED_POOL)
-  void shutdownNowRunningTasks(Executor threadPool) throws InterruptedException {
+  void shutdownNowRunningTasks() throws InterruptedException {
+    var threadPool = Executors.newCachedThreadPool();
     var service = new ExecutorServiceAdapter(threadPool);
 
     // Run nonWaiterTaskCount immediate tasks
@@ -166,6 +162,8 @@ class ExecutorServiceAdapterTest {
     assertAll(nonWaiterThreads.stream().map(t -> () -> assertFalse(t.isInterrupted())));
     // All waiterTaskCount are interrupted
     assertEquals(waiterTaskCount, interruptedCalls.get());
+
+    threadPool.shutdown();
   }
 
   @Test

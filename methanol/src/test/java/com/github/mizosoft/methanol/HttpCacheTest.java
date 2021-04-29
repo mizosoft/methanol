@@ -1,7 +1,7 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
+import static com.github.mizosoft.methanol.TestExecutorProvider.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.internal.cache.DateUtils.formatHttpDate;
 import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.CONDITIONAL_HIT;
 import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.HIT;
@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.MockWebServerProvider.UseHttps;
 import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse;
@@ -48,7 +47,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -70,8 +68,10 @@ import org.junit.jupiter.params.provider.CsvFileSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-@ExtendWith({MockWebServerProvider.class, ExecutorProvider.class})
+@ExtendWith(MockWebServerProvider.class)
 class HttpCacheTest {
+  @RegisterExtension final TestExecutorProvider executorProvider = new TestExecutorProvider();
+
   private MockClock clock;
   private HttpCache cache;
   private Methanol.Builder clientBuilder;
@@ -79,12 +79,11 @@ class HttpCacheTest {
   private MockWebServer server;
 
   @BeforeEach
-  @ExecutorConfig(FIXED_POOL)
-  void setUp(Methanol.Builder builder, MockWebServer server, Executor threadPool) {
+  void setUp(Methanol.Builder builder, MockWebServer server) {
     clock = new MockClock();
     cache = HttpCache.newBuilder()
         .cacheOnMemory(Long.MAX_VALUE)
-        .executor(threadPool)
+        .executor(executorProvider.newExecutor(FIXED_POOL))
         .clockForTesting(clock)
         .build();
     this.clientBuilder = builder.cache(cache);

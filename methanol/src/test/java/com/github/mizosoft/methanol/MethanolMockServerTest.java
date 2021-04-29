@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.SCHEDULER;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.MutableRequest.POST;
 import static com.github.mizosoft.methanol.testutils.TestUtils.localhostSslContext;
@@ -36,7 +35,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
@@ -51,6 +49,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -69,10 +68,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(ExecutorProvider.class)
 class MethanolMockServerTest {
+
   private static final int SERVICE_UNAVAILABLE = 503;
 
   private static ServiceLoggerHelper loggerHelper;
@@ -93,11 +91,10 @@ class MethanolMockServerTest {
   private ScheduledExecutorService scheduler;
 
   @BeforeEach
-  @ExecutorConfig(SCHEDULER)
-  void setUp(ScheduledExecutorService scheduler) throws IOException {
+  void setUp() throws IOException {
     server = new MockWebServer();
     server.start();
-    this.scheduler = scheduler;
+    scheduler = Executors.newScheduledThreadPool(8);
   }
 
   @AfterEach
