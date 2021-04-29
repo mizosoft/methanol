@@ -9,13 +9,10 @@ dependencies {
   testImplementation project(':methanol-testutils')
 }
 
+// TestNG transitively brings an old checkerframework artifact,
+// which causes its packages to be read from two modules.
 configurations.testImplementation {
-  // TestNG transitively brings an old checkerframework artifact, which causes its packages
-  // to be read from two modules.
   exclude group: 'org.checkerframework', module: 'checker-compat-qual'
-
-  // JUnit 4 pulls a really old hamcrest version which agitates the module system
-  exclude group: 'junit', module: 'junit'
 }
 
 compileJava {
@@ -53,8 +50,3 @@ check.dependsOn tckTest
 // compileTestJava still compiles from the module path
 addReads(compileTestJava, 'methanol.testutils')
 addReads(compileTestJava, 'org.junit.jupiter.params')
-addReads(compileTestJava, 'org.assertj.core')
-
-// This avoids a mysterious compilation error caused by some kotlin class not being accessible
-// to javac. Kotlin is brought transitively by okhttp's MockWebServer.
-addReads(compileTestJava, 'kotlin.stdlib')

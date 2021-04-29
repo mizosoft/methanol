@@ -30,7 +30,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.util.concurrent.Executors;
-import mockwebserver3.MockWebServer;
+import okhttp3.mockwebserver.MockWebServer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;

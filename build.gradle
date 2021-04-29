@@ -30,7 +30,7 @@ ext {
       'protobuf'        : '3.12.2',
       'errorprone'      : '2.6.0',
       'brotliDec'       : '0.1.2',
-      'okhttp'          : '5.0.0-alpha.2',
+      'okhttp'          : '4.8.1',
       'jmh'             : '1.29',
       'jacoco'          : '0.8.5',
       'reactor'         : '3.4.5',
@@ -40,10 +40,7 @@ ext {
       'jsoup'           : '1.13.1',
       'testng'          : '7.3.0',
       'junitParams'     : '5.7.0',
-      'jimfs'           : '1.2',
-      'assertj'         : '3.19.0',
-      'awaitability'    : '4.0.3',
-      'hamcrest'        : '2.2'
+      'jimfs'           : '1.2'
   ]
 
   deps = [
@@ -60,7 +57,7 @@ ext {
       'errorprone'             : "com.google.errorprone:error_prone_core:${versions.errorprone}",
       'errorproneAnnotations'  : "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
       'brotliDec'              : "org.brotli:dec:${versions.brotliDec}",
-      'mockWebServer'          : "com.squareup.okhttp3:mockwebserver3:${versions.okhttp}",
+      'mockWebServer'          : "com.squareup.okhttp3:mockwebserver:${versions.okhttp}",
       'reactiveStreams'        : "org.reactivestreams:reactive-streams:${versions.reactiveStreams}",
       'reactiveStreamsExamples': "org.reactivestreams:reactive-streams-examples:${versions.reactiveStreams}",
       'jmhCore'                : "org.openjdk.jmh:jmh-core:$versions.jmh",
@@ -73,10 +70,7 @@ ext {
       'jsoup'                  : "org.jsoup:jsoup:${versions.jsoup}",
       'testng'                 : "org.testng:testng:${versions.testng}",
       'junitParams'            : "org.junit.jupiter:junit-jupiter-params:${versions.junitParams}",
-      'jimfs'                  : "com.google.jimfs:jimfs:${versions.jimfs}",
-      'assertj'                : "org.assertj:assertj-core:${versions.assertj}",
-      'awaitability'           : "org.awaitility:awaitility:${versions.awaitability}",
-      'hamcrest'               : "org.hamcrest:hamcrest:${versions.hamcrest}"
+      'jimfs'                  : "com.google.jimfs:jimfs:${versions.jimfs}"
   ]
 
   // querying properties about subprojects
@@ -149,11 +143,10 @@ subprojects { subproject ->
     testCompileOnly deps.errorproneAnnotations
     testImplementation deps.junitApi
     testRuntimeOnly deps.junitEngine
-
-    // TODO start incorporating AssertJ & awaitability in tests
-    testImplementation deps.assertj
-    testImplementation deps.awaitability
-    testImplementation deps.hamcrest
+    // Gradle already has the launcher, but the explicit dependency avoids a weird
+    // IllegalAccessError when org.junit.platform.launcher is implied as unnamed which
+    // prevents tests from running in the module path
+    testRuntimeOnly deps.junitPlatformLauncher
   }
 
   // Add helper extensions for modular subprojects

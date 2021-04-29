@@ -25,9 +25,9 @@ package com.github.mizosoft.methanol;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-import mockwebserver3.Dispatcher;
-import mockwebserver3.MockResponse;
-import mockwebserver3.RecordedRequest;
+import okhttp3.mockwebserver.Dispatcher;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.jetbrains.annotations.NotNull;
 
 /**
