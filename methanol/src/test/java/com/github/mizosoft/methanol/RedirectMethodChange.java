@@ -184,7 +184,7 @@ class RedirectMethodChange {
             .build();
     HttpResponse<String> resp = client.send(req, BodyHandlers.ofString());
 
-//    System.out.println("Response: " + resp + ", body: " + resp.body());
+    System.out.println("Response: " + resp + ", body: " + resp.body());
     assertEquals(resp.statusCode(), 200);
     assertEquals(resp.body(), RESPONSE);
   }

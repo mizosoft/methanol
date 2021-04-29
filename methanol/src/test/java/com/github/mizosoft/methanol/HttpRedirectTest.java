@@ -251,11 +251,11 @@ class HttpRedirectTest {
     proxyAddress = (InetSocketAddress) proxy.toProxyAddress().address();
     proxySelector = new HttpProxySelector(proxyAddress);
     client = newHttpClient(proxySelector);
-//    System.out.println("Setup: done");
+    System.out.println("Setup: done");
   }
 
   private void testNonIdempotent(URI u, HttpRequest request, int code, String method) {
-//    System.out.println("Testing with " + u);
+    System.out.println("Testing with " + u);
     CompletableFuture<HttpResponse<String>> respCf =
         client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
     HttpResponse<String> resp = respCf.join();
@@ -317,7 +317,7 @@ class HttpRedirectTest {
   @MethodSource("uris")
   void testPUT(Supplier<URI> uri, int code, String method) {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
-//    System.out.println("Testing with " + u);
+    System.out.println("Testing with " + u);
     HttpRequest request =
         HttpRequest.newBuilder(u).PUT(HttpRequest.BodyPublishers.ofString(REQUEST_BODY)).build();
     // PUT is considered idempotent.
@@ -328,7 +328,7 @@ class HttpRedirectTest {
   @MethodSource("uris")
   void testFoo(Supplier<URI> uri, int code, String method) {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
-//    System.out.println("Testing with " + u);
+    System.out.println("Testing with " + u);
     HttpRequest request =
         HttpRequest.newBuilder(u)
             .method("FOO", HttpRequest.BodyPublishers.ofString(REQUEST_BODY))
@@ -342,7 +342,7 @@ class HttpRedirectTest {
   @Disabled("MockWebServer complains about GET requests with bodies")
   void testGet(Supplier<URI> uri, int code, String method) {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
-//    System.out.println("Testing with " + u);
+    System.out.println("Testing with " + u);
     HttpRequest request =
         HttpRequest.newBuilder(u)
             .method("GET", HttpRequest.BodyPublishers.ofString(REQUEST_BODY))
@@ -459,8 +459,8 @@ class HttpRedirectTest {
           }
         }
 
-//        System.out.println("Server " + t.getRequestUrl() + " sending response " + responseID);
-//        System.out.println("code: " + code + " body: " + response);
+        System.out.println("Server " + t.getRequestUrl() + " sending response " + responseID);
+        System.out.println("code: " + code + " body: " + response);
         mockResponse.setResponseCode(code);
         if (code != 304) {
           bytes = response.getBytes(StandardCharsets.UTF_8);
@@ -469,7 +469,7 @@ class HttpRedirectTest {
           bytes = new byte[0];
         }
 
-//        System.out.println("\tresp:" + responseID + ": wrote " + bytes.length + " bytes");
+        System.out.println("\tresp:" + responseID + ": wrote " + bytes.length + " bytes");
       } catch (Throwable e) {
         e.printStackTrace();
         e.printStackTrace(System.out);
@@ -513,7 +513,7 @@ class HttpRedirectTest {
         requireArgument(delimiterIndex != -1, "invalid CONNECT: %s", targetHostAndPort);
         targetHost = targetHostAndPort.substring(0, delimiterIndex);
         targetPort = Integer.parseInt(targetHostAndPort.substring(delimiterIndex + 1));
-//        System.out.println("Tunnelling to: " + targetHostAndPort);
+        System.out.println("Tunnelling to: " + targetHostAndPort);
 
         return new MockResponse();
       } else {
