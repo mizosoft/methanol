@@ -150,24 +150,6 @@ abstract class StoreTest {
   }
 
   @Test
-  void onlyWriteMetadataOnSecondEdit() {
-    writeEntry("e1", METADATA_1, DATA_1);
-    try (var editor = notNull(store.edit("e1"))) {
-      editor.metadata(UTF_8.encode(METADATA_2));
-    }
-    assertEntryContains("e1", METADATA_2, DATA_1);
-  }
-
-  @Test
-  void onlyWriteDataOnSecondEdit() {
-    writeEntry("e1", METADATA_1, DATA_1);
-    try (var editor = notNull(store.edit("e1"))) {
-      writeString(editor, DATA_2);
-    }
-    assertEntryContains("e1", METADATA_1, DATA_2);
-  }
-
-  @Test
   void writeThenRemove() {
     writeEntry("e1", METADATA_1, DATA_1);
     assertEquals(utf8Length(METADATA_1, DATA_1), store.size());
