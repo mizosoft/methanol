@@ -456,32 +456,17 @@ public final class CacheControl {
       return this;
     }
 
-    /**
-     * Sets the {@code max-age} directive to the given duration.
-     *
-     * @throws IllegalArgumentException If {@code maxAge} doesn't contain a positive number of
-     *     seconds
-     */
+    /** Sets the {@code max-age} directive to the given duration. */
     public Builder maxAge(Duration maxAge) {
       return putDuration(MAX_AGE, maxAge);
     }
 
-    /**
-     * Sets the {@code min-fresh} directive to the given duration.
-     *
-     * @throws IllegalArgumentException If {@code maxAge} doesn't contain a positive number of
-     *     seconds
-     */
+    /** Sets the {@code min-fresh} directive to the given duration. */
     public Builder minFresh(Duration minFresh) {
       return putDuration(MIN_FRESH, minFresh);
     }
 
-    /**
-     * Sets the {@code max-stale} directive to the given duration.
-     *
-     * @throws IllegalArgumentException If {@code maxAge} doesn't contain a positive number of
-     *     seconds
-     */
+    /** Sets the {@code max-stale} directive to the given duration. */
     public Builder maxStale(Duration maxStale) {
       return putDuration(MAX_STALE, maxStale);
     }
