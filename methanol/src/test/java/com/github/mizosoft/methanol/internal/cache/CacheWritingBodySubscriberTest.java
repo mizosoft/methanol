@@ -1,10 +1,8 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.testutils.TestUtils.EMPTY_BUFFER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -33,7 +31,6 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -42,7 +39,7 @@ class CacheWritingBodySubscriberTest {
   @TestWithExecutor
   void writeString(Executor executor) {
     var editor = new TestEditor();
-    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
+    var subscriber = new CacheWritingBodySubscriber(editor);
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     getBody(subscriber).subscribe(downstream);
 
@@ -62,7 +59,7 @@ class CacheWritingBodySubscriberTest {
 
   @Test
   void subscribeTwice() {
-    var subscriber = new CacheWritingBodySubscriber(new TestEditor(), EMPTY_BUFFER);
+    var subscriber = new CacheWritingBodySubscriber(new TestEditor());
     getBody(subscriber).subscribe(BodySubscribers.discarding());
 
     var downstream2 = new TestSubscriber<>();
@@ -77,7 +74,7 @@ class CacheWritingBodySubscriberTest {
   @TestWithExecutor
   void cancellationIsIgnoredWhileWriting(Executor executor) {
     var editor = new TestEditor();
-    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
+    var subscriber = new CacheWritingBodySubscriber(editor);
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     getBody(subscriber).subscribe(downstream);
 
@@ -107,7 +104,7 @@ class CacheWritingBodySubscriberTest {
         return future;
       }
     };
-    var subscriber = new CacheWritingBodySubscriber(failingEditor, EMPTY_BUFFER);
+    var subscriber = new CacheWritingBodySubscriber(failingEditor);
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     getBody(subscriber).subscribe(downstream);
 
@@ -140,7 +137,7 @@ class CacheWritingBodySubscriberTest {
         });
       }
     };
-    var subscriber = new CacheWritingBodySubscriber(failingEditor, EMPTY_BUFFER);
+    var subscriber = new CacheWritingBodySubscriber(failingEditor);
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     getBody(subscriber).subscribe(downstream);
 
@@ -160,7 +157,7 @@ class CacheWritingBodySubscriberTest {
   @TestWithExecutor
   void errorFromUpstreamDiscardsEdit(Executor executor) {
     var editor = new TestEditor();
-    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
+    var subscriber = new CacheWritingBodySubscriber(editor);
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     getBody(subscriber).subscribe(downstream);
 
@@ -182,7 +179,7 @@ class CacheWritingBodySubscriberTest {
         return CompletableFuture.failedFuture(new TestException());
       }
     };
-    var subscriber = new CacheWritingBodySubscriber(failingEditor, EMPTY_BUFFER);
+    var subscriber = new CacheWritingBodySubscriber(failingEditor);
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     getBody(subscriber).subscribe(downstream);
 
@@ -203,7 +200,7 @@ class CacheWritingBodySubscriberTest {
         return CompletableFuture.failedFuture(new TestException());
       }
     };
-    var subscriber = new CacheWritingBodySubscriber(failingEditor, EMPTY_BUFFER);
+    var subscriber = new CacheWritingBodySubscriber(failingEditor);
     var downstream = new TestSubscriber<List<ByteBuffer>>();
     getBody(subscriber).subscribe(downstream);
 
@@ -219,44 +216,6 @@ class CacheWritingBodySubscriberTest {
     downstream.awaitComplete();
     assertEquals(body, UTF_8.decode(collect(downstream.items)).toString());
   }
-
-  @TestWithExecutor
-  void metadataIsSaved(Executor executor) {
-    var editor = new TestEditor();
-    var metadata = UTF_8.encode("bababooey");
-    var subscriber = new CacheWritingBodySubscriber(editor, metadata);
-    getBody(subscriber).subscribe(new TestSubscriber<>());
-
-    try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor)) {
-      publisher.subscribe(subscriber);
-      publisher.submit(List.of(ByteBuffer.allocate(1)));
-    }
-
-    editor.awaitClose();
-    assertNotNull(editor.metadata);
-    assertEquals("bababooey", UTF_8.decode(editor.metadata).toString());
-  }
-
-  @TestWithExecutor
-  void subscribeToUpstreamFirst(Executor executor) {
-    var editor = new TestEditor();
-    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
-    var publisher = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    publisher.subscribe(subscriber);
-
-    executor.execute(() -> {
-      try (publisher) {
-        publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cache me if you can!"), 2, 1));
-      }
-    });
-
-    var downstream = new TestSubscriber<List<ByteBuffer>>();
-    getBody(subscriber).subscribe(downstream);
-
-    downstream.awaitComplete();
-    assertEquals("Cache me if you can!", UTF_8.decode(collect(downstream.items)).toString());
-  }
-
 
   private static void executeLaterMillis(Runnable task, long millis) {
     CompletableFuture.delayedExecutor(millis, TimeUnit.MILLISECONDS).execute(task);
@@ -277,7 +236,6 @@ class CacheWritingBodySubscriberTest {
 
   private static class TestEditor implements Editor {
     private final List<WriteRequest> writes = new ArrayList<>();
-    @MonotonicNonNull ByteBuffer metadata;
     volatile boolean discarded;
     volatile boolean closed;
 
@@ -288,7 +246,7 @@ class CacheWritingBodySubscriberTest {
 
     @Override
     public void metadata(ByteBuffer metadata) {
-      this.metadata = metadata;
+      throw new AssertionError();
     }
 
     @Override
