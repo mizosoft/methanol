@@ -159,15 +159,6 @@ abstract class StoreTest {
   }
 
   @Test
-  void onlyWriteEmptyMetadataOnSecondEdit() {
-    writeEntry("e1", METADATA_1, DATA_1);
-    try (var editor = notNull(store.edit("e1"))) {
-      editor.metadata(ByteBuffer.allocate(0));
-    }
-    assertEntryContains("e1", "", DATA_1);
-  }
-
-  @Test
   void onlyWriteDataOnSecondEdit() {
     writeEntry("e1", METADATA_1, DATA_1);
     try (var editor = notNull(store.edit("e1"))) {
