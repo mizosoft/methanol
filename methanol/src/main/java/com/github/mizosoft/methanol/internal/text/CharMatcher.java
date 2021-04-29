@@ -26,6 +26,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 
 /** Simple char matching API to use internally. */
 public interface CharMatcher {
+
   boolean matches(char c);
 
   default boolean allMatch(String s) {

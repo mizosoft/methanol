@@ -26,7 +26,6 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.alphaNum;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
-import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.BOUNDARY_MATCHER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -210,6 +209,14 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
    * automatically appended to the part's headers during transmission.
    */
   public static final class Builder {
+
+    // boundary     := 0*69<bchars> bcharnospace
+    // bchars       := bcharnospace / " "
+    // bcharnospace := DIGIT / ALPHA / "'" / "(" / ")" /
+    //                 "+" / "_" / "," / "-" / "." ?
+    //                 "/" / ":" / "=" / "?"
+    private static final CharMatcher BOUNDARY_MATCHER = chars("'()+_,-./:=? ").or(alphaNum());
+
     private static final int MAX_BOUNDARY_LENGTH = 70;
 
     private static final String MULTIPART_TYPE = "multipart";
