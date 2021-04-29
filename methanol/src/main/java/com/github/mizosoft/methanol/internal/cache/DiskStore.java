@@ -4,7 +4,6 @@ import static com.github.mizosoft.methanol.internal.Validate.TODO;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.Optional;
@@ -14,7 +13,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** STUB! */
 public final class DiskStore implements Store {
-  public DiskStore(Path directory, long maxSize, Executor executor, int appVersion) {
+  public DiskStore(Path directory, long maxSize, Executor executor) {
     requireNonNull(directory);
     requireArgument(maxSize > 0, "non-positive maxSize: %s", maxSize);
     requireNonNull(executor);
@@ -32,7 +31,12 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public @Nullable Viewer view(String key) throws IOException {
+  public @Nullable Viewer view(String key) {
+    return TODO();
+  }
+
+  @Override
+  public @Nullable Editor edit(String key) {
     return TODO();
   }
 
@@ -42,27 +46,17 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public @Nullable Editor edit(String key) throws IOException {
-    return TODO();
-  }
-
-  @Override
-  public CompletableFuture<@Nullable Editor> editAsync(String key) {
-    return TODO();
-  }
-
-  @Override
   public Iterator<Viewer> viewAll() {
     return TODO();
   }
 
   @Override
-  public boolean remove(String key) throws IOException {
+  public boolean remove(String key) {
     return TODO();
   }
 
   @Override
-  public void clear() throws IOException {
+  public void clear() {
     TODO();
   }
 
@@ -72,17 +66,7 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public void dispose() throws IOException {
-    TODO();
-  }
-
-  @Override
-  public void close() throws IOException {
-    TODO();
-  }
-
-  @Override
-  public void flush() throws IOException {
+  public void close() {
     TODO();
   }
 }

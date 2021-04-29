@@ -45,7 +45,6 @@ import com.github.mizosoft.methanol.internal.cache.FreshnessComputation;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.RawResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
-import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
@@ -77,6 +76,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -99,8 +99,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @see <a href="https://tools.ietf.org/html/rfc7234">RFC 7234: HTTP caching</a>
  */
 public final class HttpCache implements AutoCloseable {
-  private static final int CACHE_VERSION = 1;
-
   private final Store store;
   private final Executor executor;
   private final boolean ownedExecutor;
@@ -155,7 +153,7 @@ public final class HttpCache implements AutoCloseable {
   }
 
   /** Resets this cache's max size. Might evict any excessive entries as necessary. */
-  public void resetMaxSize(long maxSize) throws IOException {
+  public void resetMaxSize(long maxSize) {
     store.resetMaxSize(maxSize);
   }
 
@@ -165,31 +163,31 @@ public final class HttpCache implements AutoCloseable {
   }
 
   /** Removes all entries from this cache. */
-  public void clear() throws IOException {
+  public void clear() {
     store.clear();
   }
 
   /** Removes the entry associated with the given uri if one is present. */
-  public boolean remove(URI uri) throws IOException {
+  public boolean remove(URI uri) {
     return store.remove(key(uri));
   }
 
   /** Removes the entry associated with the given request if one is present. */
-  public boolean remove(HttpRequest request) throws IOException {
+  public boolean remove(HttpRequest request) {
     return store.remove(key(request));
   }
 
   /** Atomically clears and closes this cache. */
-  public void dispose() throws IOException {
-    store.dispose();
+  public void destroy() {
+    store.destroy();
   }
 
-  /** Returns a snapshot of statistics accumulated so far. */
+  /** Returns a snapshot of the statistics accumulated so far. */
   public Stats stats() {
     return statsRecorder.snapshot();
   }
 
-  /** Returns a snapshot of statistics accumulated so far for the given {@code URI}. */
+  /** Returns a snapshot of the statistics accumulated so far for the given {@code URI}. */
   public Stats stats(URI uri) {
     return statsRecorder.snapshot(uri);
   }
@@ -197,7 +195,7 @@ public final class HttpCache implements AutoCloseable {
   /** Closes this cache. */
   // TODO specify what is closed exactly
   @Override
-  public void close() throws IOException {
+  public void close() {
     store.close();
     if (ownedExecutor && executor instanceof ExecutorService) {
       ((ExecutorService) executor).shutdown();
@@ -240,7 +238,6 @@ public final class HttpCache implements AutoCloseable {
     try (var editor = servedCacheResponse.edit()) {
       if (editor != null) {
         editor.metadata(CacheResponseMetadata.from(response).encode());
-        editor.commit();
       }
     } catch (IOException e) {
       throw new UncheckedIOException(e);
@@ -249,19 +246,12 @@ public final class HttpCache implements AutoCloseable {
 
   private @Nullable RawResponse update(
       RawResponse networkResponse, @Nullable CacheResponse cacheResponse) {
-    Editor editor;
-    ByteBuffer metadata;
-    try {
-      editor =
-          cacheResponse != null
-              ? cacheResponse.edit()
-              : store.edit(key(networkResponse.get().request()));
-      if (editor == null) {
-        return null;
-      }
-      metadata = CacheResponseMetadata.from(networkResponse.get()).encode();
-    } catch (IOException e) {
-      // TODO log
+    var editor =
+        cacheResponse != null
+            ? cacheResponse.edit()
+            : store.edit(key(networkResponse.get().request()));
+    var metadata = tryEncodeMetadata(networkResponse);
+    if (editor == null || metadata == null) {
       return null;
     }
 
@@ -305,6 +295,15 @@ public final class HttpCache implements AutoCloseable {
 
   private static String key(URI uri) {
     return uri.toString();
+  }
+
+  private static @Nullable ByteBuffer tryEncodeMetadata(RawResponse response) {
+    try {
+      return CacheResponseMetadata.from(response.get()).encode();
+    } catch (IOException ioe) {
+      // TODO log
+      return null;
+    }
   }
 
   static Set<String> implicitlyAddedFieldsForTesting() {
@@ -400,8 +399,13 @@ public final class HttpCache implements AutoCloseable {
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException {
-      return Utils.block(doIntercept(request, chain.with(BodyHandlers.ofPublisher(), null), false))
-          .handle(chain.bodyHandler());
+      try {
+        return doIntercept(request, chain.with(BodyHandlers.ofPublisher(), null), false)
+            .get()
+            .handle(chain.bodyHandler());
+      } catch (ExecutionException e) {
+        throw Utils.rethrowAsyncIOFailure(e.getCause());
+      }
     }
 
     @Override
@@ -574,11 +578,7 @@ public final class HttpCache implements AutoCloseable {
           servedNetworkResponse = cacheUpdatingResponse;
         }
       } else if (invalidatesCache(request, servedNetworkResponse.get())) {
-        try {
-          cache.remove(request.uri());
-        } catch (IOException e) {
-          // TODO log?
-        }
+        cache.remove(request.uri());
       }
 
       if (cacheResponse != null) {
@@ -1105,7 +1105,7 @@ public final class HttpCache implements AutoCloseable {
     DISK {
       @Override
       Store create(@Nullable Path directory, long maxSize, Executor executor) {
-        return new DiskStore(requireNonNull(directory), maxSize, executor, CACHE_VERSION);
+        return new DiskStore(requireNonNull(directory), maxSize, executor);
       }
     };
 

@@ -25,8 +25,6 @@ package com.github.mizosoft.methanol.internal.cache;
 import static com.github.mizosoft.methanol.internal.Validate.TODO;
 
 import java.io.Closeable;
-import java.io.Flushable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Optional;
@@ -35,22 +33,26 @@ import java.util.concurrent.Executor;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A bounded repository of binary data entries identified by string keys. Each entry has both a
- * metadata block and a data stream. Each data stream can be read from or written to asynchronously.
- * An entry's metadata block and data stream can be accessed by a {@link Viewer} and modified by an
+ * A bounded repository of data entries each identified by a {@code String} key. Each entry has both
+ * a metadata block and a data stream that can be read from or written to asynchronously. Each
+ * entry's metadata block and data stream can be accessed by a {@link Viewer} and modified by an
  * {@link Editor}. An entry can have at most one active {@code Editor} but can have multiple
- * concurrent {@code Viewers} after it has been first successfully edited.
+ * concurrent {@code Viewers} after it has been first modified.
  *
- * <p>{@code Store} bounds the size of data it contains to it's {@link #maxSize()} by automatic
+ * <p>A {@code Store} bounds the size of data it stores to it's {@link #maxSize()} by automatic
  * eviction of entries, possibly in background. A store's {@link #size()} might exceed it's bound
  * temporarily in case entries are being actively expanded while eviction is in progress. A store's
  * size doesn't include the overhead of the underlying filesystem or any metadata the store itself
  * uses for indexing purposes. Thus, a store's {@code maxSize()} is not exact and might be slightly
  * exceeded as necessary.
  *
- * <p>{@code Store} is thread-safe and is suitable for concurrent use.
+ * <p>A {@code Store} is thread-safe and is suitable for concurrent use.
  */
-public interface Store extends AutoCloseable, Flushable {
+public interface Store extends AutoCloseable {
+
+  // TODO most of these method should be able to throw IOException (use UncheckedIOException?)
+  // TODO document IllegalStateException thrown when the store is closed
+  // TODO specify when the store can throw (readAsync, writeAsync, etc)
 
   /** Returns this store's max size in bytes. */
   long maxSize();
@@ -61,147 +63,112 @@ public interface Store extends AutoCloseable, Flushable {
   /**
    * Returns a {@code Viewer} for the entry associated with the given key, or {@code null} if
    * there's no such entry.
-   *
-   * @throws IllegalStateException if the store is closed
    */
   @Nullable
-  Viewer view(String key) throws IOException;
+  Viewer view(String key);
 
-  /** Asynchronously opens a {@code Viewer} as in {@link #view(String)}. */
+  /**
+   * Returns an {@code Editor} for the entry associated with given key (atomically creating a new
+   * entry if necessary), or {@code null} if such entry is currently being edited.
+   */
+  @Nullable
+  Editor edit(String key);
+
+  /**
+   * Version of {@link #view(String)} that opens the entry and reads it's metadata block
+   * asynchronously.
+   */
   CompletableFuture<@Nullable Viewer> viewAsync(String key);
 
-  /**
-   * Returns an {@code Editor} for the entry associated with the given key (atomically creating a
-   * new one if necessary), or {@code null} if such entry is currently being edited.
-   *
-   * @throws IllegalStateException if the store is closed
-   */
-  @Nullable
-  Editor edit(String key) throws IOException;
-
-  /** Asynchronously opens an {@code Editor} as in {@link #view(String)}. */
-  CompletableFuture<@Nullable Editor> editAsync(String key);
-
-  /**
-   * Returns a iterator of {@code Viewers} over the entries in this store. The iterator doesn't
-   * throw {@code ConcurrentModificationException} when the store is changed but might or might not
-   * reflect these changes.
-   */
+  /** Returns a <em>fail-safe</em> iterator of {@code Viewers} over the entries in this store. */
   Iterator<Viewer> viewAll();
 
-  /**
-   * Removes the entry associated with the given key.
-   *
-   * @throws IllegalStateException if the store is closed
-   */
-  boolean remove(String key) throws IOException;
+  /** Removes the entry associated with the given key. */
+  boolean remove(String key);
+
+  /** Removes all entries from this store. */
+  void clear();
 
   /**
-   * Removes all entries from this store.
-   *
-   * @throws IllegalStateException if the store is closed
+   * Returns the size in bytes all entries in this store consume. Exact consumed size might exceed
+   * the returned value.
    */
-  void clear() throws IOException;
-
-  /** Returns the size in bytes of all entries in this store. */
   long size();
 
-  /**
-   * Resets this store's max size. Evicts any excessive entries as necessary.
-   *
-   * @throws IllegalStateException if the store is closed
-   */
-  default void resetMaxSize(long maxSize) throws IOException {
+  /** Resets this store's max size. Evicts any excessive entries as necessary. */
+  default void resetMaxSize(long maxSize) {
     TODO();
   }
 
   /** Atomically clears and closes this store. */
-  void dispose() throws IOException;
+  default void destroy() {
+    TODO();
+  }
 
-  /** Closes this store. Once the store is closed, committing an edit will silently fail. */
+  /** Closes this store. */
+  // TODO specify what is closed exactly
   @Override
-  void close() throws IOException;
-
-  /**
-   * Flushes any data buffered by this store.
-   *
-   * @throws IllegalStateException if the store is closed
-   */
-  @Override
-  void flush() throws IOException;
+  void close();
 
   /** Reads an entry's metadata block and data stream. */
   interface Viewer extends Closeable {
 
-    /** Returns the entry's key. */
+    /** Returns entry's key. */
     String key();
 
-    /** Returns a readonly buffer containing the entry's metadata. */
+    /** Returns a readonly buffer containing this entry's metadata. */
     ByteBuffer metadata();
 
     /**
      * Asynchronously copies this entry's data from the given position to the given destination
      * buffer, returning either the number of read bytes or {@code -1} if end-of-file is reached.
-     *
-     * @throws IllegalStateException if the viewer is closed
      */
     CompletableFuture<Integer> readAsync(long position, ByteBuffer dst);
 
     /** Returns the size in bytes of the data stream. */
     long dataSize();
 
-    /** Returns the size in bytes of the metadata block and data stream. */
+    /** Returns the size in bytes the metadata block and data stream occupy. */
     long entrySize();
 
     /**
      * Returns an editor for this viewer's entry, or {@code null} if another edit is in progress or
      * if the entry has been modified since this viewer was created. Changes made by the returned
      * editor are not reflected by this viewer.
-     *
-     * @throws IllegalStateException if the store is closed
      */
     @Nullable
-    Editor edit() throws IOException;
+    Editor edit();
 
     /** Closes this viewer. */
     @Override
     void close();
   }
 
-  /** Writes an entry's metadata block and data stream. */
+  /** Writes this entry's metadata block and data stream. */
   interface Editor extends Closeable {
 
-    /** Returns the entry's key. */
+    /** Returns entry's key. */
     String key();
 
-    /**
-     * Sets the metadata block which is to be applied when the editor is closed.
-     *
-     * @throws IllegalStateException if the edit is committed
-     */
+    /** Sets the metadata block. */
     void metadata(ByteBuffer metadata);
 
     /**
      * Asynchronously writes the given source buffer to this entry's data at the given position,
      * returning the number of written bytes.
-     *
-     * @throws IllegalStateException if the editor is closed or the edit is committed
      */
+    // TODO returning an int implies that some bytes might not have been written
+    //      make a stronger guarantee that all bytes are written and return Void
     CompletableFuture<Integer> writeAsync(long position, ByteBuffer src);
 
-    /**
-     * Marks the edit as committed such that modifications made so far will be applied when the
-     * editor is closed.
-     *
-     * @throws IllegalStateException if the editor is closed
-     */
-    void commit();
+    /** Returns a {@code Viewer} that reflects the changes made by this editor. */
+    Viewer view();
 
-    /**
-     * Closes this editor. If {@link #commit()} is called, changes made by this editor are applied;
-     * otherwise, they're discarded.
-     */
+    /** Discards anything written. */
+    void discard();
+
+    /** Closes this editor. Unless the edit is discarded, any made changes are committed. */
     @Override
-    void close() throws IOException;
+    void close();
   }
 }

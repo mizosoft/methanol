@@ -25,7 +25,6 @@ package com.github.mizosoft.methanol.internal.cache;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.IOException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -41,11 +40,10 @@ class MemoryStoreTest extends StoreTest {
   }
   
   @Test
-  void writeWithReadOnlyBuffer() throws IOException {
+  void writeWithReadOnlyBuffer() {
     try (var editor = notNull(store.edit("e1"))) {
       editor.metadata(UTF_8.encode(METADATA_1).asReadOnlyBuffer());
       editor.writeAsync(0, UTF_8.encode(DATA_1).asReadOnlyBuffer());
-      editor.commit();
     }
     assertEntryContains("e1", METADATA_1, DATA_1);
   }

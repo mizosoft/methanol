@@ -28,13 +28,10 @@ import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Miscellaneous utilities. */
@@ -85,24 +82,13 @@ public class Utils {
     return toCopy;
   }
 
-  public static ByteBuffer copy(ByteBuffer buffer) {
-    return ByteBuffer.allocate(buffer.remaining()).put(buffer).flip();
-  }
-
-  public static ByteBuffer copy(ByteBuffer source, ByteBuffer target) {
-    return target.capacity() >= source.capacity() ? target.put(source) : copy(source);
-  }
-
   /**
    * Tries to rethrow {@code cause} with the current stack trace or rethrows an {@code IOException}
    * if not possible. Return type is only declared for this method to be used in a {@code throw}
    * statement.
-   *
-   * @param wrapInterruptedException if {@code InterruptedException} is to be wrapped in {@code
-   *     InterruptedIOException}
    */
-  private static RuntimeException rethrowAsyncIOFailure(
-      Throwable cause, boolean wrapInterruptedException) throws IOException, InterruptedException {
+  public static RuntimeException rethrowAsyncIOFailure(Throwable cause)
+      throws IOException, InterruptedException {
     var rethrownCause = tryGetRethrownCause(cause);
     if (rethrownCause instanceof RuntimeException) {
       throw (RuntimeException) rethrownCause;
@@ -111,13 +97,7 @@ public class Utils {
     } else if (rethrownCause instanceof IOException) {
       throw (IOException) rethrownCause;
     } else if (rethrownCause instanceof InterruptedException) {
-      if (wrapInterruptedException) {
-        var interruptedIO = new InterruptedIOException(cause.getMessage());
-        interruptedIO.initCause(cause);
-        throw interruptedIO;
-      } else {
-        throw (InterruptedException) rethrownCause;
-      }
+      throw (InterruptedException) rethrownCause;
     } else {
       throw new IOException(cause.getMessage(), cause);
     }
@@ -142,17 +122,10 @@ public class Utils {
         }
       }
     } catch (ReflectiveOperationException ignored) {
-      // Return null
+      // Ignore and return null
     }
-    return null;
-  }
 
-  public static <T> T block(CompletableFuture<T> future) throws IOException, InterruptedException {
-    try {
-      return future.get();
-    } catch (ExecutionException failed) {
-      throw rethrowAsyncIOFailure(failed.getCause(), false);
-    }
+    return null;
   }
 
   /**
