@@ -1187,7 +1187,7 @@ class HttpCacheTest {
 
     // Make requests fail with a ConnectException
     client = clientBuilder
-        .networkInterceptor(new FailingInterceptor(ConnectException::new))
+        .postDecorationInterceptor(new FailingInterceptor(ConnectException::new))
         .build();
 
     get(serverUri)
@@ -1221,7 +1221,7 @@ class HttpCacheTest {
 
     // Make requests fail with a ConnectException
     client = clientBuilder
-        .networkInterceptor(new FailingInterceptor(ConnectException::new))
+        .postDecorationInterceptor(new FailingInterceptor(ConnectException::new))
         .build();
 
     // stale-if-error isn't satisfied
@@ -1260,7 +1260,7 @@ class HttpCacheTest {
 
     // Make requests fail with a non-IOException
     client = clientBuilder
-        .networkInterceptor(new FailingInterceptor(TestException::new))
+        .postDecorationInterceptor(new FailingInterceptor(TestException::new))
         .build();
 
     clock.advanceSeconds(2); // Make response stale by 1 second
@@ -1282,7 +1282,7 @@ class HttpCacheTest {
 
     // Make requests fail with UncheckedIOException
     client = clientBuilder
-        .networkInterceptor(
+        .postDecorationInterceptor(
             new FailingInterceptor(() -> new UncheckedIOException(new IOException())))
         .build();
 
@@ -1464,7 +1464,7 @@ class HttpCacheTest {
   @StoreConfig
   void computingAge(Store store) throws Exception {
     setUpCache(store);
-    client = clientBuilder.networkInterceptor(new Interceptor() {
+    client = clientBuilder.postDecorationInterceptor(new Interceptor() {
       @Override public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
           throws IOException, InterruptedException {
         // Simulate response taking 3 seconds to arrive

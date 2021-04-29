@@ -50,7 +50,7 @@ import org.junit.jupiter.api.Test;
 class InterceptorTest {
 
   @Test
-  void interceptor() throws Exception {
+  void preDecorationInterceptor() throws Exception {
     var response = new HttpResponseStub<Void>();
     var interceptor = new RecordingInterceptor(response);
     var baseClient = new RecordingClient();
@@ -71,7 +71,7 @@ class InterceptorTest {
   }
 
   @Test
-  void interceptorAsync() {
+  void preDecorationInterceptorAsync() {
     var response = new HttpResponseStub<Void>();
     var interceptor = new RecordingInterceptor(response);
     var baseClient = new RecordingClient();
@@ -94,13 +94,13 @@ class InterceptorTest {
   }
 
   @Test
-  void networkInterceptor() throws Exception {
+  void postDecorationInterceptor() throws Exception {
     var response = new HttpResponseStub<Void>();
     var interceptor = new RecordingInterceptor(response);
     var baseClient = new RecordingClient();
     var client = Methanol.newBuilder(baseClient)
         .baseUri("https://localhost")
-        .networkInterceptor(interceptor)
+        .postDecorationInterceptor(interceptor)
         .build();
     var request = MutableRequest.GET("/secret")
         .header("Accept", "text/html");
@@ -122,13 +122,13 @@ class InterceptorTest {
   }
 
   @Test
-  void networkInterceptorAsync() {
+  void postDecorationInterceptorAsync() {
     var response = new HttpResponseStub<Void>();
     var interceptor = new RecordingInterceptor(response);
     var baseClient = new RecordingClient();
     var client = Methanol.newBuilder(baseClient)
         .baseUri("https://localhost")
-        .networkInterceptor(interceptor)
+        .postDecorationInterceptor(interceptor)
         .build();
     var request = MutableRequest.GET("/secret")
         .header("Accept", "text/html");
@@ -155,42 +155,42 @@ class InterceptorTest {
   @Test
   void fallThroughInterceptor() throws Exception {
     var baseClient = new RecordingClient();
-    var interceptor = new RecordingInterceptor();
-    var networkInterceptor = new RecordingInterceptor();
+    var preDecoration = new RecordingInterceptor();
+    var postDecoration = new RecordingInterceptor();
     var client = Methanol.newBuilder(baseClient)
-        .interceptor(interceptor)
-        .networkInterceptor(networkInterceptor)
+        .interceptor(preDecoration)
+        .postDecorationInterceptor(postDecoration)
         .build();
     var request = MutableRequest.GET("https://localhost");
 
     client.send(request, BodyHandlers.discarding());
 
-    assertNotSame(baseClient.request, interceptor.request);
-    assertSame(baseClient.request, networkInterceptor.request);
-    assertNotSame(baseClient.handler, interceptor.handler);
-    assertSame(baseClient.handler, networkInterceptor.handler);
+    assertNotSame(baseClient.request, preDecoration.request);
+    assertSame(baseClient.request, postDecoration.request);
+    assertNotSame(baseClient.handler, preDecoration.handler);
+    assertSame(baseClient.handler, postDecoration.handler);
   }
 
   @Test
   void fallThroughInterceptorAsync() {
     var baseClient = new RecordingClient();
-    var interceptor = new RecordingInterceptor();
-    var networkInterceptor = new RecordingInterceptor();
+    var preDecoration = new RecordingInterceptor();
+    var postDecoration = new RecordingInterceptor();
     var client = Methanol.newBuilder(baseClient)
-        .interceptor(interceptor)
-        .networkInterceptor(networkInterceptor)
+        .interceptor(preDecoration)
+        .postDecorationInterceptor(postDecoration)
         .build();
     var request = MutableRequest.GET("https://localhost");
 
     client.sendAsync(request, BodyHandlers.discarding(),
         PushPromiseHandler.of(req -> BodyHandlers.discarding(), new ConcurrentHashMap<>())).join();
 
-    assertNotSame(baseClient.request, interceptor.request);
-    assertSame(baseClient.request, networkInterceptor.request);
-    assertNotSame(baseClient.handler, interceptor.handler);
-    assertSame(baseClient.handler, networkInterceptor.handler);
-    assertNotSame(baseClient.pushHandler, interceptor.pushHandler);
-    assertSame(baseClient.pushHandler, networkInterceptor.pushHandler);
+    assertNotSame(baseClient.request, preDecoration.request);
+    assertSame(baseClient.request, postDecoration.request);
+    assertNotSame(baseClient.handler, preDecoration.handler);
+    assertSame(baseClient.handler, postDecoration.handler);
+    assertNotSame(baseClient.pushHandler, preDecoration.pushHandler);
+    assertSame(baseClient.pushHandler, postDecoration.pushHandler);
   }
 
   @Test
