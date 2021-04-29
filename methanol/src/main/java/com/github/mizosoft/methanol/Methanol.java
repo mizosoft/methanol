@@ -27,6 +27,7 @@ import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
 
 import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
@@ -66,13 +67,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /**
  * An {@code HttpClient} with interceptors, request decoration and reactive extensions.
  *
- * <p>In addition to implementing the {@link HttpClient} interface, this class allows to:
+ * <p>In addition to implementing the {@link HttpClient} interface, this class also allows to:
  *
  * <ul>
  *   <li>Specify a {@link BaseBuilder#baseUri(URI) base URI}.
  *   <li>Specify a default {@link HttpRequest#timeout() request timeout}.
  *   <li>Add a set of default HTTP headers for inclusion in requests if absent.
- *   <li>Add an {@link HttpCache HTTP caching} layer.
  *   <li>{@link BaseBuilder#autoAcceptEncoding(boolean) Transparent} response decompression.
  *   <li>Intercept requests and responses going through this client.
  *   <li>Get {@code Publisher<HttpResponse<T>>} for asynchronous requests.
@@ -80,27 +80,26 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
+
   private final HttpClient baseClient;
-  private final HttpHeaders defaultHeaders;
-  private final Optional<HttpCache> cache;
   private final Optional<String> userAgent;
   private final Optional<URI> baseUri;
   private final Optional<Duration> requestTimeout;
   private final Optional<Duration> readTimeout;
   private final @Nullable ScheduledExecutorService readTimeoutScheduler;
+  private final HttpHeaders defaultHeaders;
   private final boolean autoAcceptEncoding;
   private final List<Interceptor> preDecorationInterceptors;
   private final List<Interceptor> postDecorationInterceptors;
 
   private Methanol(BaseBuilder<?> builder) {
     baseClient = builder.buildBaseClient();
-    defaultHeaders = builder.headersBuilder.build();
-    cache = Optional.ofNullable(builder.cache);
     userAgent = Optional.ofNullable(builder.userAgent);
     baseUri = Optional.ofNullable(builder.baseUri);
     requestTimeout = Optional.ofNullable(builder.requestTimeout);
     readTimeout = Optional.ofNullable(builder.readTimeout);
     readTimeoutScheduler = builder.readTimeoutScheduler;
+    defaultHeaders = builder.headersBuilder.build();
     autoAcceptEncoding = builder.autoAcceptEncoding;
     preDecorationInterceptors = List.copyOf(builder.preDecorationInterceptors);
     postDecorationInterceptors = List.copyOf(builder.postDecorationInterceptors);
@@ -267,8 +266,6 @@ public final class Methanol extends HttpClient {
   private List<Interceptor> buildInterceptorQueue() {
     var interceptors = new ArrayList<>(this.preDecorationInterceptors);
     interceptors.add(new RequestDecorationInterceptor(this));
-    // Add cache interceptor if one is installed
-    cache.ifPresent(cache -> interceptors.add(cache.interceptor(executor().orElse(null))));
     interceptors.addAll(postDecorationInterceptors);
     return Collections.unmodifiableList(interceptors);
   }
@@ -371,6 +368,7 @@ public final class Methanol extends HttpClient {
 
   /** A base {@code Methanol} builder allowing to set the non-standard properties. */
   public abstract static class BaseBuilder<B extends BaseBuilder<B>> {
+
     final HeadersBuilder headersBuilder;
     @MonotonicNonNull String userAgent;
     @MonotonicNonNull URI baseUri;
@@ -378,9 +376,6 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull Duration readTimeout;
     @MonotonicNonNull ScheduledExecutorService readTimeoutScheduler;
     boolean autoAcceptEncoding;
-
-    // This field is put here for convenience, it's only writable by Builder
-    @MonotonicNonNull HttpCache cache;
 
     final List<Interceptor> preDecorationInterceptors = new ArrayList<>();
     final List<Interceptor> postDecorationInterceptors = new ArrayList<>();
@@ -519,6 +514,7 @@ public final class Methanol extends HttpClient {
 
   /** A builder for {@code Methanol} instances with a predefined {@code HttpClient}. */
   public static final class WithClientBuilder extends BaseBuilder<WithClientBuilder> {
+
     private final HttpClient delegate;
 
     WithClientBuilder(HttpClient delegate) {
@@ -541,16 +537,11 @@ public final class Methanol extends HttpClient {
    * HttpClient}.
    */
   public static final class Builder extends BaseBuilder<Builder> implements HttpClient.Builder {
+
     private final HttpClient.Builder delegateBuilder;
 
     Builder() {
       delegateBuilder = HttpClient.newBuilder();
-    }
-
-    /** Sets the {@link HttpCache} to be used by the client. */
-    public Builder cache(HttpCache cache) {
-      super.cache = requireNonNull(cache);
-      return this;
     }
 
     @Override
@@ -625,6 +616,7 @@ public final class Methanol extends HttpClient {
   }
 
   private static final class InterceptorChain<T> implements Interceptor.Chain<T> {
+
     private final HttpClient baseClient;
     private final BodyHandler<T> bodyHandler;
     private final @Nullable PushPromiseHandler<T> pushPromiseHandler;
@@ -680,8 +672,7 @@ public final class Methanol extends HttpClient {
     public <U> Chain<U> with(
         BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler) {
       requireNonNull(bodyHandler);
-      return new InterceptorChain<>(
-          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
+      return new InterceptorChain<>(baseClient, bodyHandler, pushPromiseHandler, interceptors);
     }
 
     @Override
@@ -741,6 +732,7 @@ public final class Methanol extends HttpClient {
 
   /** Applies client-configured decoration to each ongoing request. */
   private static final class RequestDecorationInterceptor implements Interceptor {
+
     private final Optional<URI> baseUri;
     private final Optional<Duration> requestTimeout;
     private final Optional<Duration> readTimeout;

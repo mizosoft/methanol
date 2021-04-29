@@ -26,7 +26,7 @@ public interface CacheAwareResponse<T> extends TrackedResponse<T> {
   enum CacheStatus {
 
     /**
-     * Either the cache lacked a matching response or the matching response was stale but failed
+     * Either the cache lacked a matching response or the selected response was stale but failed
      * validation with the server and thus had to be re-downloaded.
      */
     MISS,

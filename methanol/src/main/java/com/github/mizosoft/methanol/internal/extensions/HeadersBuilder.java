@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.function.BiPredicate;
 
 public final class HeadersBuilder {
   private final Map<String, List<String>> headersMap;
@@ -28,10 +27,6 @@ public final class HeadersBuilder {
     headers.forEach(this::add);
   }
 
-  public void addAll(HttpHeaders headers) {
-    addAll(headers.map());
-  }
-
   public void set(String name, String value) {
     set(name, List.of(value));
   }
@@ -42,24 +37,8 @@ public final class HeadersBuilder {
     }
   }
 
-  public void setAll(HttpHeaders headers) {
-    headers.map().forEach(this::set);
-  }
-
   public boolean remove(String name) {
     return headersMap.remove(name) != null;
-  }
-
-  public void removeIf(BiPredicate<String, String> filter) {
-    for (var iter = headersMap.entrySet().iterator(); iter.hasNext(); ) {
-      var entry = iter.next();
-      var name = entry.getKey();
-      var values = entry.getValue();
-      values.removeIf(value -> filter.test(name, value));
-      if (values.isEmpty()) {
-        iter.remove();
-      }
-    }
   }
 
   public void clear() {
@@ -68,7 +47,7 @@ public final class HeadersBuilder {
 
   public HeadersBuilder deepCopy() {
     var copy = new HeadersBuilder();
-    copy.addAll(headersMap);
+    headersMap.forEach((n, vs) -> copy.headersMap.put(n, new ArrayList<>(vs)));
     return copy;
   }
 

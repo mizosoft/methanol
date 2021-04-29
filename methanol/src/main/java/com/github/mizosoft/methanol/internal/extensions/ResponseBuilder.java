@@ -1,6 +1,5 @@
 package com.github.mizosoft.methanol.internal.extensions;
 
-import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 
 import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus;
@@ -62,12 +61,6 @@ public final class ResponseBuilder<T> {
     return this;
   }
 
-  public ResponseBuilder<T> setHeaders(HttpHeaders headers) {
-    headersBuilder.clear();
-    headersBuilder.addAll(headers.map());
-    return this;
-  }
-
   public ResponseBuilder<T> request(HttpRequest request) {
     this.request = request;
     return this;
@@ -84,13 +77,14 @@ public final class ResponseBuilder<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public <U> ResponseBuilder<U> body(@Nullable U body) {
+  public <U> ResponseBuilder<U> body(U body) {
     this.body = body;
     return (ResponseBuilder<U>) this;
   }
 
   public ResponseBuilder<T> dropBody() {
-    return body(null);
+    this.body = null;
+    return this;
   }
 
   public ResponseBuilder<T> sslSession(@Nullable SSLSession sslSession) {
@@ -121,9 +115,6 @@ public final class ResponseBuilder<T> {
   @SuppressWarnings("unchecked")
   public TrackedResponse<T> build() {
     requireState(statusCode > 0, "statusCode is required");
-    if (cacheStatus != null) {
-      return buildCacheAware();
-    }
     return new TrackedResponseImpl<>(
         statusCode,
         ensureSet(uri, "uri"),
@@ -168,7 +159,7 @@ public final class ResponseBuilder<T> {
     response.previousResponse().ifPresent(builder::previousResponse);
     response.sslSession().ifPresent(builder::sslSession);
     if (response instanceof TrackedResponse<?>) {
-      var trackedResponse = ((TrackedResponse<?>) response);
+      var trackedResponse = ((TrackedResponse<T>) response);
       builder
           .timeRequestSent(trackedResponse.timeRequestSent())
           .timeResponseReceived(trackedResponse.timeResponseReceived());
@@ -185,7 +176,7 @@ public final class ResponseBuilder<T> {
 
   private static <T> T ensureSet(T property, String name) {
     requireState(property != null, "%s is required", name);
-    return castNonNull(property);
+    return property;
   }
 
   private static class TrackedResponseImpl<T> implements TrackedResponse<T> {

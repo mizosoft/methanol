@@ -100,7 +100,7 @@ public interface Store extends AutoCloseable {
     TODO();
   }
 
-  /** Atomically clears and closes this store. */
+  /** Atomically clears this store and closes it. */
   default void destroy() {
     TODO();
   }

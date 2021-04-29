@@ -57,7 +57,6 @@ public final class MemoryStore implements Store {
 
   public MemoryStore(long maxSize) {
     this.maxSize = maxSize;
-    requireArgument(maxSize > 0, "non-positive maxSize: %s", maxSize);
   }
 
   @Override
