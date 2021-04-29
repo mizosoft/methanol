@@ -444,7 +444,7 @@ public final class MemoryStore implements Store {
       ByteBuffer newData;
       lock.readLock().lock();
       try {
-        newData = data.writtenCount() > 0 ? data.snapshot() : null;
+        newData = data.writtenCount() > 0 ? data.copyWritten() : null;
       } finally {
         lock.readLock().unlock();
       }
@@ -543,7 +543,7 @@ public final class MemoryStore implements Store {
       return output.fence();
     }
 
-    ByteBuffer snapshot() {
+    ByteBuffer copyWritten() {
       return ByteBuffer.allocate(output.fence()).put(output.array(), 0, output.fence()).flip();
     }
 
