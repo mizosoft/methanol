@@ -32,10 +32,10 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
@@ -75,30 +75,27 @@ public final class MemoryStore implements Store {
   }
 
   @Override
-  public @Nullable Viewer view(String key) {
+  public Store.@Nullable Entry open(String key) {
     synchronized (entries) {
-      var entry = entries.get(key);
-      return entry != null ? entry.view() : null;
+      return entries.get(key);
     }
   }
 
   @Override
-  public @Nullable Editor edit(String key) {
+  public Store.Entry openOrCreate(String key) {
     synchronized (entries) {
-      return entries.computeIfAbsent(key, Entry::new).edit();
+      return entries.computeIfAbsent(key, Entry::new);
     }
   }
 
   @Override
-  public CompletableFuture<@Nullable Viewer> viewAsync(String key) {
-    return CompletableFuture.completedFuture(view(key));
+  public CompletableFuture<Store.@Nullable Entry> openAsync(String key) {
+    return CompletableFuture.completedFuture(open(key));
   }
 
   @Override
-  public Iterator<Viewer> viewAll() {
-    synchronized (entries) {
-      return new ViewerIterator(Set.copyOf(entries.keySet()));
-    }
+  public CompletableFuture<Store.Entry> openOrCreateAsync(String key) {
+    return CompletableFuture.completedFuture(openOrCreate(key));
   }
 
   @Override
@@ -122,6 +119,60 @@ public final class MemoryStore implements Store {
         unlink(iter.next());
         iter.remove();
       }
+    }
+  }
+
+  @Override
+  public Iterator<Store.Entry> iterator() {
+    synchronized (entries) {
+      return new Iterator<>() {
+        /**
+         * Iterator over a snapshot of currently available keys to avoid CMEs. This however will
+         * miss keys added after this iterator is returned, which is OK.
+         */
+        private final Iterator<String> keysIterator = List.copyOf(entries.keySet()).iterator();
+
+        private @Nullable Entry nextEntry;
+        private @Nullable Entry currentEntry;
+
+        @Override
+        @EnsuresNonNullIf(expression="nextEntry", result=true)
+        public boolean hasNext() {
+          return nextEntry != null || (nextEntry = findNextEntry()) != null;
+        }
+
+        @Override
+        public Store.Entry next() {
+          if (!hasNext()) {
+            throw new NoSuchElementException();
+          }
+          var entry = castNonNull(nextEntry);
+          nextEntry = null;
+          currentEntry = entry;
+          return entry;
+        }
+
+        @Override
+        public void remove() {
+          var entry = currentEntry;
+          requireState(entry != null, "next() must be called before remove()");
+          currentEntry = null;
+          synchronized (entries) {
+            unlink(entry);
+            entries.remove(entry.key());
+          }
+        }
+
+        private @Nullable Entry findNextEntry() {
+          Entry next = null;
+          synchronized (entries) {
+            while (keysIterator.hasNext() && next == null) {
+              next = entries.get(keysIterator.next());
+            }
+          }
+          return next;
+        }
+      };
     }
   }
 
@@ -158,61 +209,8 @@ public final class MemoryStore implements Store {
     }
   }
 
-  private final class ViewerIterator implements Iterator<Viewer> {
-
-    /**
-     * Iterator over a snapshot of currently available keys to avoid CMEs. This however will
-     * miss keys added after this iterator is returned, which is OK.
-     */
-    private final Iterator<String> keysIterator;
-
-    private @Nullable Viewer nextViewer;
-
-    /** The key remove() would evict. */
-    private @Nullable String currentKey;
-
-    ViewerIterator(Set<String> keysSnapshot) {
-      keysIterator = keysSnapshot.iterator();
-    }
-
-    @Override
-    @EnsuresNonNullIf(expression="nextEntry", result=true)
-    public boolean hasNext() {
-      return nextViewer != null || (nextViewer = viewNextEntry()) != null;
-    }
-
-    @Override
-    public Viewer next() {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
-      }
-      var viewer = castNonNull(nextViewer);
-      nextViewer = null;
-      currentKey = viewer.key();
-      return viewer;
-    }
-
-    @Override
-    public void remove() {
-      var key = currentKey;
-      requireState(key != null, "next() must be called before remove()");
-      currentKey = null;
-      evict(key);
-    }
-
-    private @Nullable Viewer viewNextEntry() {
-      Viewer nextViewer = null;
-      synchronized (entries) {
-        while (keysIterator.hasNext() && nextViewer == null) {
-          nextViewer = entries.get(keysIterator.next()).view();
-        }
-      }
-      return nextViewer;
-    }
-  }
-
-  private final class Entry {
-    final String key;
+  private final class Entry implements Store.Entry {
+    private final String key;
     private ByteBuffer metadata = EMPTY_BUFFER;
     private ByteBuffer data = EMPTY_BUFFER;
     private @Nullable Editor currentEditor;
@@ -228,17 +226,23 @@ public final class MemoryStore implements Store {
       this.key = key;
     }
 
+    @Override
+    public String key() {
+      return key;
+    }
 
-    @Nullable Viewer view() {
+    @Override
+    public @Nullable Viewer view() {
       lock.readLock().lock();
       try {
-        return virgin ? null : new SnapshotViewer(key, metadata.duplicate(), data.duplicate());
+        return virgin ? null : new SnapshotViewer(this, metadata.duplicate(), data.duplicate());
       } finally {
         lock.readLock().unlock();
       }
     }
 
-    @Nullable Editor edit() {
+    @Override
+    public Store.@Nullable Editor edit() {
       lock.writeLock().lock();
       try {
         if (currentEditor != null) { // Ongoing edit
@@ -253,6 +257,14 @@ public final class MemoryStore implements Store {
       }
     }
 
+    @Override
+    public void evict() {
+      MemoryStore.this.evict(key);
+    }
+
+    @Override
+    public void close() {}
+
     /** Prevents any ongoing edit from committing it's data. */
     void markEvicted() {
       lock.writeLock().lock();
@@ -266,7 +278,6 @@ public final class MemoryStore implements Store {
     void finishEdit(Editor editor, @Nullable ByteBuffer writtenData) {
       long previousEntrySize;
       long currentEntrySize;
-      boolean evictAfterDiscardedFirstEdit = false;
       lock.writeLock().lock();
       try {
         if (currentEditor != editor) { // Unowned editor
@@ -274,8 +285,7 @@ public final class MemoryStore implements Store {
         }
 
         currentEditor = null;
-        if (writtenData == null || evicted) { // Edit is discarded or entry was evicted
-          evictAfterDiscardedFirstEdit = !evicted && virgin;
+        if (writtenData == null || evicted) { // Edit is discarded or entry is evicted while editing
           return;
         }
 
@@ -286,22 +296,6 @@ public final class MemoryStore implements Store {
         currentEntrySize = (long) metadata.remaining() + data.remaining();
       } finally {
         lock.writeLock().unlock();
-
-        // Evict the entry if it's first edit ever was discarded. This would be
-        // inside the try block above but that risks a deadlock as lock.writeLock()
-        // and entries lock are held in reverse order in evict(String key).
-        if (evictAfterDiscardedFirstEdit) {
-          synchronized (entries) {
-            lock.writeLock().lock();
-            try {
-              if (virgin) { // Recheck as another edit might have been made successfully
-                entries.remove(key);
-              }
-            } finally {
-              lock.writeLock().unlock();
-            }
-          }
-        }
       }
 
       long netEntrySize = currentEntrySize - previousEntrySize; // Might be negative
@@ -312,15 +306,15 @@ public final class MemoryStore implements Store {
   }
 
   private abstract static class AbstractViewer implements Viewer {
-    private final String key;
+    private final Entry entry;
 
-    AbstractViewer(String key) {
-      this.key = key;
+    AbstractViewer(Entry entry) {
+      this.entry = entry;
     }
 
     @Override
-    public final String key() {
-      return key;
+    public final Store.Entry entry() {
+      return entry;
     }
 
     @Override
@@ -332,8 +326,8 @@ public final class MemoryStore implements Store {
     private final ByteBuffer data;
     private final ByteBuffer metadata;
 
-    SnapshotViewer(String key, ByteBuffer metadata, ByteBuffer data) {
-      super(key);
+    SnapshotViewer(Entry entry, ByteBuffer metadata, ByteBuffer data) {
+      super(entry);
       this.data = data;
       this.metadata = metadata;
     }
@@ -381,8 +375,8 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public String key() {
-      return entry.key;
+    public Store.Entry entry() {
+      return entry;
     }
 
     @Override
@@ -405,10 +399,10 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
+    public CompletableFuture<Integer> writeAsync(long position, ByteBuffer dst) {
       lock.writeLock().lock();
       try {
-        return CompletableFuture.completedFuture(buffer.write(position, src));
+        return CompletableFuture.completedFuture(buffer.write(position, dst));
       } finally {
         lock.writeLock().unlock();
       }
@@ -441,7 +435,7 @@ public final class MemoryStore implements Store {
     /** Views data currently being edited. */
     private final class LiveViewer extends AbstractViewer {
       LiveViewer() {
-        super(entry.key);
+        super(entry);
       }
 
       @Override
