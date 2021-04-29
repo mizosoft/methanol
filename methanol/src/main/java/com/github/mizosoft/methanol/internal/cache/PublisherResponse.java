@@ -10,8 +10,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
+import java.util.function.Consumer;
 
-abstract class PublisherResponse extends RawResponse {
+class PublisherResponse extends RawResponse {
   final Publisher<List<ByteBuffer>> publisher;
 
   PublisherResponse(TrackedResponse<?> response, Publisher<List<ByteBuffer>> publisher) {
@@ -29,6 +30,13 @@ abstract class PublisherResponse extends RawResponse {
     return subscriberFuture
         .thenComposeAsync(BodySubscriber::getBody, executor)
         .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).build());
+  }
+
+  @Override
+  public RawResponse with(Consumer<ResponseBuilder<?>> mutator) {
+    var builder = ResponseBuilder.newBuilder(response);
+    mutator.accept(builder);
+    return new PublisherResponse(builder.build(), publisher);
   }
 
   private static TrackedResponse<?> dropBody(TrackedResponse<?> response) {

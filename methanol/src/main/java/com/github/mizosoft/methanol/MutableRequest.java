@@ -37,7 +37,6 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -121,14 +120,6 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
     if (headersBuilder.remove(name)) {
       cachedHeaders = null; // invalidated
     }
-    return this;
-  }
-
-  /** Removes all headers matched by the given predicate. */
-  public MutableRequest removeHeadersIf(BiPredicate<String, String> filter) {
-    requireNonNull(filter);
-    headersBuilder.removeIf(filter);
-    cachedHeaders = null; // Invalidated
     return this;
   }
 

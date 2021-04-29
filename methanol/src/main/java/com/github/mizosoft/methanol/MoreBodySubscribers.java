@@ -129,8 +129,8 @@ public class MoreBodySubscribers {
   }
 
   /**
-   * Returns a {@code BodySubscriber} of {@code T} as specified by {@link Decoder#toObject(TypeRef,
-   * MediaType)} using an installed decoder.
+   * Returns a {@code BodySubscriber} of {@code T} as specified by {@link
+   * Decoder#toObject(TypeRef, MediaType)} using an installed decoder.
    *
    * @param type a {@code TypeRef} representing {@code T}
    * @param mediaType the media type
@@ -138,7 +138,8 @@ public class MoreBodySubscribers {
    * @throws UnsupportedOperationException if no {@code Decoder} that supports the given type or
    *     media type is installed
    */
-  public static <T> BodySubscriber<T> ofObject(TypeRef<T> type, @Nullable MediaType mediaType) {
+  public static <T> BodySubscriber<T> ofObject(
+      TypeRef<T> type, @Nullable MediaType mediaType) {
     return requireDecoder(type, mediaType).toObject(type, mediaType);
   }
 

@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol;
 
-import static java.time.Duration.ofSeconds;
 import static java.util.Map.entry;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,15 +41,13 @@ class CacheControlTest {
   @Test
   void parseDirectives() {
     var allDirectives =
-        "max-age=1, min-fresh=2, s-maxage=3, max-stale=4, stale-while-revalidate=5, stale-if-error=6,"
-            + " no-cache, no-store, no-transform, public, private, only-if-cached, must-revalidate, proxy-revalidate";
+        "max-age=1, min-fresh=2, s-maxage=3, max-stale=4, no-cache, no-store"
+            + ", no-transform, public, private, only-if-cached, must-revalidate, proxy-revalidate";
     var cacheControl = CacheControl.parse(allDirectives);
-    assertEquals(Optional.of(ofSeconds(1)), cacheControl.maxAge());
-    assertEquals(Optional.of(ofSeconds(2)), cacheControl.minFresh());
-    assertEquals(Optional.of(ofSeconds(3)), cacheControl.sMaxAge());
-    assertEquals(Optional.of(ofSeconds(4)), cacheControl.maxStale());
-    assertEquals(Optional.of(ofSeconds(5)), cacheControl.staleWhileRevalidate());
-    assertEquals(Optional.of(ofSeconds(6)), cacheControl.staleIfError());
+    assertEquals(1, cacheControl.maxAgeSeconds());
+    assertEquals(2, cacheControl.minFreshSeconds());
+    assertEquals(3, cacheControl.sMaxAgeSeconds());
+    assertEquals(4, cacheControl.maxStaleSeconds());
     assertFalse(cacheControl.anyMaxStale());
     assertTrue(cacheControl.noCache());
     assertTrue(cacheControl.noStore());
@@ -65,8 +63,6 @@ class CacheControlTest {
             entry("min-fresh", "2"),
             entry("s-maxage", "3"),
             entry("max-stale", "4"),
-            entry("stale-while-revalidate", "5"),
-            entry("stale-if-error", "6"),
             entry("no-cache", ""),
             entry("no-store", ""),
             entry("no-transform", ""),
@@ -84,38 +80,39 @@ class CacheControlTest {
     var value1 = "max-age=1, public";
     var value2 = "min-fresh=2, no-transform";
     var cacheControl = CacheControl.parse(List.of(value1, value2));
-    assertEquals(Optional.of(ofSeconds(1)), cacheControl.maxAge());
+    assertEquals(1, cacheControl.maxAgeSeconds());
     assertTrue(cacheControl.isPublic());
-    assertEquals(Optional.of(ofSeconds(2)), cacheControl.minFresh());
+    assertEquals(2, cacheControl.minFreshSeconds());
     assertTrue(cacheControl.noTransform());
   }
 
   @Test
   void defaultValues() {
     var cacheControl = CacheControl.parse("my-directive");
-    assertHasNoKnownDirectives(cacheControl);
+    assertEquals(-1, cacheControl.maxAgeSeconds());
+    assertEquals(-1, cacheControl.minFreshSeconds());
+    assertEquals(-1, cacheControl.sMaxAgeSeconds());
+    assertEquals(-1, cacheControl.maxStaleSeconds());
+    assertFalse(cacheControl.anyMaxStale());
+    assertFalse(cacheControl.noCache());
+    assertFalse(cacheControl.noStore());
+    assertFalse(cacheControl.noTransform());
+    assertFalse(cacheControl.isPublic());
+    assertFalse(cacheControl.isPrivate());
+    assertFalse(cacheControl.onlyIfCached());
+    assertFalse(cacheControl.mustRevalidate());
+    assertFalse(cacheControl.proxyRevalidate());
+    assertTrue(cacheControl.noCacheFields().isEmpty());
+    assertTrue(cacheControl.noStoreFields().isEmpty());
+    assertTrue(cacheControl.privateFields().isEmpty());
     assertEquals(Map.of("my-directive", ""), cacheControl.directives());
-  }
-
-  @Test
-  void empty() {
-    var cacheControl = CacheControl.empty();
-    assertHasNoKnownDirectives(cacheControl);
-    assertTrue(cacheControl.directives().isEmpty(), cacheControl.directives()::toString);
-  }
-
-  @Test
-  void parseEmptyValues() {
-    var cacheControl = CacheControl.parse(List.of());
-    assertHasNoKnownDirectives(cacheControl);
-    assertTrue(cacheControl.directives().isEmpty(), cacheControl.directives()::toString);
   }
 
   @Test
   void directivesWithFieldNames() {
     var value =
-        "no-cache=\"Language\", no-store=Content-Encoding, "
-            + "private=\"Authorization, X-My-Private-Header\"";
+        "no-cache=\"Language\", no-store=Content-Encoding"
+            + ", private=\"Authorization, X-My-Private-Header\"";
     var cacheControl = CacheControl.parse(value);
     assertEquals(Set.of("language"), cacheControl.noCacheFields());
     assertEquals(Set.of("content-encoding"), cacheControl.noStoreFields());
@@ -125,14 +122,14 @@ class CacheControlTest {
   @Test
   void maxStaleNoArgument() {
     var cacheControl = CacheControl.parse("max-stale");
-    assertEquals(Optional.empty(), cacheControl.maxStale());
+    assertEquals(-1, cacheControl.maxAgeSeconds());
     assertTrue(cacheControl.anyMaxStale());
   }
 
   @Test
   void multipleValuesReplaceEachOther() {
     var cacheControl = CacheControl.parse("max-age=1, max-age=2");
-    assertEquals(Optional.of(ofSeconds(2)), cacheControl.maxAge());
+    assertEquals(2, cacheControl.maxAgeSeconds());
   }
 
   @Test
@@ -142,29 +139,27 @@ class CacheControlTest {
     var cacheControl = CacheControl.newBuilder()
         .directive("my-directive")
         .directive("my-directive-with-argument", "123")
-        .maxAge(ofSeconds(1))
-        .minFresh(ofSeconds(2))
-        .maxStale(ofSeconds(3))
-        .staleIfError(ofSeconds(5))
+        .maxAge(Duration.ofSeconds(1))
+        .minFresh(Duration.ofSeconds(2))
+        .maxStale(Duration.ofSeconds(3))
         .noCache()
         .noStore()
         .noTransform()
         .onlyIfCached()
         .build();
-    var headerValue = "my-directive, my-directive-with-argument=123, "
-        + "max-age=1, min-fresh=2, max-stale=3, stale-if-error=5, "
-        + "no-cache, no-store, no-transform, only-if-cached";
+    var headerValue = "my-directive, my-directive-with-argument=123, max-age=1, min-fresh=2,"
+        + " max-stale=3, no-cache, no-store, no-transform, only-if-cached";
     var parsed = CacheControl.parse(headerValue);
     assertEquals(parsed, cacheControl);
     assertEquals(headerValue, cacheControl.toString());
   }
 
   @Test
-  void durationIsTruncated() {
+  void durationWithNanoPart() {
     var cacheControl = CacheControl.newBuilder()
-        .maxAge(ofSeconds(1).plusNanos(1))
+        .maxAge(Duration.ofSeconds(1).plusNanos(1))
         .build();
-    assertEquals(Optional.of(ofSeconds(1)), cacheControl.maxAge());
+    assertEquals(Optional.of(Duration.ofSeconds(1)), cacheControl.maxAge());
   }
 
   @Test
@@ -188,14 +183,9 @@ class CacheControlTest {
 
   @Test
   void parseInvalid() {
-    assertThrows(IllegalArgumentException.class, () -> CacheControl.parse(""));
     assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("no-c@che"));
     assertThrows(IllegalArgumentException.class, () -> CacheControl.parse(List.of("no-c@che")));
     assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("max-age")); // no required argument
-    assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("min-fresh")); // no required argument
-    assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("s-maxage")); // no required argument
-    assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("stale-while-revalidate")); // no required argument
-    assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("stale-if-error")); // no required argument
     assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("max-age=-1")); // negative delta seconds
     assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("no-cache=\"illeg@l\""));
     var iae = assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("max-age=one"));
@@ -206,33 +196,10 @@ class CacheControlTest {
   @Test
   void buildInvalid() {
     var builder = CacheControl.newBuilder();
-    assertThrows(IllegalArgumentException.class, () -> builder.directive(""));
     assertThrows(IllegalArgumentException.class, () -> builder.directive("illeg@l"));
     assertThrows(IllegalArgumentException.class, () -> builder.directive("legal", "ba\r")); // Illegal value
-    assertThrows(IllegalArgumentException.class, () -> builder.maxAge(ofSeconds(-1)));
-    assertThrows(IllegalArgumentException.class, () -> builder.minFresh(ofSeconds(-1)));
-    assertThrows(IllegalArgumentException.class, () -> builder.maxStale(ofSeconds(-1)));
-    assertThrows(IllegalArgumentException.class, () -> builder.staleIfError(ofSeconds(-1)));
-  }
-
-  private static void assertHasNoKnownDirectives(CacheControl cacheControl) {
-    assertEquals(Optional.empty(), cacheControl.maxAge());
-    assertEquals(Optional.empty(), cacheControl.minFresh());
-    assertEquals(Optional.empty(), cacheControl.sMaxAge());
-    assertEquals(Optional.empty(), cacheControl.maxStale());
-    assertEquals(Optional.empty(), cacheControl.staleWhileRevalidate());
-    assertEquals(Optional.empty(), cacheControl.staleIfError());
-    assertFalse(cacheControl.anyMaxStale());
-    assertFalse(cacheControl.noCache());
-    assertFalse(cacheControl.noStore());
-    assertFalse(cacheControl.noTransform());
-    assertFalse(cacheControl.isPublic());
-    assertFalse(cacheControl.isPrivate());
-    assertFalse(cacheControl.onlyIfCached());
-    assertFalse(cacheControl.mustRevalidate());
-    assertFalse(cacheControl.proxyRevalidate());
-    assertTrue(cacheControl.noCacheFields().isEmpty());
-    assertTrue(cacheControl.noStoreFields().isEmpty());
-    assertTrue(cacheControl.privateFields().isEmpty());
+    assertThrows(IllegalArgumentException.class, () -> builder.maxAge(Duration.ofSeconds(0)));
+    assertThrows(IllegalArgumentException.class, () -> builder.minFresh(Duration.ofSeconds(0)));
+    assertThrows(IllegalArgumentException.class, () -> builder.maxStale(Duration.ofSeconds(0)));
   }
 }
