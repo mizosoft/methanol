@@ -328,41 +328,38 @@ public final class CacheWritingBodySubscriber
         editor
             .writeAsync((long) POSITION.getAndAdd(this, buffer.remaining()), buffer)
             .whenComplete((__, error) -> onWriteCompletion(error));
-      } catch (RuntimeException t) {
+      } catch (Throwable t) {
         discardEdit(t);
       }
     }
 
     private void commitEdit() {
-      if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
-        try (editor) {
-          editor.metadata(metadata);
-          editor.commit();
-        } catch (IOException ioe) {
-          // TODO handle properly
-        }
+      state = DISPOSED;
+      try (editor) {
+        editor.metadata(metadata);
+        editor.commit();
+      } catch (IOException ioe) {
+        // TODO handle properly
       }
     }
 
     private void discardEdit(@Nullable Throwable cause) {
-      if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
-        if (cause != null) {
-          LOGGER.log(
-              Level.WARNING,
-              cause,
-              () ->
-                  "caching response with key <"
-                      + editor.key()
-                      + "> will be discarded as a problem occurred while writing");
-        }
+      if (cause != null) {
+        LOGGER.log(
+            Level.WARNING,
+            cause,
+            () ->
+                "caching response with key <"
+                    + editor.key()
+                    + "> will be discarded as a problem occurred while writing");
+      }
 
-        state = DISPOSED;
-        writeQueue.clear();
-        try {
-          editor.close();
-        } catch (IOException ioe) {
-          // TODO handle properly
-        }
+      state = DISPOSED;
+      writeQueue.clear();
+      try {
+        editor.close();
+      } catch (IOException ioe) {
+        // TODO handle properly
       }
     }
 
