@@ -36,23 +36,17 @@ import static com.github.mizosoft.methanol.CacheControl.StandardDirective.PUBLIC
 import static com.github.mizosoft.methanol.CacheControl.StandardDirective.S_MAXAGE;
 import static com.github.mizosoft.methanol.internal.Utils.escapeAndQuoteValueIfNeeded;
 import static com.github.mizosoft.methanol.internal.Utils.normalizeToken;
-import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
-import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
-import static com.github.mizosoft.methanol.internal.Utils.validateToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -63,17 +57,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * href="https://tools.ietf.org/html/rfc7234#section-5.2">RFC 7234 Section 5.2</a>. Other directives
  * ({@code Cache-Control} extensions) can be accessed using the {@link #directives()} map.
  */
-@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class CacheControl {
   private static final int ABSENT_INT = -1;
 
-  private static final CacheControl EMPTY = new CacheControl(Map.of(), Map.of());
-
   private final Map<String, String> directives;
-  private final Optional<Duration> maxAge;
-  private final Optional<Duration> minFresh;
-  private final Optional<Duration> sMaxAge;
-  private final Optional<Duration> maxStale;
+  private final int maxAgeSeconds;
+  private final int minFreshSeconds;
+  private final int sMaxAgeSeconds;
+  private final int maxStaleSeconds;
   private final boolean hasMaxStale;
   private final boolean noCache;
   private final boolean noStore;
@@ -90,10 +81,10 @@ public final class CacheControl {
   private CacheControl(
       Map<String, String> directives, Map<StandardDirective, ?> standardDirectives) {
     this.directives = Collections.unmodifiableMap(directives);
-    maxAge = Optional.ofNullable((Duration) standardDirectives.get(MAX_AGE));
-    minFresh = Optional.ofNullable((Duration) standardDirectives.get(MIN_FRESH));
-    sMaxAge = Optional.ofNullable((Duration) standardDirectives.get(S_MAXAGE));
-    maxStale = Optional.ofNullable((Duration) standardDirectives.get(MAX_STALE));
+    maxAgeSeconds = getIntIfPresent(standardDirectives, MAX_AGE);
+    minFreshSeconds = getIntIfPresent(standardDirectives, MIN_FRESH);
+    sMaxAgeSeconds = getIntIfPresent(standardDirectives, S_MAXAGE);
+    maxStaleSeconds = getIntIfPresent(standardDirectives, MAX_STALE);
     hasMaxStale = standardDirectives.containsKey(MAX_STALE);
     noCache = standardDirectives.containsKey(NO_CACHE);
     noStore = standardDirectives.containsKey(NO_STORE);
@@ -116,50 +107,24 @@ public final class CacheControl {
     return directives;
   }
 
-  /** Returns the value of the {@code max-age} directive if present. */
-  public Optional<Duration> maxAge() {
-    return maxAge;
-  }
-
-  /** Returns the value of the {@code s-maxage} directive if present. */
-  public Optional<Duration> sMaxAge() {
-    return sMaxAge;
-  }
-
-  /** Returns the value of the {@code min-fresh} directive if present. */
-  public Optional<Duration> minFresh() {
-    return minFresh;
-  }
-
-  /** Returns the value of the {@code max-stale} directive if present. */
-  public Optional<Duration> maxStale() {
-    return maxStale;
-  }
-
-  // TODO remove *Seconds()?
-
   /** Returns the value of the {@code max-age} directive or {@code -1} if not present. */
-  public long maxAgeSeconds() {
-    return getSecondsIfPresent(maxAge);
+  public int maxAgeSeconds() {
+    return maxAgeSeconds;
   }
 
   /** Returns the value of the {@code min-fresh} directive or {@code -1} if not present. */
-  public long minFreshSeconds() {
-    return getSecondsIfPresent(minFresh);
+  public int minFreshSeconds() {
+    return minFreshSeconds;
   }
 
   /** Returns the value of the {@code s-maxage} directive or {@code -1} if not present. */
-  public long sMaxAgeSeconds() {
-    return getSecondsIfPresent(sMaxAge);
+  public int sMaxAgeSeconds() {
+    return sMaxAgeSeconds;
   }
 
   /** Returns the value of the {@code max-stale} directive or {@code -1} if not present. */
-  public long maxStaleSeconds() {
-    return getSecondsIfPresent(maxStale);
-  }
-
-  private long getSecondsIfPresent(Optional<Duration> duration) {
-    return duration.map(Duration::getSeconds).orElse((long) ABSENT_INT);
+  public int maxStaleSeconds() {
+    return maxStaleSeconds;
   }
 
   /**
@@ -167,10 +132,10 @@ public final class CacheControl {
    * any number of seconds is acceptable for a stale response.
    */
   public boolean anyMaxStale() {
-    return maxStale.isEmpty() && hasMaxStale;
+    return maxStaleSeconds == ABSENT_INT && hasMaxStale;
   }
 
-  /** Returns {@code true} if the {@code no-cache} directive is set. */
+  /** Returns whether the {@code no-cache} directive is present. */
   public boolean noCache() {
     return noCache;
   }
@@ -180,7 +145,7 @@ public final class CacheControl {
     return noCacheFields;
   }
 
-  /** Returns {@code true} if the {@code no-store} directive is set. */
+  /** Returns whether the {@code no-store} directive is present. */
   public boolean noStore() {
     return noStore;
   }
@@ -190,17 +155,17 @@ public final class CacheControl {
     return noStoreFields;
   }
 
-  /** Returns {@code true} if the {@code no-transform} directive is set. */
+  /** Returns whether the {@code no-transform} directive is present. */
   public boolean noTransform() {
     return noTransform;
   }
 
-  /** Returns {@code true} if the {@code public} directive is set. */
+  /** Returns whether the {@code public} directive is present. */
   public boolean isPublic() {
     return isPublic;
   }
 
-  /** Returns {@code true} if the {@code private} directive is set. */
+  /** Returns whether the {@code private} directive is present. */
   public boolean isPrivate() {
     return isPrivate;
   }
@@ -210,17 +175,17 @@ public final class CacheControl {
     return privateFields;
   }
 
-  /** Returns {@code true} if the {@code only-if-cached} directive is set. */
+  /** Returns whether the {@code only-if-cached} directive is present. */
   public boolean onlyIfCached() {
     return onlyIfCached;
   }
 
-  /** Returns {@code true} if the {@code must-revalidate} directive is set. */
+  /** Returns whether the {@code must-revalidate} directive is present. */
   public boolean mustRevalidate() {
     return mustRevalidate;
   }
 
-  /** Returns {@code true} if the {@code proxy-revalidate} directive is set. */
+  /** Returns whether the {@code proxy-revalidate} directive is present. */
   public boolean proxyRevalidate() {
     return proxyRevalidate;
   }
@@ -282,13 +247,10 @@ public final class CacheControl {
     }
   }
 
-  public static Builder newBuilder() {
-    return new Builder();
-  }
-
-  /** Returns a {@code CacheControl} with no directives. */
-  public static CacheControl empty() {
-    return EMPTY;
+  private static int getIntIfPresent(
+      Map<StandardDirective, ?> directives, StandardDirective directive) {
+    var value = directives.get(directive);
+    return value != null ? (int) value : ABSENT_INT;
   }
 
   @SuppressWarnings("unchecked")
@@ -296,6 +258,12 @@ public final class CacheControl {
       Map<StandardDirective, ?> directives, StandardDirective directive) {
     var value = directives.get(directive);
     return value != null ? (Set<String>) value : Set.of();
+  }
+
+  private static int parseDeltaSeconds(String value) {
+    long longVal = Long.parseLong(value);
+    requireArgument(longVal >= 0, "negative delta-seconds: %d", longVal);
+    return (int) Math.min(Integer.MAX_VALUE, longVal);
   }
 
   private static Set<String> parseFieldNames(String value) {
@@ -315,13 +283,37 @@ public final class CacheControl {
     var standardDirectives = new EnumMap<>(StandardDirective.class);
     for (var entry : directives.entrySet()) {
       var directive = StandardDirective.get(entry.getKey());
-      if (directive != null) {
-        var argumentValue = entry.getValue();
-        requireArgument(
-            !(directive.requiresArgument() && argumentValue.isEmpty()),
-            "directive %s requires an argument",
-            directive.token);
-        standardDirectives.put(directive, convertArgument(directive, argumentValue));
+      if (directive == null) {
+        continue;
+      }
+
+      var argumentValue = entry.getValue();
+      requireArgument(
+          !(directive.requiresArgument() && argumentValue.isEmpty()),
+          "directive %s requires an argument",
+          directive.name);
+      switch (directive) {
+        case MAX_STALE:
+          // max-stale's argument value is optional
+          if (argumentValue.isEmpty()) {
+            standardDirectives.put(MAX_STALE, ABSENT_INT);
+            break;
+          }
+          // fallthrough
+        case MAX_AGE:
+        case MIN_FRESH:
+        case S_MAXAGE:
+          standardDirectives.put(directive, parseDeltaSeconds(argumentValue));
+          break;
+
+        case NO_CACHE:
+        case NO_STORE:
+        case PRIVATE:
+          standardDirectives.put(directive, parseFieldNames(argumentValue));
+          break;
+
+        default:
+          standardDirectives.put(directive, null);
       }
     }
     return Collections.unmodifiableMap(standardDirectives);
@@ -337,33 +329,6 @@ public final class CacheControl {
       }
       directives.put(name, argumentValue);
     } while (tokenizer.consumeDelimiter(','));
-  }
-
-  /** Converts the string argument to the typesafe argument corresponding to the directive. */
-  private static @Nullable Object convertArgument(
-      StandardDirective directive, String argumentValue) {
-    switch (directive) {
-      case MAX_STALE:
-        // max-stale's argument value is optional
-        if (argumentValue.isEmpty()) {
-          return null;
-        }
-        // fallthrough
-      case MAX_AGE:
-      case MIN_FRESH:
-      case S_MAXAGE:
-        var duration = Duration.ofSeconds(Long.parseLong(argumentValue));
-        requirePositiveDuration(duration);
-        return duration;
-
-      case NO_CACHE:
-      case NO_STORE:
-      case PRIVATE:
-        return parseFieldNames(argumentValue);
-
-      default:
-        return null; // No argument
-    }
   }
 
   enum StandardDirective {
@@ -398,10 +363,10 @@ public final class CacheControl {
     // Cached enum values array
     private static final StandardDirective[] DIRECTIVES = values();
 
-    final String token;
+    final String name;
 
-    StandardDirective(String token) {
-      this.token = token;
+    StandardDirective(String name) {
+      this.name = name;
     }
 
     boolean requiresArgument() {
@@ -410,111 +375,11 @@ public final class CacheControl {
 
     static @Nullable StandardDirective get(String name) {
       for (var directive : DIRECTIVES) {
-        if (directive.token.equalsIgnoreCase(name)) {
+        if (directive.name.equalsIgnoreCase(name)) {
           return directive;
         }
       }
       return null;
-    }
-  }
-
-  /**
-   * A builder of {@code CacheControl} instances for request cache directives. Methods that accept a
-   * {@code Duration} will drop any precision finer than that of a second, which is the only
-   * precision allowed by cache directives representing durations.
-   */
-  public static final class Builder {
-    private final Map<String, String> directives = new LinkedHashMap<>();
-    private final Map<StandardDirective, Object> standardDirectives =
-        new EnumMap<>(StandardDirective.class);
-
-    Builder() {}
-
-    /**
-     * Sets the given directive.
-     *
-     * @throws IllegalArgumentException if {@code directive} is invalid
-     */
-    public Builder directive(String directive) {
-      return directive(directive, "");
-    }
-
-    /**
-     * Sets the given directive to the given argument.
-     *
-     * @throws IllegalArgumentException if either of {@code directive} or {@code argument} is
-     *     invalid
-     */
-    public Builder directive(String directive, String argument) {
-      validateToken(directive);
-      validateHeaderValue(argument);
-      directives.put(normalizeToken(directive), argument);
-      var std = StandardDirective.get(directive);
-      if (std != null) {
-        standardDirectives.put(std, convertArgument(std, argument));
-      }
-      return this;
-    }
-
-    /** Sets the {@code max-age} directive to the given duration. */
-    public Builder maxAge(Duration maxAge) {
-      return putDuration(MAX_AGE, maxAge);
-    }
-
-    /** Sets the {@code min-fresh} directive to the given duration. */
-    public Builder minFresh(Duration minFresh) {
-      return putDuration(MIN_FRESH, minFresh);
-    }
-
-    /** Sets the {@code max-stale} directive to the given duration. */
-    public Builder maxStale(Duration maxStale) {
-      return putDuration(MAX_STALE, maxStale);
-    }
-
-    /** Sets the {@code max-stale} directive to accept any stale response. */
-    public Builder anyMaxStale() {
-      return put(MAX_STALE);
-    }
-
-    /** Sets the {@code no-cache} directive. */
-    public Builder noCache() {
-      return put(NO_CACHE);
-    }
-
-    /** Sets the {@code no-store} directive. */
-    public Builder noStore() {
-      return put(NO_STORE);
-    }
-
-    /** Sets the {@code no-store} directive. */
-    public Builder noTransform() {
-      return put(NO_TRANSFORM);
-    }
-
-    /** Sets the {@code only-if-cached} directive. */
-    public Builder onlyIfCached() {
-      return put(ONLY_IF_CACHED);
-    }
-
-    private Builder putDuration(StandardDirective directive, Duration duration) {
-      var truncated = duration.truncatedTo(ChronoUnit.SECONDS);
-      requirePositiveDuration(truncated);
-      standardDirectives.put(directive, truncated);
-      directives.put(directive.token, Long.toString(truncated.toSeconds()));
-      return this;
-    }
-
-    private Builder put(StandardDirective directive) {
-      standardDirectives.put(directive, null);
-      directives.put(directive.token, "");
-      return this;
-    }
-
-    /** Builds a new {@code Cache-Control}. */
-    public CacheControl build() {
-      return new CacheControl(
-          new LinkedHashMap<>(directives), // Copy directives map as it's stored
-          standardDirectives);
     }
   }
 }

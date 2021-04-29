@@ -27,12 +27,9 @@ import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.time.Duration;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Miscellaneous utilities. */
 public class Utils {
@@ -45,11 +42,6 @@ public class Utils {
   public static String normalizeToken(String token) {
     requireArgument(isValidToken(token), "illegal token: '%s'", token);
     return toAsciiLowerCase(token);
-  }
-
-  public static void validateToken(String token) {
-    requireNonNull(token);
-    requireArgument(isValidToken(token), "illegal token: '%s'", token);
   }
 
   public static void validateHeaderName(String name) {
@@ -67,10 +59,11 @@ public class Utils {
     validateHeaderValue(value);
   }
 
-  public static void requirePositiveDuration(Duration duration) {
-    requireNonNull(duration);
+  public static void requirePositiveDuration(Duration timeout) {
+    requireNonNull(timeout);
     requireArgument(
-        !(duration.isNegative() || duration.isZero()), "non-positive duration: %s", duration);
+        !(timeout.isNegative() || timeout.isZero()),
+        "non-positive duration: %s", timeout);
   }
 
   public static int copyRemaining(ByteBuffer src, ByteBuffer dst) {

@@ -30,10 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -127,48 +125,15 @@ class CacheControlTest {
   }
 
   @Test
+  void deltaSecondsLargerThanIntIsTruncated() {
+    var cacheControl = CacheControl.parse("max-age=2147483648");
+    assertEquals(Integer.MAX_VALUE, cacheControl.maxAgeSeconds());
+  }
+
+  @Test
   void multipleValuesReplaceEachOther() {
     var cacheControl = CacheControl.parse("max-age=1, max-age=2");
     assertEquals(2, cacheControl.maxAgeSeconds());
-  }
-
-  @Test
-  void builder() {
-    assertEquals(CacheControl.empty(), CacheControl.newBuilder().build());
-
-    var cacheControl = CacheControl.newBuilder()
-        .directive("my-directive")
-        .directive("my-directive-with-argument", "123")
-        .maxAge(Duration.ofSeconds(1))
-        .minFresh(Duration.ofSeconds(2))
-        .maxStale(Duration.ofSeconds(3))
-        .noCache()
-        .noStore()
-        .noTransform()
-        .onlyIfCached()
-        .build();
-    var headerValue = "my-directive, my-directive-with-argument=123, max-age=1, min-fresh=2,"
-        + " max-stale=3, no-cache, no-store, no-transform, only-if-cached";
-    var parsed = CacheControl.parse(headerValue);
-    assertEquals(parsed, cacheControl);
-    assertEquals(headerValue, cacheControl.toString());
-  }
-
-  @Test
-  void durationWithNanoPart() {
-    var cacheControl = CacheControl.newBuilder()
-        .maxAge(Duration.ofSeconds(1).plusNanos(1))
-        .build();
-    assertEquals(Optional.of(Duration.ofSeconds(1)), cacheControl.maxAge());
-  }
-
-  @Test
-  void buildAnyMaxStale() {
-    var cacheControl = CacheControl.newBuilder()
-        .anyMaxStale()
-        .build();
-    assertTrue(cacheControl.anyMaxStale());
-    assertTrue(cacheControl.maxStale().isEmpty());
   }
 
   @Test
@@ -189,17 +154,8 @@ class CacheControlTest {
     assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("max-age=-1")); // negative delta seconds
     assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("no-cache=\"illeg@l\""));
     var iae = assertThrows(IllegalArgumentException.class, () -> CacheControl.parse("max-age=one"));
-    assertNotNull(iae.getCause());
-    assertThrows(NumberFormatException.class, () -> { throw iae.getCause(); });
-  }
-
-  @Test
-  void buildInvalid() {
-    var builder = CacheControl.newBuilder();
-    assertThrows(IllegalArgumentException.class, () -> builder.directive("illeg@l"));
-    assertThrows(IllegalArgumentException.class, () -> builder.directive("legal", "ba\r")); // Illegal value
-    assertThrows(IllegalArgumentException.class, () -> builder.maxAge(Duration.ofSeconds(0)));
-    assertThrows(IllegalArgumentException.class, () -> builder.minFresh(Duration.ofSeconds(0)));
-    assertThrows(IllegalArgumentException.class, () -> builder.maxStale(Duration.ofSeconds(0)));
+    var cause = iae.getCause();
+    assertNotNull(cause);
+    assertEquals(NumberFormatException.class, cause.getClass());
   }
 }
