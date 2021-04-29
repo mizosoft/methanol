@@ -54,16 +54,16 @@ class ExecutorServiceAdapterTest {
 
   @Test
   void execution() throws Exception {
-    var executor = new MockExecutor();
-    var service = ExecutorServiceAdapter.adapt(executor);
+    var recorder = new MockExecutor();
+    var service = ExecutorServiceAdapter.adapt(recorder);
 
     var calls = new AtomicInteger();
     var future1 = service.submit(calls::incrementAndGet);
     var future2 = service.submit(calls::incrementAndGet);
     var future3 = service.submit(calls::incrementAndGet);
-    assertEquals(3, executor.taskCount());
+    assertEquals(3, recorder.taskCount());
 
-    executor.runAll();
+    recorder.runAll();
     assertEquals(1, future1.get());
     assertEquals(2, future2.get());
     assertEquals(3, future3.get());
@@ -72,19 +72,18 @@ class ExecutorServiceAdapterTest {
 
   @Test
   void shutdown() {
-    var executor = new MockExecutor();
-    var service = ExecutorServiceAdapter.adapt(executor);
+    var recorder = new MockExecutor();
+    var service = ExecutorServiceAdapter.adapt(recorder);
 
     var calls = new AtomicInteger();
     service.execute(calls::incrementAndGet);
     service.shutdown();
     assertTrue(service.isShutdown());
     assertThrows(RejectedExecutionException.class, () -> service.execute(calls::incrementAndGet));
-
     // There's still one task "running" so the service is not terminated
     assertFalse(service.isTerminated());
 
-    executor.runAll();
+    recorder.runAll();
     assertEquals(1, calls.get());
     assertTrue(service.isTerminated());
   }
@@ -107,15 +106,14 @@ class ExecutorServiceAdapterTest {
 
     service.shutdown();
     assertTrue(service.isShutdown());
-
     // We're not terminated yet
     assertFalse(service.isTerminated());
     assertFalse(service.awaitTermination(0, TimeUnit.SECONDS));
 
     // Run waiting tasks and wait for them to complete with awaitTermination
     beginLatch.countDown();
-    assertTrue(service.awaitTermination(20, TimeUnit.SECONDS));
-    assertEquals(threadCount, calls.get());
+    assertTrue(service.awaitTermination(10, TimeUnit.SECONDS));
+    assertEquals(5, calls.get());
     assertTrue(service.isTerminated());
 
     // Make sure awaitTermination now returns true immediately
@@ -137,71 +135,61 @@ class ExecutorServiceAdapterTest {
     // and waiterTaskCount waiting tasks (destined for interruption)
     int nonWaiterTaskCount = 2;
     int waiterTaskCount = 4;
-    var nonWaitersExitLatch = new CountDownLatch(nonWaiterTaskCount);
-    // Record the threads of finished tasks to assert they're not interrupted by shutdownNow
+    var nonWaiterEndLatch = new CountDownLatch(nonWaiterTaskCount);
+    // Record the threads of finished tasks to make sure they're not
+    // interrupted later by shutdownNow
     var nonWaiterThreads = ConcurrentHashMap.<Thread>newKeySet();
-    var waitersArrivalLatch = new CountDownLatch(waiterTaskCount);
-    var waitersExitLatch = new CountDownLatch(waiterTaskCount);
+    var waiterArrivalLatch = new CountDownLatch(waiterTaskCount);
     var interruptedCalls = new AtomicInteger();
     for (int i = 0; i < nonWaiterTaskCount; i++) {
       service.execute(() -> {
         nonWaiterThreads.add(Thread.currentThread());
-        nonWaitersExitLatch.countDown();
+        nonWaiterEndLatch.countDown();
       });
     }
-    var toBeInterruptedLatch = new CountDownLatch(1);
     for (int i = 0; i < waiterTaskCount; i++) {
       service.execute(() -> {
-        waitersArrivalLatch.countDown();
-        try {
-          assertThrows(InterruptedException.class, toBeInterruptedLatch::await);
-          interruptedCalls.incrementAndGet();
-        } finally {
-          waitersExitLatch.countDown();
-        }
+        assertThrows(InterruptedException.class, () -> {
+          waiterArrivalLatch.countDown();
+          TimeUnit.SECONDS.sleep(120);
+        });
+        interruptedCalls.incrementAndGet();
       });
     }
 
-    try {
-      assertTrue(nonWaitersExitLatch.await(20, TimeUnit.SECONDS));
+    assertTrue(nonWaiterEndLatch.await(10, TimeUnit.SECONDS));
+    assertEquals(nonWaiterTaskCount, nonWaiterThreads.size());
 
-      // Await waiter tasks arrival then interrupted them by shutdown
-      assertTrue(waitersArrivalLatch.await(20, TimeUnit.SECONDS));
-      service.shutdownNow();
-      assertTrue(service.isShutdown());
-      assertTrue(service.awaitTermination(20, TimeUnit.SECONDS));
-
-      // Already completed threads are not interrupted
-      assertAll(nonWaiterThreads.stream().map(t -> () -> assertFalse(t.isInterrupted())));
-
-      // All waiter tasks are interrupted
-      assertTrue(waitersExitLatch.await(20, TimeUnit.SECONDS));
-      assertEquals(waiterTaskCount, interruptedCalls.get());
-    } finally {
-      // Make sure waiter tasks exit regardless
-      toBeInterruptedLatch.countDown();
-    }
+    // Await waiting tasks' arrival
+    waiterArrivalLatch.await();
+    service.shutdownNow();
+    assertTrue(service.isShutdown());
+    assertTrue(service.awaitTermination(10, TimeUnit.SECONDS));
+    // Already completed threads are not interrupted
+    assertAll(nonWaiterThreads.stream().map(t -> () -> assertFalse(t.isInterrupted())));
+    // All waiterTaskCount are interrupted
+    assertEquals(waiterTaskCount, interruptedCalls.get());
   }
 
   @Test
   void shutdownNowQueuedTasks() {
-    var executor = new MockExecutor();
-    var service = ExecutorServiceAdapter.adapt(executor);
+    var recorder = new MockExecutor();
+    var service = ExecutorServiceAdapter.adapt(recorder);
 
     int queuedTaskCount = 5;
     var calls = new AtomicInteger();
     for (int i = 0; i < queuedTaskCount; i++) {
-      // Queue in executor
+      // Queue in recorder
       service.execute(calls::incrementAndGet);
     }
-    assertEquals(queuedTaskCount, executor.taskCount());
+    assertEquals(queuedTaskCount, recorder.taskCount());
 
     var tasks = service.shutdownNow();
     assertEquals(queuedTaskCount, tasks.size());
     assertTrue(service.isTerminated());
 
+    recorder.runAll();
     // Make sure the service skips queued tasks executed after shutdownNow
-    executor.runAll();
     assertEquals(0, calls.get());
   }
 }

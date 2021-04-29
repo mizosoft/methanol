@@ -186,6 +186,8 @@ public final class ExecutorExtension
   }
 
   private static final class ManagedExecutors implements CloseableResource {
+    private static final int TERMINATION_TIMEOUT_SECS = 20;
+
     private final List<Executor> createdExecutors = new ArrayList<>();
 
     ManagedExecutors() {}
@@ -200,7 +202,8 @@ public final class ExecutorExtension
       for (var e : createdExecutors) {
         TestUtils.shutdown(e);
         if (e instanceof ExecutorService
-            && !((ExecutorService) e).awaitTermination(5, TimeUnit.MINUTES)) {
+            && !((ExecutorService) e)
+                .awaitTermination(TERMINATION_TIMEOUT_SECS, TimeUnit.SECONDS)) {
           throw new TimeoutException("timed out while waiting for pool termination: " + e);
         }
       }
