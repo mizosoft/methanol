@@ -33,10 +33,10 @@ import java.util.concurrent.Executor;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A bounded repository of data entries each identified by a {@code String} key. Each entry has both
- * a metadata block and a data stream that can be read from or written to asynchronously. Each
- * entry's metadata block and data stream can be accessed by a {@link Viewer} and modified by an
- * {@link Editor}. An entry can have at most one active {@code Editor} but can have multiple
+ * A bounded repository of data where each entry is identified by a {@code String} key. Each entry
+ * has both a metadata block and a data stream that can be read from or written to asynchronously.
+ * Each entry's metadata block and data stream can be accessed by a {@link Viewer} and modified by
+ * an {@link Editor}. An entry can have at most one active {@code Editor} but can have multiple
  * concurrent {@code Viewers} after it has been first modified.
  *
  * <p>A {@code Store} bounds the size of data it stores to it's {@link #maxSize()} by automatic
@@ -130,14 +130,6 @@ public interface Store extends AutoCloseable {
     /** Returns the size in bytes the metadata block and data stream occupy. */
     long entrySize();
 
-    /**
-     * Returns an editor for this viewer's entry, or {@code null} if another edit is in progress or
-     * if the entry has been modified since this viewer was created. Changes made by the returned
-     * editor are not reflected by this viewer.
-     */
-    @Nullable
-    Editor edit();
-
     /** Closes this viewer. */
     @Override
     void close();
@@ -165,7 +157,8 @@ public interface Store extends AutoCloseable {
     void discard();
 
     /**
-     * Closes this editor. Unless the edit is discarded, changes made by this editor are committed.
+     * Closes this editor. Unless the edit is discarded, previous entry data, if any, will be
+     * overwritten by changes made by this editor.
      */
     @Override
     void close();

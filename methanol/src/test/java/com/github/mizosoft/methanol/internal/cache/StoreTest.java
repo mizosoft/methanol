@@ -482,55 +482,11 @@ abstract class StoreTest {
       assertEntryContains(viewer, "", "");
       editor.metadata(UTF_8.encode(METADATA_1));
       assertEntryContains(viewer, METADATA_1, "");
-
       var dataBytes = UTF_8.encode(DATA_1);
       editor.writeAsync(0, dataBytes);
       assertEntryContains(viewer, METADATA_1, DATA_1);
-
       editor.writeAsync(viewer.dataSize(), dataBytes.rewind());
       assertEntryContains(viewer, METADATA_1, DATA_1.repeat(2));
-    }
-  }
-
-  @Test
-  void editFromViewer() {
-    writeEntry("e1", METADATA_1, DATA_1);
-    try (var viewer = notNull(store.view("e1"))) {
-      assertEntryContains(viewer, METADATA_1, DATA_1);
-      try (var editor = notNull(viewer.edit())) {
-        writeEntry(editor, METADATA_2, DATA_2);
-      }
-      // Committed edit is not visible
-      assertEntryContains(viewer, METADATA_1, DATA_1);
-    }
-    assertEntryContains("e1", METADATA_2, DATA_2);
-  }
-
-  @Test
-  void editFromStaleViewer() {
-    writeEntry("e1", METADATA_1, DATA_1);
-    try (var viewer = notNull(store.view("e1"))) {
-      assertEntryContains(viewer, METADATA_1, DATA_1);
-      writeEntry("e1", METADATA_2, DATA_2);
-      assertNull(viewer.edit());
-    }
-  }
-
-  @Test
-  void editFromViewerDuringOngoingEdit() {
-    writeEntry("e1", METADATA_1, DATA_1);
-    try (var viewer = notNull(store.view("e1")); var editor = notNull(store.edit("e1"))) {
-      assertNull(viewer.edit());
-      editor.discard();
-    }
-  }
-
-  @Test
-  void editFromLiveViewer() {
-    try (var editor = notNull(store.edit("e1")); var viewer = editor.view()) {
-      editor.metadata(UTF_8.encode(METADATA_1));
-      assertEntryContains(viewer, METADATA_1, "");
-      assertNull(viewer.edit());
     }
   }
 
