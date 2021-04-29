@@ -33,7 +33,6 @@ import static com.github.mizosoft.methanol.testutils.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testutils.TestUtils.gzip;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
-import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static java.time.Duration.ofDays;
 import static java.time.Duration.ofHours;
 import static java.time.Duration.ofSeconds;
@@ -130,8 +129,7 @@ class HttpCacheTest {
     serverUri = server.url("/").uri();
     clock = new MockClock();
 
-    ((QueueDispatcher) server.getDispatcher())
-        .setFailFast(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
+    ((QueueDispatcher) server.getDispatcher()).setFailFast(true);
   }
 
   private void setUpCache(Store store) {
@@ -853,7 +851,7 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void varyOnAcceptEncoding(Store store) throws Exception {
+  void varyWithAcceptEncoding(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
@@ -881,7 +879,7 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void varyOnMultipleFields(Store store) throws Exception {
+  void varyWithMultipleFields(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
@@ -1008,297 +1006,6 @@ class HttpCacheTest {
     get(serverUri)
         .assertHit()
         .assertBody("charlie");
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void cacheMovedPermanently(Store store) throws Exception {
-    setUpCache(store);
-    client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
-
-    server.enqueue(new MockResponse()
-        .setResponseCode(301) // 301 is cacheable by default
-        .setHeader("Location", "/redirect"));
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "no-store") // Prevent caching
-        .setBody("Ey yo"));
-    seedCache(serverUri);
-
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "no-store") // Prevent caching
-        .setBody("Ey yo"));
-    get(serverUri)
-        .assertCode(200)
-        .assertMiss() // Target response isn't cacheable
-        .assertBody("Ey yo")
-        .assertUri(serverUri.resolve("/redirect"))
-        .previousResponse()
-        .assertCode(301)
-        .assertHit() // 301 response is cached
-        .assertHeader("Location", "/redirect");
-
-    // Disable auto redirection
-    client = clientBuilder.followRedirects(Redirect.NEVER).build();
-
-    get(serverUri)
-        .assertCode(301)
-        .assertHit();
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void cacheTemporaryRedirectAndRedirectTarget(Store store) throws Exception {
-    setUpCache(store);
-    client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
-
-    server.enqueue(new MockResponse()
-        .setResponseCode(307)
-        .setHeader("Cache-Control", "max-age=2")
-        .setHeader("Location", "/redirect"));
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "max-age=1")
-        .setBody("Ey yo"));
-    seedCache(serverUri);
-
-    get(serverUri)
-        .assertCode(200)
-        .assertHit()
-        .assertBody("Ey yo")
-        .assertUri(serverUri.resolve("/redirect"))
-        .previousResponse()
-        .assertCode(307)
-        .assertHit()
-        .assertHeader("Location", "/redirect");
-
-    get(serverUri.resolve("/redirect"))
-        .assertCode(200)
-        .assertHit()
-        .assertBody("Ey yo");
-
-    // Disable auto redirection
-    client = clientBuilder.followRedirects(Redirect.NEVER).build();
-
-    get(serverUri)
-        .assertCode(307)
-        .assertHit();
-    get(serverUri.resolve("/redirect"))
-        .assertCode(200)
-        .assertHit()
-        .assertBody("Ey yo");
-
-    clock.advanceSeconds(2); // Make 200 response stale but retain 307 response's freshness
-
-    // Enable auto redirection
-    client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
-
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "max-age=2")
-        .setBody("Hey there"));
-    get(serverUri)
-        .assertCode(200)
-        .assertConditionalMiss()
-        .assertBody("Hey there")
-        .previousResponse()
-        .assertCode(307)
-        .assertHit();
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void cacheRedirectTarget(Store store) throws Exception {
-    setUpCache(store);
-    client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
-
-    server.enqueue(new MockResponse()
-        .setResponseCode(307) // 307 won't be cached as it isn't cacheable by default
-        .setHeader("Location", "/redirect"));
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "max-age=1")
-        .setBody("Wakanda forever"));
-    seedCache(serverUri);
-
-    server.enqueue(new MockResponse()
-        .setResponseCode(307)
-        .setHeader("Location", "/redirect"));
-    get(serverUri)
-        .assertCode(200)
-        .assertHit() // 200 response is cached
-        .assertBody("Wakanda forever")
-        .previousResponse()
-        .assertCode(307)
-        .assertMiss();
-  }
-
-  @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  @ValueSource(ints = {301, 302, 303, 307, 308})
-  void cacheableRedirectWithUncacheableTarget(int code, Store store) throws Exception {
-    setUpCache(store);
-    client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
-
-    // Make redirect cacheable & target uncacheable
-    server.enqueue(new MockResponse()
-        .setResponseCode(code)
-        .setHeader("Location", "/redirect")
-        .setHeader("Cache-Control", "max-age=1"));
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "no-store")
-        .setBody("Wakanda forever"));
-    seedCache(serverUri);
-
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "no-store")
-        .setBody("Wakanda forever"));
-    get(serverUri)
-        .assertCode(200)
-        .assertMiss() // Target response isn't cached
-        .assertBody("Wakanda forever")
-        .previousResponse()
-        .assertCode(code)
-        .assertHit(); // Redirect response is cached
-
-    // Disable auto redirection
-    client = clientBuilder.followRedirects(Redirect.NEVER).build();
-
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "no-store")
-        .setBody("Wakanda forever"));
-    get(serverUri)
-        .assertCode(code)
-        .assertHit();
-    get(serverUri.resolve("/redirect"))
-        .assertCode(200)
-        .assertMiss()
-        .assertBody("Wakanda forever");
-  }
-
-  @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  @ValueSource(ints = {301, 302, 303, 307, 308})
-  void uncacheableRedirectWithCacheableTarget(int code, Store store) throws Exception {
-    setUpCache(store);
-    client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
-
-    // Make redirect uncacheable & target cacheable
-    var redirectResponse = new MockResponse()
-        .setResponseCode(code)
-        .setHeader("Location", "/redirect");
-    if (code == 301) {
-      // 301 is cacheable by default so explicitly disallow caching
-      redirectResponse.setHeader("Cache-Control", "no-store");
-    }
-    server.enqueue(redirectResponse);
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "max-age=1")
-        .setBody("Wakanda forever"));
-    seedCache(serverUri);
-
-    server.enqueue(redirectResponse);
-    get(serverUri)
-        .assertCode(200)
-        .assertHit() // Target response is cached
-        .assertBody("Wakanda forever")
-        .previousResponse()
-        .assertCode(code)
-        .assertMiss(); // Redirect response isn't cached
-
-    // Disable auto redirection
-    client = clientBuilder.followRedirects(Redirect.NEVER).build();
-
-    server.enqueue(redirectResponse);
-    get(serverUri)
-        .assertCode(code)
-        .assertMiss();
-    get(serverUri.resolve("/redirect"))
-        .assertCode(200)
-        .assertHit()
-        .assertBody("Wakanda forever");
-  }
-
-  @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  @ValueSource(ints = {301, 302, 303, 307, 308})
-  void uncacheableRedirectWithUncacheableTarget(int code, Store store) throws Exception {
-    setUpCache(store);
-    client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
-
-    // Make both redirect & target uncacheable
-    var redirectResponse = new MockResponse()
-        .setResponseCode(code)
-        .setHeader("Location", "/redirect");
-    if (code == 301) {
-      // 301 is cacheable by default so explicitly disallow caching
-      redirectResponse.setHeader("Cache-Control", "no-store");
-    }
-    server.enqueue(redirectResponse);
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "no-store")
-        .setBody("Wakanda forever"));
-    seedCache(serverUri);
-
-    server.enqueue(redirectResponse);
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "no-store")
-        .setBody("Wakanda forever"));
-    get(serverUri)
-        .assertCode(200)
-        .assertMiss() // Target response isn't cached
-        .assertBody("Wakanda forever")
-        .previousResponse()
-        .assertCode(code)
-        .assertMiss(); // Redirect response isn't cached
-
-    // Disable auto redirection
-    client = clientBuilder.followRedirects(Redirect.NEVER).build();
-
-    server.enqueue(redirectResponse);
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "no-store")
-        .setBody("Wakanda forever"));
-    get(serverUri)
-        .assertCode(code)
-        .assertMiss();
-    get(serverUri.resolve("/redirect"))
-        .assertCode(200)
-        .assertMiss()
-        .assertBody("Wakanda forever");
-  }
-
-  @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  @ValueSource(ints = {301, 302, 303, 307, 308})
-  void cacheableRedirectWithCacheableTarget(int code, Store store) throws Exception {
-    setUpCache(store);
-    client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
-
-    // Make both redirect & target cacheable
-    server.enqueue(new MockResponse()
-        .setResponseCode(code)
-        .setHeader("Location", "/redirect")
-        .setHeader("Cache-Control", "max-age=1"));
-    server.enqueue(new MockResponse()
-        .setHeader("Cache-Control", "max-age=1")
-        .setBody("Wakanda forever"));
-    seedCache(serverUri);
-
-    get(serverUri)
-        .assertCode(200)
-        .assertHit() // Target response is cached
-        .assertBody("Wakanda forever")
-        .previousResponse()
-        .assertCode(code)
-        .assertHit(); // Redirect response is cached
-
-    // Disable auto redirection
-    client = clientBuilder.followRedirects(Redirect.NEVER).build();
-
-    get(serverUri)
-        .assertCode(code)
-        .assertHit();
-    get(serverUri.resolve("/redirect"))
-        .assertCode(200)
-        .assertHit()
-        .assertBody("Wakanda forever");
   }
 
   @StoreParameterizedTest

@@ -311,17 +311,6 @@ public final class ResponseVerification<T> {
     return verifying(cacheAware.cacheResponse().orElseThrow());
   }
 
-  public ResponseVerification<T> previousResponse() {
-    assertHasPreviousResponse();
-    return verifying(response.previousResponse().orElseThrow());
-  }
-
-  public ResponseVerification<T> assertHasPreviousResponse() {
-    var previousResponse = response.previousResponse();
-    assertTrue(previousResponse.isPresent(), "absent previous response");
-    return this;
-  }
-
   public void assertTracked() {
     assertNotNull(tracked, "not a TrackedResponse: " + response);
   }
