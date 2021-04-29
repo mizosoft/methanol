@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,30 +20,31 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol;
+package com.github.mizosoft.methanol.testutils;
 
-import com.github.mizosoft.methanol.testutils.TestUtils;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Stream;
 
-class ProgressTrackerWithExecutorTest extends ProgressTrackerTest {
+/** Utility methods related to logging during tests. */
+public class Logging {
+  // Hold string references to disabled loggers so their configuration won't get GCed
+  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
+  private static final Set<Logger> disabledLoggers = new CopyOnWriteArraySet<>();
 
-  private Executor trackerExecutor;
+  private Logging() {}
 
-  @BeforeEach
-  void setupTrackerExecutor() {
-    trackerExecutor = Executors.newFixedThreadPool(8);
+  public static void disable(Class<?>... clazz) {
+    disable(Stream.of(clazz).map(Class::getName).toArray(String[]::new));
   }
 
-  @AfterEach
-  void shutdownTrackerExecutor() {
-    TestUtils.shutdown(trackerExecutor);
-  }
-
-  @Override
-  Executor trackerExecutor() {
-    return trackerExecutor;
+  public static void disable(String... names) {
+    for (var name : names) {
+      var logger = java.util.logging.Logger.getLogger(name);
+      logger.setLevel(Level.OFF);
+      disabledLoggers.add(logger);
+    }
   }
 }

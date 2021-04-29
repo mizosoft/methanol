@@ -24,20 +24,19 @@ package com.github.mizosoft.methanol.internal.spi;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-/** Utility for loading/caching service providers. */
+/** Utility class for loading/caching service providers. */
 public final class ServiceCache<S> {
-
-  private static final Logger LOGGER = Logger.getLogger(ServiceCache.class.getName());
+  private static final Logger logger = System.getLogger(ServiceCache.class.getName());
 
   private final Class<S> service;
   private final ReentrantLock lock = new ReentrantLock();
@@ -79,7 +78,7 @@ public final class ServiceCache<S> {
     try {
       providers.add(provider.get());
     } catch (ServiceConfigurationError error) {
-      LOGGER.log(
+      logger.log(
           Level.WARNING,
           "provider <" + provider.type() + "> will be ignored as it couldn't be instantiated",
           error);

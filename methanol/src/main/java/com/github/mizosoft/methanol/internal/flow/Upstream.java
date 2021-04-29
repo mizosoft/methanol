@@ -45,6 +45,11 @@ public final class Upstream {
 
   public Upstream() {}
 
+  /** Returns {@code true} if the subscription was {@link #setOrCancel(Subscription) set}. */
+  public boolean isSet() {
+    return subscription != null;
+  }
+
   /** Sets incoming subscription, cancels it if already set. */
   public boolean setOrCancel(Subscription incoming) {
     if (!SUBSCRIPTION.compareAndSet(this, null, incoming)) {

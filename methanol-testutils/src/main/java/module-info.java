@@ -29,4 +29,5 @@ module methanol.testutils {
 
   exports com.github.mizosoft.methanol.testutils;
   exports com.github.mizosoft.methanol.testutils.dec;
+  exports com.github.mizosoft.methanol.testutils.io.file;
 }

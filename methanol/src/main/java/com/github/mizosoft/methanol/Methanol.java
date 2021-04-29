@@ -25,14 +25,25 @@ package com.github.mizosoft.methanol;
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
+import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.github.mizosoft.methanol.BodyDecoder.Factory;
-import com.github.mizosoft.methanol.MutableRequest.HeadersBuilder;
+import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
+import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.extensions.Handlers;
+import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
+import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
 import java.net.ProxySelector;
@@ -40,10 +51,13 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.PushPromiseHandler;
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -52,8 +66,10 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -63,44 +79,79 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An {@code HttpClient} with interceptors, request decoration and reactive extensions.
+ * An {@code HttpClient} with interceptors, request decoration, HTTP caching and reactive
+ * extensions.
  *
- * <p>In addition to implementing the {@link HttpClient} interface, this class also allows to:
+ * <p>In addition to implementing the {@link HttpClient} interface, this class allows to:
  *
  * <ul>
  *   <li>Specify a {@link BaseBuilder#baseUri(URI) base URI}.
  *   <li>Specify a default {@link HttpRequest#timeout() request timeout}.
  *   <li>Add a set of default HTTP headers for inclusion in requests if absent.
+ *   <li>Add an {@link HttpCache HTTP caching} layer.
  *   <li>{@link BaseBuilder#autoAcceptEncoding(boolean) Transparent} response decompression.
  *   <li>Intercept requests and responses going through this client.
  *   <li>Get {@code Publisher<HttpResponse<T>>} for asynchronous requests.
  * </ul>
+ *
+ * <p>A {@code Methanol} client relies on a standard {@code HttpClient} instance for sending
+ * requests, referred to as it's backend. You can obtain builders for {@code Methanol} using either
+ * {@link #newBuilder()} or {@link #newBuilder(HttpClient)}. The latter takes a prebuilt backend,
+ * while the former allows configuring a backend to be newly created each time {@link
+ * BaseBuilder#build()} is invoked. Note that {@code HttpCaches} are not usable with a prebuilt
+ * backend.
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
-
-  private final HttpClient baseClient;
+  private final HttpClient backend;
+  private final Redirect redirectPolicy;
+  private final HttpHeaders defaultHeaders;
+  private final Optional<HttpCache> cache;
   private final Optional<String> userAgent;
   private final Optional<URI> baseUri;
   private final Optional<Duration> requestTimeout;
   private final Optional<Duration> readTimeout;
   private final @Nullable ScheduledExecutorService readTimeoutScheduler;
-  private final HttpHeaders defaultHeaders;
   private final boolean autoAcceptEncoding;
-  private final List<Interceptor> preDecorationInterceptors;
-  private final List<Interceptor> postDecorationInterceptors;
+  private final List<Interceptor> interceptors;
+  private final List<Interceptor> backendInterceptors;
+
+  /** The complete list of interceptors invoked throughout the chain. */
+  private final List<Interceptor> chainInterceptors;
 
   private Methanol(BaseBuilder<?> builder) {
-    baseClient = builder.buildBaseClient();
+    backend = builder.buildBackend();
+    redirectPolicy = requireNonNullElse(builder.redirectPolicy, backend.followRedirects());
+    defaultHeaders = builder.headersBuilder.build();
+    cache = Optional.ofNullable(builder.cache);
     userAgent = Optional.ofNullable(builder.userAgent);
     baseUri = Optional.ofNullable(builder.baseUri);
     requestTimeout = Optional.ofNullable(builder.requestTimeout);
     readTimeout = Optional.ofNullable(builder.readTimeout);
     readTimeoutScheduler = builder.readTimeoutScheduler;
-    defaultHeaders = builder.headersBuilder.build();
     autoAcceptEncoding = builder.autoAcceptEncoding;
-    preDecorationInterceptors = List.copyOf(builder.preDecorationInterceptors);
-    postDecorationInterceptors = List.copyOf(builder.postDecorationInterceptors);
+    interceptors = List.copyOf(builder.interceptors);
+    backendInterceptors = List.copyOf(builder.backendInterceptors);
+
+    var chainInterceptors = new ArrayList<>(interceptors);
+    chainInterceptors.add(
+        new RequestRewritingInterceptor(
+            baseUri, defaultHeaders, requestTimeout, autoAcceptEncoding));
+    if (autoAcceptEncoding) {
+      chainInterceptors.add(AutoDecompressingInterceptor.INSTANCE);
+    }
+    readTimeout.ifPresent(
+        timeout ->
+            chainInterceptors.add(new ReadTimeoutInterceptor(timeout, readTimeoutScheduler)));
+    cache.ifPresent(
+        cache -> {
+          var executor = backend.executor().orElse(null);
+          // We handle redirection ourselves if a cache is installed
+          chainInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
+          chainInterceptors.add(cache.interceptor(executor));
+        });
+    chainInterceptors.addAll(backendInterceptors);
+    this.chainInterceptors = Collections.unmodifiableList(chainInterceptors);
   }
 
   /**
@@ -141,7 +192,7 @@ public final class Methanol extends HttpClient {
 
   /** Returns the underlying {@code HttpClient} used for sending requests. */
   public HttpClient underlyingClient() {
-    return baseClient;
+    return backend;
   }
 
   /** Returns this client's {@code User-Agent}. */
@@ -167,14 +218,30 @@ public final class Methanol extends HttpClient {
     return readTimeout;
   }
 
-  /** Returns the list of interceptors invoked before request decoration. */
+  /**
+   * Returns an immutable list of this client's {@link BaseBuilder#interceptor(Interceptor)
+   * interceptors}.
+   */
   public List<Interceptor> interceptors() {
-    return preDecorationInterceptors;
+    return interceptors;
   }
 
-  /** Returns the list of interceptors invoked after request decoration. */
+  /**
+   * Returns an immutable list of this client's {@link BaseBuilder#backendInterceptor(Interceptor)
+   * backend interceptors}.
+   */
+  public List<Interceptor> backendInterceptors() {
+    return backendInterceptors;
+  }
+
+  /**
+   * Returns the list of interceptors invoked after request decoration.
+   *
+   * @deprecated Use {@link #backendInterceptors()}
+   */
+  @Deprecated(since = "1.5.0")
   public List<Interceptor> postDecorationInterceptors() {
-    return postDecorationInterceptors;
+    return backendInterceptors;
   }
 
   /** Returns this client's default headers. */
@@ -187,49 +254,54 @@ public final class Methanol extends HttpClient {
     return autoAcceptEncoding;
   }
 
+  /** Returns this client's {@link HttpCache cache}. */
+  public Optional<HttpCache> cache() {
+    return cache;
+  }
+
   @Override
   public Optional<CookieHandler> cookieHandler() {
-    return baseClient.cookieHandler();
+    return backend.cookieHandler();
   }
 
   @Override
   public Optional<Duration> connectTimeout() {
-    return baseClient.connectTimeout();
+    return backend.connectTimeout();
   }
 
   @Override
   public Redirect followRedirects() {
-    return baseClient.followRedirects();
+    return redirectPolicy;
   }
 
   @Override
   public Optional<ProxySelector> proxy() {
-    return baseClient.proxy();
+    return backend.proxy();
   }
 
   @Override
   public SSLContext sslContext() {
-    return baseClient.sslContext();
+    return backend.sslContext();
   }
 
   @Override
   public SSLParameters sslParameters() {
-    return baseClient.sslParameters();
+    return backend.sslParameters();
   }
 
   @Override
   public Optional<Authenticator> authenticator() {
-    return baseClient.authenticator();
+    return backend.authenticator();
   }
 
   @Override
   public Version version() {
-    return baseClient.version();
+    return backend.version();
   }
 
   @Override
   public Optional<Executor> executor() {
-    return baseClient.executor();
+    return backend.executor();
   }
 
   @Override
@@ -237,8 +309,7 @@ public final class Methanol extends HttpClient {
       throws IOException, InterruptedException {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
-    return InterceptorChain.sendWithInterceptors(
-        baseClient, request, bodyHandler, buildInterceptorQueue());
+    return new InterceptorChain<>(backend, bodyHandler, null, chainInterceptors).forward(request);
   }
 
   @Override
@@ -246,8 +317,8 @@ public final class Methanol extends HttpClient {
       HttpRequest request, BodyHandler<T> bodyHandler) {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
-    return InterceptorChain.sendAsyncWithInterceptors(
-        baseClient, request, bodyHandler, null, buildInterceptorQueue());
+    return new InterceptorChain<>(backend, bodyHandler, null, chainInterceptors)
+        .forwardAsync(request);
   }
 
   @Override
@@ -257,24 +328,25 @@ public final class Methanol extends HttpClient {
       @Nullable PushPromiseHandler<T> pushPromiseHandler) {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
-    return InterceptorChain.sendAsyncWithInterceptors(
-        baseClient, request, bodyHandler, pushPromiseHandler, buildInterceptorQueue());
+    return new InterceptorChain<>(backend, bodyHandler, pushPromiseHandler, chainInterceptors)
+        .forwardAsync(request);
   }
 
-  private List<Interceptor> buildInterceptorQueue() {
-    var interceptors = new ArrayList<>(this.preDecorationInterceptors);
-    interceptors.add(new RequestDecorationInterceptor(this));
-    interceptors.addAll(postDecorationInterceptors);
-    return Collections.unmodifiableList(interceptors);
-  }
-
-  private static void validateUri(URI uri) {
+  private static URI validateUri(URI uri) {
     var scheme = uri.getScheme();
     requireArgument(scheme != null, "uri has no scheme: %s", uri);
     scheme = scheme.toLowerCase(Locale.ENGLISH);
     requireArgument(
         "http".equals(scheme) || "https".equals(scheme), "unsupported scheme: %s", scheme);
     requireArgument(uri.getHost() != null, "uri has no host: %s", uri);
+    return uri;
+  }
+
+  private static <T> PushPromiseHandler<T> transformPushPromises(
+      PushPromiseHandler<T> pushPromiseHandler,
+      Function<BodyHandler<T>, BodyHandler<T>> transformer) {
+    return (initial, push, acceptor) ->
+        pushPromiseHandler.applyPushPromise(initial, push, acceptor.compose(transformer));
   }
 
   /** Returns a new {@link Methanol.Builder}. */
@@ -282,9 +354,9 @@ public final class Methanol extends HttpClient {
     return new Builder();
   }
 
-  /** Returns a new {@link Methanol.WithClientBuilder} that uses the given client. */
-  public static WithClientBuilder newBuilder(HttpClient client) {
-    return new WithClientBuilder(client);
+  /** Returns a new {@link Methanol.WithClientBuilder} with a prebuilt backend. */
+  public static WithClientBuilder newBuilder(HttpClient backend) {
+    return new WithClientBuilder(backend);
   }
 
   /** Creates a default {@code Methanol} instance. */
@@ -296,39 +368,39 @@ public final class Methanol extends HttpClient {
   public interface Interceptor {
 
     /**
-     * Intercepts given request and returns the resulting response, normally by forwarding to the
-     * chain.
+     * Intercepts given request and returns the resulting response, usually by forwarding to the
+     * given chain.
      */
     <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException;
 
     /**
      * Intercepts the given request and returns a {@code CompletableFuture} for the resulting
-     * response, normally by forwarding to the chain.
+     * response, usually by forwarding to the given chain.
      */
     <T> CompletableFuture<HttpResponse<T>> interceptAsync(HttpRequest request, Chain<T> chain);
 
     /** Returns an interceptor that forwards the request after applying the given operator. */
-    static Interceptor create(UnaryOperator<HttpRequest> decorator) {
-      requireNonNull(decorator);
+    static Interceptor create(UnaryOperator<HttpRequest> operator) {
+      requireNonNull(operator);
       return new Interceptor() {
         @Override
         public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
             throws IOException, InterruptedException {
-          return chain.forward(decorator.apply(request));
+          return chain.forward(operator.apply(request));
         }
 
         @Override
         public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
             HttpRequest request, Chain<T> chain) {
-          return chain.forwardAsync(decorator.apply(request));
+          return chain.forwardAsync(operator.apply(request));
         }
       };
     }
 
     /**
-     * An object that gives an interceptor the ability to relay requests to following interceptors,
-     * till eventually being sent by the underlying {@code HttpClient}.
+     * An object that gives interceptors the ability to relay requests to sibling interceptors, till
+     * eventually being sent by the client's backend.
      *
      * @param <T> the response body type
      */
@@ -346,15 +418,21 @@ public final class Methanol extends HttpClient {
       /** Returns a new chain that uses the given {@code PushPromiseHandler}. */
       Chain<T> withPushPromiseHandler(@Nullable PushPromiseHandler<T> pushPromiseHandler);
 
+      /** Returns a new chain that uses given handlers, possibly targeting another response type. */
+      default <U> Chain<U> with(
+          BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler) {
+        throw new UnsupportedOperationException();
+      }
+
       /**
-       * Forwards the request to the next interceptor, or to the underlying {@code HttpClient} if
-       * called by the last interceptor.
+       * Forwards the request to the next interceptor, or to the client's backend if called by the
+       * last interceptor.
        */
       HttpResponse<T> forward(HttpRequest request) throws IOException, InterruptedException;
 
       /**
-       * Forwards the request to the next interceptor, or asynchronously to the underlying {@code
-       * HttpClient} if called by the last interceptor.
+       * Forwards the request to the next interceptor, or asynchronously to the client's backend if
+       * called by the last interceptor.
        */
       CompletableFuture<HttpResponse<T>> forwardAsync(HttpRequest request);
     }
@@ -362,7 +440,6 @@ public final class Methanol extends HttpClient {
 
   /** A base {@code Methanol} builder allowing to set the non-standard properties. */
   public abstract static class BaseBuilder<B extends BaseBuilder<B>> {
-
     final HeadersBuilder headersBuilder;
     @MonotonicNonNull String userAgent;
     @MonotonicNonNull URI baseUri;
@@ -371,8 +448,12 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull ScheduledExecutorService readTimeoutScheduler;
     boolean autoAcceptEncoding;
 
-    final List<Interceptor> preDecorationInterceptors = new ArrayList<>();
-    final List<Interceptor> postDecorationInterceptors = new ArrayList<>();
+    // These fields are put here for convenience, they're only writable by Builder
+    @MonotonicNonNull HttpCache cache;
+    @MonotonicNonNull Redirect redirectPolicy;
+
+    final List<Interceptor> interceptors = new ArrayList<>();
+    final List<Interceptor> backendInterceptors = new ArrayList<>();
 
     BaseBuilder() {
       headersBuilder = new HeadersBuilder();
@@ -389,7 +470,7 @@ public final class Methanol extends HttpClient {
     public B userAgent(String userAgent) {
       validateHeaderValue(userAgent);
       this.userAgent = userAgent;
-      headersBuilder.setHeader("User-Agent", userAgent); // overwrite previous if any
+      headersBuilder.set("User-Agent", userAgent); // overwrite previous if any
       return self();
     }
 
@@ -407,18 +488,17 @@ public final class Methanol extends HttpClient {
      */
     public B baseUri(URI uri) {
       requireNonNull(uri);
-      validateUri(uri);
-      this.baseUri = uri;
+      this.baseUri = validateUri(uri);
       return self();
     }
 
     /** Adds the given header as default. */
     public B defaultHeader(String name, String value) {
       validateHeader(name, value);
-      if (name.equalsIgnoreCase("User-Agent")) {
+      if ("User-Agent".equalsIgnoreCase(name)) {
         userAgent = value;
       }
-      headersBuilder.addHeader(name, value);
+      headersBuilder.add(name, value);
       return self();
     }
 
@@ -441,9 +521,8 @@ public final class Methanol extends HttpClient {
     }
 
     /**
-     * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration)
-     * read timeout}. Timeout events are scheduled using a system-wide {@code
-     * ScheduledExecutorService}.
+     * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration) read
+     * timeout}. Timeout events are scheduled using a system-wide {@code ScheduledExecutorService}.
      */
     public B readTimeout(Duration readTimeout) {
       requirePositiveDuration(readTimeout);
@@ -465,10 +544,10 @@ public final class Methanol extends HttpClient {
     }
 
     /**
-     * If enabled, each request will have an {@code Accept-Encoding} header appended the value of
+     * If enabled, each request will have an {@code Accept-Encoding} header appended, the value of
      * which is the set of {@link Factory#installedBindings() supported encodings}. Additionally,
-     * each received response will be transparently decompressed by wrapping it's {@code
-     * BodyHandler} with {@link MoreBodyHandlers#decoding(BodyHandler)}.
+     * each received response will be transparently decompressed by wrapping its {@code BodyHandler}
+     * with {@link MoreBodyHandlers#decoding(BodyHandler)}.
      *
      * <p>The default value of this setting is {@code true}.
      */
@@ -478,23 +557,40 @@ public final class Methanol extends HttpClient {
     }
 
     /**
-     * Adds an interceptor that is invoked before request decoration (i.e. before default properties
-     * or {@code BodyHandler} transformations are applied).
+     * Adds an interceptor that is invoked right after the client receives a request. The
+     * interceptor receives the request before it is decorated (its {@code URI} resolved with the
+     * base {@code URI}, default headers added, etc...) or handled by an {@link HttpCache}.
      */
     public B interceptor(Interceptor interceptor) {
       requireNonNull(interceptor);
-      preDecorationInterceptors.add(interceptor);
+      interceptors.add(interceptor);
+      return self();
+    }
+
+    /**
+     * Adds an interceptor that is invoked right before the request is forwarded to the client's
+     * backend. The interceptor receives the request after it is handled by all {@link
+     * #interceptor(Interceptor) client interceptors}, is decorated (its {@code URI} resolved with
+     * the base {@code URI}, default headers added, etc...) and finally handled by an {@link
+     * HttpCache}. This means that backend interceptors aren't called if network isn't used,
+     * normally due to the presence of an {@code HttpCache} that is capable of serving a stored
+     * response.
+     */
+    public B backendInterceptor(Interceptor interceptor) {
+      requireNonNull(interceptor);
+      backendInterceptors.add(interceptor);
       return self();
     }
 
     /**
      * Adds an interceptor that is invoked after request decoration (i.e. after default properties
      * or {@code BodyHandler} transformations are applied).
+     *
+     * @deprecated Use {@link #backendInterceptor(Interceptor)}
      */
+    @Deprecated(since = "1.5.0")
     public B postDecorationInterceptor(Interceptor interceptor) {
-      requireNonNull(interceptor);
-      postDecorationInterceptors.add(interceptor);
-      return self();
+      return backendInterceptor(interceptor);
     }
 
     /** Returns a new {@code Methanol} with a snapshot of the current builder's state. */
@@ -504,16 +600,15 @@ public final class Methanol extends HttpClient {
 
     abstract B self();
 
-    abstract HttpClient buildBaseClient();
+    abstract HttpClient buildBackend();
   }
 
-  /** A builder for {@code Methanol} instances with a predefined {@code HttpClient}. */
+  /** A builder for {@code Methanol} instances with a predefined backend {@code HttpClient}. */
   public static final class WithClientBuilder extends BaseBuilder<WithClientBuilder> {
+    private final HttpClient backend;
 
-    private final HttpClient delegate;
-
-    WithClientBuilder(HttpClient delegate) {
-      this.delegate = requireNonNull(delegate);
+    WithClientBuilder(HttpClient backend) {
+      this.backend = requireNonNull(backend);
     }
 
     @Override
@@ -522,80 +617,84 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    HttpClient buildBaseClient() {
-      return delegate;
+    HttpClient buildBackend() {
+      return backend;
     }
   }
 
-  /**
-   * A builder of {@code Methanol} instances allowing to configure the underlying {@code
-   * HttpClient}.
-   */
+  /** A builder of {@code Methanol} instances. */
   public static final class Builder extends BaseBuilder<Builder> implements HttpClient.Builder {
-
-    private final HttpClient.Builder delegateBuilder;
+    private final HttpClient.Builder backendBuilder;
 
     Builder() {
-      delegateBuilder = HttpClient.newBuilder();
+      backendBuilder = HttpClient.newBuilder();
+    }
+
+    /** Sets the {@link HttpCache} to be used by the client. */
+    public Builder cache(HttpCache cache) {
+      super.cache = requireNonNull(cache);
+      return this;
     }
 
     @Override
     public Builder cookieHandler(CookieHandler cookieHandler) {
-      delegateBuilder.cookieHandler(cookieHandler);
+      backendBuilder.cookieHandler(cookieHandler);
       return this;
     }
 
     @Override
     public Builder connectTimeout(Duration duration) {
-      delegateBuilder.connectTimeout(duration);
+      backendBuilder.connectTimeout(duration);
       return this;
     }
 
     @Override
     public Builder sslContext(SSLContext sslContext) {
-      delegateBuilder.sslContext(sslContext);
+      backendBuilder.sslContext(sslContext);
       return this;
     }
 
     @Override
     public Builder sslParameters(SSLParameters sslParameters) {
-      delegateBuilder.sslParameters(sslParameters);
+      backendBuilder.sslParameters(sslParameters);
       return this;
     }
 
     @Override
     public Builder executor(Executor executor) {
-      delegateBuilder.executor(executor);
+      backendBuilder.executor(executor);
       return this;
     }
 
     @Override
     public Builder followRedirects(Redirect policy) {
-      delegateBuilder.followRedirects(policy);
+      // Don't apply policy to base client until build() is called to know whether
+      // a RedirectingInterceptor is to be used instead in case a cache is installed.
+      redirectPolicy = requireNonNull(policy);
       return this;
     }
 
     @Override
     public Builder version(Version version) {
-      delegateBuilder.version(version);
+      backendBuilder.version(version);
       return this;
     }
 
     @Override
     public Builder priority(int priority) {
-      delegateBuilder.priority(priority);
+      backendBuilder.priority(priority);
       return this;
     }
 
     @Override
     public Builder proxy(ProxySelector proxySelector) {
-      delegateBuilder.proxy(proxySelector);
+      backendBuilder.proxy(proxySelector);
       return this;
     }
 
     @Override
     public Builder authenticator(Authenticator authenticator) {
-      delegateBuilder.authenticator(authenticator);
+      backendBuilder.authenticator(authenticator);
       return this;
     }
 
@@ -605,34 +704,38 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    HttpClient buildBaseClient() {
-      return delegateBuilder.build();
+    HttpClient buildBackend() {
+      // Apply redirectPolicy if a cache is not set.
+      // In such case we let the backend handle redirects.
+      if (cache == null && redirectPolicy != null) {
+        backendBuilder.followRedirects(redirectPolicy);
+      }
+      return backendBuilder.build();
     }
   }
 
   private static final class InterceptorChain<T> implements Interceptor.Chain<T> {
-
-    private final HttpClient baseClient;
+    private final HttpClient backend;
     private final BodyHandler<T> bodyHandler;
     private final @Nullable PushPromiseHandler<T> pushPromiseHandler;
     private final List<Interceptor> interceptors;
     private final int currentInterceptorIndex;
 
-    private InterceptorChain(
-        HttpClient baseClient,
+    InterceptorChain(
+        HttpClient backend,
         BodyHandler<T> bodyHandler,
         @Nullable PushPromiseHandler<T> pushPromiseHandler,
         List<Interceptor> interceptors) {
-      this(baseClient, bodyHandler, pushPromiseHandler, interceptors, 0);
+      this(backend, bodyHandler, pushPromiseHandler, interceptors, 0);
     }
 
     private InterceptorChain(
-        HttpClient baseClient,
+        HttpClient backend,
         BodyHandler<T> bodyHandler,
         @Nullable PushPromiseHandler<T> pushPromiseHandler,
         List<Interceptor> interceptors,
         int currentInterceptorIndex) {
-      this.baseClient = baseClient;
+      this.backend = backend;
       this.bodyHandler = bodyHandler;
       this.pushPromiseHandler = pushPromiseHandler;
       this.interceptors = interceptors;
@@ -651,27 +754,36 @@ public final class Methanol extends HttpClient {
 
     @Override
     public Interceptor.Chain<T> withBodyHandler(BodyHandler<T> bodyHandler) {
+      requireNonNull(bodyHandler);
       return new InterceptorChain<>(
-          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
+          backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
     }
 
     @Override
     public Interceptor.Chain<T> withPushPromiseHandler(
         @Nullable PushPromiseHandler<T> pushPromiseHandler) {
       return new InterceptorChain<>(
-          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
+          backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
+    }
+
+    @Override
+    public <U> Chain<U> with(
+        BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler) {
+      requireNonNull(bodyHandler);
+      return new InterceptorChain<>(
+          backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
     }
 
     @Override
     public HttpResponse<T> forward(HttpRequest request) throws IOException, InterruptedException {
       requireNonNull(request);
       if (currentInterceptorIndex >= interceptors.size()) {
-        return baseClient.send(request, bodyHandler);
+        return backend.send(request, bodyHandler);
       }
 
       var interceptor = interceptors.get(currentInterceptorIndex);
       return requireNonNull(
-          interceptor.intercept(request, copyForNextInterceptor()),
+          interceptor.intercept(request, nextInterceptorChain()),
           () -> interceptor + "::intercept returned a null response");
     }
 
@@ -679,158 +791,396 @@ public final class Methanol extends HttpClient {
     public CompletableFuture<HttpResponse<T>> forwardAsync(HttpRequest request) {
       requireNonNull(request);
       if (currentInterceptorIndex >= interceptors.size()) {
-        // sendAsync accepts nullable pushPromiseHandler
-        return baseClient.sendAsync(request, bodyHandler, pushPromiseHandler);
+        // sendAsync accepts a nullable pushPromiseHandler
+        return backend.sendAsync(request, bodyHandler, pushPromiseHandler);
       }
 
       var interceptor = interceptors.get(currentInterceptorIndex);
       return interceptor
-          .interceptAsync(request, copyForNextInterceptor())
+          .interceptAsync(request, nextInterceptorChain())
           .thenApply(
               res ->
                   requireNonNull(
                       res, () -> interceptor + "::interceptAsync completed with a null response"));
     }
 
-    private InterceptorChain<T> copyForNextInterceptor() {
+    private InterceptorChain<T> nextInterceptorChain() {
       return new InterceptorChain<>(
-          baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex + 1);
-    }
-
-    static <T> HttpResponse<T> sendWithInterceptors(
-        HttpClient baseClient,
-        HttpRequest request,
-        BodyHandler<T> bodyHandler,
-        List<Interceptor> interceptors)
-        throws IOException, InterruptedException {
-      return new InterceptorChain<>(baseClient, bodyHandler, null, interceptors).forward(request);
-    }
-
-    static <T> CompletableFuture<HttpResponse<T>> sendAsyncWithInterceptors(
-        HttpClient baseClient,
-        HttpRequest request,
-        BodyHandler<T> bodyHandler,
-        @Nullable PushPromiseHandler<T> pushPromiseHandler,
-        List<Interceptor> interceptors) {
-      return new InterceptorChain<>(baseClient, bodyHandler, pushPromiseHandler, interceptors)
-          .forwardAsync(request);
+          backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex + 1);
     }
   }
 
-  /** Applies client-configured decoration to each ongoing request. */
-  private static final class RequestDecorationInterceptor implements Interceptor {
-
+  /** Rewrites requests as configured. */
+  private static final class RequestRewritingInterceptor implements Interceptor {
     private final Optional<URI> baseUri;
     private final Optional<Duration> requestTimeout;
-    private final Optional<Duration> readTimeout;
-    private final @Nullable ScheduledExecutorService readTimeoutScheduler;
     private final HttpHeaders defaultHeaders;
     private final boolean autoAcceptEncoding;
 
-    RequestDecorationInterceptor(Methanol client) {
-      baseUri = client.baseUri;
-      requestTimeout = client.requestTimeout;
-      readTimeout = client.readTimeout;
-      readTimeoutScheduler = client.readTimeoutScheduler;
-      defaultHeaders = client.defaultHeaders;
-      autoAcceptEncoding = client.autoAcceptEncoding;
+    RequestRewritingInterceptor(
+        Optional<URI> baseUri,
+        HttpHeaders defaultHeaders,
+        Optional<Duration> requestTimeout,
+        boolean autoAcceptEncoding) {
+      this.baseUri = baseUri;
+      this.requestTimeout = requestTimeout;
+      this.defaultHeaders = defaultHeaders;
+      this.autoAcceptEncoding = autoAcceptEncoding;
     }
 
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException {
-      return decorateChain(chain).forward(decorateRequest(request));
+      return chain.forward(rewriteRequest(request));
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      return decorateChain(chain).forwardAsync(decorateRequest(request));
+      return chain.forwardAsync(rewriteRequest(request));
     }
 
-    private <T> Chain<T> decorateChain(Chain<T> chain) {
-      var decoratedChain = chain;
-      if (autoAcceptEncoding || readTimeout.isPresent()) { // has body handler decoration
-        decoratedChain = chain.withBodyHandler(decorateBodyHandler(chain.bodyHandler()));
+    private HttpRequest rewriteRequest(HttpRequest request) {
+      var rewrittenRequest = MutableRequest.copyOf(request);
 
-        var pushPromiseHandler = chain.pushPromiseHandler();
-        if (pushPromiseHandler.isPresent()) {
-          decoratedChain =
-              decoratedChain.withPushPromiseHandler(
-                  decoratePushPromiseHandler(pushPromiseHandler.get()));
-        }
-      }
-      return decoratedChain;
-    }
-
-    /** Uses {@link #decorateBodyHandler(BodyHandler)} for each accepted push promise. */
-    private <T> PushPromiseHandler<T> decoratePushPromiseHandler(
-        PushPromiseHandler<T> pushPromiseHandler) {
-      return (initial, push, acceptor) ->
-          pushPromiseHandler.applyPushPromise(
-              initial, push, acceptor.compose(this::decorateBodyHandler));
-    }
-
-    private <T> BodyHandler<T> decorateBodyHandler(BodyHandler<T> bodyHandler) {
-      var decoratedBodyHandler = bodyHandler;
-
-      if (autoAcceptEncoding) {
-        decoratedBodyHandler = MoreBodyHandlers.decoding(decoratedBodyHandler);
-      }
-
-      // timeout interceptor should to be "closer" to the HTTP client for better accuracy
-      if (readTimeout.isPresent()) {
-        decoratedBodyHandler =
-            readTimeoutScheduler != null
-                ? MoreBodyHandlers.withReadTimeout(
-                    decoratedBodyHandler, readTimeout.get(), readTimeoutScheduler)
-                : MoreBodyHandlers.withReadTimeout(decoratedBodyHandler, readTimeout.get());
-      }
-
-      return decoratedBodyHandler;
-    }
-
-    private HttpRequest decorateRequest(HttpRequest request) {
-      var decoratedRequest = MutableRequest.copyOf(request);
-
-      // resolve with base URI
-      if (baseUri.isPresent()) {
-        var resolvedUri = baseUri.get().resolve(request.uri());
-        validateUri(resolvedUri);
-        decoratedRequest.uri(resolvedUri);
-      }
+      // Resolve with base URI
+      baseUri
+          .map(baseUri -> validateUri(baseUri.resolve(request.uri())))
+          .ifPresent(rewrittenRequest::uri);
 
       var originalHeadersMap = request.headers().map();
       var defaultHeadersMap = defaultHeaders.map();
 
-      // add default headers without overwriting
-      defaultHeadersMap.entrySet().stream()
-          .filter(e -> !originalHeadersMap.containsKey(e.getKey()))
-          .forEach(e -> e.getValue().forEach(v -> decoratedRequest.header(e.getKey(), v)));
+      // Add default headers if absent from the request
+      defaultHeadersMap.forEach(
+          (name, values) -> {
+            if (!originalHeadersMap.containsKey(name)) {
+              values.forEach(value -> rewrittenRequest.header(name, value));
+            }
+          });
 
-      // add Accept-Encoding without overwriting if enabled
+      // Add Accept-Encoding if absent from the request
       if (autoAcceptEncoding
           && !originalHeadersMap.containsKey("Accept-Encoding")
           && !defaultHeadersMap.containsKey("Accept-Encoding")) {
         var supportedEncodings = BodyDecoder.Factory.installedBindings().keySet();
         if (!supportedEncodings.isEmpty()) {
-          decoratedRequest.header("Accept-Encoding", String.join(", ", supportedEncodings));
+          rewrittenRequest.header("Accept-Encoding", String.join(", ", supportedEncodings));
         }
       }
 
-      // overwrite Content-Type if request body is MimeBodyPublisher
+      // Overwrite Content-Type if request body is a MimeBodyPublisher
       request
           .bodyPublisher()
           .filter(MimeBodyPublisher.class::isInstance)
           .map(body -> ((MimeBodyPublisher) body).mediaType())
-          .ifPresent(mediaType -> decoratedRequest.setHeader("Content-Type", mediaType.toString()));
+          .ifPresent(mediaType -> rewrittenRequest.setHeader("Content-Type", mediaType.toString()));
 
-      // add default timeout if not already present
+      // Add default timeout if not already present
       if (request.timeout().isEmpty()) {
-        requestTimeout.ifPresent(decoratedRequest::timeout);
+        requestTimeout.ifPresent(rewrittenRequest::timeout);
       }
 
-      return decoratedRequest;
+      return rewrittenRequest.toImmutableRequest();
+    }
+  }
+
+  /** Applies {@link MoreBodyHandlers#decoding(BodyHandler)} to responses and push promises. */
+  private enum AutoDecompressingInterceptor implements Interceptor {
+    INSTANCE;
+
+    @Override
+    public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+        throws IOException, InterruptedException {
+      return decoding(chain).forward(request);
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+        HttpRequest request, Chain<T> chain) {
+      return decoding(chain).forwardAsync(request);
+    }
+
+    private static <T> Chain<T> decoding(Chain<T> chain) {
+      return chain.with(
+          MoreBodyHandlers.decoding(chain.bodyHandler()),
+          chain
+              .pushPromiseHandler()
+              .map(handler -> transformPushPromises(handler, MoreBodyHandlers::decoding))
+              .orElse(null));
+    }
+  }
+
+  /**
+   * Applies {@link MoreBodyHandlers#withReadTimeout read timeouts} to responses and push promises.
+   */
+  private static final class ReadTimeoutInterceptor implements Interceptor {
+    private final Duration readTimeout;
+    private final @Nullable ScheduledExecutorService readTimeoutScheduler;
+
+    ReadTimeoutInterceptor(
+        Duration readTimeout, @Nullable ScheduledExecutorService readTimeoutScheduler) {
+      this.readTimeout = readTimeout;
+      this.readTimeoutScheduler = readTimeoutScheduler;
+    }
+
+    @Override
+    public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+        throws IOException, InterruptedException {
+      return withReadTimeout(chain).forward(request);
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+        HttpRequest request, Chain<T> chain) {
+      return withReadTimeout(chain).forwardAsync(request);
+    }
+
+    private <T> Chain<T> withReadTimeout(Chain<T> chain) {
+      return chain.with(
+          withReadTimeout(chain.bodyHandler()),
+          chain
+              .pushPromiseHandler()
+              .map(handler -> transformPushPromises(handler, this::withReadTimeout))
+              .orElse(null));
+    }
+
+    private <T> BodyHandler<T> withReadTimeout(BodyHandler<T> bodyHandler) {
+      return readTimeoutScheduler != null
+          ? MoreBodyHandlers.withReadTimeout(bodyHandler, readTimeout, readTimeoutScheduler)
+          : MoreBodyHandlers.withReadTimeout(bodyHandler, readTimeout);
+    }
+  }
+
+  /**
+   * An {@link Interceptor} that follows redirects. The interceptor is applied prior to the cache
+   * interceptor only if one is installed. Allowing the cache to intercept redirects increases its
+   * efficiency as network access can be avoided in case a redirected URI is accessed repeatedly
+   * (provided the redirecting response is cacheable). Additionally, this ensures correctness in
+   * case a cacheable response is received for a redirected request. In such case, the response
+   * should be cached for the URI the request was redirected to, not the initiating URI.
+   *
+   * <p>To avoid surprises, the interceptor follows HttpClient's redirecting behaviour.
+   */
+  static final class RedirectingInterceptor implements Interceptor {
+    private static final int DEFAULT_MAX_REDIRECTS = 5;
+    private static final int MAX_REDIRECTS =
+        Integer.getInteger("jdk.httpclient.redirects.retrylimit", DEFAULT_MAX_REDIRECTS);
+
+    private final Redirect policy;
+
+    /** The executor used for invoking the response handler. */
+    private final Executor handlerExecutor;
+
+    RedirectingInterceptor(Redirect policy, @Nullable Executor handlerExecutor) {
+      this.policy = policy;
+      // Use a cached thread-pool of daemon threads if we can't access HttpClient's executor
+      this.handlerExecutor =
+          requireNonNullElseGet(
+              handlerExecutor,
+              () ->
+                  Executors.newCachedThreadPool(
+                      runnable -> {
+                        var thread = new Thread(runnable);
+                        thread.setDaemon(true);
+                        return thread;
+                      }));
+    }
+
+    @Override
+    public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+        throws IOException, InterruptedException {
+      if (policy == Redirect.NEVER) {
+        return chain.forward(request);
+      }
+      return Utils.block(doIntercept(request, chain, false));
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+        HttpRequest request, Chain<T> chain) {
+      if (policy == Redirect.NEVER) {
+        return chain.forwardAsync(request);
+      }
+      return doIntercept(request, chain, true);
+    }
+
+    private <T> CompletableFuture<HttpResponse<T>> doIntercept(
+        HttpRequest request, Chain<T> chain, boolean async) {
+      return new Redirector(
+              request, new SendAdapter(Handlers.toPublisherChain(chain, handlerExecutor), async))
+          .sendAndFollowUp()
+          .thenApply(Redirector::result)
+          .thenCompose(
+              response -> Handlers.handleAsync(response, chain.bodyHandler(), handlerExecutor));
+    }
+
+    private static final class SendAdapter {
+      private final Chain<Publisher<List<ByteBuffer>>> chain;
+      private final boolean async;
+
+      private SendAdapter(Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
+        this.chain = chain;
+        this.async = async;
+      }
+
+      CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> send(HttpRequest request) {
+        return async
+            ? chain.forwardAsync(request)
+            : Unchecked.supplyAsync(() -> chain.forward(request), FlowSupport.SYNC_EXECUTOR);
+      }
+    }
+
+    private final class Redirector {
+      private final HttpRequest request;
+      private final SendAdapter sendAdapter;
+      private final AtomicInteger redirectCount;
+      private final @Nullable HttpResponse<Publisher<List<ByteBuffer>>> response;
+      private final @Nullable HttpResponse<Publisher<List<ByteBuffer>>> previousResponse;
+
+      Redirector(HttpRequest request, SendAdapter sendAdapter) {
+        this(request, sendAdapter, new AtomicInteger(), null, null);
+      }
+
+      private Redirector(
+          HttpRequest request,
+          SendAdapter sendAdapter,
+          AtomicInteger redirectCount,
+          @Nullable HttpResponse<Publisher<List<ByteBuffer>>> response,
+          @Nullable HttpResponse<Publisher<List<ByteBuffer>>> previousResponse) {
+        this.request = request;
+        this.sendAdapter = sendAdapter;
+        this.redirectCount = redirectCount;
+        this.response = response;
+        this.previousResponse = previousResponse;
+      }
+
+      HttpResponse<Publisher<List<ByteBuffer>>> result() {
+        requireState(response != null, "absent response");
+        return castNonNull(response);
+      }
+
+      private Redirector withResponse(HttpResponse<Publisher<List<ByteBuffer>>> response) {
+        var newResponse = response;
+        if (previousResponse != null) {
+          var previousResponseWithoutBody =
+              ResponseBuilder.newBuilder(previousResponse).dropBody().build();
+          newResponse =
+              ResponseBuilder.newBuilder(response)
+                  .previousResponse(previousResponseWithoutBody)
+                  .build();
+        }
+        return new Redirector(request, sendAdapter, redirectCount, newResponse, null);
+      }
+
+      CompletableFuture<Redirector> sendAndFollowUp() {
+        return sendAdapter
+            .send(request)
+            .thenApply(this::withResponse)
+            .thenCompose(Redirector::followUp);
+      }
+
+      CompletableFuture<Redirector> followUp() {
+        var response = result();
+        var redirectedRequest = redirectedRequest(response);
+        if (redirectedRequest == null || redirectCount.incrementAndGet() > MAX_REDIRECTS) {
+          // Reached destination or exceeded allowed redirects
+          return CompletableFuture.completedFuture(this);
+        }
+
+        // Discard the body of the redirecting response
+        Handlers.handleAsync(response, BodyHandlers.discarding(), handlerExecutor);
+
+        // Follow redirected request
+        return new Redirector(redirectedRequest, sendAdapter, redirectCount, null, response)
+            .sendAndFollowUp();
+      }
+
+      public @Nullable HttpRequest redirectedRequest(HttpResponse<?> response) {
+        if (policy == Redirect.NEVER) {
+          return null;
+        }
+
+        int statusCode = response.statusCode();
+        if (isRedirecting(statusCode) && statusCode != HTTP_NOT_MODIFIED) {
+          var redirectedUri = redirectedUri(response.headers());
+          var newMethod = redirectedMethod(response.statusCode());
+          if (canRedirectTo(redirectedUri)) {
+            return createRedirectedRequest(redirectedUri, statusCode, newMethod);
+          }
+        }
+        return null;
+      }
+
+      private URI redirectedUri(HttpHeaders responseHeaders) {
+        return responseHeaders
+            .firstValue("Location")
+            .map(request.uri()::resolve)
+            .orElseThrow(() -> new UncheckedIOException(new IOException("invalid redirection")));
+      }
+
+      // jdk.internal.net.http.RedirectFilter.redirectedMethod
+      private String redirectedMethod(int statusCode) {
+        var originalMethod = request.method();
+        switch (statusCode) {
+          case 301:
+          case 302:
+            return originalMethod.equals("POST") ? "GET" : originalMethod;
+          case 303:
+            return "GET";
+          case 307:
+          case 308:
+          default:
+            return originalMethod;
+        }
+      }
+
+      // jdk.internal.net.http.RedirectFilter.canRedirect
+      private boolean canRedirectTo(URI redirectedUri) {
+        var oldScheme = request.uri().getScheme();
+        var newScheme = redirectedUri.getScheme();
+        switch (policy) {
+          case ALWAYS:
+            return true;
+          case NEVER:
+            return false;
+          case NORMAL:
+            return newScheme.equalsIgnoreCase(oldScheme) || newScheme.equalsIgnoreCase("https");
+          default:
+            throw new AssertionError("unexpected policy: " + policy);
+        }
+      }
+
+      private HttpRequest createRedirectedRequest(
+          URI redirectedUri, int statusCode, String newMethod) {
+        boolean retainBody = statusCode != 303 && request.method().equals(newMethod);
+        var newBody =
+            request.bodyPublisher().filter(__ -> retainBody).orElseGet(BodyPublishers::noBody);
+        return MutableRequest.copyOf(request).uri(redirectedUri).method(newMethod, newBody);
+      }
+
+      // jdk.internal.net.http.RedirectFilter.isRedirecting
+      private boolean isRedirecting(int statusCode) {
+        // 309-399 Unassigned => don't follow
+        if (!HttpStatus.isRedirection(statusCode) || statusCode > 308) {
+          return false;
+        }
+
+        switch (statusCode) {
+            // 300: MultipleChoice => don't follow
+            // 304: Not Modified => don't follow
+            // 305: Proxy Redirect => don't follow.
+            // 306: Unused => don't follow
+          case 300:
+          case 304:
+          case 305:
+          case 306:
+            return false;
+            // 301, 302, 303, 307, 308: OK to follow.
+          default:
+            return true;
+        }
+      }
     }
   }
 }

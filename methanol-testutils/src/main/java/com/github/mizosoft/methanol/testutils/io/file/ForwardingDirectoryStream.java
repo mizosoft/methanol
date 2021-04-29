@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,30 +20,44 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.extensions;
+package com.github.mizosoft.methanol.testutils.io.file;
 
-import com.github.mizosoft.methanol.testutils.TestUtils;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.function.Consumer;
 
-class HttpResponsePublisherWithExecutorTest extends HttpResponsePublisherTest {
+public class ForwardingDirectoryStream<T>
+    implements DirectoryStream<T>, ForwardingObject<DirectoryStream<T>> {
+  private final DirectoryStream<T> delegate;
 
-  private Executor executor;
+  ForwardingDirectoryStream(DirectoryStream<T> delegate) {
+    this.delegate = delegate;
+  }
 
   @Override
-  Executor executor() {
-    return executor;
+  public DirectoryStream<T> delegate() {
+    return delegate;
   }
 
-  @BeforeEach
-  void setUpExecutor() {
-    executor = Executors.newFixedThreadPool(8);
+  @Override
+  public Iterator<T> iterator() {
+    return delegate.iterator();
   }
 
-  @AfterEach
-  void shutdownExecutor() {
-    TestUtils.shutdown(executor);
+  @Override
+  public void close() throws IOException {
+    delegate.close();
+  }
+
+  @Override
+  public void forEach(Consumer<? super T> action) {
+    delegate.forEach(action);
+  }
+
+  @Override
+  public Spliterator<T> spliterator() {
+    return delegate.spliterator();
   }
 }

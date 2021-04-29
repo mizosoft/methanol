@@ -38,12 +38,12 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
+import mockwebserver3.Dispatcher;
+import mockwebserver3.MockResponse;
+import mockwebserver3.MockWebServer;
+import mockwebserver3.PushPromise;
+import mockwebserver3.RecordedRequest;
 import okhttp3.Headers;
-import okhttp3.mockwebserver.Dispatcher;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.PushPromise;
-import okhttp3.mockwebserver.RecordedRequest;
 import org.jetbrains.annotations.NotNull;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
@@ -115,11 +115,7 @@ public class HttpResponsePublisherTck extends FlowPublisherVerification<Response
 
   @Override
   public long maxElementsFromPublisher() {
-    // Items are buffered in memory before submission so a large # of elements
-    // will cause OME when createFlowPublisher() is called (currently happens with
-    // required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue) so return
-    // an small arbitrary num that allows other tests to pass
-    return 1 << 15;
+    return TckUtils.MAX_PRECOMPUTED_ELEMENTS;
   }
 
   private Subscriber<HttpResponse<String>> mapSubscriber(

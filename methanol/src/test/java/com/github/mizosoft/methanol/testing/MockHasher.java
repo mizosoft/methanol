@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2019-2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,30 +20,29 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.flow;
+package com.github.mizosoft.methanol.testing;
 
-import com.github.mizosoft.methanol.testutils.TestUtils;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import com.github.mizosoft.methanol.internal.cache.DiskStore;
+import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-class AbstractSubscriptionWithExecutorTest extends AbstractSubscriptionTest {
+/** {@code DiskStore.Hasher} allowing to explicitly set fake hash codes for some keys. */
+public final class MockHasher implements DiskStore.Hasher {
+  private final Map<String, Hash> mockHashCodes = new ConcurrentHashMap<>();
 
-  private Executor executor;
+  MockHasher() {}
 
   @Override
-  Executor executor() {
-    return executor;
+  public Hash hash(String key) {
+    // Fallback to default hasher if a fake hash is not set
+    var mockHash = mockHashCodes.get(key);
+    return mockHash != null ? mockHash : TRUNCATED_SHA_256.hash(key);
   }
 
-  @BeforeEach
-  void setUpExecutor() {
-    executor = Executors.newFixedThreadPool(8);
-  }
-
-  @AfterEach
-  void shutdownExecutor() {
-    TestUtils.shutdown(executor);
+  public void setHash(String key, long upperHashBits) {
+    mockHashCodes.put(
+        key, new Hash(ByteBuffer.allocate(80).putLong(upperHashBits).putShort((short) 0).flip()));
   }
 }

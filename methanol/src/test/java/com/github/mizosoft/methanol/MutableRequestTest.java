@@ -118,6 +118,17 @@ class MutableRequestTest {
   }
 
   @Test
+  void immutableCopy() {
+    var request = create(uri)
+        .POST(publisher)
+        .headers(headersArray)
+        .expectContinue(expectContinue)
+        .timeout(timeout)
+        .version(version);
+    assertDeepEquals(request, request.toImmutableRequest());
+  }
+
+  @Test
   void defaultFields() {
     var request = create();
     assertEquals("GET", request.method());
@@ -183,6 +194,27 @@ class MutableRequestTest {
     assertTrue(request.bodyPublisher().isEmpty());
     assertEquals("PUT", request.PUT(publisher).method());
     assertSame(publisher, request.bodyPublisher().orElseThrow());
+  }
+
+  @Test
+  void removeHeadersIf() {
+    var request = MutableRequest.create()
+        .headers(
+            "X-My-First-Header", "val1",
+            "X-My-First-Header", "val2",
+            "X-My-Second-Header", "val1",
+            "X-My-Second-Header", "val2");
+
+    request.removeHeadersIf((name, __) -> "X-My-First-Header".equals(name));
+    assertEquals(
+        headers("X-My-Second-Header", "val1", "X-My-Second-Header", "val2"), request.headers());
+
+    request.removeHeadersIf(
+        (name, value) -> "X-My-Second-Header".equals(name) && "val1".equals(value));
+    assertEquals(headers("X-My-Second-Header", "val2"), request.headers());
+
+    request.removeHeadersIf((__, ___) -> true);
+    assertEquals(headers(/* empty */), request.headers());
   }
 
   @Test

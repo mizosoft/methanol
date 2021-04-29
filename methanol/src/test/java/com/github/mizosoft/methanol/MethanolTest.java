@@ -29,14 +29,13 @@ import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static java.net.http.HttpRequest.BodyPublishers.noBody;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
 import static java.net.http.HttpResponse.BodyHandlers.discarding;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.testutils.ServiceLoggerHelper;
 import java.net.Authenticator;
 import java.net.CookieManager;
 import java.net.InetSocketAddress;
@@ -56,26 +55,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.UnaryOperator;
 import javax.net.ssl.SSLContext;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class MethanolTest {
-
-  private static ServiceLoggerHelper loggerHelper;
-
-  @BeforeAll
-  static void turnOffServiceLogger() {
-    // Do not log service loader failures.
-    loggerHelper = new ServiceLoggerHelper();
-    loggerHelper.turnOff();
-  }
-
-  @AfterAll
-  static void resetServiceLogger() {
-    loggerHelper.reset();
-  }
-
   @Test
   void defaultExtraFields() {
     var client = Methanol.create();
@@ -84,6 +66,7 @@ class MethanolTest {
     assertTrue(client.requestTimeout().isEmpty());
     assertTrue(client.readTimeout().isEmpty());
     assertTrue(client.interceptors().isEmpty());
+    assertTrue(client.backendInterceptors().isEmpty());
     assertTrue(client.postDecorationInterceptors().isEmpty());
     assertEquals(headers(/* empty */), client.defaultHeaders());
     assertTrue(client.autoAcceptEncoding());
@@ -92,7 +75,7 @@ class MethanolTest {
   @Test
   void setExtraFields() {
     var interceptor1 = Interceptor.create(UnaryOperator.identity());
-    var interceptor2 = Interceptor.create((UnaryOperator.identity()));
+    var interceptor2 = Interceptor.create(UnaryOperator.identity());
     var client = Methanol.newBuilder()
         .userAgent("Mr Potato")
         .baseUri(URI.create("https://localhost"))
@@ -101,7 +84,7 @@ class MethanolTest {
         .defaultHeader("Accept", "text/html")
         .autoAcceptEncoding(true)
         .interceptor(interceptor1)
-        .postDecorationInterceptor(interceptor2)
+        .backendInterceptor(interceptor2)
         .build();
     assertEquals(Optional.of("Mr Potato"), client.userAgent());
     assertEquals(Optional.of(URI.create("https://localhost")), client.baseUri());
@@ -422,6 +405,12 @@ class MethanolTest {
     public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request,
         BodyHandler<T> responseBodyHandler) {
       return sendAsync(request, responseBodyHandler, null);
+    }
+
+    // Methanol's constructor calls this so don't throw AssertionError
+    @Override
+    public Redirect followRedirects() {
+      return Redirect.NORMAL;
     }
   }
 }

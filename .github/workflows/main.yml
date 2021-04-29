@@ -1,12 +1,6 @@
 name: CI
 
-on:
-  pull_request:
-    branches:
-      - master
-  push:
-    branches:
-      - master
+on: [push, pull_request]
 
 jobs:
   build:
@@ -34,6 +28,14 @@ jobs:
         run: | # brotli is not currently supported for mac so tests are excluded on macos
           ./gradlew --warning-mode=all -PenableErrorprone build \
           `if [[ "${{ matrix.os }}" == macos* ]]; then echo '-x :methanol-brotli:test'; fi`
+
+      # Save test results as an artifact
+      - name: Save test results
+        uses: actions/upload-artifact@v2
+        if: ${{ always() }} && ${{ matrix.os }} == ubuntu-latest # Only upload once, regardless of build status
+        with:
+          name: ${{ matrix.os }}-test-results
+          path: ./*/build/test-results/**/*.xml
 
   publish_snapshot:
     name: Publish snapshot artifacts

@@ -1,20 +1,36 @@
 dependencies {
+  // Use latest version of TestNG as the one used by tck-flow is really old.
+  // A recent feature currently in use is CONSTRUCTOR target for @Factory.
+  testImplementation deps.testng
+  testImplementation deps.junitParams
   testImplementation deps.reactiveStreamsTckFlow
   testImplementation deps.mockWebServer
+  testImplementation deps.jimfs
   testImplementation project(':methanol-testutils')
 }
 
+configurations.testImplementation {
+  // TestNG transitively brings an old checkerframework artifact, which causes its packages
+  // to be read from two modules.
+  exclude group: 'org.checkerframework', module: 'checker-compat-qual'
+
+  // JUnit 4 pulls a really old hamcrest version which agitates the module system
+  exclude group: 'junit', module: 'junit'
+}
+
 compileJava {
-  // suppress exporting to module unresolvable on compilation
+  // Suppress exporting to modules unresolvable on compilation
   options.compilerArgs += '-Xlint:-module'
 }
 
 test {
   exclude '**/tck/**'
-  // run from classpath to use META-INF/services which doesn't work from module path
+  // Run from classpath to use META-INF/services which doesn't work from module path
   moduleOptions {
     runOnClasspath = true
   }
+
+  systemProperty 'junit.jupiter.execution.timeout.mode', 'disabled_on_debug'
 }
 
 task tckTest(type: Test) {
@@ -36,3 +52,9 @@ check.dependsOn tckTest
 
 // compileTestJava still compiles from the module path
 addReads(compileTestJava, 'methanol.testutils')
+addReads(compileTestJava, 'org.junit.jupiter.params')
+addReads(compileTestJava, 'org.assertj.core')
+
+// This avoids a mysterious compilation error caused by some kotlin class not being accessible
+// to javac. Kotlin is brought transitively by okhttp's MockWebServer.
+addReads(compileTestJava, 'kotlin.stdlib')

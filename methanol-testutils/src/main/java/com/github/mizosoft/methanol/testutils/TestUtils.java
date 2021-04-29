@@ -23,8 +23,10 @@
 package com.github.mizosoft.methanol.testutils;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
@@ -32,15 +34,21 @@ import java.net.http.HttpHeaders;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Flow.Subscription;
 import java.util.stream.Collectors;
+import java.util.zip.DeflaterInputStream;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLContext;
@@ -48,7 +56,6 @@ import okhttp3.tls.HandshakeCertificates;
 import okhttp3.tls.HeldCertificate;
 
 public class TestUtils {
-
   public static final Subscription NOOP_SUBSCRIPTION =
       new Subscription() {
         @Override
@@ -58,13 +65,26 @@ public class TestUtils {
         public void cancel() {}
       };
 
-  public static void awaitUninterruptedly(CountDownLatch latch) {
+  public static void awaitUninterruptibly(CountDownLatch latch) {
     while (true) {
       try {
         latch.await();
         return;
       } catch (InterruptedException ignored) {
         // continue;
+      }
+    }
+  }
+
+  public static void awaitUninterruptibly(CyclicBarrier barier) {
+    while (true) {
+      try {
+        barier.await();
+        return;
+      } catch (InterruptedException ignored) {
+        // continue;
+      } catch (BrokenBarrierException e) {
+        throw new RuntimeException(e);
       }
     }
   }
@@ -78,11 +98,21 @@ public class TestUtils {
   }
 
   public static byte[] gunzip(byte[] data) {
-    try {
-      return new GZIPInputStream(new ByteArrayInputStream(data)).readAllBytes();
+    try (var in = new GZIPInputStream(new ByteArrayInputStream(data))) {
+      return in.readAllBytes();
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  public static byte[] gzip(String s) {
+    var buffer = new ByteArrayOutputStream();
+    try (var out = new GZIPOutputStream(buffer)) {
+      out.write(s.getBytes(UTF_8));
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    return buffer.toByteArray();
   }
 
   public static byte[] zlibUnwrap(byte[] zlibWrapped) {
@@ -99,8 +129,18 @@ public class TestUtils {
   }
 
   private static byte[] inflate0(byte[] data, Inflater inflater) {
-    try {
-      return new InflaterInputStream(new ByteArrayInputStream(data), inflater).readAllBytes();
+    try (var in = new InflaterInputStream(new ByteArrayInputStream(data), inflater)) {
+      return in.readAllBytes();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    } finally {
+      inflater.end();
+    }
+  }
+
+  public static byte[] deflate(String s) {
+    try (var in = new DeflaterInputStream(new ByteArrayInputStream(s.getBytes(UTF_8)))) {
+      return in.readAllBytes();
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -109,7 +149,7 @@ public class TestUtils {
   public static HttpHeaders headers(String... pairs) {
     var headers = new LinkedHashMap<String, List<String>>();
     for (int i = 0, len = pairs.length; i < len; i += 2) {
-      headers.put(pairs[i], List.of(pairs[i + 1]));
+      headers.computeIfAbsent(pairs[i], __ -> new ArrayList<>()).add(pairs[i + 1]);
     }
     return HttpHeaders.of(headers, (n, v) -> true);
   }
@@ -149,11 +189,24 @@ public class TestUtils {
     }
   }
 
+  public static byte[] toByteArray(ByteBuffer buffer) {
+    var bytes = new byte[buffer.remaining()];
+    buffer.get(bytes);
+    return bytes;
+  }
+
+  public static X509Certificate localhostCert() {
+    return new HeldCertificate.Builder()
+        .addSubjectAlternativeName(InetAddress.getLoopbackAddress().getCanonicalHostName())
+        .build()
+        .certificate();
+  }
+
   /** Build {@code SSLContext} that trusts a self-assigned certificate for localhost in tests. */
-  public static SSLContext localhostSslContext() throws IOException {
+  public static SSLContext localhostSslContext() {
     var heldCertificate =
         new HeldCertificate.Builder()
-            .addSubjectAlternativeName(InetAddress.getByName("localhost").getCanonicalHostName())
+            .addSubjectAlternativeName(InetAddress.getLoopbackAddress().getCanonicalHostName())
             .build();
     return new HandshakeCertificates.Builder()
         .heldCertificate(heldCertificate)

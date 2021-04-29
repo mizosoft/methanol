@@ -64,13 +64,19 @@ public class Validate {
 
   /** Copied from checker-framework's {@code NullnessUtil} to avoid a runtime dependency. */
   @SuppressWarnings({
-      "nullness", // Nullness utilities are trusted regarding nullness.
-      "cast", // Casts look redundant if Nullness Checker is not run.
-      "NullAway",
-      "RedundantCast", "NullableProblems", "TypeParameterExplicitlyExtendsObject"})
+    "nullness", // Nullness utilities are trusted regarding nullness.
+    "cast", // Casts look redundant if Nullness Checker is not run.
+    "NullAway",
+    "RedundantCast"
+  })
   public static @EnsuresNonNull("#1") <T extends @Nullable Object> @NonNull T castNonNull(
       @Nullable T ref) {
     assert ref != null : "Misuse of castNonNull: called with a null argument";
     return (@NonNull T) ref;
+  }
+
+  @SuppressWarnings("TypeParameterUnusedInFormals")
+  public static <T> T TODO() {
+    throw new UnsupportedOperationException("not implemented");
   }
 }
