@@ -65,6 +65,6 @@ public interface CacheAwareResponse<T> extends TrackedResponse<T> {
      * network use despite being necessary to serve a valid response. The resulted response code is
      * normally {@link java.net.HttpURLConnection#HTTP_GATEWAY_TIMEOUT Gateway timeout}.
      */
-    UNSATISFIABLE
+    UNSATISFIABLE_REQUEST
   }
 }

@@ -373,7 +373,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     public void onStatus(URI uri, CacheStatus status) {
       switch (status) {
         case MISS:
-        case UNSATISFIABLE:
+        case UNSATISFIABLE_REQUEST:
           statsRecorder.recordMiss(uri);
           break;
 
