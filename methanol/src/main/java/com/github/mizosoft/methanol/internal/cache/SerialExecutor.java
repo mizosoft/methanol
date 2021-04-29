@@ -36,30 +36,30 @@ import java.util.concurrent.RejectedExecutionException;
  * Guava's {@code SequentialExecutor} but completely relies on atomics for synchronization.
  */
 class SerialExecutor implements Executor {
-  private static final int DRAIN_COUNT_BITS = Long.SIZE - 4; // There's 4 state bits
+  private static final int DRAIN_COUNT_BITS = Integer.SIZE - 4; // There's 4 state bits
 
-  /** Mask for the drain count maintained in the lower 60 bits of {@link #sync} field. */
-  private static final long DRAIN_COUNT_MASK = (1L << DRAIN_COUNT_BITS) - 1;
+  /** Mask for the drain count maintained in {@link #sync} field. */
+  private static final int DRAIN_COUNT_MASK = (1 << DRAIN_COUNT_BITS) - 1;
 
   /**
    * Drain task is submitted to delegate executor. This is used to prevent resubmission of drain
    * task multiple times if it commences execution late. If set, the bit is retained till drain
    * exits.
    */
-  private static final long SUBMITTED = 1L << DRAIN_COUNT_BITS;
+  private static final int SUBMITTED = 1 << DRAIN_COUNT_BITS;
   /** Drain task commenced execution. Retained till drain exits. */
-  private static final long RUNNING = 2L << DRAIN_COUNT_BITS;
+  private static final int RUNNING = 2 << DRAIN_COUNT_BITS;
   /** Drain loop should keep running to recheck for incoming tasks. */
-  private static final long KEEP_ALIVE = 4L << DRAIN_COUNT_BITS;
+  private static final int KEEP_ALIVE = 4 << DRAIN_COUNT_BITS;
   /** Don't accept more tasks. */
-  private static final long SHUTDOWN = 8L << DRAIN_COUNT_BITS;
+  private static final int SHUTDOWN = 8 << DRAIN_COUNT_BITS;
 
   private static final VarHandle SYNC;
 
   static {
     try {
       var lookup = MethodHandles.lookup();
-      SYNC = lookup.findVarHandle(SerialExecutor.class, "sync", long.class);
+      SYNC = lookup.findVarHandle(SerialExecutor.class, "sync", int.class);
     } catch (NoSuchFieldException | IllegalAccessException e) {
       throw new ExceptionInInitializerError(e);
     }
@@ -74,14 +74,14 @@ class SerialExecutor implements Executor {
    * maintained to avoid an ABA problem that would otherwise occur under the following scenario: A
    * thread reads the sync field, sees RUNNING is not set, then fires a drain task. Before the
    * thread has the chance to set SUBMITTED, the drain task begins (sets RUNNING) then completes
-   * execution (unsets RUNNING) (e.g. same thread executor). The thread then sees the sync field
+   * execution (unsets RUNNING) (i.e. same thread executor). The thread then sees the sync field
    * hasn't changed, then successfully sets SUBMITTED via a CAS. Other threads will later fail to
    * submit the drain as they'll think it's already been submitted, but that's not true. Attaching a
    * 'stamp' to the field fixes this issue. Kudos to Guava's SequentialExecutor for bringing this
    * issue to mind ;).
    */
   @SuppressWarnings("unused") // VarHandle indirection
-  private volatile long sync;
+  private volatile int sync;
 
   SerialExecutor(Executor delegate) {
     this.delegate = delegate;
@@ -102,7 +102,7 @@ class SerialExecutor implements Executor {
       // threads might succeed to submit the drain task after observing  the absence
       // of RUNNING and SUBMITTED bits, but that's OK since the drain task itself ensures
       // it's only run once.
-      long s = sync;
+      int s = sync;
       boolean drainIsIdle = (s & (SUBMITTED | RUNNING)) == 0;
       if (drainIsIdle || SYNC.compareAndSet(this, s, (s | KEEP_ALIVE))) {
         if (drainIsIdle) {
@@ -147,8 +147,8 @@ class SerialExecutor implements Executor {
         }
       } else {
         // Exit or consume keep-alive bit. Don't forget to also unset SUBMITTED if exiting.
-        long s = sync;
-        long unsetBits = (s & KEEP_ALIVE) != 0 ? KEEP_ALIVE : (RUNNING | SUBMITTED);
+        int s = sync;
+        int unsetBits = (s & KEEP_ALIVE) != 0 ? KEEP_ALIVE : (RUNNING | SUBMITTED);
         if (SYNC.compareAndSet(this, s, incrementDrainCount(s) & ~unsetBits)
             && (unsetBits & RUNNING) != 0) {
           break;
@@ -159,18 +159,15 @@ class SerialExecutor implements Executor {
 
   /** Atomically sets the {@link #RUNNING} bit, returning true if successful. */
   private boolean acquireRun() {
-    long s = (long) SYNC.getAndBitwiseOr(this, RUNNING);
+    int s = (int) SYNC.getAndBitwiseOr(this, RUNNING);
     return (s & RUNNING) == 0;
   }
 
-  /** Returns {@code sync} with an incremented drain count and existing state bits. */
-  private static long incrementDrainCount(long sync) {
-    long count = sync & DRAIN_COUNT_MASK;
-    // Make sure drain count wraps around if it ever overflows,
-    // which would take about 37 years assuming each drain task takes 1 ns.
-    long incrementedCount = (count + 1) & DRAIN_COUNT_MASK;
-    long stateBits = sync & ~DRAIN_COUNT_MASK;
-    return incrementedCount | stateBits;
+  /** Returns {@code sync} with an incremented exit count and existing state bits. */
+  private static int incrementDrainCount(int sync) {
+    int count = sync & DRAIN_COUNT_MASK;
+    int stateBits = sync & ~DRAIN_COUNT_MASK;
+    return (count + 1) | stateBits;
   }
 
   // For testing
@@ -179,7 +176,7 @@ class SerialExecutor implements Executor {
     return (sync & RUNNING) != 0;
   }
 
-  long drainCount() {
+  int drainCount() {
     return (sync & DRAIN_COUNT_MASK);
   }
 
@@ -192,9 +189,8 @@ class SerialExecutor implements Executor {
   }
 
   /**
-   * Associates an identity with each task passed to {@link #execute(Runnable)} so it is
-   * deterministically removed from the task queue when the delegate executor rejects the drain
-   * task.
+   * Adds an identity to each task passed to {@link #execute(Runnable)} so it is deterministically
+   * removed from the task queue when the delegate executor rejects the drain task.
    */
   private static final class RunnableDecorator implements Runnable {
     private final Runnable delegate;
