@@ -174,7 +174,8 @@ public final class StoreExtension
         .filter(ResolvedStoreConfig::isCompatible);
   }
 
-  private static Set<List<?>> cartesianProduct(Set<?>... sets) {
+  @SafeVarargs
+  private static Set<List<Object>> cartesianProduct(Set<Object>... sets) {
     // Cover empty sets case
     if (sets.length == 0) {
       return Set.of(List.of());
@@ -182,7 +183,7 @@ public final class StoreExtension
     return cartesianProduct(List.of(sets));
   }
 
-  private static Set<List<?>> cartesianProduct(List<Set<?>> sets) {
+  private static Set<List<Object>> cartesianProduct(List<Set<Object>> sets) {
     // Cover base cases
     if (sets.isEmpty()) {
       return Set.of();
