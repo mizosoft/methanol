@@ -30,13 +30,16 @@ import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -111,14 +114,14 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
   /** Removes all headers added so far. */
   public MutableRequest removeHeaders() {
     cachedHeaders = null; // invalidated
-    headersBuilder.clear();
+    headersBuilder.removeAll();
     return this;
   }
 
   /** Removes any header associated with the given name. */
   public MutableRequest removeHeader(String name) {
     requireNonNull(name);
-    if (headersBuilder.remove(name)) {
+    if (headersBuilder.removeHeader(name)) {
       cachedHeaders = null; // invalidated
     }
     return this;
@@ -133,7 +136,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
       validateHeaderName(name);
       for (String value : entry.getValue()) {
         validateHeaderValue(value);
-        headersBuilder.add(name, value);
+        headersBuilder.addHeader(name, value);
       }
     }
     return this;
@@ -214,7 +217,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
   public MutableRequest header(String name, String value) {
     validateHeader(name, value);
     cachedHeaders = null; // invalidated
-    headersBuilder.add(name, value);
+    headersBuilder.addHeader(name, value);
     return this;
   }
 
@@ -228,7 +231,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
       String name = headers[i];
       String value = headers[i + 1];
       validateHeader(name, value);
-      headersBuilder.add(name, value);
+      headersBuilder.addHeader(name, value);
     }
     return this;
   }
@@ -244,7 +247,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
   public MutableRequest setHeader(String name, String value) {
     validateHeader(name, value);
     cachedHeaders = null; // invalidated
-    headersBuilder.set(name, value);
+    headersBuilder.setHeader(name, value);
     return this;
   }
 
@@ -351,6 +354,41 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
   /** Returns a new {@code MutableRequest} with the given {@code URI} and a POST method. */
   public static MutableRequest POST(URI uri, BodyPublisher bodyPublisher) {
     return new MutableRequest().uri(uri).POST(bodyPublisher);
+  }
+
+  static final class HeadersBuilder {
+
+    private final Map<String, List<String>> headersMap;
+
+    HeadersBuilder() {
+      headersMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    }
+
+    void addHeader(String name, String value) {
+      headersMap.computeIfAbsent(name, k -> new ArrayList<>()).add(value);
+    }
+
+    void setHeader(String name, String value) {
+      headersMap.put(name, new ArrayList<>(List.of(value)));
+    }
+
+    boolean removeHeader(String name) {
+      return headersMap.remove(name) != null;
+    }
+
+    void removeAll() {
+      headersMap.clear();
+    }
+
+    HeadersBuilder deepCopy() {
+      var copy = new HeadersBuilder();
+      headersMap.forEach((n, vs) -> copy.headersMap.put(n, new ArrayList<>(vs)));
+      return copy;
+    }
+
+    HttpHeaders build() {
+      return HttpHeaders.of(headersMap, (n, v) -> true);
+    }
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
