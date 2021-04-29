@@ -1544,9 +1544,9 @@ public final class DiskStore implements Store {
     void commitEdit(
         DiskEditor editor,
         String key,
-        @Nullable ByteBuffer newMetadata, // null if no metadata was set
+        @Nullable ByteBuffer newMetadata,
         @Nullable AsynchronousFileChannel dataChannel, // null if no data was written
-        long dataSize) // >= 0 only if the edit is committed
+        long dataSize)
         throws IOException {
       long oldEntrySize;
       long newEntrySize;
@@ -1556,8 +1556,7 @@ public final class DiskStore implements Store {
         boolean ownedEditor = currentEditor == editor;
         currentEditor = null;
         if (!ownedEditor
-            || dataSize < 0 // Edit isn't committed
-            || (newMetadata == null && dataChannel == null) // Nothing is written
+            || (newMetadata == null && dataChannel == null) // Edit isn't committed
             || evicted) {
           refuseEdit(dataChannel);
           return;
@@ -1954,8 +1953,8 @@ public final class DiskStore implements Store {
 
     @Override
     public void close() throws IOException {
-      AsynchronousFileChannel channel;
       ByteBuffer newMetadata = null;
+      AsynchronousFileChannel channel = null;
       long dataSize = -1;
       lock.lock();
       try {
@@ -1964,9 +1963,9 @@ public final class DiskStore implements Store {
         }
         closed = true;
 
-        channel = lazyChannel;
         if (committed) {
           newMetadata = editedMetadata ? Utils.copy(metadata) : null;
+          channel = lazyChannel;
           dataSize = writtenCount;
         }
       } finally {
