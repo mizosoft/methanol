@@ -2148,29 +2148,6 @@ class HttpCacheTest {
     get(uri2).assertMiss();
   }
 
-  @StoreParameterizedTest
-  @StoreConfig
-  void manuallyInvalidateEntryMatchingASpecificVariant(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("Vary", "Accept-Encoding")
-        .addHeader("Content-Encoding", "gzip")
-        .setBody(new okio.Buffer().write(gzip("Mew"))));
-    seedCache(GET(serverUri).header("Accept-Encoding", "gzip"));
-
-    // Removal only succeeds for the request matching the correct response variant
-
-    assertFalse(cache.remove(GET(serverUri).header("Accept-Encoding", "deflate")));
-    get(GET(serverUri).header("Accept-Encoding", "gzip"))
-        .assertCode(200)
-        .assertHit()
-        .assertBody("Mew");
-
-    assertTrue(cache.remove(GET(serverUri).header("Accept-Encoding", "gzip")));
-    assertNotCached(GET(serverUri).header("Accept-Encoding", "gzip"));
-  }
-
   @ParameterizedTest
   @ValueSource(strings = {"private", "public"})
   @StoreConfig(store = DISK, fileSystem = SYSTEM)
@@ -2675,15 +2652,11 @@ class HttpCacheTest {
   }
 
   private void assertNotCached(URI uri) throws Exception {
-    assertNotCached(GET(uri));
-  }
-
-  private void assertNotCached(MutableRequest request) throws Exception {
     var cacheControl = CacheControl.newBuilder()
         .onlyIfCached()
         .anyMaxStale()
         .build();
-    get(request.cacheControl(cacheControl))
+    get(GET(uri).cacheControl(cacheControl))
         .assertLocallyGenerated();
   }
 
