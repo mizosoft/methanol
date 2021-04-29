@@ -35,7 +35,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
 
   @Override
   public void close() {
-    viewer.close();
+    viewer.close(); // TODO close quietly
   }
 
   public @Nullable Editor edit() throws IOException {

@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Validate.TODO;
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.cache.DateUtils.formatHttpDate;
@@ -50,10 +52,8 @@ import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.function.ThrowingSupplier;
-import com.github.mizosoft.methanol.internal.function.Unchecked;
-import java.io.Flushable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
@@ -73,6 +73,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
@@ -83,8 +84,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -97,10 +97,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @see <a href="https://tools.ietf.org/html/rfc7234">RFC 7234: HTTP caching</a>
  */
-// TODO consider logging more events
-public final class HttpCache implements AutoCloseable, Flushable {
-  private static final Logger LOGGER = Logger.getLogger(HttpCache.class.getName());
-
+public final class HttpCache implements AutoCloseable {
   private static final int CACHE_VERSION = 1;
 
   private final Store store;
@@ -110,9 +107,13 @@ public final class HttpCache implements AutoCloseable, Flushable {
   private final StatsRecorder statsRecorder;
   private final Clock clock;
 
-  private HttpCache(Builder builder) {
-    var userExecutor = builder.executor;
-    var storeFactory = builder.storeFactory;
+  private HttpCache(
+      long maxSize,
+      StoreFactory storeFactory,
+      @Nullable Executor userExecutor,
+      @Nullable Path cacheDirectory,
+      @Nullable StatsRecorder statsRecorder,
+      @Nullable Clock clock) {
     if (userExecutor != null) {
       executor = userExecutor;
       ownedExecutor = false;
@@ -127,24 +128,19 @@ public final class HttpCache implements AutoCloseable, Flushable {
       ownedExecutor = true;
       userVisibleExecutor = false;
     }
-    store =
-        requireNonNullElseGet(
-            builder.store,
-            () -> storeFactory.create(builder.cacheDirectory, builder.maxSize, executor));
+    store = storeFactory.create(cacheDirectory, maxSize, executor);
     this.statsRecorder =
-        requireNonNullElseGet(builder.statsRecorder, StatsRecorder::createConcurrentRecorder);
-    this.clock = requireNonNullElseGet(builder.clock, Utils::systemMillisUtc);
+        requireNonNullElseGet(statsRecorder, StatsRecorder::createConcurrentRecorder);
+    this.clock = requireNonNullElseGet(clock, Utils::systemMillisUtc);
   }
 
-  Store storeForTesting() {
-    return store;
-  }
-
-  /** Returns the directory used by the HTTP cache if entries are being cached on disk. */
-  public Optional<Path> directory() {
-    return store instanceof DiskStore
-        ? Optional.of(((DiskStore) store).directory())
-        : Optional.empty();
+  /**
+   * Returns the directory in which HTTP cache entries are persisted.
+   *
+   * @throws UnsupportedOperationException if the cache doesn't persist entries on disk
+   */
+  public Path directory() {
+    return TODO();
   }
 
   /** Returns this cache's max size in bytes. */
@@ -167,29 +163,17 @@ public final class HttpCache implements AutoCloseable, Flushable {
     store.clear();
   }
 
-  /**
-   * Removes the entry associated with the given URI if one is present.
-   *
-   * @throws IllegalStateException if closed
-   */
+  /** Removes the entry associated with the given uri if one is present. */
   public boolean remove(URI uri) throws IOException {
     return store.remove(key(uri));
   }
 
-  /**
-   * Removes the entry associated with the given request if one is present.
-   *
-   * @throws IllegalStateException if closed
-   */
+  /** Removes the entry associated with the given request if one is present. */
   public boolean remove(HttpRequest request) throws IOException {
     return store.remove(key(request));
   }
 
-  /**
-   * Atomically clears and closes this cache.
-   *
-   * @throws IllegalStateException if closed
-   */
+  /** Atomically clears and closes this cache. */
   public void dispose() throws IOException {
     store.dispose();
   }
@@ -204,16 +188,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return statsRecorder.snapshot(uri);
   }
 
-  @Override
-  public void flush() throws IOException {
-    store.flush();
-  }
-
-  /**
-   * Closes this cache. An HTTP cache becomes unusable once it has been closed. Attempting to access
-   * a closed cache's content either directly or indirectly (by sending requests over a client that
-   * uses this cache) will likely cause an {@code IllegalStateException} to be thrown.
-   */
+  /** Closes this cache. */
+  // TODO specify what is closed exactly
   @Override
   public void close() throws IOException {
     store.close();
@@ -222,23 +198,19 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
   }
 
-  /** Called by {@code Methanol} when building the interceptor chain. */
+  /** Called by {@code Methanol} when building interceptor chain. */
   Interceptor interceptor(@Nullable Executor clientExecutor) {
     return new CacheInterceptor(this, clientExecutor);
   }
 
-  private CompletableFuture<@Nullable CacheResponse> get(
+  private CompletableFuture<@Nullable CacheResponse> getAsync(
       HttpRequest request,
       BiFunction<Store, String, CompletableFuture<@Nullable Viewer>> viewAdapter) {
-    if (!"GET".equalsIgnoreCase(request.method())) {
-      // The implementation only caches GETs
-      return CompletableFuture.completedFuture(null);
-    }
-
-    return viewAdapter
-        .apply(store, key(request))
-        .thenApply(
-            Unchecked.func(viewer -> viewer != null ? createCacheResponse(request, viewer) : null));
+    return "GET".equalsIgnoreCase(request.method()) // The implementation only caches GETs
+        ? viewAdapter
+            .apply(store, key(request))
+            .thenApply(viewer -> viewer != null ? createCacheResponse(request, viewer) : null)
+        : CompletableFuture.completedFuture(null);
   }
 
   private @Nullable CacheResponse createCacheResponse(HttpRequest request, Viewer viewer) {
@@ -246,14 +218,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
     try {
       metadata = CacheResponseMetadata.decode(viewer.metadata());
     } catch (IOException e) {
-      LOGGER.log(Level.WARNING, "unrecoverable cache entry", e);
-
-      viewer.close();
-      return null;
+      viewer.close(); // TODO close quietly
+      // TODO might want to ignore
+      throw new CompletionException(e); // Unrolled by CompletableFuture
     }
-
     if (!metadata.matches(request)) {
-      viewer.close();
+      viewer.close(); // TODO close quietly
       return null;
     }
     return new CacheResponse(metadata, viewer, executor);
@@ -267,25 +237,25 @@ public final class HttpCache implements AutoCloseable, Flushable {
         editor.commitOnClose();
       }
     } catch (IOException e) {
-      LOGGER.log(Level.WARNING, "failed to update the cache after successful revalidation", e);
+      throw new UncheckedIOException(e);
     }
   }
 
   private @Nullable RawResponse update(
       RawResponse networkResponse, @Nullable CacheResponse cacheResponse) {
-    ByteBuffer metadata;
     Editor editor;
+    ByteBuffer metadata;
     try {
-      metadata = CacheResponseMetadata.from(networkResponse.get()).encode();
       editor =
           cacheResponse != null
               ? cacheResponse.edit()
               : store.edit(key(networkResponse.get().request()));
+      if (editor == null) {
+        return null;
+      }
+      metadata = CacheResponseMetadata.from(networkResponse.get()).encode();
     } catch (IOException e) {
-      LOGGER.log(Level.WARNING, "exception while attempting to update the cache", e);
-      return null;
-    }
-    if (editor == null) {
+      // TODO log
       return null;
     }
 
@@ -343,7 +313,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
   /**
    * A dirty hack that masks synchronous operations as {@code CompletableFuture} calls that are
    * always completed when returned. This is important in order to share major logic between {@code
-   * intercept} and {@code interceptAsync}, which facilitates implementation & maintenance.
+   * intercept} and {@code interceptAsync}, which facilitates implementation & maintainance.
    */
   private static final class AsyncAdapter {
     private final boolean async;
@@ -352,8 +322,9 @@ public final class HttpCache implements AutoCloseable, Flushable {
       this.async = async;
     }
 
-    private static <T> CompletableFuture<T> adapt(ThrowingSupplier<T> supplier) {
-      return Unchecked.supplyAsync(supplier, FlowSupport.SYNC_EXECUTOR);
+    private static <T> CompletableFuture<T> adapt(IOSupplier<T> supplier) {
+      return CompletableFuture.supplyAsync(
+          supplier.toUncheckedForAsyncCompletion(), FlowSupport.SYNC_EXECUTOR);
     }
 
     <T> CompletableFuture<HttpResponse<T>> forward(Chain<T> chain, HttpRequest request) {
@@ -363,12 +334,27 @@ public final class HttpCache implements AutoCloseable, Flushable {
     CompletableFuture<@Nullable Viewer> view(Store store, String key) {
       return async ? store.viewAsync(key) : adapt(() -> store.view(key));
     }
+
+    @FunctionalInterface
+    interface IOSupplier<T> {
+      T get() throws IOException, InterruptedException;
+
+      default Supplier<T> toUncheckedForAsyncCompletion() {
+        return () -> {
+          try {
+            return get();
+          } catch (IOException | InterruptedException e) {
+            throw new CompletionException(e); // Unrolled by CompletableFuture
+          }
+        };
+      }
+    }
   }
 
   /**
    * This interceptor does most HTTP caching workload: restore a response from the underlying store,
-   * determine freshness, forward to network or revalidate if required, update or invalidate the
-   * cached response if necessary and finally serve the response.
+   * determine freshness, forward to network or revalidate if required and finally update or
+   * invalidate cache if necessary then serve the response.
    */
   private static class CacheInterceptor implements Methanol.Interceptor {
     /**
@@ -396,7 +382,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
       handlerExecutor = requireNonNullElse(clientExecutor, cacheExecutor);
     }
 
+    // TODO figure out what to do with push promises
+    // TODO are resources held by CacheResponse handled correctly?
     // TODO figure out what to do with HEADs
+    // TODO properly handle logging
+    // TODO merging headers doesn't quite work correctly,
+    //      for example Content-Length: 0 replaces original
     // TODO consider implementing our own redirecting interceptor
     //      to be above the caching layer so they get cached
 
@@ -420,14 +411,16 @@ public final class HttpCache implements AutoCloseable, Flushable {
       cache.onRequest(request);
       var asyncAdapter = new AsyncAdapter(async);
       var context = new ExchangeContext(cache, request, chain, asyncAdapter);
-      // Requests accepting HTTP/2 pushes are forwarded as
-      // we don't know what might be pushed by the server.
-      if (chain.pushPromiseHandler().isPresent() || hasPreconditions(request.headers())) {
+      if (chain.pushPromiseHandler().isPresent()) {
+        // Forward client's request to origin in case of HTTP2 push support as we
+        // don't know what might be pushed by the server
+        return context.forwardToNetwork().thenApply(ctx -> castNonNull(ctx.networkResponse));
+      }
+      if (hasPreconditions(request.headers())) {
         return context.forwardToNetwork().thenApply(this::updateCacheAndServe);
       }
-
       return cache
-          .get(request, asyncAdapter::view)
+          .getAsync(request, asyncAdapter::view)
           .thenApply(cacheResponse -> context.withResponse(cacheResponse, null))
           .thenCompose(this::exchangeAsync)
           .thenApply(this::updateCacheAndServe);
@@ -437,34 +430,31 @@ public final class HttpCache implements AutoCloseable, Flushable {
       var requestCacheControl = cacheControl(context.request.headers());
       var cacheResponse = context.cacheResponse;
       if (cacheResponse == null) {
-        // Don't forward the request if network is prohibited
+        // Don't forward the request if the client prohibits network
         return requestCacheControl.onlyIfCached()
             ? CompletableFuture.completedFuture(context)
             : context.forwardToNetwork();
       }
 
       var responseCacheControl = cacheControl(cacheResponse.get().headers());
-      var freshnessComputation =
+      var computation =
           new FreshnessComputation(
               requestCacheControl.maxAge().or(responseCacheControl::maxAge),
               cacheResponse.get().timeRequestSent(),
               cacheResponse.get().timeResponseReceived(),
               cacheResponse.get().headers());
       var now = context.now();
-      var age = freshnessComputation.computeAge(now);
+      var age = computation.computeAge(now);
       var lifetime =
-          freshnessComputation
-              .computeFreshnessLifetime()
-              .orElseGet(freshnessComputation::computeHeuristicLifetime);
+          computation.computeFreshnessLifetime().orElseGet(computation::computeHeuristicLifetime);
       var freshness = lifetime.minus(age);
       if (canServeWithoutRevalidation(requestCacheControl, responseCacheControl, freshness)) {
         // Network entirely avoided! Hooray!
         var servableCacheResponse =
             cacheResponse.with(
                 builder -> {
-                  // Add additional cache headers as advised by rfc7234
                   builder.setHeader("Age", Long.toString(age.toSeconds()));
-                  if (!freshnessComputation.hasExplicitExpiration() && age.compareTo(ONE_DAY) > 0) {
+                  if (!computation.hasExplicitExpiration() && age.compareTo(ONE_DAY) > 0) {
                     builder.header("Warning", "113 - \"Heuristic Expiration\"");
                   }
                   if (freshness.isNegative()) {
@@ -474,7 +464,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
         return CompletableFuture.completedFuture(context.withResponse(servableCacheResponse, null));
       }
 
-      // Don't revalidate if network is prohibited
+      // Don't revalidate if the client prohibits network
       if (requestCacheControl.onlyIfCached()) {
         cacheResponse.close();
         return CompletableFuture.completedFuture(context.withResponse(null, null));
@@ -488,7 +478,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
           .firstValue("ETag")
           .ifPresent(etag -> conditionalRequest.header("If-None-Match", etag));
       conditionalRequest.header(
-          "If-Modified-Since", formatHttpDate(freshnessComputation.computeEffectiveLastModified()));
+          "If-Modified-Since", formatHttpDate(computation.computeEffectiveLastModified()));
       var networkContextFuture =
           context.withRequest(conditionalRequest.toImmutableRequest()).forwardToNetwork();
       // Let's not forget to release the cacheResponse if network fails
@@ -542,22 +532,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
         // Make sure networkResponse is consumed properly
         networkResponse.handleAsync(BodyHandlers.discarding(), handlerExecutor);
 
-        // Update the stored response as specified in rfc7234 4.3.4
-        var storedHeaders = cacheResponse.get().headers();
         var mergedHeaders = new HeadersBuilder();
-        mergedHeaders.addAll(storedHeaders);
-        // Remove Warning headers with a 1xx warn code in the stored response
+        mergedHeaders.addAll(cacheResponse.get().headers());
+        // Remove Warning headers with a 1xx warn code
         mergedHeaders.removeIf(
             (name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
-        // Use the 304 response fields to replace those with corresponding
-        // names in the stored response. The Content-Length of the stored
-        // response however is restored to avoid replacing it with the
-        // Content-Length: 0 that some servers incorrectly add to 304 responses.
         mergedHeaders.setAll(networkResponse.get().headers());
-        storedHeaders
-            .firstValue("Content-Length")
-            .ifPresent(value -> mergedHeaders.set("Content-Length", value));
-
         var servedCacheResponse =
             cacheResponse.with(
                 builder ->
@@ -591,7 +571,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
         try {
           cache.remove(request.uri());
         } catch (IOException e) {
-          LOGGER.log(Level.WARNING, "failed to remove invalidated cache response", e);
+          // TODO log?
         }
       }
 
@@ -654,6 +634,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     /** Returns whether the network response can be cached as specified by rfc7234 section 3. */
+    // TODO: figure out what "is understood by the cache" means
     private static boolean isCacheable(HttpRequest initiatingRequest, TrackedResponse<?> response) {
       // Refuse anything but GETs
       if (!"GET".equalsIgnoreCase(initiatingRequest.method())) {
@@ -665,7 +646,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
         return false;
       }
 
-      // Refuse if the response has a different URI or method (e.g. redirection)
+      // Refuse if response has a different URI or method (e.g. redirection)
       if (!initiatingRequest.uri().equals(response.uri())
           || !initiatingRequest.method().equalsIgnoreCase(response.request().method())) {
         return false;
@@ -685,9 +666,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
       return response.headers().firstValue("Expires").filter(DateUtils::isHttpDate).isPresent()
           || responseCacheControl.maxAge().isPresent()
-          // Public & Private imply cacheable by default
           || responseCacheControl.isPublic()
-          || responseCacheControl.isPrivate()
+          || responseCacheControl.isPrivate() // Private implies cacheable by default
           || isCacheableByDefault(response.statusCode());
     }
 
@@ -712,7 +692,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       }
     }
 
-    /** Checks if the matching stored response should be invalidated as per rfc7234 4.4. */
+    /** Checks if a corresponding stored response should be invalidated as per rfc7234 4.4. */
     private static boolean invalidatesCache(
         HttpRequest initiatingRequest, TrackedResponse<?> response) {
       return isUnsafe(initiatingRequest.method())
@@ -871,7 +851,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     /**
      * Creates a {@code StatsRecorder} that atomically increments each count. The recorder is
-     * thread-safe but there's a very slight chance that returned {@code Stats} have inconsistent
+     * thread-safe but there's a very slight chance that returned {@code Stats} has inconsistent
      * counts due to concurrent increments (e.g. sum of hit and miss counts might be less than
      * request count). Additionally, independence of per-{@code URI} stats is dictated by {@link
      * URI#equals(Object)}. That is, stats of {@code https://example.com/a} and {@code
@@ -1039,14 +1019,15 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   /** A builder of {@code HttpCaches}. */
   public static final class Builder {
+    // Guard against ridiculously small values
+    private static final int MAX_SIZE_THRESHOLD = 2 * 1024;
+
     long maxSize;
     @MonotonicNonNull StoreFactory storeFactory;
     @MonotonicNonNull Path cacheDirectory;
     @MonotonicNonNull Executor executor;
     @MonotonicNonNull StatsRecorder statsRecorder;
-
     @MonotonicNonNull Clock clock;
-    @MonotonicNonNull Store store;
 
     Builder() {}
 
@@ -1076,7 +1057,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return this;
     }
 
-    /** Sets the cache's {@code StatsRecorder}. */
+    /** Sets the {@code StatsRecorder}. */
     public Builder statsRecorder(StatsRecorder statsRecorder) {
       this.statsRecorder = requireNonNull(statsRecorder);
       return this;
@@ -1087,19 +1068,20 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return this;
     }
 
-    Builder storeForTesting(Store store) {
-      this.store = requireNonNull(store);
-      return this;
-    }
-
     /** Builds a new {@code HttpCache}. */
     public HttpCache build() {
-      requireState(storeFactory != null || store != null, "caching method must be specified");
-      return new HttpCache(this);
+      var appliedStoreFactory = storeFactory;
+      requireState(appliedStoreFactory != null, "caching method must be specified");
+      return new HttpCache(
+          maxSize, appliedStoreFactory, executor, cacheDirectory, statsRecorder, clock);
     }
 
     private void checkMaxSize(long maxSize) {
-      requireArgument(maxSize > 0, "non-positive maxSize");
+      requireArgument(
+          maxSize >= MAX_SIZE_THRESHOLD,
+          "a maxSize of %d doesn't seem reasonable, please set a value >= %d",
+          maxSize,
+          MAX_SIZE_THRESHOLD);
     }
   }
 

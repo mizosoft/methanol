@@ -32,7 +32,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class MockExecutor implements Executor {
   private final Queue<Runnable> tasks = new ArrayDeque<>();
   private final Lock lock = new ReentrantLock();
-  private final Condition notEmpty = lock.newCondition();
+  private final Condition notEmpty  = lock.newCondition();
 
   private boolean reject;
   private boolean executeOnSameThread;
