@@ -91,11 +91,21 @@ public final class MemoryStore implements Store {
   }
 
   @Override
+  public CompletableFuture<@Nullable Viewer> viewAsync(String key) {
+    return CompletableFuture.completedFuture(view(key));
+  }
+
+  @Override
   public @Nullable Editor edit(String key) {
     requireNonNull(key);
     synchronized (entries) {
       return entries.computeIfAbsent(key, Entry::new).edit();
     }
+  }
+
+  @Override
+  public CompletableFuture<@Nullable Editor> editAsync(String key) {
+    return CompletableFuture.completedFuture(edit(key));
   }
 
   @Override
@@ -142,8 +152,8 @@ public final class MemoryStore implements Store {
   public void flush() {}
 
   /**
-   * Marks entry for eviction and decrements its last committed size. Called before removal from the
-   * LRU map. Returns the current size after decrementing the evicted entry's size.
+   * Marks entry for eviction and decrements its last committed size. Called before removal from
+   * the LRU map. Returns the current size after decrementing the evicted entry's size.
    */
   private long evict(Entry entry) {
     // Lock must be held to avoid concurrent decrements on `size`

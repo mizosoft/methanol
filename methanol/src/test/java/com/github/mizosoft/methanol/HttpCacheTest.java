@@ -131,7 +131,6 @@ class HttpCacheTest {
     assertEquals(12L, store.maxSize());
     assertEquals(Optional.empty(), store.executor());
     assertEquals(Optional.empty(), cache.directory());
-    assertEquals(12L, cache.maxSize());
   }
 
   @Test
@@ -145,7 +144,6 @@ class HttpCacheTest {
     assertEquals(12L, store.maxSize());
     assertEquals(Optional.of(Path.of("cache_dir")), cache.directory());
     assertEquals(cache.executor(), store.executor());
-    assertEquals(12L, cache.maxSize());
   }
 
   @StoreParameterizedTest
@@ -2045,9 +2043,19 @@ class HttpCacheTest {
     }
 
     @Override
+    public CompletableFuture<@Nullable Viewer> viewAsync(String key) {
+      return delegate.viewAsync(key);
+    }
+
+    @Override
     @Nullable
     public Editor edit(String key) throws IOException {
       return delegate.edit(key);
+    }
+
+    @Override
+    public CompletableFuture<@Nullable Editor> editAsync(String key) {
+      return delegate.editAsync(key);
     }
 
     @Override

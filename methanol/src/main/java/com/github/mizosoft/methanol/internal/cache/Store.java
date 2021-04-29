@@ -71,6 +71,9 @@ public interface Store extends AutoCloseable, Flushable {
   @Nullable
   Viewer view(String key) throws IOException;
 
+  /** Asynchronously opens a {@code Viewer} as in {@link #view(String)}. */
+  CompletableFuture<@Nullable Viewer> viewAsync(String key);
+
   /**
    * Returns an {@code Editor} for the entry associated with the given key (atomically creating a
    * new one if necessary), or {@code null} if such entry is currently being edited.
@@ -79,6 +82,9 @@ public interface Store extends AutoCloseable, Flushable {
    */
   @Nullable
   Editor edit(String key) throws IOException;
+
+  /** Asynchronously opens an {@code Editor} as in {@link #view(String)}. */
+  CompletableFuture<@Nullable Editor> editAsync(String key);
 
   /**
    * Returns a iterator of {@code Viewers} over the entries in this store. The iterator doesn't
