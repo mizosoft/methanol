@@ -77,7 +77,7 @@ public class DateUtils {
     return null;
   }
 
-  static @Nullable Duration toDeltaSecondsOrNull(String value) {
+  static @Nullable Duration toDeltaSecondsDurationLenient(String value) {
     long longValue;
     try {
       longValue = Long.parseLong(value);

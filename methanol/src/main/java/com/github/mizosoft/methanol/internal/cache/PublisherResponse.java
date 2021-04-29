@@ -1,8 +1,8 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import com.github.mizosoft.methanol.TrackedResponse;
-import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
+import com.github.mizosoft.methanol.internal.extensions.Handlers;
+import com.github.mizosoft.methanol.TrackedResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.nio.ByteBuffer;
 import java.util.List;

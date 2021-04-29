@@ -22,29 +22,36 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import java.net.http.HttpResponse.BodyHandlers;
+import com.github.mizosoft.methanol.internal.flow.Upstream;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.net.http.HttpResponse.ResponseInfo;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscription;
 import java.util.function.Consumer;
 
-/** A {@code RawResponse} that came from the network and may be written to cache. */
+/** A {@code RawResponse} that came from the network and maybe cached. */
 public final class NetworkResponse extends PublisherResponse {
   NetworkResponse(TrackedResponse<?> response, Publisher<List<ByteBuffer>> publisher) {
     super(response, publisher);
   }
 
-  public NetworkResponse writingWith(Editor editor) {
-    return new NetworkResponse(response, new CacheWritingPublisher(publisher, editor));
+  public NetworkResponse cachingWith(Editor editor, ByteBuffer metadata) {
+    return new NetworkResponse(response, new CacheWritingPublisher(publisher, editor, metadata));
   }
 
-  /** Discards the response body in background. */
-  public void discard(Executor executor) {
-    handleAsync(BodyHandlers.discarding(), executor);
+  /** Asynchronously drains the entire response body. */
+  public void drainInBackground(Executor executor) {
+    handleAsync(NetworkResponse::draining, executor);
   }
 
   @Override
@@ -52,6 +59,38 @@ public final class NetworkResponse extends PublisherResponse {
     var builder = ResponseBuilder.newBuilder(response);
     mutator.accept(builder);
     return new NetworkResponse(builder.buildTracked(), publisher);
+  }
+
+  private static BodySubscriber<Void> draining(ResponseInfo unused) {
+    // Make sure the upstream is drained
+    return new BodySubscriber<>() {
+      private final Upstream upstream = new Upstream();
+
+      @Override
+      public CompletionStage<Void> getBody() {
+        return CompletableFuture.completedFuture(null); // Drain in background
+      }
+
+      @Override
+      public void onSubscribe(Subscription subscription) {
+        if (upstream.setOrCancel(subscription)) {
+          subscription.request(Long.MAX_VALUE);
+        }
+      }
+
+      @Override
+      public void onNext(List<ByteBuffer> item) {
+        requireNonNull(item);
+      }
+
+      @Override
+      public void onError(Throwable throwable) {
+        requireNonNull(throwable);
+      }
+
+      @Override
+      public void onComplete() {}
+    };
   }
 
   public static NetworkResponse from(TrackedResponse<Publisher<List<ByteBuffer>>> response) {

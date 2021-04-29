@@ -44,7 +44,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
-import com.github.mizosoft.methanol.internal.cache.CacheInterceptor;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
@@ -902,7 +901,7 @@ class HttpCacheTest {
   @StoreConfig
   void responsesVaryingOnImplicitHeadersAreNotStored(Store store) throws Exception {
     setUpCache(store);
-    for (var field : CacheInterceptor.implicitlyAddedFieldsForTesting()) {
+    for (var field : HttpCache.implicitlyAddedFieldsForTesting()) {
       server.enqueue(new MockResponse()
           .addHeader("Cache-Control", "max-age=1")
           .addHeader("Vary", "Accept-Encoding, " + field)
@@ -1639,7 +1638,7 @@ class HttpCacheTest {
     // Make requests fail with UncheckedIOException
     client = clientBuilder
         .backendInterceptor(
-            new FailingInterceptor(() -> new UncheckedIOException(new ConnectException())))
+            new FailingInterceptor(() -> new UncheckedIOException(new IOException())))
         .build();
 
     clock.advanceSeconds(2); // Make response stale by 1 second
@@ -1820,25 +1819,17 @@ class HttpCacheTest {
   @StoreConfig
   void computingAge(Store store) throws Exception {
     setUpCache(store);
+    client = clientBuilder.backendInterceptor(new Interceptor() {
+      @Override public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+          throws IOException, InterruptedException {
+        // Simulate response taking 3 seconds to arrive
+        clock.advanceSeconds(3);
+        return chain.forward(request);
+      }
 
-    // Simulate response taking 3 seconds to arrive
-    client = clientBuilder.backendInterceptor(
-        new Interceptor() {
-          @Override
-          public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
-              throws IOException, InterruptedException {
-            clock.advanceSeconds(3);
-            return chain.forward(request);
-          }
-
-          @Override
-          public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-              HttpRequest request, Chain<T> chain) {
-            clock.advanceSeconds(3);
-            return chain.forwardAsync(request);
-          }
-        })
-        .build();
+      @Override public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+          HttpRequest request, Chain<T> chain) { throw new AssertionError(); }
+    }).build();
 
     // date_value = x
     // now = x + 2

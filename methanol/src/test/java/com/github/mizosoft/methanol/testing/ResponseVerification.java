@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.testing;
 
 import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.CONDITIONAL_HIT;
 import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.HIT;
-import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.UNSATISFIABLE_REQUEST;
+import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.LOCALLY_GENERATED;
 import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.MISS;
 import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
@@ -284,7 +284,7 @@ public final class ResponseVerification<T> {
   }
 
   public ResponseVerification<T> assertLocallyGenerated() {
-    assertCacheStatus(UNSATISFIABLE_REQUEST);
+    assertCacheStatus(LOCALLY_GENERATED);
     assertEquals(HTTP_GATEWAY_TIMEOUT, response.statusCode());
     assertHasNoNetworkResponse();
     assertHasNoCacheResponse();
