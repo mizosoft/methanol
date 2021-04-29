@@ -102,7 +102,7 @@ public interface Store extends AutoCloseable, Flushable {
   void clear() throws IOException;
 
   /** Returns the size in bytes of all entries in this store. */
-  long size() throws IOException;
+  long size();
 
   /** Atomically clears and closes this store. */
   void dispose() throws IOException;

@@ -793,17 +793,6 @@ class DiskStoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig(store = DISK, autoInit = false)
-  void queryingSizeInitializesTheStore(Store store, StoreContext context) throws IOException {
-    setUp(context);
-    mockStore.write("e1", "Mew", "Pickachu");
-    mockStore.write("e2", "Mewtwo", "Jigglypuff");
-    mockStore.writeWorkIndex();
-
-    assertEquals(sizeOf("Mew", "Pickachu", "Mewtwo", "Jigglypuff"), store.size());
-  }
-
-  @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void closedStoreIsInoperable(StoreContext context) throws IOException {
     setUp(context);

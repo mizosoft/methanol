@@ -2566,7 +2566,7 @@ class HttpCacheTest {
     }
 
     @Override
-    public long size() throws IOException {
+    public long size() {
       return delegate.size();
     }
 
