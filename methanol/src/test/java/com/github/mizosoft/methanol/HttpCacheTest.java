@@ -1,34 +1,12 @@
-/*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.internal.cache.DateUtils.formatHttpDate;
 import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.HIT;
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.ResponseVerification.verifying;
-import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
+import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
+import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.FileSystemType.SYSTEM;
+import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testutils.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testutils.TestUtils.gzip;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
@@ -48,15 +26,13 @@ import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testing.MockWebServerExtension;
-import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
 import com.github.mizosoft.methanol.testing.ResponseVerification;
-import com.github.mizosoft.methanol.testing.StoreConfig;
-import com.github.mizosoft.methanol.testing.StoreContext;
-import com.github.mizosoft.methanol.testing.StoreExtension;
-import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.MockWebServerProvider.UseHttps;
+import com.github.mizosoft.methanol.testing.extensions.StoreProvider;
+import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig;
+import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreContext;
+import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreParameterizedTest;
 import com.github.mizosoft.methanol.testutils.MockClock;
 import com.github.mizosoft.methanol.testutils.TestException;
 import java.io.IOException;
@@ -105,7 +81,7 @@ import org.junit.jupiter.params.provider.CsvFileSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @Timeout(value = 5, unit = TimeUnit.MINUTES)
-@ExtendWith({MockWebServerExtension.class, StoreExtension.class, ExecutorExtension.class})
+@ExtendWith({MockWebServerProvider.class, StoreProvider.class, ExecutorProvider.class})
 class HttpCacheTest {
   private Executor threadPool;
   private Methanol.Builder clientBuilder;
@@ -1582,6 +1558,7 @@ class HttpCacheTest {
         .setBody("Mewtwo"));
     seedCache(serverUri);
 
+    // TODO that'll fail if HEADS are handled
     server.enqueue(new MockResponse().addHeader("Cache-Control", "max-age=2"));
     var head = MutableRequest.create(serverUri).method("HEAD", BodyPublishers.noBody());
     get(head).assertMiss();

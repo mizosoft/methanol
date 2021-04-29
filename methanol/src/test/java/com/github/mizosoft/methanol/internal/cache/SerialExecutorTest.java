@@ -1,14 +1,14 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
+import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.ExecutorProvider;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.testutils.MockExecutor;
 import com.github.mizosoft.methanol.testutils.TestException;
 import java.util.ArrayList;
@@ -170,7 +170,7 @@ class SerialExecutorTest {
   }
 
   @RepeatedTest(10)
-  @ExtendWith(ExecutorExtension.class)
+  @ExtendWith(ExecutorProvider.class)
   @ExecutorConfig(CACHED_POOL)
   void executionFromMultipleThreads(Executor threadPool) throws InterruptedException {
     executor = new SerialExecutor(threadPool);

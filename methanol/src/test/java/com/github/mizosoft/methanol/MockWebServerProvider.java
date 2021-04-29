@@ -1,31 +1,7 @@
-/*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.testutils.TestUtils.localhostSslContext;
 
-import com.github.mizosoft.methanol.Methanol;
-import com.github.mizosoft.methanol.Methanol.Builder;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -40,24 +16,39 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
-import org.junit.platform.commons.support.AnnotationSupport;
 
 /**
  * An extension that provides plain or secure {@code MockWebServers} and {@code Methanol.Builder}
  * either explicitly or by resolving parameters.
  */
-public final class MockWebServerExtension
-    implements AfterAllCallback, AfterEachCallback, ParameterResolver {
+public final class MockWebServerProvider
+    implements BeforeAllCallback,
+        BeforeEachCallback,
+        AfterAllCallback,
+        AfterEachCallback,
+        ParameterResolver {
   private static final Namespace EXTENSION_NAMESPACE =
-      Namespace.create(MockWebServerExtension.class);
+      Namespace.create(MockWebServerProvider.class);
 
-  public MockWebServerExtension() {}
+  private ManagedServers explicitServers;
+
+  @Override
+  public void beforeEach(ExtensionContext context) {
+    explicitServers = ManagedServers.get(context);
+  }
+
+  @Override
+  public void beforeAll(ExtensionContext context) {
+    explicitServers = ManagedServers.get(context);
+  }
 
   @Override
   public void afterEach(ExtensionContext context) throws Exception {
@@ -74,28 +65,42 @@ public final class MockWebServerExtension
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
     var type = parameterContext.getParameter().getType();
-    return type == MockWebServer.class || type == Builder.class;
+    return type == MockWebServer.class || type == Methanol.Builder.class;
   }
 
   @Override
   public Object resolveParameter(
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
+    // TODO BUG with UseHttps!
     var type = parameterContext.getParameter().getType();
     var servers = ManagedServers.get(extensionContext);
     var executable = parameterContext.getDeclaringExecutable();
-    boolean useHttps = AnnotationSupport.isAnnotated(executable, UseHttps.class);
+    boolean useHttps =
+        executable.isAnnotationPresent(UseHttps.class)
+            || extensionContext
+                .getElement()
+                .map(e -> e.isAnnotationPresent(UseHttps.class))
+                .orElse(false);
     if (type == MockWebServer.class) {
       try {
         return servers.newServer(executable, useHttps);
       } catch (IOException e) {
         throw new ParameterResolutionException("couldn't start server", e);
       }
-    } else if (type == Builder.class) {
+    } else if (type == Methanol.Builder.class) {
       return servers.newClientBuilder(executable, useHttps);
     } else {
       throw new UnsupportedOperationException("unsupported type: " + type.toString());
     }
+  }
+
+  public MockWebServer newServer(boolean useHttps) throws IOException {
+    var servers = explicitServers;
+    if (servers == null) {
+      throw new IllegalStateException("expected beforeAll or beforeEach to be called");
+    }
+    return servers.newServer(null, useHttps); // use null key for default context
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -115,7 +120,7 @@ public final class MockWebServerExtension
       return getContext(key).newServer(useHttps);
     }
 
-    Builder newClientBuilder(@Nullable Object key, boolean useHttps) {
+    Methanol.Builder newClientBuilder(@Nullable Object key, boolean useHttps) {
       return getContext(key).newClientBuilder(useHttps);
     }
 
@@ -124,8 +129,8 @@ public final class MockWebServerExtension
     }
 
     void shutdownAll() throws IOException {
-      for (var context : contextMap.values()) {
-        context.shutdownServers();
+      for (var ctx : contextMap.values()) {
+        ctx.shutdownServers();
       }
 
       contextMap.clear();
@@ -156,7 +161,7 @@ public final class MockWebServerExtension
         return server;
       }
 
-      Builder newClientBuilder(boolean useHttps) {
+      Methanol.Builder newClientBuilder(boolean useHttps) {
         return Methanol.newBuilder()
             .apply(
                 builder -> {

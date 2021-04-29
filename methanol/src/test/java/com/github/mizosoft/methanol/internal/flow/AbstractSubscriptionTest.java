@@ -45,9 +45,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.ExecutorProvider;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.util.concurrent.CompletableFuture;
@@ -64,7 +64,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @Timeout(20)
-@ExtendWith(ExecutorExtension.class)
+@ExtendWith(ExecutorProvider.class)
 class AbstractSubscriptionTest {
   @ExecutorParameterizedTest
   @ExecutorConfig

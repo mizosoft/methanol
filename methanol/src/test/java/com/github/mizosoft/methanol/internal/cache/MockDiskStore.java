@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hasher;
-import com.github.mizosoft.methanol.testing.StoreContext;
+import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreContext;
 import com.github.mizosoft.methanol.testutils.MockClock;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.IOException;

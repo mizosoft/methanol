@@ -1,20 +1,15 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
-import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.github.mizosoft.methanol.ExecutorProvider;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
-import com.github.mizosoft.methanol.testing.StoreConfig;
-import com.github.mizosoft.methanol.testing.StoreExtension;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.io.IOException;
@@ -32,29 +27,19 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith({ExecutorExtension.class, StoreExtension.class})
+@ExtendWith(ExecutorProvider.class)
 class CacheReadingPublisherTest {
   @ExecutorParameterizedTest
   @ExecutorConfig
-  @StoreConfig(store = MEMORY)
-  void cacheStringInMemory(Executor executor, Store store) throws IOException {
-    testCachingAString(executor, store);
-  }
-
-  @ExecutorParameterizedTest
-  @ExecutorConfig
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  void cacheStringInDisk(Executor executor, Store store) throws IOException {
-    testCachingAString(executor, store);
-  }
-
-  private void testCachingAString(Executor executor, Store store) throws IOException {
+  void cacheString(Executor executor) throws IOException {
+    // TODO parameterize also with DiskStore when implemented
+    var store = new MemoryStore(Long.MAX_VALUE);
     try (var editor = notNull(store.edit("e1"))) {
-      editor.writeAsync(0, UTF_8.encode("Cache me please!")).join();
+      editor.writeAsync(0, UTF_8.encode("Cache me please!"));
       editor.commitOnClose();
     }
 
-    var publisher = new CacheReadingPublisher(notNull(store.view("e1")), executor);
+    var publisher = new CacheReadingPublisher(store.view("e1"), executor);
     var subscriber = BodySubscribers.ofString(UTF_8);
     publisher.subscribe(subscriber);
     assertEquals("Cache me please!", getBody(subscriber));

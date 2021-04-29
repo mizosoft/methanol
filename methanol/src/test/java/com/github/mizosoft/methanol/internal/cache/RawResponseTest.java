@@ -1,16 +1,16 @@
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.github.mizosoft.methanol.ExecutorProvider;
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.EmptyPublisher;
 import com.github.mizosoft.methanol.testutils.FailedPublisher;
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
-@ExtendWith(ExecutorExtension.class)
+@ExtendWith(ExecutorProvider.class)
 class RawResponseTest {
   final TrackedResponse<?> responseTemplate =
       new ResponseBuilder<>()

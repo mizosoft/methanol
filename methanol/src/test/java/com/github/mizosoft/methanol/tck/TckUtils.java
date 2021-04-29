@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.tck;
 
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.reactivestreams.tck.TestEnvironment;
@@ -45,6 +47,23 @@ public class TckUtils {
    */
   static final int MAX_PRECOMPUTED_ELEMENTS = 1 << 10;
 
+  enum ExecutorFactory {
+    SYNC {
+      @Override
+      Executor create() {
+        return FlowSupport.SYNC_EXECUTOR;
+      }
+    },
+    FIXED_POOL {
+      @Override
+      Executor create() {
+        return fixedThreadPool();
+      }
+    };
+
+    abstract Executor create();
+  }
+
   static ExecutorService fixedThreadPool() {
     return Executors.newFixedThreadPool(FIXED_POOL_SIZE);
   }
@@ -65,7 +84,8 @@ public class TckUtils {
     try {
       return Long.parseLong(value);
     } catch (NumberFormatException ex) {
-      throw new RuntimeException("unable to parse <" + value + "> for property <" + prop + ">", ex);
+      throw new RuntimeException(
+          "Unable to parse <" + value + "> for property <" + prop + ">", ex);
     }
   }
 }
