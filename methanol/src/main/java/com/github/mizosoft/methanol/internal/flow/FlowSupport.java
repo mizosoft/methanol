@@ -25,7 +25,6 @@ package com.github.mizosoft.methanol.internal.flow;
 import java.lang.invoke.VarHandle;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow;
-import java.util.concurrent.Flow.Subscriber;
 
 /** Helpers for implementing reactive streams subscriptions and the like. */
 public class FlowSupport {
@@ -113,19 +112,5 @@ public class FlowSupport {
   /** Subtracts given count from demand. Caller ensures result won't be negative. */
   public static long subtractAndGetDemand(Object owner, VarHandle demand, long n) {
     return (long) demand.getAndAdd(owner, -n) - n;
-  }
-
-  public static IllegalStateException multipleSubscribersToUnicast() {
-    return new IllegalStateException("multiple subscribers to a unicast publisher");
-  }
-
-  public static void refuse(Subscriber<?> subscriber, Throwable error) {
-    try {
-      subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    } catch (Throwable t) {
-      error.addSuppressed(t);
-    } finally {
-      subscriber.onError(error);
-    }
   }
 }

@@ -19,10 +19,10 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /** An extensions that provides sync and async {@code Executors} and terminates them after tests. */
 public final class TestExecutorProvider
@@ -49,16 +49,10 @@ public final class TestExecutorProvider
     ManagedExecutors.get(context).shutdownAndTerminate();
   }
 
-  @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
+  @Target(ElementType.METHOD)
   @Retention(RetentionPolicy.RUNTIME)
   @ArgumentsSource(TestExecutorProvider.class)
   public @interface ExecutorSource {}
-
-  @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
-  @Retention(RetentionPolicy.RUNTIME)
-  @ParameterizedTest
-  @ExecutorSource
-  public @interface TestWithExecutor {}
 
   private enum ExecutorType {
     SAME_THREAD {

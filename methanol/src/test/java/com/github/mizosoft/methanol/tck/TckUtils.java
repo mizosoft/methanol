@@ -24,11 +24,12 @@ package com.github.mizosoft.methanol.tck;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.reactivestreams.tck.TestEnvironment;
 
+/** Reads TestEnvironment timeouts from system properties and not env. */
 public class TckUtils {
+
   private static final long DEFAULT_TIMEOUT_MILLIS = 200L;
 
   private static final long TIMEOUT_MILLIS =
@@ -57,15 +58,11 @@ public class TckUtils {
     FIXED_POOL {
       @Override
       Executor create() {
-        return fixedThreadPool();
+        return Executors.newFixedThreadPool(FIXED_POOL_SIZE);
       }
     };
 
     abstract Executor create();
-  }
-
-  static ExecutorService fixedThreadPool() {
-    return Executors.newFixedThreadPool(FIXED_POOL_SIZE);
   }
 
   static TestEnvironment testEnvironment() {
