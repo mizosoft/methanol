@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -65,15 +66,13 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching">HTTP cache</a> that
- * resides between a {@link Methanol} client and its backend {@code HttpClient}.
+ * An HTTP cache that resides between a {@link Methanol} client and the underlying network {@link
+ * HttpClient}. No API is exported to add or update HTTP request/response entries. Instead, the
+ * cache inserts itself as an {@link Interceptor} when configured with a {@code Methanol.Builder}.
+ * The cache however allows explicitly invalidating an entry matching a specified request or
+ * deleting all available entries.
  *
- * <p>An {@code HttpCache} instance is utilized by configuring it with {@link
- * Methanol.Builder#cache(HttpCache)}. The cache operates by inserting itself as an {@code
- * Interceptor} that can short-circuit requests by serving responses from local storage. Responses
- * can be stored either in memory or on disk, all configurable with {@link Builder}.
- *
- * @see <a href="https://mizosoft.github.io/methanol/caching/">Caching with Methanol</a>
+ * @see <a href="https://tools.ietf.org/html/rfc7234">RFC 7234: HTTP caching</a>
  */
 public final class HttpCache implements AutoCloseable, Flushable {
   private static final Logger logger = System.getLogger(HttpCache.class.getName());
@@ -89,6 +88,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   private HttpCache(Builder builder) {
     var userExecutor = builder.executor;
+    var storeFactory = builder.storeFactory;
     if (userExecutor != null) {
       executor = userExecutor;
       userVisibleExecutor = true;
@@ -96,13 +96,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
       executor = Executors.newCachedThreadPool();
       userVisibleExecutor = false;
     }
-
-    var storeFactory = builder.storeFactory;
     store =
         requireNonNullElseGet(
             builder.store,
             () -> storeFactory.create(builder.cacheDirectory, builder.maxSize, executor));
-
     this.statsRecorder =
         requireNonNullElseGet(builder.statsRecorder, StatsRecorder::createConcurrentRecorder);
     this.clock = requireNonNullElseGet(builder.clock, Utils::systemMillisUtc);
@@ -112,7 +109,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return store;
   }
 
-  /** Returns the directory used by this cache if entries are being cached on disk. */
+  /** Returns the directory used by the HTTP cache if entries are being cached on disk. */
   public Optional<Path> directory() {
     return store instanceof DiskStore
         ? Optional.of(((DiskStore) store).directory())
@@ -163,10 +160,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return store.initializeAsync();
   }
 
-  /**
-   * Returns an {@code Iterator} for the {@code URIs} of responses known to this cache. The returned
-   * iterator supports removal.
-   */
+  /** Returns an {@code Iterator} for the {@code URIs} of responses known to this cache. */
   public Iterator<URI> uris() throws IOException {
     return new Iterator<>() {
       private final Iterator<Viewer> storeIterator = store.iterator();
@@ -176,7 +170,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
       @Override
       public boolean hasNext() {
-        // Prevent any later remove() from removing the wrong entry as hasNext
+        // Prevent any later remove() from remove the wrong entry as hasNext
         // causes the underlying store iterator to advance.
         canRemove = false;
         return nextUri != null || findNextUri();
@@ -304,16 +298,16 @@ public final class HttpCache implements AutoCloseable, Flushable {
     @Override
     public @Nullable CacheResponse get(HttpRequest request) throws IOException {
       var viewer = store.view(key(request));
-      return viewer != null ? getCacheResponse(request, viewer) : null;
+      return viewer != null ? createCacheResponse(request, viewer) : null;
     }
 
     @Override
     public CompletableFuture<@Nullable CacheResponse> getAsync(HttpRequest request) {
       return Unchecked.supplyAsync(() -> store.view(key(request)), executor)
-          .thenApply(viewer -> viewer != null ? getCacheResponse(request, viewer) : null);
+          .thenApply(viewer -> viewer != null ? createCacheResponse(request, viewer) : null);
     }
 
-    private @Nullable CacheResponse getCacheResponse(HttpRequest request, Viewer viewer) {
+    private @Nullable CacheResponse createCacheResponse(HttpRequest request, Viewer viewer) {
       var metadata = tryRecoverMetadata(viewer);
       if (metadata != null && metadata.matches(request)) {
         return new CacheResponse(metadata, viewer, executor, request, clock.instant());
@@ -498,11 +492,13 @@ public final class HttpCache implements AutoCloseable, Flushable {
     Stats snapshot(URI uri);
 
     /**
-     * Creates a {@code StatsRecorder} that atomically increments each count.
-     *
-     * <p>Independence of per-{@code URI} stats is dictated by {@link URI#equals(Object)}. That is,
-     * stats of {@code https://example.com/a} and {@code https://example.com/a?x=y} are recorded
-     * independently as they are not equal, although they have the same host and path.
+     * Creates a {@code StatsRecorder} that atomically increments each count. The recorder is
+     * thread-safe but there's a very slight chance that returned {@code Stats} have inconsistent
+     * counts due to concurrent increments (e.g. sum of hit and miss counts might be less than
+     * request count). Additionally, independence of per-{@code URI} stats is dictated by {@link
+     * URI#equals(Object)}. That is, stats of {@code https://example.com/a} and {@code
+     * https://example.com/a?x=y} are recorded independently as they are not equal although they
+     * have the same host and path.
      *
      * <p>This is the {@code StatsRecorder} used by default.
      */
