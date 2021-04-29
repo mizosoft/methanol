@@ -1,6 +1,5 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testutils.TestUtils.EMPTY_BUFFER;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -264,43 +263,6 @@ class CacheWritingBodySubscriberTest {
     assertEquals("Cache me if you can!", UTF_8.decode(collect(downstream.items)).toString());
   }
 
-  /**
-   * This test simulates the scenario where some (or all) of the writes don't have a chance to
-   * finish before upstream calls our onComplete(). On such case, completion is forwarded downstream
-   * and writing continues on background.
-   */
-  @ExecutorParameterizedTest
-  @ExecutorConfig(CACHED_POOL)
-  void writeLaggingBehindBodyCompletion(Executor threadPool) {
-    var bodyCompletion = new CountDownLatch(1);
-    var editor = new TestEditor() {
-      @Override
-      public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-        return CompletableFuture.runAsync(() -> awaitUninterruptibly(bodyCompletion), threadPool)
-            .thenCompose(__ -> super.writeAsync(position, src));
-      }
-    };
-
-    var subscriber = new CacheWritingBodySubscriber(editor, EMPTY_BUFFER);
-    var downstream = new TestSubscriber<List<ByteBuffer>>();
-    getBody(subscriber).subscribe(downstream);
-
-    threadPool.execute(
-        () -> {
-          try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(threadPool)) {
-            publisher.subscribe(subscriber);
-            publisher.submitAll(() -> new BuffListIterator(UTF_8.encode("Cyberpunk"), 1, 1));
-          }
-        });
-
-    downstream.awaitComplete();
-    // Allow the editor to progress
-    bodyCompletion.countDown();
-    assertEquals("Cyberpunk", UTF_8.decode(collect(downstream.items)).toString());
-
-    editor.awaitClose();
-    assertEquals("Cyberpunk", UTF_8.decode(editor.written()).toString());
-  }
 
   private static void executeLaterMillis(Runnable task, long millis) {
     CompletableFuture.delayedExecutor(millis, TimeUnit.MILLISECONDS).execute(task);
@@ -320,7 +282,7 @@ class CacheWritingBodySubscriberTest {
   }
 
   private static class TestEditor implements Editor {
-    private final List<WriteRequest> writes = new CopyOnWriteArrayList<>();
+    private final List<WriteRequest> writes = new ArrayList<>();
     @MonotonicNonNull ByteBuffer metadata;
     volatile boolean discarded;
     volatile boolean closed;
@@ -338,10 +300,8 @@ class CacheWritingBodySubscriberTest {
 
     @Override
     public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-      writes.add(new WriteRequest(position, src.duplicate()));
-      int written = src.remaining();
-      src.limit(src.position());
-      return CompletableFuture.completedFuture(written);
+      writes.add(new WriteRequest(position, src));
+      return CompletableFuture.completedFuture(src.remaining());
     }
 
     @Override
