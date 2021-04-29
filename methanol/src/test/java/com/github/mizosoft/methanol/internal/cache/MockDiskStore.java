@@ -31,7 +31,7 @@ import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_FILENA
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_HEADER_SIZE;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_MAGIC;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.LOCK_FILENAME;
-import static com.github.mizosoft.methanol.internal.cache.DiskStore.RIP_FILE_PREFIX;
+import static com.github.mizosoft.methanol.internal.cache.DiskStore.RIP_PREFIX;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.STORE_VERSION;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.TEMP_ENTRY_FILE_SUFFIX;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.TEMP_INDEX_FILENAME;
@@ -217,7 +217,7 @@ final class MockDiskStore {
     return file.equals(indexFile)
         || file.equals(tempIndexFile)
         || file.equals(lockFile)
-        || file.getFileName().toString().startsWith(RIP_FILE_PREFIX);
+        || file.getFileName().toString().startsWith(RIP_PREFIX);
   }
 
   Path entryFile(String key) {

@@ -179,7 +179,7 @@ public final class DiskStore implements Store {
   static final String TEMP_INDEX_FILENAME = "index.tmp";
   static final String ENTRY_FILE_SUFFIX = ".ch3oh";
   static final String TEMP_ENTRY_FILE_SUFFIX = ".ch3oh.tmp";
-  static final String RIP_FILE_PREFIX = "RIP_";
+  static final String RIP_PREFIX = "rip_";
 
   /**
    * This caps on what to be read from the index so that an {@code OutOfMemoryError} is not thrown
@@ -626,7 +626,13 @@ public final class DiskStore implements Store {
     var lockFile = directory.resolve(LOCK_FILENAME);
     try (var stream = Files.newDirectoryStream(directory, file -> !file.equals(lockFile))) {
       for (var file : stream) {
-        safeDelete(file);
+        var filename = file.getFileName().toString();
+        if (filename.endsWith(ENTRY_FILE_SUFFIX)) {
+          // Make sure to entry files are deleted in isolation as they might have open viewers
+          isolatedDelete(file);
+        } else {
+          Files.deleteIfExists(file);
+        }
       }
     } catch (DirectoryIteratorException e) {
       throw e.getCause();
@@ -653,8 +659,7 @@ public final class DiskStore implements Store {
     var parent = file.getParent();
     for (boolean isolated = false; !isolated; ) {
       var ripFile =
-          parent.resolve(
-              RIP_FILE_PREFIX + Long.toHexString(ThreadLocalRandom.current().nextLong()));
+          parent.resolve(RIP_PREFIX + Long.toHexString(ThreadLocalRandom.current().nextLong()));
       try {
         Files.move(file, ripFile);
         isolated = true;
@@ -666,27 +671,6 @@ public final class DiskStore implements Store {
         return;
       }
       Files.deleteIfExists(ripFile);
-    }
-  }
-
-  /**
-   * Deletes the given file with {@code isolatedDelete} if it's an entry file, otherwise deletes it
-   * directly.
-   */
-  private static void safeDelete(Path file) throws IOException {
-    var pathString = file.getFileName().toString();
-    if (pathString.endsWith(ENTRY_FILE_SUFFIX)) {
-      isolatedDelete(file);
-    } else if (pathString.startsWith(RIP_FILE_PREFIX)) {
-      try {
-        Files.deleteIfExists(file);
-      } catch (AccessDeniedException ignored) {
-        // An RIP file can be either forgotten (perhaps by a previous session) or awaiting
-        // deletion if it has open handles. In the latter case, an AccessDeniedException is
-        // thrown (assuming we're on Windows), so there's nothing we can do.
-      }
-    } else {
-      Files.deleteIfExists(file);
     }
   }
 
@@ -811,7 +795,7 @@ public final class DiskStore implements Store {
       }
 
       for (var file : toDelete) {
-        safeDelete(file);
+        Files.deleteIfExists(file);
       }
       return Collections.unmodifiableSet(processedEntrySet);
     }
@@ -900,9 +884,9 @@ public final class DiskStore implements Store {
             } else {
               files.dirtyFile = path;
             }
-          } else if (filename.startsWith(RIP_FILE_PREFIX)) {
+          } else if (filename.startsWith(RIP_PREFIX)) {
             // Clean trails of isolatedDelete in case it failed in a previous session
-            safeDelete(path);
+            Files.deleteIfExists(path);
           } else {
             logger.log(
                 Level.WARNING,
