@@ -118,17 +118,6 @@ class MutableRequestTest {
   }
 
   @Test
-  void immutableCopy() {
-    var request = create(uri)
-        .POST(publisher)
-        .headers(headersArray)
-        .expectContinue(expectContinue)
-        .timeout(timeout)
-        .version(version);
-    assertDeepEquals(request, request.toImmutableRequest());
-  }
-
-  @Test
   void defaultFields() {
     var request = create();
     assertEquals("GET", request.method());

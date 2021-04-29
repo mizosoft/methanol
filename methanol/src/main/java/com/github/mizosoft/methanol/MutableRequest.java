@@ -44,8 +44,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /**
  * A mutable {@code HttpRequest}. This class implements {@link HttpRequest.Builder} for setting the
  * request's fields. Querying a field before it's been set will return it's default value. Invoking
- * the {@link #toImmutableRequest()} method will return an immutable {@code HttpRequest} copy that
- * is independent from this instance.
+ * the {@link #build} method will return an immutable {@code HttpRequest} copy that is independent
+ * from this instance.
  *
  * <p>{@code MutableRequest} adds some convenience when the {@code HttpRequest} is used immediately
  * after creation:
@@ -63,6 +63,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * Methanol} client that has a base URL, with which this request's URL is resolved.
  */
 public final class MutableRequest extends HttpRequest implements HttpRequest.Builder {
+
   private static final URI EMPTY_URI = URI.create("");
 
   private final HeadersBuilder headersBuilder;
@@ -277,15 +278,9 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
     return setMethod(method, bodyPublisher);
   }
 
-  /** Prefer {@link #toImmutableRequest()}. */
   @Override
   public HttpRequest build() {
-    return new ImmutableRequest(this);
-  }
-
-  /** Returns an immutable copy of this request. */
-  public HttpRequest toImmutableRequest() {
-    return new ImmutableRequest(this);
+    return new ImmutableHttpRequest(this);
   }
 
   /** Returns a copy of this request that is independent from this instance. */
@@ -359,7 +354,8 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private static final class ImmutableRequest extends HttpRequest {
+  private static final class ImmutableHttpRequest extends HttpRequest {
+
     private final String method;
     private final URI uri;
     private final HttpHeaders headers;
@@ -368,7 +364,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
     private final Optional<Version> version;
     private final boolean expectContinue;
 
-    ImmutableRequest(MutableRequest other) {
+    ImmutableHttpRequest(MutableRequest other) {
       method = other.method;
       uri = other.uri;
       headers = other.headers();
