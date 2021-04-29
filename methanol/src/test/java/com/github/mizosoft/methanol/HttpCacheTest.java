@@ -95,7 +95,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
-import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -118,7 +117,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvFileSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-@Timeout(value = 10, unit = TimeUnit.MINUTES)
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
 @ExtendWith({MockWebServerExtension.class, StoreExtension.class, ExecutorExtension.class})
 class HttpCacheTest {
   static {
@@ -2631,8 +2630,9 @@ class HttpCacheTest {
   @StoreConfig
   void writeStats(Store store) throws Exception {
     var failingStore = new FailingStore(store);
-    failingStore.allowReads = true;
     setUpCache(failingStore);
+    failingStore.allowReads = true;
+
     server.setDispatcher(new Dispatcher() {
       @Override
       public MockResponse dispatch(RecordedRequest recordedRequest) {
@@ -2643,27 +2643,32 @@ class HttpCacheTest {
     });
 
     failingStore.allowWrites = true;
+
     seedCache(serverUri.resolve("/a"));
-    assertTrue(cache.remove(serverUri.resolve("/a"))); // Reinsert
+    cache.remove(serverUri.resolve("/a")); // Reinsert
     seedCache(serverUri.resolve("/a"));
     seedCache(serverUri.resolve("/b"));
 
     failingStore.allowWrites = false;
-    assertTrue(cache.remove(serverUri.resolve("/b"))); // Reinsert
+    cache.remove(serverUri.resolve("/b")); // Reinsert
     seedCache(serverUri.resolve("/b"));
     seedCache(serverUri.resolve("/c"));
 
-    assertEventuallyEquals(3, () -> cache.stats().writeSuccessCount());
-    assertEventuallyEquals(2, () -> cache.stats().writeFailureCount());
+    var stats = cache.stats();
+    assertEquals(3, stats.writeSuccessCount());
+    assertEquals(2, stats.writeFailureCount());
 
-    assertEventuallyEquals(2, () -> cache.stats(serverUri.resolve("/a")).writeSuccessCount());
-    assertEventuallyEquals(0, () -> cache.stats(serverUri.resolve("/a")).writeFailureCount());
+    var stats_a = cache.stats(serverUri.resolve("/a"));
+    assertEquals(2, stats_a.writeSuccessCount());
+    assertEquals(0, stats_a.writeFailureCount());
 
-    assertEventuallyEquals(1, () ->  cache.stats(serverUri.resolve("/b")).writeSuccessCount());
-    assertEventuallyEquals(1, () ->  cache.stats(serverUri.resolve("/b")).writeFailureCount());
+    var stats_b = cache.stats(serverUri.resolve("/b"));
+    assertEquals(1, stats_b.writeSuccessCount());
+    assertEquals(1, stats_b.writeFailureCount());
 
-    assertEventuallyEquals(0, () -> cache.stats(serverUri.resolve("/c")).writeSuccessCount());
-    assertEventuallyEquals(1, () -> cache.stats(serverUri.resolve("/c")).writeFailureCount());
+    var stats_c = cache.stats(serverUri.resolve("/c"));
+    assertEquals(0, stats_c.writeSuccessCount());
+    assertEquals(1, stats_c.writeFailureCount());
   }
 
   private ResponseVerification<String> get(URI uri) throws IOException, InterruptedException {
@@ -2680,14 +2685,14 @@ class HttpCacheTest {
 
   private ResponseVerification<String> get(HttpRequest request)
       throws IOException, InterruptedException {
-    var response = client.send(request, BodyHandlers.ofString());
+    var response = client.send(withTimeout(request), BodyHandlers.ofString());
     editAwaiter.await();
     return verifying(response);
   }
 
   private ResponseVerification<String> getWithPushHandler(URI uri) {
     var response = client.sendAsync(
-        GET(uri),
+        withTimeout(GET(uri)),
         BodyHandlers.ofString(),
         PushPromiseHandler.of(__ -> BodyHandlers.ofString(), new ConcurrentHashMap<>())).join();
     editAwaiter.await();
@@ -2731,33 +2736,13 @@ class HttpCacheTest {
         .assertLocallyGenerated();
   }
 
-  private static LocalDateTime toUtcDateTime(Instant instant) {
-    return LocalDateTime.ofInstant(instant, UTC);
+  // Set timeout to not block indefinitely when response is mistakenly not enqueued to MockWebServer
+  private static MutableRequest withTimeout(HttpRequest request) {
+    return MutableRequest.copyOf(request).timeout(Duration.ofSeconds(90));
   }
 
-  private static void assertEventuallyEquals(long expected, LongSupplier actual) {
-    var tolerance = Duration.ofSeconds(30);
-    while (tolerance.toMillis() > 0) {
-      try {
-        assertEquals(expected, actual.getAsLong());
-        return;
-      } catch (AssertionError e) {
-        try {
-          long millisToSleep = Math.min(500, tolerance.toMillis());
-          tolerance = tolerance.minusMillis(millisToSleep);
-
-          //noinspection BusyWait
-          Thread.sleep(millisToSleep);
-        } catch (InterruptedException interrupted) {
-          Thread.currentThread().interrupt();
-          throw new RuntimeException(interrupted);
-        }
-      }
-    }
-
-    // Assert one last time to fail with the appropriate exception.
-    // There's also a chance that this assert succeeds.
-    assertEquals(expected, actual.getAsLong());
+  private static LocalDateTime toUtcDateTime(Instant instant) {
+    return LocalDateTime.ofInstant(instant, UTC);
   }
 
   private static class ForwardingStore implements Store {
@@ -2926,9 +2911,11 @@ class HttpCacheTest {
    * for all open editors to close after a client.send(...) is issued.
    */
   private static final class EditAwaiter {
-    private final Phaser phaser = new Phaser(1); // Register self
+    private final Phaser phaser;
 
-    EditAwaiter() {}
+    EditAwaiter() {
+      this.phaser = new Phaser(1); // Register self
+    }
 
     Editor register(Editor editor) {
       return new NotifyingEditor(editor, phaser);
@@ -2952,7 +2939,7 @@ class HttpCacheTest {
       NotifyingEditor(Editor delegate, Phaser phaser) {
         super(delegate);
         this.phaser = phaser;
-        phaser.register(); // Register self
+        phaser.register();
       }
 
       @Override

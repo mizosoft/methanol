@@ -56,6 +56,8 @@ import okhttp3.tls.HandshakeCertificates;
 import okhttp3.tls.HeldCertificate;
 
 public class TestUtils {
+  public static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
+
   public static final Subscription NOOP_SUBSCRIPTION =
       new Subscription() {
         @Override
