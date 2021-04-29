@@ -110,7 +110,7 @@ public final class Methanol extends HttpClient {
 
   private Methanol(BaseBuilder<?> builder) {
     baseClient = builder.buildBaseClient();
-    redirectPolicy = requireNonNullElse(builder.redirectPolicy, baseClient.followRedirects());
+    redirectPolicy = requireNonNullElse(builder.redirectPolicy, Redirect.NEVER);
     defaultHeaders = builder.headersBuilder.build();
     cache = Optional.ofNullable(builder.cache);
     userAgent = Optional.ofNullable(builder.userAgent);
@@ -642,8 +642,8 @@ public final class Methanol extends HttpClient {
 
     @Override
     public Builder followRedirects(Redirect policy) {
-      // Don't apply policy to base client until build() is called to know whether
-      // a RedirectingInterceptor is to be used instead in case a cache is installed.
+      // Defer applying policy to base client till build() is called to know whether
+      // a RedirectingInterceptor is to be installed in case a cache is installed.
       redirectPolicy = requireNonNull(policy);
       return this;
     }

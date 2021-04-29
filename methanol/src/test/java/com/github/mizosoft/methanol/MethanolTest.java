@@ -424,11 +424,5 @@ class MethanolTest {
         BodyHandler<T> responseBodyHandler) {
       return sendAsync(request, responseBodyHandler, null);
     }
-
-    // Methanol's constructor calls this so don't throw AssertionError
-    @Override
-    public Redirect followRedirects() {
-      return Redirect.NORMAL;
-    }
   }
 }
