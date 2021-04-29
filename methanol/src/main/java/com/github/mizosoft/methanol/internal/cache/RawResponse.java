@@ -1,6 +1,5 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
@@ -11,7 +10,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
-import java.util.function.Consumer;
 
 /** A response with a "raw" body that is yet to be handled. */
 public abstract class RawResponse {
@@ -37,8 +35,6 @@ public abstract class RawResponse {
 
   public abstract <T> CompletableFuture<TrackedResponse<T>> handleAsync(
       BodyHandler<T> handler, Executor executor);
-
-  public abstract RawResponse with(Consumer<ResponseBuilder<?>> mutator);
 
   public static RawResponse from(TrackedResponse<Publisher<List<ByteBuffer>>> response) {
     return new PublisherResponse(response, response.body());
