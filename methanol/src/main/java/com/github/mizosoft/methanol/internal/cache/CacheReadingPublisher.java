@@ -67,7 +67,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
 
     /**
      * The state field maintains the count of available buffers + 1 if a read is pending (referred
-     * to as window), along with pending read and disposed states at its first and second MSBs
+     * to as window), along with pending read and disposed states at it's first and second MSBs
      * respectively.
      */
     private volatile int state;
@@ -84,7 +84,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     @Override
     protected long emit(Subscriber<? super List<ByteBuffer>> downstream, long emit) {
       // Fire a read if this is the first run, which guarantees completion
-      // regardless of demand in case of an empty data stream.
+      // regardless of demand in case of an empty data stream
       if (state == 0) {
         tryScheduleReadOnDrain();
       }

@@ -41,9 +41,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * {@link Editor}. An entry can have at most one active {@code Editor} but can have multiple
  * concurrent {@code Viewers} after it has been first successfully edited.
  *
- * <p>{@code Store} bounds the size of data it contains to its {@link #maxSize()} by automatic
- * eviction of entries, possibly in background. A store's {@link #size()} might temporarily exceed
- * its bound in case entries are being actively expanded while eviction is in progress. A store's
+ * <p>{@code Store} bounds the size of data it contains to it's {@link #maxSize()} by automatic
+ * eviction of entries, possibly in background. A store's {@link #size()} might exceed it's bound
+ * temporarily in case entries are being actively expanded while eviction is in progress. A store's
  * size doesn't include the overhead of the underlying filesystem or any metadata the store itself
  * uses for indexing purposes. Thus, a store's {@code maxSize()} is not exact and might be slightly
  * exceeded as necessary.
@@ -57,12 +57,6 @@ public interface Store extends AutoCloseable, Flushable {
 
   /** Returns the optional executor used for background operations. */
   Optional<Executor> executor();
-
-  /** Initializes this store. */
-  void initialize() throws IOException;
-
-  /** Asynchronously initializes this store. */
-  CompletableFuture<Void> initializeAsync();
 
   /**
    * Returns a {@code Viewer} for the entry associated with the given key, or {@code null} if
@@ -93,7 +87,7 @@ public interface Store extends AutoCloseable, Flushable {
    * throw {@code ConcurrentModificationException} when the store is changed but might or might not
    * reflect these changes.
    */
-  Iterator<Viewer> viewAll() throws IOException;
+  Iterator<Viewer> viewAll();
 
   /**
    * Removes the entry associated with the given key.
@@ -149,7 +143,6 @@ public interface Store extends AutoCloseable, Flushable {
      * Asynchronously copies this entry's data from the given position to the given destination
      * buffer, returning either the number of read bytes or {@code -1} if end-of-file is reached.
      *
-     * @throws IllegalArgumentException if {@code dst} is read-only
      * @throws IllegalStateException if the viewer is closed
      */
     CompletableFuture<Integer> readAsync(long position, ByteBuffer dst);
@@ -192,21 +185,21 @@ public interface Store extends AutoCloseable, Flushable {
      * Asynchronously writes the given source buffer to this entry's data at the given position,
      * returning the number of written bytes.
      *
-     * @throws IllegalStateException if the edit is committed
+     * @throws IllegalStateException if the editor is closed or the edit is committed
      */
     CompletableFuture<Integer> writeAsync(long position, ByteBuffer src);
 
     /**
-     * Marks the edit as committed so that modifications made so far are applied when the editor is
-     * closed.
+     * Marks the edit as committed such that modifications made so far will be applied when the
+     * editor is closed.
      *
      * @throws IllegalStateException if the editor is closed
      */
-    void commitOnClose();
+    void commit();
 
     /**
-     * Closes this editor. If {@link #commitOnClose()} is called, changes made by this editor are
-     * applied; otherwise, they're discarded.
+     * Closes this editor. If {@link #commit()} is called, changes made by this editor are applied;
+     * otherwise, they're discarded.
      */
     @Override
     void close() throws IOException;

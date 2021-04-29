@@ -66,6 +66,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -108,12 +109,12 @@ public final class HttpCache implements AutoCloseable {
   private final Clock clock;
 
   private HttpCache(
-      long maxSize,
       StoreFactory storeFactory,
       @Nullable Executor userExecutor,
       @Nullable Path cacheDirectory,
+      long maxSize,
       @Nullable StatsRecorder statsRecorder,
-      @Nullable Clock clock) {
+      Clock clock) {
     if (userExecutor != null) {
       executor = userExecutor;
       ownedExecutor = false;
@@ -131,7 +132,7 @@ public final class HttpCache implements AutoCloseable {
     store = storeFactory.create(cacheDirectory, maxSize, executor);
     this.statsRecorder =
         requireNonNullElseGet(statsRecorder, StatsRecorder::createConcurrentRecorder);
-    this.clock = requireNonNullElseGet(clock, Utils::systemMillisUtc);
+    this.clock = clock;
   }
 
   /**
@@ -239,7 +240,7 @@ public final class HttpCache implements AutoCloseable {
     try (var editor = servedCacheResponse.edit()) {
       if (editor != null) {
         editor.metadata(CacheResponseMetadata.from(response).encode());
-        editor.commitOnClose();
+        editor.commit();
       }
     } catch (IOException e) {
       throw new UncheckedIOException(e);
@@ -1027,12 +1028,16 @@ public final class HttpCache implements AutoCloseable {
     // Guard against ridiculously small values
     private static final int MAX_SIZE_THRESHOLD = 2 * 1024;
 
-    long maxSize;
     @MonotonicNonNull StoreFactory storeFactory;
     @MonotonicNonNull Path cacheDirectory;
     @MonotonicNonNull Executor executor;
     @MonotonicNonNull StatsRecorder statsRecorder;
-    @MonotonicNonNull Clock clock;
+    long maxSize;
+
+    // Use a clock that ticks in millis under UTC, which suffices for freshness
+    // calculations and makes saving Instants more compact (no nanos-of-second part
+    // is written).
+    Clock clock = Clock.tickMillis(ZoneOffset.UTC);
 
     Builder() {}
 
@@ -1078,7 +1083,7 @@ public final class HttpCache implements AutoCloseable {
       var appliedStoreFactory = storeFactory;
       requireState(appliedStoreFactory != null, "caching method must be specified");
       return new HttpCache(
-          maxSize, appliedStoreFactory, executor, cacheDirectory, statsRecorder, clock);
+          appliedStoreFactory, executor, cacheDirectory, maxSize, statsRecorder, clock);
     }
 
     private void checkMaxSize(long maxSize) {
@@ -1100,12 +1105,7 @@ public final class HttpCache implements AutoCloseable {
     DISK {
       @Override
       Store create(@Nullable Path directory, long maxSize, Executor executor) {
-        return DiskStore.newBuilder()
-            .directory(directory)
-            .maxSize(maxSize)
-            .executor(executor)
-            .appVersion(CACHE_VERSION)
-            .build();
+        return new DiskStore(requireNonNull(directory), maxSize, executor, CACHE_VERSION);
       }
     };
 

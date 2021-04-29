@@ -72,7 +72,6 @@ public final class MockWebServerProvider
   public Object resolveParameter(
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
-    // TODO BUG with UseHttps!
     var type = parameterContext.getParameter().getType();
     var servers = ManagedServers.get(extensionContext);
     var executable = parameterContext.getDeclaringExecutable();

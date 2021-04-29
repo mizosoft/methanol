@@ -52,7 +52,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
           // Set metadata to prevent the entry from being discarded if data is empty
           editor.metadata(ByteBuffer.wrap(new byte[] {1}));
           editor.writeAsync(0, BodyCollector.collect(data)).join();
-          editor.commitOnClose();
+          editor.commit();
         } catch (IOException ioe) {
           throw new AssertionError(ioe);
         }

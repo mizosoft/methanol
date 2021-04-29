@@ -39,9 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Flow.Subscription;
@@ -74,19 +72,6 @@ public class TestUtils {
         return;
       } catch (InterruptedException ignored) {
         // continue;
-      }
-    }
-  }
-
-  public static void awaitUninterruptibly(CyclicBarrier barier) {
-    while (true) {
-      try {
-        barier.await();
-        return;
-      } catch (InterruptedException ignored) {
-        // continue;
-      } catch (BrokenBarrierException e) {
-        throw new RuntimeException(e);
       }
     }
   }
