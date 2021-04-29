@@ -156,8 +156,6 @@ public interface Store extends AutoCloseable {
      * Asynchronously writes the given source buffer to this entry's data at the given position,
      * returning the number of written bytes.
      */
-    // TODO returning an int implies that some bytes might not have been written
-    //      make a stronger guarantee that all bytes are written and return Void
     CompletableFuture<Integer> writeAsync(long position, ByteBuffer src);
 
     /** Returns a {@code Viewer} that reflects the changes made by this editor. */

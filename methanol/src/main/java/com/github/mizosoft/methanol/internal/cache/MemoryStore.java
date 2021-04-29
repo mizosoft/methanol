@@ -136,7 +136,6 @@ public final class MemoryStore implements Store {
     // Lock must be held to avoid concurrent decrements on `size`
     // which can cause evictExcessiveEntries() to evict more entries than necessary
     assert Thread.holdsLock(entries);
-
     entry.markEvicted(); // Prevent the entry from increasing size if an edit is yet to be committed
     var viewer = entry.view();
     if (viewer != null) { // Entry has committed data
@@ -174,7 +173,7 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    @EnsuresNonNullIf(expression = "nextViewer", result = true)
+    @EnsuresNonNullIf(expression = "nextEntry", result = true)
     public boolean hasNext() {
       return nextViewer != null || (nextViewer = viewNextEntry()) != null;
     }
@@ -215,7 +214,7 @@ public final class MemoryStore implements Store {
     final String key;
     private ByteBuffer metadata = EMPTY_BUFFER;
     private ByteBuffer data = EMPTY_BUFFER;
-    private @Nullable MemoryEditor currentEditor;
+    private @Nullable Editor currentEditor;
     private boolean evicted;
 
     /** The number of committed edits. 0 means the entry can't be viewed. */
@@ -256,7 +255,7 @@ public final class MemoryStore implements Store {
           return null;
         }
 
-        var editor = new MemoryEditor(this);
+        var editor = new Editor(this);
         currentEditor = editor;
         return editor;
       } finally {
@@ -275,7 +274,7 @@ public final class MemoryStore implements Store {
     }
 
     void finishEdit(
-        MemoryEditor editor, @Nullable ByteBuffer newMetadata, @Nullable ByteBuffer newData) {
+        Editor editor, @Nullable ByteBuffer newMetadata, @Nullable ByteBuffer newData) {
       long previousEntrySize;
       long currentEntrySize;
       boolean evictAfterDiscardedFirstEdit = false;
@@ -302,7 +301,6 @@ public final class MemoryStore implements Store {
         currentEntrySize = (long) metadata.remaining() + data.remaining();
       } finally {
         lock.writeLock().unlock();
-
         // Evict the entry if it's first edit ever was discarded. This would be
         // inside the try block above but that risks a deadlock as lock.writeLock()
         // and entries lock are held in reverse order in evict(String key).
@@ -328,7 +326,7 @@ public final class MemoryStore implements Store {
   }
 
   /** Views a snapshot of committed entry's metadata/data. */
-  private static final class SnapshotViewer implements Viewer {
+  private static final class SnapshotViewer implements Store.Viewer {
     private final Entry entry;
     private final int snapshotVersion;
     private final ByteBuffer data;
@@ -375,7 +373,7 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public @Nullable Editor edit() {
+    public Store.@Nullable Editor edit() {
       return entry.edit(snapshotVersion);
     }
 
@@ -383,7 +381,7 @@ public final class MemoryStore implements Store {
     public void close() {}
   }
 
-  private static final class MemoryEditor implements Editor {
+  private static final class Editor implements Store.Editor {
     private final Entry entry;
     private final GrowableBuffer data = new GrowableBuffer();
 
@@ -392,7 +390,7 @@ public final class MemoryStore implements Store {
     /** Guards writes to {@code buffer} but allows concurrent reads by viewers. */
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
-    MemoryEditor(Entry entry) {
+    Editor(Entry entry) {
       this.entry = entry;
     }
 
@@ -454,7 +452,7 @@ public final class MemoryStore implements Store {
     }
 
     /** Views data currently being edited. */
-    private final class LiveViewer implements Viewer {
+    private final class LiveViewer implements Store.Viewer {
       LiveViewer() {}
 
       @Override
@@ -503,7 +501,7 @@ public final class MemoryStore implements Store {
       }
 
       @Override
-      public @Nullable Editor edit() {
+      public Store.@Nullable Editor edit() {
         // An edit is always still in progress (by the editor that created this viewer)
         return null;
       }

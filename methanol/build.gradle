@@ -1,8 +1,7 @@
 dependencies {
   // Use latest version of TestNG as the one used by tck-flow is really old.
   // A recent feature currently in use is CONSTRUCTOR target for @Factory
-  testImplementation deps.testng
-  testImplementation deps.junitParams
+  testImplementation "org.testng:testng:${versions.testng}"
   testImplementation deps.reactiveStreamsTckFlow
   testImplementation deps.mockWebServer
   testImplementation project(':methanol-testutils')
@@ -46,7 +45,6 @@ check.dependsOn tckTest
 
 // compileTestJava still compiles from the module path
 addReads(compileTestJava, 'methanol.testutils')
-addReads(compileTestJava, 'org.junit.jupiter.params')
 
 // The TestNG explicit dep causes java modularity plugin to insert --add-module testng,
 // which only works with older versions of TestNG (TestNG version >= 7.0.0 have org.testng
