@@ -52,7 +52,6 @@ public interface Store extends AutoCloseable {
 
   // TODO most of these method should be able to throw IOException (use UncheckedIOException?)
   // TODO document IllegalStateException thrown when the store is closed
-  // TODO specify when the store can throw (readAsync, writeAsync, etc)
 
   /** Returns this store's max size in bytes. */
   long maxSize();
