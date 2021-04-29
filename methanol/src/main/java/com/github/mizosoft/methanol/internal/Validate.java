@@ -67,14 +67,10 @@ public class Validate {
       "nullness", // Nullness utilities are trusted regarding nullness.
       "cast", // Casts look redundant if Nullness Checker is not run.
       "NullAway",
-      "RedundantCast", "NullableProblems"})
+      "RedundantCast", "NullableProblems", "TypeParameterExplicitlyExtendsObject"})
   public static @EnsuresNonNull("#1") <T extends @Nullable Object> @NonNull T castNonNull(
       @Nullable T ref) {
     assert ref != null : "Misuse of castNonNull: called with a null argument";
     return (@NonNull T) ref;
-  }
-
-  public static <T> T TODO() {
-    throw new UnsupportedOperationException("not implemented");
   }
 }

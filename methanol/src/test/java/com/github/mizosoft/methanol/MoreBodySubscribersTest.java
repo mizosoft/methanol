@@ -28,7 +28,7 @@ import static com.github.mizosoft.methanol.MoreBodySubscribers.ofDeferredObject;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofReader;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.withReadTimeout;
-import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptedly;
 import static java.net.http.HttpResponse.BodySubscribers.discarding;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -58,11 +58,13 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -132,7 +134,7 @@ class MoreBodySubscribersTest {
     var awaitRead = new CountDownLatch(1);
     var readerThread = Thread.currentThread();
     new Thread(() -> {
-      awaitUninterruptibly(awaitRead);
+      awaitUninterruptedly(awaitRead);
       readerThread.interrupt();
     }).start();
     assertThrows(ClosedByInterruptException.class, () -> {
@@ -518,6 +520,39 @@ class MoreBodySubscribersTest {
 
     void assertCancelled() {
       assertTrue(cancelled, "Subscription not cancelled");
+    }
+  }
+
+  private static class ToBeOnErroredSubscriber implements Subscriber<List<ByteBuffer>> {
+
+    final CompletableFuture<Void> completion;
+
+    ToBeOnErroredSubscriber() {
+      completion = new CompletableFuture<>();
+    }
+
+    @Override
+    public void onSubscribe(Subscription subscription) {}
+
+    @Override
+    public void onNext(List<ByteBuffer> item) {}
+
+    @Override
+    public void onError(Throwable throwable) {
+      if (!completion.completeExceptionally(throwable)) {
+        fail("Multiple error completions");
+      }
+    }
+
+    @Override
+    public void onComplete() {
+      fail("Being completed normally");
+    }
+
+    void assertOnErrored(Class<? extends Throwable> clz) {
+      CompletionException e = assertThrows(CompletionException.class,
+          () -> completion.getNow(null));
+      assertEquals(clz, e.getCause().getClass());
     }
   }
 }

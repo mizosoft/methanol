@@ -37,7 +37,6 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
-import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -47,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -359,7 +359,7 @@ class AbstractSubscriptionTest {
       @Override
       public void onNext(Integer item) {
         awaitFirstOnNext.countDown();
-        awaitUninterruptibly(awaitSignalError);
+        TestUtils.awaitUninterruptedly(awaitSignalError);
         super.onNext(item);
       }
     };
@@ -373,7 +373,7 @@ class AbstractSubscriptionTest {
     s.awaitSubscribe();
     CompletableFuture.runAsync(() -> s.subscription.request(2L));
     // wait till first onNext comes
-    awaitUninterruptibly(awaitFirstOnNext);
+    TestUtils.awaitUninterruptedly(awaitFirstOnNext);
     // set pendingError (first onNext now blocking)
     p.signalError(new TestException());
     // let first onNext pass
