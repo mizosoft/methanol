@@ -126,18 +126,16 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     private List<ByteBuffer> collectNextBatch() {
       List<ByteBuffer> batch = null;
       ByteBuffer buffer;
-      for (int batchSize = 0; batchSize < MAX_BATCH_SIZE; batchSize++) {
+      do {
         buffer = available.poll();
-        if (buffer == null) {
-          break;
+        if (buffer != null) {
+          if (batch == null) {
+            batch = new ArrayList<>();
+          }
+          batch.add(buffer);
         }
-
-        if (batch == null) {
-          batch = new ArrayList<>();
-        }
-        batch.add(buffer);
-      }
-      return batch != null ? List.copyOf(batch) : List.of();
+      } while (buffer != null && batch.size() < MAX_BATCH_SIZE);
+      return batch != null ? Collections.unmodifiableList(batch) : List.of();
     }
 
     private void updateStateOnPoll(int polled) {
@@ -178,7 +176,9 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
 
         int window = currentState & WINDOW_MASK;
         int nextState =
-            window < PREFETCH ? (window + 1) | PENDING_READ : currentState & ~PENDING_READ;
+            window < PREFETCH
+                ? (window + 1) | PENDING_READ
+                : currentState & ~PENDING_READ;
         if (STATE.compareAndSet(this, currentState, nextState)) {
           if ((nextState & PENDING_READ) != 0) {
             scheduleRead();
