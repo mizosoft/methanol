@@ -348,10 +348,6 @@ public final class Methanol extends HttpClient {
       /** Returns a new chain that uses the given {@code PushPromiseHandler}. */
       Chain<T> withPushPromiseHandler(@Nullable PushPromiseHandler<T> pushPromiseHandler);
 
-      /** Returns a new chain that uses given handlers, possibly targeting another response type. */
-      <U> Chain<U> with(
-          BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler);
-
       /**
        * Forwards the request to the next interceptor, or to the underlying {@code HttpClient} if
        * called by the last interceptor.
@@ -666,13 +662,6 @@ public final class Methanol extends HttpClient {
         @Nullable PushPromiseHandler<T> pushPromiseHandler) {
       return new InterceptorChain<>(
           baseClient, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
-    }
-
-    @Override
-    public <U> Chain<U> with(
-        BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler) {
-      requireNonNull(bodyHandler);
-      return new InterceptorChain<>(baseClient, bodyHandler, pushPromiseHandler, interceptors);
     }
 
     @Override
