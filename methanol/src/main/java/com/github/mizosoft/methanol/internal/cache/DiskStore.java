@@ -1081,7 +1081,7 @@ public final class DiskStore implements Store {
       }
 
       Runnable logOnFailure() {
-        // TODO consider disabling the store if failure happens too often
+        // TODO consider disabling the store if this happens too often
         return () -> {
           try {
             run();
@@ -1190,7 +1190,7 @@ public final class DiskStore implements Store {
 
     static DirectoryLock acquire(Path directory) throws IOException {
       var lock = new DirectoryLock(directory);
-      boolean inserted = acquiredLocks.putIfAbsent(directory, lock) == null;
+      var inserted = acquiredLocks.putIfAbsent(directory, lock) == null;
       if (!inserted || !tryLock(lock)) {
         lock.release();
         throw new IOException(
@@ -1231,7 +1231,8 @@ public final class DiskStore implements Store {
     private static Hash truncatedSha256Hash(String key) {
       var digest = sha256Digest();
       digest.update(UTF_8.encode(key));
-      return new Hash(ByteBuffer.wrap(digest.digest()).limit(Hash.BYTES));
+      var buffer = ByteBuffer.wrap(digest.digest());
+      return new Hash(buffer);
     }
 
     private static MessageDigest sha256Digest() {
@@ -1245,7 +1246,7 @@ public final class DiskStore implements Store {
 
   /** An immutable 80-bit hash code. */
   public static final class Hash {
-    static final int BYTES = 10; // 80 bits
+    private static final int BYTES = 10; // 80 bits
     private static final int HEX_STRING_LENGTH = 2 * BYTES;
 
     // Upper 64 bits + lower 16 bits in big-endian order

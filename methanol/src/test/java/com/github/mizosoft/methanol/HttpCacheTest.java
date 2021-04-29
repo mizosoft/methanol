@@ -2197,10 +2197,10 @@ class HttpCacheTest {
 
       @Override
       public void close() throws IOException {
-        super.close();
         if (committed && !allowWrites) {
-          throw new IOException("edit is committed but writes weren't allowed");
+          throw new IOException("Nope!");
         }
+        super.close();
       }
     }
 
@@ -2239,10 +2239,8 @@ class HttpCacheTest {
 
     // Write failure is ignored & the response completes normally nevertheless.
     seedCache(serverUri).assertBody("Pickachu");
-    get(GET(serverUri).header("Cache-Control", "only-if-cached"))
-        .assertLocallyGenerated(); // No cached response
 
-    // Allow the response to be cached
+    // Allow the response to be written
     failingStore.allowWrites = true;
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
@@ -2693,7 +2691,7 @@ class HttpCacheTest {
     }
 
     /**
-     * An Editor that notifies (arrives at) a Phaser when closed, allowing to await its closure
+     * An Editor that notifies (arrives at) a Phaser when closed, allowing to await it's closure
      * among others'.
      */
     private static final class NotifyingEditor extends ForwardingEditor {
