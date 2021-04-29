@@ -102,7 +102,7 @@ public final class MemoryStore implements Store {
   }
 
   @Override
-  public boolean remove(String key) {
+  public boolean evict(String key) {
     synchronized (entries) {
       var entry = entries.get(key);
       if (entry != null) {
@@ -115,7 +115,7 @@ public final class MemoryStore implements Store {
   }
 
   @Override
-  public void clear() {
+  public void evictAll() {
     synchronized (entries) {
       var iter = entries.values().iterator();
       while (iter.hasNext()) {
@@ -136,7 +136,9 @@ public final class MemoryStore implements Store {
     // Lock must be held to avoid concurrent decrements on `size`
     // which can cause evictExcessiveEntries() to evict more entries than necessary
     assert Thread.holdsLock(entries);
+
     entry.markEvicted(); // Prevent the entry from increasing size if an edit is yet to be committed
+
     var viewer = entry.view();
     if (viewer != null) { // Entry has committed data
       return size.addAndGet(-viewer.entrySize());
@@ -157,6 +159,7 @@ public final class MemoryStore implements Store {
   }
 
   private final class ViewerIterator implements Iterator<Viewer> {
+
     /**
      * Iterator over a snapshot of currently available keys to avoid CMEs. This however will
      * miss keys added after this iterator is returned, which is OK.
@@ -194,7 +197,7 @@ public final class MemoryStore implements Store {
       var key = currentKey;
       requireState(key != null, "next() must be called before remove()");
       currentKey = null;
-      MemoryStore.this.remove(key);
+      evict(key);
     }
 
     private @Nullable Viewer viewNextEntry() {
@@ -241,6 +244,7 @@ public final class MemoryStore implements Store {
         if (currentEditor != null) { // Ongoing edit
           return null;
         }
+
         var editor = new Editor(this);
         currentEditor = editor;
         return editor;
@@ -282,6 +286,7 @@ public final class MemoryStore implements Store {
         currentEntrySize = (long) metadata.remaining() + data.remaining();
       } finally {
         lock.writeLock().unlock();
+
         // Evict the entry if it's first edit ever was discarded. This would be
         // inside the try block above but that risks a deadlock as lock.writeLock()
         // and entries lock are held in reverse order in evict(String key).

@@ -102,15 +102,15 @@ abstract class StoreTest {
   }
 
   @Test
-  void openCreateRemove() {
+  void openCreateEvict() {
     assertNull(store.view("e1"));
     assertNotNull(newManaged(() -> store.edit("e1")));
     assertNull(store.view("e2"));
-    assertTrue(store.remove("e1"));
+    assertTrue(store.evict("e1"));
     assertNull(store.view("e1"));
     assertNotNull(newManaged(() -> store.edit("e1")));
     assertNotNull(newManaged(() -> store.edit("e2")));
-    store.clear();
+    store.evictAll();
     assertNull(store.view("e1"));
     assertNull(store.view("e2"));
   }
@@ -150,21 +150,21 @@ abstract class StoreTest {
   }
 
   @Test
-  void writeThenRemove() {
+  void writeThenEvict() {
     writeEntry("e1", METADATA_1, DATA_1);
     assertEquals(utf8Length(METADATA_1, DATA_1), store.size());
-    assertTrue(store.remove("e1"));
+    assertTrue(store.evict("e1"));
     assertEquals(0, store.size());
   }
 
   @Test
-  void writeTwoEntriesThenClear() {
+  void writeTwoEntriesThenEvictAll() {
     writeEntry("e1", METADATA_1, DATA_1);
     writeEntry("e2", METADATA_2, DATA_2);
     assertEquals(utf8Length(METADATA_1, DATA_1, METADATA_2, DATA_2), store.size());
-    assertTrue(store.remove("e1"));
+    assertTrue(store.evict("e1"));
     assertEquals(utf8Length(METADATA_2, DATA_2), store.size());
-    assertTrue(store.remove("e2"));
+    assertTrue(store.evict("e2"));
     assertEquals(0, store.size());
   }
 
@@ -202,7 +202,7 @@ abstract class StoreTest {
     }
     assertNull(store.view("e1"));
     assertEquals(0, store.size());
-    assertFalse(store.remove("e1")); // Entry shouldn't be present
+    assertFalse(store.evict("e1")); // Entry shouldn't be present
   }
 
   @Test
@@ -263,7 +263,7 @@ abstract class StoreTest {
         assertEntryContains(viewer, "metadata" + index, "data" + index);
       }
     }
-    store.clear();
+    store.evictAll();
     assertEquals(0, store.size());
     assertEquals(0, count(store));
   }
@@ -315,10 +315,10 @@ abstract class StoreTest {
 
   /** Closing an editor of an evicted entry discards the edit. */
   @Test
-  void removeBeforeClosingEditorDiscardsData() {
+  void evictBeforeClosingEditorDiscardsData() {
     try (var editor = notNull(store.edit("e1"))) {
       writeEntry(editor, METADATA_1, DATA_1);
-      assertTrue(store.remove("e1"));
+      assertTrue(store.evict("e1"));
     }
     assertNull(store.view("e1"));
     assertEquals(0, store.size());
@@ -326,8 +326,8 @@ abstract class StoreTest {
   }
 
   @Test
-  void removeNonExistingEntry() {
-    assertFalse(store.remove("e1"));
+  void evictNonExistingEntry() {
+    assertFalse(store.evict("e1"));
   }
 
   @Test
@@ -456,7 +456,7 @@ abstract class StoreTest {
     writeEntry("e1", "aaa", "ccc");
     writeEntry("e2", "ccc", "ddd");
     assertEquals(12, store.size());
-    store.resetMaxSize(18);
+    store.truncateTo(18);
     writeEntry("e3", "eee", "fff");
     assertEquals(18, store.size());
     assertEntryContains("e1", "aaa", "ccc");
@@ -471,7 +471,7 @@ abstract class StoreTest {
     writeEntry("e1", "aaa", "ccc");          // e1
     writeEntry("e2", "ccc", "ddd");          // e1, e2
     assertEntryContains("e1", "aaa", "ccc"); // e2, e1
-    store.resetMaxSize(6);
+    store.truncateTo(6);
     assertNull(store.view("e2"));
     assertEquals(6, store.size());
   }

@@ -82,11 +82,11 @@ public interface Store extends AutoCloseable {
   /** Returns a <em>fail-safe</em> iterator of {@code Viewers} over the entries in this store. */
   Iterator<Viewer> viewAll();
 
-  /** Removes the entry associated with the given key. */
-  boolean remove(String key);
+  /** Evicts the entry associated with the given key. */
+  boolean evict(String key);
 
-  /** Removes all entries from this store. */
-  void clear();
+  /** Evicts all entries in this store. */
+  void evictAll();
 
   /**
    * Returns the size in bytes all entries in this store consume. Exact consumed size might exceed
@@ -95,12 +95,7 @@ public interface Store extends AutoCloseable {
   long size();
 
   /** Resets this store's max size. Might evict any excessive entries as necessary. */
-  default void resetMaxSize(long maxSize) {
-    TODO();
-  }
-
-  /** Atomically clears this store and closes it. */
-  default void destroy() {
+  default void truncateTo(long maxSize) {
     TODO();
   }
 
