@@ -26,8 +26,6 @@ test {
   moduleOptions {
     runOnClasspath = true
   }
-
-  systemProperty 'junit.jupiter.execution.timeout.mode', 'disabled_on_debug'
 }
 
 task tckTest(type: Test) {

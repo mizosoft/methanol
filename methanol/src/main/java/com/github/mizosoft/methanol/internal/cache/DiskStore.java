@@ -1496,10 +1496,6 @@ public final class DiskStore implements Store {
       }
     }
 
-    /**
-     * Silently discards the currently ongoing edit. Does nothing if there isn't an active editor
-     * for this entry.
-     */
     private void discardCurrentEdit() throws IOException {
       assert lock.isHeldByCurrentThread();
 
@@ -1527,14 +1523,31 @@ public final class DiskStore implements Store {
         if (!ownedEditor
             || (newMetadata == null && dataChannel == null) // Edit isn't committed
             || evicted) {
-          refuseEdit(dataChannel);
+          closeQuietly(dataChannel);
+          Files.deleteIfExists(tempEntryFile());
+          if (entryVersion == 0 && !evicted) {
+            // The entry's first ever edit wasn't committed, so remove it. It's safe
+            // to directly remove it from the map since it's not visible to the user
+            // at this point (no views/edits) and doesn't contribute to store size.
+            evicted = true;
+            entries.remove(hash, this);
+          }
           return;
         }
 
+        // Write a new entry file (replacing the previous one if existed) if data
+        // is written, or if this is the entry's first edit. Otherwise, just update
+        // the end of the old entry file with the new metadata (and possibly new key).
         var readResult = tryReadEntry(null); // Read old entry for whatever key
         var oldMetadata = readResult != null ? readResult.metadata : EMPTY_BUFFER;
         var metadataToWrite = requireNonNullElse(newMetadata, oldMetadata);
-        long updatedMetadataSize = metadataToWrite.remaining();
+        long newMetadataSize = metadataToWrite.remaining();
+        if (dataChannel != null || readResult == null) {
+          writeEntry(key, metadataToWrite, dataChannel, dataSize);
+        } else {
+          updateEntry(key, metadataToWrite, readResult.dataSize); // No changes to data stream
+        }
+
         long updatedDataSize;
         if (dataChannel != null) {
           updatedDataSize = dataSize;
@@ -1542,27 +1555,10 @@ public final class DiskStore implements Store {
           // Data is untouched
           updatedDataSize = readResult.dataSize;
         } else {
-          // The entry wasn't readable, so this is a new entry with an empty data stream
+          // The entry wasn't readable, meaning it's new
           updatedDataSize = 0L;
         }
-        newEntrySize = updatedMetadataSize + updatedDataSize;
-
-        // Don't bother with the edit if committing it would evict everything,
-        // including its target entry.
-        if (newEntrySize > maxSize) {
-          refuseEdit(dataChannel);
-          return;
-        }
-
-        // Write a new entry file if the data stream is changed (replacing the previous
-        // file if existed), or if this is the entry's first edit. Otherwise, just update
-        // the footer of the old entry file with the new metadata (and possibly new key).
-        if (dataChannel != null || readResult == null) {
-          writeEntry(key, metadataToWrite, dataChannel, dataSize);
-        } else {
-          updateEntry(key, metadataToWrite, readResult.dataSize); // No changes to data stream
-        }
-
+        newEntrySize = newMetadataSize + updatedDataSize;
         oldEntrySize = entrySize;
         entrySize = newEntrySize;
         cachedKey = key; // Now we know what's our key
@@ -1572,6 +1568,7 @@ public final class DiskStore implements Store {
         lock.unlock();
       }
 
+      // TODO if the entry is itself larger than maxSize, just discard it
       long netEntrySize = newEntrySize - oldEntrySize; // Might be negative
       if (size.addAndGet(netEntrySize) > maxSize) {
         evictionScheduler.schedule();
@@ -1579,21 +1576,6 @@ public final class DiskStore implements Store {
 
       if (firstTimeReadable) {
         indexWriteScheduler.trySchedule(); // Update LRU info if we've just become readable
-      }
-    }
-
-    /** Silently refuses committing an edit. */
-    private void refuseEdit(@Nullable AsynchronousFileChannel dataChannel) throws IOException {
-      assert lock.isHeldByCurrentThread();
-
-      closeQuietly(dataChannel);
-      Files.deleteIfExists(tempEntryFile());
-      if (entryVersion == 0 && !evicted) {
-        // The entry's first ever edit wasn't committed, so remove it. It's safe
-        // to directly remove it from the map since it's not visible to the outside
-        // world at this point (no views/edits) and doesn't contribute to store size.
-        evicted = true;
-        entries.remove(hash, this);
       }
     }
 
