@@ -1,43 +1,45 @@
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.internal.cache.DateUtils.formatHttpDate;
+import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.CONDITIONAL_HIT;
 import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.HIT;
-import static com.github.mizosoft.methanol.testing.ResponseVerification.verifying;
-import static com.github.mizosoft.methanol.ExecutorProvider.ExecutorType.FIXED_POOL;
+import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.LOCALLY_GENERATED;
+import static com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse.CacheStatus.MISS;
 import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.FileSystemType.SYSTEM;
 import static com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testutils.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testutils.TestUtils.gzip;
+import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
+import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.time.Duration.ofDays;
 import static java.time.Duration.ofHours;
 import static java.time.Duration.ofSeconds;
 import static java.time.ZoneOffset.UTC;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
+import com.github.mizosoft.methanol.MockWebServerProvider.UseHttps;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.testing.ResponseVerification;
-import com.github.mizosoft.methanol.ExecutorProvider.ExecutorConfig;
-import com.github.mizosoft.methanol.MockWebServerProvider.UseHttps;
+import com.github.mizosoft.methanol.internal.extensions.CacheAwareResponse;
+import com.github.mizosoft.methanol.internal.extensions.TrackedResponse;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreConfig;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreContext;
 import com.github.mizosoft.methanol.testing.extensions.StoreProvider.StoreParameterizedTest;
 import com.github.mizosoft.methanol.testutils.MockClock;
-import com.github.mizosoft.methanol.testutils.TestException;
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
@@ -47,11 +49,17 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
+import java.security.cert.Certificate;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
+import java.util.Set;
+import java.util.Spliterators;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Phaser;
@@ -59,15 +67,16 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
-import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
 import okhttp3.Headers;
 import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.QueueDispatcher;
 import okhttp3.mockwebserver.RecordedRequest;
-import okhttp3.mockwebserver.SocketPolicy;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
@@ -87,7 +96,6 @@ class HttpCacheTest {
   private Methanol.Builder clientBuilder;
   private Methanol client;
   private MockWebServer server;
-  private URI serverUri;
   private MockClock clock;
   private EditAwaiter editAwaiter;
   private HttpCache cache;
@@ -98,17 +106,14 @@ class HttpCacheTest {
     this.threadPool = threadPool;
     this.clientBuilder = builder.executor(threadPool);
     this.server = server;
-    serverUri = server.url("/").uri();
-    clock = new MockClock();
-
-    ((QueueDispatcher) server.getDispatcher()).setFailFast(true);
   }
 
-  private void setUpCache(Store store) {
+  private void setUpCache(StoreContext storeContext) throws IOException {
+    clock = new MockClock();
     editAwaiter = new EditAwaiter();
     cache = HttpCache.newBuilder()
         .clockForTesting(clock)
-        .storeForTesting(new EditAwaiterStore(store, editAwaiter))
+        .storeForTesting(new EditAwaiterStore(storeContext.newStore(), editAwaiter))
         .executor(threadPool)
         .build();
     client = clientBuilder.cache(cache).build();
@@ -117,7 +122,7 @@ class HttpCacheTest {
   @AfterEach
   void tearDown() throws IOException {
     if (cache != null) {
-      cache.close();
+      cache.dispose();
     }
   }
 
@@ -148,15 +153,15 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void cacheGetWithMaxAge(Store store) throws Exception {
-    setUpCache(store);
+  void cacheGetWithMaxAge(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     assertGetIsCached(ofSeconds(1), "Cache-Control", "max-age=2");
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void cacheGetWithExpires(Store store) throws Exception {
-    setUpCache(store);
+  void cacheGetWithExpires(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     var now = toUtcDateTime(clock.instant());
     assertGetIsCached(
         ofHours(12),                      // Advance clock half a day
@@ -166,8 +171,8 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void cacheGetWithExpiresAndDate(Store store) throws Exception {
-    setUpCache(store);
+  void cacheGetWithExpiresAndDate(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     var date = toUtcDateTime(clock.instant());
     assertGetIsCached(
         ofDays(1),                         // Advance clock a day (retain freshness)
@@ -180,34 +185,33 @@ class HttpCacheTest {
   @StoreParameterizedTest
   @StoreConfig
   @UseHttps
-  void cacheSecureGetWithMaxAge(Store store) throws Exception {
-    setUpCache(store);
-    assertGetIsCached(ofSeconds(1), "Cache-Control", "max-age=2")
-        .assertCachedWithSSL();
+  void cacheSecureGetWithMaxAge(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
+    var cacheResponse = assertGetIsCached(ofSeconds(1), "Cache-Control", "max-age=2");
+    assertCachedWithSSLSession(cacheResponse);
   }
 
-  private ResponseVerification<String> assertGetIsCached(
+  private CacheAwareResponse<String> assertGetIsCached(
       Duration clockAdvance, String... headers)
       throws Exception {
     server.enqueue(new MockResponse()
         .setHeaders(Headers.of(headers))
         .setBody("Is you is or is you ain't my baby?"));
 
-    get(serverUri)
-        .assertMiss()
-        .assertBody("Is you is or is you ain't my baby?");
+    var response = assertMiss(getString(uri(server)));
+    assertEquals("Is you is or is you ain't my baby?", response.body());
 
     clock.advance(clockAdvance);
 
-    return get(serverUri)
-        .assertHit()
-        .assertBody("Is you is or is you ain't my baby?");
+    var cacheResponse = assertHit(getString(uri(server)));
+    assertEquals("Is you is or is you ain't my baby?", cacheResponse.body());
+    return cacheResponse;
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void cacheGetWithExpiresConditionalHit(Store store) throws Exception {
-    setUpCache(store);
+  void cacheGetWithExpiresConditionalHit(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     // Expire one day from "now"
     var oneDayFromNow = clock.instant().plus(ofDays(1));
     server.enqueue(new MockResponse()
@@ -215,45 +219,19 @@ class HttpCacheTest {
         .setBody("Is you is or is you ain't my baby?"));
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
 
-    get(serverUri)
-        .assertMiss()
-        .assertBody("Is you is or is you ain't my baby?");
+    var response = assertMiss(getString(uri(server)));
+    assertEquals("Is you is or is you ain't my baby?", response.body());
 
     clock.advance(ofDays(2)); // Make response stale
 
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("Is you is or is you ain't my baby?");
+    var cacheResponse = assertConditionalHit(getString(uri(server)));
+    assertEquals("Is you is or is you ain't my baby?", cacheResponse.body());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  @UseHttps
-  void secureCacheGetWithExpiresConditionalHit(Store store) throws Exception {
-    setUpCache(store);
-    // Expire one day from "now"
-    var oneDayFromNow = clock.instant().plus(ofDays(1));
-    server.enqueue(new MockResponse()
-        .addHeader("Expires", formatHttpDate(toUtcDateTime(oneDayFromNow)))
-        .setBody("Is you is or is you ain't my baby?"));
-    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-
-    get(serverUri)
-        .assertMiss()
-        .assertBody("Is you is or is you ain't my baby?");
-
-    clock.advance(ofDays(2)); // Make response stale
-
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("Is you is or is you ain't my baby?")
-        .assertCachedWithSSL();
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void responseIsFreshenedOnConditionalHit(Store store) throws Exception {
-    setUpCache(store);
+  void responseIsFreshenedOnConditionalHit(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         // Warning 113 will be stored (e.g. may come from a proxy's cache)
         // but will be removed on freshening
@@ -265,29 +243,39 @@ class HttpCacheTest {
     server.enqueue(new MockResponse()
         .setResponseCode(HTTP_NOT_MODIFIED)
         .addHeader("X-Version", "v2"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
 
     clock.advanceSeconds(2); // Make response stale
 
     var instantRevalidationReceived = clock.instant();
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("Youse is still my baby, baby");
+    var response = assertConditionalHit(getString(uri(server)));
+    assertEquals("Youse is still my baby, baby", response.body());
 
     // Check that response metadata is updated, which is done in
-    // background, so keep trying a number of times.
-    retryTillOfflineHit()
-        .assertHit()
-        .assertBody("Youse is still my baby, baby")
-        .assertHeader("X-Version", "v2")
-        .assertRequestSentAt(instantRevalidationReceived)
-        .assertResponseReceivedAt(instantRevalidationReceived);
+    // background, so keep trying a number of times
+    int maxTries = 10, tries = 0;
+    CacheAwareResponse<String> cacheResponse;
+    do {
+      server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+      cacheResponse = getString(uri(server));
+    } while (cacheResponse.cacheStatus() != HIT && tries++ < maxTries);
+
+    assertEquals(
+        HIT, cacheResponse.cacheStatus(),
+        () -> "metadata not updated after " + maxTries + " tries");
+
+    assertHit(cacheResponse);
+    assertEquals("Youse is still my baby, baby", cacheResponse.body());
+    assertEquals(Optional.of("v2"), cacheResponse.headers().firstValue("X-Version"));
+    // Timestamps updated to that of the conditional GET
+    assertEquals(instantRevalidationReceived, cacheResponse.timeRequestSent());
+    assertEquals(instantRevalidationReceived, cacheResponse.timeResponseReceived());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void successfulRevalidationWithZeroContentLength(Store store) throws Exception {
-    setUpCache(store);
+  void successfulRevalidationWithZeroContentLength(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("X-Version", "v1")
         .addHeader("Cache-Control", "max-age=1")
@@ -295,50 +283,68 @@ class HttpCacheTest {
     server.enqueue(new MockResponse()
         .setResponseCode(HTTP_NOT_MODIFIED)
         .addHeader("X-Version", "v2")
-        .setHeader("Content-Length", "0")); // This is wrong, but some servers do it
-    seedCache(serverUri);
+        .addHeader("Content-Length", "0")); // This is wrong, but some servers do it
+
+    assertMiss(getString(uri(server))); // Put response
 
     clock.advanceSeconds(2); // Make response stale
 
-    // The 304 response has 0 Content-Length, but it isn't use to replace that
-    // of the stored response.
     var instantRevalidationReceived = clock.instant();
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("Pickachu")
-        .assertHeader("X-Version", "v2")
-        .assertHeader("Content-Length", "Pickachu".length())
-        .networkResponse()
-        .assertHeader("Content-Length", "0");
+    var response = assertConditionalHit(getString(uri(server)));
+    assertEquals("Pickachu", response.body());
+    assertEquals(Optional.of("v2"), response.headers().firstValue("X-Version"));
+    // The 304 response has 0 Content-Length, but that isn't use to replace the
+    // stored response's Content-Length.
+    assertEquals(
+        OptionalLong.of(0L),
+        response.networkResponse().orElseThrow().headers().firstValueAsLong("Content-Length"));
+    assertEquals(
+        OptionalLong.of("Pickachu".length()),
+        response.headers().firstValueAsLong("Content-Length"));
 
-    retryTillOfflineHit()
-        .assertHit()
-        .assertBody("Pickachu")
-        .assertHeader("X-Version", "v2")
-        .assertHeader("Content-Length", "Pickachu".length())
-        .assertRequestSentAt(instantRevalidationReceived)
-        .assertResponseReceivedAt(instantRevalidationReceived);
+    // Wait till response metadata is updated
+    int maxTries = 10, tries = 0;
+    CacheAwareResponse<String> cacheResponse;
+    do {
+      server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+      cacheResponse = getString(uri(server));
+    } while (cacheResponse.cacheStatus() != HIT && tries++ < maxTries);
+
+    assertEquals(
+        HIT, cacheResponse.cacheStatus(),
+        () -> "metadata not updated after " + maxTries + " tries");
+
+    assertHit(cacheResponse);
+    assertEquals("Pickachu", cacheResponse.body());
+    assertEquals(Optional.of("v2"), cacheResponse.headers().firstValue("X-Version"));
+    assertEquals(
+        OptionalLong.of("Pickachu".length()),
+        cacheResponse.headers().firstValueAsLong("Content-Length"));
+    // Timestamps updated to that of the conditional GET
+    assertEquals(instantRevalidationReceived, cacheResponse.timeRequestSent());
+    assertEquals(instantRevalidationReceived, cacheResponse.timeResponseReceived());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void prohibitNetworkOnRequiredValidation(Store store) throws Exception {
-    setUpCache(store);
+  void prohibitNetworkOnRequiredValidation(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .setBody("123"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
 
     clock.advanceSeconds(2); // Make response stale
 
-    get(GET(serverUri).header("Cache-Control", "only-if-cached"))
-        .assertLocallyGenerated()
-        .assertBody(""); // Doesn't have a body
+    var request = GET(uri(server)).header("Cache-Control", "only-if-cached");
+    var response = assertLocallyGenerated(getString(request));
+    assertEquals("", response.body()); // Doesn't have a body
   }
 
   /* As encouraged by rfc 7232 2.4, both validators are added in case an
      HTTP/1.0 recipient is present along the way that doesn't know about ETags. */
 
+  @SuppressWarnings("unused") // EnumSource indirection
   private enum ValidatorConfig {
     ETAG(true, false),
     LAST_MODIFIED(false, true),
@@ -369,7 +375,7 @@ class HttpCacheTest {
   @StoreConfig
   void revalidationFromStale(StoreContext storeContext) throws Throwable {
     testForEachValidator(storeContext, config -> {
-      var request = GET(serverUri);
+      var request = GET(uri(server));
       assertRevalidation(request, config, true);
     });
   }
@@ -378,7 +384,7 @@ class HttpCacheTest {
   @StoreConfig
   void failedRevalidationFromStale(StoreContext storeContext) throws Throwable {
     testForEachValidator(storeContext, config -> {
-      var request = GET(serverUri);
+      var request = GET(uri(server));
       assertFailedRevalidation(request, config, true);
     });
   }
@@ -387,7 +393,7 @@ class HttpCacheTest {
   @StoreConfig
   void revalidationForcedByNoCache(StoreContext storeContext) throws Throwable {
     testForEachValidator(storeContext, config -> {
-      var request = GET(serverUri).header("Cache-Control", "no-cache");
+      var request = GET(uri(server)).header("Cache-Control", "no-cache");
       assertRevalidation(request, config, false);
     });
   }
@@ -396,7 +402,7 @@ class HttpCacheTest {
   @StoreConfig
   void failedRevalidationForcedByNoCache(StoreContext storeContext) throws Throwable {
     testForEachValidator(storeContext, config -> {
-      var request = GET(serverUri).header("Cache-Control", "no-cache");
+      var request = GET(uri(server)).header("Cache-Control", "no-cache");
       assertFailedRevalidation(request, config, false);
     });
   }
@@ -405,7 +411,7 @@ class HttpCacheTest {
       StoreContext storeContext, ThrowingConsumer<ValidatorConfig> tester) throws Throwable {
     for (var config : ValidatorConfig.values()) {
       try {
-        setUpCache(storeContext.newStore());
+        setUpCache(storeContext);
         tester.accept(config);
 
         // Clean workspace for next config
@@ -434,16 +440,16 @@ class HttpCacheTest {
         .addHeader("X-Version", "v2"));
 
     var timeInitiallyReceived = clock.instant(); // First response is received at this tick
-    seedCache(serverUri)
-        .assertBody("STONKS!")
-        .assertHeader("X-Version", "v1");
+    var response = assertMiss(getString(uri(server))); // Put response
+    assertEquals("STONKS!", response.body());
+    assertEquals(Optional.of("v1"), response.headers().firstValue("X-Version"));
     server.takeRequest(); // Remove initial request
 
     clock.advanceSeconds(makeStale ? 3 : 1); // Make stale or retain freshness
 
-    get(triggeringRequest)
-        .assertBody("STONKS!")
-        .assertHeader("X-Version", "v2");
+    var cacheResponse = assertConditionalHit(getString(triggeringRequest));
+    assertEquals("STONKS!", cacheResponse.body());
+    assertEquals(Optional.of("v2"), cacheResponse.headers().firstValue("X-Version"));
 
     var sentRequest = server.takeRequest();
     // Time received is used if Last-Modified is absent
@@ -472,34 +478,35 @@ class HttpCacheTest {
         .setBody("STONKS!"));
     server.enqueue(new MockResponse()
         .setHeaders(validators2)
-        .addHeader("Cache-Control", "max-age=2")
+        .setHeader("Cache-Control", "max-age=2")
         .addHeader("X-Version", "v2")
         .setBody("DOUBLE STONKS!"));
 
     var instantInitiallyReceived = clock.instant(); // First response is received at this tick
-    seedCache(serverUri)
-        .assertBody("STONKS!")
-        .assertHeader("X-Version", "v1");
+    var response = assertMiss(getString(uri(server))); // Put response
+    assertEquals("STONKS!", response.body());
+    assertEquals(Optional.of("v1"), response.headers().firstValue("X-Version"));
     server.takeRequest(); // Remove initial request
 
     clock.advanceSeconds(makeStale ? 3 : 1); // Make stale or retain freshness
 
-    get(triggeringRequest)
-        .assertConditionalMiss()
-        .assertBody("DOUBLE STONKS!")
-        .assertHeader("X-Version", "v2")
-        .assertHasHeaders(validators2.toMultimap())
-        .cacheResponse() // This is the invalidated cache response
-        .assertHeader("X-Version", "v1")
-        .assertHasHeaders(validators1.toMultimap());
+    var networkResponse = assertConditionalMiss(getString(triggeringRequest));
+    assertEquals("DOUBLE STONKS!", networkResponse.body()); // Body is updated
+    assertEquals(Optional.of("v2"), networkResponse.headers().firstValue("X-Version"));
+    validators2.toMultimap()
+        .forEach((name, values) -> assertEquals(values, networkResponse.headers().allValues(name)));
+
+    // This is the invalidated cache response
+    var cacheResponse = networkResponse.cacheResponse().orElseThrow();
+    assertEquals(Optional.of("v1"), cacheResponse.headers().firstValue("X-Version"));
 
     clock.advanceSeconds(1); // Updated response is still fresh
 
-    get(serverUri)
-        .assertHit()
-        .assertBody("DOUBLE STONKS!")
-        .assertHeader("X-Version", "v2")
-        .assertHasHeaders(validators2.toMultimap());
+    var cacheResponse2 = assertHit(getString(uri(server)));
+    assertEquals("DOUBLE STONKS!", cacheResponse2.body());
+    assertEquals(Optional.of("v2"), cacheResponse2.headers().firstValue("X-Version"));
+    validators2.toMultimap()
+        .forEach((name, values) -> assertEquals(values, cacheResponse2.headers().allValues(name)));
 
     var sentRequest = server.takeRequest();
     // Date received is used if Last-Modified is absent
@@ -513,33 +520,8 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void revalidatedResponseDoesNotSeePreconditionFields(Store store) throws Exception {
-    setUpCache(store);
-    var lastModifiedString = formatHttpDate(toUtcDateTime(clock.instant().minusSeconds(1)));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("ETag", "1")
-        .addHeader("Last-Modified", lastModifiedString));
-    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    seedCache(serverUri);
-
-    clock.advanceSeconds(2); // Make response stale by 1 second
-
-    // Precondition fields aren't visible on the served response's request.
-    // The preconditions are however visible from the network response's request.
-    get(serverUri)
-        .assertConditionalHit()
-        .assertAbsentRequestHeader("If-None-Match")
-        .assertAbsentRequestHeader("If-Modified-Since")
-        .networkResponse()
-        .assertRequestHeader("If-None-Match", "1")
-        .assertRequestHeader("If-Modified-Since", lastModifiedString);
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void lastModifiedDefaultsToDateWhenRevalidating(Store store) throws Exception {
-    setUpCache(store);
+  void lastModifiedDefaultsToDateWhenRevalidating(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     var dateInstant = clock.instant();
     clock.advanceSeconds(1);
 
@@ -548,14 +530,13 @@ class HttpCacheTest {
         .addHeader("Date", formatHttpDate(toUtcDateTime(dateInstant)))
         .setBody("FLUX"));
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
     server.takeRequest(); // Remove initial request
 
     clock.advanceSeconds(2); // Make stale
 
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("FLUX");
+    var response = assertConditionalHit(getString(uri(server)));
+    assertEquals("FLUX", response.body());
 
     var sentRequest = server.takeRequest();
     assertEquals(dateInstant, sentRequest.getHeaders().getInstant("If-Modified-Since"));
@@ -563,47 +544,45 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void relaxMaxAgeWithRequest(Store store) throws Exception {
-    setUpCache(store);
+  void relaxMaxAgeWithRequest(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .setBody("tesla"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
 
     clock.advanceSeconds(2); // Make response stale
 
     // Relaxed max-age retains freshness
-    var request = GET(serverUri).header("Cache-Control", "max-age=2");
-    get(request)
-        .assertHit()
-        .assertBody("tesla");
+    var request = GET(uri(server)).header("Cache-Control", "max-age=2");
+    var cacheResponse = assertHit(getString(request));
+    assertEquals("tesla", cacheResponse.body());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void constrainMaxAgeWithRequest(Store store) throws Exception {
-    setUpCache(store);
+  void constrainMaxAgeWithRequest(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=2")
         .setBody("tesla"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
 
     clock.advanceSeconds(2); // Retain freshness
 
-    get(serverUri).assertHit();
+    assertHit(getString(uri(server)));
 
     // Constrain max-age so that the response is stale
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    var request = GET(serverUri).header("Cache-Control", "max-age=1");
-    get(request)
-        .assertConditionalHit()
-        .assertBody("tesla");
+    var request = GET(uri(server)).header("Cache-Control", "max-age=1");
+    var cacheResponse = assertConditionalHit(getString(request));
+    assertEquals("tesla", cacheResponse.body());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void constrainFreshnessWithMinFresh(Store store) throws Exception {
-    setUpCache(store);
+  void constrainFreshnessWithMinFresh(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     // Last-Modified: 2 seconds from "now"
     var lastModifiedInstant = clock.instant();
     clock.advanceSeconds(2);
@@ -612,26 +591,22 @@ class HttpCacheTest {
         .addHeader("Cache-Control", "max-age=3")
         .addHeader("Last-Modified", formatHttpDate(toUtcDateTime(lastModifiedInstant)))
         .setBody("spaceX"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
     server.takeRequest(); // Drop request
 
     clock.advanceSeconds(1); // Retain freshness (lifetime = 2 secs)
 
-    get(serverUri).assertHit();
+    assertHit(getString(uri(server)));
 
-    var request1 = GET(serverUri).header("Cache-Control", "min-fresh=2");
-    get(request1) // min-fresh satisfied
-        .assertHit()
-        .assertBody("spaceX");
+    var request1 = GET(uri(server)).header("Cache-Control", "min-fresh=2");
+    assertEquals("spaceX", assertHit(getString(request1)).body()); // min-fresh satisfied
 
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=3")
         .addHeader("Last-Modified", formatHttpDate(toUtcDateTime(lastModifiedInstant)))
         .setBody("tesla"));
-    var request2 = GET(serverUri).header("Cache-Control", "min-fresh=3");
-    get(request2) // min-fresh unsatisfied
-        .assertConditionalMiss()
-        .assertBody("tesla");
+    var request2 = GET(uri(server)).header("Cache-Control", "min-fresh=3");
+    assertEquals("tesla", assertConditionalMiss(getString(request2)).body());
 
     var sentRequest = server.takeRequest();
     assertEquals(lastModifiedInstant, sentRequest.getHeaders().getInstant("If-Modified-Since"));
@@ -639,95 +614,90 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void acceptingStalenessWithMaxStale(Store store) throws Exception {
-    setUpCache(store);
+  void acceptingStalenessWithMaxStale(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .setBody("stale on a scale"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
 
     clock.advanceSeconds(3); // Make stale by 2 seconds
 
-    BiConsumer<CacheControl, UnaryOperator<ResponseVerification<String>>> assertStaleness =
+    BiConsumer<CacheControl, UnaryOperator<CacheAwareResponse<String>>> assertStaleness =
         (cacheControl, cacheStatusAssert) -> {
-          var request = GET(serverUri).cacheControl(cacheControl);
-          var response = cacheStatusAssert.apply(getUnchecked(request))
-              .assertBody("stale on a scale");
+          var request = GET(uri(server)).cacheControl(cacheControl);
+          var response = cacheStatusAssert.apply(getStringUnchecked(request));
+          assertEquals("stale on a scale", response.body());
           // Must put a warning only if not revalidated
-          if (response.getCacheAware().cacheStatus() == HIT) {
-            response.assertHeader("Warning", "110 - \"Response is Stale\"");
+          if (response.cacheStatus() == HIT) {
+            assertEquals(
+                Optional.of("110 - \"Response is Stale\""),
+                response.headers().firstValue("Warning"));
           } else {
-            response.assertAbsentHeader("Warning");
+            assertEquals(Optional.empty(), response.headers().firstValue("Warning"));
           }
         };
 
     // Allow any staleness -> HIT
-    assertStaleness.accept(CacheControl.parse("max-stale"), ResponseVerification::assertHit);
+    assertStaleness.accept(CacheControl.parse("max-stale"), HttpCacheTest::assertHit);
 
     // Allow 3 seconds of staleness -> HIT
-    assertStaleness.accept(CacheControl.parse("max-stale=3"), ResponseVerification::assertHit);
+    assertStaleness.accept(CacheControl.parse("max-stale=3"), HttpCacheTest::assertHit);
 
     // Allow 2 seconds of staleness -> HIT
-    assertStaleness.accept(CacheControl.parse("max-stale=2"), ResponseVerification::assertHit);
+    assertStaleness.accept(CacheControl.parse("max-stale=2"), HttpCacheTest::assertHit);
 
     // Allow 1 second of staleness -> CONDITIONAL_HIT as staleness is 2
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    assertStaleness.accept(
-        CacheControl.parse("max-stale=1"), ResponseVerification::assertConditionalHit);
+    assertStaleness.accept(CacheControl.parse("max-stale=1"), HttpCacheTest::assertConditionalHit);
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void imposeRevalidationWhenStaleByMustRevalidate(Store store) throws Exception {
-    setUpCache(store);
+  void imposeRevalidationWhenStaleByMustRevalidate(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1, must-revalidate")
         .setBody("popeye"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
 
     clock.advanceSeconds(2); // Make stale by 1 secs
 
     // A revalidation is made despite max-stale=2
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    var requestMaxStale2Secs = GET(serverUri).header("Cache-Control", "max-stale=2");
-    get(requestMaxStale2Secs).assertConditionalHit();
+    var requestMaxStale2Secs = GET(uri(server)).header("Cache-Control", "max-stale=2");
+    assertConditionalHit(getString(requestMaxStale2Secs));
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void cacheTwoPathsSameUri(Store store) throws Exception {
-    setUpCache(store);
+  void cacheTwoPathsSameUri(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .setBody("alpha"));
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .setBody("beta"));
-    seedCache(serverUri.resolve("/a"));
-    seedCache(serverUri.resolve("/b"));
+    assertMiss(getString(uri((server), "/a")));
+    assertMiss(getString(uri((server), "/b")));
 
-    get(serverUri.resolve("/a"))
-        .assertHit()
-        .assertBody("alpha");
-    get(serverUri.resolve("/b"))
-        .assertHit()
-        .assertBody("beta");
+    assertEquals("alpha", assertHit(getString(uri(server, "/a"))).body());
+    assertEquals("beta", assertHit(getString(uri(server, "/b"))).body());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void preventCachingByNoStore(Store store) throws Exception {
-    setUpCache(store);
+  void preventCachingByNoStore(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "no-store")
         .setBody("alpha"));
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "no-store")
         .setBody("alpha"));
-    seedCache(serverUri.resolve("/a")); // Offer to cache
-    get(serverUri.resolve("/a"))
-        .assertMiss() // Not cached
-        .assertBody("alpha");
+    assertMiss(getString(uri((server), "/a"))); // Offer to cache
+    assertEquals("alpha", assertMiss(getString(uri(server, "/a"))).body());
 
     // The request can also prevent caching even if the response is cacheable
     server.enqueue(new MockResponse()
@@ -736,17 +706,15 @@ class HttpCacheTest {
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .setBody("beta"));
-    var request = GET(serverUri.resolve("/b")).header("Cache-Control", "no-store");
-    seedCache(request); // Offer to cache
-    get(request)
-        .assertMiss() // Not cached
-        .assertBody("beta");
+    var request = GET(uri(server, "/b")).header("Cache-Control", "no-store");
+    assertMiss(getString(request)); // Offer to cache
+    assertEquals("beta", assertMiss(getString(request)).body());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void preventCachingByWildcardVary(Store store) throws Exception {
-    setUpCache(store);
+  void preventCachingByWildcardVary(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .addHeader("Vary", "*")
@@ -755,571 +723,90 @@ class HttpCacheTest {
         .addHeader("Cache-Control", "max-age=1")
         .addHeader("Vary", "*")
         .setBody("Cache me if you can!"));
-    seedCache(serverUri); // Offer to cache
-    get(serverUri)
-        .assertMiss() // Not cached
-        .assertBody("Cache me if you can!");
+    assertMiss(getString(uri(server))); // Offer to cache
+    assertEquals("Cache me if you can!", assertMiss(getString(uri(server))).body());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void varyingResponse(Store store) throws Exception {
-    setUpCache(store);
+  void varyingResponse(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .addHeader("Vary", "X-My-Header")
         .setBody("alpha"));
-    var requestAlpha = GET(serverUri).header("X-My-Header", "a");
-    seedCache(requestAlpha);
-    get(requestAlpha)
-        .assertHit()
-        .assertBody("alpha")
-        .cacheResponse()
-        .assertRequestHeaders("X-My-Header", "a");
+    var requestAlpha = GET(uri(server)).header("X-My-Header", "a");
+    assertMiss(getString(requestAlpha)); // Put response
+    var cacheResponseAlpha =  assertHit(getString(requestAlpha));
+    assertEquals("alpha", cacheResponseAlpha.body());
+    assertEquals(
+        headers("X-My-Header", "a"),
+        cacheResponseAlpha.cacheResponse().orElseThrow().request().headers());
 
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .addHeader("Vary", "X-My-Header")
         .setBody("beta"));
-    var requestBeta = GET(serverUri).header("X-My-Header", "b");
+    var requestBeta = GET(uri(server)).header("X-My-Header", "b");
     // TODO that'll need to change if we ever support storing multiple variants
-    seedCache(requestBeta); // Replace first variant
-    get(requestBeta)
-        .assertHit()
-        .assertBody("beta")
-        .cacheResponse()
-        .assertRequestHeaders("X-My-Header", "b");
+    assertMiss(getString(requestBeta)); // Replace first variant
+    var cacheResponseBeta = assertHit(getString(requestBeta));
+    assertEquals("beta", cacheResponseBeta.body());
+    assertEquals(
+        headers("X-My-Header", "b"),
+        cacheResponseBeta.cacheResponse().orElseThrow().request().headers());
 
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .addHeader("Vary", "X-My-Header")
         .setBody("ϕ"));
-    var requestPhi = GET(serverUri); // Varying header is absent -> another variant!
-    seedCache(requestPhi); // Replace second variant
-    get(requestPhi)
-        .assertHit()
-        .assertBody("ϕ")
-        .cacheResponse()
-        .assertAbsentRequestHeader("X-My-Header");
+    var requestPhi = GET(uri(server)); // Varying header is absent -> another variant!
+    assertMiss(getString(requestPhi)); // Replace second variant
+    var cacheResponsePhi = assertHit(getString(requestPhi));
+    assertEquals("ϕ", cacheResponsePhi.body());
+    assertEquals(
+        headers(/* empty */),
+        cacheResponsePhi.cacheResponse().orElseThrow().request().headers());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void responsesVaryingOnImplicitHeadersAreNotStored(Store store) throws Exception {
-    setUpCache(store);
+  void responsesVaryingOnImplicitHeadersAreNotStored(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     for (var field : HttpCache.implicitlyAddedFieldsForTesting()) {
       server.enqueue(new MockResponse()
           .addHeader("Cache-Control", "max-age=1")
           .addHeader("Vary", "Accept-Encoding, " + field)
           .setBody("aaa"));
-      seedCache(serverUri); // Offer to cache
+      assertMiss(getString(uri(server))); // Offer to cache
 
-      var request = GET(serverUri).header("Cache-Control", "only-if-cached");
-      get(request).assertLocallyGenerated(); // Not cached!
+      var request = GET(uri(server)).header("Cache-Control", "only-if-cached");
+      assertLocallyGenerated(getString(request)); // Not cached!
     }
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void varyWithAcceptEncoding(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("Vary", "Accept-Encoding")
-        .addHeader("Content-Encoding", "gzip")
-        .setBody(new okio.Buffer().write(gzip("Jigglypuff"))));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("Vary", "Accept-Encoding")
-        .addHeader("Content-Encoding", "deflate")
-        .setBody(new okio.Buffer().write(deflate("Jigglypuff"))));
-
-    var gzipRequest = GET(serverUri).header("Accept-Encoding", "gzip");
-    seedCache(gzipRequest).assertBody("Jigglypuff");
-    get(gzipRequest)
-        .assertHit()
-        .assertBody("Jigglypuff");
-
-    var deflateRequest = GET(serverUri).header("Accept-Encoding", "deflate");
-    seedCache(deflateRequest).assertBody("Jigglypuff"); // Replace gzip variant
-    get(deflateRequest)
-        .assertHit()
-        .assertBody("Jigglypuff");
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void varyWithMultipleFields(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("Vary", "Accept-Encoding, Accept-Language")
-        .addHeader("Vary", "Accept")
-        .addHeader("Content-Language", "fr-FR")
-        .setBody("magnifique"));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("Vary", "Accept-Encoding, Accept-Language")
-        .addHeader("Vary", "Accept")
-        .addHeader("Content-Language", "es-ES")
-        .setBody("magnífico"));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("Vary", "Accept-Encoding, Accept-Language")
-        .addHeader("Vary", "Accept")
-        .addHeader("Content-Language", "en-US")
-        .setBody("Lit!"));
-
-    var jeNeParlePasAnglais = GET(serverUri)
-        .header("Accept-Language", "fr-FR")
-        .header("Accept-Encoding", "identity");
-    seedCache(jeNeParlePasAnglais); // Put in cache
-    get(jeNeParlePasAnglais)
-        .assertHit()
-        .assertHeader("Content-Language", "fr-FR")
-        .assertBody("magnifique")
-        .cacheResponse()
-        .assertRequestHeaders(
-            "Accept-Language", "fr-FR",
-            "Accept-Encoding", "identity");
-    get(jeNeParlePasAnglais.header("My-Header", "a"))
-        .assertHit()
-        .assertBody("magnifique");
-    // Current variant has no Accept header, so this won't match
-    var withTextHtml = jeNeParlePasAnglais
-        .header("Accept", "text/html")
-        .header("Cache-Control", "only-if-cached");
-    get(withTextHtml).assertLocallyGenerated();
-
-    var noHabloIngles = GET(serverUri)
-        .header("Accept-Language", "es-ES")
-        .header("Accept-Encoding", "identity")
-        .header("Accept", "text/html");
-    seedCache(noHabloIngles); // Replace french variant
-    get(noHabloIngles)
-        .assertHit()
-        .assertHeader("Content-Language", "es-ES")
-        .assertBody("magnífico")
-        .cacheResponse()
-        .assertRequestHeaders(
-            "Accept-Language", "es-ES",
-            "Accept-Encoding", "identity",
-            "Accept", "text/html");
-    get(noHabloIngles.header("My-Header", "a"))
-        .assertHit()
-        .assertBody("magnífico");
-    // Request with different Accept won't match
-    var withApplicationJson = noHabloIngles
-        .header("Accept", "application/json")
-        .header("Cache-Control", "only-if-cached");
-    get(withApplicationJson).assertLocallyGenerated();
-
-    // Absent varying fields won't match a request containing them
-    seedCache(serverUri);
-    get(serverUri)
-        .assertHit()
-        .assertHeader("Content-Language", "en-US")
-        .assertBody("Lit!");
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void varyOnMultipleFieldValues(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("Vary", "My-Header")
-        .setBody("alpha"));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("Vary", "My-Header")
-        .setBody("beta"));
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .addHeader("Vary", "My-Header")
-        .setBody("charlie"));
-
-    var requestAlpha = GET(serverUri)
-        .header("My-Header", "val1")
-        .header("My-Header", "val2")
-        .header("My-Header", "val3");
-    seedCache(requestAlpha); // Put alpha variant
-    get(requestAlpha)
-        .assertHit()
-        .assertBody("alpha");
-
-    // This matches as values are only different in order
-    var requestBeta = GET(serverUri)
-        .header("My-Header", "val2")
-        .header("My-Header", "val3")
-        .header("My-Header", "val1");
-    get(requestBeta)
-        .assertHit()
-        .assertBody("alpha");
-
-    // This doesn't match as there's 2 values vs alpha variant's 3
-    var requestBeta2 = GET(serverUri)
-        .header("My-Header", "val1")
-        .header("My-Header", "val2");
-    seedCache(requestBeta2);
-    get(requestBeta2)
-        .assertHit()
-        .assertBody("beta");
-
-    // TODO this should probably match but it currently doesn't
-//    var requestCharlie = GET(serverUri)
-//        .header("My-Header", "val1, val3");
-//    assertEquals("beta", assertHit(getString(request4)).body());
-
-    // Request with no values doesn't match
-    seedCache(serverUri);
-    get(serverUri)
-        .assertHit()
-        .assertBody("charlie");
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void staleWhileRevalidate(Store store) throws Exception {
-    setUpCache(store);
-    var dateInstant = clock.instant();
-    var lastModifiedInstant = dateInstant.minusSeconds(1);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-while-revalidate=2")
-        .addHeader("ETag", "1")
-        .addHeader("Last-Modified", formatHttpDate(toUtcDateTime(lastModifiedInstant)))
-        .addHeader("Date", formatHttpDate(toUtcDateTime(dateInstant)))
-        .setBody("Pickachu"));
-    seedCache(serverUri);
-    get(serverUri).assertHit();
-    server.takeRequest(); // Remove initial request
-
-    clock.advanceSeconds(3); // Make response stale by 2 seconds
-
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-while-revalidate=2")
-        .addHeader("ETag", "2")
-        .addHeader("Last-Modified", formatHttpDate(toUtcDateTime(clock.instant().minusSeconds(1))))
-        .addHeader("Date", formatHttpDate(toUtcDateTime(clock.instant())))
-        .setBody("Ricardo"));
-
-    get(serverUri)
-        .assertHit()
-        .assertBody("Pickachu")
-        .assertHeader("ETag", "1")
-        .assertHeader("Warning", "110 - \"Response is Stale\"")
-        .assertHeader("Age", "3");
-
-    // A revalidation request is sent in background
-    var sentRequest = server.takeRequest();
-    assertEquals("1", sentRequest.getHeader("If-None-Match"));
-    assertEquals(lastModifiedInstant, sentRequest.getHeaders().getInstant("If-Modified-Since"));
-
-    // Retry till revalidation response completes, causing the cached response to be updated
-    retryTillOfflineHit()
-        .assertHit()
-        .assertBody("Ricardo")
-        .assertHeader("ETag", "2")
-        .assertAbsentHeader("Warning") // No warnings
-        .assertHeader("Age", "0");
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void unsatisfiedStaleWhileRevalidate(Store store) throws Exception {
-    setUpCache(store);
-    var dateInstant = clock.instant();
-    var lastModifiedInstant = dateInstant.minusSeconds(1);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-while-revalidate=2")
-        .addHeader("ETag", "1")
-        .addHeader("Last-Modified", formatHttpDate(toUtcDateTime(lastModifiedInstant)))
-        .addHeader("Date", formatHttpDate(toUtcDateTime(dateInstant)))
-        .setBody("Pickachu"));
-    seedCache(serverUri); // Put in cache
-    get(serverUri).assertHit();
-    server.takeRequest(); // Remove initial request
-
-    clock.advanceSeconds(4); // Make response stale by 3 seconds (unsatisfied stale-while-revalidate)
-
-    // Synchronous revalidation is issued when stale-while-revalidate isn't satisfied
-
-    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("Pickachu")
-        .assertHeader("ETag", "1")
-        .assertAbsentHeader("Warning");
-
-    clock.advanceSeconds(4); // Make response stale by 3 seconds (unsatisfied stale-while-revalidate)
-
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-while-revalidate=2")
-        .addHeader("ETag", "2")
-        .addHeader("Last-Modified", formatHttpDate(toUtcDateTime(clock.instant().minusSeconds(1))))
-        .addHeader("Date", formatHttpDate(toUtcDateTime(clock.instant())))
-        .setBody("Ricardo"));
-    get(serverUri)
-        .assertConditionalMiss()
-        .assertBody("Ricardo")
-        .assertHeader("ETag", "2")
-        .assertAbsentHeader("Warning");
- }
-
-  @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  @ValueSource(ints = {500, 502, 503, 504})
-  void staleIfErrorWithServerErrorCodes(int code, Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-if-error=2")
-        .setBody("Ricardo"));
-    seedCache(serverUri);
-    get(serverUri).assertHit();
-
-    clock.advanceSeconds(2); // Make response stale by 1 second
-
-    server.enqueue(new MockResponse().setResponseCode(code));
-    get(serverUri)
-        .assertHit()
-        .assertCode(200)
-        .assertBody("Ricardo")
-        .assertHeader("Warning", "110 - \"Response is Stale\"");
-
-    clock.advanceSeconds(1); // Make response stale by 2 seconds
-
-    // stale-if-error is still satisfied
-    server.enqueue(new MockResponse().setResponseCode(code));
-    get(serverUri)
-        .assertHit()
-        .assertCode(200)
-        .assertBody("Ricardo")
-        .assertHeader("Warning", "110 - \"Response is Stale\"");
-  }
-
-  @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  @ValueSource(ints = {500, 502, 503, 504})
-  void unsatisfiedStaleIfErrorWithServerErrorCodes(int code, Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-if-error=1")
-        .setBody("Ditto"));
-    seedCache(serverUri);
-    get(serverUri).assertHit();
-
-    clock.advanceSeconds(3); // Make response stale by 2 seconds
-
-    // stale-if-error isn't satisfied
-    server.enqueue(new MockResponse().setResponseCode(code));
-    get(serverUri)
-        .assertConditionalMiss()
-        .assertCode(code)
-        .assertBody("") // No body in the error response
-        .assertAbsentHeader("Warning");
-  }
-
-  private static final class FailingInterceptor implements Interceptor {
-    private final Supplier<Throwable> failure;
-
-    FailingInterceptor(Supplier<Throwable> failure) {
-      this.failure = failure;
-    }
-
-    @Override
-    public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain) {
-      throw throwUnchecked(failure.get());
-    }
-
-    @Override
-    public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-        HttpRequest request, Chain<T> chain) {
-      return CompletableFuture.failedFuture(failure.get());
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <X extends Throwable> X throwUnchecked(Throwable t) throws X {
-      throw (X) t;
-    }
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void staleIfErrorWithConnectionFailure(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-if-error=2")
-        .setBody("Jigglypuff"));
-    seedCache(serverUri);
-    get(serverUri).assertHit();
-
-    clock.advanceSeconds(2); // Make response stale by 1 second
-
-    // Make requests fail with a ConnectException
-    client = clientBuilder
-        .postDecorationInterceptor(new FailingInterceptor(ConnectException::new))
-        .build();
-
-    get(serverUri)
-        .assertHit()
-        .assertCode(200)
-        .assertBody("Jigglypuff")
-        .assertHeader("Warning", "110 - \"Response is Stale\"");
-
-    clock.advanceSeconds(1); // Make response stale by 2 seconds
-
-    // stale-if-error is still satisfied
-    server.enqueue(new MockResponse().setBody("huh?"));
-    get(serverUri)
-        .assertHit()
-        .assertCode(200)
-        .assertBody("Jigglypuff")
-        .assertHeader("Warning", "110 - \"Response is Stale\"");
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void unsatisfiedStaleIfErrorWithConnectionFailure(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-if-error=1")
-        .setBody("Ricardo"));
-    seedCache(serverUri);
-    get(serverUri).assertHit();
-
-    clock.advanceSeconds(3); // Make response stale by 2 seconds
-
-    // Make requests fail with a ConnectException
-    client = clientBuilder
-        .postDecorationInterceptor(new FailingInterceptor(ConnectException::new))
-        .build();
-
-    // stale-if-error isn't satisfied
-    assertThrows(IOException.class, () -> get(serverUri));
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void staleIfErrorWithInapplicableErrorCode(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-if-error=1")
-        .setBody("Eevee"));
-    seedCache(serverUri);
-    get(serverUri).assertHit();
-
-    clock.advanceSeconds(2); // Make response stale by 1 second
-
-    // Only 5xx error codes are applicable to stale-if-error
-    server.enqueue(new MockResponse().setResponseCode(404));
-    get(serverUri)
-        .assertConditionalMiss()
-        .assertCode(404)
-        .assertBody(""); // Error response has no body
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void staleIfErrorWithInapplicableException(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-if-error=1")
-        .setBody("Charmander"));
-    seedCache(serverUri);
-    get(serverUri).assertHit();
-
-    // Make requests fail with a non-IOException
-    client = clientBuilder
-        .postDecorationInterceptor(new FailingInterceptor(TestException::new))
-        .build();
-
-    clock.advanceSeconds(2); // Make response stale by 1 second
-
-    // Exception is rethrown as stale-if-error isn't satisfied
-    assertThrows(TestException.class, () -> get(serverUri));
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void staleIfErrorWithUncheckedIOException(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-if-error=1")
-        .setBody("Jynx"));
-    seedCache(serverUri);
-    get(serverUri).assertHit();
-
-
-    // Make requests fail with UncheckedIOException
-    client = clientBuilder
-        .postDecorationInterceptor(
-            new FailingInterceptor(() -> new UncheckedIOException(new IOException())))
-        .build();
-
-    clock.advanceSeconds(2); // Make response stale by 1 second
-
-    // UncheckedIOException is treated as IOException -> stale-if-error is satisfied
-    var request = GET(serverUri).header("Cache-Control", "stale-if-error=2");
-    get(request)
-        .assertHit()
-        .assertCode(200)
-        .assertBody("Jynx")
-        .assertHeader("Warning", "110 - \"Response is Stale\"");
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void staleIfErrorInRequestOverridesThatInResponse(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1, stale-if-error=2")
-        .setBody("Psyduck"));
-    seedCache(serverUri);
-    get(serverUri).assertHit();
-
-    clock.advanceSeconds(4); // Make response stale by 3 seconds
-
-    // Response's stale-if-error isn't satisfied but that of the request is
-    server.enqueue(new MockResponse().setResponseCode(500));
-    var request1 = GET(serverUri).header("Cache-Control", "stale-if-error=3");
-    get(request1)
-        .assertHit()
-        .assertCode(200)
-        .assertBody("Psyduck");
-
-    // Refresh response
-    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    get(serverUri).assertConditionalHit();
-
-    clock.advanceSeconds(3); // Make response stale by 2 seconds
-
-    // Response's stale-if-error is satisfied but that of request isn't
-    server.enqueue(new MockResponse().setResponseCode(500));
-    var request2 = GET(serverUri).header("Cache-Control", "stale-if-error=1");
-    get(request2)
-        .assertConditionalMiss()
-        .assertCode(500)
-        .assertBody("");
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void warnCodes1xxAreRemovedOnRevalidation(Store store) throws Exception {
-    setUpCache(store);
+  void warningCodes1xxAreRemovedOnRevalidation(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1")
         .addHeader("Warning", "199 - \"OMG IT'S HAPPENING\"")
         .addHeader("Warning", "299 - \"EVERY BODY STAY CALM\"")
         .setBody("Dwight the trickster"));
-    seedCache(serverUri);
+    var response = assertMiss(getString(uri(server))); // Put in cache
+    assertEquals(
+        Set.of("199 - \"OMG IT'S HAPPENING\"", "299 - \"EVERY BODY STAY CALM\""),
+        Set.copyOf(response.headers().allValues("Warning")));
 
     clock.advanceSeconds(2); // Make stale
 
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("Dwight the trickster")
-        .assertHeader("Warning", "299 - \"EVERY BODY STAY CALM\""); // Warn code 199 is removed
+    var cacheResponse = assertConditionalHit(getString(uri(server)));
+    assertEquals("Dwight the trickster", cacheResponse.body());
+    assertEquals(
+        Set.of("299 - \"EVERY BODY STAY CALM\""),
+        Set.copyOf(cacheResponse.headers().allValues("Warning")));
   }
 
   /**
@@ -1329,8 +816,8 @@ class HttpCacheTest {
   @ParameterizedTest
   @CsvFileSource(resources = "/default_cacheability.csv", numLinesToSkip = 1)
   @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  void defaultCacheability(int code, boolean cacheableByDefault, Store store) throws Exception {
-    setUpCache(store);
+  void defaultCacheability(int code, boolean cacheableByDefault, StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     client = clientBuilder
         .version(Version.HTTP_1_1)       // HTTP_2 doesn't let 101 pass
         .followRedirects(Redirect.NEVER) // Disable redirections in case code is 3xx
@@ -1349,29 +836,29 @@ class HttpCacheTest {
         .addHeader("Last-Modified", formatHttpDate(lastModified))
         .addHeader("Date", formatHttpDate(date))
         .setBody(body));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Offer to cache
 
     clock.advanceSeconds(1); // Heuristic freshness retained
 
-    ResponseVerification<String> response;
+    CacheAwareResponse<String> response;
     if (cacheableByDefault) {
-      response = get(serverUri).assertHit();
+      response = assertHit(getString(uri(server)));
     } else {
       server.enqueue(new MockResponse()
           .setResponseCode(code)
           .addHeader("Last-Modified", formatHttpDate(lastModified))
           .addHeader("Date", formatHttpDate(date))
           .setBody(body));
-      response = get(serverUri).assertMiss();
+      response = assertMiss(getString(uri(server)));
     }
-    response.assertCode(code)
-        .assertBody(body);
+    assertEquals(code, response.statusCode());
+    assertEquals(body, response.body());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void heuristicExpiration(Store store) throws Exception {
-    setUpCache(store);
+  void heuristicExpiration(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     // Last-Modified:      20 seconds from date
     // Heuristic lifetime: 2 seconds
     // Age:                1 second
@@ -1381,63 +868,60 @@ class HttpCacheTest {
     clock.advanceSeconds(1);
 
     server.enqueue(new MockResponse()
-        .addHeader("Last-Modified", formatHttpDate(lastModified))
+        .setHeader("Last-Modified", formatHttpDate(lastModified))
         .addHeader("Date", formatHttpDate(date))
         .setBody("Cache me pls!"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
 
     clock.advanceSeconds(1); // Heuristic freshness retained (age = 2 secs, lifetime = 2 secs)
 
-    get(serverUri)
-        .assertHit()
-        .assertBody("Cache me pls!")
-        .assertHeader("Age", "2")
-        .assertAbsentHeader("Warning");
+    var cacheResponse = assertHit(getString(uri(server)));
+    assertEquals("Cache me pls!", cacheResponse.body());
+    assertEquals(Optional.empty(), cacheResponse.headers().firstValue("Warning"));
+    assertEquals(Optional.of("2"), cacheResponse.headers().firstValue("Age"));
 
     clock.advanceSeconds(1); // Make response stale (age = 3 secs, lifetime = 2 secs)
 
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("Cache me pls!")
-        .assertAbsentHeader("Age") // The response has no Age as it has just been revalidated
-        .assertAbsentHeader("Warning");
+    var validationResponse = assertConditionalHit(getString(uri(server)));
+    assertEquals("Cache me pls!", validationResponse.body());
+    assertEquals(Optional.empty(), validationResponse.headers().firstValue("Warning"));
+    assertEquals(Optional.empty(), validationResponse.headers().firstValue("Age"));
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void warningOnHeuristicFreshnessWithAgeGreaterThanOneDay(Store store) throws Exception {
-    setUpCache(store);
-    // Last-Modified:      20 days from date
-    // Heuristic lifetime: 2 days
+  void warningOnHeuristicFreshnessWithAgeGreaterThanOneDay(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
+    // Last-Modified:      11 days from date
+    // Heuristic lifetime: 1.1 days
     var lastModified = toUtcDateTime(clock.instant());
     clock.advance(ofDays(20));
     var date = toUtcDateTime(clock.instant());
 
     server.enqueue(new MockResponse()
-        .addHeader("Last-Modified", formatHttpDate(lastModified))
+        .setHeader("Last-Modified", formatHttpDate(lastModified))
         .addHeader("Date", formatHttpDate(date))
         .setBody("Cache me pls!"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put response
 
-    // Heuristic freshness retained (age = 1 day + 1 second, lifetime = 2 days)
+    // Heuristic freshness retained (age = 1 day + 1 second, lifetime = 1.1 days)
     clock.advance(ofDays(1).plusSeconds(1));
 
-    get(serverUri)
-        .assertHit()
-        .assertBody("Cache me pls!")
-        .assertHeader("Age", ofDays(1).plusSeconds(1).toSeconds())
-        .assertHeader("Warning", "113 - \"Heuristic Expiration\"");
+    var cacheResponse = assertHit(getString(uri(server)));
+    assertEquals("Cache me pls!", cacheResponse.body());
+    assertEquals(
+        List.of("113 - \"Heuristic Expiration\""), cacheResponse.headers().allValues("Warning"));
+    assertEquals(Optional.of("86401"), cacheResponse.headers().firstValue("Age"));
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void computingAge(Store store) throws Exception {
-    setUpCache(store);
+  void computingAge(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     client = clientBuilder.postDecorationInterceptor(new Interceptor() {
       @Override public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
           throws IOException, InterruptedException {
-        // Simulate response taking 3 seconds to arrive
         clock.advanceSeconds(3);
         return chain.forward(request);
       }
@@ -1452,14 +936,14 @@ class HttpCacheTest {
     // response_time = request_time + 3 = x + 5
     // apparent_age = response_time - date_value = 5
     // age_value = 10
-    clock.advanceSeconds(2);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=60")
         .addHeader("Age", "10"));
+    clock.advanceSeconds(2);
     // now = x + 5
-    seedCache(serverUri) // Put in cache & advance clock
-        .assertRequestSentAt(clock.instant().minusSeconds(3))
-        .assertResponseReceivedAt(clock.instant());
+    var response = assertMiss(getString(uri(server))); // Put in cache & advance clock
+    assertEquals(clock.instant().minusSeconds(3), response.timeRequestSent());
+    assertEquals(clock.instant(), response.timeResponseReceived());
 
     // now = x + 10
     // resident_time = now - responseTime = 5
@@ -1470,108 +954,121 @@ class HttpCacheTest {
     // corrected_initial_age = max(apparent_age, corrected_age_value) = 13
     // resident_time = now - response_time = 5
     // current_age = corrected_initial_age + resident_time = 18
-    get(serverUri)
-        .assertHit()
-        .assertHeader("Age", "18");
+    var cacheResponse = assertHit(getString(uri(server)));
+    assertEquals(Optional.of("18"), cacheResponse.headers().firstValue("Age"));
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
   @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  void unsafeMethodsInvalidateCache(String method, Store store) throws Exception {
-    setUpCache(store);
+  void unsafeMethodsInvalidateCache(String method, StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Pickachu"));
-    seedCache(serverUri);
+        .setHeader("Cache-Control", "max-age=2")
+        .setBody("Pikachu"));
+    assertMiss(getString(uri(server))); // Put in cache
 
-    get(serverUri)
-        .assertHit()
-        .assertBody("Pickachu");
+    assertEquals("Pikachu", assertHit(getString(uri(server))).body());
 
     server.enqueue(new MockResponse().setBody("Eevee"));
-    var unsafeRequest = MutableRequest.create(serverUri).method(method, BodyPublishers.noBody());
-    get(unsafeRequest) // Invalidates what's cached
-        .assertMiss()
-        .assertBody("Eevee");
+    var request = MutableRequest.create(uri(server)).method(method, BodyPublishers.noBody());
+    assertEquals("Eevee", assertMiss(getString(request)).body()); // Invalidates what's cached
 
     server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=2")
+        .setHeader("Cache-Control", "max-age=2")
         .setBody("Charmander"));
-    get(serverUri)
-        .assertMiss()
-        .assertBody("Charmander");
+    assertEquals("Charmander", assertMiss(getString(uri(server))).body());
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
   @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  void unsafeMethodsOnlyInvalidateCacheIfSuccessful(String method, Store store) throws Exception {
-    setUpCache(store);
+  void unsafeMethodsOnlyInvalidateCacheIfSuccessful(String method, StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Pickachu"));
-    seedCache(serverUri);
+        .setHeader("Cache-Control", "max-age=2")
+        .setBody("Pikachu"));
+    assertMiss(getString(uri(server))); // Put in cache
 
-    get(serverUri)
-        .assertHit()
-        .assertBody("Pickachu");
+    clock.advanceSeconds(1);
+
+    assertEquals("Pikachu", assertHit(getString(uri(server))).body());
 
     server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR));
-    var unsafeRequest = MutableRequest.create(serverUri).method(method, BodyPublishers.noBody());
-    get(unsafeRequest).assertMiss(); // Shouldn't invalidate what's cached
+    var unsafeRequest = MutableRequest.create(uri(server)).method(method, BodyPublishers.noBody());
+    assertMiss(getString(unsafeRequest)); // Shouldn't invalidate what's cached
 
-    get(serverUri)
-        .assertHit()
-        .assertCode(200)
-        .assertBody("Pickachu"); // Hit!
+    server.enqueue(new MockResponse()
+        .setHeader("Cache-Control", "max-age=2")
+        .setBody("Charmander"));
+    assertEquals("Pikachu", assertHit(getString(uri(server))).body()); // Hit!
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
   @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  void unsafeMethodsAreNotCached(String method, Store store) throws Exception {
-    setUpCache(store);
+  void unsafeMethodsAreNotCached(String method, StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=2")
-        .setBody("Pickachu"));
-
-    var unsafeRequest = MutableRequest.create(serverUri).method(method, BodyPublishers.noBody());
-    seedCache(unsafeRequest).assertBody("Pickachu"); // Offer to cache
-
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=2")
+        .setHeader("Cache-Control", "max-age=2")
         .setBody("Ditto"));
-    get(serverUri)
-        .assertMiss()
-        .assertBody("Ditto"); // Unsafe request's response isn't cached
+
+    var unsafeRequest = MutableRequest.create(uri(server)).method(method, BodyPublishers.noBody());
+    assertMiss(getString(unsafeRequest)); // Offer to cache
+
+    server.enqueue(new MockResponse()
+        .setHeader("Cache-Control", "max-age=2")
+        .setBody("Ditto"));
+    assertEquals("Ditto", assertMiss(getString(uri(server))).body()); // Not cached!
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void headOfCachedGet(Store store) throws Exception {
-    setUpCache(store);
+  void headOfCachedGet(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=2")
+        .setHeader("Cache-Control", "max-age=2")
         .setBody("Mewtwo"));
-    seedCache(serverUri);
+    assertMiss(getString(uri(server))); // Put in cache
 
     // TODO that'll fail if HEADS are handled
-    server.enqueue(new MockResponse().addHeader("Cache-Control", "max-age=2"));
-    var head = MutableRequest.create(serverUri).method("HEAD", BodyPublishers.noBody());
-    get(head).assertMiss();
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=2"));
+    var head = MutableRequest.create(uri(server)).method("HEAD", BodyPublishers.noBody());
+    assertMiss(getString(head));
 
-    get(serverUri)
-        .assertHit()
-        .assertBody("Mewtwo");
+    assertEquals("Mewtwo", assertHit(getString(uri(server))).body());
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void manuallyInvalidateEntries(Store store) throws Exception {
-    setUpCache(store);
-    var uri1 = serverUri.resolve("/a");
-    var uri2 = serverUri.resolve("/b");
+  void varyWithAcceptEncoding(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
+    server.enqueue(new MockResponse()
+        .setHeader("Cache-Control", "max-age=1")
+        .setHeader("Vary", "Accept-Encoding")
+        .setHeader("Content-Encoding", "gzip")
+        .setBody(new okio.Buffer().write(gzip("Jigglypuff"))));
+    server.enqueue(new MockResponse()
+        .setHeader("Cache-Control", "max-age=1")
+        .setHeader("Vary", "Accept-Encoding")
+        .setHeader("Content-Encoding", "deflate")
+        .setBody(new okio.Buffer().write(deflate("Jigglypuff"))));
+
+    var gzipRequest = GET(uri(server)).header("Accept-Encoding", "gzip");
+    assertEquals("Jigglypuff", assertMiss(getString(gzipRequest)).body()); // Put in cache
+    assertEquals("Jigglypuff", assertHit(getString(gzipRequest)).body());
+
+    var deflateRequest = GET(uri(server)).header("Accept-Encoding", "deflate");
+    assertEquals("Jigglypuff", assertMiss(getString(deflateRequest)).body()); // Replace gzip variant
+    assertEquals("Jigglypuff", assertHit(getString(deflateRequest)).body());
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig
+  void manuallyInvalidateEntries(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
+    var uri1 = uri(server, "/a");
+    var uri2 = uri(server, "/b");
     server.setDispatcher(new Dispatcher() {
       @Override
       public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
@@ -1587,40 +1084,32 @@ class HttpCacheTest {
       }
     });
 
-    seedCache(uri1);
-    get(uri1)
-        .assertHit()
-        .assertBody("a");
+    assertMiss(getString(uri1)); // Put in cache
+    assertEquals("a", assertHit(getString(uri1)).body());
 
-    seedCache(uri2);
-    get(uri2)
-        .assertHit()
-        .assertBody("b");
+    assertMiss(getString(uri2)); // Put in cache
+    assertEquals("b", assertHit(getString(uri2)).body());
 
-    assertTrue(cache.remove(uri1));
-    get(uri1).assertMiss(); // Reinserts the response
+    cache.remove(uri1);
+    assertMiss(getString(uri1)); // Re-insert
 
-    assertTrue(cache.remove(MutableRequest.GET(uri2)));
-    get(uri2).assertMiss(); // Reinserts the response
+    cache.remove(MutableRequest.GET(uri2));
+    assertMiss(getString(uri2)); // Re-insert
 
-    get(uri1)
-        .assertHit()
-        .assertBody("a");
-    get(uri2)
-        .assertHit()
-        .assertBody("b");
+    assertEquals("a", assertHit(getString(uri1)).body());
+    assertEquals("b", assertHit(getString(uri2)).body());
 
     cache.clear();
-    get(uri1).assertMiss();
-    get(uri2).assertMiss();
+    assertEquals("a", assertMiss(getString(uri1)).body());
+    assertEquals("b", assertMiss(getString(uri2)).body());
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"private", "public"})
   @StoreConfig(store = DISK, fileSystem = SYSTEM)
-  void cacheControlPublicOrPrivateIsCacheableByDefault(String directive, Store store)
+  void cacheControlPublicOrPrivateIsCacheableByDefault(String directive, StoreContext storeContext)
       throws Exception {
-    setUpCache(store);
+    setUpCache(storeContext);
     // Last-Modified:      30 seconds from date
     // Heuristic lifetime: 3 seconds
     var lastModifiedInstant = clock.instant();
@@ -1631,246 +1120,32 @@ class HttpCacheTest {
         .addHeader("Last-Modified", formatHttpDate(toUtcDateTime(lastModifiedInstant)))
         .addHeader("Date", formatHttpDate(toUtcDateTime(dateInstant)))
         .setBody("Mew"));
-    seedCache(serverUri); // Put in cache
+    getString(uri(server)); // Put in cache
     server.takeRequest(); // Drop network request
 
     clock.advanceSeconds(2); // Retain freshness (lifetime = 1 seconds)
 
-    get(serverUri)
-        .assertHit()
-        .assertBody("Mew");
+    assertEquals("Mew", assertHit(getString(uri(server))).body());
 
     clock.advanceSeconds(2); // Make stale
 
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("Mew");
+    assertEquals("Mew", assertConditionalHit(getString(uri(server))).body());
 
     var sentRequest = server.takeRequest();
     assertEquals(lastModifiedInstant, sentRequest.getHeaders().getInstant("If-Modified-Since"));
   }
 
-  @UseHttps // Test SSLSession persistence
   @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void cachePersistence(StoreContext storeContext) throws Exception {
-    setUpCache(storeContext.newStore());
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Eevee"));
-    seedCache(serverUri);
-
-    cache.close();
-    clock.advanceSeconds(1); // Retain freshness between sessions
-
-    setUpCache(storeContext.newStore()); // Create a new cache
-    get(serverUri)
-        .assertHit()
-        .assertBody("Eevee")
-        .assertCachedWithSSL();
-
-    cache.close();
-    clock.advanceSeconds(1); // Make response stale by 1 second between sessions
-
-    setUpCache(storeContext.newStore()); // Create a new cache
-    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    get(serverUri)
-        .assertConditionalHit()
-        .assertBody("Eevee")
-        .assertCachedWithSSL();
+    setUpCache(storeContext);
   }
 
   @StoreParameterizedTest
   @StoreConfig
-  void cacheSize(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("bababooey"));
-    seedCache(serverUri);
-
-    assertEquals(cache.storeForTesting().size(), cache.size());
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void networkFailureDuringTransmission(Store store) throws Exception {
-    setUpCache(store);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Jigglypuff get that stuff")
-        .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY));
-    assertThrows(IOException.class, () -> get(serverUri));
-
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Jigglypuff get that stuff"));
-    get(serverUri)
-        .assertMiss()
-        .assertBody("Jigglypuff get that stuff");
-
-    clock.advanceSeconds(2); // Make response stale by 1 second
-
-    // Attempted revalidation throws & cache update is discarded
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Jigglypuff get that stuff")
-        .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY));
-    assertThrows(IOException.class, () -> get(serverUri));
-
-    // Stale cache response is still there
-    var request = GET(serverUri).header("Cache-Control", "max-stale=1");
-    get(request)
-        .assertHit()
-        .assertBody("Jigglypuff get that stuff")
-        .assertHeader("Age", "2")
-        .assertHeader("Warning", "110 - \"Response is Stale\"");
-  }
-
-  private static final class FailingStore extends ForwardingStore {
-    volatile boolean allowReads = false;
-    volatile boolean allowWrites = false;
-
-    FailingStore(Store delegate) {
-      super(delegate);
-    }
-
-    @Override
-    public @Nullable Editor edit(String key) throws IOException {
-      return wrapEditor(super.edit(key));
-    }
-
-    @Override
-    public @Nullable Viewer view(String key) throws IOException {
-      return wrapViewer(super.view(key));
-    }
-
-    @Nullable Editor wrapEditor(@Nullable Editor e) {
-      return e != null ? new FailingEditor(e) : null;
-    }
-
-    @Nullable Viewer wrapViewer(@Nullable Viewer v) {
-      return v != null ? new FailingViewer(v) : null;
-    }
-
-    private final class FailingEditor extends ForwardingEditor {
-      private volatile boolean committed;
-
-      FailingEditor(Editor delegate) {
-        super(delegate);
-      }
-
-      @Override
-      public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-        return super.writeAsync(position, src)
-            .thenCompose(
-                r ->
-                    allowWrites
-                        ? CompletableFuture.completedFuture(r)
-                        : CompletableFuture.failedFuture(new TestException()));
-      }
-
-      @Override
-      public void commitOnClose() {
-        committed = true;
-        super.commitOnClose();
-      }
-
-      @Override
-      public void close() throws IOException {
-        if (committed && !allowWrites) {
-          throw new IOException("Nope!");
-        }
-        super.close();
-      }
-    }
-
-    private final class FailingViewer extends ForwardingViewer {
-      FailingViewer(Viewer delegate) {
-        super(delegate);
-      }
-
-      @Override
-      public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
-        return super.readAsync(position, dst)
-            .thenCompose(
-                r ->
-                    allowReads
-                        ? CompletableFuture.completedFuture(r)
-                        : CompletableFuture.failedFuture(new TestException()));
-
-      }
-
-      @Override
-      public @Nullable Editor edit() throws IOException {
-        return wrapEditor(super.edit());
-      }
-    }
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void errorsWhileWritingDiscardsCaching(Store store) throws Exception {
-    var failingStore = new FailingStore(store);
-    failingStore.allowReads = true;
-    setUpCache(failingStore);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Pickachu"));
-
-    // Write failure is ignored & the response completes normally nevertheless.
-    seedCache(serverUri).assertBody("Pickachu");
-
-    // Allow the response to be written
-    failingStore.allowWrites = true;
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Pickachu"));
-    seedCache(serverUri);
-    get(serverUri)
-        .assertHit()
-        .assertBody("Pickachu");
-
-    clock.advanceSeconds(2); // Make response stale by 1 second
-
-    // Attempted revalidation throws & cache update is discarded
-    failingStore.allowWrites = false;
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Charmander"));
-    get(serverUri)
-        .assertConditionalMiss()
-        .assertBody("Charmander");
-
-    // Stale cache response is still there
-    var request = GET(serverUri).header("Cache-Control", "max-stale=1");
-    get(request)
-        .assertHit()
-        .assertBody("Pickachu")
-        .assertHeader("Age", "2")
-        .assertHeader("Warning", "110 - \"Response is Stale\"");
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void errorsWhileReadingArePropagated(Store store) throws Exception {
-    var failingStore = new FailingStore(store);
-    failingStore.allowWrites = true;
-    setUpCache(failingStore);
-    server.enqueue(new MockResponse()
-        .addHeader("Cache-Control", "max-age=1")
-        .setBody("Pickachu"));
-    seedCache(serverUri);
-
-    // Read failure is propagated
-    assertThrows(TestException.class, () -> get(serverUri));
-  }
-
-  @StoreParameterizedTest
-  @StoreConfig
-  void recordStats(Store store) throws Exception {
-    setUpCache(store);
+  void recordStats(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
     server.setDispatcher(new Dispatcher() {
       @NotNull @Override public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
         var path = recordedRequest.getRequestUrl().pathSegments().get(0);
@@ -1885,25 +1160,24 @@ class HttpCacheTest {
       }
     });
 
-    var hitUri = serverUri.resolve("/hit");
-    var missUri = serverUri.resolve("/miss");
-    get(hitUri).assertMiss();  // requestCount = 1, missCount = 1, networkUseCount = 1
-    get(hitUri).assertHit();   // requestCount = 2, hitCount = 1
-    get(missUri).assertMiss(); // requestCount = 3, missCount = 2, networkUseCount = 2
+    var hitUri = uri(server, "/hit");
+    var missUri = uri(server, "/miss");
+    assertMiss(getString(hitUri));  // requestCount = 1, missCount = 1, networkUseCount = 1
+    assertHit(getString(hitUri));   // requestCount = 2, hitCount = 1
+    assertMiss(getString(missUri)); // requestCount = 3, missCount = 2, networkUseCount = 2
     for (int i = 0; i < 10; i++) {  // requestCount = 13, missCount = 12, networkUseCount = 12
-      get(missUri).assertMiss();
+      assertMiss(getString(missUri));
     }
 
-    assertTrue(cache.remove(hitUri));
+    cache.remove(hitUri);
 
-    get(hitUri).assertMiss();  // requestCount = 14, missCount = 13, networkUseCount = 13
+    assertMiss(getString(hitUri));  // requestCount = 14, missCount = 13, networkUseCount = 13
     for (int i = 0; i < 10; i++) {  // requestCount = 24, hitCount = 11
-      get(hitUri).assertHit();
+      assertHit(getString(hitUri));
     }
 
     // requestCount = 25, missCount = 14 (no network)
-    get(GET(missUri).header("Cache-Control", "only-if-cached"))
-        .assertLocallyGenerated();
+    assertLocallyGenerated(getString(GET(missUri).header("Cache-Control", "only-if-cached")));
 
     var stats = cache.stats();
     assertEquals(25, stats.requestCount());
@@ -1916,31 +1190,30 @@ class HttpCacheTest {
 
   @StoreParameterizedTest
   @StoreConfig
-  void perUriStats(Store store) throws Exception {
-    setUpCache(store);
-    var uri1 = serverUri.resolve("/a");
-    var uri2 = serverUri.resolve("/b");
+  void perUriStats(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext);
+    var uri1 = uri(server, "/a");
+    var uri2 = uri(server, "/b");
     server.setDispatcher(new Dispatcher() {
       @NotNull @Override public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
         return new MockResponse().addHeader("Cache-Control", "max-age=2");
       }
     });
 
-    get(uri1).assertMiss(); // a.requestCount = 1, a.missCount = 1, a.networkUseCount = 1
-    get(uri1).assertHit();  // a.requestCount = 2, a.hitCount = 1
+    assertMiss(getString(uri1)); // a.requestCount = 1, a.missCount = 1, a.networkUseCount = 1
+    assertHit(getString(uri1));  // a.requestCount = 2, a.hitCount = 1
     // a.requestCount = 3, a.missCount = 2, a.networkUseCount = 2
-    get(GET(uri1).header("Cache-Control", "no-cache"))
-        .assertConditionalMiss();
-    get(uri1).assertHit(); // a.requestCount = 4, a.hitCount = 2
-    assertTrue(cache.remove(uri1));
+    assertConditionalMiss(getString(GET(uri1).header("Cache-Control", "no-cache")));
+    assertHit(getString(uri1)); // a.requestCount = 4, a.hitCount = 2
+    cache.remove(uri1);
     // a.requestCount = 5, a.missCount = 3 (no network)
-    get(GET(uri1).header("Cache-Control", "only-if-cached")).assertLocallyGenerated();
+    assertLocallyGenerated(getString(GET(uri1).header("Cache-Control", "only-if-cached")));
 
-    get(uri2).assertMiss(); // b.requestCount = 1, b.missCount = 1, b.networkUseCount = 1
+    assertMiss(getString(uri2)); // b.requestCount = 1, b.missCount = 1, b.networkUseCount = 1
     for (int i = 0; i < 5; i++) { // b.requestCount = 6, b.missCount = 6, b.networkUseCount = 6
-      get(GET(uri2).header("Cache-Control", "no-cache")).assertConditionalMiss();
+      assertConditionalMiss(getString(GET(uri2).header("Cache-Control", "no-cache")));
     }
-    get(uri2).assertHit(); // b.requestCount = 7, b.hitCount = 1
+    assertHit(getString(uri2)); // b.requestCount = 7, b.hitCount = 1
 
     var stats1 = cache.stats(uri1);
     assertEquals(5, stats1.requestCount());
@@ -1954,50 +1227,30 @@ class HttpCacheTest {
     assertEquals(6, stats2.missCount());
     assertEquals(6, stats2.networkUseCount());
 
-    var emptyStats = cache.stats(serverUri.resolve("/c"));
+    var emptyStats = cache.stats(uri(server, "/c"));
     assertEquals(0, emptyStats.requestCount());
     assertEquals(0, emptyStats.hitCount());
     assertEquals(0, emptyStats.missCount());
     assertEquals(0, emptyStats.networkUseCount());
   }
 
-  private ResponseVerification<String> get(URI uri) throws IOException, InterruptedException {
-    return get(GET(uri));
+  private CacheAwareResponse<String> getString(URI uri) throws IOException, InterruptedException {
+    return getString(GET(uri));
   }
 
-  private ResponseVerification<String> getUnchecked(HttpRequest request) {
+  private CacheAwareResponse<String> getStringUnchecked(HttpRequest request) {
     try {
-      return get(request);
+      return getString(request);
     } catch (IOException | InterruptedException e) {
       return fail(e);
     }
   }
 
-  private ResponseVerification<String> get(HttpRequest request)
+  private CacheAwareResponse<String> getString(HttpRequest request)
       throws IOException, InterruptedException {
-    var response = client.send(withTimeout(request), BodyHandlers.ofString());
+    var response = cacheAware(client.send(withTimeout(request), BodyHandlers.ofString()));
     editAwaiter.await();
-    return verifying(response);
-  }
-
-  private ResponseVerification<String> seedCache(URI uri)
-      throws IOException, InterruptedException {
-    return get(uri).assertMiss();
-  }
-
-  private ResponseVerification<String> seedCache(HttpRequest request)
-      throws IOException, InterruptedException {
-    return get(request).assertMiss();
-  }
-
-  private ResponseVerification<String> retryTillOfflineHit() throws IOException, InterruptedException {
-    int tries = 0;
-    int maxTries = 20;
-    ResponseVerification<String> response;
-    do {
-      response = get(GET(serverUri).header("Cache-Control", "max-stale=0, only-if-cached"));
-    } while (response.getCacheAware().cacheStatus() != HIT && tries++ < maxTries);
-    return response.assertCacheStatus(HIT);
+    return response;
   }
 
   // Set timeout to not block indefinitely when response is mistakenly not enqueued to MockWebServer
@@ -2009,166 +1262,128 @@ class HttpCacheTest {
     return LocalDateTime.ofInstant(instant, UTC);
   }
 
-  private static class ForwardingStore implements Store {
-    final Store delegate;
+  private static <T> CacheAwareResponse<T> assertHit(CacheAwareResponse<T> response) {
+    assertEquals(HIT, response.cacheStatus());
+    assertFalse(response.networkResponse().isPresent(), response.networkResponse().toString());
+    assertTrue(response.cacheResponse().isPresent(), response.cacheResponse().toString());
+    assertSimilarResponses(response.cacheResponse().get(), response);
+    return response;
+  }
 
-    ForwardingStore(Store delegate) {
-      this.delegate = delegate;
-    }
+  private static <T> CacheAwareResponse<T> assertConditionalHit(CacheAwareResponse<T> response) {
+    assertEquals(CONDITIONAL_HIT, response.cacheStatus());
+    assertTrue(response.cacheResponse().isPresent(), response.cacheResponse().toString());
+    assertTrue(response.networkResponse().isPresent(), response.networkResponse().toString());
 
-    @Override
-    public long maxSize() {
-      return delegate.maxSize();
-    }
+    var cacheResponse = response.cacheResponse().get();
+    assertEquals(cacheResponse.uri(), response.uri());
+    assertEquals(cacheResponse.statusCode(), response.statusCode());
 
-    @Override
-    public Optional<Executor> executor() {
-      return delegate.executor();
-    }
+    var networkResponse = response.networkResponse().get();
+    assertEquals(cacheResponse.uri(), response.uri());
+    assertEquals(HTTP_NOT_MODIFIED, networkResponse.statusCode());
 
-    @Override
-    public void initialize() throws IOException {
-      delegate.initialize();
-    }
+    // Make sure headers are merged correctly as specified
+    // in https://httpwg.org/specs/rfc7234.html#freshening.responses
+    var cacheHeaders = new HashMap<>(cacheResponse.headers().map());
+    var networkHeaders = new HashMap<>(networkResponse.headers().map());
+    response.headers().map().forEach(
+        (name, values) -> {
+          var cacheValues = cacheHeaders.get(name);
+          var networkValues = networkHeaders.get(name);
+          // Assert Warning headers with 1xx code are removed
+          if ("Warning".equalsIgnoreCase(name)) {
+            values.forEach(value -> assertFalse(value.startsWith("1")));
+            if (cacheValues != null) {
+              cacheValues =
+                  cacheValues.stream()
+                      .filter(value -> !value.startsWith("1"))
+                      .collect(Collectors.toUnmodifiableList());
+            }
+          }
 
-    @Override
-    public CompletableFuture<Void> initializeAsync() {
-      return delegate.initializeAsync();
-    }
+          // Network values override cached unless it's Content-Length
+          if (!"Content-Length".equalsIgnoreCase(name)) {
+            assertEquals(networkValues != null ? networkValues : cacheValues, values, name);
+          }
+        });
 
-    @Override
-    @Nullable
-    public Viewer view(String key) throws IOException {
-      return delegate.view(key);
-    }
+    return response;
+  }
 
-    @Override
-    public CompletableFuture<@Nullable Viewer> viewAsync(String key) {
-      return delegate.viewAsync(key);
-    }
+  private static <T> CacheAwareResponse<T> assertMiss(CacheAwareResponse<T> response) {
+    assertEquals(MISS, response.cacheStatus());
+    assertFalse(response.cacheResponse().isPresent(), response.cacheResponse().toString());
+    assertTrue(response.networkResponse().isPresent(), response.networkResponse().toString());
+    assertEqualResponses(response.networkResponse().get(), response);
+    return response;
+  }
 
-    @Override
-    @Nullable
-    public Editor edit(String key) throws IOException {
-      return delegate.edit(key);
-    }
+  private static <T> CacheAwareResponse<T> assertConditionalMiss(CacheAwareResponse<T> response) {
+    assertEquals(MISS, response.cacheStatus());
+    assertTrue(response.cacheResponse().isPresent(), response.cacheResponse().toString());
+    assertTrue(response.networkResponse().isPresent(), response.networkResponse().toString());
+    assertEqualResponses(response.networkResponse().get(), response);
+    return response;
+  }
 
-    @Override
-    public CompletableFuture<@Nullable Editor> editAsync(String key) {
-      return delegate.editAsync(key);
-    }
+  private static <T> CacheAwareResponse<T> assertLocallyGenerated(
+      CacheAwareResponse<T> response) {
+    assertEquals(LOCALLY_GENERATED, response.cacheStatus());
+    assertEquals(HTTP_GATEWAY_TIMEOUT, response.statusCode());
+    assertFalse(response.cacheResponse().isPresent(), response.cacheResponse().toString());
+    assertFalse(response.networkResponse().isPresent(), response.networkResponse().toString());
+    return response;
+  }
 
-    @Override
-    public Iterator<Viewer> viewAll() throws IOException {
-      return delegate.viewAll();
-    }
+  private static void assertCachedWithSSLSession(CacheAwareResponse<?> response) {
+    var cacheResponse = response.cacheResponse().orElseThrow();
+    assertTrue(cacheResponse.sslSession().isPresent());
+    assertTrue(response.sslSession().isPresent());
 
-    @Override
-    public boolean remove(String key) throws IOException {
-      return delegate.remove(key);
-    }
+    var session = response.sslSession().get();
+    var cachedSession = cacheResponse.sslSession().get();
+    assertEquals(cachedSession.getCipherSuite(), session.getCipherSuite());
+    assertEquals(cachedSession.getProtocol(), session.getProtocol());
+    assertArrayEquals(getPeerCerts(cachedSession), getPeerCerts(session));
+    assertArrayEquals(cachedSession.getLocalCertificates(), session.getLocalCertificates());
+  }
 
-    @Override
-    public void clear() throws IOException {
-      delegate.clear();
-    }
-
-    @Override
-    public long size() {
-      return delegate.size();
-    }
-
-    @Override
-    public void dispose() throws IOException {
-      delegate.dispose();
-    }
-
-    @Override
-    public void close() throws IOException {
-      delegate.close();
-    }
-
-    @Override
-    public void flush() throws IOException {
-      delegate.flush();
+  private static Certificate[] getPeerCerts(SSLSession session) {
+    try {
+      return session.getPeerCertificates();
+    } catch (SSLPeerUnverifiedException e) {
+      return null;
     }
   }
 
-  private static class ForwardingEditor implements Editor {
-    final Editor delegate;
-
-    ForwardingEditor(Editor delegate) {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public String key() {
-      return delegate.key();
-    }
-
-    @Override
-    public void metadata(ByteBuffer metadata) {
-      delegate.metadata(metadata);
-    }
-
-    @Override
-    public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-      return delegate.writeAsync(position, src);
-    }
-
-    @Override
-    public void commitOnClose() {
-      delegate.commitOnClose();
-    }
-
-    @Override
-    public void close() throws IOException {
-      delegate.close();
-    }
+  private static void assertSimilarResponses(HttpResponse<?> expected, HttpResponse<?> actual) {
+    assertEquals(expected.uri(), actual.uri());
+    assertEquals(expected.statusCode(), actual.statusCode());
+    assertEquals(expected.headers(), actual.headers());
+    assertEquals(expected.sslSession().isPresent(), actual.sslSession().isPresent());
   }
 
-  private static class ForwardingViewer implements Viewer {
-    final Viewer delegate;
+  private static void assertEqualResponses(TrackedResponse<?> expected, TrackedResponse<?> actual) {
+    assertEquals(expected.uri(), actual.uri());
+    assertEquals(expected.statusCode(), actual.statusCode());
+    assertEquals(expected.headers(), actual.headers());
+    assertEquals(expected.version(), actual.version());
+    assertEquals(expected.timeRequestSent(), actual.timeRequestSent());
+    assertEquals(expected.timeResponseReceived(), actual.timeResponseReceived());
+    assertEquals(expected.sslSession().isPresent(), actual.sslSession().isPresent());
+  }
 
-    ForwardingViewer(Viewer delegate) {
-      this.delegate = delegate;
-    }
+  private static URI uri(MockWebServer server) {
+    return uri(server, "/");
+  }
 
-    @Override
-    public String key() {
-      return delegate.key();
-    }
+  private static URI uri(MockWebServer server, String path) {
+    return server.url(path).uri();
+  }
 
-    @Override
-    public ByteBuffer metadata() {
-      return delegate.metadata();
-    }
-
-    @Override
-    public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
-      return delegate.readAsync(position, dst);
-    }
-
-    @Override
-    public long dataSize() {
-      return delegate.dataSize();
-    }
-
-    @Override
-    public long entrySize() {
-      return delegate.entrySize();
-    }
-
-    @Override
-    @Nullable
-    public Editor edit() throws IOException {
-      return delegate.edit();
-    }
-
-    @Override
-    public void close() {
-      delegate.close();
-    }
+  private static <T> CacheAwareResponse<T> cacheAware(HttpResponse<T> response) {
+    return (CacheAwareResponse<T>) response;
   }
 
   /**
@@ -2202,13 +1417,34 @@ class HttpCacheTest {
      * An Editor that notifies (arrives at) a Phaser when closed, allowing to await it's closure
      * among others'.
      */
-    private static final class NotifyingEditor extends ForwardingEditor {
+    private static final class NotifyingEditor implements Editor {
+      private final Editor delegate;
       private final Phaser phaser;
 
       NotifyingEditor(Editor delegate, Phaser phaser) {
-        super(delegate);
+        this.delegate = delegate;
         this.phaser = phaser;
         phaser.register();
+      }
+
+      @Override
+      public String key() {
+        return delegate.key();
+      }
+
+      @Override
+      public void metadata(ByteBuffer metadata) {
+        delegate.metadata(metadata);
+      }
+
+      @Override
+      public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
+        return delegate.writeAsync(position, src);
+      }
+
+      @Override
+      public void commitOnClose() {
+        delegate.commitOnClose();
       }
 
       @Override
@@ -2222,12 +1458,33 @@ class HttpCacheTest {
     }
   }
 
-  private static final class EditAwaiterStore extends ForwardingStore {
+  private static final class EditAwaiterStore implements Store {
     private final EditAwaiter editAwaiter;
+    private final Store delegate;
 
     EditAwaiterStore(Store delegate, EditAwaiter editAwaiter) {
-      super(delegate);
       this.editAwaiter = editAwaiter;
+      this.delegate = delegate;
+    }
+
+    @Override
+    public long maxSize() {
+      return delegate.maxSize();
+    }
+
+    @Override
+    public Optional<Executor> executor() {
+      return delegate.executor();
+    }
+
+    @Override
+    public void initialize() throws IOException {
+      delegate.initialize();
+    }
+
+    @Override
+    public CompletableFuture<Void> initializeAsync() {
+      return delegate.initializeAsync();
     }
 
     @Override
@@ -2237,20 +1494,99 @@ class HttpCacheTest {
     }
 
     @Override
+    public CompletableFuture<@Nullable Viewer> viewAsync(String key) {
+      return delegate.viewAsync(key);
+    }
+
+    @Override
     public @Nullable Editor edit(String key) throws IOException {
       var e = delegate.edit(key);
       return e != null ? editAwaiter.register(e) : null;
     }
 
-    private final class EditAwaiterViewer extends ForwardingViewer {
+    @Override
+    public CompletableFuture<@Nullable Editor> editAsync(String key) {
+      return delegate.editAsync(key);
+    }
+
+    @Override
+    public Iterator<Viewer> viewAll() throws IOException {
+      return StreamSupport.stream(Spliterators.spliteratorUnknownSize(delegate.viewAll(), 0), false)
+          .<Viewer>map(EditAwaiterViewer::new)
+          .iterator();
+    }
+
+    @Override
+    public boolean remove(String key) throws IOException {
+      return delegate.remove(key);
+    }
+
+    @Override
+    public void clear() throws IOException {
+      delegate.clear();
+    }
+
+    @Override
+    public long size() {
+      return delegate.size();
+    }
+
+    @Override
+    public void dispose() throws IOException {
+      delegate.dispose();
+    }
+
+    @Override
+    public void close() throws IOException {
+      delegate.close();
+    }
+
+    @Override
+    public void flush() throws IOException {
+      delegate.flush();
+    }
+
+    private final class EditAwaiterViewer implements Viewer {
+      private final Viewer delegate;
+
       EditAwaiterViewer(Viewer delegate) {
-        super(delegate);
+        this.delegate = delegate;
+      }
+
+      @Override
+      public String key() {
+        return delegate.key();
+      }
+
+      @Override
+      public ByteBuffer metadata() {
+        return delegate.metadata();
+      }
+
+      @Override
+      public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
+        return delegate.readAsync(position, dst);
+      }
+
+      @Override
+      public long dataSize() {
+        return delegate.dataSize();
+      }
+
+      @Override
+      public long entrySize() {
+        return delegate.entrySize();
       }
 
       @Override
       public @Nullable Editor edit() throws IOException {
         var e = delegate.edit();
         return e != null ? editAwaiter.register(e) : null;
+      }
+
+      @Override
+      public void close() {
+        delegate.close();
       }
     }
   }

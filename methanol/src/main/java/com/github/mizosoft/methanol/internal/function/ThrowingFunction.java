@@ -13,7 +13,6 @@ public interface ThrowingFunction<T, R> {
       try {
         return apply(val);
       } catch (Exception e) {
-        Unchecked.propagateIfUnchecked(e);
         throw new CompletionException(e);
       }
     };
