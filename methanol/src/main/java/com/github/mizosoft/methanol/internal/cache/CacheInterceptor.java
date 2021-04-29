@@ -234,11 +234,11 @@ public final class CacheInterceptor implements Interceptor {
       return false;
     }
 
-    return responseCacheControl.maxAge().isPresent()
+    return response.headers().firstValue("Expires").filter(DateUtils::isHttpDate).isPresent()
+        || responseCacheControl.maxAge().isPresent()
         || responseCacheControl.isPublic()
         || responseCacheControl.isPrivate()
-        || isCacheableByDefault(response.statusCode())
-        || response.headers().firstValue("Expires").filter(DateUtils::isHttpDate).isPresent();
+        || isCacheableByDefault(response.statusCode());
   }
 
   /**
@@ -265,39 +265,6 @@ public final class CacheInterceptor implements Interceptor {
       default:
         return false;
     }
-  }
-
-  /** Updates the cache response after successful revalidation as specified in rfc7234 4.3.4. */
-  private static CacheResponse updateCacheResponse(
-      CacheResponse cacheResponse, NetworkResponse networkResponse) {
-    var mergedHeaders =
-        mergeHeaders(cacheResponse.get().headers(), networkResponse.get().headers());
-    return cacheResponse.with(
-        builder ->
-            builder
-                .setHeaders(mergedHeaders)
-                .timeRequestSent(networkResponse.get().timeRequestSent())
-                .timeResponseReceived(networkResponse.get().timeResponseReceived())
-                .apply(__ -> networkResponse.get().sslSession().ifPresent(builder::sslSession)));
-  }
-
-  private static HttpHeaders mergeHeaders(HttpHeaders storedHeaders, HttpHeaders networkHeaders) {
-    var builder = new HeadersBuilder();
-    builder.addAll(storedHeaders);
-
-    // Remove Warning headers with a 1xx warn code in the stored response
-    builder.removeIf((name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
-
-    // Use the 304 response fields to replace those with the same names in the
-    // stored response. The Content-Length of the stored response however is
-    // restored to avoid replacing it with the Content-Length: 0 some servers
-    // incorrectly send with their 304 responses.
-    builder.setAll(networkHeaders);
-    storedHeaders
-        .firstValue("Content-Length")
-        .ifPresent(value -> builder.set("Content-Length", value));
-
-    return builder.build();
   }
 
   /** Returns the URIs invalidated by the given exchange as specified by rfc7234 section 4.4. */
@@ -580,6 +547,39 @@ public final class CacheInterceptor implements Interceptor {
         throw new CompletionException(error);
       }
       return networkExchange;
+    }
+
+    /** Updates the cache response after successful revalidation as specified in rfc7234 4.3.4. */
+    private CacheResponse updateCacheResponse(
+        CacheResponse cacheResponse, NetworkResponse networkResponse) {
+      var mergedHeaders =
+          mergeHeaders(cacheResponse.get().headers(), networkResponse.get().headers());
+      return cacheResponse.with(
+          builder ->
+              builder
+                  .setHeaders(mergedHeaders)
+                  .timeRequestSent(networkResponse.get().timeRequestSent())
+                  .timeResponseReceived(networkResponse.get().timeResponseReceived())
+                  .apply(__ -> networkResponse.get().sslSession().ifPresent(builder::sslSession)));
+    }
+
+    private HttpHeaders mergeHeaders(HttpHeaders storedHeaders, HttpHeaders networkHeaders) {
+      var builder = new HeadersBuilder();
+      builder.addAll(storedHeaders);
+
+      // Remove Warning headers with a 1xx warn code in the stored response
+      builder.removeIf((name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
+
+      // Use the 304 response fields to replace those with the same names in the
+      // stored response. The Content-Length of the stored response however is
+      // restored to avoid replacing it with the Content-Length: 0 some servers
+      // incorrectly send with their 304 responses.
+      builder.setAll(networkHeaders);
+      storedHeaders
+          .firstValue("Content-Length")
+          .ifPresent(value -> builder.set("Content-Length", value));
+
+      return builder.build();
     }
 
     private Exchange withCacheResponse(@Nullable CacheResponse cacheResponse) {
