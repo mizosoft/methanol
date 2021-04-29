@@ -272,11 +272,6 @@ public final class ResponseBuilder<T> {
     public Instant timeResponseReceived() {
       return timeResponseReceived;
     }
-
-    @Override
-    public String toString() {
-      return '(' + request.method() + " " + request.uri() + ") " + statusCode;
-    }
   }
 
   private static final class CacheAwareResponseImpl<T> extends TrackedResponseImpl<T>
