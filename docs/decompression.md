@@ -185,7 +185,7 @@ public static final class MyDecoderFactory implements BodyDecoder.Factory {
 ```
 
 The next step is to declare your factory as a service-provider. For instance, here's an appropriate
-`provides` declaration to put in `module-info.java` if your application uses Java modules.
+`provides...with` declaration to put in `module-info.java` if your application uses Java modules.
 
 ```java
 module my.module {

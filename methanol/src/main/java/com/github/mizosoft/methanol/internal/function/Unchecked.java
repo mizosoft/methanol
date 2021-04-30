@@ -3,9 +3,8 @@ package com.github.mizosoft.methanol.internal.function;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
-/** Static functions that make it less painful to mix checked exceptions with lambdas. */
+/** Static functions that make it easier to mix checked exceptions with lambdas. */
 public class Unchecked {
   private Unchecked() {}
 

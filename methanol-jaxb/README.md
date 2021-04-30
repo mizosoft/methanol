@@ -1,91 +1,141 @@
 # methanol-jaxb
 
-`BodyAdapter` implementations for XML binding using [JAXB][jaxb].
+Adapters for XML using [JAXB][jaxb].
 
 ## Installation
 
-Add this module as a dependency:
+First, add `methanol-jaxb` as a dependency.
 
 ### Gradle
 
 ```gradle
-dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-jaxb:1.4.1'
-}
+implementation 'com.github.mizosoft.methanol:methanol-jaxb:1.5.0'
 ```
 
 ### Maven
 
 ```xml
-<dependencies>
-  <dependency>
-    <groupId>com.github.mizosoft.methanol</groupId>
-    <artifactId>methanol-jaxb</artifactId>
-    <version>1.4.1</version>
-  </dependency>
-</dependencies>
+<dependency>
+  <groupId>com.github.mizosoft.methanol</groupId>
+  <artifactId>methanol-jaxb</artifactId>
+  <version>1.5.0</version>
+</dependency>
 ```
 
-### Registering providers
+Next, register the adapters as [service providers][serviceloader_javadoc] so Methanol knows they're
+there. The way this is done depends on your project setup.
 
-`Encoder` and `Decoder` implementations are not service-provided by default. You must add
-provider declarations yourself if you intend to use them for dynamic request/response conversion.
+### Module Path
 
-#### Module path
+Follow these steps if your project uses the Java module system.
 
-Add this class to your module:
+1. Add this class to your module:
+
+    ```java
+    public class JaxbProviders {      
+      public static class EncoderProvider {
+        public static BodyAdapter.Encoder provider() {
+          return JaxbAdapterFactory.createEncoder();
+        }
+      }
+   
+      public static class DecoderProvider {
+        public static BodyAdapter.Decoder provider() {
+          return JaxbAdapterFactory.createDecoder();
+        }
+      }
+    }
+    ```
+
+2. Add the corresponding provider declarations in your `module-info.java` file.
+
+    ```java
+    provides BodyAdapter.Encoder with JaxbProviders.EncoderProvider;
+    provides BodyAdapter.Decoder with JaxbProviders.DecoderProvider;
+    ```
+
+### Classpath
+
+Registering adapters from the classpath requires declaring the adapter's implementation classes in
+provider-configuration files that are bundled with your JAR. You'll first need to implement
+delegating `Encoder` & `Decoder` that forward to the instances created by `JaxbAdapterFactory`.
+Extending from `ForwardingEncoder` & `ForwardingDecoder` makes this easier.
+
+It is recommended to use Google's [AutoService][autoservice] to generate the provider-configuration
+files automatically, so you won't bother writing them.
+
+#### Using AutoService
+
+After [installing AutoService][autoservice_getting_started], add this class to your project:
 
 ```java
-public class JaxbProviders {
-  private JaxbProviders() {}
-
-  public static class EncoderProvider {
-    private EncoderProvider() {}
-
-    public static BodyAdapter.Encoder provider() {
-      // By default, JAXBContexts are created and cached for each type
-      return JaxbAdapterFactory.createEncoder();
+public class JaxbAdapters {
+  @AutoService(BodyAdapter.Encoder.class)
+  public class JaxbEncoder extends ForwardingEncoder {
+    public JaxbEncoder() {
+      super(JaxbAdapterFactory.createEncoder());
     }
   }
-
-  public static class DecoderProvider {
-    private DecoderProvider() {}
-
-    public static BodyAdapter.Decoder provider() {
-      // May use a custom JAXBContext (provided indirectly via JaxbBindingFactory)
-      JaxbBindingFactory factory = ...
-      return JaxbAdapterFactory.createDecoder(factory);
+  
+  @AutoService(BodyAdapter.Decoder.class)
+  public class JaxbDecoder extends ForwardingDecoder {
+    public JaxbDecoder() {
+      super(JaxbAdapterFactory.createDecoder());
     }
   }
 }
 ```
 
-Then add provider declarations in your `module-info.java`:
+#### Manual Configuration
+
+First, add this class to your project:
 
 ```java
-provides BodyAdapter.Encoder with JaxbProviders.EncoderProvider;
-provides BodyAdapter.Decoder with JaxbProviders.DecoderProvider;
+public class JaxbAdapters {
+  public class JaxbEncoder extends ForwardingEncoder {
+    public JaxbEncoder() {
+      super(JaxbAdapterFactory.createEncoder());
+    }
+  }
+  
+  public class JaxbDecoder extends ForwardingDecoder {
+    public JaxbDecoder() {
+      super(JaxbAdapterFactory.createDecoder());
+    }
+  }
+}
 ```
 
-#### Class path
+Next, create two provider-configuration files in the resource directory: `META-INF/services`,
+one for the encoder and the other for the decoder. Each file must contain the fully qualified
+name of the implementation class.
 
-If you're running from the classpath, you must instead implement delegating `Encoder` and `Decoder`
-that forward to the instances created by `JaxbAdapterFactory`. Then declare them in
-`META-INF/services` entries as described in `ServiceLoader`'s [Javadoc][ServiceLoader].
+Let's say the above class is in a package named `com.example`. You'll want to have one file for the
+encoder named:
 
-## Usage
-
-```java
-// For request
-MyDto dto = ...
-HttpRequest request = HttpRequest.newBuilder(...)
-    .POST(MoreBodyPublishers.ofObject(dto, MediaType.APPLICATION_XML))
-     ...
-    .build();
-
-// For response
-HttpResponse<MyDto> response = client.send(request, MoreBodyHandlers.ofObject(MyDto.class));
+```
+META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 ```
 
-[ServiceLoader]: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceLoader.html
-[jaxb]: https://javaee.github.io/jaxb-v2/
+and contains the following line:
+
+```
+com.example.JaxbAdapters$JaxbEncoder
+```
+
+Similarly, the decoder's file is named:
+
+```
+META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
+```
+
+and contains:
+
+```
+com.example.JaxbAdapters$JaxbDecoder
+```
+
+[JAXB]: https://javaee.github.io/jaxb-v2/
+[autoservice]: https://github.com/google/auto/tree/master/service
+[autoservice_getting_started]: https://github.com/google/auto/tree/master/service#getting-started
+[serviceloader_javadoc]: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceLoader.html

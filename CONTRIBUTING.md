@@ -1,8 +1,7 @@
 # Contributing
 
-Contributions are welcome! It is often a good idea to first discuss changes before
-submitting them. If you're considering small changes (e.g. in documentation), you can open a
-PR directly but make sure to explain what you're trying to do and why.
+Contributions are welcome! It is often a good idea to first discuss changes before submitting them.
+If you're considering small changes (e.g. in documentation), you can open a PR directly.
 
 You are more than welcome to:
 
@@ -23,33 +22,31 @@ Before submitting a change, make sure to first run tests and code analysis.
 
 `./gradlew clean check -PenableErrorprone`
 
-[Error-prone][errorprone] checks are included but disabled by default for build speed. It is
-highly desirable to make errorprone happy (maybe via reasonable suppressions).
-[Checker Framework][checker-framework] is also optionally used but mainly for informative 
-reasons (its acts weird and sometimes crashes, patches regarding this are welcome).
-Similarly, it can be run with `enableCheckerframework` project property.
+[Error-prone][errorprone] checks are included but disabled by default for build speed. It is desirable
+to make errorprone happy (maybe via reasonable suppressions). [Checker Framework][checker-framework]
+is optionally used but mainly for informative reasons (its acts weird and crashes, patches regarding
+this are welcome). Similarly, it can be run with `enableCheckerframework` project property.
 
-[`methanol-brotli`][build-brotli] uses JNI and contains a `c/c++` subproject for brotli 
-decoder. The native project is not included in the build by default. You can do so with project
-property `includeBrotliJni` or running the `installBrotli` task if you have a proper tool 
-chain. Note that brotli is not yet supported for macOS, so you must exclude brotli tests to 
-pass others:
+[`methanol-brotli`][build-brotli] uses JNI and contains a `c/c++` subproject for the brotli decoder.
+The native project is not included in the build by default. You can do so with project property
+`includeBrotliJni` or running the `installBrotli` task if you have a proper tool chain. Note that
+brotli isn't yet supported for macOS, so make sure to exclude brotli tests when running from a Mac:
 
-`./gradlew clean check -PenableErrorprone -x methanol-brotli:test`
+`./gradlew check -PenableErrorprone -x methanol-brotli:test`
 
 ## Dependencies
 
 Methanol makes it easier to use third-party libraries with the HTTP client. However, it does so 
 without making users pay for what they don't need. The core module currently has zero runtime 
-dependencies and it is important it remains so. Features that require dependencies should be in
+dependencies, and it is important it remains so. Features that require dependencies should be in
 separate modules, possibly with `ServideLoader` abstractions introduced in the core 
-(e.g. `BodyAdapter`, `BodyDecoder`).
+(e.g. `BodyAdapter`,`BodyDecoder`).
 
 ## Style
 
-The project mostly adheres to the [Google Style Guide][google-style-guide]. Changes are
-expected to be consistent regarding key style aspects (2 space indentation, 4 for continuation, 
-etc). It is preferable to use [google-java-format][google-java-format] for new code.
+The project mostly adheres to the [Google Style Guide][google-style-guide]. Changes are expected to
+be consistent regarding key style aspects (2 space indentation, 4 for continuation, etc). It is
+preferable to use [google-java-format][google-java-format] for new code.
 
 [build-brotli]: <https://github.com/mizosoft/methanol/tree/master/methanol-brotli>
 [errorprone]: <https://errorprone.info/>

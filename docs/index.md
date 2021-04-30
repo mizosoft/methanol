@@ -18,22 +18,22 @@ is given to object mapping, so integration with libraries like Jackson or Gson b
 ### Gradle
 
 ```gradle
-dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol:1.5.0'
-}
+implementation 'com.github.mizosoft.methanol:methanol:1.5.0'
 ```
 
 ### Maven
 
 ```xml
-<dependencies>
-  <dependency>
-    <groupId>com.github.mizosoft.methanol</groupId>
-    <artifactId>methanol</artifactId>
-    <version>1.5.0</version>
-  </dependency>
-</dependencies>
+<dependency>
+  <groupId>com.github.mizosoft.methanol</groupId>
+  <artifactId>methanol</artifactId>
+  <version>1.5.0</version>
+</dependency>
 ```
+
+## Contributing
+
+See [CONTRIBUTING](CONTRIBUTING.md)
 
 # License
 

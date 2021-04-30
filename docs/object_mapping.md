@@ -10,129 +10,16 @@ and easy-to-use object mapping mechanism that treats your objects as first-citiz
 Before sending and receiving objects over HTTP, Methanol needs to adapt to your desired mapping schemes.
 Adapters for the most popular serialization libraries are provided in separate modules.
 
-  * [`methanol-gson`](methanol_gson): JSON with Gson
-  * [`methanol-jackson`](methanol_jackson): JSON with Jackson
-  * [`methanol-jackson-flux`](methanol_jackson_flux): Reactive JSON with Jackson and Reactor
-  * [`methanol-protobuf`](methanol_protobuf): Google's Protocol Buffers
-  * [`methanol-jaxb`](methanol_jaxb): XML with JAXB
+  * [`methanol-gson`](adapters/gson.md): JSON with Gson
+  * [`methanol-jackson`](adapters/jackson.md): JSON with Jackson
+  * [`methanol-jackson-flux`](adapters/jackson_flux.md): Reactive JSON with Jackson and Reactor
+  * [`methanol-jaxb`](adapters/jaxb.md): XML with JAXB
+  * [`methanol-protobuf`](adapters/protobuf.md): Google's Protocol Buffers
 
 Adapters are dynamically located using Java's `ServiceLoader`. You can find clear installation steps
 in each module's README. We'll later see how to implement custom adapters as well.
 
 If you want to run examples presented here, get started by installing your favorite JSON adapter!
-
-<!-- 
-First, add `methanol-gson` as a dependency.
-
-### Gradle
-
-```gradle
-dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-gson:1.5.0'
-}
-```
-
-### Maven
-
-```xml
-<dependencies>
-  <dependency>
-    <groupId>com.github.mizosoft.methanol</groupId>
-    <artifactId>methanol-gson</artifactId>
-    <version>1.5.0</version>
-  </dependency>
-</dependencies>
-```
-
-Next, we'll let Methanol know about the adapter by registering it as a service provider. The way 
-this is done depends on how you're running your application.
-
-### Module path
-
-Add this class to your module:
-
-```java
-public class GsonProviders {
-  static final Gson gson = new Gson();
-
-  private GsonProviders() {}
-
-  public static class EncoderProvider {
-    private EncoderProvider() {}
-
-    public static BodyAdapter.Encoder provider() {
-      return GsonAdapterFactory.createEncoder(gson);
-    }
-  }
-
-  public static class DecoderProvider {
-    private DecoderProvider() {}
-
-    public static BodyAdapter.Decoder provider() {
-      return GsonAdapterFactory.createDecoder(gson);
-    }
-  }
-}
-```
-
-Then add provider declarations in your `module-info.java` file.
-
-```java
-provides BodyAdapter.Encoder with GsonProviders.EncoderProvider;
-provides BodyAdapter.Decoder with GsonProviders.DecoderProvider;
-```
-
-### Classpath
-
-First, implement delegating `Encoder` & `Decoder` that forward to the instances created by the adapter
-factory. Use `ForwardingEncoder` & `ForwardingDecoder` to make this easier.
-
-```java
-class GsonHolder {
-  static final Gson gson = new Gson();
-}
-
-public class GsonEncoder extends ForwardingEncoder {
-  public GsonEncoder() {
-    super(GsonHolder.gson);
-  }
-}
-
-public class GsonDecoder extends ForwardingDecoder {
-  public GsonDecoder() {
-    super(GsonHolder.gson);
-  }
-}
-```
-
-Next, add two provider-configuration files in the resource directory `META-INF/services`, one for
-`GsonEncoder` and the other for `GsonDecoder`, each containing their fully qualified names.
-
-For instance, if the classes are in a package named `com.example`, the provider-configuration file
-should be named:
-
-```
-META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
-```
-
-and should contain the following line:
-
-```
-com.example.GsonEncoder
-```
-
-Similarly, the decoder file is named:
-
-```
-META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
-```
-
-and contains:
-
-```
-com.example.GsonDecoder
-``` 
--->
 
 ## Receiving Objects
 
