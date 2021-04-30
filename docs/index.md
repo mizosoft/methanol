@@ -3,6 +3,10 @@
 
 # Methanol
 
+[![CI status](https://img.shields.io/github/workflow/status/mizosoft/methanol/CI?logo=github&style=flat-square)](https://github.com/mizosoft/methanol/actions)
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.mizosoft.methanol/methanol?style=flat-square)](https://search.maven.org/search?q=g:%22com.github.mizosoft.methanol%22%20AND%20a:%22methanol%22)
+[![Coverage Status](https://img.shields.io/coveralls/github/mizosoft/methanol?style=flat-square)](https://coveralls.io/github/mizosoft/methanol?branch=master)
+
 Java enjoys a neat, built-in [HTTP client](https://openjdk.java.net/groups/net/httpclient/intro.html).
 However, it lacks key HTTP features like multipart uploads, caching and response decompression.
 ***Methanol*** comes in to fill these gaps. The library comprises a set of lightweight, yet powerful
