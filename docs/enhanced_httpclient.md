@@ -27,7 +27,7 @@ var client = builder.executor(...)
     .build();
 ```
 
-You can also build from an existing `HttpClient` instance. Note that you can't install an `HttpCache`
+You can also build from an existing `HttpClient` instance. However, you can't install an `HttpCache`
 in such case.
 
 ```java
@@ -78,8 +78,8 @@ set one in your request.
 
 ### MimeBodyPublisher
 
-`Methanol` automatically sets a request's `Content-Type` if it has a `MimeBodyPublisher`. If the
-request already has a `Content-Type`, it's overwritten. This makes sense as a body knows its media type
+`Methanol` automatically sets a request's `Content-Type` if it has a [`MimeBodyPublisher`](media_types.md#mimebodypublisher).
+If the request already has a `Content-Type`, it's overwritten. This makes sense as a body knows its media type
 better than a containing request mistakenly setting a different one.
 
 ### Reactive Dispatching

@@ -52,7 +52,7 @@ progress is tracked by registering a `Listener` with a request's `BodyPublisher`
         .build();
         
     HttpResponse<Path> downloadVeryInterestingVideo() throws IOException, InterruptedException {
-      var request = MutableReqeust.GET("https://i.imgur.com/OBmbMPV.mp4");
+      var request = MutableReqeust.GET("https://i.imgur.com/NYvl8Sy.mp4");
 
       var downloadingBodyHandler = BodyHandlers.ofFile(
           Path.of("interesting-video.mp4"), CREATE, WRITE);

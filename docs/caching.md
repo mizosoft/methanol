@@ -5,13 +5,13 @@ backends.
 
 ## Setup
 
-An `HttpCache` needs to know where it stores entries and how much space it can occupy. It is utilized
-by injecting it into a `Methanol` client.
+An `HttpCache` is utilized by injecting it into a `Methanol` client. First, it needs to know where
+it stores entries and how much space it can occupy.
 
 === "Disk"
 
     ```java
-    // Select a size limit that suites your application
+    // Select a size limit thats suitable for your application
     long maxSizeInBytes = 500 * 1024 * 1024; // 500 MBs
 
     var cache = HttpCache.newBuilder()
@@ -30,7 +30,7 @@ by injecting it into a `Methanol` client.
 === "Memory"
 
     ```java
-    // Select a size limit that suites your application
+    // Select a size limit thats suitable for your application
     long maxSizeInBytes = 50 * 1024 * 1024; // 50 MBs
 
     var cache = HttpCache.newBuilder()
@@ -54,7 +54,7 @@ by injecting it into a `Methanol` client.
     To avoid surprises, make sure the disk directory is exclusively owned by a single cache instance
     as long as it's open and nothing else. The cache enforces that to some degree by complaining with
     an `IOException` if it's initialized with a directory that's already in use by another instance
-    in the same or a different JVM.
+    in the same or a different JVM. Note that you can use the same `HttpCache` with multiple clients.
 
 ## Usage
 
@@ -222,11 +222,11 @@ is updated in background, keeping things fresh.
 var cache = ...
 
 // Remove the entry cached under a particular URI
-cache.remove(URI.create("https://i.imgur.com/OBmbMPV.mp4"));
+cache.remove(URI.create("https://i.imgur.com/NYvl8Sy.mp4"));
 
 // Remove the response matching a particular response variant
 cache.remove(
-    MutableRequest.GET(URI.create("https://i.imgur.com/OBmbMPV.mp4"))
+    MutableRequest.GET(URI.create("https://i.imgur.com/NYvl8Sy.mp4"))
         .header("Accept-Encoding", "gzip"));
 
 // Remove specific entries by examining their URIs
@@ -322,7 +322,7 @@ global or correspond to a specific `URI`.
 === "URI-specific Stats"
 
     ```java
-    var stats = cache.stats(URI.create("https://i.imgur.com/OBmbMPV.mp4"));
+    var stats = cache.stats(URI.create("https://i.imgur.com/NYvl8Sy.mp4"));
 
     System.out.println(stats.hitRate());
     System.out.println(stats.missRate());
