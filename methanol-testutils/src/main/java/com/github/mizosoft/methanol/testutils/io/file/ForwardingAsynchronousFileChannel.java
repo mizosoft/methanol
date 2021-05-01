@@ -29,7 +29,7 @@ import java.nio.channels.CompletionHandler;
 import java.nio.channels.FileLock;
 import java.util.concurrent.Future;
 
-public class ForwardingAsynchronousFileChannel extends AsynchronousFileChannel
+class ForwardingAsynchronousFileChannel extends AsynchronousFileChannel
     implements ForwardingObject<AsynchronousFileChannel> {
   private final AsynchronousFileChannel delegate;
 

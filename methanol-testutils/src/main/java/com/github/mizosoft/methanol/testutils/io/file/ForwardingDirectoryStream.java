@@ -28,7 +28,7 @@ import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 
-public class ForwardingDirectoryStream<T>
+class ForwardingDirectoryStream<T>
     implements DirectoryStream<T>, ForwardingObject<DirectoryStream<T>> {
   private final DirectoryStream<T> delegate;
 

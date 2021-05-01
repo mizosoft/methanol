@@ -46,7 +46,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
-public class ForwardingFileSystemProvider extends FileSystemProvider
+class ForwardingFileSystemProvider extends FileSystemProvider
     implements ForwardingObject<FileSystemProvider> {
   private final FileSystemProvider delegate;
 

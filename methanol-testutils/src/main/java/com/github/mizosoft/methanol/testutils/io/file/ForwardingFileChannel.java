@@ -30,7 +30,7 @@ import java.nio.channels.FileLock;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-public class ForwardingFileChannel extends FileChannel implements ForwardingObject<FileChannel> {
+class ForwardingFileChannel extends FileChannel implements ForwardingObject<FileChannel> {
   private final FileChannel delegate;
 
   ForwardingFileChannel(FileChannel delegate) {

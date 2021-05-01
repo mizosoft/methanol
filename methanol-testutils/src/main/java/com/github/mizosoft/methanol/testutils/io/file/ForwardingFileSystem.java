@@ -32,7 +32,7 @@ import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Set;
 
-public class ForwardingFileSystem extends FileSystem implements ForwardingObject<FileSystem> {
+class ForwardingFileSystem extends FileSystem implements ForwardingObject<FileSystem> {
   private final FileSystem delegate;
 
   ForwardingFileSystem(FileSystem delegate) {
