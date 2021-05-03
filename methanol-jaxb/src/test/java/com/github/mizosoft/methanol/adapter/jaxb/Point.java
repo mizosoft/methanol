@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,21 +22,44 @@
 
 package com.github.mizosoft.methanol.adapter.jaxb;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.Objects;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlRootElement;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+@XmlRootElement(name = "point")
+public class Point {
+  @XmlAttribute(required = true)
+  private final int x;
 
-class CachingJaxbBindingFactoryTest {
-  @BeforeAll
-  static void registerJaxbImplementation() {
-    JaxbUtils.registerImplementation();
+  @XmlAttribute(required = true)
+  private final int y;
+
+  //  Provide a no-arg constructor for JAXB
+  public Point() {
+    this(0, 0);
   }
 
-  @Test
-  void cachesContextsForSameType() {
-    var factory = new CachingJaxbBindingFactory();
-    assertThat(factory.getOrCreateContext(Point.class))
-        .isSameAs(factory.getOrCreateContext(Point.class));
+  public Point(int x, int y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof Point)) {
+      return false;
+    }
+    var other = (Point) obj;
+    return x == other.x && y == other.y;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(x, y);
+  }
+
+  @Override
+  public String toString() {
+    return "Point[" + x + ", " + y + "]";
   }
 }

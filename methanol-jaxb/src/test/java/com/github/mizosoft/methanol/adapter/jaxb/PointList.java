@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,21 +22,45 @@
 
 package com.github.mizosoft.methanol.adapter.jaxb;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+@XmlRootElement(name = "points")
+public class PointList {
+  @XmlElement(name = "point")
+  private final List<Point> points;
 
-class CachingJaxbBindingFactoryTest {
-  @BeforeAll
-  static void registerJaxbImplementation() {
-    JaxbUtils.registerImplementation();
+  // Provide a no-arg constructor for JAXB
+  public PointList() {
+    this(new ArrayList<>());
   }
 
-  @Test
-  void cachesContextsForSameType() {
-    var factory = new CachingJaxbBindingFactory();
-    assertThat(factory.getOrCreateContext(Point.class))
-        .isSameAs(factory.getOrCreateContext(Point.class));
+  public PointList(Point... points) {
+    this.points = List.of(points);
+  }
+
+  public PointList(List<Point> points) {
+    this.points = points;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof PointList)) {
+      return false;
+    }
+    return points.equals(((PointList) obj).points);
+  }
+
+  @Override
+  public int hashCode() {
+    return points.hashCode();
+  }
+
+  @Override
+  public String toString() {
+    return "PointList" + points.toString();
   }
 }
+

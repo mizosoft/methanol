@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,23 +20,22 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jackson.flux;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import java.io.IOException;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+final class PointTreeNodeDeserializer extends StdDeserializer<Point> {
+    PointTreeNodeDeserializer() {
+      super(Point.class);
+    }
 
-class CachingJaxbBindingFactoryTest {
-  @BeforeAll
-  static void registerJaxbImplementation() {
-    JaxbUtils.registerImplementation();
+    @Override
+    public Point deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+      var node = p.<JsonNode>readValueAsTree();
+      return new Point(node.get("x").asInt(), node.get("y").asInt());
+    }
   }
-
-  @Test
-  void cachesContextsForSameType() {
-    var factory = new CachingJaxbBindingFactory();
-    assertThat(factory.getOrCreateContext(Point.class))
-        .isSameAs(factory.getOrCreateContext(Point.class));
-  }
-}

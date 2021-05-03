@@ -32,20 +32,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
+import java.util.concurrent.Flow.Publisher;
 
 /** Collects BodyPublisher's content. */
 public class BodyCollector implements Flow.Subscriber<ByteBuffer> {
-
-  private final CompletableFuture<ByteBuffer> bodyCF;
+  private final CompletableFuture<ByteBuffer> future;
   private final List<ByteBuffer> buffers;
 
   public BodyCollector() {
-    bodyCF = new CompletableFuture<>();
+    future = new CompletableFuture<>();
     buffers = new ArrayList<>();
   }
 
   @Override
   public void onSubscribe(Flow.Subscription subscription) {
+    requireNonNull(subscription);
     subscription.request(Long.MAX_VALUE);
   }
 
@@ -58,40 +59,50 @@ public class BodyCollector implements Flow.Subscriber<ByteBuffer> {
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
-    bodyCF.completeExceptionally(throwable);
+    future.completeExceptionally(throwable);
   }
 
   @Override
   public void onComplete() {
-    bodyCF.complete(collect(buffers));
+    future.complete(collect(buffers));
   }
 
-  public CompletableFuture<ByteBuffer> body() {
-    return bodyCF;
+  public CompletableFuture<ByteBuffer> future() {
+    return future;
   }
 
   public static ByteBuffer collect(List<ByteBuffer> buffers) {
-    ByteBuffer compacted =
-        ByteBuffer.allocate(buffers.stream().mapToInt(ByteBuffer::remaining).sum());
+    var compacted = ByteBuffer.allocate(buffers.stream().mapToInt(ByteBuffer::remaining).sum());
     buffers.forEach(compacted::put);
     return compacted.flip();
   }
 
-  public static ByteBuffer collect(Flow.Publisher<ByteBuffer> publisher) {
+  public static ByteBuffer collect(Publisher<ByteBuffer> publisher) {
     var collector = new BodyCollector();
     publisher.subscribe(collector);
-    return collector.bodyCF.join();
+    return collector.future().join();
   }
 
-  public static String collectAscii(Flow.Publisher<ByteBuffer> publisher) {
+  public static CompletableFuture<ByteBuffer> collectAsync(Publisher<ByteBuffer> publisher) {
+    var collector = new BodyCollector();
+    publisher.subscribe(collector);
+    return collector.future();
+  }
+
+  public static CompletableFuture<String> collectStringAsync(
+      Publisher<ByteBuffer> publisher, Charset charset) {
+    return collectAsync(publisher).thenApply(bytes -> charset.decode(bytes).toString());
+  }
+
+  public static String collectAscii(Publisher<ByteBuffer> publisher) {
     return collectString(publisher, US_ASCII);
   }
 
-  public static String collectUtf8(Flow.Publisher<ByteBuffer> publisher) {
+  public static String collectUtf8(Publisher<ByteBuffer> publisher) {
     return collectString(publisher, UTF_8);
   }
 
-  public static String collectString(Flow.Publisher<ByteBuffer> publisher, Charset charset) {
+  public static String collectString(Publisher<ByteBuffer> publisher, Charset charset) {
     return charset.decode(collect(publisher)).toString();
   }
 }

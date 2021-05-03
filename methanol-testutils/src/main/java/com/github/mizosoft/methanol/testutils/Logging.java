@@ -30,7 +30,7 @@ import java.util.stream.Stream;
 
 /** Utility methods related to logging during tests. */
 public class Logging {
-  // Hold string references to disabled loggers so their configuration won't get GCed
+  // Hold strong references to disabled loggers so their configuration won't get GCed
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private static final Set<Logger> disabledLoggers = new CopyOnWriteArraySet<>();
 

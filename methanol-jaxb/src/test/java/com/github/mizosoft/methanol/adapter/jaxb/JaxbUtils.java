@@ -27,28 +27,28 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBContextFactory;
 import javax.xml.bind.JAXBException;
 
-public class JaxbUtils {
-
+class JaxbUtils {
   static void registerImplementation() {
     System.setProperty(JAXBContext.JAXB_CONTEXT_FACTORY, MoxyJaxbContextFactory.class.getName());
   }
 
-  public static class MoxyJaxbContextFactory implements JAXBContextFactory {
-
+  // Make the factory accessible to JAXB
+  public static final class MoxyJaxbContextFactory implements JAXBContextFactory {
     public MoxyJaxbContextFactory() {}
 
     @Override
     public JAXBContext createContext(Class<?>[] classesToBeBound, Map<String, ?> properties)
         throws JAXBException {
-      return org.eclipse.persistence.jaxb.JAXBContextFactory
-          .createContext(classesToBeBound, properties);
+      return org.eclipse.persistence.jaxb.JAXBContextFactory.createContext(
+          classesToBeBound, properties);
     }
 
     @Override
-    public JAXBContext createContext(String contextPath, ClassLoader classLoader,
-        Map<String, ?> properties) throws JAXBException {
-      return org.eclipse.persistence.jaxb.JAXBContextFactory
-          .createContext(contextPath, classLoader, properties);
+    public JAXBContext createContext(
+        String contextPath, ClassLoader classLoader, Map<String, ?> properties)
+        throws JAXBException {
+      return org.eclipse.persistence.jaxb.JAXBContextFactory.createContext(
+          contextPath, classLoader, properties);
     }
   }
 }

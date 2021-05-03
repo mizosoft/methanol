@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,46 +20,38 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jackson.flux;
 
-import java.util.ArrayList;
-import java.util.List;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlRootElement;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Objects;
 
-@XmlRootElement(name = "course")
-final class Course {
+public class Point {
+  public final int x;
+  public final int y;
 
-  @XmlAttribute(required = true)
-  private final Type type;
-
-  @XmlElementWrapper(name = "enrolled-students")
-  @XmlElement(name = "student")
-  private final List<Student> enrolledStudents;
-
-  private Course() {
-    this(Type.UNKNOWN, new ArrayList<>());
-  }
-
-  Course(Type type, List<Student> enrolledStudents) {
-    this.type = type;
-    this.enrolledStudents = enrolledStudents;
+  @JsonCreator
+  public Point(@JsonProperty("x") int x, @JsonProperty("y") int y) {
+    this.x = x;
+    this.y = y;
   }
 
   @Override
   public boolean equals(Object obj) {
-    return obj instanceof Course
-        && type == ((Course) obj).type
-        && enrolledStudents.equals(((Course) obj).enrolledStudents);
+    if (!(obj instanceof Point)) {
+      return false;
+    }
+    var other = (Point) obj;
+    return x == other.x && y == other.y;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(x, y);
   }
 
   @Override
   public String toString() {
-     return "Course[type="
-         + type
-         + ", enrolledStudents="
-         + enrolledStudents + "]";
+    return "Point[" + x + ", " + y + "]";
   }
 }

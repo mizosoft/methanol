@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,23 +20,29 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.gson;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+final class CompactPointAdapter extends TypeAdapter<Point> {
+  CompactPointAdapter() {}
 
-class CachingJaxbBindingFactoryTest {
-  @BeforeAll
-  static void registerJaxbImplementation() {
-    JaxbUtils.registerImplementation();
+  @Override
+  public void write(JsonWriter out, Point value) throws IOException {
+    out.beginArray();
+    out.value(value.x);
+    out.value(value.y);
+    out.endArray();
   }
 
-  @Test
-  void cachesContextsForSameType() {
-    var factory = new CachingJaxbBindingFactory();
-    assertThat(factory.getOrCreateContext(Point.class))
-        .isSameAs(factory.getOrCreateContext(Point.class));
+  @Override
+  public Point read(JsonReader in) throws IOException {
+    in.beginArray();
+    var point = new Point(in.nextInt(), in.nextInt());
+    in.endArray();
+    return point;
   }
 }

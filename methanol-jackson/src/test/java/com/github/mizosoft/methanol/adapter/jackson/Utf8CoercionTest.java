@@ -22,27 +22,27 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
 import static com.github.mizosoft.methanol.testutils.TestUtils.load;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertLinesMatch;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
 import com.github.mizosoft.methanol.testutils.BufferTokenizer;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class Utf8CoercionTest {
-
   private Executor executor;
 
   @BeforeEach()
@@ -60,18 +60,20 @@ class Utf8CoercionTest {
     var aladinText = new String(load(getClass(), "/aladin_utf8.txt"), UTF_8);
     var aladinBytesUtf16 = UTF_16.encode(aladinText);
     var subscriber = JacksonAdapterUtils.coerceUtf8(BodySubscribers.ofString(UTF_8), UTF_16);
-    var executor = Executors.newFixedThreadPool(8);
     int[] buffSizes = {1, 32, 555, 1024, 21, 77};
     int[] listSizes = {1, 3, 1};
-    executor.execute(() -> {
-      try (var publisher = new SubmissionPublisher<List<ByteBuffer>>(executor, Integer.MAX_VALUE)) {
-        publisher.subscribe(subscriber);
-        BufferTokenizer.tokenizeToLists(aladinBytesUtf16, buffSizes, listSizes)
-            .forEach(publisher::submit);
-      }
-    });
+    executor.execute(
+        () -> {
+          try (var publisher =
+              new SubmissionPublisher<List<ByteBuffer>>(executor, Integer.MAX_VALUE)) {
+            publisher.subscribe(subscriber);
+            BufferTokenizer.tokenizeToLists(aladinBytesUtf16, buffSizes, listSizes)
+                .forEach(publisher::submit);
+          }
+        });
 
-    var receivedText = subscriber.getBody().toCompletableFuture().join();
-    assertLinesMatch(lines(aladinText), lines(receivedText));
+    assertThat(subscriber.getBody())
+        .succeedsWithin(Duration.ofSeconds(20), Assertions.STRING)
+        .isEqualToNormalizingNewlines(aladinText);
   }
 }

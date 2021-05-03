@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,23 +20,35 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.gson;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.util.Objects;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+public final class Point {
+  public final int x;
+  public final int y;
 
-class CachingJaxbBindingFactoryTest {
-  @BeforeAll
-  static void registerJaxbImplementation() {
-    JaxbUtils.registerImplementation();
+  public Point(int x, int y) {
+    this.x = x;
+    this.y = y;
   }
 
-  @Test
-  void cachesContextsForSameType() {
-    var factory = new CachingJaxbBindingFactory();
-    assertThat(factory.getOrCreateContext(Point.class))
-        .isSameAs(factory.getOrCreateContext(Point.class));
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof Point)) {
+      return false;
+    }
+    var other = (Point) obj;
+    return x == other.x && y == other.y;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(x, y);
+  }
+
+  @Override
+  public String toString() {
+    return "Point[" + x + ", " + y + "]";
   }
 }

@@ -25,9 +25,11 @@ module methanol.testutils {
   requires transitive methanol;
   requires okhttp3.tls;
   requires java.logging;
+  requires org.assertj.core;
   requires static org.checkerframework.checker.qual;
 
   exports com.github.mizosoft.methanol.testutils;
   exports com.github.mizosoft.methanol.testutils.dec;
   exports com.github.mizosoft.methanol.testutils.io.file;
+  exports com.github.mizosoft.methanol.testutils.adapter;
 }

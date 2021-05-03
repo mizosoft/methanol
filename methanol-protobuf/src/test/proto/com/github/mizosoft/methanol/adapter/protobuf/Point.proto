@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package mizosoft.methanol.adapter.protobuf;
+
+option java_package = "com.github.mizosoft.methanol.adapter.protobuf";
+
+message Point {
+  optional int32 x = 1;
+  optional int32 y = 2;
+
+  extensions 4;
+}
+
+extend Point {
+  optional string tag = 4;
+}

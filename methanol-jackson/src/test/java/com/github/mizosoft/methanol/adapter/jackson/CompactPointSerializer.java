@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,10 +20,24 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jackson;
 
-enum Type {
-  UNKNOWN,
-  ART,
-  CALCULUS
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import java.io.IOException;
+
+final class CompactPointSerializer extends StdSerializer<Point> {
+  CompactPointSerializer() {
+    super(Point.class);
+  }
+
+  @Override
+  public void serialize(Point value, JsonGenerator gen, SerializerProvider provider)
+      throws IOException {
+    gen.writeStartArray();
+    gen.writeNumber(value.x);
+    gen.writeNumber(value.y);
+    gen.writeEndArray();
+  }
 }
