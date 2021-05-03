@@ -104,7 +104,7 @@ public class Utils {
   }
 
   public static ByteBuffer copy(ByteBuffer source, ByteBuffer target) {
-    return target.capacity() >= source.capacity() ? target.put(source) : copy(source);
+    return target.remaining() >= source.remaining() ? target.put(source) : copy(source);
   }
 
   public static Clock systemMillisUtc() {
