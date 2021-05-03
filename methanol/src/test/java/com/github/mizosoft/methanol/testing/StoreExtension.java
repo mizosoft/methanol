@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
@@ -106,11 +108,8 @@ public final class StoreExtension
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
     var element = parameterContext.getDeclaringExecutable();
-    if (!AnnotationSupport.isAnnotated(element, StoreConfig.class)) {
-      return false;
-    }
 
-    // Do not complete with our ArgumentsProvider side
+    // Do not compete with our ArgumentsProvider side
     var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
     if (argSource.isPresent() && argSource.get().value() == StoreExtension.class) {
       return false;
@@ -142,7 +141,7 @@ public final class StoreExtension
 
   private static StoreConfig findStoreConfig(AnnotatedElement element) {
     return AnnotationSupport.findAnnotation(element, StoreConfig.class)
-        .orElseThrow(() -> new UnsupportedOperationException("@StoreConfig not found"));
+        .orElse(DEFAULT_STORE_CONFIG);
   }
 
   private static Arguments resolveArguments(Set<Class<?>> params, StoreContext context)
@@ -206,6 +205,24 @@ public final class StoreExtension
     return Collections.unmodifiableSet(product);
   }
 
+  private static final StoreConfig DEFAULT_STORE_CONFIG;
+
+  static {
+    try {
+      DEFAULT_STORE_CONFIG =
+          StoreExtension.class
+              .getDeclaredMethod("defaultStoreConfigHolder")
+              .getAnnotation(StoreConfig.class);
+
+      requireNonNull(DEFAULT_STORE_CONFIG);
+    } catch (NoSuchMethodException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
+  @StoreConfig
+  private static void defaultStoreConfigHolder() {}
+
   @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
   @ArgumentsSource(StoreExtension.class)
@@ -250,22 +267,21 @@ public final class StoreExtension
 
     @Override
     public void close() throws Exception {
-      var thrown = new ArrayList<Throwable>();
+      var closeFailures = new ArrayList<Exception>();
       for (var contexts : contextMap.values()) {
         for (var context : contexts) {
           try {
             context.close();
-          } catch (Throwable t) {
-            thrown.add(t);
+          } catch (Exception t) {
+            closeFailures.add(t);
           }
         }
       }
       contextMap.clear();
 
-      if (!thrown.isEmpty()) {
-        var toThrow =
-            new IOException("encountered one or more exceptions while closing stores");
-        thrown.forEach(toThrow::addSuppressed);
+      if (!closeFailures.isEmpty()) {
+        var toThrow = new IOException("encountered one or more exceptions while closing stores");
+        closeFailures.forEach(toThrow::addSuppressed);
         throw toThrow;
       }
     }

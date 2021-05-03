@@ -30,12 +30,11 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.HttpClientStub;
 import com.github.mizosoft.methanol.HttpResponseStub;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.net.http.HttpClient;
@@ -63,7 +62,6 @@ class HttpResponsePublisherTest {
       DELAY_MILLIS, TimeUnit.MILLISECONDS, FlowSupport.SYNC_EXECUTOR);
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void sendNoPush(Executor executor) throws Exception {
     var request = GET("https://localhost");
     var handler = replacing(null);
@@ -94,7 +92,6 @@ class HttpResponsePublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void sendNoPush_completeExceptionally(Executor executor) {
     var request = GET("https://localhost");
     var client = new FakeHttpClient();
@@ -110,7 +107,6 @@ class HttpResponsePublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void sendWithPush(Executor executor) {
     var request = GET("https://localhost/push");
     var mainResponseHandler = replacing("");
@@ -167,7 +163,6 @@ class HttpResponsePublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void throwFromPushReceiver(Executor executor) {
     // accepts one push then throws
     var pushAcceptor = new PushAcceptor<>(s -> true, replacing("gibe dat push")) {
@@ -213,7 +208,6 @@ class HttpResponsePublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void throwFromSendAsync(Executor executor) {
     var request = GET("https://localhost");
     var client = new HttpClientStub() {
@@ -236,7 +230,6 @@ class HttpResponsePublisherTest {
    * allowed by the spec.
    */
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void handlesPushesAfterInitialCompletion(Executor executor) {
     var request = GET("https://localhost");
     var client = new FakeHttpClient();
@@ -273,7 +266,6 @@ class HttpResponsePublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void completePushExceptionally(Executor executor) {
     var request = GET("https://localhost");
     var client = new FakeHttpClient();
@@ -309,7 +301,6 @@ class HttpResponsePublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void request1NoPush(Executor executor) {
     var client = new FakeHttpClient();
     var publisher = createPublisher(
@@ -331,7 +322,6 @@ class HttpResponsePublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void request3WithPush(Executor executor) {
     var request = GET("https://localhost");
     var client = new FakeHttpClient();

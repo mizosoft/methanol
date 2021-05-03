@@ -44,7 +44,6 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void writeString(Executor executor) {
     var editor = new TestEditor();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
@@ -88,7 +87,6 @@ class CacheWritingPublisherTest {
    * body.
    */
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void cancellationIsNotPropagatedIfWriting(Executor executor) {
     var editor = new TestEditor();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
@@ -114,7 +112,6 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void cancellationIsPropagatedIfNotWriting(Executor executor) {
     var failingEditor =
         new TestEditor() {
@@ -147,7 +144,6 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void cancellationIsPropagatedLaterOnFailedWrite(Executor executor) {
     var cancelledSubscription = new CountDownLatch(1);
     var failingEditor =
@@ -181,7 +177,6 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void errorFromUpstreamDiscardsEdit(Executor executor) {
     var editor = new TestEditor();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
@@ -207,7 +202,6 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void failedWriteDiscardsEdit(Executor executor) {
     var failingEditor =
         new TestEditor() {
@@ -232,7 +226,6 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void failedWriteDoesNotInterruptStream(Executor executor) {
     var failingEditor =
         new TestEditor() {

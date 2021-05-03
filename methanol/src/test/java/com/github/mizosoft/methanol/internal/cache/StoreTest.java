@@ -48,7 +48,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void writeThenRead(Store store) throws IOException {
     writeEntry(store, "e1", "Lucario", "Jynx");
     assertEntryEquals(store, "e1", "Lucario", "Jynx");
@@ -56,7 +55,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void writeThenReadTwice(Store store) throws IOException {
     writeEntry(store, "e1", "Lucario", "Jynx");
     assertEntryEquals(store, "e1", "Lucario", "Jynx");
@@ -67,7 +65,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   @ExecutorConfig(CACHED_POOL)
   void concurrentViewers(Store store, Executor threadPool) throws IOException {
     writeEntry(store, "e1", "Pockemon", "Charmander");
@@ -89,7 +86,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void writeMetadataWithoutData(Store store) throws IOException {
     try (var editor = edit(store, "e1")) {
       editor.metadata(UTF_8.encode("Light"));
@@ -99,7 +95,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void writeDataWithoutMetadata(Store store) throws IOException {
     try (var editor = edit(store, "e1")) {
       writeData(editor, "I'm in the dark here!");
@@ -110,7 +105,6 @@ class StoreTest {
 
   /** An entry must be discarded if its first edit wrote nothing. */
   @StoreParameterizedTest
-  @StoreConfig
   void writeNothingOnFirstEdit(Store store, StoreContext context) throws IOException {
     try (var editor = edit(store, "e1")) {
       editor.commitOnClose();
@@ -120,7 +114,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void updateMetadataOnSecondEdit(Store store) throws IOException {
     writeEntry(store, "e1", "Mew", "Pickachu");
 
@@ -133,7 +126,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void clearMetadataOnSecondEdit(Store store) throws IOException {
     writeEntry(store, "e1", "Mr Mime", "Ditto");
 
@@ -146,7 +138,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void updateDataOnSecondEdit(Store store) throws IOException {
     writeEntry(store, "e1", "Meowth", "Mew");
 
@@ -159,7 +150,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void clearDataOnSecondEdit(Store store) throws IOException {
     writeEntry(store, "e1", "Jynx", "Charmander");
 
@@ -172,7 +162,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void writeThenRemove(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Jigglypuff", "Pickachu");
 
@@ -182,7 +171,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void writeThenClear(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "methanol", "CH3OH");
     writeEntry(store, "e2", "ethanol", "C2H5OH");
@@ -195,7 +183,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void editSameEntryTwice(Store store) throws IOException {
     writeEntry(store, "e1", "Mew", "Pickachu");
     writeEntry(store, "e1", "Mewtwo", "Eevee");
@@ -204,7 +191,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void discardEdit(Store store, StoreContext context) throws IOException {
     try (var editor = edit(store, "e1")) {
       writeEntry(editor, "Jynx", "Eevee");
@@ -215,7 +201,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void discardSecondEdit(Store store) throws IOException {
     writeEntry(store, "e1", "Mew", "Mewtwo");
     try (var editor = edit(store, "e1")) {
@@ -227,7 +212,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void discardEditAfterRemove(Store store, StoreContext context) throws IOException {
     var editor = edit(store, "e1");
     writeEntry(editor, "Jynx", "Mew");
@@ -240,7 +224,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   @ExecutorConfig(CACHED_POOL)
   void contendedEdit(Store store, Executor threadPool) throws IOException {
     // Create 10 threads that contend over an edit
@@ -282,7 +265,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void entryRemainsUnreadableTillFirstEditCompletes(Store store) throws IOException {
     var editor = edit(store, "e1");
     setMetadata(editor, "Snorlax");
@@ -302,7 +284,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void  entryRemainsUnchangedTillSecondEditCompletes(Store store) throws IOException {
     writeEntry(store, "e1", "Mew", "Eevee");
 
@@ -325,7 +306,6 @@ class StoreTest {
 
   /** Removing an entry discards any ongoing edit for this entry. */
   @StoreParameterizedTest
-  @StoreConfig
   void removeBeforeCommittingFirstEdit(Store store, StoreContext context) throws IOException {
     var editor = edit(store, "e1");
     writeEntry(editor, "Pickachu", "Jigglypuff");
@@ -341,7 +321,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void clearWhileEditing(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Jynx", "Raichu");
     writeEntry(store, "e2", "Eevee", "Ditto");
@@ -387,7 +366,6 @@ class StoreTest {
    * opened.
    */
   @StoreParameterizedTest
-  @StoreConfig
   void removeWhileReading(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Ditto", "Eevee");
 
@@ -406,7 +384,6 @@ class StoreTest {
    * before removal.
    */
   @StoreParameterizedTest
-  @StoreConfig
   void removeThenWriteWhileReading(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Ditto", "Eevee");
 
@@ -428,7 +405,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void updateMetadataWhileReading(Store store) throws IOException {
     writeEntry(store, "e1", "Pickachu", "Psyduck");
 
@@ -447,7 +423,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void editFromViewer(Store store) throws IOException {
     writeEntry(store, "e1", "Pickachu", "Snorlax");
 
@@ -467,7 +442,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void discardEditFromViewer(Store store) throws IOException {
     writeEntry(store, "e1", "Ditto", "Eevee");
 
@@ -482,7 +456,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void removeWhileEditingFromViewer(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Pickachu", "Mewtwo");
 
@@ -503,7 +476,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void removeFromViewer(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Mew", "Mewtwo");
 
@@ -518,7 +490,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void removeFromViewerWhileEditingFromViewer(Store store, StoreContext context)
       throws IOException {
     writeEntry(store, "e1", "Pickachu", "Mewtwo");
@@ -540,7 +511,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void removeFromViewerAfterRemovingFromStore(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Eevee", "Ditto");
 
@@ -552,7 +522,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void removeFromStaleViewer(Store store) throws IOException {
     writeEntry(store, "e1", "Pikachu", "Ditto");
 
@@ -567,7 +536,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void canNotEditFromStaleViewer(Store store) throws IOException {
     writeEntry(store, "e1", "Eevee", "Ditto");
 
@@ -582,7 +550,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void canNotEditFromStaleViewerDueToRemoval(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Eevee", "Ditto");
 
@@ -597,7 +564,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void canNotEditFromViewerDuringAnOngoingEdit(Store store) throws IOException {
     writeEntry(store, "e1", "Eevee", "Ditto");
 
@@ -615,7 +581,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void removeNonExistingEntry(Store store) throws IOException {
     assertThat(store.remove("e1")).isFalse();
     writeEntry(store, "e1", "Raichu", "Eevee");
@@ -624,7 +589,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void iterateEntries(Store store) throws IOException {
     var entries = Map.of(
         "e1", List.of("Pickachu", "Raichu"),
@@ -650,7 +614,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void removeFromIterator(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Mew", "Mewtwo");
     writeEntry(store, "e2", "Charmander", "Pickachu");
@@ -676,7 +639,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void removeFromIteratorPointingAtStaleViewer(Store store) throws IOException {
     writeEntry(store, "e1", "Ditto", "Jynx");
 
@@ -881,7 +843,6 @@ class StoreTest {
    * it do not affect the store.
    */
   @StoreParameterizedTest
-  @StoreConfig
   void mutateMetadataBufferAfterPassingToEditor(Store store) throws IOException {
     var metadata = UTF_8.encode("420");
     try (var editor = edit(store, "e1")) {
@@ -897,7 +858,6 @@ class StoreTest {
 
   /** Ensure the position of the metadata buffer a viewer returns can be changed independently. */
   @StoreParameterizedTest
-  @StoreConfig
   void mutatePositionOfMetadataBufferReturnedFromViewer(Store store) throws IOException {
     writeEntry(store, "e1", "555", "");
     try (var viewer = view(store, "e1")) {
@@ -909,7 +869,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void metadataBufferReturnedFromViewerIsReadOnly(Store store) throws IOException {
     writeEntry(store, "e1", "555", "");
     try (var viewer = view(store, "e1")) {
@@ -918,7 +877,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void readBeyondDataSize(Store store) throws IOException {
     writeEntry(store, "e1", "Jynx", "Mew");
     try (var viewer = view(store, "e1")) {
@@ -931,7 +889,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void readWithNegativePosition(Store store) throws IOException {
     writeEntry(store, "e1", "Jynx", "Mew");
     try (var viewer = view(store, "e1")) {
@@ -941,7 +898,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void writeWithIllegalPosition(Store store) throws IOException {
     try (var editor = edit(store, "e1")) {
       assertThatIllegalArgumentException()
@@ -955,7 +911,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void editorRefusesWritesAfterCommitOnClose(Store store) throws IOException {
     try (var editor = edit(store, "e1")) {
       writeEntry(editor, "Ditto", "Jynx");
@@ -968,7 +923,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void editorDiscardsWritesAfterClosure(Store store, StoreContext context) throws IOException {
     var editor = edit(store, "e1");
     try (editor) {
@@ -982,7 +936,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void randomAccess(Store store) throws IOException {
     writeEntry(store, "e1", "", "1234");
     try (var viewer = view(store, "e1")) {

@@ -46,7 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
@@ -67,7 +66,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(ExecutorExtension.class)
 class AbstractSubscriptionTest {
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void subscribeNoSignals(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -80,7 +78,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void noItems(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -93,7 +90,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void errorSignal(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -104,7 +100,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void errorOnSubscribe(Executor executor) {
     var s = new TestSubscriber<Integer>();
     s.throwOnCall = true;
@@ -117,7 +112,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void oneItem(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -130,7 +124,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void oneItemThenError(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -144,7 +137,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void itemsAfterCancellation(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -160,7 +152,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void errorOnNext(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -176,7 +167,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void itemOrder(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -191,7 +181,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void noItemsWithoutRequests(Executor executor) {
     var s = new TestSubscriber<Integer>();
     s.request = 0L;
@@ -210,7 +199,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void requestOneReceiveOne(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -225,7 +213,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void negativeRequest(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -245,7 +232,6 @@ class AbstractSubscriptionTest {
    * JDK-8187947: A race condition in SubmissionPublisher
    */
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void testMissedSignal_8187947(Executor executor) throws Exception {
     int N =
         ((ForkJoinPool.getCommonPoolParallelism() < 2) // JDK-8212899
@@ -276,7 +262,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void abort_byCancellation(Executor executor) {
     var p = subscription(new TestSubscriber<>(), executor);
     p.cancel();
@@ -287,7 +272,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void abort_byCompletion(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -302,7 +286,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void abort_byError(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -316,7 +299,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void abort_byErrorOnSubscribe(Executor executor) {
     var s = new TestSubscriber<Integer>();
     s.throwOnCall = true;
@@ -330,7 +312,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void abort_byErrorOnNext(Executor executor) {
     var s = new TestSubscriber<Integer>();
     var p = subscription(s, executor);
@@ -347,7 +328,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void rejectedExecution() {
     Executor busy = r -> { throw new RejectedExecutionException(); };
     var p = new SubmittableSubscription<>(new TestSubscriber<Integer>(), busy);
@@ -357,7 +337,6 @@ class AbstractSubscriptionTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void multipleErrors(Executor executor) {
     var s = new TestSubscriber<Integer>();
     s.throwOnCall = true;
@@ -370,7 +349,6 @@ class AbstractSubscriptionTest {
 
   /** Test that emit() stops in case of an asynchronous signalError detected by submitOnNext. */
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void pendingErrorStopsSubmission(Executor executor) {
     var awaitSignalError = new CountDownLatch(1);
     var awaitFirstOnNext = new CountDownLatch(1);

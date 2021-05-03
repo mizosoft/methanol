@@ -140,7 +140,6 @@ class ProgressTrackerTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void trackUploadProgressNoThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;
@@ -156,7 +155,6 @@ class ProgressTrackerTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void trackUploadProgressWithError(Executor executor) {
     var tracker = withExecutor(executor).build();
     var listener = new TestListener();
@@ -173,7 +171,6 @@ class ProgressTrackerTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void trackMultipartUploadProgressNoThreshold(Executor executor) {
     int batchSize = 64;
     int[] partCounts = {4, 2, 1};
@@ -241,7 +238,6 @@ class ProgressTrackerTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void trackUploadProgressWithByteThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;
@@ -257,7 +253,6 @@ class ProgressTrackerTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void trackUploadProgressWithTimeThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;
@@ -273,7 +268,6 @@ class ProgressTrackerTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void trackDownloadProgressNoThresholds(Executor executor) {
     int batchSize = 64;
     int count = 20;
@@ -294,7 +288,6 @@ class ProgressTrackerTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void trackDownloadProgressWithError(Executor executor) {
     var tracker = withExecutor(executor).build();
     var listener = new TestListener();
@@ -311,7 +304,6 @@ class ProgressTrackerTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void trackDownloadProgressWithByteThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;
@@ -327,7 +319,6 @@ class ProgressTrackerTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void trackDownloadProgressWithTimeThreshold(Executor executor) {
     int batchSize = 64;
     int count = 20;

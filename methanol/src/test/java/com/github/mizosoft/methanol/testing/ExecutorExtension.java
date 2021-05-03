@@ -22,12 +22,15 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.AnnotatedElement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -74,13 +77,10 @@ public final class ExecutorExtension
 
   @Override
   public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-    var config =
-        context
-            .getElement()
-            .flatMap(el -> AnnotationSupport.findAnnotation(el, ExecutorConfig.class))
-            .orElseThrow(() -> new UnsupportedOperationException("@ExecutorConfig not found"));
+    var config = findStoreConfig(context.getRequiredTestMethod());
     var executors = ManagedExecutors.get(context);
-    return Stream.of(config.value()).map(type -> Arguments.of(executors.newExecutor(type)));
+    return Stream.of(config.value())
+        .map(executorType -> Arguments.of(executors.newExecutor(executorType)));
   }
 
   @Override
@@ -88,19 +88,14 @@ public final class ExecutorExtension
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
     var element = parameterContext.getDeclaringExecutable();
-    var config = AnnotationSupport.findAnnotation(element, ExecutorConfig.class);
-    if (config.isEmpty()) {
+
+    // Do not compete with our ArgumentsProvider side
+    var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
+    if (argSource.isPresent() && argSource.get().value() == ExecutorExtension.class) {
       return false;
     }
 
-    // Do not complete with our ArgumentsProvider side
-    var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
-    if (argSource.isPresent()
-        && argSource.get().value() == ExecutorExtension.class
-        && AnnotationSupport.isAnnotated(element, ParameterizedTest.class)) {
-      return false;
-    }
-    return Stream.of(config.get().value())
+    return Stream.of(findStoreConfig(parameterContext.getDeclaringExecutable()).value())
         .anyMatch(executorType -> executorType.matches(parameterContext.getParameter().getType()));
   }
 
@@ -108,18 +103,38 @@ public final class ExecutorExtension
   public Object resolveParameter(
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
-    var element = parameterContext.getDeclaringExecutable();
-    var config = AnnotationSupport.findAnnotation(element, ExecutorConfig.class);
-    if (config.isEmpty()) {
-      throw new UnsupportedOperationException("@ExecutorConfig not found");
-    }
+    var executable = parameterContext.getDeclaringExecutable();
+    var config = findStoreConfig(executable);
     var executors = ManagedExecutors.get(extensionContext);
-    return Stream.of(config.get().value())
+    return Stream.of(config.value())
         .filter(executorType -> executorType.matches(parameterContext.getParameter().getType()))
         .map(executors::newExecutor)
         .findFirst()
         .orElseThrow(UnsupportedOperationException::new);
   }
+
+  private static ExecutorConfig findStoreConfig(AnnotatedElement element) {
+    return AnnotationSupport.findAnnotation(element, ExecutorConfig.class)
+        .orElse(DEFAULT_EXECUTOR_CONFIG);
+  }
+
+  private static final ExecutorConfig DEFAULT_EXECUTOR_CONFIG;
+
+  static {
+    try {
+      DEFAULT_EXECUTOR_CONFIG =
+          ExecutorExtension.class
+              .getDeclaredMethod("defaultStoreConfigHolder")
+              .getAnnotation(ExecutorConfig.class);
+
+      requireNonNull(DEFAULT_EXECUTOR_CONFIG);
+    } catch (NoSuchMethodException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
+  @ExecutorConfig
+  private static void defaultStoreConfigHolder() {}
 
   @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
@@ -197,11 +212,11 @@ public final class ExecutorExtension
     }
 
     void shutdownAndTerminate() throws Exception {
-      for (var e : createdExecutors) {
-        TestUtils.shutdown(e);
-        if (e instanceof ExecutorService
-            && !((ExecutorService) e).awaitTermination(5, TimeUnit.MINUTES)) {
-          throw new TimeoutException("timed out while waiting for pool termination: " + e);
+      for (var executor : createdExecutors) {
+        TestUtils.shutdown(executor);
+        if (executor instanceof ExecutorService
+            && !((ExecutorService) executor).awaitTermination(5, TimeUnit.MINUTES)) {
+          throw new TimeoutException("timed out while waiting for pool termination: " + executor);
         }
       }
 

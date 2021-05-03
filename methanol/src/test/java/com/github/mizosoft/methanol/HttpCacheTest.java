@@ -197,14 +197,12 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void cacheGetWithMaxAge(Store store) throws Exception {
     setUpCache(store);
     assertGetIsCached(ofSeconds(1), "Cache-Control", "max-age=2");
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void cacheGetWithExpires(Store store) throws Exception {
     setUpCache(store);
     var now = toUtcDateTime(clock.instant());
@@ -215,7 +213,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void cacheGetWithExpiresAndDate(Store store) throws Exception {
     setUpCache(store);
     var date = toUtcDateTime(clock.instant());
@@ -228,7 +225,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   @UseHttps
   void cacheSecureGetWithMaxAge(Store store) throws Exception {
     setUpCache(store);
@@ -255,7 +251,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void cacheGetWithExpiresConditionalHit(Store store) throws Exception {
     setUpCache(store);
     // Expire one day from "now"
@@ -277,7 +272,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   @UseHttps
   void secureCacheGetWithExpiresConditionalHit(Store store) throws Exception {
     setUpCache(store);
@@ -301,7 +295,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void responseIsFreshenedOnConditionalHit(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -335,7 +328,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void successfulRevalidationWithZeroContentLength(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -371,7 +363,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void prohibitNetworkOnRequiredValidation(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -413,7 +404,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void revalidationFromStale(StoreContext storeContext) throws Throwable {
     testForEachValidator(storeContext, config -> {
       var request = GET(serverUri);
@@ -422,7 +412,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void failedRevalidationFromStale(StoreContext storeContext) throws Throwable {
     testForEachValidator(storeContext, config -> {
       var request = GET(serverUri);
@@ -431,7 +420,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void revalidationForcedByNoCache(StoreContext storeContext) throws Throwable {
     testForEachValidator(storeContext, config -> {
       var request = GET(serverUri).header("Cache-Control", "no-cache");
@@ -440,7 +428,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void failedRevalidationForcedByNoCache(StoreContext storeContext) throws Throwable {
     testForEachValidator(storeContext, config -> {
       var request = GET(serverUri).header("Cache-Control", "no-cache");
@@ -562,7 +549,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void preconditionFieldsAreNotVisibleOnServedResponse(Store store) throws Exception {
     setUpCache(store);
     var lastModifiedString = formatInstant(clock.instant().minusSeconds(1));
@@ -587,7 +573,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void lastModifiedDefaultsToDateWhenRevalidating(Store store) throws Exception {
     setUpCache(store);
     var dateInstant = clock.instant();
@@ -613,7 +598,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void pastExpires(Store store) throws Exception {
     setUpCache(store);
 
@@ -638,7 +622,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void futureLastModified(Store store) throws Exception {
     setUpCache(store);
 
@@ -667,7 +650,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void relaxMaxAgeWithRequest(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -685,7 +667,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void constrainMaxAgeWithRequest(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -706,7 +687,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void constrainFreshnessWithMinFresh(Store store) throws Exception {
     setUpCache(store);
     // Last-Modified: 2 seconds from "now"
@@ -744,7 +724,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void acceptingStalenessWithMaxStale(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -783,7 +762,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void imposeRevalidationWhenStaleByMustRevalidate(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -800,7 +778,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void cacheTwoPathsSameUri(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -821,7 +798,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void preventCachingByNoStore(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -840,7 +816,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void preventCachingByWildcardVary(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -858,7 +833,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void varyingResponse(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -900,7 +874,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void responsesVaryingOnImplicitHeadersAreNotStored(Store store) throws Exception {
     setUpCache(store);
     for (var field : CacheInterceptor.implicitlyAddedFieldsForTesting()) {
@@ -915,7 +888,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void varyOnAcceptEncoding(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -943,7 +915,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void varyOnMultipleFields(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -1018,7 +989,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void varyOnMultipleFieldValues(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -1069,7 +1039,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void cacheMovedPermanently(Store store) throws Exception {
     setUpCache(store);
     client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
@@ -1104,7 +1073,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void cacheTemporaryRedirectAndRedirectTarget(Store store) throws Exception {
     setUpCache(store);
     client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
@@ -1162,7 +1130,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void cacheRedirectTarget(Store store) throws Exception {
     setUpCache(store);
     client = clientBuilder.followRedirects(Redirect.ALWAYS).build();
@@ -1360,7 +1327,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void staleWhileRevalidate(Store store) throws Exception {
     setUpCache(store);
     var dateInstant = clock.instant();
@@ -1408,7 +1374,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void unsatisfiedStaleWhileRevalidate(Store store) throws Exception {
     setUpCache(store);
     var dateInstant = clock.instant();
@@ -1590,7 +1555,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void staleIfErrorWithInapplicableErrorCode(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -1610,7 +1574,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void staleIfErrorWithInapplicableException(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -1631,7 +1594,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void staleIfErrorWithUncheckedIOException(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -1658,7 +1620,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void staleIfErrorInRequestOverridesThatInResponse(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -1693,7 +1654,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void warnCodes1xxAreRemovedOnRevalidation(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -1759,7 +1719,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void heuristicExpiration(Store store) throws Exception {
     setUpCache(store);
     // Last-Modified:      20 seconds from date
@@ -1795,7 +1754,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void warningOnHeuristicFreshnessWithAgeGreaterThanOneDay(Store store) throws Exception {
     setUpCache(store);
     // Last-Modified:      20 days from date
@@ -1822,7 +1780,6 @@ class HttpCacheTest {
 
   /** See https://tools.ietf.org/html/rfc7234#section-4.2.3 */
   @StoreParameterizedTest
-  @StoreConfig
   void computingAge(Store store) throws Exception {
     setUpCache(store);
 
@@ -1993,7 +1950,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void headOfCachedGet(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -2014,7 +1970,6 @@ class HttpCacheTest {
 
   @UseHttps
   @StoreParameterizedTest
-  @StoreConfig
   void requestsWithPushPromiseHandlersBypassCache(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -2079,7 +2034,6 @@ class HttpCacheTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"If-Match", "If-Unmodified-Since", "If-None-Match", "If-Range"})
-  @StoreConfig
   void requestsWithPreconditionsAreForwarded(String preconditionField, Store store)
       throws Exception {
     setUpCache(store);
@@ -2104,7 +2058,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void manuallyInvalidateEntries(Store store) throws Exception {
     setUpCache(store);
     var uri1 = serverUri.resolve("/a");
@@ -2156,7 +2109,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void manuallyInvalidateEntryMatchingASpecificVariant(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -2247,7 +2199,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void cacheSize(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -2258,7 +2209,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void networkFailureDuringTransmission(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -2372,7 +2322,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void prematurelyCloseResponseBody(Store store) throws Exception {
     setUpCache(store);
 
@@ -2400,7 +2349,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void errorsWhileWritingDiscardsCaching(Store store) throws Exception {
     var failingStore = new FailingStore(store);
     failingStore.allowReads = true;
@@ -2444,7 +2392,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void errorsWhileReadingArePropagated(Store store) throws Exception {
     var failingStore = new FailingStore(store);
     failingStore.allowWrites = true;
@@ -2459,7 +2406,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void uriIterator(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -2484,7 +2430,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void iteratorRemove(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
@@ -2525,7 +2470,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void recordStats(Store store) throws Exception {
     setUpCache(store);
     server.setDispatcher(new Dispatcher() {
@@ -2583,7 +2527,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void perUriStats(Store store) throws Exception {
     setUpCache(store);
     var uri1 = serverUri.resolve("/a");
@@ -2643,7 +2586,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreConfig
   void writeStats(Store store) throws Exception {
     var failingStore = new FailingStore(store);
     failingStore.allowReads = true;

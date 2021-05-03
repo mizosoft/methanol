@@ -29,14 +29,11 @@ import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testing.StoreConfig;
 import com.github.mizosoft.methanol.testing.StoreExtension;
@@ -45,6 +42,7 @@ import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -59,18 +57,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
 class CacheReadingPublisherTest {
   static {
-    Awaitility.setDefaultTimeout(ofSeconds(30));
+    Awaitility.setDefaultTimeout(Duration.ofSeconds(30));
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   @StoreConfig(store = MEMORY)
   void cacheStringInMemory(Executor executor, Store store) throws IOException {
     testCachingAString(executor, store);
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   @StoreConfig(store = DISK, fileSystem = SYSTEM)
   void cacheStringInDisk(Executor executor, Store store) throws IOException {
     testCachingAString(executor, store);
@@ -83,12 +79,11 @@ class CacheReadingPublisherTest {
     var subscriber = BodySubscribers.ofString(UTF_8);
     publisher.subscribe(subscriber);
     assertThat(subscriber.getBody())
-        .succeedsWithin(ofSeconds(20))
+        .succeedsWithin(Duration.ofSeconds(20))
         .isEqualTo("Cache me please!");
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void failureInAsyncRead(Executor executor) {
     var failingViewer = new TestViewer() {
       @Override
@@ -105,14 +100,13 @@ class CacheReadingPublisherTest {
     publisher.subscribe(subscriber);
 
     subscriber.awaitComplete();
-    assertEquals(1, subscriber.errors);
+    assertThat(subscriber.errors).isOne();
     assertThat(subscriber.errors).isOne();
     assertThat(subscriber.lastError).isInstanceOf(TestException.class);
   }
 
   /** No new reads should be scheduled when the subscription is cancelled. */
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void cancelSubscriptionWhileReadIsPending(Executor executor) throws InterruptedException {
     var firstReadLatch = new CountDownLatch(1);
     var readAsyncFuture = new CompletableFuture<Integer>();
@@ -138,7 +132,6 @@ class CacheReadingPublisherTest {
     readAsyncFuture.complete(null);
 
     // No further reads are scheduled
-    assertEquals(1, viewer.readAsyncCalls.get());
     assertThat(viewer.readAsyncCalls.get()).isEqualTo(1);
 
     // The subscriber receives no signals
@@ -148,7 +141,6 @@ class CacheReadingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @ExecutorConfig
   void completionWithoutDemandOnEmptyViewer(Executor executor) {
     var emptyViewer = new TestViewer() {
       @Override
@@ -181,11 +173,6 @@ class CacheReadingPublisherTest {
     publisher.subscribe(secondSubscriber);
     secondSubscriber.awaitError();
     assertThat(secondSubscriber.lastError).isInstanceOf(IllegalStateException.class);
-  }
-
-  @Test
-  void bufferWithZeroSize() {
-
   }
 
   private abstract static class TestViewer implements Viewer {
