@@ -38,9 +38,7 @@ import static com.github.mizosoft.methanol.internal.cache.DiskStore.TEMP_INDEX_F
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.function.Predicate.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hasher;
@@ -55,7 +53,6 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /** Allows reading or writing DiskStore entries directly from/to disk. */
 final class MockDiskStore {
@@ -79,28 +76,11 @@ final class MockDiskStore {
     clock = context.clock();
   }
 
-  boolean indexFileExists() {
-    return Files.exists(indexFile);
-  }
-
-  boolean lockFileExists() {
-    return Files.exists(lockFile);
-  }
-
-  boolean entryFileExists(String key) {
-    return Files.exists(entryFile(key));
-  }
-
-  boolean dirtyEntryFileExists(String key) {
-    return Files.exists(tempEntryFile(key));
-  }
-
   Index copyWorkIndex() {
     return new Index(workIndex.encode());
   }
 
   Index readIndex() throws IOException {
-    assertTrue(Files.exists(indexFile), "the index file doesn't exist");
     return new Index(ByteBuffer.wrap(Files.readAllBytes(indexFile)));
   }
 
@@ -155,7 +135,6 @@ final class MockDiskStore {
   }
 
   void delete(String key) throws IOException {
-    assertTrue(Files.exists(entryFile(key)));
     Files.delete(entryFile(key));
   }
 
@@ -167,13 +146,37 @@ final class MockDiskStore {
     }
   }
 
+  void assertEntryFileExists(String key) {
+    assertThat(entryFile(key))
+        .withFailMessage("expected entry file for <%s> to exist", key)
+        .exists();
+  }
+
+  void assertEntryFileDoesNotExist(String key) {
+    assertThat(entryFile(key))
+        .withFailMessage("expected entry file for <%s> to not exist", key)
+        .doesNotExist();
+  }
+
+  void assertDirtyEntryFileExists(String key) {
+    assertThat(tempEntryFile(key))
+        .withFailMessage("expected dirty entry file for <%s> to exist", key)
+        .exists();
+  }
+
+  void assertDirtyEntryFileDoesNotExist(String key) {
+    assertThat(tempEntryFile(key))
+        .withFailMessage("expected dirty entry file for <%s> to not exist", key)
+        .doesNotExist();
+  }
+
   void assertEntryEquals(String key, String metadata, String data) throws IOException {
-    assertTrue(entryFileExists(key), "entry file for <" + key + "> doesn't exist");
+    assertEntryFileExists(key);
 
     var entry = readEntry(key);
-    assertEquals(key, entry.key);
-    assertEquals(metadata, entry.metadata);
-    assertEquals(data, entry.data);
+    assertThat(entry.key).isEqualTo(key);
+    assertThat(entry.metadata).isEqualTo(metadata);
+    assertThat(entry.data).isEqualTo(data);
   }
 
   // <key, last-used, size> tuples
@@ -181,25 +184,27 @@ final class MockDiskStore {
     requireArgument(content.length % 3 == 0, "invalid content");
 
     var index = readIndex();
-    assertEquals(INDEX_MAGIC, index.magic);
-    assertEquals(STORE_VERSION, index.storeVersion);
-    assertEquals(appVersion, index.appVersion);
+    assertThat(index.magic).isEqualTo(INDEX_MAGIC);
+    assertThat(index.storeVersion).isEqualTo(STORE_VERSION);
+    assertThat(index.appVersion).isEqualTo(appVersion);
 
     var coveredHashes = new HashSet<Hash>();
     for (int i = 0; i < content.length; i += 3) {
       var key = content[i].toString();
       var hash = hasher.hash(key);
       var indexEntry = index.get(hasher.hash(key));
-      assertNotNull(indexEntry, "entry with key <" + key + "> is missing from the index");
-      assertEquals(content[i + 1], indexEntry.lastUsed, key);
-      assertEquals(content[i + 2], indexEntry.size, key);
+      assertThat(indexEntry)
+          .withFailMessage("entry with key <%s> is missing from the index", key)
+          .isNotNull();
+      assertThat(indexEntry.lastUsed).as(key).isEqualTo(content[i + 1]);
+      assertThat(indexEntry.size).as(key).isEqualTo(content[i + 2]);
 
       coveredHashes.add(hash);
     }
 
     var remainingHashes = new HashSet<>(index.entries.keySet());
     remainingHashes.removeAll(coveredHashes);
-    assertTrue(remainingHashes.isEmpty(), "index contains unexpected entries: " + remainingHashes);
+    assertThat(remainingHashes).withFailMessage("index contains unexpected entries").isEmpty();
   }
 
   void assertEmptyIndex() throws IOException {
@@ -208,8 +213,7 @@ final class MockDiskStore {
 
   void assertHasNoEntriesOnDisk() throws IOException {
     try (var stream = Files.list(directory)) {
-      var entryFiles = stream.filter(not(this::isNonEntryFile)).collect(Collectors.toSet());
-      assertTrue(entryFiles.isEmpty(), entryFiles::toString);
+      assertThat(stream).filteredOn(not(this::isNonEntryFile)).isEmpty();
     }
   }
 
@@ -218,6 +222,14 @@ final class MockDiskStore {
         || file.equals(tempIndexFile)
         || file.equals(lockFile)
         || file.getFileName().toString().startsWith(RIP_FILE_PREFIX);
+  }
+
+  Path indexFile() {
+    return indexFile;
+  }
+
+  Path lockFile() {
+    return lockFile;
   }
 
   Path entryFile(String key) {

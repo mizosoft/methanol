@@ -21,10 +21,7 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
@@ -39,7 +36,9 @@ class StoreTesting {
 
   static void assertUnreadable(Store store, String key) throws IOException {
     try (var viewer = store.view(key)) {
-      assertNull(viewer, "expected entry <" + key + "> to be unreadable");
+      assertThat(viewer)
+          .withFailMessage("expected entry <%s> to be unreadable", key)
+          .isNull();
     }
   }
 
@@ -49,7 +48,9 @@ class StoreTesting {
       assertUnreadable(store, key);
       if (context.config().storeType() == DISK) {
         var mockStore = new MockDiskStore(context);
-        assertFalse(mockStore.entryFileExists(key), "unexpected entry file for: " + key);
+        assertThat(mockStore.entryFile(key))
+            .withFailMessage("unexpected entry file for: %s", key)
+            .doesNotExist();
       }
     }
   }
@@ -57,26 +58,31 @@ class StoreTesting {
   static long sizeOf(String... values) {
     return Stream.of(values)
         .map(UTF_8::encode)
-        .mapToInt(ByteBuffer::remaining)
-        .summaryStatistics()
-        .getSum();
+        .mapToLong(ByteBuffer::remaining)
+        .sum();
   }
 
   static Viewer view(Store store, String key) throws IOException {
     var viewer = store.view(key);
-    assertNotNull(viewer, "expected a viewer to be opened for " + key);
+    assertThat(viewer)
+        .withFailMessage("expected entry <%s> to be readable", key)
+        .isNotNull();
     return viewer;
   }
 
   static Editor edit(Store store, String key) throws IOException {
     var editor = store.edit(key);
-    assertNotNull(editor, "expected an editor to be opened for " + key);
+    assertThat(editor)
+        .withFailMessage("expected entry <%s> to be editable", key)
+        .isNotNull();
     return editor;
   }
 
   static Editor edit(Viewer viewer) throws IOException {
     var editor = viewer.edit();
-    assertNotNull(editor, "expected an editor to be opened from viewer for: " + viewer.key());
+    assertThat(editor)
+        .withFailMessage("expected entry <%s> to be editable from given viewer", viewer.key())
+        .isNotNull();
     return editor;
   }
 
@@ -88,10 +94,10 @@ class StoreTesting {
   }
 
   static void assertEntryEquals(Viewer viewer, String metadata, String data) throws IOException {
-    assertEquals(metadata, UTF_8.decode(viewer.metadata()).toString());
-    assertEquals(data, readData(viewer));
-    assertEquals(sizeOf(data), viewer.dataSize());
-    assertEquals(sizeOf(metadata, data), viewer.entrySize());
+    assertThat(UTF_8.decode(viewer.metadata()).toString()).isEqualTo(metadata);
+    assertThat(readData(viewer)).isEqualTo(data);
+    assertThat(viewer.dataSize()).isEqualTo(sizeOf(data));
+    assertThat(viewer.entrySize()).isEqualTo(sizeOf(metadata, data));
   }
 
   static void writeEntry(Store store, String key, String metadata, String data) throws IOException {

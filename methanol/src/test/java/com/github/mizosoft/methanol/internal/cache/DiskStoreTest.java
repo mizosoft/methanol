@@ -36,13 +36,11 @@ import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.WI
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.DiskEntry;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.EntryCorruptionMode;
@@ -58,14 +56,12 @@ import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTes
 import com.github.mizosoft.methanol.testutils.Logging;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Timeout;
@@ -93,7 +89,7 @@ class DiskStoreTest {
     Files.delete(context.directory());
 
     store.initialize();
-    assertTrue(Files.exists(context.directory()));
+    assertThat(context.directory()).exists();
     mockStore.assertEmptyIndex();
   }
 
@@ -108,7 +104,7 @@ class DiskStoreTest {
     store.initialize();
     assertEntryEquals(store, "e1", "Ditto", "Eevee");
     assertEntryEquals(store, "e2", "Mew", "Mewtwo");
-    assertEquals(sizeOf("Ditto", "Eevee", "Mew", "Mewtwo"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Ditto", "Eevee", "Mew", "Mewtwo"));
   }
 
   @StoreParameterizedTest
@@ -125,7 +121,7 @@ class DiskStoreTest {
     var store2 = context.newStore();
     assertEntryEquals(store2, "e1", "Mewtwo", "Charmander");
     assertEntryEquals(store2, "e2", "Psyduck", "Pickachu");
-    assertEquals(sizeOf("Mewtwo", "Charmander", "Psyduck", "Pickachu"), store2.size());
+    assertThat(store2.size()).isEqualTo(sizeOf("Mewtwo", "Charmander", "Psyduck", "Pickachu"));
   }
 
   @StoreParameterizedTest
@@ -140,7 +136,7 @@ class DiskStoreTest {
     // Create initCount concurrent initializers
     int initCount = 10;
     var arrival = new CyclicBarrier(initCount);
-    var tasks = new ArrayList<CompletableFuture<Void>>();
+    var assertionTasks = new ArrayList<CompletableFuture<Void>>();
     for (int i = 0; i < initCount; i++) {
       var task = Unchecked.runAsync(() -> {
         awaitUninterruptibly(arrival);
@@ -149,10 +145,10 @@ class DiskStoreTest {
         assertEntryEquals(store, "e1", "Ditto", "Eevee");
       }, threadPool);
 
-      tasks.add(task);
+      assertionTasks.add(task);
     }
 
-    assertAll(tasks.stream().map(cf -> cf::join));
+    assertAll(assertionTasks.stream().map(cf -> cf::join));
   }
 
   /** Dirty entry files of untracked entries found during initialization are deleted. */
@@ -169,11 +165,11 @@ class DiskStoreTest {
     mockStore.writeDirtyTruncated("e3", "Raichu", "Ditto");
 
     store.initialize();
-    assertFalse(mockStore.dirtyEntryFileExists("e2"));
-    assertFalse(mockStore.dirtyEntryFileExists("e3"));
+    mockStore.assertDirtyEntryFileDoesNotExist("e2");
+    mockStore.assertDirtyEntryFileDoesNotExist("e3");
     assertAbsent(store, context, "e2", "e3");
     assertEntryEquals(store, "e1", "Eevee", "Jigglypuff");
-    assertEquals(sizeOf("Eevee", "Jigglypuff"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Eevee", "Jigglypuff"));
   }
 
   /** Dirty entry files of tracked entries found during initialization are deleted. */
@@ -193,9 +189,9 @@ class DiskStoreTest {
     mockStore.writeDirtyTruncated("e3", "Meowth", "Lucario");
 
     store.initialize();
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
-    assertFalse(mockStore.dirtyEntryFileExists("e2"));
-    assertFalse(mockStore.dirtyEntryFileExists("e3"));
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
+    mockStore.assertDirtyEntryFileDoesNotExist("e2");
+    mockStore.assertDirtyEntryFileDoesNotExist("e3");
     assertEntryEquals(store, "e1", "Eevee", "Jigglypuff");
     assertEntryEquals(store, "e2", "Jynx", "Mew");
     assertEntryEquals(store, "e3", "Psyduck", "Raichu");
@@ -215,9 +211,9 @@ class DiskStoreTest {
     mockStore.writeDirty(entry, false);
 
     store.initialize();
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
     assertAbsent(store, context, "e1");
-    assertEquals(0, store.size());
+    assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
@@ -235,9 +231,9 @@ class DiskStoreTest {
 
     store.initialize();
     assertAbsent(store, context, "e2", "e3");
-    assertFalse(mockStore.dirtyEntryFileExists("e3"));
+    mockStore.assertDirtyEntryFileDoesNotExist("e3");
     assertEntryEquals(store, "e1", "Psyduck", "Pickachu");
-    assertEquals(sizeOf("Psyduck", "Pickachu"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Psyduck", "Pickachu"));
   }
 
   @StoreParameterizedTest
@@ -254,7 +250,7 @@ class DiskStoreTest {
     store.initialize();
     assertAbsent(store, context, "e1");
     assertEntryEquals(store, "e2", "Mew", "Eevee");
-    assertEquals(sizeOf("Mew", "Eevee"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Mew", "Eevee"));
   }
 
   @StoreParameterizedTest
@@ -285,12 +281,12 @@ class DiskStoreTest {
     store.initialize();
     mockStore.assertHasNoEntriesOnDisk();
     assertAbsent(store, context, "e1", "e2");
-    assertEquals(0, store.size());
+    assertThat(store.size()).isZero();
 
     // The corrupt index is overwritten with an empty index
     mockStore.assertEmptyIndex();
     // Make sure the lock file is not deleted with the store content
-    assertTrue(mockStore.lockFileExists());
+    assertThat(mockStore.lockFile()).exists();
   }
 
   @StoreParameterizedTest
@@ -318,10 +314,11 @@ class DiskStoreTest {
     mockStore.writeWorkIndex();
 
     store.initialize();
-    assertThrows(StoreCorruptionException.class, () -> view(store, "e1"));
+    assertThatExceptionOfType(StoreCorruptionException.class)
+        .isThrownBy(() -> view(store, "e1"));
 
-    // Currently the entry is not automatically removed
-    assertTrue(mockStore.entryFileExists("e1"));
+    // The current implementation doesn't automatically remove the entry
+    mockStore.assertEntryFileExists("e1");
   }
 
   @StoreParameterizedTest
@@ -337,14 +334,14 @@ class DiskStoreTest {
     store.flush();
 
     var index = mockStore.readIndex();
-    assertFalse(index.contains(context.hasher().hash("e1")));
+    assertThat(index.contains(context.hasher().hash("e1"))).isFalse();
 
     // Completing the edit makes the entry readable
     editor.close();
     store.flush();
 
     var index2 = mockStore.readIndex();
-    assertTrue(index2.contains(context.hasher().hash("e1")));
+    assertThat(index2.contains(context.hasher().hash("e1"))).isTrue();
   }
 
   @StoreParameterizedTest
@@ -353,11 +350,11 @@ class DiskStoreTest {
     setUp(context);
     writeEntry(store, "e1", "Mew", "Mewtwo");
 
-    assertTrue(store.remove("e1"));
+    assertThat(store.remove("e1")).isTrue();
     store.flush();
 
     var index = mockStore.readIndex();
-    assertFalse(index.contains(context.hasher().hash("e1")));
+    assertThat(index.contains(context.hasher().hash("e1"))).isFalse();
   }
 
   @StoreParameterizedTest
@@ -372,8 +369,8 @@ class DiskStoreTest {
     mockStore.assertHasNoEntriesOnDisk();
 
     var index = mockStore.readIndex();
-    assertFalse(index.contains(context.hasher().hash("e1")));
-    assertFalse(index.contains(context.hasher().hash("e2")));
+    assertThat(index.contains(context.hasher().hash("e1"))).isFalse();
+    assertThat(index.contains(context.hasher().hash("e2"))).isFalse();
   }
 
   @StoreParameterizedTest
@@ -386,12 +383,12 @@ class DiskStoreTest {
     writeEntry(store, "e1", "aaa", "bbb"); // Grow size to 6 bytes
     writeEntry(store, "e2", "ccc", "ddd"); // Grow size to 12 bytes, causing e1 to be evicted
     assertAbsent(store, context, "e1");
-    assertEquals(6, store.size());
+    assertThat(store.size()).isEqualTo(6);
     store.flush();
 
     var index = mockStore.readIndex();
-    assertFalse(index.contains(context.hasher().hash("e1")));
-    assertTrue(index.contains(context.hasher().hash("e2")));
+    assertThat(index.contains(context.hasher().hash("e1"))).isFalse();
+    assertThat(index.contains(context.hasher().hash("e2"))).isTrue();
   }
 
   @StoreParameterizedTest
@@ -406,18 +403,18 @@ class DiskStoreTest {
     store.close();
 
     // Closing the store deletes the editor's work file
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
 
     // The entry isn't in the index since it wasn't readable before closing
     var index = mockStore.readIndex();
-    assertFalse(index.contains(context.hasher().hash("e1")));
+    assertThat(index.contains(context.hasher().hash("e1"))).isFalse();
 
     // The editor silently discards writes & commits
     writeData(editor, "Charmander");
     editor.commitOnClose();
     editor.close();
-    assertFalse(mockStore.entryFileExists("e1"));
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
+    mockStore.assertEntryFileDoesNotExist("e1");
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
   }
 
   @StoreParameterizedTest
@@ -434,15 +431,15 @@ class DiskStoreTest {
     store.close();
 
     // Closing the store deletes the editor's work file
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
 
     // The editor silently discards writes & commits
     writeData(editor, "Charmander");
     editor.commitOnClose();
     editor.close();
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
     mockStore.assertEntryEquals("e1", "Pickachu", "Eevee");
-    assertEquals(sizeOf("Pickachu", "Eevee"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Pickachu", "Eevee"));
   }
 
   @StoreParameterizedTest
@@ -453,21 +450,23 @@ class DiskStoreTest {
     setUp(context);
     writeEntry(store, "e1", "Ditto", "Eevee");
 
-    int removalCount = 10;
-    var arrival = new CyclicBarrier(removalCount);
-    var tasks = new ArrayList<CompletableFuture<Void>>();
+    int removalTriesCount = 10;
+    var arrival = new CyclicBarrier(removalTriesCount);
+    var assertionTasks = new ArrayList<CompletableFuture<Void>>();
     var removed = new AtomicBoolean();
-    for (int i = 0; i < removalCount; i++) {
+    for (int i = 0; i < removalTriesCount; i++) {
       var task = Unchecked.runAsync(() -> {
         awaitUninterruptibly(arrival);
         // Assert remove only succeeds once
-        assertTrue(!store.remove("e1") || removed.compareAndSet(false, true));
+        assertThat(!store.remove("e1") || removed.compareAndSet(false, true))
+            .withFailMessage("more than one removal succeeded")
+            .isTrue();
       }, threadPool);
 
-      tasks.add(task);
+      assertionTasks.add(task);
     }
 
-    assertAll(tasks.stream().map(cf -> cf::join));
+    assertAll(assertionTasks.stream().map(cf -> cf::join));
   }
 
   @StoreParameterizedTest
@@ -476,8 +475,8 @@ class DiskStoreTest {
     setUp(context);
     writeEntry(store, "e1", "Jynx", "Ditto");
 
-    assertTrue(store.remove("e1"));
-    assertFalse(mockStore.entryFileExists("e1"));
+    assertThat(store.remove("e1")).isTrue();
+    mockStore.assertEntryFileDoesNotExist("e1");
   }
 
   @StoreParameterizedTest
@@ -487,8 +486,8 @@ class DiskStoreTest {
     writeEntry(store, "e1", "Jynx", "Ditto");
 
     try (var viewer = view(store, "e1")) {
-      assertTrue(viewer.removeEntry());
-      assertFalse(mockStore.entryFileExists("e1"));
+      assertThat(viewer.removeEntry()).isTrue();
+      mockStore.assertEntryFileDoesNotExist("e1");
     }
   }
 
@@ -512,9 +511,9 @@ class DiskStoreTest {
       writeEntry(editor, "Pickachu", "Jynx");
       // Don't commit
 
-      assertTrue(mockStore.dirtyEntryFileExists("e1"));
+      mockStore.assertDirtyEntryFileExists("e1");
     }
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
   }
 
   @StoreParameterizedTest
@@ -522,9 +521,9 @@ class DiskStoreTest {
   void editorWorkFileIsCreatedLazily(Store store, StoreContext context) throws IOException {
     setUp(context);
     try (var editor = edit(store, "e1")) {
-      assertFalse(mockStore.dirtyEntryFileExists("e1"));
+      mockStore.assertDirtyEntryFileDoesNotExist("e1");
       writeEntry(editor, "Ditto", "Eevee");
-      assertTrue(mockStore.dirtyEntryFileExists("e1"));
+      mockStore.assertDirtyEntryFileExists("e1");
     }
   }
 
@@ -543,25 +542,25 @@ class DiskStoreTest {
 
     setMetadata(store, "e1", "aaa"); // Grow size to 3 bytes
     setMetadata(store, "e2", "ccc"); // Grow size to 6 bytes
-    assertEquals(6, store.size());
+    assertThat(store.size()).isEqualTo(6);
     // An eviction task is submitted
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     setMetadata(store, "e3", "eee"); // Grow size to 9 bytes
-    assertEquals(9, store.size());
+    assertThat(store.size()).isEqualTo(9);
     // No evictions tasks are submitted when one is already "running"
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
 
     // Get size down to 3
     executor.runNext();
     assertAbsent(store, context, "e1", "e2");
-    assertEquals(3, store.size());
+    assertThat(store.size()).isEqualTo(3);
 
     setMetadata(store, "e1", "hello"); // Grow size to 8 bytes
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
 
     executor.runNext();
     assertAbsent(store, context, "e3");
-    assertEquals(5, store.size());
+    assertThat(store.size()).isEqualTo(5);
   }
 
   @StoreParameterizedTest
@@ -575,7 +574,7 @@ class DiskStoreTest {
     store.initialize();
     assertAbsent(store, context, "e1");
     assertEntryEquals(store, "e2", "ccc" , "ddd");
-    assertEquals(6, store.size());
+    assertThat(store.size()).isEqualTo(6);
   }
 
   @StoreParameterizedTest
@@ -586,14 +585,14 @@ class DiskStoreTest {
     writeEntry(store1, "e1", "a", "b"); // Grow size to 2 bytes
     writeEntry(store1, "e2", "c", "d"); // Grow size to 4 bytes
     writeEntry(store1, "e3", "e", "f"); // Grow size to 6 bytes
-    assertEquals(6, store1.size());
+    assertThat(store1.size()).isEqualTo(6);
 
     // LRU queue: e2, e3, e1
     view(store1, "e1").close();
 
     // LRU queue: e2, e3, e1, e4
     writeEntry(store1, "e4", "h", "i"); // Grow size to 8 bytes
-    assertEquals(8, store1.size());
+    assertThat(store1.size()).isEqualTo(8);
 
     // LRU queue: e3, e1, e4, e2
     view(store1, "e2").close();
@@ -604,7 +603,7 @@ class DiskStoreTest {
     // Grow size to 16 bytes, causing first 3 LRU entries to be evicted to get back to 10
     writeEntry(store2, "e5", "jjjj", "kkkk");
     assertAbsent(store2, context, "e3", "e1", "e4");
-    assertEquals(10, store2.size());
+    assertThat(store2.size()).isEqualTo(10);
   }
 
   @StoreParameterizedTest
@@ -624,7 +623,7 @@ class DiskStoreTest {
     writeEntry(store, "e1", "Ditto", "Jynx");
     var iter = store.iterator();
     mockStore.delete("e1");
-    assertFalse(iter.hasNext());
+    assertThat(iter.hasNext()).isFalse();
   }
 
   @StoreParameterizedTest
@@ -636,89 +635,89 @@ class DiskStoreTest {
 
     // Opening an editor for a previously non-existent entry doesn't issue an index write
     var editor = edit(store, "e1");
-    assertEquals(0, executor.taskCount());
+    assertThat(executor.taskCount()).isZero();
 
     // Completing an entry's first edit issues an index write
     setMetadata(editor, "Jynx"); // 4 bytes
     editor.commitOnClose();
     editor.close();
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     // Opening an editor for an existing entry issues an index write
     edit(store, "e1").close();
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     // Viewing an existing entry issues an index write
     view(store, "e1").close();
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     // Attempting to view a non-existent entry doesn't issue an index write
     store.view("e2");
-    assertEquals(0, executor.taskCount());
+    assertThat(executor.taskCount()).isZero();
 
     // Removing an existing entry issues an index write
-    assertTrue(store.remove("e1"));
-    assertEquals(1, executor.taskCount());
+    assertThat(store.remove("e1")).isTrue();
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     // Removing an existing entry with a viewer issues an index write
     setMetadata(store, "e1", "Steve");
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
     try (var viewer = view(store, "e1")) {
       viewer.removeEntry();
-      assertEquals(1, executor.taskCount());
+      assertThat(executor.taskCount()).isOne();
       executor.runNext();
     }
 
     // Removing a non-existent entry doesn't issue an index write
-    assertFalse(store.remove("e2"));
-    assertEquals(0, executor.taskCount());
+    assertThat(store.remove("e2")).isFalse();
+    assertThat(executor.taskCount()).isZero();
 
     // Clearing the store issues an index write
     store.clear();
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     // Opening Viewers from iterators issues an index write
     setMetadata(store, "e1", "Jynx"); // 4 bytes
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
     var iter = store.iterator();
-    assertEquals(0, executor.taskCount());
-    assertTrue(iter.hasNext());
+    assertThat(executor.taskCount()).isZero();
+    assertThat(iter.hasNext()).isTrue();
     iter.next().close();
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     // Invoking Iterator::remove issues an index write
     iter.remove();
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     // Writing a new entry issues an index write.
     // Writing is serialized, so only SerialExecutor' drain task is submitted.
     setMetadata(store, "e3", "abc"); // 3 bytes
     setMetadata(store, "e4", "xy"); // 2 bytes
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runAll();
 
-    assertEquals(5, store.size());
+    assertThat(store.size()).isEqualTo(5);
 
     // Eviction due to exceeding the size bound issues an index write
     try (var editor2 = edit(store, "e4")) {
-      assertEquals(1, executor.taskCount());
+      assertThat(executor.taskCount()).isOne();
       executor.runNext();
       setMetadata(editor2, "xyz"); // Growing e4 to 3 bytes causes e3 to get evicted
       editor2.commitOnClose();
 
       // Eviction isn't scheduled until the edit is committed
-      assertEquals(0, executor.taskCount());
+      assertThat(executor.taskCount()).isZero();
     }
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
     assertAbsent(store, context, "e3");
   }
@@ -739,62 +738,62 @@ class DiskStoreTest {
     // t = 0
     // First index write is dispatched immediately
     setMetadata(store, "e1", "a");
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     // t = 0
     // An index write is scheduled to run in 2 seconds as one has just run
     view(store, "e1").close();
-    assertEquals(1, delayer.taskCount());
-    assertEquals(0, executor.taskCount());
+    assertThat(delayer.taskCount()).isOne();
+    assertThat(executor.taskCount()).isZero();
 
     clock.advanceSeconds(1);
     // t = 1
     // 1 second is still remaining till the scheduled write is dispatched to the executor
-    assertEquals(0, executor.taskCount());
+    assertThat(executor.taskCount()).isZero();
 
     clock.advanceSeconds(1);
     // t = 2
     // Now the write is dispatched to the executor
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     // t = 2
     // An index write is scheduled to run in 2 seconds as one has just run
     view(store, "e1").close();
-    assertEquals(1, delayer.taskCount());
-    assertEquals(0, executor.taskCount());
+    assertThat(delayer.taskCount()).isOne();
+    assertThat(executor.taskCount()).isZero();
 
     clock.advanceSeconds(1);
     // t = 3
     // An index write is not scheduled since one is still going to run in 1 second
     view(store, "e1").close();
-    assertEquals(1, delayer.taskCount());
-    assertEquals(0, executor.taskCount());
+    assertThat(delayer.taskCount()).isOne();
+    assertThat(executor.taskCount()).isZero();
 
     clock.advanceSeconds(1);
     // t = 4
     // The scheduled write is dispatched and a new write is scheduled to run
     // in 2 seconds as one has just run.
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
     view(store, "e1").close();
-    assertEquals(1, delayer.taskCount());
+    assertThat(delayer.taskCount()).isOne();
 
     clock.advanceSeconds(4);
     // t = 8
     // An index write is dispatched immediately as two seconds have passed since the last write
     view(store, "e1").close();
-    assertEquals(0, delayer.taskCount());
-    assertEquals(1, executor.taskCount());
+    assertThat(delayer.taskCount()).isZero();
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     clock.advanceSeconds(2);
     // t = 10
     // An index write is dispatched immediately as two seconds have passed since the last write
     view(store, "e1").close();
-    assertEquals(0, delayer.taskCount());
-    assertEquals(1, executor.taskCount());
+    assertThat(delayer.taskCount()).isZero();
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
   }
 
@@ -835,7 +834,7 @@ class DiskStoreTest {
     mockStore.write("e2", "Mewtwo", "Jigglypuff");
     mockStore.writeWorkIndex();
 
-    assertEquals(sizeOf("Mew", "Pickachu", "Mewtwo", "Jigglypuff"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Mew", "Pickachu", "Mewtwo", "Jigglypuff"));
   }
 
   @StoreParameterizedTest
@@ -847,14 +846,16 @@ class DiskStoreTest {
     writeEntry(store, "e1", "123", "abc");
     long sizeBeforeShrinking = Files.size(mockStore.entryFile("e1"));
 
-    // Shrink metadata
+    // Shrink metadata by 1 byte
     try (var editor = edit(store, "e1")) {
       setMetadata(editor, "12");
       editor.commitOnClose();
     }
+
     long sizeAfterShrinking = Files.size(mockStore.entryFile("e1"));
-    assertEquals(sizeBeforeShrinking - 1, sizeAfterShrinking,
-        String.format("%d -> %d", sizeBeforeShrinking, sizeAfterShrinking));
+    assertThat(sizeBeforeShrinking)
+        .withFailMessage("%d -> %d", sizeBeforeShrinking, sizeAfterShrinking)
+        .isEqualTo(sizeAfterShrinking + 1);
   }
 
   @StoreParameterizedTest
@@ -866,14 +867,14 @@ class DiskStoreTest {
     writeEntry(store, "e2", "123", "abc"); // 6 bytes -> e1 is evicted to accommodate e2
     assertAbsent(store, context, "e1");
     assertEntryEquals(store, "e2", "123", "abc");
-    assertEquals(6, store.size());
-    assertFalse(mockStore.dirtyEntryFileExists("e3"));
+    assertThat(store.size()).isEqualTo(6);
+    mockStore.assertDirtyEntryFileDoesNotExist("e3");
 
     writeEntry(store, "e3", "12345", "abcxyz"); // 11 bytes -> e3 is ignored & e2 remains untouched
     assertAbsent(store, context, "e3");
     assertEntryEquals(store, "e2", "123", "abc");
-    assertEquals(6, store.size());
-    assertFalse(mockStore.dirtyEntryFileExists("e3"));
+    assertThat(store.size()).isEqualTo(6);
+    mockStore.assertDirtyEntryFileDoesNotExist("e3");
   }
 
   @StoreParameterizedTest
@@ -890,8 +891,8 @@ class DiskStoreTest {
       editor.commitOnClose();
     }
     assertAbsent(store, context, "e1");
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
-    assertEquals(0, store.size());
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
+    assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
@@ -908,8 +909,8 @@ class DiskStoreTest {
       editor.commitOnClose();
     }
     assertAbsent(store, context, "e1");
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
-    assertEquals(0, store.size());
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
+    assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
@@ -930,8 +931,8 @@ class DiskStoreTest {
       editor.commitOnClose();
     }
     assertAbsent(store, context, "e1");
-    assertFalse(mockStore.dirtyEntryFileExists("e1"));
-    assertEquals(0, store.size());
+    mockStore.assertDirtyEntryFileDoesNotExist("e1");
+    assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
@@ -960,9 +961,9 @@ class DiskStoreTest {
     try (var viewer = view(store, "e1")) {
       store.close();
 
-      assertThrows(IllegalStateException.class, viewer::removeEntry);
+      assertThatIllegalStateException().isThrownBy(viewer::removeEntry);
       mockStore.assertEntryEquals("e1", "Eevee", "Jynx");
-      assertTrue(mockStore.readIndex().contains(context.hasher().hash("e1")));
+      assertThat(mockStore.readIndex().contains(context.hasher().hash("e1"))).isTrue();
     }
   }
 
@@ -976,7 +977,7 @@ class DiskStoreTest {
     try (var viewer = view(store, "e1")) {
       store.dispose();
 
-      assertThrows(IllegalStateException.class, viewer::removeEntry);
+      assertThatIllegalStateException().isThrownBy(viewer::removeEntry);
     }
   }
 
@@ -989,12 +990,12 @@ class DiskStoreTest {
     writeEntry(store, "e2", "Eevee", "Jynx");
 
     var iter = store.iterator();
-    assertTrue(iter.hasNext());
+    assertThat(iter.hasNext()).isTrue();
     iter.next().close(); // Consume next
     context.drainQueuedTasks();
     store.close();
-    assertFalse(iter.hasNext());
-    assertThrows(NoSuchElementException.class, iter::next);
+    assertThat(iter.hasNext()).isFalse();
+    assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(iter::next);
   }
 
   @StoreParameterizedTest
@@ -1018,9 +1019,9 @@ class DiskStoreTest {
 
     store.dispose();
     assertInoperable(store);
-    assertFalse(store.iterator().hasNext());
-    assertEquals(0, store.size());
-    assertEmptyDirectory(context.directory());
+    assertThat(store.iterator().hasNext()).isFalse();
+    assertThat(store.size()).isZero();
+    assertThat(context.directory()).isEmptyDirectory();
   }
 
   // Using two tests as JUnit 5 doesn't allow RepeatedTest + ParameterizedTest
@@ -1047,14 +1048,14 @@ class DiskStoreTest {
 
     var executor = context.mockExecutor();
     setMetadata(store, "e1", "Jynx");
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
     executor.runNext();
 
     for (int i = 0; i < 10; i++) {
       view(store, "e1").close(); // Trigger IndexWriteScheduler
     }
     // Since index is written with a SerialExecutor, only one drain task is dispatched
-    assertEquals(1, executor.taskCount());
+    assertThat(executor.taskCount()).isOne();
 
     var arrival = new CyclicBarrier(2);
     var triggerWrite = Unchecked.runAsync(() -> {
@@ -1066,9 +1067,9 @@ class DiskStoreTest {
       store.dispose();
     }, threadPool);
 
-    assertAll(Stream.of(triggerWrite, invokeDispose).map(cf -> cf::join));
-    assertEquals(0, executor.taskCount());
-    assertEmptyDirectory(context.directory());
+    CompletableFuture.allOf(triggerWrite, invokeDispose).join();
+    assertThat(executor.taskCount()).isZero();
+    assertThat(context.directory()).isEmptyDirectory();
   }
 
   @StoreParameterizedTest
@@ -1085,7 +1086,6 @@ class DiskStoreTest {
     }
   }
 
-
   @StoreParameterizedTest
   @StoreConfig(store = DISK)
   void hashCollisionOnViewing(Store store, StoreContext context) throws IOException {
@@ -1094,7 +1094,7 @@ class DiskStoreTest {
     context.hasher().setHash("e2", 1);
 
     writeEntry(store, "e1", "Jynx", "Psyduck");
-    assertNull(store.view("e2"));
+    assertThat(store.view("e2")).isNull();
     assertEntryEquals(store, "e1", "Jynx", "Psyduck");
   }
 
@@ -1109,7 +1109,7 @@ class DiskStoreTest {
     mockStore.writeWorkIndex();
 
     store.initialize();
-    assertNull(store.view("e2"));
+    assertThat(store.view("e2")).isNull();
     assertEntryEquals(store, "e1", "Jynx", "Psyduck");
   }
 
@@ -1125,7 +1125,7 @@ class DiskStoreTest {
 
     // e2 removes e1 since e1 isn't read or edited so it doesn't know its key
     store.initialize();
-    assertTrue(store.remove("e2"));
+    assertThat(store.remove("e2")).isTrue();
   }
 
   @StoreParameterizedTest
@@ -1142,7 +1142,7 @@ class DiskStoreTest {
     view(store, "e1").close();
 
     // e2 doesn't remove e1 since e1 knows its key due to being read
-    assertFalse(store.remove("e2"));
+    assertThat(store.remove("e2")).isFalse();
   }
 
   @StoreParameterizedTest
@@ -1156,7 +1156,7 @@ class DiskStoreTest {
     writeEntry(store, "e1", "Jynx", "Psyduck");
 
     // e2 doesn't remove e1 since the entry knows its key due to being written
-    assertFalse(store.remove("e2"));
+    assertThat(store.remove("e2")).isFalse();
   }
 
   @StoreParameterizedTest
@@ -1171,25 +1171,17 @@ class DiskStoreTest {
     writeEntry(store, "e2", "Eevee", "Mewtwo");
 
     // e2 replaces e1 as they collide
-    assertNull(store.view("e1"));
+    assertThat(store.view("e1")).isNull();
     assertEntryEquals(store, "e2", "Eevee", "Mewtwo");
 
     // e1 doesn't remove e2 as it knows its key due to being edited
-    assertFalse(store.remove("e1"));
+    assertThat(store.remove("e1")).isFalse();
   }
 
   private static void assertInoperable(Store store) {
-    assertThrows(IllegalStateException.class, () -> store.view("e1"));
-    assertThrows(IllegalStateException.class, () -> store.edit("e1"));
-    assertThrows(IllegalStateException.class, () -> store.remove("e1"));
-    assertThrows(IllegalStateException.class, store::clear);
-  }
-
-  private static void assertEmptyDirectory(Path dir) throws IOException {
-    try (var stream = Files.newDirectoryStream(dir)) {
-      var entries = new ArrayList<>();
-      stream.forEach(entries::add);
-      assertTrue(entries.isEmpty(), entries::toString);
-    }
+    assertThatIllegalStateException().isThrownBy(() -> store.view("e1"));
+    assertThatIllegalStateException().isThrownBy(() -> store.edit("e1"));
+    assertThatIllegalStateException().isThrownBy(() -> store.remove("e1"));
+    assertThatIllegalStateException().isThrownBy(store::clear);
   }
 }

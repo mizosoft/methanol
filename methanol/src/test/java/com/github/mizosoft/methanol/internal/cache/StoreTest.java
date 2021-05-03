@@ -13,13 +13,10 @@ import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorTyp
 import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.SAME_THREAD;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
@@ -32,7 +29,6 @@ import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTes
 import com.github.mizosoft.methanol.testutils.Logging;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ReadOnlyBufferException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +52,7 @@ class StoreTest {
   void writeThenRead(Store store) throws IOException {
     writeEntry(store, "e1", "Lucario", "Jynx");
     assertEntryEquals(store, "e1", "Lucario", "Jynx");
-    assertEquals(sizeOf("Lucario", "Jynx"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Lucario", "Jynx"));
   }
 
   @StoreParameterizedTest
@@ -67,7 +63,7 @@ class StoreTest {
 
     writeEntry(store, "e2", "Mew", "Mewtwo");
     assertEntryEquals(store, "e2", "Mew", "Mewtwo");
-    assertEquals(sizeOf("Lucario", "Jynx", "Mew", "Mewtwo"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Lucario", "Jynx", "Mew", "Mewtwo"));
   }
 
   @StoreParameterizedTest
@@ -79,17 +75,17 @@ class StoreTest {
     // Create viewerCount concurrent viewers
     int viewerCount = 10;
     var arrival = new CyclicBarrier(viewerCount);
-    var tasks = new ArrayList<CompletableFuture<Void>>();
+    var assertionTasks = new ArrayList<CompletableFuture<Void>>();
     for (int i = 0; i < viewerCount; i++) {
       var task = Unchecked.runAsync(() -> {
         awaitUninterruptibly(arrival);
         assertEntryEquals(store, "e1", "Pockemon", "Charmander");
       }, threadPool);
 
-      tasks.add(task);
+      assertionTasks.add(task);
     }
-
-    assertAll(tasks.stream().map(cf -> cf::join));
+    
+    assertAll(assertionTasks.stream().map(cf -> cf::join));
   }
 
   @StoreParameterizedTest
@@ -120,7 +116,7 @@ class StoreTest {
       editor.commitOnClose();
     }
     assertAbsent(store, context, "e1");
-    assertEquals(0, store.size());
+    assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
@@ -133,7 +129,7 @@ class StoreTest {
       editor.commitOnClose();
     }
     assertEntryEquals(store, "e1", "Mewtwo", "Pickachu");
-    assertEquals(sizeOf("Mewtwo", "Pickachu"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Mewtwo", "Pickachu"));
   }
 
   @StoreParameterizedTest
@@ -146,7 +142,7 @@ class StoreTest {
       editor.commitOnClose();
     }
     assertEntryEquals(store, "e1", "", "Ditto");
-    assertEquals(sizeOf("", "Ditto"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("", "Ditto"));
   }
 
   @StoreParameterizedTest
@@ -159,7 +155,7 @@ class StoreTest {
       editor.commitOnClose();
     }
     assertEntryEquals(store, "e1", "Meowth", "Mewtwo");
-    assertEquals(sizeOf("Meowth", "Mewtwo"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Meowth", "Mewtwo"));
   }
 
   @StoreParameterizedTest
@@ -172,7 +168,7 @@ class StoreTest {
       editor.commitOnClose();
     }
     assertEntryEquals(store, "e1", "Jynx", "");
-    assertEquals(sizeOf("Jynx"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Jynx"));
   }
 
   @StoreParameterizedTest
@@ -180,9 +176,9 @@ class StoreTest {
   void writeThenRemove(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "Jigglypuff", "Pickachu");
 
-    assertTrue(store.remove("e1"));
+    assertThat(store.remove("e1")).isTrue();
     assertAbsent(store, context, "e1");
-    assertEquals(0, store.size());
+    assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
@@ -194,8 +190,8 @@ class StoreTest {
     store.clear();
     assertAbsent(store, context, "e1");
     assertAbsent(store, context, "e2");
-    assertFalse(store.iterator().hasNext());
-    assertEquals(0, store.size());
+    assertThat(store.iterator().hasNext()).isFalse();
+    assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
@@ -204,7 +200,7 @@ class StoreTest {
     writeEntry(store, "e1", "Mew", "Pickachu");
     writeEntry(store, "e1", "Mewtwo", "Eevee");
     assertEntryEquals(store, "e1", "Mewtwo", "Eevee");
-    assertEquals(sizeOf("Mewtwo", "Eevee"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Mewtwo", "Eevee"));
   }
 
   @StoreParameterizedTest
@@ -215,20 +211,19 @@ class StoreTest {
       // Don't commit
     }
     assertAbsent(store, context, "e1");
-    assertEquals(0, store.size());
+    assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
   @StoreConfig
   void discardSecondEdit(Store store) throws IOException {
     writeEntry(store, "e1", "Mew", "Mewtwo");
-
     try (var editor = edit(store, "e1")) {
       writeEntry(editor, "Jynx", "Eevee");
       // Don't commit
     }
     assertEntryEquals(store, "e1", "Mew", "Mewtwo");
-    assertEquals(sizeOf("Mew", "Mewtwo"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Mew", "Mewtwo"));
   }
 
   @StoreParameterizedTest
@@ -237,7 +232,7 @@ class StoreTest {
     var editor = edit(store, "e1");
     writeEntry(editor, "Jynx", "Mew");
 
-    assertTrue(store.remove("e1"));
+    assertThat(store.remove("e1")).isTrue();
 
     // Don't commit
     editor.close();
@@ -253,7 +248,7 @@ class StoreTest {
     var arrival = new CyclicBarrier(threadCount);
     var endLatch = new CountDownLatch(threadCount);
     var acquired = new AtomicBoolean();
-    var tasks = new ArrayList<CompletableFuture<Void>>();
+    var assertionTasks = new ArrayList<CompletableFuture<Void>>();
     for (int i = 0; i < threadCount; i++) {
       var task = Unchecked.runAsync(() -> {
         awaitUninterruptibly(arrival);
@@ -261,9 +256,9 @@ class StoreTest {
         Editor editor = null;
         try {
           editor = store.edit("e1");
-          assertTrue(
-              editor == null || acquired.compareAndSet(false, true),
-              "more than one thread got an editor!");
+          assertThat(editor == null || acquired.compareAndSet(false, true))
+              .withFailMessage("more than one thread got an editor!")
+              .isTrue();
           if (editor != null) {
             writeEntry(editor, "Jigglypuff", "Psyduck");
             editor.commitOnClose();
@@ -279,10 +274,10 @@ class StoreTest {
         }
       }, threadPool);
 
-      tasks.add(task);
+      assertionTasks.add(task);
     }
 
-    assertAll(tasks.stream().map(cf -> cf::join));
+    assertAll(assertionTasks.stream().map(cf -> cf::join));
     assertEntryEquals(store, "e1", "Jigglypuff", "Psyduck");
   }
 
@@ -303,7 +298,7 @@ class StoreTest {
     // Closing the editor commits what's written
     editor.close();
     assertEntryEquals(store, "e1", "Snorlax", "Squirtle");
-    assertEquals(sizeOf("Snorlax", "Squirtle"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Snorlax", "Squirtle"));
   }
 
   @StoreParameterizedTest
@@ -325,7 +320,7 @@ class StoreTest {
     // Closing the editor commits what's written
     editor.close();
     assertEntryEquals(store, "e1", "Mewtwo", "Meowth");
-    assertEquals(sizeOf("Mewtwo", "Meowth"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Mewtwo", "Meowth"));
   }
 
   /** Removing an entry discards any ongoing edit for this entry. */
@@ -336,13 +331,13 @@ class StoreTest {
     writeEntry(editor, "Pickachu", "Jigglypuff");
     editor.commitOnClose();
 
-    assertTrue(store.remove("e1"));
+    assertThat(store.remove("e1")).isTrue();
     assertAbsent(store, context, "e1");
 
     // Close will silently discard the edit
     editor.close();
     assertAbsent(store, context, "e1");
-    assertEquals(0, store.size());
+    assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
@@ -359,7 +354,7 @@ class StoreTest {
     var editor3 = edit(store, "e3");
     var editor4 = edit(store, "e4");
 
-    // Write to a first & second edit before clearing
+    // Write to first & second edits before clearing
     writeEntry(editor1, "Pichachu", "Snorlax");
     editor1.commitOnClose();
     writeEntry(editor3, "Gengar", "Raichu");
@@ -367,7 +362,7 @@ class StoreTest {
 
     store.clear();
 
-    // Write to a first & second edit after clearing
+    // Write to first & second edits after clearing
     writeEntry(editor2, "Squirtle", "Charmander");
     editor2.commitOnClose();
     writeEntry(editor4, "Mew", "Mewtwo");
@@ -382,7 +377,7 @@ class StoreTest {
     assertAbsent(store, context, "e2");
     assertAbsent(store, context, "e3");
     assertAbsent(store, context, "e4");
-    assertEquals(0, store.size());
+    assertThat(store.size()).isZero();
   }
 
   /**
@@ -397,9 +392,9 @@ class StoreTest {
     writeEntry(store, "e1", "Ditto", "Eevee");
 
     try (var viewer = view(store, "e1")) {
-      assertTrue(store.remove("e1"));
+      assertThat(store.remove("e1")).isTrue();
       assertAbsent(store, context, "e1");
-      assertEquals(0, store.size());
+      assertThat(store.size()).isZero();
 
       // Viewer keeps operating normally
       assertEntryEquals(viewer, "Ditto", "Eevee");
@@ -416,9 +411,9 @@ class StoreTest {
     writeEntry(store, "e1", "Ditto", "Eevee");
 
     try (var viewer = view(store, "e1")) {
-      assertTrue(store.remove("e1"));
+      assertThat(store.remove("e1")).isTrue();
       assertAbsent(store, context, "e1");
-      assertEquals(0, store.size());
+      assertThat(store.size()).isZero();
 
       // Viewer keeps operating normally
       assertEntryEquals(viewer, "Ditto", "Eevee");
@@ -497,10 +492,10 @@ class StoreTest {
         editor.commitOnClose();
 
         // Removal discards the edit
-        assertTrue(store.remove("e1"));
+        assertThat(store.remove("e1")).isTrue();
       }
       assertAbsent(store, context, "e1");
-      assertEquals(0, store.size());
+      assertThat(store.size()).isZero();
 
       // Viewer still operates normally
       assertEntryEquals(viewer,  "Pickachu", "Mewtwo");
@@ -513,7 +508,7 @@ class StoreTest {
     writeEntry(store, "e1", "Mew", "Mewtwo");
 
     try (var viewer = view(store, "e1")) {
-      assertTrue(viewer.removeEntry());
+      assertThat(viewer.removeEntry()).isTrue();
       assertAbsent(store, context, "e1");
 
       // Viewer still operates normally
@@ -534,10 +529,10 @@ class StoreTest {
         editor.commitOnClose();
 
         // Removal discards the edit
-        assertTrue(viewer.removeEntry());
+        assertThat(viewer.removeEntry()).isTrue();
       }
       assertAbsent(store, context, "e1");
-      assertEquals(0, store.size());
+      assertThat(store.size()).isZero();
 
       // Viewer still operates normally
       assertEntryEquals(viewer,  "Pickachu", "Mewtwo");
@@ -550,8 +545,8 @@ class StoreTest {
     writeEntry(store, "e1", "Eevee", "Ditto");
 
     try (var viewer = view(store, "e1")) {
-      assertTrue(store.remove("e1"));
-      assertFalse(viewer.removeEntry());
+      assertThat(store.remove("e1")).isTrue();
+      assertThat(viewer.removeEntry()).isFalse();
       assertAbsent(store, context, "e1");
     }
   }
@@ -566,7 +561,7 @@ class StoreTest {
       writeEntry(store, "e1", "Snorlax", "Eevee");
 
       // A stale viewer can't remove its entry
-      assertFalse(viewer.removeEntry());
+      assertThat(viewer.removeEntry()).isFalse();
       assertEntryEquals(store, "e1", "Snorlax", "Eevee");
     }
   }
@@ -581,7 +576,7 @@ class StoreTest {
       writeEntry(store, "e1", "Jynx", "Psyduck");
       assertEntryEquals(store, "e1", "Jynx", "Psyduck");
 
-      assertNull(viewer.edit()); // Uneditable
+      assertThat(viewer.edit()).isNull(); // Uneditable
       assertEntryEquals(viewer, "Eevee", "Ditto");
     }
   }
@@ -593,10 +588,10 @@ class StoreTest {
 
     try (var viewer = view(store, "e1")) {
       // Make viewer stale by removing the entry
-      assertTrue(store.remove("e1"));
+      assertThat(store.remove("e1")).isTrue();
       assertAbsent(store, context, "e1");
 
-      assertNull(viewer.edit()); // Uneditable
+      assertThat(viewer.edit()).isNull(); // Uneditable
       assertEntryEquals(viewer, "Eevee", "Ditto");
     }
   }
@@ -612,7 +607,7 @@ class StoreTest {
         writeEntry(editor, "Jynx", "Psyduck");
         editor.commitOnClose();
 
-        assertNull(viewer.edit()); // Uneditable
+        assertThat(viewer.edit()).isNull(); // Uneditable
       }
       assertEntryEquals(store, "e1", "Jynx", "Psyduck");
       assertEntryEquals(viewer, "Eevee", "Ditto");
@@ -622,10 +617,10 @@ class StoreTest {
   @StoreParameterizedTest
   @StoreConfig
   void removeNonExistingEntry(Store store) throws IOException {
-    assertFalse(store.remove("e1"));
+    assertThat(store.remove("e1")).isFalse();
     writeEntry(store, "e1", "Raichu", "Eevee");
-    assertTrue(store.remove("e1"));
-    assertFalse(store.remove("e1"));
+    assertThat(store.remove("e1")).isTrue();
+    assertThat(store.remove("e1")).isFalse();
   }
 
   @StoreParameterizedTest
@@ -641,15 +636,17 @@ class StoreTest {
 
     var iter = store.iterator();
     for (int i = 0; i < entries.size(); i++) {
-      assertTrue(iter.hasNext());
+      assertThat(iter.hasNext()).isTrue();
 
       try (var viewer = iter.next()) {
         var entry = entries.get(viewer.key());
-        assertNotNull(entry, "entry came from nowhere: " + viewer.key());
+        assertThat(entry)
+            .withFailMessage("entry came from nowhere: %s", viewer.key())
+            .isNotNull();
         assertEntryEquals(store, viewer.key(), entry.get(0), entry.get(1));
       }
     }
-    assertFalse(iter.hasNext());
+    assertThat(iter.hasNext()).isFalse();
   }
 
   @StoreParameterizedTest
@@ -661,21 +658,21 @@ class StoreTest {
     // Remove e2 with Iterator::remove
     var iter = store.iterator();
     for (int i = 0; i < 2; i++) {
-      assertTrue(iter.hasNext());
+      assertThat(iter.hasNext()).isTrue();
 
       try (var viewer = iter.next()) {
         if (viewer.key().equals("e2")) {
           iter.remove();
         } else {
-          assertEquals("e1", viewer.key());
+          assertThat(viewer.key()).isEqualTo("e1");
           assertEntryEquals(viewer, "Mew", "Mewtwo");
         }
       }
     }
-    assertFalse(iter.hasNext());
+    assertThat(iter.hasNext()).isFalse();
 
     assertAbsent(store, context, "e2");
-    assertEquals(sizeOf("Mew", "Mewtwo"), store.size());
+    assertThat(store.size()).isEqualTo(sizeOf("Mew", "Mewtwo"));
   }
 
   @StoreParameterizedTest
@@ -684,7 +681,7 @@ class StoreTest {
     writeEntry(store, "e1", "Ditto", "Jynx");
 
     var iter = store.iterator();
-    assertTrue(iter.hasNext());
+    assertThat(iter.hasNext()).isTrue();
     try (var viewer = iter.next()) {
       // Rewrite the entry, making the viewer stale
       writeEntry(store, "e1", "Pikachu", "Psyduck");
@@ -703,7 +700,7 @@ class StoreTest {
   void writeExactlyMaxSizeBytesByOneEntry(Store store) throws IOException {
     writeEntry(store, "e1", "12345", "abcde"); // Grow size to 10 bytes
     assertEntryEquals(store, "e1", "12345", "abcde");
-    assertEquals(10, store.size());
+    assertThat(store.size()).isEqualTo(10);
   }
 
   @StoreParameterizedTest
@@ -713,7 +710,7 @@ class StoreTest {
     writeEntry(store, "e2", "45", "def"); // Grow size to 10 bytes
     assertEntryEquals(store, "e1", "12", "abc");
     assertEntryEquals(store, "e2", "45", "def");
-    assertEquals(10, store.size());
+    assertThat(store.size()).isEqualTo(10);
   }
 
   @StoreParameterizedTest
@@ -721,7 +718,7 @@ class StoreTest {
   void writeBeyondMaxSize(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "12", "abc"); // Grow size to 5 bytes
     writeEntry(store, "e2", "34", "def"); // Grow size to 10 bytes
-    assertEquals(10, store.size());
+    assertThat(store.size()).isEqualTo(10);
 
     // LRU queue: e2, e1
     view(store, "e1").close();
@@ -733,7 +730,7 @@ class StoreTest {
     assertAbsent(store, context, "e2");
     assertEntryEquals(store, "e1", "12", "abc");
     assertEntryEquals(store, "e3", "567", "ghi");
-    assertEquals(11, store.size());
+    assertThat(store.size()).isEqualTo(11);
 
     // Grows size to 11 + 14 bytes causing both e1 & e3 to be evicted
     writeEntry(store, "e4", "Jynx", "Charmander");
@@ -741,7 +738,7 @@ class StoreTest {
     assertAbsent(store, context, "e1");
     assertAbsent(store, context, "e3");
     assertEntryEquals(store, "e4", "Jynx", "Charmander");
-    assertEquals(14, store.size());
+    assertThat(store.size()).isEqualTo(14);
   }
 
   @StoreParameterizedTest
@@ -749,7 +746,7 @@ class StoreTest {
   void discardedWriteBeyondMaxSize(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "123", "abc"); // Grow size to 6 bytes
     writeEntry(store, "e2", "456", "def"); // Grow size to 12 bytes
-    assertEquals(12, store.size());
+    assertThat(store.size()).isEqualTo(12);
 
     try (var editor = edit(store, "e3")) {
       writeEntry(editor, "alpha", "beta");
@@ -758,7 +755,7 @@ class StoreTest {
     assertAbsent(store, context, "e3");
     assertEntryEquals(store, "e1", "123", "abc");
     assertEntryEquals(store, "e2", "456", "def");
-    assertEquals(12, store.size());
+    assertThat(store.size()).isEqualTo(12);
   }
 
   @StoreParameterizedTest
@@ -766,18 +763,18 @@ class StoreTest {
   void discardedByRemovalWriteBeyondMaxSize(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "123", "abc"); // Grow size to 6 bytes
     writeEntry(store, "e2", "456", "def"); // Grow size to 12 bytes
-    assertEquals(12, store.size());
+    assertThat(store.size()).isEqualTo(12);
 
     try (var editor = edit(store, "e3")) {
       writeEntry(editor, "alpha", "beta");
       editor.commitOnClose();
 
-      assertTrue(store.remove("e3"));
+      assertThat(store.remove("e3")).isTrue();
     }
     assertAbsent(store, context, "e3");
     assertEntryEquals(store, "e1", "123", "abc");
     assertEntryEquals(store, "e2", "456", "def");
-    assertEquals(12, store.size());
+    assertThat(store.size()).isEqualTo(12);
   }
 
   @StoreParameterizedTest
@@ -785,7 +782,7 @@ class StoreTest {
   void writeBeyondMaxSizeByMetadataUpdate(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "123", "abc"); // Grow size to 6 bytes
     writeEntry(store, "e2", "456", "def"); // Grow size to 12 bytes
-    assertEquals(12, store.size());
+    assertThat(store.size()).isEqualTo(12);
 
     try (var editor = edit(store, "e1")) {
       // Increase metadata by 3 bytes, causing size to grow to 15 bytes & e2 to be evicted
@@ -794,7 +791,7 @@ class StoreTest {
     }
     assertAbsent(store, context, "e2");
     assertEntryEquals(store, "e1", "123456", "abc");
-    assertEquals(9, store.size());
+    assertThat(store.size()).isEqualTo(9);
   }
 
   @StoreParameterizedTest
@@ -802,7 +799,7 @@ class StoreTest {
   void writeBeyondMaxSizeByDataUpdate(Store store, StoreContext context) throws IOException {
     writeEntry(store, "e1", "123", "abc"); // Grow size to 6 bytes
     writeEntry(store, "e2", "456", "def"); // Grow size to 12 bytes
-    assertEquals(12, store.size());
+    assertThat(store.size()).isEqualTo(12);
 
     try (var editor = edit(store, "e1")) {
       // Increase data by 3 bytes, causing size to grow to 15 bytes & e2 to be evicted
@@ -811,7 +808,7 @@ class StoreTest {
     }
     assertAbsent(store, context, "e2");
     assertEntryEquals(store, "e1", "123", "abcdef");
-    assertEquals(9, store.size());
+    assertThat(store.size()).isEqualTo(9);
   }
 
   @StoreParameterizedTest
@@ -820,12 +817,12 @@ class StoreTest {
     // Grow size to 6 bytes
     // LRU queue: e1
     writeEntry(store, "e1", "aaa", "bbb");
-    assertEquals(6, store.size());
+    assertThat(store.size()).isEqualTo(6);
 
     // Grow size to 12 bytes
     // LRU queue: e1, e2
     writeEntry(store, "e2", "ccc", "ddd");
-    assertEquals(12, store.size());
+    assertThat(store.size()).isEqualTo(12);
 
     // LRU queue: e2, e1
     view(store, "e1").close();
@@ -833,7 +830,7 @@ class StoreTest {
     // Grow size to 18 bytes
     // LRU queue: e2, e1, e3
     writeEntry(store, "e3", "eee", "fff");
-    assertEquals(18, store.size());
+    assertThat(store.size()).isEqualTo(18);
 
     // LRU queue: e2, e3, e1
     view(store, "e1").close();
@@ -842,7 +839,7 @@ class StoreTest {
     // LRU queue: e3, e1, e4
     writeEntry(store, "e4", "ggg", "hhh");
     assertAbsent(store, context, "e2");
-    assertEquals(18, store.size());
+    assertThat(store.size()).isEqualTo(18);
 
     // LRU queue: e1, e4, e3
     view(store, "e3").close();
@@ -851,13 +848,13 @@ class StoreTest {
     // LRU queue: e4, e3, e5
     writeEntry(store, "e5", "iii", "jjj");
     assertAbsent(store, context, "e1");
-    assertEquals(18, store.size());
+    assertThat(store.size()).isEqualTo(18);
 
     // Grow size to 18 + 12 bytes, causing e4 & e3 to be evicted to get down to 18 bytes
     // LRU queue: e5, e6
     writeEntry(store, "e6", "kkk", "lmnopqrst");
     assertAbsent(store, context, "e4", "e3");
-    assertEquals(18, store.size());
+    assertThat(store.size()).isEqualTo(18);
 
     // LRU queue: e6, e5
     view(store, "e5").close();
@@ -866,17 +863,17 @@ class StoreTest {
     // LRU queue: e5, e7
     writeEntry(store, "e7", "uuu", "vvv");
     assertAbsent(store, context, "e6");
-    assertEquals(12, store.size());
+    assertThat(store.size()).isEqualTo(12);
 
-    // Grow size to 18 bytes, causes nothing to be evicted since size is within bounds
+    // Grow size to 18 bytes, causing nothing to be evicted since size is within bounds
     // LRU queue: e5, e7, e8
     writeEntry(store, "e8", "xxx", "~!@");
-    assertEquals(18, store.size());
+    assertThat(store.size()).isEqualTo(18);
 
     // Write one 18 bytes entry, causing all other entries to be evicted
     writeEntry(store, "e9", "Ricardo", "all is mine");
     assertAbsent(store, context, "e5, e7", "e8");
-    assertEquals(18, store.size());
+    assertThat(store.size()).isEqualTo(18);
   }
 
   /**
@@ -890,7 +887,7 @@ class StoreTest {
     try (var editor = edit(store, "e1")) {
       editor.metadata(metadata);
       // Metadata is consumed
-      assertFalse(metadata.hasRemaining());
+      assertThat(metadata.hasRemaining()).isFalse();
 
       metadata.rewind().put(new byte[]{'6', '9'});
       editor.commitOnClose();
@@ -906,7 +903,7 @@ class StoreTest {
     try (var viewer = view(store, "e1")) {
       var metadata = viewer.metadata();
       metadata.position(metadata.limit()); // Consume
-      assertEquals(0, viewer.metadata().position());
+      assertThat(viewer.metadata().position()).isZero();
       assertEntryEquals(viewer, "555", "");
     }
   }
@@ -916,8 +913,7 @@ class StoreTest {
   void metadataBufferReturnedFromViewerIsReadOnly(Store store) throws IOException {
     writeEntry(store, "e1", "555", "");
     try (var viewer = view(store, "e1")) {
-      assertThrows(
-          ReadOnlyBufferException.class, () -> viewer.metadata().put(new byte[] {'6', '9'}));
+      assertThat(viewer.metadata().isReadOnly()).isTrue();
     }
   }
 
@@ -927,10 +923,10 @@ class StoreTest {
     writeEntry(store, "e1", "Jynx", "Mew");
     try (var viewer = view(store, "e1")) {
       int read1 = viewer.readAsync(viewer.dataSize(), ByteBuffer.allocate(1)).join();
-      assertEquals(read1, -1);
+      assertThat(read1).isEqualTo(-1);
 
       int read2 = viewer.readAsync(viewer.dataSize(), ByteBuffer.allocate(1)).join();
-      assertEquals(read2, -1);
+      assertThat(read2).isEqualTo(-1);
     }
   }
 
@@ -939,8 +935,8 @@ class StoreTest {
   void readWithNegativePosition(Store store) throws IOException {
     writeEntry(store, "e1", "Jynx", "Mew");
     try (var viewer = view(store, "e1")) {
-      assertThrows(
-          IllegalArgumentException.class, () -> viewer.readAsync(-1, ByteBuffer.allocate(0)));
+      assertThatIllegalArgumentException()
+          .isThrownBy(() -> viewer.readAsync(-1, ByteBuffer.allocate(0)));
     }
   }
 
@@ -948,13 +944,13 @@ class StoreTest {
   @StoreConfig
   void writeWithIllegalPosition(Store store) throws IOException {
     try (var editor = edit(store, "e1")) {
-      assertThrows(
-          IllegalArgumentException.class, () -> editor.writeAsync(-1, ByteBuffer.allocate(1)));
+      assertThatIllegalArgumentException()
+          .isThrownBy(() -> editor.writeAsync(-1, ByteBuffer.allocate(1)));
 
       // Editor prohibits gabs between writes
       editor.writeAsync(0, ByteBuffer.allocate(1)).join();
-      assertThrows(
-          IllegalArgumentException.class, () -> editor.writeAsync(2, ByteBuffer.allocate(1)));
+      assertThatIllegalArgumentException()
+          .isThrownBy(() -> editor.writeAsync(2, ByteBuffer.allocate(1)));
     }
   }
 
@@ -964,8 +960,10 @@ class StoreTest {
     try (var editor = edit(store, "e1")) {
       writeEntry(editor, "Ditto", "Jynx");
       editor.commitOnClose();
-      assertThrows(IllegalStateException.class, () -> editor.metadata(ByteBuffer.allocate(0)));
-      assertThrows(IllegalStateException.class, () -> editor.writeAsync(0, ByteBuffer.allocate(0)));
+      assertThatIllegalStateException()
+          .isThrownBy(() -> editor.metadata(ByteBuffer.allocate(0)));
+      assertThatIllegalStateException()
+          .isThrownBy(() -> editor.writeAsync(0, ByteBuffer.allocate(0)));
     }
   }
 
@@ -990,8 +988,8 @@ class StoreTest {
     try (var viewer = view(store, "e1")) {
       var buffer = ByteBuffer.allocate(1);
       for (int i = 3; i >= 0; i--) {
-        assertEquals(1, viewer.readAsync(i, buffer.clear()).join());
-        assertEquals(i + 1, buffer.flip().get() - '0');
+        assertThat(viewer.readAsync(i, buffer.clear()).join()).isEqualTo(1);
+        assertThat(buffer.flip().get() - '0').isEqualTo(i + 1);
       }
     }
   }
