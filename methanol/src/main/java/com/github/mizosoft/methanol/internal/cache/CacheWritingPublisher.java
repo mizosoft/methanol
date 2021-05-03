@@ -223,12 +223,12 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     @Override
     public void cancel() {
       // Downstream isn't interested in the body anymore. However, we are!
-      // Since we're also writing the body to cache. This will be done in
-      // background since downstream is probably completed by now.
+      // That's because we're also writing the body to cache. This will be done in
+      // background since downstream is probably done by now.
       if (getAndClearDownstream() != null) {
         assert upstream.isSet();
+        // Propagate cancellation if nothing is being written or propagation is allowed
         if (state == DISPOSED || PROPAGATE_CANCELLATION) {
-          // Nothing is being written or propagating cancellation is allowed
           upstream.cancel();
         } else {
           upstream.request(Long.MAX_VALUE); // Drain the whole body
@@ -244,11 +244,13 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     void onNext(List<ByteBuffer> buffers) {
-      // Duplicate buffers since they'll be operated upon concurrently
-      var duplicateBuffers =
-          buffers.stream().map(ByteBuffer::duplicate).collect(Collectors.toUnmodifiableList());
-      writeQueue.addAll(duplicateBuffers);
-      tryScheduleWrite(false);
+      if (state != DISPOSED) {
+        // Duplicate buffers since they'll be operated upon concurrently
+        var duplicateBuffers =
+            buffers.stream().map(ByteBuffer::duplicate).collect(Collectors.toUnmodifiableList());
+        writeQueue.addAll(duplicateBuffers);
+        tryScheduleWrite(false);
+      }
 
       var subscriber = downstream;
       if (subscriber != null) {
@@ -258,24 +260,28 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     void onError(Throwable error) {
       upstream.clear();
-
-      discardEdit(null); // Discard anything written as the body might not have been completed
-
-      var subscriber = getAndClearDownstream();
-      if (subscriber != null) {
-        subscriber.onError(error);
+      try {
+        discardEdit(null);
+      } finally {
+        var subscriber = getAndClearDownstream();
+        if (subscriber != null) {
+          subscriber.onError(error);
+        } else {
+          logger.log(Level.WARNING, "upstream error during background cache write", error);
+        }
       }
     }
 
     void onComplete() {
       upstream.clear();
-
       receivedBodyCompletion = true;
-      tryScheduleWrite(false);
-
-      var subscriber = getAndClearDownstream();
-      if (subscriber != null) {
-        subscriber.onComplete();
+      try {
+        tryScheduleWrite(false);
+      } finally {
+        var subscriber = getAndClearDownstream();
+        if (subscriber != null) {
+          subscriber.onComplete();
+        }
       }
     }
 
