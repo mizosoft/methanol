@@ -30,7 +30,6 @@
  */
 module methanol {
   requires transitive java.net.http;
-  requires java.logging;
   requires static org.checkerframework.checker.qual;
   requires static com.google.errorprone.annotations;
 
