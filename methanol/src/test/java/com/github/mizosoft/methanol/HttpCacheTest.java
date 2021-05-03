@@ -72,6 +72,7 @@ import java.io.UncheckedIOException;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
@@ -1502,21 +1503,31 @@ class HttpCacheTest {
   }
 
   private static final class FailingInterceptor implements Interceptor {
-    private final Supplier<Throwable> failure;
+    private final Supplier<Throwable> failureFactory;
 
-    FailingInterceptor(Supplier<Throwable> failure) {
-      this.failure = failure;
+    FailingInterceptor(Supplier<Throwable> failureFactory) {
+      this.failureFactory = failureFactory;
+    }
+
+    FailingInterceptor(Class<? extends Throwable> failureType) {
+      this.failureFactory = () -> {
+        try {
+          return failureType.getConstructor().newInstance();
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
     }
 
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain) {
-      throw throwUnchecked(failure.get());
+      throw throwUnchecked(failureFactory.get());
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      return CompletableFuture.failedFuture(failure.get());
+      return CompletableFuture.failedFuture(failureFactory.get());
     }
 
     @SuppressWarnings("unchecked")
@@ -1525,9 +1536,11 @@ class HttpCacheTest {
     }
   }
 
-  @StoreParameterizedTest
-  @StoreConfig
-  void staleIfErrorWithConnectionFailure(Store store) throws Exception {
+  @ParameterizedTest
+  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @ValueSource(classes = {ConnectException.class, UnknownHostException.class})
+  void staleIfErrorWithConnectionFailure(
+      Class<? extends Throwable> failureType, Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1, stale-if-error=2")
@@ -1537,10 +1550,7 @@ class HttpCacheTest {
 
     clock.advanceSeconds(2); // Make response stale by 1 second
 
-    // Make requests fail with a ConnectException
-    client = clientBuilder
-        .backendInterceptor(new FailingInterceptor(ConnectException::new))
-        .build();
+    client = clientBuilder.backendInterceptor(new FailingInterceptor(failureType)).build();
 
     get(serverUri)
         .assertCode(200)
@@ -1559,9 +1569,11 @@ class HttpCacheTest {
         .assertHeader("Warning", "110 - \"Response is Stale\"");
   }
 
-  @StoreParameterizedTest
-  @StoreConfig
-  void unsatisfiedStaleIfErrorWithConnectionFailure(Store store) throws Exception {
+  @ParameterizedTest
+  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @ValueSource(classes = {ConnectException.class, UnknownHostException.class})
+  void unsatisfiedStaleIfErrorWithConnectionFailure(
+      Class<? extends Throwable> failureType, Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse()
         .addHeader("Cache-Control", "max-age=1, stale-if-error=1")
@@ -1571,13 +1583,10 @@ class HttpCacheTest {
 
     clock.advanceSeconds(3); // Make response stale by 2 seconds
 
-    // Make requests fail with a ConnectException
-    client = clientBuilder
-        .backendInterceptor(new FailingInterceptor(ConnectException::new))
-        .build();
+    client = clientBuilder.backendInterceptor(new FailingInterceptor(failureType)).build();
 
     // stale-if-error isn't satisfied
-    assertThatExceptionOfType(ConnectException.class).isThrownBy(() -> get(serverUri));
+    assertThatExceptionOfType(failureType).isThrownBy(() -> get(serverUri));
   }
 
   @StoreParameterizedTest

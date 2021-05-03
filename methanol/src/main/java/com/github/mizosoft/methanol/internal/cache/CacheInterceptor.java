@@ -43,6 +43,7 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.ConnectException;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
@@ -193,15 +194,14 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     // It seems silly to regard an IllegalArgumentException or something as a
-    // candidate for stale-if-error treatment. ConnectException and subclasses are
-    // regarded as so since they're usually situational errors for network usage,
-    // similar to 5xx response codes, which are themselves perfect candidates for
-    // stale-if-error.
+    // candidate for stale-if-error treatment. Only situational errors for network
+    // usage are regarded as so as they're similar to 5xx response codes (but on the client side),
+    // which are themselves perfect candidates for stale-if-error.
     var cause = Utils.getDeepCompletionCause(error); // Might be a CompletionException
     if (cause instanceof UncheckedIOException) {
       cause = cause.getCause();
     }
-    return cause instanceof ConnectException;
+    return cause instanceof ConnectException || cause instanceof UnknownHostException;
   }
 
   /** Returns whether the given network response can be cached. Based on rfc7234 section 3. */
