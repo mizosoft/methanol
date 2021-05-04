@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol;
+package com.github.mizosoft.methanol.jdk;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -47,7 +47,7 @@ class ScopedDispatcher extends Dispatcher {
     return dispatchers.entrySet().stream()
         .filter(entry -> requestedPath.startsWith(entry.getKey()))
         .max(Comparator.comparingInt(entry -> entry.getKey().length())) // Get max matching prefix
-        .orElseThrow(() -> new IllegalStateException("unregistered path: " + requestedPath))
+        .orElseThrow(() -> new IllegalStateException("unregistered scope for: " + requestedPath))
         .getValue();
   }
 

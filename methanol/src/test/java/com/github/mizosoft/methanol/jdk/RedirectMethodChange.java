@@ -21,12 +21,13 @@
  * questions.
  */
 
-package com.github.mizosoft.methanol;
+package com.github.mizosoft.methanol.jdk;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.testng.Assert.assertEquals;
 
-import com.github.mizosoft.methanol.Methanol.RedirectingInterceptor;
+import com.github.mizosoft.methanol.Methanol;
+import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
@@ -87,88 +88,69 @@ class RedirectMethodChange {
     }
   }
 
-  private Supplier<String> uri(String fieldName) {
-    return new Supplier<>() {
-      @Override
-      public String get() {
-        try {
-          var field = RedirectMethodChange.class.getDeclaredField(fieldName);
-          field.setAccessible(true);
-          return (String) field.get(RedirectMethodChange.this);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public String toString() {
-        return fieldName;
-      }
-    };
-  }
-
   Object[][] variants() {
+    var uris = new TestUriSupplierFactory(this);
     return new Object[][] {
-      {uri("httpURI"), "GET", 301, "GET"},
-      {uri("httpURI"), "GET", 302, "GET"},
-      {uri("httpURI"), "GET", 303, "GET"},
-      {uri("httpURI"), "GET", 307, "GET"},
-      {uri("httpURI"), "GET", 308, "GET"},
-      {uri("httpURI"), "POST", 301, "GET"},
-      {uri("httpURI"), "POST", 302, "GET"},
-      {uri("httpURI"), "POST", 303, "GET"},
-      {uri("httpURI"), "POST", 307, "POST"},
-      {uri("httpURI"), "POST", 308, "POST"},
-      {uri("httpURI"), "PUT", 301, "PUT"},
-      {uri("httpURI"), "PUT", 302, "PUT"},
-      {uri("httpURI"), "PUT", 303, "GET"},
-      {uri("httpURI"), "PUT", 307, "PUT"},
-      {uri("httpURI"), "PUT", 308, "PUT"},
-      {uri("httpsURI"), "GET", 301, "GET"},
-      {uri("httpsURI"), "GET", 302, "GET"},
-      {uri("httpsURI"), "GET", 303, "GET"},
-      {uri("httpsURI"), "GET", 307, "GET"},
-      {uri("httpsURI"), "GET", 308, "GET"},
-      {uri("httpsURI"), "POST", 301, "GET"},
-      {uri("httpsURI"), "POST", 302, "GET"},
-      {uri("httpsURI"), "POST", 303, "GET"},
-      {uri("httpsURI"), "POST", 307, "POST"},
-      {uri("httpsURI"), "POST", 308, "POST"},
-      {uri("httpsURI"), "PUT", 301, "PUT"},
-      {uri("httpsURI"), "PUT", 302, "PUT"},
-      {uri("httpsURI"), "PUT", 303, "GET"},
-      {uri("httpsURI"), "PUT", 307, "PUT"},
-      {uri("httpsURI"), "PUT", 308, "PUT"},
-      {uri("http2URI"), "GET", 301, "GET"},
-      {uri("http2URI"), "GET", 302, "GET"},
-      {uri("http2URI"), "GET", 303, "GET"},
-      {uri("http2URI"), "GET", 307, "GET"},
-      {uri("http2URI"), "GET", 308, "GET"},
-      {uri("http2URI"), "POST", 301, "GET"},
-      {uri("http2URI"), "POST", 302, "GET"},
-      {uri("http2URI"), "POST", 303, "GET"},
-      {uri("http2URI"), "POST", 307, "POST"},
-      {uri("http2URI"), "POST", 308, "POST"},
-      {uri("http2URI"), "PUT", 301, "PUT"},
-      {uri("http2URI"), "PUT", 302, "PUT"},
-      {uri("http2URI"), "PUT", 303, "GET"},
-      {uri("http2URI"), "PUT", 307, "PUT"},
-      {uri("http2URI"), "PUT", 308, "PUT"},
-      {uri("https2URI"), "GET", 301, "GET"},
-      {uri("https2URI"), "GET", 302, "GET"},
-      {uri("https2URI"), "GET", 303, "GET"},
-      {uri("https2URI"), "GET", 307, "GET"},
-      {uri("https2URI"), "GET", 308, "GET"},
-      {uri("https2URI"), "POST", 301, "GET"},
-      {uri("https2URI"), "POST", 302, "GET"},
-      {uri("https2URI"), "POST", 303, "GET"},
-      {uri("https2URI"), "POST", 307, "POST"},
-      {uri("https2URI"), "POST", 308, "POST"},
-      {uri("https2URI"), "PUT", 301, "PUT"},
-      {uri("https2URI"), "PUT", 302, "PUT"},
-      {uri("https2URI"), "PUT", 303, "GET"},
-      {uri("https2URI"), "PUT", 307, "PUT"},
-      {uri("https2URI"), "PUT", 308, "PUT"},
+      {uris.uriString("httpURI"), "GET", 301, "GET"},
+      {uris.uriString("httpURI"), "GET", 302, "GET"},
+      {uris.uriString("httpURI"), "GET", 303, "GET"},
+      {uris.uriString("httpURI"), "GET", 307, "GET"},
+      {uris.uriString("httpURI"), "GET", 308, "GET"},
+      {uris.uriString("httpURI"), "POST", 301, "GET"},
+      {uris.uriString("httpURI"), "POST", 302, "GET"},
+      {uris.uriString("httpURI"), "POST", 303, "GET"},
+      {uris.uriString("httpURI"), "POST", 307, "POST"},
+      {uris.uriString("httpURI"), "POST", 308, "POST"},
+      {uris.uriString("httpURI"), "PUT", 301, "PUT"},
+      {uris.uriString("httpURI"), "PUT", 302, "PUT"},
+      {uris.uriString("httpURI"), "PUT", 303, "GET"},
+      {uris.uriString("httpURI"), "PUT", 307, "PUT"},
+      {uris.uriString("httpURI"), "PUT", 308, "PUT"},
+      {uris.uriString("httpsURI"), "GET", 301, "GET"},
+      {uris.uriString("httpsURI"), "GET", 302, "GET"},
+      {uris.uriString("httpsURI"), "GET", 303, "GET"},
+      {uris.uriString("httpsURI"), "GET", 307, "GET"},
+      {uris.uriString("httpsURI"), "GET", 308, "GET"},
+      {uris.uriString("httpsURI"), "POST", 301, "GET"},
+      {uris.uriString("httpsURI"), "POST", 302, "GET"},
+      {uris.uriString("httpsURI"), "POST", 303, "GET"},
+      {uris.uriString("httpsURI"), "POST", 307, "POST"},
+      {uris.uriString("httpsURI"), "POST", 308, "POST"},
+      {uris.uriString("httpsURI"), "PUT", 301, "PUT"},
+      {uris.uriString("httpsURI"), "PUT", 302, "PUT"},
+      {uris.uriString("httpsURI"), "PUT", 303, "GET"},
+      {uris.uriString("httpsURI"), "PUT", 307, "PUT"},
+      {uris.uriString("httpsURI"), "PUT", 308, "PUT"},
+      {uris.uriString("http2URI"), "GET", 301, "GET"},
+      {uris.uriString("http2URI"), "GET", 302, "GET"},
+      {uris.uriString("http2URI"), "GET", 303, "GET"},
+      {uris.uriString("http2URI"), "GET", 307, "GET"},
+      {uris.uriString("http2URI"), "GET", 308, "GET"},
+      {uris.uriString("http2URI"), "POST", 301, "GET"},
+      {uris.uriString("http2URI"), "POST", 302, "GET"},
+      {uris.uriString("http2URI"), "POST", 303, "GET"},
+      {uris.uriString("http2URI"), "POST", 307, "POST"},
+      {uris.uriString("http2URI"), "POST", 308, "POST"},
+      {uris.uriString("http2URI"), "PUT", 301, "PUT"},
+      {uris.uriString("http2URI"), "PUT", 302, "PUT"},
+      {uris.uriString("http2URI"), "PUT", 303, "GET"},
+      {uris.uriString("http2URI"), "PUT", 307, "PUT"},
+      {uris.uriString("http2URI"), "PUT", 308, "PUT"},
+      {uris.uriString("https2URI"), "GET", 301, "GET"},
+      {uris.uriString("https2URI"), "GET", 302, "GET"},
+      {uris.uriString("https2URI"), "GET", 303, "GET"},
+      {uris.uriString("https2URI"), "GET", 307, "GET"},
+      {uris.uriString("https2URI"), "GET", 308, "GET"},
+      {uris.uriString("https2URI"), "POST", 301, "GET"},
+      {uris.uriString("https2URI"), "POST", 302, "GET"},
+      {uris.uriString("https2URI"), "POST", 303, "GET"},
+      {uris.uriString("https2URI"), "POST", 307, "POST"},
+      {uris.uriString("https2URI"), "POST", 308, "POST"},
+      {uris.uriString("https2URI"), "PUT", 301, "PUT"},
+      {uris.uriString("https2URI"), "PUT", 302, "PUT"},
+      {uris.uriString("https2URI"), "PUT", 303, "GET"},
+      {uris.uriString("https2URI"), "PUT", 307, "PUT"},
+      {uris.uriString("https2URI"), "PUT", 308, "PUT"},
     };
   }
 
@@ -184,7 +166,7 @@ class RedirectMethodChange {
             .build();
     HttpResponse<String> resp = client.send(req, BodyHandlers.ofString());
 
-//    System.out.println("Response: " + resp + ", body: " + resp.body());
+    //    System.out.println("Response: " + resp + ", body: " + resp.body());
     assertEquals(resp.statusCode(), 200);
     assertEquals(resp.body(), RESPONSE);
   }

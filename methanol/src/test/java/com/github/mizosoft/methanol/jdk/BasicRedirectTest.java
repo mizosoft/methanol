@@ -21,14 +21,15 @@
  * questions.
  */
 
-package com.github.mizosoft.methanol;
+package com.github.mizosoft.methanol.jdk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.github.mizosoft.methanol.Methanol.RedirectingInterceptor;
+import com.github.mizosoft.methanol.Methanol;
+import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
@@ -79,46 +80,23 @@ class BasicRedirectTest {
   static final String MESSAGE = "Is fearr Gaeilge briste, na Bearla cliste";
   static final int ITERATIONS = 3;
 
-  /**
-   * Defers getting the URI to test invocation as JUnit 5 invokes arguments provider before setup
-   * method so URIs never get the chance to get initialized when the provider is invoked.
-   */
-  private Supplier<String> uri(String fieldName) {
-    return new Supplier<>() {
-      @Override
-      public String get() {
-        try {
-          var field = BasicRedirectTest.class.getDeclaredField(fieldName);
-          field.setAccessible(true);
-          return (String) field.get(BasicRedirectTest.this);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public String toString() {
-        return fieldName;
-      }
-    };
-  }
-
   Object[][] positive() {
+    var uris = new TestUriSupplierFactory(this);
     return new Object[][] {
-      {uri("httpURI"), Redirect.ALWAYS},
-      {uri("httpsURI"), Redirect.ALWAYS},
-      {uri("http2URI"), Redirect.ALWAYS},
-      {uri("https2URI"), Redirect.ALWAYS},
-      {uri("httpURIToMoreSecure"), Redirect.ALWAYS},
-      {uri("http2URIToMoreSecure"), Redirect.ALWAYS},
-      {uri("httpsURIToLessSecure"), Redirect.ALWAYS},
-      {uri("https2URIToLessSecure"), Redirect.ALWAYS},
-      {uri("httpURI"), Redirect.NORMAL},
-      {uri("httpsURI"), Redirect.NORMAL},
-      {uri("http2URI"), Redirect.NORMAL},
-      {uri("https2URI"), Redirect.NORMAL},
-      {uri("httpURIToMoreSecure"), Redirect.NORMAL},
-      {uri("http2URIToMoreSecure"), Redirect.NORMAL},
+      {uris.uriString("httpURI"), Redirect.ALWAYS},
+      {uris.uriString("httpsURI"), Redirect.ALWAYS},
+      {uris.uriString("http2URI"), Redirect.ALWAYS},
+      {uris.uriString("https2URI"), Redirect.ALWAYS},
+      {uris.uriString("httpURIToMoreSecure"), Redirect.ALWAYS},
+      {uris.uriString("http2URIToMoreSecure"), Redirect.ALWAYS},
+      {uris.uriString("httpsURIToLessSecure"), Redirect.ALWAYS},
+      {uris.uriString("https2URIToLessSecure"), Redirect.ALWAYS},
+      {uris.uriString("httpURI"), Redirect.NORMAL},
+      {uris.uriString("httpsURI"), Redirect.NORMAL},
+      {uris.uriString("http2URI"), Redirect.NORMAL},
+      {uris.uriString("https2URI"), Redirect.NORMAL},
+      {uris.uriString("httpURIToMoreSecure"), Redirect.NORMAL},
+      {uris.uriString("http2URIToMoreSecure"), Redirect.NORMAL},
     };
   }
 
@@ -193,17 +171,18 @@ class BasicRedirectTest {
   // --  negatives
 
   Object[][] negative() {
+    var uris = new TestUriSupplierFactory(this);
     return new Object[][] {
-      {uri("httpURI"), Redirect.NEVER},
-      {uri("httpsURI"), Redirect.NEVER},
-      {uri("http2URI"), Redirect.NEVER},
-      {uri("https2URI"), Redirect.NEVER},
-      {uri("httpURIToMoreSecure"), Redirect.NEVER},
-      {uri("http2URIToMoreSecure"), Redirect.NEVER},
-      {uri("httpsURIToLessSecure"), Redirect.NEVER},
-      {uri("https2URIToLessSecure"), Redirect.NEVER},
-      {uri("httpsURIToLessSecure"), Redirect.NORMAL},
-      {uri("https2URIToLessSecure"), Redirect.NORMAL},
+      {uris.uriString("httpURI"), Redirect.NEVER},
+      {uris.uriString("httpsURI"), Redirect.NEVER},
+      {uris.uriString("http2URI"), Redirect.NEVER},
+      {uris.uriString("https2URI"), Redirect.NEVER},
+      {uris.uriString("httpURIToMoreSecure"), Redirect.NEVER},
+      {uris.uriString("http2URIToMoreSecure"), Redirect.NEVER},
+      {uris.uriString("httpsURIToLessSecure"), Redirect.NEVER},
+      {uris.uriString("https2URIToLessSecure"), Redirect.NEVER},
+      {uris.uriString("httpsURIToLessSecure"), Redirect.NORMAL},
+      {uris.uriString("https2URIToLessSecure"), Redirect.NORMAL},
     };
   }
 

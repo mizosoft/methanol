@@ -21,15 +21,17 @@
  * questions.
  */
 
-package com.github.mizosoft.methanol;
+package com.github.mizosoft.methanol.jdk;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import com.github.mizosoft.methanol.Methanol.RedirectingInterceptor;
+import com.github.mizosoft.methanol.Methanol;
+import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
@@ -123,35 +125,16 @@ class HttpRedirectTest {
     return builder.build();
   }
 
-  private Supplier<URI> uri(String fieldName, String path) {
-    return new Supplier<>() {
-      @Override
-      public URI get() {
-        try {
-          var field = HttpRedirectTest.class.getDeclaredField(fieldName);
-          field.setAccessible(true);
-          return ((URI) field.get(HttpRedirectTest.this)).resolve(path);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public String toString() {
-        return fieldName;
-      }
-    };
-  }
-
   private Object[][] testURIs() {
+    var uriFactory = new TestUriSupplierFactory(this);
     List<Supplier<URI>> uris =
         List.of(
-            uri("http1URI", "direct/orig/"),
-            uri("https1URI", "direct/orig/"),
-            uri("https1URI", "proxy/orig/"),
-            uri("http2URI", "direct/orig/"),
-            uri("https2URI", "direct/orig/"),
-            uri("https2URI", "proxy/orig/"));
+            uriFactory.uri("http1URI", "direct/orig/"),
+            uriFactory.uri("https1URI", "direct/orig/"),
+            uriFactory.uri("https1URI", "proxy/orig/"),
+            uriFactory.uri("http2URI", "direct/orig/"),
+            uriFactory.uri("https2URI", "direct/orig/"),
+            uriFactory.uri("https2URI", "proxy/orig/"));
     List<Map.Entry<Integer, String>> redirects =
         List.of(
             Map.entry(301, "GET"),
@@ -251,11 +234,11 @@ class HttpRedirectTest {
     proxyAddress = (InetSocketAddress) proxy.toProxyAddress().address();
     proxySelector = new HttpProxySelector(proxyAddress);
     client = newHttpClient(proxySelector);
-//    System.out.println("Setup: done");
+    //    System.out.println("Setup: done");
   }
 
   private void testNonIdempotent(URI u, HttpRequest request, int code, String method) {
-//    System.out.println("Testing with " + u);
+    //    System.out.println("Testing with " + u);
     CompletableFuture<HttpResponse<String>> respCf =
         client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
     HttpResponse<String> resp = respCf.join();
@@ -317,7 +300,7 @@ class HttpRedirectTest {
   @MethodSource("uris")
   void testPUT(Supplier<URI> uri, int code, String method) {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
-//    System.out.println("Testing with " + u);
+    //    System.out.println("Testing with " + u);
     HttpRequest request =
         HttpRequest.newBuilder(u).PUT(HttpRequest.BodyPublishers.ofString(REQUEST_BODY)).build();
     // PUT is considered idempotent.
@@ -328,7 +311,7 @@ class HttpRedirectTest {
   @MethodSource("uris")
   void testFoo(Supplier<URI> uri, int code, String method) {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
-//    System.out.println("Testing with " + u);
+    //    System.out.println("Testing with " + u);
     HttpRequest request =
         HttpRequest.newBuilder(u)
             .method("FOO", HttpRequest.BodyPublishers.ofString(REQUEST_BODY))
@@ -342,7 +325,7 @@ class HttpRedirectTest {
   @Disabled("MockWebServer complains about GET requests with bodies")
   void testGet(Supplier<URI> uri, int code, String method) {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
-//    System.out.println("Testing with " + u);
+    //    System.out.println("Testing with " + u);
     HttpRequest request =
         HttpRequest.newBuilder(u)
             .method("GET", HttpRequest.BodyPublishers.ofString(REQUEST_BODY))
@@ -459,8 +442,9 @@ class HttpRedirectTest {
           }
         }
 
-//        System.out.println("Server " + t.getRequestUrl() + " sending response " + responseID);
-//        System.out.println("code: " + code + " body: " + response);
+        //        System.out.println("Server " + t.getRequestUrl() + " sending response " +
+        // responseID);
+        //        System.out.println("code: " + code + " body: " + response);
         mockResponse.setResponseCode(code);
         if (code != 304) {
           bytes = response.getBytes(StandardCharsets.UTF_8);
@@ -469,7 +453,7 @@ class HttpRedirectTest {
           bytes = new byte[0];
         }
 
-//        System.out.println("\tresp:" + responseID + ": wrote " + bytes.length + " bytes");
+        //        System.out.println("\tresp:" + responseID + ": wrote " + bytes.length + " bytes");
       } catch (Throwable e) {
         e.printStackTrace();
         e.printStackTrace(System.out);
@@ -513,7 +497,7 @@ class HttpRedirectTest {
         requireArgument(delimiterIndex != -1, "invalid CONNECT: %s", targetHostAndPort);
         targetHost = targetHostAndPort.substring(0, delimiterIndex);
         targetPort = Integer.parseInt(targetHostAndPort.substring(delimiterIndex + 1));
-//        System.out.println("Tunnelling to: " + targetHostAndPort);
+        //        System.out.println("Tunnelling to: " + targetHostAndPort);
 
         return new MockResponse();
       } else {

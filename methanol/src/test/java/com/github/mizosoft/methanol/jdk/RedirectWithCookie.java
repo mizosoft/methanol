@@ -38,12 +38,15 @@
  *       RedirectWithCookie
  */
 
-package com.github.mizosoft.methanol;
+package com.github.mizosoft.methanol.jdk;
 
 import static java.lang.System.out;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.mizosoft.methanol.Methanol;
+import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.net.CookieManager;
@@ -54,6 +57,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 import javax.net.ssl.SSLContext;
 import mockwebserver3.Dispatcher;
@@ -68,7 +72,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-@ExtendWith(MockWebServerExtension.class)
+@ExtendWith({MockWebServerExtension.class, ExecutorExtension.class})
 @TestInstance(Lifecycle.PER_CLASS)
 class RedirectWithCookie {
   SSLContext sslContext;
@@ -85,47 +89,26 @@ class RedirectWithCookie {
   static final int ITERATIONS = 3;
 
   Object[][] positive() {
+    var uris = new TestUriSupplierFactory(this);
     return new Object[][] {
-      {uri("httpURI")},
-      {uri("httpsURI")},
-      {uri("http2URI")},
-      {uri("https2URI")}
-    };
-  }
-
-  /**
-   * Defers getting the URI to test invocation as JUnit 5 invokes arguments provider before setup
-   * method so URIs never get the chance to get initialized when the provider is invoked.
-   */
-  private Supplier<String> uri(String fieldName) {
-    return new Supplier<>() {
-      @Override
-      public String get() {
-        try {
-          var field = RedirectWithCookie.class.getDeclaredField(fieldName);
-          field.setAccessible(true);
-          return (String) field.get(RedirectWithCookie.this);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-          throw new RuntimeException(e);
-        }
-      }
-
-      @Override
-      public String toString() {
-        return fieldName;
-      }
+      {uris.uriString("httpURI")},
+      {uris.uriString("httpsURI")},
+      {uris.uriString("http2URI")},
+      {uris.uriString("https2URI")}
     };
   }
 
   @ParameterizedTest
   @MethodSource("positive")
-  void test(Supplier<String> uriString) throws Exception {
+  void test(Supplier<String> uriString, Executor handlerExecutor) throws Exception {
     out.printf("%n---- starting (%s) ----%n", uriString);
     HttpClient client =
-        HttpClient.newBuilder()
-            .followRedirects(Redirect.ALWAYS)
+        Methanol.newBuilder()
+            .followRedirects(Redirect.NEVER)
             .cookieHandler(new CookieManager())
             .sslContext(sslContext)
+            .interceptor(new RedirectingInterceptor(Redirect.ALWAYS, handlerExecutor))
+            .autoAcceptEncoding(false)
             .build();
     assert client.cookieHandler().isPresent();
 
@@ -231,7 +214,8 @@ class RedirectWithCookie {
     @NotNull
     @Override
     public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
-//      System.out.println("CookieRedirectDispatcher for: " + recordedRequest.getRequestUrl());
+      //      System.out.println("CookieRedirectDispatcher for: " +
+      // recordedRequest.getRequestUrl());
 
       // redirecting
       if (recordedRequest.getRequestUrl().encodedPath().endsWith("redirect")) {
@@ -248,15 +232,11 @@ class RedirectWithCookie {
       if (cookie == null || cookie.size() == 0) {
         String msg = "No cookie header present";
         (new RuntimeException(msg)).printStackTrace();
-        return new MockResponse()
-            .setResponseCode(500)
-            .setBody(msg);
+        return new MockResponse().setResponseCode(500).setBody(msg);
       } else if (!cookie.get(0).equals("CUSTOMER=WILE_E_COYOTE")) {
         String msg = "Incorrect cookie header value:[" + cookie.get(0) + "]";
         (new RuntimeException(msg)).printStackTrace();
-        return new MockResponse()
-            .setResponseCode(500)
-            .setBody(msg);
+        return new MockResponse().setResponseCode(500).setBody(msg);
       } else {
         assert cookie.get(0).equals("CUSTOMER=WILE_E_COYOTE");
         byte[] bytes = MESSAGE.getBytes(UTF_8);
