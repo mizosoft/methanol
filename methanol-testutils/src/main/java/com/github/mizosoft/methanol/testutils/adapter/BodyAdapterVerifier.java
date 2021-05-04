@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.TypeRef;
 
 /** A small DSL for testing {@link BodyAdapter} implementations. */
 public abstract class BodyAdapterVerifier<
@@ -55,6 +56,24 @@ public abstract class BodyAdapterVerifier<
 
   public VERIFIER isNotCompatibleWith(String mediaType) {
     return isNotCompatibleWith(MediaType.parse(mediaType));
+  }
+
+  public VERIFIER supports(Class<?> type) {
+    return supports(TypeRef.from(type));
+  }
+
+  public VERIFIER supports(TypeRef<?> type) {
+    assertThat(type).matches(adapter::supportsType);
+    return self();
+  }
+
+  public VERIFIER doesNotSupport(Class<?> type) {
+    return doesNotSupport(TypeRef.from(type));
+  }
+
+  public VERIFIER doesNotSupport(TypeRef<?> type) {
+    assertThat(type).matches(not(adapter::supportsType));
+    return self();
   }
 
   public static EncoderVerifier verifyThat(BodyAdapter.Encoder encoder) {
