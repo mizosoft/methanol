@@ -277,15 +277,14 @@ public final class CacheInterceptor implements Interceptor {
             builder
                 .setHeaders(mergedHeaders)
                 .timeRequestSent(networkResponse.get().timeRequestSent())
-                .timeResponseReceived(networkResponse.get().timeResponseReceived())
-                .apply(__ -> networkResponse.get().sslSession().ifPresent(builder::sslSession)));
+                .timeResponseReceived(networkResponse.get().timeResponseReceived()));
   }
 
   private static HttpHeaders mergeHeaders(HttpHeaders storedHeaders, HttpHeaders networkHeaders) {
     var builder = new HeadersBuilder();
     builder.addAll(storedHeaders);
 
-    // Remove Warning headers with a 1xx warn code in the stored response
+    // Remove Warning values with 1xx warn codes
     builder.removeIf((name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
 
     // Use the 304 response fields to replace those with the same names in the
