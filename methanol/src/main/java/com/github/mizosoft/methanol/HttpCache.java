@@ -343,7 +343,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
         var editor =
             cacheResponse != null
                 ? cacheResponse.edit()
-                : store.edit(key(networkResponse.get().request()));
+                : store.edit(key(networkResponse.get().uri()));
 
         if (editor != null) {
           editor.metadata(CacheResponseMetadata.from(networkResponse.get()).encode());
