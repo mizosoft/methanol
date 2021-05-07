@@ -52,7 +52,7 @@ public class MoreBodyHandlers {
   private MoreBodyHandlers() {} // non-instantiable
 
   /**
-   * Returns a {@code BodyHandler} that returns the subscriber specified by {@link
+   * Returns a {@code BodyHandler} that handles the response with the subscriber returned by {@link
    * MoreBodySubscribers#fromAsyncSubscriber(Subscriber, Function)}.
    *
    * @param downstream the receiver of the response body
@@ -70,7 +70,7 @@ public class MoreBodyHandlers {
   }
 
   /**
-   * Returns a {@code BodyHandler} that returns the {@code BodySubscriber} specified by {@link
+   * Returns a {@code BodyHandler} that handles the response with the subscriber returned by {@link
    * MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration)}.
    */
   public static <T> BodyHandler<T> withReadTimeout(BodyHandler<T> baseHandler, Duration timeout) {
@@ -80,7 +80,7 @@ public class MoreBodyHandlers {
   }
 
   /**
-   * Returns a {@code BodyHandler} that returns the {@code BodySubscriber} specified by {@link
+   * Returns a {@code BodyHandler} that handles the response with the subscriber returned by {@link
    * MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration, ScheduledExecutorService)}.
    */
   public static <T> BodyHandler<T> withReadTimeout(
@@ -124,8 +124,8 @@ public class MoreBodyHandlers {
 
   /**
    * Returns a {@code BodyHandler} of {@code T} as specified by {@link
-   * MoreBodySubscribers#ofObject(TypeRef, MediaType)}. The media type will inferred from the {@code
-   * Content-Type} response header.
+   * MoreBodySubscribers#ofObject(TypeRef, MediaType)}. The media type will be inferred from the
+   * {@code Content-Type} response header.
    *
    * @param type the raw type of {@code T}
    * @param <T> the response body type
@@ -138,7 +138,7 @@ public class MoreBodyHandlers {
 
   /**
    * Returns a {@code BodyHandler} of {@code T} as specified by {@link
-   * MoreBodySubscribers#ofObject(TypeRef, MediaType)}. The media type will inferred from the
+   * MoreBodySubscribers#ofObject(TypeRef, MediaType)}. The media type will be inferred from the
    * {@code Content-Type} response header.
    *
    * @param type a {@code TypeRef} representing {@code T}
@@ -153,7 +153,7 @@ public class MoreBodyHandlers {
 
   /**
    * Returns a {@code BodyHandler} of {@code Supplier<T>} as specified by {@link
-   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will inferred from
+   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will be inferred from
    * the {@code Content-Type} response header.
    *
    * @param type the raw type of {@code T}
@@ -167,7 +167,7 @@ public class MoreBodyHandlers {
 
   /**
    * Returns a {@code BodyHandler} of {@code Supplier<T>} as specified by {@link
-   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will inferred from
+   * MoreBodySubscribers#ofDeferredObject(TypeRef, MediaType)}. The media type will be inferred from
    * the {@code Content-Type} response header.
    *
    * @param type a {@code TypeRef} representing {@code T}
