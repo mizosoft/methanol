@@ -1336,6 +1336,35 @@ class HttpCacheTest {
         .assertBody("Wakanda forever");
   }
 
+  /** Ensure the cache doesn't store responses that disagree with their requests' URIs. */
+  @StoreParameterizedTest
+  void responseWithDifferentUriFromThatOfRequest(Store store) throws Exception {
+    setUpCache(store);
+
+    // Don't let the cache intercept redirects
+    clientBuilder = Methanol.newBuilder()
+        .interceptor(cache.interceptor(threadPool))
+        .followRedirects(Redirect.ALWAYS);
+    client = clientBuilder.build();
+
+    // The cache only sees the second response
+    server.enqueue(new MockResponse()
+        .setResponseCode(301)
+        .addHeader("Location", "/redirect"));
+    server.enqueue(new MockResponse()
+        .addHeader("Cache-Control", "max-age=1")
+        .setBody("Pikachu"));
+
+    // Offer the response to cache
+    seedCache(serverUri)
+        .assertUri(serverUri.resolve("/redirect"))
+        .assertBody("Pikachu");
+
+    // The cache refuses the response as its URI is different from that of the
+    // request it intercepted.
+    assertNotCached(serverUri.resolve("/redirect"));
+  }
+
   @StoreParameterizedTest
   void staleWhileRevalidate(Store store) throws Exception {
     setUpCache(store);
