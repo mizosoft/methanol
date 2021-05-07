@@ -1,3 +1,6 @@
+import java.time.Duration
+import java.util.concurrent.atomic.AtomicReference
+
 dependencies {
   testImplementation(deps.testng) {
     exclude group: 'junit'
@@ -37,6 +40,15 @@ task tckTest(type: Test) {
   if (System.getenv().GITHUB_ACTIONS) {
     systemProperties.TCK_TIMEOUT_MILLIS = 1_000
     systemProperties.TCK_NO_SIGNAL_TIMEOUT_MILLIS = 100
+  }
+
+  timeout = Duration.ofMinutes(8)
+
+  def runningTckTestClassName = new AtomicReference<String>()
+  beforeTest { descriptor ->
+    if (runningTckTestClassName.getAndSet(descriptor.className) != descriptor.className) {
+      println "Running TCK test: ${descriptor.className.tokenize('.').last()}"
+    }
   }
 }
 
