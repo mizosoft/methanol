@@ -1,21 +1,13 @@
 dependencies {
-  // Use latest version of TestNG as the one used by tck-flow is really old.
-  // A recent feature currently in use is CONSTRUCTOR target for @Factory.
-  testImplementation deps.testng
+  testImplementation(deps.testng) {
+    exclude group: 'junit'
+    exclude group: 'org.checkerframework', module: 'checker-compat-qual'
+  }
   testImplementation deps.junitParams
   testImplementation deps.reactiveStreamsTckFlow
   testImplementation deps.mockWebServer
   testImplementation deps.jimfs
   testImplementation project(':methanol-testutils')
-}
-
-configurations.testImplementation {
-  // TestNG transitively brings an old checkerframework artifact, which causes its packages
-  // to be read from two modules.
-  exclude group: 'org.checkerframework', module: 'checker-compat-qual'
-
-  // JUnit 4 pulls a really old hamcrest version which agitates the module system
-  exclude group: 'junit', module: 'junit'
 }
 
 compileJava {
@@ -50,7 +42,6 @@ task tckTest(type: Test) {
 
 check.dependsOn tckTest
 
-// compileTestJava still compiles from the module path
 addReads(compileTestJava, 'methanol.testutils')
 addReads(compileTestJava, 'org.junit.jupiter.params')
 addReads(compileTestJava, 'org.assertj.core')
