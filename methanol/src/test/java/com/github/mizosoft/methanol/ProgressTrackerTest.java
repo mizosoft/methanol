@@ -39,7 +39,7 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameteri
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BuffIterator;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
-import com.github.mizosoft.methanol.testutils.FailedPublisher;
+import com.github.mizosoft.methanol.testutils.FailingPublisher;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -159,7 +159,7 @@ class ProgressTrackerTest {
     var tracker = withExecutor(executor).build();
     var listener = new TestListener();
     var trackedUpstream = tracker.tracking(
-        BodyPublishers.fromPublisher(new FailedPublisher<>(TestException::new)), listener);
+        BodyPublishers.fromPublisher(new FailingPublisher<>(TestException::new)), listener);
 
     var downstream = new TestSubscriber<ByteBuffer>();
     upstreamExecutor.execute(
@@ -295,7 +295,7 @@ class ProgressTrackerTest {
     var trackedDownstream = tracker.tracking(
         BodySubscribers.fromSubscriber(downstream), listener, -1);
 
-    var publisher = new FailedPublisher<List<ByteBuffer>>(TestException::new);
+    var publisher = new FailingPublisher<List<ByteBuffer>>(TestException::new);
     upstreamExecutor.execute(() -> publisher.subscribe(trackedDownstream));
     downstream.awaitError();
 

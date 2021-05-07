@@ -10,7 +10,7 @@ import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.testing.ResolvedStoreConfig;
 import com.github.mizosoft.methanol.testing.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.StoreContext;
-import com.github.mizosoft.methanol.testutils.FailedPublisher;
+import com.github.mizosoft.methanol.testutils.FailingPublisher;
 import com.github.mizosoft.methanol.testutils.Logging;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestUtils;
@@ -92,7 +92,7 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
   @Override
   public Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
     return new CacheWritingPublisher(
-        new FailedPublisher<>(TestException::new), DisabledEditor.INSTANCE);
+        new FailingPublisher<>(TestException::new), DisabledEditor.INSTANCE);
   }
 
   private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {

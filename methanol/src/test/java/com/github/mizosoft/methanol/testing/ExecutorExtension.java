@@ -214,6 +214,9 @@ public final class ExecutorExtension
     void shutdownAndTerminate() throws Exception {
       for (var executor : createdExecutors) {
         TestUtils.shutdown(executor);
+        // Clear interruption flag to not throw from awaitTermination
+        // if this thread is interrupted by some test.
+        Thread.interrupted();
         if (executor instanceof ExecutorService
             && !((ExecutorService) executor).awaitTermination(5, TimeUnit.MINUTES)) {
           throw new TimeoutException("timed out while waiting for pool termination: " + executor);

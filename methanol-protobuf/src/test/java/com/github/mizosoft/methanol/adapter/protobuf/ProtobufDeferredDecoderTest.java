@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.adapter.protobuf;
 
 import static com.github.mizosoft.methanol.adapter.protobuf.ProtobufAdapterFactory.createDecoder;
-import static com.github.mizosoft.methanol.testutils.adapter.BodyAdapterVerifier.verifyThat;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.adapter.protobuf.PointOuterClass.Point;

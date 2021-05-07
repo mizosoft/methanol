@@ -22,71 +22,49 @@
 
 package com.github.mizosoft.methanol;
 
-import static java.lang.String.format;
-import static java.nio.charset.StandardCharsets.US_ASCII;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import com.github.mizosoft.methanol.testutils.BodyCollector;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class FormBodyPublisherTest {
   @Test
-  void buildMultiQueries() {
-    var queries = new LinkedHashMap<String, List<String>>(); // preserve order
-    queries.put("purpose", List.of("idk"));
-    queries.put("help", List.of("now", "pls"));
-    var builder = FormBodyPublisher.newBuilder();
-    queries.forEach((n, vs) -> vs.forEach(v -> builder.query(n, v)));
-    var formBody = builder.build();
-    assertEquals(queries, formBody.queries());
-    assertEquals(Optional.of("idk"), formBody.firstQuery("purpose"));
-    assertEquals(Optional.of("idk"), formBody.lastQuery("purpose"));
-    assertEquals(Optional.of("now"), formBody.firstQuery("help"));
-    assertEquals(Optional.of("pls"), formBody.lastQuery("help"));
-    assertEquals("application/x-www-form-urlencoded", formBody.mediaType().toString());
-    assertEquals("purpose=idk&help=now&help=pls", formBody.encodedString());
+  void mediaType() {
+    verifyThat(FormBodyPublisher.newBuilder().build())
+        .hasMediaType("application/x-www-form-urlencoded");
   }
 
   @Test
-  void encodedString_safe() {
-    var formBody = FormBodyPublisher.newBuilder()
-        .query("stranger", "danger")
-        .query("leader", "believer")
+  void encode() {
+    var body = FormBodyPublisher.newBuilder()
+        .query("x", "hello")
+        .query("a", "hi")
+        .query("a", "hola")
+        .build();
+    assertThat(body.firstQuery("x")).hasValue("hello");
+    assertThat(body.lastQuery("x")).hasValue("hello");
+    assertThat(body.firstQuery("a")).hasValue("hi");
+    assertThat(body.lastQuery("a")).hasValue("hola");
+
+    assertThat(body.encodedString()).isEqualTo("x=hello&a=hi&a=hola");
+    verifyThat(body).succeedsWith("x=hello&a=hi&a=hola");
+  }
+
+  @Test
+  void encodeWithSafeChars() {
+    var body = FormBodyPublisher.newBuilder()
+        .query("safe", "hello")
         .query("safe", "*.-_")
         .build();
-    assertSameContent("stranger=danger&leader=believer&safe=*.-_", formBody);
+    verifyThat(body).succeedsWith("safe=hello&safe=*.-_");
   }
 
   @Test
-  void encodedString_unsafe() {
-    var formBody = FormBodyPublisher.newBuilder()
-        .query("some_unsafe", "&(@___@)&")
-        .query("more uns@fe", "¥£$")
+  void encodeWithUnsafeChars() {
+    var body = FormBodyPublisher.newBuilder()
+        .query("uns@fe", "&") // @ = 0x40, & = 0x26
+        .query("uns@fe", "£") // Non-ascii chars are encoded in UTF-8 (£ = U+00A3)
         .build();
-    assertSameContent("some_unsafe=%26%28%40___%40%29%26&more+uns%40fe=%C2%A5%C2%A3%24", formBody);
-  }
-
-  @Test
-  void serializeBody() {
-    var formBody = FormBodyPublisher.newBuilder()
-        .query("eyy+oh&ooh=help", "¥£$ but actually ηΦ")
-        .query("fresh", "avocado")
-        .query("sexy veg@n", "¤")
-        .build();
-    assertSameContent(
-        "eyy%2Boh%26ooh%3Dhelp=%C2%A5%C2%A3%24+but+actually+%CE%B7%CE%A6&fresh=avocado&sexy+veg%40n=%C2%A4",
-        formBody);
-  }
-
-  private void assertSameContent(String expected, FormBodyPublisher body) {
-    var expectedContent = US_ASCII.encode(expected);
-    var bodyContent = BodyCollector.collect(body);
-    assertEquals(expectedContent.remaining(), body.contentLength());
-    assertEquals(expectedContent, bodyContent,
-        format("expected <%s> found <%s>", expected, US_ASCII.decode(bodyContent.duplicate())));
-    assertEquals(expected, body.encodedString());
+    verifyThat(body).succeedsWith("uns%40fe=%26&uns%40fe=%C2%A3");
   }
 }

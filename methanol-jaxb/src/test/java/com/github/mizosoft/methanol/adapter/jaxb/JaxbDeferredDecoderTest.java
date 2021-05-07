@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.adapter.jaxb;
 
 import static com.github.mizosoft.methanol.adapter.jaxb.JaxbAdapterFactory.createDecoder;
-import static com.github.mizosoft.methanol.testutils.adapter.BodyAdapterVerifier.verifyThat;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 
 import com.github.mizosoft.methanol.testutils.TestException;

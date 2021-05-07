@@ -22,39 +22,36 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.MoreBodyPublishers.ofObject;
-import static java.net.http.HttpRequest.BodyPublishers.ofString;
-import static java.nio.charset.StandardCharsets.US_ASCII;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import com.github.mizosoft.methanol.testutils.BodyCollector;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.CharBuffer;
 import org.junit.jupiter.api.Test;
 
 class MoreBodyPublishersTest {
-
   @Test
   void ofMediaType() {
-    var content = "some content";
-    var plainText = MediaType.of("text", "plain");
-    MimeBodyPublisher publisher =
-        MoreBodyPublishers.ofMediaType(ofString(content), plainText);
-    assertEquals(plainText, publisher.mediaType());
-    assertEquals(content, US_ASCII.decode(BodyCollector.collect(publisher)).toString());
+    verifyThat(
+            MoreBodyPublishers.ofMediaType(
+                BodyPublishers.ofString("Pikachu"), MediaType.parse("text/plain")))
+        .hasMediaType("text/plain")
+        .succeedsWith("Pikachu");
   }
 
   @Test
   void ofObject_charBufferBody() {
-    var content = CharBuffer.wrap("<p>very important text</p>");
-    var body = ofObject(content, MediaType.parse("text/html"));
-    assertEquals(content, US_ASCII.decode(BodyCollector.collect(body)));
+    var charBuffer = CharBuffer.wrap("Pikachu");
+    verifyThat(MoreBodyPublishers.ofObject(charBuffer, MediaType.parse("text/plain")))
+        .succeedsWith("Pikachu");
   }
 
   @Test
   void ofObject_unsupported() {
-    assertThrows(UnsupportedOperationException.class, () -> ofObject(5555, null));
-    assertThrows(UnsupportedOperationException.class,
-        () -> ofObject("blah", MediaType.parse("application/json")));
+    assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(() -> MoreBodyPublishers.ofObject(123, null));
+    assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(
+            () -> MoreBodyPublishers.ofObject("something", MediaType.parse("application/*")));
   }
 }

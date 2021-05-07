@@ -44,7 +44,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A small DSL for testing {@link Decoder} implementations. */
 public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderVerifier> {
-  DecoderVerifier(Decoder decoder) {
+  public DecoderVerifier(Decoder decoder) {
     super(decoder);
   }
 
@@ -91,50 +91,50 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
           .isThrownBy(() -> decoder.toDeferredObject(type, mediaType));
     }
 
-    public BodySubscriberAssert<T> withBody(String body) {
+    public BodySubscriberVerifier<T> withBody(String body) {
       return withBody(body, UTF_8);
     }
 
-    public BodySubscriberAssert<T> withBody(String body, Charset charset) {
+    public BodySubscriberVerifier<T> withBody(String body, Charset charset) {
       return withBody(charset.encode(body));
     }
 
-    public BodySubscriberAssert<T> withBody(ByteBuffer body) {
+    public BodySubscriberVerifier<T> withBody(ByteBuffer body) {
       var subscriber = decoder.toObject(type, mediaType);
       publisherBody(subscriber, body);
-      return new BodySubscriberAssert<>(subscriber);
+      return new BodySubscriberVerifier<>(subscriber);
     }
 
-    public BodySubscriberAssert<T> withFailure(Throwable error) {
+    public BodySubscriberVerifier<T> withFailure(Throwable error) {
       var subscriber = decoder.toObject(type, mediaType);
       publisherError(subscriber, error);
-      return new BodySubscriberAssert<>(subscriber);
+      return new BodySubscriberVerifier<>(subscriber);
     }
 
-    public SupplierAssert<T> withDeferredBody(String body) {
+    public SupplierVerifier<T> withDeferredBody(String body) {
       return withDeferredBody(body, UTF_8);
     }
 
-    public SupplierAssert<T> withDeferredBody(String body, Charset charset) {
+    public SupplierVerifier<T> withDeferredBody(String body, Charset charset) {
       return withDeferredBody(charset.encode(body));
     }
 
-    public SupplierAssert<T> withDeferredBody(ByteBuffer body) {
+    public SupplierVerifier<T> withDeferredBody(ByteBuffer body) {
       var subscriber = decoder.toDeferredObject(type, mediaType);
       publisherBody(subscriber, body);
-      return supplierAssert(subscriber);
+      return verifySupplier(subscriber);
     }
 
-    public SupplierAssert<T> withDeferredFailure(Throwable error) {
+    public SupplierVerifier<T> withDeferredFailure(Throwable error) {
       var subscriber = decoder.toDeferredObject(type, mediaType);
       publisherError(subscriber, error);
-      return supplierAssert(subscriber);
+      return verifySupplier(subscriber);
     }
 
-    private SupplierAssert<T> supplierAssert(BodySubscriber<Supplier<T>> subscriber) {
+    private SupplierVerifier<T> verifySupplier(BodySubscriber<Supplier<T>> subscriber) {
       var bodyFuture = subscriber.getBody();
       assertThat(bodyFuture).isCompleted().isNotCancelled();
-      return new SupplierAssert<>(bodyFuture.toCompletableFuture().join());
+      return new SupplierVerifier<>(bodyFuture.toCompletableFuture().join());
     }
 
     private static void publisherBody(BodySubscriber<?> subscriber, ByteBuffer buffer) {
@@ -152,10 +152,10 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
     }
   }
 
-  public static final class BodySubscriberAssert<T> {
+  public static final class BodySubscriberVerifier<T> {
     private final BodySubscriber<T> subscriber;
 
-    BodySubscriberAssert(BodySubscriber<T> subscriber) {
+    public BodySubscriberVerifier(BodySubscriber<T> subscriber) {
       this.subscriber = subscriber;
     }
 
@@ -176,10 +176,10 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
     }
   }
 
-  public static final class SupplierAssert<T> {
+  public static final class SupplierVerifier<T> {
     private final Supplier<T> supplier;
 
-    SupplierAssert(Supplier<T> supplier) {
+    SupplierVerifier(Supplier<T> supplier) {
       this.supplier = supplier;
     }
 

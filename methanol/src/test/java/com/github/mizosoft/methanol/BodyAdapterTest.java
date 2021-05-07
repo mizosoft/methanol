@@ -22,70 +22,54 @@
 
 package com.github.mizosoft.methanol;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
-import com.github.mizosoft.methanol.testutils.EmptyPublisher;
-import com.github.mizosoft.methanol.testutils.FailedPublisher;
 import com.github.mizosoft.methanol.testutils.TestException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
 
 class BodyAdapterTest {
-
   @Test
-  void toDeferredObject_default() {
-    var decoder = new ReplacingDecoder("lol");
-    var subscriber = decoder.toDeferredObject(new TypeRef<String>() {}, null);
-    var supplier = toFuture(subscriber).getNow(null);
-    assertNotNull(supplier);
-    EmptyPublisher.<List<ByteBuffer>>instance().subscribe(subscriber);
-    assertEquals("lol", supplier.get());
+  void defaultToDeferredObject() {
+    verifyThat(new ReplacingDecoder("abc"))
+        .converting(String.class)
+        .withDeferredBody("")
+        .succeedsWith("abc");
   }
 
   @Test
-  void toDeferredObject_default_completeExceptionally() {
-    var decoder = new ReplacingDecoder("lol");
-    var subscriber = decoder.toDeferredObject(new TypeRef<String>() {}, null);
-    var supplier = toFuture(subscriber).getNow(null);
-    assertNotNull(supplier);
-    new FailedPublisher<List<ByteBuffer>>(TestException::new)
-        .subscribe(subscriber);
-    var ex = assertThrows(CompletionException.class, supplier::get);
-    assertEquals(TestException.class, ex.getCause().getClass());
-  }
-
-  private static <T> CompletableFuture<T> toFuture(BodySubscriber<T> s) {
-    return s.getBody().toCompletableFuture();
+  void defaultToDeferredObjectWithExceptionalCompletion() {
+    verifyThat(new ReplacingDecoder("abc"))
+        .converting(String.class)
+        .withDeferredFailure(new TestException())
+        .failsWith(CompletionException.class)
+        .withCauseInstanceOf(TestException.class);
   }
 
   private static final class ReplacingDecoder implements Decoder {
-
     private final Object value;
 
-    private ReplacingDecoder(Object value) {
+    ReplacingDecoder(Object value) {
       this.value = value;
     }
 
-    @Override public boolean isCompatibleWith(MediaType mediaType) {
-      return false;
+    @Override
+    public boolean isCompatibleWith(MediaType mediaType) {
+      throw new AssertionError();
     }
 
-    @Override public boolean supportsType(TypeRef<?> type) {
-      return false;
+    @Override
+    public boolean supportsType(TypeRef<?> type) {
+      throw new AssertionError();
     }
 
     @SuppressWarnings("unchecked")
-    @Override public <T> BodySubscriber<T> toObject(
-        TypeRef<T> type, @Nullable MediaType mediaType) {
+    @Override
+    public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
       return (BodySubscriber<T>) BodySubscribers.replacing(value);
     }
   }

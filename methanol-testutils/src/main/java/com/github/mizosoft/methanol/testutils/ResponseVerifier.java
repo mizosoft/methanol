@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testutils;
 
 import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.CONDITIONAL_HIT;
 import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.HIT;
@@ -228,34 +228,37 @@ public final class ResponseVerifier<T> {
     // https://httpwg.org/specs/rfc7234.html#freshening.responses
     var networkHeaders = new HashMap<>(networkResponse.headers().map());
     var cachedHeaders = new HashMap<>(cacheResponse.headers().map());
-    response.headers().map().forEach(
-        (name, values) -> {
-          var networkValues = networkHeaders.get(name);
-          var cacheValues = cachedHeaders.get(name);
+    response
+        .headers()
+        .map()
+        .forEach(
+            (name, values) -> {
+              var networkValues = networkHeaders.get(name);
+              var cacheValues = cachedHeaders.get(name);
 
-          // Header values must come from either network or cache
-          assertThat(networkValues != null || cacheValues != null).isTrue();
+              // Header values must come from either network or cache
+              assertThat(networkValues != null || cacheValues != null).isTrue();
 
-          // Network values override stored ones unless the header is Content-Length.
-          // This is because some servers misbehave by sending a Content-Length: 0 to
-          // their 304 responses.
-          if ("Content-Length".equalsIgnoreCase(name)) {
-            assertThat(values).as(name).isEqualTo(cacheValues);
-          } else if (networkValues != null) {
-            assertThat(values).as(name).isEqualTo(networkValues);
-          } else if ("Warning".equalsIgnoreCase(name)) {
-            // Warn codes 1xx must be deleted from the stored response
-            assertThat(values)
-                .as(name)
-                .noneMatch(value -> value.startsWith("1"))
-                .isEqualTo(
-                    cacheValues.stream()
-                        .filter(value -> !value.startsWith("1"))
-                        .collect(Collectors.toUnmodifiableList()));
-          } else {
-            assertThat(values).as(name).isEqualTo(cacheValues);
-          }
-        });
+              // Network values override stored ones unless the header is Content-Length.
+              // This is because some servers misbehave by sending a Content-Length: 0 to
+              // their 304 responses.
+              if ("Content-Length".equalsIgnoreCase(name)) {
+                assertThat(values).as(name).isEqualTo(cacheValues);
+              } else if (networkValues != null) {
+                assertThat(values).as(name).isEqualTo(networkValues);
+              } else if ("Warning".equalsIgnoreCase(name)) {
+                // Warn codes 1xx must be deleted from the stored response
+                assertThat(values)
+                    .as(name)
+                    .noneMatch(value -> value.startsWith("1"))
+                    .isEqualTo(
+                        cacheValues.stream()
+                            .filter(value -> !value.startsWith("1"))
+                            .collect(Collectors.toUnmodifiableList()));
+              } else {
+                assertThat(values).as(name).isEqualTo(cacheValues);
+              }
+            });
 
     return this;
   }

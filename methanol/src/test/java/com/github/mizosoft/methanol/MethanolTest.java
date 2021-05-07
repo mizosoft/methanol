@@ -22,20 +22,16 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.MoreBodyPublishers.ofMediaType;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.MutableRequest.POST;
 import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
-import static java.net.http.HttpRequest.BodyPublishers.noBody;
-import static java.net.http.HttpRequest.BodyPublishers.ofString;
-import static java.net.http.HttpResponse.BodyHandlers.discarding;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.net.Authenticator;
 import java.net.CookieManager;
 import java.net.InetSocketAddress;
@@ -45,65 +41,67 @@ import java.net.http.HttpClient;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.UnaryOperator;
-import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.Test;
 
 class MethanolTest {
   @Test
-  void defaultExtraFields() {
+  void defaultFields() {
     var client = Methanol.create();
-    assertTrue(client.baseUri().isEmpty());
-    assertTrue(client.userAgent().isEmpty());
-    assertTrue(client.requestTimeout().isEmpty());
-    assertTrue(client.readTimeout().isEmpty());
-    assertTrue(client.interceptors().isEmpty());
-    assertTrue(client.backendInterceptors().isEmpty());
-    assertTrue(client.postDecorationInterceptors().isEmpty());
-    assertEquals(headers(/* empty */), client.defaultHeaders());
-    assertTrue(client.autoAcceptEncoding());
+    assertThat(client.baseUri()).isEmpty();
+    assertThat(client.userAgent()).isEmpty();
+    assertThat(client.requestTimeout()).isEmpty();
+    assertThat(client.readTimeout()).isEmpty();
+    assertThat(client.cache()).isEmpty();
+    assertThat(client.interceptors()).isEmpty();
+    assertThat(client.backendInterceptors()).isEmpty();
+    assertThat(client.defaultHeaders().map()).isEmpty();
+    assertThat(client.autoAcceptEncoding()).isTrue();
   }
 
   @Test
-  void setExtraFields() {
-    var interceptor1 = Interceptor.create(UnaryOperator.identity());
-    var interceptor2 = Interceptor.create(UnaryOperator.identity());
+  void settingFields() {
+    var interceptor = Interceptor.create(UnaryOperator.identity());
+    var backendInterceptor = Interceptor.create(UnaryOperator.identity());
     var client = Methanol.newBuilder()
-        .userAgent("Mr Potato")
-        .baseUri(URI.create("https://localhost"))
-        .requestTimeout(Duration.ofSeconds(69))
-        .readTimeout(Duration.ofSeconds(420))
+        .userAgent("Will Smith")
+        .baseUri("https://example.com")
+        .requestTimeout(Duration.ofSeconds(1))
+        .readTimeout(Duration.ofSeconds(2))
         .defaultHeader("Accept", "text/html")
-        .autoAcceptEncoding(true)
-        .interceptor(interceptor1)
-        .backendInterceptor(interceptor2)
+        .autoAcceptEncoding(false)
+        .interceptor(interceptor)
+        .backendInterceptor(backendInterceptor)
         .build();
-    assertEquals(Optional.of("Mr Potato"), client.userAgent());
-    assertEquals(Optional.of(URI.create("https://localhost")), client.baseUri());
-    assertEquals(Optional.of(Duration.ofSeconds(69)), client.requestTimeout());
-    assertEquals(Optional.of(Duration.ofSeconds(420)), client.readTimeout());
-    assertEquals(
-        headers("Accept", "text/html", "User-Agent", "Mr Potato"),
-        client.defaultHeaders());
-    assertTrue(client.autoAcceptEncoding());
-    assertEquals(List.of(interceptor1), client.interceptors());
-    assertEquals(List.of(interceptor2), client.postDecorationInterceptors());
+    assertThat(client.userAgent()).hasValue("Will Smith");
+    assertThat(client.baseUri()).hasValue(URI.create("https://example.com"));
+    assertThat(client.requestTimeout()).hasValue(Duration.ofSeconds(1));
+    assertThat(client.readTimeout()).hasValue(Duration.ofSeconds(2));
+    assertThat(client.defaultHeaders())
+        .isEqualTo(
+            headers(
+                "Accept", "text/html",
+                "User-Agent", "Will Smith")); // The user agent is treated as a default header
+    assertThat(client.autoAcceptEncoding()).isFalse();
+    assertThat(client.interceptors()).containsExactly(interceptor);
+    assertThat(client.backendInterceptors()).containsExactly(backendInterceptor);
   }
 
   @Test
-  void setDelegateFields() throws Exception {
+  void settingBackendFields() {
     var cookieHandler = new CookieManager();
-    var connectTimeout = Duration.ofSeconds(69);
-    var sslContext = SSLContext.getDefault();
-    var executor = FlowSupport.SYNC_EXECUTOR;
+    var connectTimeout = Duration.ofSeconds(1);
+    var sslContext = TestUtils.localhostSslContext();
+    Executor executor = r -> { throw new RejectedExecutionException(); };
     var redirect = Redirect.ALWAYS;
     var version = Version.HTTP_1_1;
     var proxy = ProxySelector.of(InetSocketAddress.createUnresolved("localhost", 80));
@@ -118,217 +116,216 @@ class MethanolTest {
         .proxy(proxy)
         .authenticator(authenticator)
         .build();
-    assertEquals(Optional.of(cookieHandler), client.cookieHandler());
-    assertEquals(Optional.of(connectTimeout), client.connectTimeout());
-    assertEquals(sslContext, client.sslContext());
-    assertEquals(Optional.of(executor), client.executor());
-    assertEquals(redirect, client.followRedirects());
-    assertEquals(version, client.version());
-    assertEquals(Optional.of(proxy), client.proxy());
-    assertEquals(Optional.of(authenticator), client.authenticator());
+    assertThat(client.cookieHandler()).hasValue(cookieHandler);
+    assertThat(client.connectTimeout()).hasValue(connectTimeout);
+    assertThat(client.sslContext()).isSameAs(sslContext);
+    assertThat(client.executor()).hasValue(executor);
+    assertThat(client.followRedirects()).isEqualTo(redirect);
+    assertThat(client.version()).isEqualTo(version);
+    assertThat(client.proxy()).hasValue(proxy);
+    assertThat(client.authenticator()).hasValue(authenticator);
   }
 
   @Test
-  void buildWithExplicitDelegate() throws NoSuchAlgorithmException {
-    var delegate = HttpClient.newBuilder()
+  void buildWithPrebuiltBackend() {
+    var backend = HttpClient.newBuilder()
         .cookieHandler(new CookieManager())
-        .connectTimeout(Duration.ofSeconds(69))
-        .sslContext(SSLContext.getDefault())
-        .executor(FlowSupport.SYNC_EXECUTOR)
+        .connectTimeout(Duration.ofSeconds(1))
+        .sslContext(TestUtils.localhostSslContext())
+        .executor(r -> { throw new RejectedExecutionException(); })
         .followRedirects(Redirect.ALWAYS)
         .version(Version.HTTP_1_1)
         .proxy(ProxySelector.of(InetSocketAddress.createUnresolved("localhost", 80)))
         .authenticator(new Authenticator() {})
         .build();
-    var client = Methanol.newBuilder(delegate).build();
-    assertEquals(delegate, client.underlyingClient());
-    assertEquals(delegate.cookieHandler(), client.cookieHandler());
-    assertEquals(delegate.connectTimeout(), client.connectTimeout());
-    assertSame(delegate.sslContext(), client.sslContext());
-    assertEquals(delegate.executor(), client.executor());
-    assertEquals(delegate.followRedirects(), client.followRedirects());
-    assertEquals(delegate.version(), client.version());
-    assertEquals(delegate.proxy(), client.proxy());
-    assertEquals(delegate.authenticator(), client.authenticator());
+    var client = Methanol.newBuilder(backend).build();
+    assertThat(client.underlyingClient()).isSameAs(backend);
+    assertThat(client)
+        .returns(backend.cookieHandler(), from(HttpClient::cookieHandler))
+        .returns(backend.connectTimeout(), from(HttpClient::connectTimeout))
+        .returns(backend.sslContext(), from(HttpClient::sslContext))
+        .returns(backend.executor(), from(HttpClient::executor))
+        .returns(backend.followRedirects(), from(HttpClient::followRedirects))
+        .returns(backend.version(), from(HttpClient::version))
+        .returns(backend.proxy(), from(HttpClient::proxy))
+        .returns(backend.authenticator(), from(HttpClient::authenticator));
   }
 
   @Test
   void applyConsumer() {
     var client = Methanol.newBuilder()
-        .autoAcceptEncoding(false)
         .apply(b -> b.defaultHeader("Accept", "text/html"))
         .build();
-    assertEquals(headers("Accept", "text/html"), client.defaultHeaders());
+    assertThat(client.defaultHeaders()).isEqualTo(headers("Accept", "text/html"));
   }
 
   @Test
   void addUserAgentAsDefaultHeader() {
-    var client = Methanol.newBuilder().defaultHeader("User-Agent", "Mr Potato").build();
-    assertEquals(Optional.of("Mr Potato"), client.userAgent());
+    var client = Methanol.newBuilder()
+        .defaultHeader("User-Agent", "Will Smith")
+        .build();
+    assertThat(client.userAgent()).hasValue("Will Smith");
   }
 
   @Test
-  void requestDecoration_defaultHeaders() throws Exception {
-    var delegate = new RecordingClient();
-    var client = Methanol.newBuilder(delegate)
+  void defaultHeadersAreAppliedToRequests() throws Exception {
+    var backend = new RecordingClient();
+    var client = Methanol.newBuilder(backend)
         .autoAcceptEncoding(false)
-        .defaultHeaders("Accept", "text/html", "Cookie", "password=123")
+        .defaultHeaders(
+            "Accept", "text/html",
+            "Cookie", "password=123")
         .build();
-    var request = GET("https://localhost").header("Foo", "bar");
-    client.send(request, discarding());
-    assertEquals(
-        headers(
+    client.send(GET("https://example.com").header("X-Foo", "bar"), BodyHandlers.discarding());
+    verifyThat(backend.request)
+        .hasHeadersExactly(
             "Accept", "text/html",
             "Cookie", "password=123",
-            "Foo", "bar"),
-        delegate.request.headers());
+            "X-Foo", "bar");
   }
 
   @Test
-  void requestDecoration_userAgent() throws Exception {
-    var delegate = new RecordingClient();
-    var client = Methanol.newBuilder(delegate)
+  void userAgentIsAppliedToRequests() throws Exception {
+    var backend = new RecordingClient();
+    var client = Methanol.newBuilder(backend)
         .autoAcceptEncoding(false)
-        .userAgent("Mr Potato")
+        .userAgent("Will Smith")
         .build();
-    var request = GET("https://localhost");
-    client.send(request, discarding());
-    assertEquals(headers("User-Agent", "Mr Potato"), delegate.request.headers());
+    client.send(GET("https://example.com"), BodyHandlers.discarding());
+    verifyThat(backend.request).hasHeadersExactly("User-Agent", "Will Smith");
   }
 
   @Test
-  void requestDecoration_baseUri() throws Exception {
-    var delegate = new RecordingClient();
-    var client = Methanol.newBuilder(delegate).baseUri("https://localhost/secrets/").build();
-    client.send(GET(""), discarding()); // empty relative path
-    assertEquals(client.baseUri().orElseThrow(), delegate.request.uri());
-    client.send(GET("/memes?q=bruh"), discarding()); // root path
-    assertEquals(URI.create("https://localhost/memes?q=bruh"), delegate.request.uri());
-    client.send(GET("memes?q=bruh"), discarding()); // relative path
-    assertEquals(URI.create("https://localhost/secrets/memes?q=bruh"), delegate.request.uri());
+  void baseUriIsAppliedToRequests() throws Exception {
+    var backend = new RecordingClient();
+    var client = Methanol.newBuilder(backend).baseUri("https://example.com/").build();
+
+    client.send(GET(""), BodyHandlers.discarding());
+    verifyThat(backend.request).hasUri("https://example.com/");
+
+    client.send(GET("/b?q=value"), BodyHandlers.discarding());
+    verifyThat(backend.request).hasUri("https://example.com/b?q=value");
+
+    client.send(GET("b?q=value"), BodyHandlers.discarding());
+    verifyThat(backend.request).hasUri("https://example.com/b?q=value");
+
+    client.send(GET("?q=value"), BodyHandlers.discarding());
+    verifyThat(backend.request).hasUri("https://example.com/?q=value");
   }
 
   @Test
-  void requestDecorations_autoAcceptEncoding() throws Exception {
-    var delegate = new RecordingClient();
-    var client = Methanol.newBuilder(delegate).autoAcceptEncoding(true).build();
-    client.send(GET("https://localhost"), discarding());
-    assertEquals(headers("Accept-Encoding", acceptEncodingValue()), delegate.request.headers());
+  void autoAcceptEncoding() throws Exception {
+    var backend = new RecordingClient();
+    var client = Methanol.newBuilder(backend).build();
+    client.send(GET("https://example.com"), BodyHandlers.discarding());
+    verifyThat(backend.request).hasHeadersExactly("Accept-Encoding", acceptEncodingValue());
   }
 
   @Test
-  void requestDecorations_mimeBodyPublisher() throws Exception {
-    var delegate = new RecordingClient();
-    var client = Methanol.newBuilder(delegate).autoAcceptEncoding(false).build();
-    var mimeBody = ofMediaType(noBody(), MediaType.of("text", "plain"));
-    client.send(POST("https://localhost", mimeBody), discarding());
-    assertEquals(headers("Content-Type", "text/plain"), delegate.request.headers());
+  void requestWithMimeBodyPublisher() throws Exception {
+    var backend = new RecordingClient();
+    var client = Methanol.newBuilder(backend).build();
+    var mimeBody = MoreBodyPublishers.ofMediaType(
+        BodyPublishers.ofString("something"), MediaType.of("text", "plain"));
+    client.send(POST("https://example.com", mimeBody), BodyHandlers.discarding());
+    verifyThat(backend.request).containsHeader("Content-Type", "text/plain");
   }
 
   @Test
-  void requestDecoration_noOverwrites_exceptWithContentType() throws Exception {
-    var delegate = new RecordingClient();
-    var client = Methanol.newBuilder(delegate)
-        .defaultHeaders("Accept", "text/html", "Content-Type", "image/png")
-        .autoAcceptEncoding(true)
-        .userAgent("Mr Potato")
-        .requestTimeout(Duration.ofSeconds(69))
+  void defaultRequestTimeoutIsApplied() throws Exception {
+    var timeout = Duration.ofSeconds(1);
+    var backend = new RecordingClient();
+    var client = Methanol.newBuilder(backend).requestTimeout(timeout).build();
+    client.send(GET("https://example.com"), BodyHandlers.discarding());
+    verifyThat(backend.request).hasTimeout(Duration.ofSeconds(1));
+  }
+
+  @Test
+  void requestPropertiesAreNotOverwrittenByDefaultOnes() throws Exception {
+    var backend = new RecordingClient();
+    var client = Methanol.newBuilder(backend)
+        .userAgent("Will Smith")
+        .defaultHeaders("Accept", "text/html")
+        .requestTimeout(Duration.ofSeconds(1))
         .build();
-    var mimeBody = ofMediaType(noBody(), MediaType.of("application", "json"));
-    var request = MutableRequest.create("https://localhost")
+    var request = GET("https://localhost")
         .headers(
             "Accept", "application/json",
-            "Accept-Encoding", "myzip",
-            "User-Agent", "Joe Mama",
-            "Content-Type", "text/plain")
-        .POST(mimeBody)
-        .timeout(Duration.ofSeconds(420))
+            "User-Agent", "Dave Bautista",
+            "Accept-Encoding", "gzip")
+        .timeout(Duration.ofSeconds(2))
         .build();
-    client.send(request, discarding());
-    assertEquals(
-        headers(
-            "Accept", "application/json", // not overwritten by default header
-            "Accept-Encoding", "myzip", // not overwritten by autoCompression
-            "User-Agent", "Joe Mama", // not overwritten by userAgent
-            "Content-Type", mimeBody.mediaType().toString()), // overwritten by MimeBodyPublisher
-        delegate.request.headers());
-    assertEquals(request.timeout(), delegate.request.timeout()); // not overwritten by requestTimeout
+    client.send(request, BodyHandlers.discarding());
+    verifyThat(request)
+        .hasHeadersExactly(
+            "Accept", "application/json",
+            "User-Agent", "Dave Bautista",
+            "Accept-Encoding", "gzip")
+        .hasTimeout(Duration.ofSeconds(2));
   }
 
   @Test
-  void requestDecoration_requestTimeout() throws Exception {
-    var timeout = Duration.ofSeconds(69);
-    var delegate = new RecordingClient();
-    var client = Methanol.newBuilder(delegate).requestTimeout(timeout).build();
-    client.send(GET("https://localhost"), discarding());
-    assertEquals(Optional.of(timeout), delegate.request.timeout());
-  }
-
-  @Test
-  void requestDecoration_fromMutableRequest() throws Exception {
-    var delegate = new RecordingClient();
-    var client = Methanol.newBuilder(delegate)
-        .baseUri("https://localhost/")
+  void sendMutableRequest() throws Exception {
+    var backend = new RecordingClient();
+    var client = Methanol.newBuilder(backend)
+        .userAgent("Will Smith")
+        .baseUri("https://example.com")
         .defaultHeader("Accept", "text/html")
-        .autoAcceptEncoding(true)
-        .userAgent("Mr Potato")
         .build();
-    var mutableRequest = POST("/secrets", ofString("Santa is real"))
+    var mutableRequest = POST("/a", BodyPublishers.ofString("something"))
         .header("Content-Type", "text/plain")
-        .timeout(Duration.ofSeconds(69))
+        .timeout(Duration.ofSeconds(1))
         .version(Version.HTTP_1_1)
         .expectContinue(true);
-    var snapshot = mutableRequest.build();
-    client.send(mutableRequest, discarding());
-    var sentRequest = delegate.request;
-    // original request properties are copied
-    assertTrue(
-        sentRequest.headers().map().entrySet().containsAll(snapshot.headers().map().entrySet()));
-    assertEquals(snapshot.bodyPublisher(), sentRequest.bodyPublisher());
-    assertEquals(snapshot.timeout(), sentRequest.timeout());
-    assertEquals(snapshot.version(), sentRequest.version());
-    assertEquals(snapshot.expectContinue(), sentRequest.expectContinue());
-    // main request not mutated
-    assertDeepEquals(snapshot, mutableRequest);
+    var snapshot = mutableRequest.toImmutableRequest();
+    client.send(mutableRequest, BodyHandlers.discarding());
+
+    // Verify that original request properties are copied
+    verifyThat(backend.request)
+        .containsHeaders(snapshot.headers())
+        .hasBodyPublisher(snapshot.bodyPublisher())
+        .hasTimeout(snapshot.timeout())
+        .hasVersion(snapshot.version())
+        .hasExpectContinue(snapshot.expectContinue());
+
+    // Request passed to the client isn't mutated
+    verifyThat(mutableRequest).isDeeplyEqualTo(snapshot);
   }
 
   @Test
-  void requestDecoration_fromImmutable() throws Exception {
-    var delegate = new RecordingClient();
-    var client = Methanol.newBuilder(delegate)
-        .baseUri("https://localhost/")
+  void sendImmutableRequest() throws Exception {
+    var backend = new RecordingClient();
+    var client = Methanol.newBuilder(backend)
+        .userAgent("Will Smith")
+        .baseUri("https://example.com")
         .defaultHeader("Accept", "text/html")
-        .autoAcceptEncoding(true)
-        .userAgent("Mr Potato")
         .build();
-    var immutableRequest = POST("/secrets", ofString("Santa is real"))
+    var immutableRequest = POST("/a", BodyPublishers.ofString("something"))
         .header("Content-Type", "text/plain")
-        .timeout(Duration.ofSeconds(69))
+        .timeout(Duration.ofSeconds(1))
         .version(Version.HTTP_1_1)
         .expectContinue(true)
-        .build();
-    client.send(immutableRequest, discarding());
-    var sentRequest = delegate.request;
-    // original request properties are copied
-    assertTrue(
-        sentRequest.headers().map().entrySet().containsAll(
-            immutableRequest.headers().map().entrySet()));
-    assertEquals(immutableRequest.bodyPublisher(), sentRequest.bodyPublisher());
-    assertEquals(immutableRequest.timeout(), sentRequest.timeout());
-    assertEquals(immutableRequest.version(), sentRequest.version());
-    assertEquals(immutableRequest.expectContinue(), sentRequest.expectContinue());
+        .toImmutableRequest();
+    client.send(immutableRequest, BodyHandlers.discarding());
+
+    // Verify that original request properties are copied
+    verifyThat(backend.request)
+        .containsHeaders(immutableRequest.headers())
+        .hasBodyPublisher(immutableRequest.bodyPublisher())
+        .hasTimeout(immutableRequest.timeout())
+        .hasVersion(immutableRequest.version())
+        .hasExpectContinue(immutableRequest.expectContinue());
   }
 
   @Test
   void illegalBaseUri() {
     var builder = Methanol.newBuilder();
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> builder.baseUri(new URI(null, "localhost", null, null))); // no scheme
-    assertThrows(IllegalArgumentException.class,
-        () -> builder.baseUri("ws://localhost")); // not http
-    assertThrows(IllegalArgumentException.class,
-        () -> builder.baseUri(new URI("https", null, "/", ""))); // no host
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.baseUri(new URI(null, "localhost", null, null))); // No scheme
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.baseUri("ws://localhost")); // Not http or https
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.baseUri(new URI("https", null, "/", ""))); // No host
   }
 
   /** URI is also checked after being resolved with base URI. */
@@ -336,43 +333,32 @@ class MethanolTest {
   void illegalResolvedUri() {
     var client = Methanol.newBuilder().build();
     var webSocketRequest = GET("ws://localhost");
-    assertThrows(IllegalArgumentException.class, () -> client.send(webSocketRequest, discarding()));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> client.send(webSocketRequest, BodyHandlers.discarding()));
   }
 
   @Test
   void illegalUserAgent() {
     var builder = Methanol.newBuilder();
-    assertThrows(IllegalArgumentException.class, () -> builder.userAgent("b\ruh"));
-    assertThrows(IllegalArgumentException.class, () -> builder.userAgent("…"));
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.userAgent("ba\r"));
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.userAgent("…"));
   }
 
   @Test
   void illegalRequestTimeout() {
     var builder = Methanol.newBuilder();
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> builder.requestTimeout(Duration.ofSeconds(0)));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> builder.requestTimeout(Duration.ofSeconds(-1)));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.requestTimeout(Duration.ofSeconds(0)));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.requestTimeout(Duration.ofSeconds(-1)));
   }
 
   @Test
   void illegalDefaultHeaders() {
     var builder = Methanol.newBuilder();
-    builder.defaultHeader("foo", "fa\t "); // valid
-    assertThrows(IllegalArgumentException.class, () -> builder.defaultHeader("ba\r", "foo"));
-    assertThrows(IllegalArgumentException.class, () -> builder.defaultHeaders("Name", "…"));
-  }
-
-  private static void assertDeepEquals(HttpRequest x, HttpRequest y) {
-    assertEquals(x.method(), y.method());
-    assertEquals(x.uri(), y.uri());
-    assertEquals(x.headers(), y.headers());
-    assertEquals(x.bodyPublisher(), y.bodyPublisher());
-    assertEquals(x.timeout(), y.timeout());
-    assertEquals(x.version(), y.version());
-    assertEquals(x.expectContinue(), y.expectContinue());
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.defaultHeader("ba\r", "foo"));
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.defaultHeader("", "foo"));
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.defaultHeaders("name", "…"));
   }
 
   private static String acceptEncodingValue() {
@@ -380,7 +366,6 @@ class MethanolTest {
   }
 
   static final class RecordingClient extends HttpClientStub {
-
     HttpRequest request;
     BodyHandler<?> handler;
     PushPromiseHandler<?> pushHandler;

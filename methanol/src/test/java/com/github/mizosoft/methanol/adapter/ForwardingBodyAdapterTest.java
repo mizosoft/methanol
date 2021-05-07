@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.adapter;
 
-import static com.github.mizosoft.methanol.testutils.adapter.BodyAdapterVerifier.verifyThat;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 
 import com.github.mizosoft.methanol.testutils.CharSequenceEncoder;
 import com.github.mizosoft.methanol.testutils.StringDecoder;

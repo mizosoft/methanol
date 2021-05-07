@@ -23,12 +23,12 @@
 package com.github.mizosoft.methanol;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URLEncoder;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -115,7 +115,7 @@ public final class FormBodyPublisher implements MimeBodyPublisher {
   }
 
   private static String encodeFormValueUtf8(String value) {
-    return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    return URLEncoder.encode(value, UTF_8);
   }
 
   /** Returns a new {@code FormBodyPublisher.Builder}. */

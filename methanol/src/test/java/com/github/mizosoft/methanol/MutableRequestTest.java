@@ -22,178 +22,214 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.MutableRequest.POST;
-import static com.github.mizosoft.methanol.MutableRequest.create;
 import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.net.URI;
 import java.net.http.HttpClient.Version;
-import java.net.http.HttpHeaders;
-import java.net.http.HttpRequest;
-import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.time.Duration;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class MutableRequestTest {
-
-  private static final URI uri = URI.create("https://localhost");
-  private static final String method = "PUT";
-  private static final String[] headersArray = {
-    "Content-Type", "application/x-bruh",
-    "Content-Length", "69"
-  };
-  private static final HttpHeaders headers = headers(headersArray);
-  private static final BodyPublisher publisher = BodyPublishers.noBody();
-  private static final Duration timeout = Duration.ofSeconds(420);
-  private static final Version version = Version.HTTP_1_1;
-  private static final boolean expectContinue = true;
-
   @Test
-  void setFields() {
-    assertHasFields(createWithFields());
+  void settingFields() {
+    var publisher = BodyPublishers.ofString("XYZ");
+    var request = MutableRequest.create()
+        .uri("https://example.com")
+        .method("PUT", publisher)
+        .header("Content-Type", "text/plain")
+        .timeout(Duration.ofSeconds(20))
+        .version(Version.HTTP_2)
+        .expectContinue(true);
+    verifyThat(request)
+        .hasUri("https://example.com")
+        .isPUT()
+        .hasBodyPublisher(publisher)
+        .hasHeadersExactly("Content-Type", "text/plain")
+        .hasTimeout(Duration.ofSeconds(20))
+        .hasVersion(Version.HTTP_2)
+        .hasExpectContinue(true);
   }
 
   @Test
-  void setFieldsAndBuild() {
-    assertHasFields(createWithFields().build());
+  void settingFieldsBeforeSnapshot() {
+    var publisher = BodyPublishers.ofString("XYZ");
+    var request = MutableRequest.create()
+        .uri("https://example.com")
+        .method("PUT", publisher)
+        .header("Content-Type", "text/plain")
+        .timeout(Duration.ofSeconds(20))
+        .version(Version.HTTP_2)
+        .expectContinue(true)
+        .toImmutableRequest();
+    verifyThat(request)
+        .hasUri("https://example.com")
+        .isPUT()
+        .hasBodyPublisher(publisher)
+        .hasHeadersExactly("Content-Type", "text/plain")
+        .hasTimeout(Duration.ofSeconds(20))
+        .hasVersion(Version.HTTP_2)
+        .hasExpectContinue(true);
   }
 
   @Test
-  void uriFromString() {
-    var uriStr = uri.toString();
-    assertEquals(uri, create().uri(uriStr).uri());
-    assertEquals(uri, create(uriStr).uri());
-    assertEquals(uri, GET(uriStr).uri());
-    assertEquals(uri, POST(uriStr, BodyPublishers.noBody()).uri());
+  void setUriFromString() {
+    verifyThat(MutableRequest.create().uri("https://example.com")).hasUri("https://example.com");
+    verifyThat(MutableRequest.create("https://example.com")).hasUri("https://example.com");
+    verifyThat(MutableRequest.GET("https://example.com")).hasUri("https://example.com");
+    verifyThat(MutableRequest.POST("https://example.com", BodyPublishers.noBody()))
+        .hasUri("https://example.com");
   }
 
   @Test
-  void invalidateCachedHeaders() {
-    var request = create().header("Content-Length", "69");
-    assertEquals(headers("Content-Length", "69"), request.headers());
-    request.header("Content-Type", "application/x-bruh");
-    assertEquals(
-        headers("Content-Length", "69", "Content-Type", "application/x-bruh"),
-        request.headers());
+  void mutateHeaders() {
+    var request = MutableRequest.create()
+        .header("Content-Length", "1")
+        .header("Accept-Encoding", "gzip");
+    verifyThat(request)
+        .hasHeadersExactly(
+            "Content-Length", "1",
+            "Accept-Encoding", "gzip");
+
+    request.removeHeader("Content-Length");
+    verifyThat(request).hasHeadersExactly("Accept-Encoding", "gzip");
+
+    request.setHeader("Accept-Encoding", "deflate");
+    verifyThat(request).hasHeadersExactly("Accept-Encoding", "deflate");
+
+    request.setHeader("Content-Length", "2");
+    verifyThat(request)
+        .hasHeadersExactly(
+            "Accept-Encoding", "deflate",
+            "Content-Length", "2");
+
+    request.headers(
+        "Content-Type", "text/plain",
+        "Accept-Language", "fr-FR");
+    verifyThat(request)
+        .hasHeadersExactly(
+            "Accept-Encoding", "deflate",
+            "Content-Length", "2",
+            "Content-Type", "text/plain",
+            "Accept-Language", "fr-FR");
+
+    request.removeHeaders();
+    verifyThat(request).hasNoHeaders();
   }
 
   @Test
-  void addFromHttpHeaders() {
+  void addHttpHeaders() {
     var headers = headers(
         "Accept", "text/html",
         "Cookie", "sessionid=123",
         "Cookie", "password=321");
-    var request = create().headers(headers);
-    assertEquals(headers, request.headers());
+    var request = MutableRequest.create().headers(headers);
+    verifyThat(request).hasHeadersExactly(headers);
+
+    request.header("Accept-Encoding", "gzip");
+    verifyThat(request)
+        .hasHeadersExactly(
+            "Accept", "text/html",
+            "Cookie", "sessionid=123",
+            "Cookie", "password=321",
+            "Accept-Encoding", "gzip");
+  }
+
+  @Test
+  void copying() {
+    var request = MutableRequest.create()
+        .POST(BodyPublishers.ofString("something"))
+        .headers(
+            "Content-Length", "1",
+            "Accept-Encoding", "gzip")
+        .timeout(Duration.ofSeconds(20))
+        .version(Version.HTTP_1_1)
+        .expectContinue(true);
+    verifyThat(request.copy()).isDeeplyEqualTo(request);
+    verifyThat(request.copy().toImmutableRequest()).isDeeplyEqualTo(request);
+    verifyThat(request.toImmutableRequest()).isDeeplyEqualTo(request);
+    verifyThat(MutableRequest.copyOf(request)).isDeeplyEqualTo(request);
+    verifyThat(MutableRequest.copyOf(request).toImmutableRequest()).isDeeplyEqualTo(request);
+    verifyThat(MutableRequest.copyOf(request.toImmutableRequest())).isDeeplyEqualTo(request);
   }
 
   @Test
   void changeHeadersAfterCopy() {
-    var request1 = create().header("Content-Length", "69");
-    var request2 = request1.copy().header("Content-Type", "application/x-bruh");
-    assertEquals(headers("Content-Length", "69"), request1.headers());
-    assertEquals(
-        headers("Content-Length", "69", "Content-Type", "application/x-bruh"),
-        request2.headers());
-  }
-
-  @Test
-  void copyOf() {
-    var request = create()
-        .POST(publisher)
-        .headers(headersArray)
-        .expectContinue(expectContinue)
-        .timeout(timeout)
-        .version(version);
-    assertDeepEquals(request, MutableRequest.copyOf(request));
-    assertDeepEquals(request, MutableRequest.copyOf(request.build()));
-  }
-
-  @Test
-  void immutableCopy() {
-    var request = create(uri)
-        .POST(publisher)
-        .headers(headersArray)
-        .expectContinue(expectContinue)
-        .timeout(timeout)
-        .version(version);
-    assertDeepEquals(request, request.toImmutableRequest());
+    var request = MutableRequest.create().header("Content-Length", "1");
+    var requestCopy = request.copy().header("Accept-Encoding", "gzip");
+    verifyThat(request).hasHeadersExactly("Content-Length", "1");
+    verifyThat(requestCopy)
+        .hasHeadersExactly(
+            "Content-Length", "1",
+            "Accept-Encoding", "gzip");
   }
 
   @Test
   void defaultFields() {
-    var request = create();
-    assertEquals("GET", request.method());
-    assertEquals(URI.create(""), request.uri());
-    assertEquals(headers(/* empty */), request.headers());
-    assertEquals(Optional.empty(), request.bodyPublisher());
-    assertEquals(Optional.empty(), request.timeout());
-    assertEquals(Optional.empty(), request.version());
-    assertFalse(request.expectContinue());
+    verifyThat(MutableRequest.create())
+        .isGET()
+        .hasUri("")
+        .hasNoHeaders()
+        .hasNoBody()
+        .hasNoTimeout()
+        .hasNoVersion()
+        .hasExpectContinue(false);
   }
 
   @Test
-  void changeHeaders() {
-    var request = create().headers("Content-Length", "69", "Content-Type", "application/x-bruh");
-    assertEquals(
-        headers("Content-Length", "69", "Content-Type", "application/x-bruh"),
-        request.headers());
-    assertEquals(
-        headers("Content-Type", "application/x-bruh"),
-        request.removeHeader("Content-Length").headers());
-    assertEquals(
-        headers("Content-Type", "application/x-bruh-moment"),
-        request.setHeader("Content-Type", "application/x-bruh-moment").headers());
-    // setHeader should also add header when it doesn't exist
-    assertEquals(
-        headers("Content-Type", "application/x-bruh-moment", "Accept", "text/html"),
-        request.setHeader("Accept", "text/html").headers());
-    assertEquals(headers(/* empty */), request.removeHeaders().headers());
-  }
-
-  @Test
-  void testApply() {
-    var request = create().apply(b -> b.uri(uri));
-    assertEquals(uri, request.uri());
+  void applyConsumer() {
+    var request = MutableRequest.create().apply(r -> r.uri("https://example.com"));
+    verifyThat(request).hasUri("https://example.com");
   }
 
   @Test
   void testToString() {
-    var request = GET("https://google.com");
-    assertEquals("https://google.com GET", request.toString());
-    assertEquals("https://google.com GET", request.build().toString());
+    assertThat(MutableRequest.GET("https://example.com"))
+        .hasToString("https://example.com GET")
+        .extracting(MutableRequest::toImmutableRequest)
+        .hasToString("https://example.com GET");
   }
 
   @Test
   void staticFactories() {
-    assertEquals(uri, create(uri).uri());
-    var getRequest = GET(uri);
-    assertEquals("GET", getRequest.method());
-    assertEquals(uri, getRequest.uri());
-    var postRequest = POST(uri, publisher);
-    assertEquals("POST", postRequest.method());
-    assertSame(publisher, postRequest.bodyPublisher().orElseThrow());
+    var uri = URI.create("https://example.com");
+
+    verifyThat(MutableRequest.create(uri))
+        .hasUri(uri)
+        .isGET()
+        .hasNoBody();
+
+    verifyThat(MutableRequest.GET(uri))
+        .hasUri(uri)
+        .isGET()
+        .hasNoBody();
+
+    var publisher = BodyPublishers.ofString("something");
+    verifyThat(MutableRequest.POST(uri, publisher))
+        .hasUri(uri)
+        .isPOST()
+        .hasBodyPublisher(publisher);
   }
 
   @Test
   void methodShortcuts() {
-    var request = create().method("POST", publisher);
-    assertEquals("GET", request.GET().method());
-    assertTrue(request.bodyPublisher().isEmpty());
-    assertEquals("POST", request.POST(publisher).method());
-    assertSame(publisher, request.bodyPublisher().orElseThrow());
-    assertEquals("DELETE", request.DELETE().method());
-    assertTrue(request.bodyPublisher().isEmpty());
-    assertEquals("PUT", request.PUT(publisher).method());
-    assertSame(publisher, request.bodyPublisher().orElseThrow());
+    var request = MutableRequest.create();
+    var publisher = BodyPublishers.ofString("something");
+
+    request.POST(publisher);
+    verifyThat(request).isPOST().hasBodyPublisher(publisher);
+
+    request.GET();
+    verifyThat(request).isGET().hasNoBody();
+
+    request.PUT(publisher);
+    verifyThat(request).isPUT().hasBodyPublisher(publisher);
+
+    request.DELETE();
+    verifyThat(request).isDELETE().hasNoBody();
   }
 
   @Test
@@ -206,72 +242,50 @@ class MutableRequestTest {
             "X-My-Second-Header", "val2");
 
     request.removeHeadersIf((name, __) -> "X-My-First-Header".equals(name));
-    assertEquals(
-        headers("X-My-Second-Header", "val1", "X-My-Second-Header", "val2"), request.headers());
+    verifyThat(request)
+        .hasHeadersExactly(
+            "X-My-Second-Header", "val1",
+            "X-My-Second-Header", "val2");
 
     request.removeHeadersIf(
         (name, value) -> "X-My-Second-Header".equals(name) && "val1".equals(value));
-    assertEquals(headers("X-My-Second-Header", "val2"), request.headers());
+    verifyThat(request).hasHeadersExactly("X-My-Second-Header", "val2");
 
     request.removeHeadersIf((__, ___) -> true);
-    assertEquals(headers(/* empty */), request.headers());
+    verifyThat(request).hasNoHeaders();
   }
 
   @Test
-  void headers_invalidLength() {
-    assertThrows(IllegalArgumentException.class, () -> create().headers(new String[0]));
-    assertThrows(
-        IllegalArgumentException.class, () -> create().headers("Content-Length", "69", "Orphan"));
+  void headersWithInvalidNumberOfArguments() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MutableRequest.create().headers(new String[0]));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MutableRequest.create().headers("Content-Length", "1", "Orphan"));
   }
 
   @Test
   void illegalHeaders() {
-    create().header("foo", "fa\t "); // valid
-    assertThrows(IllegalArgumentException.class, () -> create().header("ba\r", "foo"));
-    assertThrows(IllegalArgumentException.class, () -> create().headers("Name", "…"));
-    assertThrows(IllegalArgumentException.class, () -> create().headers(headers("ba\r..", "foo")));
-    assertThrows(IllegalArgumentException.class, () -> create().headers(headers("Name", "…")));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MutableRequest.create().header("ba\r", "foo"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MutableRequest.create().headers("Name", "…"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MutableRequest.create().headers(headers("ba\r..", "foo")));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MutableRequest.create().headers(headers("Name", "…")));
   }
 
   @Test
   void illegalTimeout() {
-    assertThrows(IllegalArgumentException.class, () -> create().timeout(Duration.ofSeconds(0)));
-    assertThrows(IllegalArgumentException.class, () -> create().timeout(Duration.ofSeconds(-1)));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MutableRequest.create().timeout(Duration.ofSeconds(0)));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MutableRequest.create().timeout(Duration.ofSeconds(-1)));
   }
 
   @Test
   void illegalMethodName() {
-    assertThrows(
-        IllegalArgumentException.class, () -> create().method("ba\r", BodyPublishers.noBody()));
-  }
-
-  private static void assertDeepEquals(HttpRequest x, HttpRequest y) {
-    assertEquals(x.method(), y.method());
-    assertEquals(x.uri(), y.uri());
-    assertEquals(x.headers(), y.headers());
-    assertEquals(x.bodyPublisher(), y.bodyPublisher());
-    assertEquals(x.timeout(), y.timeout());
-    assertEquals(x.version(), y.version());
-    assertEquals(x.expectContinue(), y.expectContinue());
-  }
-
-  private static void assertHasFields(HttpRequest req) {
-    assertEquals(method, req.method());
-    assertEquals(uri, req.uri());
-    assertEquals(headers, req.headers());
-    assertSame(publisher, req.bodyPublisher().orElseThrow());
-    assertEquals(timeout, req.timeout().orElseThrow());
-    assertEquals(version, req.version().orElseThrow());
-    assertEquals(expectContinue, req.expectContinue());
-  }
-
-  private static MutableRequest createWithFields() {
-    return MutableRequest.create()
-        .uri(uri)
-        .method(method, publisher)
-        .headers(headersArray)
-        .timeout(timeout)
-        .version(version)
-        .expectContinue(expectContinue);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MutableRequest.create().method("ba\r", BodyPublishers.noBody()));
   }
 }

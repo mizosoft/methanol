@@ -22,301 +22,309 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.MoreBodyPublishers.ofMediaType;
-import static com.github.mizosoft.methanol.MultipartBodyPublisher.newBuilder;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
-import static java.net.http.HttpRequest.BodyPublishers.fromPublisher;
-import static java.net.http.HttpRequest.BodyPublishers.ofInputStream;
-import static java.net.http.HttpRequest.BodyPublishers.ofString;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.assertj.core.api.Assertions.from;
+import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
-import com.github.mizosoft.methanol.testutils.BodyCollector;
-import com.github.mizosoft.methanol.testutils.FailedPublisher;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testutils.FailingPublisher;
 import com.github.mizosoft.methanol.testutils.RegistryFileTypeDetector;
 import com.github.mizosoft.methanol.testutils.TestException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ForkJoinPool;
-import java.util.function.Consumer;
+import java.util.concurrent.Executor;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
+@ExtendWith(ExecutorExtension.class)
 class MultipartBodyPublisherTest {
-
   @Test
   void defaultMediaType() {
-    var type = onePart().build().mediaType();
-    assertEquals("multipart", type.type());
-    assertEquals("form-data", type.subtype());
+    assertThat(onePart().build().mediaType())
+        .returns("multipart", from(MediaType::type))
+        .returns("form-data", from(MediaType::subtype));
   }
 
   @Test
   void customSubtype() {
-    var type = onePart()
-        .mediaType(MediaType.parse("multipart/mixed"))
-        .build()
-        .mediaType();
-    assertEquals("mixed", type.subtype());
+    assertThat(onePart().mediaType(MediaType.parse("multipart/mixed")).build().mediaType())
+        .returns("multipart", from(MediaType::type))
+        .returns("mixed", from(MediaType::subtype));
   }
 
   @Test
   void customBoundary() {
-    var builder = onePart();
-    assertEquals("cool_boundary", boundaryOf(builder.boundary("cool_boundary")));
-    var customType = MediaType.parse("multipart/alternative")
-        .withParameter("boundary", "cool_boundary");
-    assertEquals("cool_boundary", boundaryOf(builder.mediaType(customType)));
-    assertEquals("cooler_boundary",
-        boundaryOf(builder.mediaType(customType).boundary("cooler_boundary")));
+    assertThat(onePart().boundary("my_boundary").build())
+        .returns("my_boundary", from(MultipartBodyPublisher::boundary));
+
+    var mediaType = MediaType.parse("multipart/alternative")
+        .withParameter("boundary", "my_boundary");
+
+    assertThat(onePart().mediaType(mediaType).build())
+        .returns("my_boundary", from(MultipartBodyPublisher::boundary));
+
+    assertThat(onePart().mediaType(mediaType).boundary("my_other_boundary").build())
+        .returns("my_other_boundary", from(MultipartBodyPublisher::boundary));
+
+    assertThat(onePart().boundary("my_other_boundary").mediaType(mediaType).build())
+        .returns("my_boundary", from(MultipartBodyPublisher::boundary));
   }
 
   @Test
   void invalidBoundary() {
-    var customType = MediaType.parse("multipart/alternative");
-    List.<Consumer<String>>of(
-        b -> onePart().boundary(b),
-        b -> onePart().mediaType(customType.withParameter("boundary", b))
-    ).forEach(s -> {
-      assertIllegalArg(() -> s.accept("i||ega|_boundary"));
-      assertIllegalArg(() -> s.accept("b".repeat(71)));
-      assertIllegalArg(() -> s.accept(""));
-      assertIllegalArg(() -> s.accept("ends_with_space "));
-    });
+    var builder = MultipartBodyPublisher.newBuilder();
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.boundary("i||ega|_boundary"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.boundary("b".repeat(71))); // Illegal boundary size
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.boundary(""));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.boundary("ends_with_space "));
+  }
+
+  @Test
+  void invalidBoundaryFromMediaType() {
+    var builder = MultipartBodyPublisher.newBuilder();
+    var mediaType = MediaType.parse("multipart/form-data");
+    assertThatIllegalArgumentException()
+        .isThrownBy(
+            () -> builder.mediaType(mediaType.withParameter("boundary", "i||ega|_boundary")));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.mediaType(mediaType.withParameter("boundary", "b".repeat(71))));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.mediaType(mediaType.withParameter("boundary", "")));
+    assertThatIllegalArgumentException()
+        .isThrownBy(
+            () -> builder.mediaType(mediaType.withParameter("boundary", "ends_with_space ")));
   }
 
   @Test
   void invalidMediaType() {
-    assertIllegalArg(() -> onePart().mediaType(MediaType.parse("text/plain")));
+    var builder = MultipartBodyPublisher.newBuilder();
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.mediaType(MediaType.parse("text/plain")));
   }
 
   @Test
-  void contentTypeHeaderWithMimeBodyPublisher() {
+  void createPartWithContentTypeHeaderAndMimeBodyPublisher() {
+    // Content-Type can't be defined in two different places
     var headers = headers("Content-Type", "application/octet-stream");
-    var publisher = ofMediaType(ofString("something"), MediaType.parse("text/plain"));
-    assertIllegalArg(() -> Part.create(headers, publisher));
+    var publisher = MoreBodyPublishers.ofMediaType(
+        BodyPublishers.ofString("something"), MediaType.parse("text/plain"));
+    assertThatIllegalArgumentException().isThrownBy(() -> Part.create(headers, publisher));
   }
 
   @Test
-  void invalidHeaderName() {
+  void createPartWithInvalidHeaderName() {
     var headers = headers("Illeg@l-Token", "whatever");
-    var publisher = ofString("ligma");
-    assertIllegalArg(() -> Part.create(headers, publisher));
+    var publisher = BodyPublishers.ofString("something");
+    assertThatIllegalArgumentException().isThrownBy(() -> Part.create(headers, publisher));
   }
 
   @Test
   void addNoParts() {
-    assertThrows(IllegalStateException.class, () -> newBuilder().build());
+    var builder = MultipartBodyPublisher.newBuilder();
+    assertThatIllegalStateException().isThrownBy(builder::build);
   }
 
   @Test
-  void serializeBodyPart() {
-    var expected =
-          "--cool_boundary\r\n"
-        + "Foo: bar\r\n"
-        + "\r\n"
-        + "some content\r\n"
-        + "--cool_boundary--\r\n";
-    var body = newBuilder()
-        .boundary("cool_boundary")
-        .part(Part.create(headers("Foo", "bar"), ofString("some content")))
+  void serializeOnePart() {
+    var body = MultipartBodyPublisher.newBuilder()
+        .boundary("my_boundary")
+        .part(Part.create(headers("X-Foo", "bar"), BodyPublishers.ofString("some content")))
         .build();
-    assertContentEquals(expected, body, US_ASCII);
+    verifyThat(body)
+        .succeedsWith(
+              "--my_boundary\r\n"
+            + "X-Foo: bar\r\n"
+            + "\r\n"
+            + "some content\r\n"
+            + "--my_boundary--\r\n");
   }
 
   @Test
   void serializeFormParts() {
-    var expected =
-          "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"innocent_field\"\r\n"
-        + "\r\n"
-        + "Hold my innocent cup of water\r\n"
-        + "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"hacker_field\"; filename=\"hack.cpp\"\r\n"
-        + "Content-Type: text/x-c; charset=ascii\r\n"
-        + "\r\n"
-        + "system(\"hack pc\");\r\n"
-        + "--cool_boundary--\r\n";
-    var body = newBuilder()
-        .boundary("cool_boundary")
-        .formPart("innocent_field", ofString("Hold my innocent cup of water"))
-        .formPart("hacker_field", "hack.cpp", ofMediaType(ofString("system(\"hack pc\");"),
-            MediaType.parse("text/x-c; charset=ascii")))
+    var body = MultipartBodyPublisher.newBuilder()
+        .boundary("my_boundary")
+        .formPart("text_field", BodyPublishers.ofString("Hello World"))
+        .formPart(
+            "file_field",
+            "hola.txt",
+            MoreBodyPublishers.ofMediaType(
+                BodyPublishers.ofString("Hola Mundo"),
+                MediaType.parse("text/plain; charset=utf-8")))
         .build();
-    assertContentEquals(expected, body, US_ASCII);
+    verifyThat(body)
+        .succeedsWith(
+              "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"text_field\"\r\n"
+            + "\r\n"
+            + "Hello World\r\n"
+            + "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"file_field\"; filename=\"hola.txt\"\r\n"
+            + "Content-Type: text/plain; charset=utf-8\r\n"
+            + "\r\n"
+            + "Hola Mundo\r\n"
+            + "--my_boundary--\r\n");
   }
 
   @Test
   void serializeTextPartUtf8() {
-    var expected =
-          "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"important_question\"\r\n"
-        + "\r\n"
-        + "Is math related to science? £_£\r\n"
-        + "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"less_important_question\"\r\n"
-        + "\r\n"
-        + "Is earth flat? $_$\r\n"
-        + "--cool_boundary--\r\n";
-    var body = newBuilder()
-        .boundary("cool_boundary")
+    var body = MultipartBodyPublisher.newBuilder()
+        .boundary("my_boundary")
         .textPart("important_question", "Is math related to science? £_£")
         .textPart("less_important_question", "Is earth flat? $_$", US_ASCII)
         .build();
-    assertContentEquals(expected, body, UTF_8);
+    verifyThat(body)
+        .succeedsWith(
+              "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"important_question\"\r\n"
+            + "\r\n"
+            + "Is math related to science? £_£\r\n"
+            + "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"less_important_question\"\r\n"
+            + "\r\n"
+            + "Is earth flat? $_$\r\n"
+            + "--my_boundary--\r\n");
   }
 
   @Test
   void serializeFileParts(@TempDir Path tempDir) throws IOException  {
-    var crazyFile = Files.createFile(tempDir.resolve("crazy_file.impossible.to.be.detected.by.anything.else"));
-    var normalFile = Files.createFile(tempDir.resolve("normal_file.txt"));
+    var crazyFile = Files.createFile(
+        tempDir.resolve("crazy_file.impossible.to.be.detected.by.anything.else"));
+    var saneFile = Files.createFile(tempDir.resolve("sane_file.txt"));
     RegistryFileTypeDetector.register(
-        "impossible.to.be.detected.by.anything.else", MediaType.parse("application/x-bruh"));
+        "impossible.to.be.detected.by.anything.else", MediaType.parse("application/x-crazy"));
     Files.writeString(crazyFile, "ey yo i'm trippin");
-    Files.writeString(normalFile, "we live in a society");
-    var expected =
-          "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"crazy_file_field\"; filename=\"crazy_file.impossible.to.be.detected.by.anything.else\"\r\n"
-        + "Content-Type: application/x-bruh\r\n"
-        + "\r\n"
-        + "ey yo i'm trippin\r\n"
-        + "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"normal_file_field\"; filename=\"normal_file.txt\"\r\n"
-        + "Content-Type: text/plain\r\n"
-        + "\r\n"
-        + "we live in a society\r\n"
-        + "--cool_boundary--\r\n";
-    var body = newBuilder()
-        .boundary("cool_boundary")
-        .filePart("crazy_file_field", crazyFile)
-        .filePart("normal_file_field", normalFile, MediaType.parse("text/plain"))
+    Files.writeString(saneFile, "we live in a society");
+
+    var body = MultipartBodyPublisher.newBuilder()
+        .boundary("my_boundary")
+        .filePart("crazy_file", crazyFile)
+        .filePart("sane_file", saneFile, MediaType.parse("text/plain"))
         .build();
-    assertContentEquals(expected, body, US_ASCII);
+    verifyThat(body)
+        .succeedsWith(
+              "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"crazy_file\"; filename=\"crazy_file.impossible.to.be.detected.by.anything.else\"\r\n"
+            + "Content-Type: application/x-crazy\r\n"
+            + "\r\n"
+            + "ey yo i'm trippin\r\n"
+            + "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"sane_file\"; filename=\"sane_file.txt\"\r\n"
+            + "Content-Type: text/plain\r\n"
+            + "\r\n"
+            + "we live in a society\r\n"
+            + "--my_boundary--\r\n");
   }
 
   @Test
-  void asyncBodyPart() {
+  @ExecutorConfig(FIXED_POOL)
+  void asyncBodyPart(Executor executor) {
     var token = "REPEAT ME!\r\n";
-    var count = 10000;
-    var expected =
-          "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"sync_field_1\"\r\n"
-        + "\r\n"
-        + "blah blah\r\n"
-        + "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"async_field\"\r\n"
-        + "\r\n"
-        + token.repeat(count) + "\r\n"
-        + "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"sync_field_2\"\r\n"
-        + "\r\n"
-        + "blah blah blah\r\n"
-        + "--cool_boundary--\r\n";
-    var asyncPublisher = FlowAdapters.toFlowPublisher(new AsyncIterablePublisher<>(
-        Stream.generate(() -> US_ASCII.encode(token)).limit(count)::iterator,
-        ForkJoinPool.commonPool()));
-    var body = newBuilder()
-        .boundary("cool_boundary")
-        .formPart("sync_field_1", ofString("blah blah"))
-        .formPart("async_field", fromPublisher(asyncPublisher, token.length() * count))
-        .formPart("sync_field_2", ofString("blah blah blah"))
+    var encodedToken = US_ASCII.encode(token);
+    var repeatCount = 10000;
+    var asyncPublisher = toFlowPublisher(
+        new AsyncIterablePublisher<>(
+            Stream.generate(encodedToken::duplicate).limit(repeatCount)::iterator, executor));
+
+    var body = MultipartBodyPublisher.newBuilder()
+        .boundary("my_boundary")
+        .formPart("sync_field_1", BodyPublishers.ofString("something"))
+        .formPart("async_field", BodyPublishers.fromPublisher(asyncPublisher))
+        .formPart("sync_field_2", BodyPublishers.ofString("another thing"))
         .build();
-    assertContentEquals(expected, body, US_ASCII);
+    verifyThat(body)
+        .succeedsWith(
+              "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"sync_field_1\"\r\n"
+            + "\r\n"
+            + "something\r\n"
+            + "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"async_field\"\r\n"
+            + "\r\n"
+            + token.repeat(repeatCount) + "\r\n"
+            + "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"sync_field_2\"\r\n"
+            + "\r\n"
+            + "another thing\r\n"
+            + "--my_boundary--\r\n");
   }
 
   @Test
   void bodyWithUnknownLength() {
-    var body = newBuilder()
-        .boundary("cool_boundary")
-        .part(Part.create(headers(), ofString("I know my length")))
-        .part(Part.create(headers("Foo", "bar"), ofInputStream(
-            () -> new ByteArrayInputStream("I don't know my length!".getBytes(US_ASCII)))))
+    var body = MultipartBodyPublisher.newBuilder()
+        .boundary("my_boundary")
+        .part(Part.create(headers(), BodyPublishers.ofString("I know my length")))
+        .part(Part.create(
+            headers("Foo", "bar"),
+            BodyPublishers.ofInputStream(
+                () -> new ByteArrayInputStream("I don't know my length!".getBytes(US_ASCII)))))
         .build();
-    assertTrue(body.contentLength() < 0);
+    verifyThat(body).hasContentLength(-1);
   }
 
   @Test
   void utf8HeaderValues() {
-    var expected =
-          "--cool_boundary\r\n"
-        + "Utf8-Header: πω\r\n"
-        + "\r\n"
-        + "blah blah\r\n"
-        + "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"utf8_fięld\"; filename=\"utf8_ƒile_ñame\"\r\n"
-        + "\r\n"
-        + "blah blah blah\r\n"
-        + "--cool_boundary--\r\n";
-    var body = newBuilder()
-        .boundary("cool_boundary")
-        .part(Part.create(headers("Utf8-Header", "πω"), ofString("blah blah")))
-        .formPart("utf8_fięld", "utf8_ƒile_ñame", ofString("blah blah blah"))
+    var body = MultipartBodyPublisher.newBuilder()
+        .boundary("my_boundary")
+        .part(Part.create(headers("X-Utf8-Header", "πω"), BodyPublishers.ofString("something")))
+        .formPart("utf8_fięld", "utf8_ƒile_ñame", BodyPublishers.ofString("another thing"))
         .build();
-    assertContentEquals(expected, body, UTF_8);
+    verifyThat(body)
+        .succeedsWith(
+              "--my_boundary\r\n"
+            + "X-Utf8-Header: πω\r\n"
+            + "\r\n"
+            + "something\r\n"
+            + "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"utf8_fięld\"; filename=\"utf8_ƒile_ñame\"\r\n"
+            + "\r\n"
+            + "another thing\r\n"
+            + "--my_boundary--\r\n");
   }
 
   @Test
   void nameWithBackslashAndQuote() {
-    var expected =
-          "--cool_boundary\r\n"
-        + "Content-Disposition: form-data; name=\"field\\\\name\"; filename=\"\\\"file\\\\name\\\"\"\r\n"
-        + "\r\n"
-        + "escaping is a mess\r\n"
-        + "--cool_boundary--\r\n";
-    var body = newBuilder()
-        .boundary("cool_boundary")
-        .formPart("field\\name", "\"file\\name\"", ofString("escaping is a mess"))
+    var body = MultipartBodyPublisher.newBuilder()
+        .boundary("my_boundary")
+        .formPart("field\\name", "\"file\\name\"", BodyPublishers.ofString("something"))
         .build();
-    assertContentEquals(expected, body, US_ASCII);
+    verifyThat(body)
+        .succeedsWith(
+              "--my_boundary\r\n"
+            + "Content-Disposition: form-data; name=\"field\\\\name\"; filename=\"\\\"file\\\\name\\\"\"\r\n"
+            + "\r\n"
+            + "something\r\n"
+            + "--my_boundary--\r\n");
   }
 
   @Test
   void failingPart() {
-    var body = newBuilder()
-        .formPart("good_part", ofString("such wow"))
-        .formPart("bad_part", fromPublisher(new FailedPublisher<>(TestException::new)))
+    var body = MultipartBodyPublisher.newBuilder()
+        .formPart("good_part", BodyPublishers.ofString("something"))
+        .formPart(
+            "bad_part", BodyPublishers.fromPublisher(new FailingPublisher<>(TestException::new)))
         .build();
-    var ex = assertThrows(CompletionException.class, () -> BodyCollector.collect(body));
-    var cause = ex.getCause();
-    assertNotNull(cause);
-    assertEquals(TestException.class, cause.getClass());
+    verifyThat(body).failsWith(TestException.class);
   }
 
   private static MultipartBodyPublisher.Builder onePart() {
-    return newBuilder().textPart("some", "thing");
-  }
-
-  private static String boundaryOf(MultipartBodyPublisher.Builder builder) {
-    return builder.build().boundary();
-  }
-
-  private static void assertIllegalArg(Executable action) {
-    assertThrows(IllegalArgumentException.class, action);
-  }
-
-  private static void assertContentEquals(
-      String expected, MultipartBodyPublisher body, Charset charset) {
-    var bodyContent = BodyCollector.collect(body);
-    var expectedContent = charset.encode(expected);
-    if (body.contentLength() >= 0) {
-      assertEquals(bodyContent.remaining(), body.contentLength());
-      assertEquals(expectedContent.remaining(), body.contentLength());
-    }
-    int mismatch = expectedContent.mismatch(bodyContent);
-    assertEquals(-1, mismatch);
+    return MultipartBodyPublisher.newBuilder().textPart("some", "thing");
   }
 }

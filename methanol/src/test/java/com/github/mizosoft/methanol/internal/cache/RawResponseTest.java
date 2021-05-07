@@ -7,13 +7,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
+import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.EmptyPublisher;
-import com.github.mizosoft.methanol.testutils.FailedPublisher;
+import com.github.mizosoft.methanol.testutils.FailingPublisher;
 import com.github.mizosoft.methanol.testutils.TestException;
 import java.io.IOException;
 import java.net.URI;
@@ -130,7 +130,7 @@ class RawResponseTest {
   private RawResponse failingWith(Supplier<Throwable> supplier) {
     return NetworkResponse.from(
         ResponseBuilder.newBuilder(responseTemplate)
-            .body((Publisher<List<ByteBuffer>>) new FailedPublisher<List<ByteBuffer>>(supplier))
+            .body((Publisher<List<ByteBuffer>>) new FailingPublisher<List<ByteBuffer>>(supplier))
             .buildTracked());
   }
 

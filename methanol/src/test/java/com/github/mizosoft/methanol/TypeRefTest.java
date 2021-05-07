@@ -22,62 +22,58 @@
 
 package com.github.mizosoft.methanol;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 class TypeRefTest {
-
   @Test
   void new_rawType() {
     var ref = new TypeRef<String>() {};
-    assertEquals(String.class, ref.type());
+    assertThat(ref.type()).isEqualTo(String.class);
   }
 
   @Test
   void new_parameterizedType() {
     var ref = new TypeRef<List<String>>() {};
-    assertEquals(StringList.type, ref.type());
+    assertThat(ref.type()).isEqualTo(StringList.TYPE);
   }
-
-  // raw type resolution tests
 
   @Test
   void rawType_rawType() {
     var ref = new TypeRef<String>() {};
-    assertEquals(String.class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(String.class);
   }
 
   @Test
   void rawType_parameterizedType() {
     var ref = new TypeRef<List<String>>() {};
-    assertEquals(List.class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(List.class);
   }
 
   @Test
   <T> void rawType_typeVariableNoBounds() {
     var ref = new TypeRef<T>() {};
-    assertEquals(Object.class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(Object.class);
   }
 
   @Test
   <T extends Dummy1> void rawType_typeVariableOneBound() {
     var ref = new TypeRef<T>() {};
-    assertEquals(Dummy1.class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(Dummy1.class);
   }
 
   @Test
   <T extends Dummy1 & Dummy2> void rawType_typeVariableTwoBounds() {
     var ref = new TypeRef<T>() {};
-    assertEquals(Dummy1.class, ref.rawType()); // First bound is considered as the raw type
+    assertThat(ref.rawType()).isEqualTo(Dummy1.class); // Resolution selects the first bound
   }
 
   @Test
@@ -85,8 +81,8 @@ class TypeRefTest {
     var wildCard = ((ParameterizedType) new TypeRef<List<?>>() {}.type())
         .getActualTypeArguments()[0];
     var ref = TypeRef.from(wildCard);
-    assertTrue(ref.type() instanceof WildcardType);
-    assertEquals(Object.class, ref.rawType());
+    assertThat(ref.type()).isInstanceOf(WildcardType.class);
+    assertThat(ref.rawType()).isEqualTo(Object.class);
   }
 
   @Test
@@ -94,39 +90,39 @@ class TypeRefTest {
     var wildCard = ((ParameterizedType) new TypeRef<List<? extends Dummy1>>() {}.type())
         .getActualTypeArguments()[0];
     var ref = TypeRef.from(wildCard);
-    assertTrue(ref.type() instanceof WildcardType);
-    assertEquals(Dummy1.class, ref.rawType());
+    assertThat(ref.type()).isInstanceOf(WildcardType.class);
+    assertThat(ref.rawType()).isEqualTo(Dummy1.class);
   }
 
   @Test
   void rawType_parameterizedTypeArray() {
     var ref = new TypeRef<List<String>[]>() {};
-    assertEquals(List[].class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(List[].class);
   }
 
   @Test
   <T> void rawType_typeVariableArrayNoBounds() {
     var ref = new TypeRef<T[]>() {};
-    assertEquals(Object[].class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(Object[].class);
   }
 
   @Test
   <T extends Dummy1 & Dummy2> void rawType_typeVariableArrayTwoBounds() {
     var ref = new TypeRef<T[]>() {};
-    assertEquals(Dummy1[].class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(Dummy1[].class);
   }
 
   @Test
   <T extends Dummy1 & Dummy2> void rawType_typeVariable3DArrayTwoBounds() {
     var ref = new TypeRef<T[][][]>() {};
-    assertEquals(Dummy1[][][].class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(Dummy1[][][].class);
   }
 
   @Test
   <T extends Dummy1 & Dummy2, Y extends T, X extends Y>
   void rawType_typeVariableWithTypeVariableBound() {
     var ref = new TypeRef<X>() {};
-    assertEquals(Dummy1.class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(Dummy1.class);
   }
 
   @Test
@@ -135,57 +131,56 @@ class TypeRefTest {
     var wildCard = ((ParameterizedType) new TypeRef<List<? extends X>>() {}.type())
         .getActualTypeArguments()[0];
     var ref = TypeRef.from(wildCard);
-    assertTrue(ref.type() instanceof WildcardType);
-    assertEquals(Dummy1.class, ref.rawType());
+    assertThat(ref.type()).isInstanceOf(WildcardType.class);
+    assertThat(ref.rawType()).isEqualTo(Dummy1.class);
   }
 
   @Test
   <T extends List<String>> void rawType_typeVariableWithParameterizedTypeBounds() {
     var ref = new TypeRef<T>() {};
-    assertEquals(List.class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(List.class);
   }
 
   @Test
   <T extends Dummy1 & Dummy2, Y extends T, X extends Y>
   void rawType_typeVariable3DArrayWithTypeVariableBound() {
     var ref = new TypeRef<X[][][]>() {};
-    assertEquals(Dummy1[][][].class, ref.rawType());
+    assertThat(ref.rawType()).isEqualTo(Dummy1[][][].class);
   }
 
   @Test
   void equals_hashCode() {
     var ref1 = new TypeRef<List<String>>() {};
-    var ref2 = TypeRef.from(StringList.type);
-    assertEquals(ref1, ref1);
-    assertEquals(ref1, ref2);
-    assertEquals(ref1.hashCode(), ref2.hashCode());
-    assertNotEquals(ref2, TypeRef.from(List.class));
-    assertNotEquals(ref1, "I'm not a TypeReference, I'm a String!");
+    var ref2 = TypeRef.from(StringList.TYPE);
+    assertThat(ref1)
+        .isEqualTo(ref1)
+        .isEqualTo(ref2)
+        .hasSameHashCodeAs(ref2)
+        .isNotEqualTo(TypeRef.from(List.class))
+        .isNotEqualTo("I'm not a TypeRef, I'm a String!");
   }
 
   @Test
   void toString_isTypeName() {
     var ref = new TypeRef<List<String>>() {};
-    assertEquals(StringList.type.getTypeName(), ref.toString());
+    assertThat(ref).hasToString(StringList.TYPE.getTypeName());
   }
 
   @Test
   void exactRawType_fromRawType() {
     var ref = new TypeRef<String>() {};
-    assertEquals(String.class, ref.exactRawType());
+    assertThat(ref.exactRawType()).isEqualTo(String.class);
   }
 
-  // exceptional behaviour
-
-  @SuppressWarnings("rawtypes") // intentional
+  @SuppressWarnings("rawtypes") // Intentional
   @Test
   void new_rawSubtype() {
-    assertIllegalState(() -> new TypeRef() {});
+    assertThatIllegalStateException().isThrownBy(() -> new TypeRef() {});
   }
 
   @Test
   void from_nonstandardTypeSpecialization() {
-    assertIllegalArg(() -> TypeRef.from(new Type() {}));
+    assertThatIllegalArgumentException().isThrownBy(() -> TypeRef.from(new Type() {}));
   }
 
   @Test
@@ -203,28 +198,22 @@ class TypeRefTest {
         return null;
       }
     };
-    assertIllegalArg(() -> TypeRef.from(fakeParameterizedType));
+    assertThatIllegalArgumentException().isThrownBy(() -> TypeRef.from(fakeParameterizedType));
   }
 
   @Test
   <T> void exactRawType_notRaw() {
-    assertThrows(UnsupportedOperationException.class, () -> new TypeRef<T>() {}.exactRawType());
-    assertThrows(UnsupportedOperationException.class, () -> new TypeRef<List<String>>() {}.exactRawType());
+    assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(() -> new TypeRef<T>() {}.exactRawType());
+    assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(() -> new TypeRef<List<String>>() {}.exactRawType());
   }
 
   interface StringList extends List<String> {
-    Type type = StringList.class.getGenericInterfaces()[0];
+    Type TYPE = StringList.class.getGenericInterfaces()[0];
   }
 
   interface Dummy1 {}
 
   interface Dummy2 {}
-
-  private static void assertIllegalArg(Executable action) {
-    assertThrows(IllegalArgumentException.class, action);
-  }
-
-  private static void assertIllegalState(Executable action) {
-    assertThrows(IllegalStateException.class, action);
-  }
 }

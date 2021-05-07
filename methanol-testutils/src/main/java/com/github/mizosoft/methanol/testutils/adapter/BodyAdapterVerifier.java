@@ -75,12 +75,4 @@ public abstract class BodyAdapterVerifier<
     assertThat(type).matches(not(adapter::supportsType));
     return self();
   }
-
-  public static EncoderVerifier verifyThat(BodyAdapter.Encoder encoder) {
-    return new EncoderVerifier(encoder);
-  }
-
-  public static DecoderVerifier verifyThat(BodyAdapter.Decoder decoder) {
-    return new DecoderVerifier(decoder);
-  }
 }

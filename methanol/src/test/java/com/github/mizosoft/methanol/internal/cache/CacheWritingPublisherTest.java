@@ -3,18 +3,15 @@ package com.github.mizosoft.methanol.internal.cache;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.SubmittableSubscription;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.Logging;
@@ -25,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -58,11 +54,11 @@ class CacheWritingPublisherTest {
     }
 
     subscriber.awaitComplete();
-    assertEquals("Cache me if you can!", subscriber.bodyToString());
-    assertEquals("Cache me if you can!", editor.writtenToString());
+    assertThat(subscriber.bodyToString()).isEqualTo("Cache me if you can!");
+    assertThat(editor.writtenToString()).isEqualTo("Cache me if you can!");
 
     editor.awaitClose();
-    assertFalse(editor.discarded);
+    assertThat(editor.discarded).isFalse();
   }
 
   @Test
@@ -74,16 +70,12 @@ class CacheWritingPublisherTest {
     publisher.subscribe(secondSubscriber);
 
     secondSubscriber.awaitComplete();
-    assertEquals(1, secondSubscriber.errors);
-    assertThrows(
-        IllegalStateException.class,
-        () -> {
-          throw secondSubscriber.lastError;
-        });
+    assertThat(secondSubscriber.errors).isOne();
+    assertThat(secondSubscriber.lastError).isInstanceOf(IllegalStateException.class);
   }
 
   /**
-   * The subscriber shouldn't propagate cancellation upstream and prefer to complete caching the
+   * The publisher shouldn't propagate cancellation upstream and prefer to complete caching the
    * body.
    */
   @ExecutorParameterizedTest
@@ -103,12 +95,14 @@ class CacheWritingPublisherTest {
 
     // Writing completes successfully and cancellation is propagated
     editor.awaitClose();
-    assertFalse(editor.discarded);
-    assertFalse(upstream.firstSubscription().flowInterrupted);
-    assertEquals("Cancel me if you can!", editor.writtenToString());
+    assertThat(editor.discarded).isFalse();
+    assertThat(upstream.firstSubscription().flowInterrupted).isFalse();
+    assertThat(editor.writtenToString()).isEqualTo("Cancel me if you can!");
 
     // Subscriber's cancellation request is satisfied & body flow stops
-    assertTrue(subscriber.items.isEmpty(), () -> "Received: " + subscriber.bodyToString());
+    assertThat(subscriber.items)
+        .withFailMessage(() -> "Unexpectedly received: " + subscriber.bodyToString())
+        .isEmpty();
   }
 
   @ExecutorParameterizedTest
@@ -140,7 +134,7 @@ class CacheWritingPublisherTest {
 
     var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
-    assertTrue(subscription.flowInterrupted);
+    assertThat(subscription.flowInterrupted).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -173,7 +167,7 @@ class CacheWritingPublisherTest {
 
     var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
-    assertTrue(subscription.flowInterrupted);
+    assertThat(subscription.flowInterrupted).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -191,14 +185,10 @@ class CacheWritingPublisherTest {
     }
 
     subscriber.awaitError();
-    assertThrows(
-        TestException.class,
-        () -> {
-          throw subscriber.lastError;
-        });
+    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
 
     editor.awaitClose();
-    assertTrue(editor.discarded);
+    assertThat(editor.discarded).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -222,7 +212,7 @@ class CacheWritingPublisherTest {
     }
 
     failingEditor.awaitClose();
-    assertTrue(failingEditor.discarded);
+    assertThat(failingEditor.discarded).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -246,10 +236,10 @@ class CacheWritingPublisherTest {
     }
 
     failingEditor.awaitClose();
-    assertTrue(failingEditor.discarded);
+    assertThat(failingEditor.discarded).isTrue();
 
     subscriber.awaitComplete();
-    assertEquals("Cache me if you can!", subscriber.bodyToString());
+    assertThat(subscriber.bodyToString()).isEqualTo("Cache me if you can!");
   }
 
   /**
@@ -260,13 +250,13 @@ class CacheWritingPublisherTest {
   @ExecutorParameterizedTest
   @ExecutorConfig(CACHED_POOL)
   void writeLaggingBehindBodyCompletion(Executor threadPool) {
-    var bodyCompletion = new CountDownLatch(1);
+    var bodyCompletionLatch = new CountDownLatch(1);
     var editor =
         new TestEditor() {
           @Override
           public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
             return CompletableFuture.runAsync(
-                    () -> awaitUninterruptibly(bodyCompletion), threadPool)
+                    () -> awaitUninterruptibly(bodyCompletionLatch), threadPool)
                 .thenCompose(__ -> super.writeAsync(position, src));
           }
         };
@@ -286,20 +276,15 @@ class CacheWritingPublisherTest {
 
     subscriber.awaitComplete();
     // Allow the editor to progress
-    bodyCompletion.countDown();
-    assertEquals("Cyberpunk", subscriber.bodyToString());
+    bodyCompletionLatch.countDown();
+    assertThat(subscriber.bodyToString()).isEqualTo("Cyberpunk");
 
     editor.awaitClose();
-    assertEquals("Cyberpunk", editor.writtenToString());
+    assertThat(editor.writtenToString()).isEqualTo("Cyberpunk");
   }
 
   private static void executeLaterMillis(Runnable task, long millis) {
     CompletableFuture.delayedExecutor(millis, TimeUnit.MILLISECONDS).execute(task);
-  }
-
-  private static ByteBuffer collect(Collection<List<ByteBuffer>> buffers) {
-    return BodyCollector.collect(
-        buffers.stream().flatMap(Collection::stream).collect(Collectors.toUnmodifiableList()));
   }
 
   private static Iterable<List<ByteBuffer>> toResponseBody(String str) {
@@ -357,7 +342,9 @@ class CacheWritingPublisherTest {
       long p = 0;
       var buffers = new ArrayList<ByteBuffer>();
       for (var write : writes) {
-        assertEquals(p, write.position, "non-sequential right");
+        assertThat(write.position)
+            .withFailMessage("non-sequential write")
+            .isEqualTo(p);
 
         buffers.add(write.buffer);
         p += write.buffer.remaining();
@@ -384,7 +371,9 @@ class CacheWritingPublisherTest {
     StringSubscriber() {}
 
     String bodyToString() {
-      return UTF_8.decode(collect(super.items)).toString();
+      var body = BodyCollector.collect(
+          items.stream().flatMap(Collection::stream).collect(Collectors.toUnmodifiableList()));
+      return UTF_8.decode(body).toString();
     }
   }
 
@@ -408,12 +397,12 @@ class CacheWritingPublisherTest {
     }
 
     SubmittableSubscription<T> firstSubscription() {
-      assertFalse(subscriptions.isEmpty(), "nothing has subscribed yet");
+      assertThat(subscriptions).withFailMessage("nothing has subscribed yet").isNotEmpty();
       return subscriptions.get(0);
     }
 
     void submit(T item) {
-      subscriptions.forEach(s -> s.signal(item));
+      subscriptions.forEach(s -> s.submit(item));
     }
 
     void submitAll(Iterable<T> items) {
@@ -422,65 +411,7 @@ class CacheWritingPublisherTest {
 
     @Override
     public void close() {
-      subscriptions.forEach(SubmittableSubscription::signalCompletion);
-    }
-
-    static final class SubmittableSubscription<T> extends AbstractSubscription<T> {
-      private final ConcurrentLinkedQueue<T> items = new ConcurrentLinkedQueue<>();
-
-      private volatile boolean complete;
-      volatile boolean aborted;
-      volatile boolean flowInterrupted;
-
-      SubmittableSubscription(Subscriber<? super T> downstream, Executor executor) {
-        super(downstream, executor);
-      }
-
-      @Override
-      protected long emit(Subscriber<? super T> downstream, long emit) {
-        T item;
-        long submitted = 0L;
-        while (true) {
-          if (items.isEmpty() && complete) {
-            cancelOnComplete(downstream);
-            return 0L;
-          } else if (submitted >= emit
-              || (item = items.poll()) == null) { // Exhausted either demand or items
-            return submitted;
-          } else if (submitOnNext(downstream, item)) {
-            submitted++;
-          } else {
-            return 0L;
-          }
-        }
-      }
-
-      @Override
-      protected synchronized void abort(boolean flowInterrupted) {
-        aborted = true;
-        this.flowInterrupted = flowInterrupted;
-        notifyAll();
-      }
-
-      synchronized void awaitAbort() {
-        while (!aborted) {
-          try {
-            wait();
-          } catch (InterruptedException e) {
-            fail(e);
-          }
-        }
-      }
-
-      void signal(T item) {
-        items.offer(item);
-        signal(false);
-      }
-
-      void signalCompletion() {
-        complete = true;
-        signal(true);
-      }
+      subscriptions.forEach(SubmittableSubscription::complete);
     }
   }
 }

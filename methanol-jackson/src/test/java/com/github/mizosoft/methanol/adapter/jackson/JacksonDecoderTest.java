@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.adapter.jackson;
 
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createDecoder;
-import static com.github.mizosoft.methanol.testutils.adapter.BodyAdapterVerifier.verifyThat;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 
 import com.fasterxml.jackson.core.JsonParser.Feature;

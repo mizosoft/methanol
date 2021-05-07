@@ -30,8 +30,11 @@ import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+/**
+ * Facilitates testing Publisher implementations and the like. Adapted from
+ * https://github.com/openjdk/jdk/blob/36e5ad61e63e2f1da9cf565c607db28f23622ea9/test/jdk/java/util/concurrent/tck/SubmissionPublisherTest.java#L67
+ */
 public class TestSubscriber<T> implements Subscriber<T> {
-
   public volatile int nexts;
   public volatile int errors;
   public volatile int completes;
