@@ -135,7 +135,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
       }
 
       // The response is stale, but might have acceptable staleness
-      return stalenessLimit.get(this).filter(value -> staleness.compareTo(value) <= 0).isPresent();
+      return stalenessLimit.get(this).filter(limit -> staleness.compareTo(limit) <= 0).isPresent();
     }
 
     void addCacheHeaders(ResponseBuilder<?> builder) {
@@ -177,7 +177,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
       STALE_IF_ERROR {
         @Override
         Optional<Duration> get(CacheStrategy strategy) {
-          // stale-if-error is applicable request or the response,
+          // stale-if-error is applicable to requests and responses,
           // but the former overrides the latter.
           return strategy
               .requestCacheControl
