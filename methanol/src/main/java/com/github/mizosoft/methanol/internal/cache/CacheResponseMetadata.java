@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
@@ -146,7 +147,7 @@ public final class CacheResponseMetadata {
   public static CacheResponseMetadata decode(ByteBuffer metadataBuffer) throws IOException {
     var reader = new MetadataReader(metadataBuffer);
     int flags = reader.readInt();
-    var uri = URI.create(reader.readUtf8String());
+    var uri = recoverUri(reader.readUtf8String());
     var requestMethod = reader.readUtf8String();
     var varyHeaders = reader.readHeaders();
     int statusCode = reader.readInt();
@@ -163,6 +164,14 @@ public final class CacheResponseMetadata {
         timeRequestSent,
         timeResponseReceived,
         sslSession);
+  }
+
+  private static URI recoverUri(String uri) throws IOException {
+    try {
+      return new URI(uri);
+    } catch (URISyntaxException e) {
+      throw new IOException("unrecoverable URI", e);
+    }
   }
 
   public static CacheResponseMetadata from(TrackedResponse<?> response) {
@@ -206,7 +215,7 @@ public final class CacheResponseMetadata {
     private final ByteBuffer buffer;
 
     MetadataReader(ByteBuffer buffer) {
-      // Start with position = 0 to report read bytes when EOF is reached prematurely
+      // Slice to start with position = 0 to report read bytes when EOF is reached prematurely
       this.buffer = buffer.slice();
     }
 
