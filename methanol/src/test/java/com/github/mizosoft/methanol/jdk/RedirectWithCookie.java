@@ -40,7 +40,6 @@
 
 package com.github.mizosoft.methanol.jdk;
 
-import static java.lang.System.out;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -101,7 +100,7 @@ class RedirectWithCookie {
   @ParameterizedTest
   @MethodSource("positive")
   void test(Supplier<String> uriString, Executor handlerExecutor) throws Exception {
-    out.printf("%n---- starting (%s) ----%n", uriString);
+    // out.printf("%n---- starting (%s) ----%n", uriString);
     HttpClient client =
         Methanol.newBuilder()
             .followRedirects(Redirect.NEVER)
@@ -114,14 +113,14 @@ class RedirectWithCookie {
 
     URI uri = URI.create(uriString.get());
     HttpRequest request = HttpRequest.newBuilder(uri).build();
-    out.println("Initial request: " + request.uri());
+    // out.println("Initial request: " + request.uri());
 
     for (int i = 0; i < ITERATIONS; i++) {
-      out.println("iteration: " + i);
+      // out.println("iteration: " + i);
       HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
 
-      out.println("  Got response: " + response);
-      out.println("  Got body Path: " + response.body());
+      // out.println("  Got response: " + response);
+      // out.println("  Got body Path: " + response.body());
 
       assertThat(response.statusCode()).isEqualTo(200);
       assertThat(response.body()).isEqualTo(MESSAGE);
@@ -146,9 +145,7 @@ class RedirectWithCookie {
           .withFailMessage("Expected 300 <= code <= 309, got: %s", response.statusCode())
           .isStrictlyBetween(300, 309);
 
-      assertThat(response.body())
-          .withFailMessage("Unexpected body: %s", response.body())
-          .isNull();
+      assertThat(response.body()).withFailMessage("Unexpected body: %s", response.body()).isNull();
       String locationHeader =
           response
               .headers()
@@ -214,7 +211,7 @@ class RedirectWithCookie {
     @NotNull
     @Override
     public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
-      //      System.out.println("CookieRedirectDispatcher for: " +
+      // System.out.println("CookieRedirectDispatcher for: " +
       // recordedRequest.getRequestUrl());
 
       // redirecting
