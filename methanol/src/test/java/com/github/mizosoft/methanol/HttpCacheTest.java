@@ -47,6 +47,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 
+import com.github.mizosoft.methanol.HttpCache.Stats;
+import com.github.mizosoft.methanol.HttpCache.StatsRecorder;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.cache.CacheInterceptor;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
@@ -154,12 +156,20 @@ class HttpCacheTest {
   }
 
   private void setUpCache(Store store) {
+    setUpCache(store, null);
+  }
+
+  private void setUpCache(Store store, @Nullable StatsRecorder statsRecorder) {
     editAwaiter = new EditAwaiter();
-    cache = HttpCache.newBuilder()
+
+    var cacheBuilder = HttpCache.newBuilder()
         .clockForTesting(clock)
         .storeForTesting(new EditAwaiterStore(store, editAwaiter))
-        .executor(threadPool)
-        .build();
+        .executor(threadPool);
+    if (statsRecorder != null) {
+      cacheBuilder.statsRecorder(statsRecorder);
+    }
+    cache = cacheBuilder.build();
     client = clientBuilder.cache(cache).build();
   }
 
@@ -2524,72 +2534,77 @@ class HttpCacheTest {
     assertThat(stats.networkUseCount()).isEqualTo(13);
     assertThat(stats.hitRate()).isEqualTo(11 / 25.0);
     assertThat(stats.missRate()).isEqualTo(14 / 25.0);
+
+    // Check that per URI stats aren't recorded by default
+    assertThat(cache.stats(hitUri)).isEqualTo(Stats.empty());
+    assertThat(cache.stats(missUri)).isEqualTo(Stats.empty());
   }
 
   @StoreParameterizedTest
   void perUriStats(Store store) throws Exception {
-    setUpCache(store);
-    var uri1 = serverUri.resolve("/a");
-    var uri2 = serverUri.resolve("/b");
+    setUpCache(store, StatsRecorder.createConcurrentPerUriRecorder());
     server.setDispatcher(new Dispatcher() {
       @Override public MockResponse dispatch(RecordedRequest recordedRequest) {
         return new MockResponse().addHeader("Cache-Control", "max-age=2");
       }
     });
 
+    var aUri = serverUri.resolve("/a");
+    var bUri = serverUri.resolve("/b");
+
     // a.requestCount = 1, a.missCount = 1, a.networkUseCount = 1
-    get(uri1).assertMiss();
+    get(aUri).assertMiss();
 
     // a.requestCount = 2, a.hitCount = 1
-    get(uri1).assertHit();
+    get(aUri).assertHit();
 
     // a.requestCount = 3, a.missCount = 2, a.networkUseCount = 2
-    get(GET(uri1).header("Cache-Control", "no-cache"))
+    get(GET(aUri).header("Cache-Control", "no-cache"))
         .assertConditionalMiss();
 
     // a.requestCount = 4, a.hitCount = 2
-    get(uri1).assertHit();
+    get(aUri).assertHit();
 
-    assertThat(cache.remove(uri1)).isTrue();
+    assertThat(cache.remove(aUri)).isTrue();
 
     // a.requestCount = 5, a.missCount = 3, a.networkUseCount = 2 (network isn't accessed)
-    assertNotCached(uri1);
+    assertNotCached(aUri);
 
     // b.requestCount = 1, b.missCount = 1, b.networkUseCount = 1
-    get(uri2).assertMiss();
+    get(bUri).assertMiss();
 
     // b.requestCount = 6, b.missCount = 6, b.networkUseCount = 6
     for (int i = 0; i < 5; i++) {
-      get(GET(uri2).header("Cache-Control", "no-cache")).assertConditionalMiss();
+      get(GET(bUri).header("Cache-Control", "no-cache")).assertConditionalMiss();
     }
 
     // b.requestCount = 7, b.hitCount = 1
-    get(uri2).assertHit();
+    get(bUri).assertHit();
 
-    var stats1 = cache.stats(uri1);
-    assertThat(stats1.requestCount()).isEqualTo(5);
-    assertThat(stats1.hitCount()).isEqualTo(2);
-    assertThat(stats1.missCount()).isEqualTo(3);
-    assertThat(stats1.networkUseCount()).isEqualTo(2);
+    var aStats = cache.stats(aUri);
+    assertThat(aStats.requestCount()).isEqualTo(5);
+    assertThat(aStats.hitCount()).isEqualTo(2);
+    assertThat(aStats.missCount()).isEqualTo(3);
+    assertThat(aStats.networkUseCount()).isEqualTo(2);
 
-    var stats2 = cache.stats(uri2);
-    assertThat(stats2.requestCount()).isEqualTo(7);
-    assertThat(stats2.hitCount()).isEqualTo(1);
-    assertThat(stats2.missCount()).isEqualTo(6);
-    assertThat(stats2.networkUseCount()).isEqualTo(6);
+    var bStats = cache.stats(bUri);
+    assertThat(bStats.requestCount()).isEqualTo(7);
+    assertThat(bStats.hitCount()).isEqualTo(1);
+    assertThat(bStats.missCount()).isEqualTo(6);
+    assertThat(bStats.networkUseCount()).isEqualTo(6);
 
-    var emptyStats = cache.stats(serverUri.resolve("/c"));
-    assertThat(emptyStats.requestCount()).isZero();
-    assertThat(emptyStats.hitCount()).isZero();
-    assertThat(emptyStats.missCount()).isZero();
-    assertThat(emptyStats.networkUseCount()).isZero();
+    var untrackedUriStats = cache.stats(serverUri.resolve("/c"));
+    assertThat(untrackedUriStats.requestCount()).isZero();
+    assertThat(untrackedUriStats.hitCount()).isZero();
+    assertThat(untrackedUriStats.missCount()).isZero();
+    assertThat(untrackedUriStats.networkUseCount()).isZero();
   }
 
   @StoreParameterizedTest
   void writeStats(Store store) throws Exception {
     var failingStore = new FailingStore(store);
     failingStore.allowReads = true;
-    setUpCache(failingStore);
+    setUpCache(failingStore, StatsRecorder.createConcurrentPerUriRecorder());
     server.setDispatcher(new Dispatcher() {
       @Override
       public MockResponse dispatch(RecordedRequest recordedRequest) {
@@ -2633,6 +2648,16 @@ class HttpCacheTest {
 
     await().until(() -> cache.stats(serverUri.resolve("/c")).writeSuccessCount(), isEqual(0L));
     await().until(() -> cache.stats(serverUri.resolve("/c")).writeFailureCount(), isEqual(1L));
+  }
+
+  @StoreParameterizedTest
+  void disabledStatsRecorder(Store store) throws Exception {
+    setUpCache(store, StatsRecorder.disabled());
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    seedCache(serverUri);
+    get(serverUri);
+    assertThat(cache.stats()).isEqualTo(Stats.empty());
+    assertThat(cache.stats(serverUri)).isEqualTo(Stats.empty());
   }
 
   private ResponseVerifier<String> get(URI uri) throws IOException, InterruptedException {

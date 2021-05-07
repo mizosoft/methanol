@@ -457,6 +457,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
     private static double rate(long x, long y) {
       return y == 0 || x >= y ? 1.0 : (double) x / y;
     }
+
+    /** Returns empty stats. */
+    static Stats empty() {
+      return StatsSnapshot.EMPTY;
+    }
   }
 
   /**
@@ -498,16 +503,25 @@ public final class HttpCache implements AutoCloseable, Flushable {
     Stats snapshot(URI uri);
 
     /**
-     * Creates a {@code StatsRecorder} that atomically increments each count.
-     *
-     * <p>Independence of per-{@code URI} stats is dictated by {@link URI#equals(Object)}. That is,
-     * stats of {@code https://example.com/a} and {@code https://example.com/a?x=y} are recorded
-     * independently as they are not equal, although they have the same host and path.
+     * Creates a {@code StatsRecorder} that atomically increments each count and doesn't record per
+     * {@code URI} stats.
      *
      * <p>This is the {@code StatsRecorder} used by default.
      */
     static StatsRecorder createConcurrentRecorder() {
       return new ConcurrentStatsRecorder();
+    }
+
+    /**
+     * Creates a {@code StatsRecorder} that atomically increments each count and records per {@code
+     * URI} stats.
+     *
+     * <p>Independence of per {@code URI} stats is dictated by {@link URI#equals(Object)}. That is,
+     * stats of {@code https://example.com/a} and {@code https://example.com/a?x=y} are recorded
+     * independently as the {@code URIs} are not equal, although they have the same host and path.
+     */
+    static StatsRecorder createConcurrentPerUriRecorder() {
+      return new ConcurrentPerUriStatsRecorder();
     }
 
     /** Returns a disabled {@code StatsRecorder}. */
@@ -516,90 +530,126 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
   }
 
-  private static final class ConcurrentStatsRecorder implements StatsRecorder {
-    private final StatsCounters globalCounters = new StatsCounters();
-    private final ConcurrentMap<URI, StatsCounters> perUriCounters = new ConcurrentHashMap<>();
+  private static class ConcurrentStatsRecorder implements StatsRecorder {
+    private final LongAdder requestCounter = new LongAdder();
+    private final LongAdder hitCounter = new LongAdder();
+    private final LongAdder missCounter = new LongAdder();
+    private final LongAdder networkUseCounter = new LongAdder();
+    private final LongAdder writeSuccessCounter = new LongAdder();
+    private final LongAdder writeFailureCounter = new LongAdder();
 
     ConcurrentStatsRecorder() {}
 
     @Override
     public void recordRequest(URI uri) {
       requireNonNull(uri);
-      globalCounters.requestCounter.increment();
-      perUriCounters.computeIfAbsent(uri, __ -> new StatsCounters()).requestCounter.increment();
+      requestCounter.increment();
     }
 
     @Override
     public void recordHit(URI uri) {
       requireNonNull(uri);
-      globalCounters.hitCounter.increment();
-      perUriCounters.computeIfAbsent(uri, __ -> new StatsCounters()).hitCounter.increment();
+      hitCounter.increment();
     }
 
     @Override
     public void recordMiss(URI uri) {
       requireNonNull(uri);
-      globalCounters.missCounter.increment();
-      perUriCounters.computeIfAbsent(uri, __ -> new StatsCounters()).missCounter.increment();
+      missCounter.increment();
     }
 
     @Override
     public void recordNetworkUse(URI uri) {
       requireNonNull(uri);
-      globalCounters.networkUseCounter.increment();
-      perUriCounters.computeIfAbsent(uri, __ -> new StatsCounters()).networkUseCounter.increment();
+      networkUseCounter.increment();
     }
 
     @Override
     public void recordWriteSuccess(URI uri) {
       requireNonNull(uri);
-      globalCounters.writeSuccessCounter.increment();
-      perUriCounters
-          .computeIfAbsent(uri, __ -> new StatsCounters())
-          .writeSuccessCounter
-          .increment();
+      writeSuccessCounter.increment();
     }
 
     @Override
     public void recordWriteFailure(URI uri) {
       requireNonNull(uri);
-      globalCounters.writeFailureCounter.increment();
-      perUriCounters
-          .computeIfAbsent(uri, __ -> new StatsCounters())
-          .writeFailureCounter
-          .increment();
+      writeFailureCounter.increment();
     }
 
     @Override
     public Stats snapshot() {
-      return globalCounters.snapshot();
+      return new StatsSnapshot(
+          requestCounter.sum(),
+          hitCounter.sum(),
+          missCounter.sum(),
+          networkUseCounter.sum(),
+          writeSuccessCounter.sum(),
+          writeFailureCounter.sum());
     }
 
     @Override
     public Stats snapshot(URI uri) {
-      var counters = perUriCounters.get(uri);
-      return counters != null ? counters.snapshot() : StatsSnapshot.EMPTY;
+      return Stats.empty();
+    }
+  }
+
+  private static final class ConcurrentPerUriStatsRecorder extends ConcurrentStatsRecorder {
+    private final ConcurrentMap<URI, StatsRecorder> perUriRecorders = new ConcurrentHashMap<>();
+
+    ConcurrentPerUriStatsRecorder() {}
+
+    @Override
+    public void recordRequest(URI uri) {
+      requireNonNull(uri);
+      super.recordRequest(uri);
+      perUriRecorders.computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder()).recordRequest(uri);
     }
 
-    private static final class StatsCounters {
-      final LongAdder requestCounter = new LongAdder();
-      final LongAdder hitCounter = new LongAdder();
-      final LongAdder missCounter = new LongAdder();
-      final LongAdder networkUseCounter = new LongAdder();
-      final LongAdder writeSuccessCounter = new LongAdder();
-      final LongAdder writeFailureCounter = new LongAdder();
+    @Override
+    public void recordHit(URI uri) {
+      requireNonNull(uri);
+      super.recordHit(uri);
+      perUriRecorders.computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder()).recordHit(uri);
+    }
 
-      StatsCounters() {}
+    @Override
+    public void recordMiss(URI uri) {
+      requireNonNull(uri);
+      super.recordMiss(uri);
+      perUriRecorders.computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder()).recordMiss(uri);
+    }
 
-      Stats snapshot() {
-        return new StatsSnapshot(
-            requestCounter.sum(),
-            hitCounter.sum(),
-            missCounter.sum(),
-            networkUseCounter.sum(),
-            writeSuccessCounter.sum(),
-            writeFailureCounter.sum());
-      }
+    @Override
+    public void recordNetworkUse(URI uri) {
+      requireNonNull(uri);
+      super.recordNetworkUse(uri);
+      perUriRecorders
+          .computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder())
+          .recordNetworkUse(uri);
+    }
+
+    @Override
+    public void recordWriteSuccess(URI uri) {
+      requireNonNull(uri);
+      super.recordWriteSuccess(uri);
+      perUriRecorders
+          .computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder())
+          .recordWriteSuccess(uri);
+    }
+
+    @Override
+    public void recordWriteFailure(URI uri) {
+      requireNonNull(uri);
+      super.recordWriteFailure(uri);
+      perUriRecorders
+          .computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder())
+          .recordWriteFailure(uri);
+    }
+
+    @Override
+    public Stats snapshot(URI uri) {
+      var recorder = perUriRecorders.get(uri);
+      return recorder != null ? recorder.snapshot() : Stats.empty();
     }
   }
 
@@ -626,12 +676,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public Stats snapshot() {
-      return StatsSnapshot.EMPTY;
+      return Stats.empty();
     }
 
     @Override
     public Stats snapshot(URI uri) {
-      return StatsSnapshot.EMPTY;
+      return Stats.empty();
     }
   }
 
