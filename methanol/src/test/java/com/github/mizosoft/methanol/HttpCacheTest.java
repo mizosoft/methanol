@@ -50,7 +50,6 @@ import static org.awaitility.Awaitility.await;
 import com.github.mizosoft.methanol.HttpCache.Stats;
 import com.github.mizosoft.methanol.HttpCache.StatsRecorder;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
-import com.github.mizosoft.methanol.internal.cache.CacheInterceptor;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
@@ -112,7 +111,6 @@ import mockwebserver3.QueueDispatcher;
 import mockwebserver3.RecordedRequest;
 import mockwebserver3.SocketPolicy;
 import okhttp3.Headers;
-import org.awaitility.Awaitility;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -130,7 +128,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 class HttpCacheTest {
   static {
     Logging.disable(HttpCache.class, DiskStore.class, CacheWritingPublisher.class);
-    Awaitility.setDefaultPollDelay(Duration.ZERO);
   }
 
   private Executor threadPool;
@@ -883,18 +880,22 @@ class HttpCacheTest {
         .assertAbsentRequestHeader("X-My-Header");
   }
 
-  @StoreParameterizedTest
-  void responsesVaryingOnImplicitHeadersAreNotStored(Store store) throws Exception {
+  /**
+   * Responses that vary on header fields that can be added implicitly by the HttpClient are
+   * rendered as uncacheable.
+   */
+  @ParameterizedTest
+  @ValueSource(strings = {"Cookie", "Cookie2", "Authorization", "Proxy-Authorization"})
+  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  void responsesVaryingOnImplicitHeadersAreNotStored(String implicitField, Store store)
+      throws Exception {
     setUpCache(store);
-    for (var field : CacheInterceptor.implicitlyAddedFieldsForTesting()) {
-      server.enqueue(new MockResponse()
-          .addHeader("Cache-Control", "max-age=1")
-          .addHeader("Vary", "Accept-Encoding, " + field)
-          .setBody("aaa"));
-      seedCache(serverUri); // Offer to cache
-
-      assertNotCached(serverUri);
-    }
+    server.enqueue(new MockResponse()
+        .addHeader("Cache-Control", "max-age=1")
+        .addHeader("Vary", "Accept-Encoding, " + implicitField)
+        .setBody("aaa"));
+    seedCache(serverUri).assertBody("aaa");
+    assertNotCached(serverUri);
   }
 
   @StoreParameterizedTest
@@ -2666,17 +2667,27 @@ class HttpCacheTest {
     // writeFailureCount = 2, c.writeFailureCount = 1
     seedCache(serverUri.resolve("/c"));
 
-    await().until(() -> cache.stats().writeSuccessCount(), isEqual(3L));
-    await().until(() -> cache.stats().writeFailureCount(), isEqual(2L));
+    await().pollDelay(Duration.ZERO).until(() -> cache.stats().writeSuccessCount(), isEqual(3L));
+    await().pollDelay(Duration.ZERO).until(() -> cache.stats().writeFailureCount(), isEqual(2L));
 
-    await().until(() -> cache.stats(serverUri.resolve("/a")).writeSuccessCount(), isEqual(2L));
-    await().until(() -> cache.stats(serverUri.resolve("/a")).writeFailureCount(), isEqual(0L));
+    await()
+        .pollDelay(Duration.ZERO)
+        .until(() -> cache.stats(serverUri.resolve("/a")).writeSuccessCount(), isEqual(2L));
+    await()
+        .pollDelay(Duration.ZERO)
+        .until(() -> cache.stats(serverUri.resolve("/a")).writeFailureCount(), isEqual(0L));
 
-    await().until(() ->  cache.stats(serverUri.resolve("/b")).writeSuccessCount(), isEqual(1L));
-    await().until(() ->  cache.stats(serverUri.resolve("/b")).writeFailureCount(), isEqual(1L));
+    await()
+        .pollDelay(Duration.ZERO)
+        .until(() -> cache.stats(serverUri.resolve("/b")).writeSuccessCount(), isEqual(1L));
+    await().until(() -> cache.stats(serverUri.resolve("/b")).writeFailureCount(), isEqual(1L));
 
-    await().until(() -> cache.stats(serverUri.resolve("/c")).writeSuccessCount(), isEqual(0L));
-    await().until(() -> cache.stats(serverUri.resolve("/c")).writeFailureCount(), isEqual(1L));
+    await()
+        .pollDelay(Duration.ZERO)
+        .until(() -> cache.stats(serverUri.resolve("/c")).writeSuccessCount(), isEqual(0L));
+    await()
+        .pollDelay(Duration.ZERO)
+        .until(() -> cache.stats(serverUri.resolve("/c")).writeFailureCount(), isEqual(1L));
   }
 
   @StoreParameterizedTest

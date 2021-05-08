@@ -54,11 +54,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
@@ -73,19 +70,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public final class CacheInterceptor implements Interceptor {
   private static final Logger logger = System.getLogger(CacheInterceptor.class.getName());
-
-  /**
-   * Fields that can be added implicitly by HttpClient's own filters. This can happen if an
-   * Authenticator or a CookieHandler is installed. If a response varies with these (unlikely but
-   * possible), it's rendered uncacheable as we can't access the corresponding values from requests.
-   */
-  private static final Set<String> IMPLICITLY_ADDED_FIELDS;
-
-  static {
-    var fields = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-    fields.addAll(Set.of("Cookie", "Cookie2", "Authorization", "Proxy-Authorization"));
-    IMPLICITLY_ADDED_FIELDS = fields;
-  }
 
   private final InternalCache cache;
   private final Executor cacheExecutor;
@@ -153,8 +137,8 @@ public final class CacheInterceptor implements Interceptor {
 
     if (networkResponse != null) {
       // Release the network response properly. If this is a cache miss and we're updating a
-      // cache entry, discarding will drain the response body so it's fully written and the
-      // entry is committed.
+      // cache entry, discarding will drain the response body in background so it's fully
+      // written and the entry is committed.
       networkResponse.discard(handlerExecutor);
     } else {
       logger.log(Level.WARNING, "asynchronous revalidation failure", error);
@@ -165,24 +149,31 @@ public final class CacheInterceptor implements Interceptor {
     return headers.map().keySet().stream().anyMatch(CacheInterceptor::isPreconditionField);
   }
 
+  /**
+   * Returns true if the given field name denotes a precondition (rfc7232 section 3). 'If-Match' &
+   * 'If-Unmodified-Since' are meant to be seen by the origin, so requests having them are
+   * forwarded. rfc7234 allows caches to evaluate other preconditions, but the added complexity is
+   * discouraging, so they're also forwarded.
+   */
   private static boolean isPreconditionField(String name) {
-    switch (name) {
-      case "If-Match":
-      case "If-Unmodified-Since":
-        // These are meant for the origin and must be forwarded to it
-        return true;
+    return "If-Match".equalsIgnoreCase(name)
+        || "If-Unmodified-Since".equalsIgnoreCase(name)
+        || "If-None-Match".equalsIgnoreCase(name)
+        || "If-Modified-Since".equalsIgnoreCase(name)
+        || "If-Range".equalsIgnoreCase(name);
+  }
 
-      case "If-None-Match":
-      case "If-Modified-Since":
-      case "If-Range":
-        // rfc7234 allows us to evaluate these, but the added complexity
-        // is discouraging, particularly considering that preconditions
-        // are usually intended to be seen by the origin.
-        return true;
-
-      default:
-        return false;
-    }
+  /**
+   * Returns true if the given field name can be added implicitly by HttpClient's own filters. This
+   * can happen if an Authenticator or a CookieHandler is installed. If a response varies with
+   * these, it's rendered uncacheable as we can't access the corresponding values from requests, so
+   * we won't be able to match them with the correct response.
+   */
+  private static boolean isImplicitField(String name) {
+    return "Cookie".equalsIgnoreCase(name)
+        || "Cookie2".equalsIgnoreCase(name)
+        || "Authorization".equalsIgnoreCase(name)
+        || "Proxy-Authorization".equalsIgnoreCase(name);
   }
 
   private static boolean isNetworkOrServerError(
@@ -230,7 +221,8 @@ public final class CacheInterceptor implements Interceptor {
 
     // Refuse if the response is unmatchable or varies with fields that we can't see
     var varyFields = CacheResponseMetadata.varyFields(response.headers());
-    if (varyFields.contains("*") || !Collections.disjoint(varyFields, IMPLICITLY_ADDED_FIELDS)) {
+    if (varyFields.contains("*")
+        || varyFields.stream().anyMatch(CacheInterceptor::isImplicitField)) {
       return false;
     }
 
@@ -330,20 +322,10 @@ public final class CacheInterceptor implements Interceptor {
    * Based on rfc7231 4.2.1.
    */
   private static boolean isUnsafe(String method) {
-    switch (method.toUpperCase(Locale.ROOT)) {
-      case "GET":
-      case "HEAD":
-      case "OPTIONS":
-      case "TRACE":
-        return false;
-
-      default:
-        return true;
-    }
-  }
-
-  public static Set<String> implicitlyAddedFieldsForTesting() {
-    return IMPLICITLY_ADDED_FIELDS;
+    return !"GET".equalsIgnoreCase(method)
+        && !"HEAD".equalsIgnoreCase(method)
+        && !"OPTIONS".equalsIgnoreCase(method)
+        && !"TRACE".equalsIgnoreCase(method);
   }
 
   /**
