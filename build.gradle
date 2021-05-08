@@ -102,7 +102,6 @@ ext {
   contributesToTests = { project ->
     project.name in [
         'methanol',
-        'methanol-benchmarks',
         'methanol-blackbox',
         'methanol-brotli',
         'methanol-gson',
