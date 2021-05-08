@@ -42,7 +42,7 @@ task tckTest(type: Test) {
     systemProperties.TCK_NO_SIGNAL_TIMEOUT_MILLIS = 100
   }
 
-  timeout = Duration.ofMinutes(8)
+  timeout = Duration.ofMinutes(15)
 
   def runningTckTestClassName = new AtomicReference<String>()
   beforeTest { descriptor ->
