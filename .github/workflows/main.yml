@@ -72,7 +72,7 @@ jobs:
 
       - name: Upload JaCoCo report to Coveralls
         env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.coverallsRepoToken }}
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: ./gradlew coveralls
 
   publish_snapshot:
@@ -102,6 +102,9 @@ jobs:
 
       - name: Run Gradle publish
         env:
-          ORG_GRADLE_PROJECT_nexusUsername: ${{ secrets.nexusUsername }}
-          ORG_GRADLE_PROJECT_nexusPassword: ${{ secrets.nexusPassword }}
+          ORG_GRADLE_PROJECT_nexusUsername: ${{ secrets.NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_nexusPassword: ${{ secrets.NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
         run: ./gradlew publish -x check

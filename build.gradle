@@ -17,6 +17,7 @@ plugins {
   id 'jacoco'
   id 'com.github.kt3k.coveralls' version '2.12.0'
   id 'com.github.ben-manes.versions' version '0.38.0'
+  id 'io.github.gradle-nexus.publish-plugin' version '1.0.0'
 }
 
 ext {
@@ -79,33 +80,48 @@ ext {
       'hamcrest'               : "org.hamcrest:hamcrest:${versions.hamcrest}"
   ]
 
-  // querying properties about subprojects
-
   isJavaProject = { project ->
-    project.name != 'brotli-jni'
+    !(project.name in ['methanol-parent', 'brotli-jni'])
   }
+
   isPublished = { project ->
-    isJavaProject(project) &&
-        project.name != 'methanol-blackbox' &&
-        project.name != 'methanol-samples' &&
-        project.name != 'progress' &&
-        project.name != 'crawler'
+    project.name in [
+        'methanol',
+        'methanol-benchmarks',
+        'methanol-brotli',
+        'methanol-gson',
+        'methanol-jackson',
+        'methanol-jackson-flux',
+        'methanol-jaxb',
+        'methanol-protobuf',
+        'methanol-testutils'
+    ]
   }
-  // project has tests that contribute to coverage?
+
+  // Project has tests that contribute to coverage?
   contributesToTests = { project ->
-    isJavaProject(project) &&
-        !(project.name in
-            ['methanol-benchmarks', 'methanol-testutils', 'methanol-samples', 'progress', 'crawler'])
+    project.name in [
+        'methanol',
+        'methanol-benchmarks',
+        'methanol-blackbox',
+        'methanol-brotli',
+        'methanol-gson',
+        'methanol-jackson',
+        'methanol-jackson-flux',
+        'methanol-jaxb',
+        'methanol-protobuf'
+    ]
   }
-  // project is included in coverage report?
+
+  // Project is included in coverage report?
   contributesToCoverageReport = { project ->
     isPublished(project) && project.name != 'methanol-benchmarks'
   }
+
   getArtifactId = { project ->
-    if (isPublished(project)) {
-      return project.name == 'methanol-benchmarks' ? 'benchmarks' : project.name
-    }
-    return null
+    if (!isPublished(project)) return null
+
+    return project.name == 'methanol-benchmarks' ? 'benchmarks' : project.name
   }
 }
 
@@ -124,9 +140,7 @@ allprojects {
 }
 
 subprojects { subproject ->
-  if (!isJavaProject(subproject)) {
-    return
-  }
+  if (!isJavaProject(subproject)) return
 
   apply plugin: 'java-library'
   apply plugin: 'org.checkerframework'
@@ -230,11 +244,17 @@ subprojects { subproject ->
   }
 }
 
-// configure publishing for published projects
-subprojects { subproject ->
-  if (!isPublished(subproject)) {
-    return
+nexusPublishing {
+  repositories {
+    sonatype {
+      username = project.findProperty('nexusUsername')
+      password = project.findProperty('nexusPassword')
+    }
   }
+}
+
+subprojects { subproject ->
+  if (!isPublished(subproject)) return
 
   apply plugin: 'maven-publish'
   apply plugin: 'signing'
@@ -247,14 +267,12 @@ subprojects { subproject ->
 
     publications {
       maven(MavenPublication) {
-        groupId = project.group
         artifactId = project.ext.artifactId
-        version = project.version
         from components.java
 
         pom {
           name = project.name
-          description = "Lightweight HTTP extensions for Java 11"
+          description = 'Lightweight HTTP extensions for Java'
           url = 'https://github.com/mizosoft/methanol'
           inceptionYear = '2019'
 
@@ -282,30 +300,17 @@ subprojects { subproject ->
         }
       }
     }
-
-    repositories {
-      maven {
-        url = version.endsWith('SNAPSHOT')
-            ? 'https://oss.sonatype.org/content/repositories/snapshots'
-            : 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
-
-        credentials {
-          username = project.findProperty('nexusUsername')
-          password = project.findProperty('nexusPassword')
-        }
-      }
-    }
   }
 
   signing {
-    // Workaround for https://github.com/gradle/gradle/issues/888 (use gpg 2.2.X from CLI)
-    useGpgCmd()
-
     // Workaround for https://github.com/gradle/gradle/issues/11387
     required { false }
-    if (!project.version.endsWith('SNAPSHOT')) {
-      sign publishing.publications.maven
-    }
+
+    def signingKeyId = project.findProperty("signingKeyId")
+    def signingKey = project.findProperty("signingKey")
+    def signingPassword = project.findProperty("signingPassword")
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+    sign publishing.publications.maven
   }
 }
 
