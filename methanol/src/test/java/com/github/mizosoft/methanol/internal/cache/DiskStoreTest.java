@@ -444,6 +444,27 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreConfig(store = DISK)
+  void viewerDisallowsEditsAfterClosingTheStore(Store store, StoreContext context)
+      throws IOException {
+    setUp(context);
+    writeEntry(store, "e1", "Mew", "Mewtwo");
+
+    var viewer = view(store, "e1");
+
+    context.drainQueuedTasks();
+    store.close();
+
+    try (viewer) {
+      // Viewer keeps operating normally
+      assertEntryEquals(viewer, "Mew", "Mewtwo");
+
+      // No edits are allowed
+      assertThat(viewer.edit()).isNull();
+    }
+  }
+
+  @StoreParameterizedTest
+  @StoreConfig(store = DISK)
   @ExecutorConfig(CACHED_POOL)
   void concurrentRemovals(Store store, StoreContext context, Executor threadPool)
       throws IOException {
