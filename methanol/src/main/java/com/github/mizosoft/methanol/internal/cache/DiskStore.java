@@ -427,13 +427,13 @@ public final class DiskStore implements Store {
     }
     if (disposing) {
       // Avoid overlapping an index write with store directory deletion
-      indexWriteScheduler.shutdown(/* awaitRunningTask */ true);
+      indexWriteScheduler.shutdown();
       deleteStoreContent(directory);
     } else {
       // Make sure we close within our size bound
       evictExcessiveEntries();
       Utils.blockOnIO(indexWriteScheduler.scheduleNow());
-      indexWriteScheduler.shutdown(false);
+      indexWriteScheduler.shutdown();
     }
     indexExecutor.shutdown();
     evictionScheduler.shutdown();
@@ -988,16 +988,16 @@ public final class DiskStore implements Store {
      *
      * Where Tn is the currently scheduled and hence the only referenced task, and the time between
      * two consecutive Ts is at minimum the index update delay (note that Ts don't overlap since the
-     * executor is serialized). Ensuring no Ts are running after shutdown (currently needed by
-     * dispose) entails awaiting for the currently running task (if any) to finish then preventing
-     * ones following it from starting. If the update delay is small enough, or if the executor
-     * and/or the system-wide scheduler are busy, the currently running task might be lagging behind
-     * Tn by multiple Ts, so it's not ideal to somehow keep a reference to it in order to await it
-     * when needed. This Phaser solves this issue by having the currently running T to register
-     * itself then arriveAndDeregister when finished. During shutdown, the scheduler deregisters
-     * from, then attempts to await, the phaser, where it is only awaited if there is still one
-     * registered party (a running T). When registerers reach 0, the phaser is terminated,
-     * preventing yet to arrive tasks from registering, so they won't run.
+     * executor is serialized). Ensuring no Ts are running after shutdown entails awaiting for the
+     * currently running task (if any) to finish then preventing ones following it from starting. If
+     * the update delay is small enough, or if the executor and/or the system-wide scheduler are
+     * busy, the currently running task might be lagging behind Tn by multiple Ts, so it's not ideal
+     * to somehow keep a reference to it in order to await it when needed. This Phaser solves this
+     * issue by having the currently running T to register itself then arriveAndDeregister when
+     * finished. During shutdown, the scheduler deregisters from, then attempts to await, the
+     * phaser, where it is only awaited if there is still one registered party (a running T). When
+     * registerers reach 0, the phaser is terminated, preventing yet to arrive tasks from
+     * registering, so they won't run.
      */
     private final Phaser runningTaskAwaiter = new Phaser(1); // Register self
 
@@ -1077,16 +1077,13 @@ public final class DiskStore implements Store {
       }
     }
 
-    void shutdown(boolean awaitRunningTask) throws InterruptedIOException {
+    void shutdown() throws InterruptedIOException {
       scheduledWriteTask.set(TOMBSTONE);
-      int phase = runningTaskAwaiter.arriveAndDeregister();
-      if (awaitRunningTask) {
-        try {
-          runningTaskAwaiter.awaitAdvanceInterruptibly(phase);
-          assert runningTaskAwaiter.isTerminated();
-        } catch (InterruptedException e) {
-          throw new InterruptedIOException();
-        }
+      try {
+        runningTaskAwaiter.awaitAdvanceInterruptibly(runningTaskAwaiter.arriveAndDeregister());
+        assert runningTaskAwaiter.isTerminated();
+      } catch (InterruptedException e) {
+        throw new InterruptedIOException();
       }
     }
 
