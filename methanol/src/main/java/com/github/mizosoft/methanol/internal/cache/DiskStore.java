@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.Utils.closeQuietly;
+import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDuration;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
@@ -189,18 +190,18 @@ public final class DiskStore implements Store {
 
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
-  private static final long DEFAULT_INDEX_UPDATE_DELAY = 4000;
-  private static final Duration INDEX_UPDATE_DELAY;
+  private static final long DEFAULT_INDEX_UPDATE_DELAY_MILLIS = 4000;
+  private static final Duration DEFAULT_INDEX_UPDATE_DELAY;
 
   static {
     long millis =
         Long.getLong(
             "com.github.mizosoft.methanol.internal.cache.DiskStore.indexUpdateDelayMillis",
-            DEFAULT_INDEX_UPDATE_DELAY);
+            DEFAULT_INDEX_UPDATE_DELAY_MILLIS);
     if (millis < 0) {
-      millis = DEFAULT_INDEX_UPDATE_DELAY;
+      millis = DEFAULT_INDEX_UPDATE_DELAY_MILLIS;
     }
-    INDEX_UPDATE_DELAY = Duration.ofMillis(millis);
+    DEFAULT_INDEX_UPDATE_DELAY = Duration.ofMillis(millis);
   }
 
   private final Path directory;
@@ -236,7 +237,7 @@ public final class DiskStore implements Store {
             indexOperator,
             indexExecutor,
             this::entrySetSnapshot,
-            requireNonNullElse(builder.indexUpdateDelay, INDEX_UPDATE_DELAY),
+            requireNonNullElse(builder.indexUpdateDelay, DEFAULT_INDEX_UPDATE_DELAY),
             requireNonNullElseGet(builder.delayer, Delayer::systemDelayer),
             clock);
     evictionScheduler = new EvictionScheduler(this, executor);
@@ -259,9 +260,9 @@ public final class DiskStore implements Store {
   }
 
   /**
-   * Synchronously initializes the store. Must be run by the index executor. Operations that are
-   * guarded by closeLock's read lock must first ensure the store is initialized by calling {@link
-   * #initialize()} (except {@code flush}, which is a NO-OP for an uninitialized store).
+   * Synchronously initializes the store. Must be run by the index executor. Operations that access
+   * the store (other than close() or dispose()) must first ensure the store is initialized by
+   * calling {@link #initialize()} (except flush(), which is a NO-OP for an uninitialized store).
    */
   private void doInitialize() throws IOException {
     if (initialized) { // Recheck as another initialize() might have taken over indexExecutor
@@ -401,7 +402,7 @@ public final class DiskStore implements Store {
   @Override
   public void dispose() throws IOException {
     doClose(true);
-    size.set(0); // There's no contention on size at this point so there's no need to CAS
+    size.set(0);
   }
 
   @Override
@@ -507,10 +508,10 @@ public final class DiskStore implements Store {
   }
 
   /**
-   * Runs an eviction that is scheduled by {@link EvictionScheduler} and returns {@code true} only
-   * if the store is not closed, returns {@code false} otherwise.
+   * Attempts to run an eviction that is scheduled by {@link EvictionScheduler}. Returns false if
+   * eviction is ignored because the store has been closed.
    */
-  private boolean runScheduledEviction() throws IOException {
+  private boolean tryRunScheduledEviction() throws IOException {
     assert initialized;
     long stamp = closeLock.readLock();
     try {
@@ -659,8 +660,7 @@ public final class DiskStore implements Store {
         Files.move(file, ripFile);
         isolated = true;
       } catch (FileAlreadyExistsException | AccessDeniedException possiblyDuplicateRipFile) {
-        // The RIP file name is in use and is (or is yet to be) marked for deletion.
-        // This is unlikely, but we can then try again with a new random name.
+        // The RIP file name is in use.  We can then try again with a new random name.
       } catch (NoSuchFileException e) {
         // The file couldn't be found. It's already gone!
         return;
@@ -752,8 +752,8 @@ public final class DiskStore implements Store {
               removeEntry(entry, true);
             } catch (IOException ignored) {
             }
-          } catch (IOException ignored) {
-            // Try next entry...
+          } catch (IOException e) {
+            logger.log(Level.WARNING, "failed to open viewer while iterating", e);
           }
         }
         return false;
@@ -780,7 +780,7 @@ public final class DiskStore implements Store {
       var indexEntrySet = readOrCreateIndexIfAbsent();
       var entriesFoundOnDisk = scanDirectoryForEntries();
       var processedEntrySet = new HashSet<EntryDescriptor>(indexEntrySet.size());
-      var toDelete = new HashSet<Path>(); // Stale entry files to delete
+      var toDelete = new HashSet<Path>();
       for (var descriptor : indexEntrySet) {
         var entryFiles = entriesFoundOnDisk.get(descriptor.hash);
         if (entryFiles != null) {
@@ -949,8 +949,7 @@ public final class DiskStore implements Store {
       long millis = TimeUnit.MILLISECONDS.convert(delay);
       return millis <= 0
           ? delegate // Execute immediately
-          : CompletableFuture.delayedExecutor(
-              TimeUnit.MILLISECONDS.convert(delay), TimeUnit.MILLISECONDS);
+          : CompletableFuture.delayedExecutor(millis, TimeUnit.MILLISECONDS);
     }
   }
 
@@ -981,7 +980,7 @@ public final class DiskStore implements Store {
 
     /**
      * A barrier for shutdowns to await the currently running task. Scheduled WriteTasks normally
-     * (if there's no flushes) have the following transitions:
+     * (if there're no flushes) have the following transitions:
      *
      * <pre>{@code
      * T1 -> T2 -> .... -> Tn
@@ -1182,7 +1181,7 @@ public final class DiskStore implements Store {
     private void runEviction() {
       for (int s; ((s = sync) & SHUTDOWN) == 0; ) {
         try {
-          if (!store.runScheduledEviction()) {
+          if (!store.tryRunScheduledEviction()) {
             // The store is closed
             shutdown();
             break;
@@ -1248,9 +1247,8 @@ public final class DiskStore implements Store {
     }
 
     private static boolean tryLock(DirectoryLock lock) throws IOException {
-      var channel =
-          FileChannel.open(
-              lock.lockFile, CREATE, WRITE); // WRITE is needed for an exclusive FileLock
+      // Opening the channel with WRITE is needed for an exclusive FileLock
+      var channel = FileChannel.open(lock.lockFile, CREATE, WRITE);
       lock.channel = channel;
       try {
         var fileLock = channel.tryLock();
@@ -1419,13 +1417,7 @@ public final class DiskStore implements Store {
 
     final Hash hash;
 
-    /**
-     * This entry's key as known from the last open/edit. Used to minimize removals of the wrong
-     * entry in case of hash collisions, only if the entry knows its key. If it doesn't however, the
-     * entry is evicted either ways, which is considered better than having to read the entry file
-     * in each remove(String), bearing in mind that collisions under the used hasher are extremely
-     * rare in practice.
-     */
+    /** This entry's key as known from the last open/edit. */
     volatile @MonotonicNonNull String cachedKey;
 
     /** The number of viewers with an open channel to the entry file. */
@@ -1441,9 +1433,9 @@ public final class DiskStore implements Store {
     private @Nullable DiskEditor currentEditor;
 
     /**
-     * The number of times this entry has changed. Starts with 1 if the entry is recovered during
-     * initialization, or 0 if newly created for opening an editor. On the latter case, the entry
-     * won't be viewable until the edit is committed.
+     * This entry's version as indicated by the number of times it has changed. Starts with 1 if the
+     * entry is recovered during initialization, or 0 if newly created for opening an editor. On the
+     * latter case, the entry won't be viewable until the edit is committed.
      */
     private int version;
 
@@ -1501,8 +1493,7 @@ public final class DiskStore implements Store {
           return null;
         }
         var channel =
-            AsynchronousFileChannel.open(
-                entryFile(), Set.of(READ), ExecutorServiceAdapter.adapt(executor));
+            AsynchronousFileChannel.open(entryFile(), Set.of(READ), asyncChannelExecutor());
         var viewer =
             new DiskViewer(this, version, result.key, result.metadata, channel, result.dataSize);
         viewerCount++;
@@ -1609,12 +1600,12 @@ public final class DiskStore implements Store {
         if (dataChannel != null || readResult == null) {
           writeEntry(key, metadataToWrite, dataChannel, dataSize);
         } else {
-          updateEntry(key, metadataToWrite, readResult.dataSize); // No changes to data stream
+          updateEntry(key, metadataToWrite, readResult.dataSize);
         }
 
         oldEntrySize = entrySize;
         entrySize = newEntrySize;
-        cachedKey = key; // Now we know what's our key
+        cachedKey = key;
         firstTimeReadable = version == 0;
         version++;
       } finally {
@@ -1627,7 +1618,7 @@ public final class DiskStore implements Store {
       }
 
       if (firstTimeReadable) {
-        indexWriteScheduler.trySchedule(); // Update LRU info if we've just become readable
+        indexWriteScheduler.trySchedule(); // Update entry set if we've just become readable
       }
     }
 
@@ -1667,7 +1658,7 @@ public final class DiskStore implements Store {
 
       // Replacing deletes the target if it's there, so make sure it's deleted
       // in isolation in case we have viewers. If the replace fails, we'll be tracking
-      // an entry without its file. But that's taken care of by view(key).
+      // an entry without its file. But that's taken care of by view(String).
       if (viewerCount > 0) {
         isolatedDelete(entryFile());
       }
@@ -1704,7 +1695,7 @@ public final class DiskStore implements Store {
           .flip();
     }
 
-    /** Reads this entry only if it's readable provided its key matches expectedKey if not null. */
+    /** Reads this entry only if it's readable, provided its key matches expectedKey if not null. */
     private @Nullable EntryReadResult tryReadEntry(@Nullable String expectedKey)
         throws IOException {
       var key = cachedKey;
@@ -1738,15 +1729,15 @@ public final class DiskStore implements Store {
         var metadata =
             keyAndMetadata
                 .limit(keySize + metadataSize)
-                .slice() // Slice to have 0 position metadataSize capacity
+                .slice() // Slice to have 0 position & metadataSize capacity
                 .asReadOnlyBuffer();
         return new EntryReadResult(key, metadata, dataSize);
       }
     }
 
     /**
-     * Evicts this entry and returns either -1 if this entry is already evicted, it's last committed
-     * size if the entry was readable or 0 otherwise.
+     * Evicts this entry if it matches the given version and returns it's last committed size if it
+     * did get evicted, otherwise returns -1.
      */
     long evict(int targetVersion) throws IOException {
       lock.lock();
@@ -1763,7 +1754,7 @@ public final class DiskStore implements Store {
           Files.deleteIfExists(entryFile());
         }
         discardCurrentEdit();
-        return entrySize; // 0 if the entry wasn't readable
+        return entrySize;
       } finally {
         lock.unlock();
       }
@@ -1816,7 +1807,7 @@ public final class DiskStore implements Store {
   private final class DiskViewer implements Viewer {
     private final Entry entry;
 
-    /** Entry's version at the time of opening the viewer. */
+    /** Entry's version at the time of opening this viewer. */
     private final int entryVersion;
 
     private final String key;
@@ -1854,11 +1845,13 @@ public final class DiskStore implements Store {
     public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
       requireArgument(position >= 0, "negative position: %d", position);
       requireNonNull(dst);
+
       // Make sure the read doesn't exceed data stream bounds
       long availableBytes = dataSize - position;
       if (availableBytes <= 0) {
-        return CompletableFuture.completedFuture(-1); // End of data stream
+        return CompletableFuture.completedFuture(-1);
       }
+
       int toRead = (int) Math.min(availableBytes, dst.remaining());
       int originalLimit = dst.limit();
       dst.limit(dst.position() + toRead);
@@ -1946,7 +1939,7 @@ public final class DiskStore implements Store {
             position >= 0 && position <= writtenCount, "position out of range: %d", position);
         if (closed) {
           // Instead of throwing, simulate a fake write. This is an expected scenario when
-          // the editor is used concurrently. For example, if a thread discards the edit by
+          // the editor is closed concurrently. For example, if a thread discards this edit by
           // closing the editor (due to a failed write or closing the store), another thread
           // might not immediately know and try to schedule more writes when it gets more data.
           int fakeWritten = src.remaining();
@@ -2090,8 +2083,7 @@ public final class DiskStore implements Store {
     }
 
     public Builder indexUpdateDelay(Duration duration) {
-      requireNonNull(duration);
-      requireArgument(!duration.isNegative(), "negative duration");
+      requireNonNegativeDuration(duration);
       this.indexUpdateDelay = duration;
       return this;
     }
