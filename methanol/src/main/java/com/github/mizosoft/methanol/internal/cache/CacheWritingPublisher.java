@@ -57,8 +57,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> {
   private static final Logger logger = System.getLogger(CacheWritingPublisher.class.getName());
 
-  /** Whether to propagate cancellation by downstream to upstream. Intended for TCK tests. */
-  private static final boolean PROPAGATE_CANCELLATION =
+  private static final boolean DEFAULT_PROPAGATE_CANCELLATION =
       Boolean.getBoolean(
           "com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.propagateCancellation");
 
@@ -67,22 +66,38 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
   private final Listener listener;
   private final AtomicBoolean subscribed = new AtomicBoolean();
 
+  /**
+   * Whether to propagate cancellation by downstream to upstream, or prefer draining the response
+   * body into cache instead.
+   */
+  private final boolean propagateCancellation;
+
   public CacheWritingPublisher(Publisher<List<ByteBuffer>> upstream, Editor editor) {
-    this(upstream, editor, DisabledListener.INSTANCE);
+    this(upstream, editor, DisabledListener.INSTANCE, DEFAULT_PROPAGATE_CANCELLATION);
   }
 
   public CacheWritingPublisher(
       Publisher<List<ByteBuffer>> upstream, Editor editor, Listener listener) {
+    this(upstream, editor, listener, DEFAULT_PROPAGATE_CANCELLATION);
+  }
+
+  public CacheWritingPublisher(
+      Publisher<List<ByteBuffer>> upstream,
+      Editor editor,
+      Listener listener,
+      boolean propagateCancellation) {
     this.upstream = upstream;
     this.editor = editor;
     this.listener = listener;
+    this.propagateCancellation = propagateCancellation;
   }
 
   @Override
   public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      upstream.subscribe(new CacheWritingSubscriber(subscriber, editor, listener));
+      upstream.subscribe(
+          new CacheWritingSubscriber(subscriber, editor, listener, propagateCancellation));
     } else {
       FlowSupport.refuse(subscriber, FlowSupport.multipleSubscribersToUnicast());
     }
@@ -114,6 +129,10 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         }
       };
     }
+
+    static Listener disabled() {
+      return DisabledListener.INSTANCE;
+    }
   }
 
   private enum DisabledListener implements Listener {
@@ -130,8 +149,12 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private final CacheWritingSubscription downstreamSubscription;
 
     CacheWritingSubscriber(
-        Subscriber<? super List<ByteBuffer>> downstream, Editor editor, Listener listener) {
-      downstreamSubscription = new CacheWritingSubscription(downstream, editor, listener);
+        Subscriber<? super List<ByteBuffer>> downstream,
+        Editor editor,
+        Listener listener,
+        boolean propagateCancellation) {
+      downstreamSubscription =
+          new CacheWritingSubscription(downstream, editor, listener, propagateCancellation);
     }
 
     @Override
@@ -180,6 +203,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     private final Editor editor;
     private final Listener listener;
+    private final boolean propagateCancellation;
     private final Upstream upstream = new Upstream();
     private final ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
 
@@ -205,10 +229,12 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     CacheWritingSubscription(
         @NonNull Subscriber<? super List<ByteBuffer>> downstream,
         Editor editor,
-        Listener listener) {
+        Listener listener,
+        boolean propagateCancellation) {
       this.downstream = downstream;
       this.editor = editor;
       this.listener = listener.guarded(); // Ensure the listener doesn't throw
+      this.propagateCancellation = propagateCancellation;
     }
 
     @Override
@@ -222,13 +248,14 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     @Override
     public void cancel() {
-      // Downstream isn't interested in the body anymore. However, we are!
-      // That's because we're also writing the body to cache. This will be done in
-      // background since downstream is probably done by now.
+      // Downstream isn't interested in the body anymore. However, we are! So we'll keep
+      // writing the body to cache. This will be done in background since downstream
+      // is probably done by now.
       if (getAndClearDownstream() != null) {
         assert upstream.isSet();
+
         // Propagate cancellation if nothing is being written or propagation is allowed
-        if (state == DISPOSED || PROPAGATE_CANCELLATION) {
+        if (state == DISPOSED || propagateCancellation) {
           upstream.cancel();
         } else {
           upstream.request(Long.MAX_VALUE); // Drain the whole body
@@ -260,6 +287,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     void onError(Throwable error) {
       upstream.clear();
+      writeQueue.clear();
       try {
         discardEdit(null);
       } finally {
@@ -326,9 +354,9 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         boolean failedToCommitEdit = false;
         try (editor) {
           editor.commitOnClose();
-        } catch (IOException ioe) {
+        } catch (IOException e) {
           failedToCommitEdit = true;
-          logger.log(Level.WARNING, "Editor::close failure while committing edit", ioe);
+          logger.log(Level.WARNING, "Editor::close failure while committing edit", e);
         }
 
         if (failedToCommitEdit) {
@@ -339,13 +367,13 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       }
     }
 
-    private void discardEdit(@Nullable Throwable writeFailureCause) {
+    private void discardEdit(@Nullable Throwable writeFailure) {
       if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
-        if (writeFailureCause != null) {
+        if (writeFailure != null) {
           logger.log(
               Level.WARNING,
               "aborting cache edit as a problem occurred while writing",
-              writeFailureCause);
+              writeFailure);
 
           listener.onWriteFailure();
         }
@@ -353,18 +381,21 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         writeQueue.clear();
         try {
           editor.close();
-        } catch (IOException ioe) {
-          logger.log(Level.WARNING, "Editor::close failure while aborting edit", ioe);
+        } catch (IOException e) {
+          logger.log(Level.WARNING, "Editor::close failure while aborting edit", e);
         }
       }
     }
 
     private void onWriteCompletion(@Nullable Throwable error) {
       if (error != null) {
-        discardEdit(error);
-        // Cancel upstream if downstream was disposed and we're only caching the body
-        if (downstream == null) {
-          upstream.cancel();
+        try {
+          discardEdit(error);
+        } finally {
+          // Cancel upstream if downstream was disposed and we were only writing the body
+          if (downstream == null) {
+            upstream.cancel();
+          }
         }
       } else if (!tryScheduleWrite(true) && STATE.compareAndSet(this, WRITING, IDLE)) {
         // There might be signals missed just before CASing to IDLE

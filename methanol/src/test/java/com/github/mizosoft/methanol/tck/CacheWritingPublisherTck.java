@@ -4,6 +4,7 @@ import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
@@ -25,7 +26,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.AfterMethod;
@@ -84,8 +84,7 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
     }
 
     return new CacheWritingPublisher(
-        FlowAdapters.toFlowPublisher(
-            new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
+        toFlowPublisher(new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
         editor);
   }
 
@@ -143,7 +142,9 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
 
     @Override
     public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-      return CompletableFuture.completedFuture(src.remaining());
+      int remaining = src.remaining();
+      src.position(src.position() + remaining);
+      return CompletableFuture.completedFuture(remaining);
     }
 
     @Override

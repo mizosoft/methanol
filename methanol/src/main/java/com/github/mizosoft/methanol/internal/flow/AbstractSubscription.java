@@ -291,4 +291,8 @@ public abstract class AbstractSubscription<T> implements Subscription {
   private int getAndBitwiseOrState(int bits) {
     return (int) STATE.getAndBitwiseOr(this, bits);
   }
+
+  protected long currentDemand() {
+    return demand;
+  }
 }

@@ -85,4 +85,8 @@ public class SubmittableSubscription<T> extends AbstractSubscription<T> {
     complete = true;
     signal(true);
   }
+
+  public long currentDemand() {
+    return super.currentDemand();
+  }
 }

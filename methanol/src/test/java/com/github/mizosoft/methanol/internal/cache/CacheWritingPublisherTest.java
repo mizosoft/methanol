@@ -6,6 +6,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listener;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
@@ -93,7 +94,7 @@ class CacheWritingPublisherTest {
       upstream.submitAll(toResponseBody("Cancel me if you can!"));
     }
 
-    // Writing completes successfully and cancellation is propagated
+    // Writing completes successfully and cancellation is not propagated
     editor.awaitClose();
     assertThat(editor.discarded).isFalse();
     assertThat(upstream.firstSubscription().flowInterrupted).isFalse();
@@ -124,12 +125,11 @@ class CacheWritingPublisherTest {
     subscriber.awaitSubscribe();
 
     upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
-    // Don't complete upstream
 
-    // Wait till error is handled and failingEditor is closed
+    // Wait till the error is handled and failingEditor is closed
     failingEditor.awaitClose();
 
-    // This cancellation is propagated as there's nothing being written anymore
+    // This cancellation is propagated as there's nothing being written
     subscriber.subscription.cancel();
 
     var subscription = upstream.firstSubscription();
@@ -139,14 +139,14 @@ class CacheWritingPublisherTest {
 
   @ExecutorParameterizedTest
   void cancellationIsPropagatedLaterOnFailedWrite(Executor executor) {
-    var cancelledSubscription = new CountDownLatch(1);
+    var cancelledSubscriptionLatch = new CountDownLatch(1);
     var failingEditor =
         new TestEditor() {
           @Override
           public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
             return CompletableFuture.supplyAsync(
                 () -> {
-                  awaitUninterruptibly(cancelledSubscription);
+                  awaitUninterruptibly(cancelledSubscriptionLatch);
                   // This failure causes cancellation to be propagated
                   throw new TestException();
                 });
@@ -160,10 +160,13 @@ class CacheWritingPublisherTest {
     subscriber.awaitSubscribe();
 
     upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
-    // Don't complete upstream
 
     subscriber.subscription.cancel();
-    cancelledSubscription.countDown();
+
+    // Cancellation isn't propagated until the editor fails
+    assertThat(upstream.firstSubscription().flowInterrupted).isFalse();
+
+    cancelledSubscriptionLatch.countDown();
 
     var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
@@ -251,7 +254,7 @@ class CacheWritingPublisherTest {
   @ExecutorConfig(CACHED_POOL)
   void writeLaggingBehindBodyCompletion(Executor threadPool) {
     var bodyCompletionLatch = new CountDownLatch(1);
-    var editor =
+    var laggyEditor =
         new TestEditor() {
           @Override
           public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
@@ -261,7 +264,7 @@ class CacheWritingPublisherTest {
           }
         };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(threadPool);
-    var publisher = new CacheWritingPublisher(upstream, editor);
+    var publisher = new CacheWritingPublisher(upstream, laggyEditor);
     var subscriber = new StringSubscriber();
 
     publisher.subscribe(subscriber);
@@ -275,12 +278,34 @@ class CacheWritingPublisherTest {
         });
 
     subscriber.awaitComplete();
+
     // Allow the editor to progress
     bodyCompletionLatch.countDown();
     assertThat(subscriber.bodyToString()).isEqualTo("Cyberpunk");
 
-    editor.awaitClose();
-    assertThat(editor.writtenToString()).isEqualTo("Cyberpunk");
+    laggyEditor.awaitClose();
+    assertThat(laggyEditor.writtenToString()).isEqualTo("Cyberpunk");
+  }
+
+  @ExecutorParameterizedTest
+  void requestAfterCancellation(Executor executor) {
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher =
+        new CacheWritingPublisher(upstream, new TestEditor(), Listener.disabled(), true);
+    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    subscriber.request = 0;
+
+    publisher.subscribe(subscriber);
+    subscriber.awaitSubscribe();
+
+    subscriber.subscription.request(2);
+    assertThat(upstream.firstSubscription().currentDemand()).isEqualTo(2);
+
+    subscriber.subscription.cancel();
+
+    // This request isn't forwarded upstream as the subscription is cancelled
+    subscriber.subscription.request(1);
+    assertThat(upstream.firstSubscription().currentDemand()).isEqualTo(2);
   }
 
   private static void executeLaterMillis(Runnable task, long millis) {
