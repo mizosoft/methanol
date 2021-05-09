@@ -34,6 +34,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
+import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.net.Authenticator;
@@ -331,9 +332,15 @@ public final class Methanol extends HttpClient {
 
   private static <T> PushPromiseHandler<T> transformPushPromises(
       PushPromiseHandler<T> pushPromiseHandler,
-      Function<BodyHandler<T>, BodyHandler<T>> transformer) {
+      UnaryOperator<BodyHandler<T>> bodyHandlerTransform,
+      UnaryOperator<HttpResponse<T>> responseTransformer) {
     return (initial, push, acceptor) ->
-        pushPromiseHandler.applyPushPromise(initial, push, acceptor.compose(transformer));
+        pushPromiseHandler.applyPushPromise(
+            initial,
+            push,
+            acceptor
+                .compose(bodyHandlerTransform)
+                .andThen(future -> future.thenApply(responseTransformer)));
   }
 
   /** Returns a new {@link Methanol.Builder}. */
@@ -879,13 +886,15 @@ public final class Methanol extends HttpClient {
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException {
-      return decoding(chain).forward(request);
+      return stripContentEncoding(decoding(chain).forward(request));
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      return decoding(chain).forwardAsync(request);
+      return decoding(chain)
+          .forwardAsync(request)
+          .thenApply(AutoDecompressingInterceptor::stripContentEncoding);
     }
 
     private static <T> Chain<T> decoding(Chain<T> chain) {
@@ -893,8 +902,25 @@ public final class Methanol extends HttpClient {
           MoreBodyHandlers.decoding(chain.bodyHandler()),
           chain
               .pushPromiseHandler()
-              .map(handler -> transformPushPromises(handler, MoreBodyHandlers::decoding))
+              .map(
+                  handler ->
+                      transformPushPromises(
+                          handler,
+                          MoreBodyHandlers::decoding,
+                          AutoDecompressingInterceptor::stripContentEncoding))
               .orElse(null));
+    }
+
+    private static <T> HttpResponse<T> stripContentEncoding(HttpResponse<T> response) {
+      // Strip outdated Content-Encoding & Content-Length
+      if (response.headers().map().containsKey("Content-Encoding")) {
+        return ResponseBuilder.newBuilder(response)
+            .removeHeader("Content-Encoding")
+            .removeHeader("Content-Length")
+            .build();
+      }
+
+      return response;
     }
   }
 
@@ -928,7 +954,10 @@ public final class Methanol extends HttpClient {
           withReadTimeout(chain.bodyHandler()),
           chain
               .pushPromiseHandler()
-              .map(handler -> transformPushPromises(handler, this::withReadTimeout))
+              .map(
+                  handler ->
+                      transformPushPromises(
+                          handler, this::withReadTimeout, UnaryOperator.identity()))
               .orElse(null));
     }
 
