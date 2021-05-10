@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
@@ -390,6 +391,33 @@ class MethanolClientTest {
     verifying(client.sendAsync(GET(serverUri), BodyHandlers.ofString()).join())
         .assertCode(200)
         .assertBody("I'm back!");
+  }
+
+  @Test
+  void headOfCompressedResponse() throws Exception {
+    var gzippedBody = gzip("Pikachu");
+    server.enqueue(new MockResponse()
+        .setHeader("Content-Encoding", "gzip")
+        .setHeader("Content-Length", gzippedBody.length));
+    server.enqueue(new MockResponse()
+        .setHeader("Content-Encoding", "gzip")
+        .setHeader("Content-Length", gzippedBody.length)
+        .setBody(new okio.Buffer().write(gzippedBody)));
+
+    var client = clientBuilder.build();
+
+    var headRequest = MutableRequest.create(serverUri).method("HEAD", BodyPublishers.noBody());
+    verifying(client.send(headRequest, BodyHandlers.ofString()))
+        .assertCode(200)
+        .assertBody("")
+        .assertHeader("Content-Encoding", "gzip")
+        .assertHeader("Content-Length", gzippedBody.length);
+
+    verifying(client.send(GET(serverUri), BodyHandlers.ofString()))
+        .assertCode(200)
+        .assertBody("Pikachu")
+        .assertAbsentHeader("Content-Encoding")
+        .assertAbsentHeader("Content-Length");
   }
 
   private static String acceptEncodingValue() {
