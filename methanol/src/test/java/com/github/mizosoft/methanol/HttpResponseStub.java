@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
@@ -30,14 +31,46 @@ import java.net.http.HttpResponse;
 import java.util.Optional;
 import javax.net.ssl.SSLSession;
 
-public class HttpResponseStub<T> implements HttpResponse<T> {
+public final class HttpResponseStub<T> implements HttpResponse<T> {
+  public HttpResponseStub() {}
 
-  @Override public int statusCode() { throw new AssertionError(); }
-  @Override public HttpRequest request() { throw new AssertionError(); }
-  @Override public Optional<HttpResponse<T>> previousResponse() { throw new AssertionError(); }
-  @Override public HttpHeaders headers() { throw new AssertionError(); }
-  @Override public T body() { throw new AssertionError(); }
-  @Override public Optional<SSLSession> sslSession() { throw new AssertionError(); }
-  @Override public URI uri() { throw new AssertionError(); }
-  @Override public Version version() { throw new AssertionError(); }
+  @Override
+  public int statusCode() {
+    return 200;
+  }
+
+  @Override
+  public HttpRequest request() {
+    return MutableRequest.GET("http://example.com").toImmutableRequest();
+  }
+
+  @Override
+  public Optional<HttpResponse<T>> previousResponse() {
+    return Optional.empty();
+  }
+
+  @Override
+  public HttpHeaders headers() {
+    return TestUtils.headers();
+  }
+
+  @Override
+  public T body() {
+    return null;
+  }
+
+  @Override
+  public Optional<SSLSession> sslSession() {
+    return Optional.empty();
+  }
+
+  @Override
+  public URI uri() {
+    return URI.create("http://example.com");
+  }
+
+  @Override
+  public Version version() {
+    return Version.HTTP_1_1;
+  }
 }

@@ -106,6 +106,25 @@ public final class ResponseVerifier<T> {
     return this;
   }
 
+  public ResponseVerifier<T> assertHeadersDiscardingStrippedContentEncoding(HttpHeaders headers) {
+    // Discard Content-Encoding & Content-Length if Content-Encoding is included in the given
+    // headers but not our response's headers. When these are present in a network/cache response,
+    // Methanol removes them from the returned response. This is because transparently decompressing
+    // the response obsoletes these headers.
+    if (headers.map().containsKey("Content-Encoding")
+        && !response.headers().map().containsKey("Content-Encoding")) {
+      assertHeaders(
+          HttpHeaders.of(
+              headers.map(),
+              (name, __) ->
+                  !"Content-Encoding".equalsIgnoreCase(name)
+                      && !"Content-Length".equalsIgnoreCase(name)));
+    } else {
+      assertHeaders(headers);
+    }
+    return this;
+  }
+
   public ResponseVerifier<T> assertRequestHeader(String name, String value) {
     assertHeader(name, value, response.request().headers());
     return this;
@@ -200,7 +219,7 @@ public final class ResponseVerifier<T> {
     var cacheResponse = cacheResponse().get();
     assertUri(cacheResponse.uri())
         .assertCode(cacheResponse.statusCode())
-        .assertHeaders(cacheResponse.headers())
+        .assertHeadersDiscardingStrippedContentEncoding(cacheResponse.headers())
         .assertSslSession(cacheResponse.sslSession());
     return this;
   }
@@ -283,7 +302,7 @@ public final class ResponseVerifier<T> {
   private ResponseVerifier<T> assertEqualToNetworkResponse(TrackedResponse<?> networkResponse) {
     assertUri(networkResponse.uri())
         .assertCode(networkResponse.statusCode())
-        .assertHeaders(networkResponse.headers())
+        .assertHeadersDiscardingStrippedContentEncoding(networkResponse.headers())
         .assertSslSession(networkResponse.sslSession())
         .assertRequestSentAt(networkResponse.timeRequestSent())
         .assertResponseReceivedAt(networkResponse.timeResponseReceived());
@@ -366,10 +385,7 @@ public final class ResponseVerifier<T> {
   }
 
   private static void assertHeader(String name, String value, HttpHeaders headers) {
-    assertThat(headers.allValues(name))
-        .as(name)
-        .singleElement()
-        .isEqualTo(value);
+    assertThat(headers.allValues(name)).as(name).singleElement().isEqualTo(value);
   }
 
   private static Certificate[] getPeerCerts(SSLSession session) {

@@ -2700,6 +2700,24 @@ class HttpCacheTest {
     assertThat(cache.stats(serverUri)).isEqualTo(Stats.empty());
   }
 
+  @StoreParameterizedTest
+  void compressedCacheResponse(Store store) throws Exception {
+    setUpCache(store);
+
+    var gzippedBytes = gzip("Will Smith");
+    server.enqueue(new MockResponse()
+        .setHeader("Cache-Control", "max-age=1")
+        .setHeader("Content-Encoding", "gzip")
+        .setBody(new okio.Buffer().write(gzippedBytes)));
+    seedCache(serverUri);
+    get(serverUri)
+        .assertCode(200)
+        .assertHit()
+        .assertBody("Will Smith")
+        .assertAbsentHeader("Content-Encoding")
+        .assertAbsentHeader("Content-Length");
+  }
+
   private ResponseVerifier<String> get(URI uri) throws IOException, InterruptedException {
     return get(GET(uri));
   }
