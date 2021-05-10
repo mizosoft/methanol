@@ -25,12 +25,12 @@ package com.github.mizosoft.methanol;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.MutableRequest.POST;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
+import static com.github.mizosoft.methanol.testutils.ResponseVerifier.verifying;
 import static com.github.mizosoft.methanol.testutils.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testutils.TestUtils.gzip;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
@@ -47,6 +47,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -86,7 +87,7 @@ class MethanolClientTest {
   void syncGet() throws Exception {
     server.enqueue(new MockResponse()
         .setBody(new okio.Buffer().write(gzip("unzip me!")))
-        .addHeader("Content-Encoding", "gzip"));
+        .setHeader("Content-Encoding", "gzip"));
 
     var client = clientBuilder
         .userAgent("Will Smith")
@@ -94,8 +95,11 @@ class MethanolClientTest {
         .defaultHeader("Accept", "text/plain")
         .build();
 
-    var response = client.send(GET("relative?q=value"), BodyHandlers.ofString());
-    assertThat(response.body()).isEqualTo("unzip me!");
+    verifying(client.send(GET("relative?q=value"), BodyHandlers.ofString()))
+        .assertCode(200)
+        .assertBody("unzip me!")
+        .assertAbsentHeader("Content-Encoding")
+        .assertAbsentHeader("Content-Length");
 
     var sentRequest = server.takeRequest();
     assertThat(sentRequest.getHeader("User-Agent")).isEqualTo("Will Smith");
@@ -111,7 +115,7 @@ class MethanolClientTest {
   void asyncGet() throws Exception {
     server.enqueue(new MockResponse()
         .setBody(new okio.Buffer().write(gzip("unzip me!")))
-        .addHeader("Content-Encoding", "gzip"));
+        .setHeader("Content-Encoding", "gzip"));
 
     var client = clientBuilder
         .userAgent("Will Smith")
@@ -119,9 +123,11 @@ class MethanolClientTest {
         .defaultHeader("Accept", "text/plain")
         .build();
 
-    assertThat(client.sendAsync(GET("relative?q=value"), BodyHandlers.ofString()))
-        .succeedsWithin(Duration.ofSeconds(20))
-        .returns("unzip me!", from(HttpResponse::body));
+    verifying(client.sendAsync(GET("relative?q=value"), BodyHandlers.ofString()).join())
+        .assertCode(200)
+        .assertBody("unzip me!")
+        .assertAbsentHeader("Content-Encoding")
+        .assertAbsentHeader("Content-Length");
 
     var sentRequest = server.takeRequest();
     assertThat(sentRequest.getHeader("User-Agent")).isEqualTo("Will Smith");
@@ -139,14 +145,18 @@ class MethanolClientTest {
     int pushCount = 3;
     var mockResponse = new MockResponse()
         .setBody(new okio.Buffer().write(deflate("Pikachu")))
-        .addHeader("Content-Encoding", "deflate");
+        .setHeader("Content-Encoding", "deflate");
+    var decompressedPaths = new HashSet<String>();
     for (int i = 0; i < pushCount; i++) {
-      var pushResponse =
-          i % 2 == 0
-              ? new MockResponse()
-                  .setBody(new okio.Buffer().write(gzip("pika pika!")))
-                  .addHeader("Content-Encoding", "gzip")
-              : new MockResponse().setBody("pika pika!");
+      MockResponse pushResponse;
+      if (i % 2 == 0) {
+        pushResponse = new MockResponse()
+            .setBody(new okio.Buffer().write(gzip("pika pika!")))
+            .setHeader("Content-Encoding", "gzip");
+        decompressedPaths.add("/push" + i);
+      } else {
+        pushResponse = new MockResponse().setBody("pika pika!");
+      }
       mockResponse.withPush(
           new PushPromise("GET", "/push" + i, Headers.of(":scheme", "https"), pushResponse));
     }
@@ -159,16 +169,29 @@ class MethanolClientTest {
         GET(serverUri),
         BodyHandlers.ofString(),
         PushPromiseHandler.of(__ -> BodyHandlers.ofString(), pushes));
-    assertThat(responseFuture)
-        .succeedsWithin(Duration.ofSeconds(20))
-        .returns("Pikachu", from(HttpResponse::body));
+    verifying(responseFuture.join())
+        .assertCode(200)
+        .assertBody("Pikachu")
+        .assertAbsentHeader("Content-Encoding")
+        .assertAbsentHeader("Content-Length");
 
     pushes.forEachValue(
         Long.MAX_VALUE,
-        push ->
-            assertThat(push)
-                .succeedsWithin(Duration.ofSeconds(40))
-                .returns("pika pika!", from(HttpResponse::body)));
+        push -> {
+          var response = push.join();
+          if (decompressedPaths.contains(response.uri().getPath())) {
+            verifying(response)
+                .assertCode(200)
+                .assertBody("pika pika!")
+                .assertAbsentHeader("Content-Encoding")
+                .assertAbsentHeader("Content-Length");
+          } else {
+            verifying(response)
+                .assertCode(200)
+                .assertBody("pika pika!")
+                .assertHeader("Content-Length", "pika pika!".length());
+          }
+        });
   }
 
   @Test
@@ -176,11 +199,14 @@ class MethanolClientTest {
     var gzippedBytes = gzip("Pikachu");
     server.enqueue(new MockResponse()
         .setBody(new okio.Buffer().write(gzippedBytes))
-        .addHeader("Content-Encoding", "gzip"));
+        .setHeader("Content-Encoding", "gzip"));
 
     var client = clientBuilder.autoAcceptEncoding(false).build();
     var response = client.send(GET(serverUri), BodyHandlers.ofByteArray());
-    assertThat(response.body()).isEqualTo(gzippedBytes);
+    verifying(response)
+        .assertBody(gzippedBytes)
+        .assertHeader("Content-Encoding", "gzip")
+        .assertHeader("Content-Length", gzippedBytes.length);
 
     assertThat(server.takeRequest().getHeader("Accept-Encoding")).isNull();
   }
@@ -253,7 +279,7 @@ class MethanolClientTest {
   void exchange() {
     server.enqueue(new MockResponse()
         .setBody(new okio.Buffer().write(gzip("Pikachu")))
-        .addHeader("Content-Encoding", "gzip"));
+        .setHeader("Content-Encoding", "gzip"));
 
     var client = clientBuilder.build();
     var publisher = client.exchange(GET(serverUri), BodyHandlers.ofString());
@@ -263,9 +289,12 @@ class MethanolClientTest {
     subscriber.awaitComplete();
 
     assertThat(subscriber.lastError).isNull();
-    assertThat(subscriber.items)
-        .singleElement()
-        .returns("Pikachu", from(HttpResponse::body));
+    assertThat(subscriber.items).hasSize(1);
+    verifying(subscriber.items.peekFirst())
+        .assertCode(200)
+        .assertBody("Pikachu")
+        .assertAbsentHeader("Content-Encoding")
+        .assertAbsentHeader("Content-Length");
   }
 
   @Test
@@ -274,17 +303,20 @@ class MethanolClientTest {
     var pushCount = 3;
     var mockResponse = new MockResponse()
         .setBody(new okio.Buffer().write(deflate("Pikachu")))
-        .addHeader("Content-Encoding", "deflate");
+        .setHeader("Content-Encoding", "deflate");
+    var decompressedPaths = new HashSet<String>();
     for (int i = 0; i < pushCount; i++) {
-      var pushResponse =
-          i % 2 == 0
-              ? new MockResponse()
-                  .setBody(new okio.Buffer().write(gzip("pika pika!!")))
-                  .addHeader("Content-Encoding", "gzip")
-              : new MockResponse().setBody("pika pika!!");
+      MockResponse pushResponse;
+      if (i % 2 == 0) {
+        pushResponse = new MockResponse()
+            .setBody(new okio.Buffer().write(gzip("pika pika!")))
+            .setHeader("Content-Encoding", "gzip");
+        decompressedPaths.add("/push" + i);
+      } else {
+        pushResponse = new MockResponse().setBody("pika pika!");
+      }
       mockResponse.withPush(
-          new PushPromise(
-              "GET", "/push" + i, Headers.of(":scheme", "https"), pushResponse));
+          new PushPromise("GET", "/push" + i, Headers.of(":scheme", "https"), pushResponse));
     }
 
     server.enqueue(mockResponse);
@@ -306,9 +338,24 @@ class MethanolClientTest {
       var path = response.request().uri().getPath();
       if (path.startsWith("/push")) {
         assertThat(path).isNotEqualTo("/push0"); // First push promise isn't accepted
-        assertThat(response.body()).isEqualTo("pika pika!!");
+        if (decompressedPaths.contains(path)) {
+          verifying(response)
+              .assertCode(200)
+              .assertBody("pika pika!")
+              .assertAbsentHeader("Content-Encoding")
+              .assertAbsentHeader("Content-Length");
+        } else {
+          verifying(response)
+              .assertCode(200)
+              .assertBody("pika pika!")
+              .assertHeader("Content-Length", "pika pika!".length());
+        }
       } else {
-        assertThat(response.body()).isEqualTo("Pikachu");
+        verifying(response)
+            .assertCode(200)
+            .assertBody("Pikachu")
+            .assertAbsentHeader("Content-Encoding")
+            .assertAbsentHeader("Content-Length");
       }
     }
   }
@@ -324,10 +371,9 @@ class MethanolClientTest {
     }
     server.enqueue(new MockResponse().setBody("I'm back!"));
 
-    var response = client.send(GET(serverUri), BodyHandlers.ofString());
-    assertThat(response)
-        .returns(200, from(HttpResponse::statusCode))
-        .returns("I'm back!", from(HttpResponse::body));
+    verifying(client.send(GET(serverUri), BodyHandlers.ofString()))
+        .assertCode(200)
+        .assertBody("I'm back!");
   }
 
   @Test
@@ -341,11 +387,9 @@ class MethanolClientTest {
     }
     server.enqueue(new MockResponse().setBody("I'm back!"));
 
-    var responseFuture = client.sendAsync(GET(serverUri), BodyHandlers.ofString());
-    assertThat(responseFuture)
-        .succeedsWithin(Duration.ofSeconds(20))
-        .returns(200, from(HttpResponse::statusCode))
-        .returns("I'm back!", from(HttpResponse::body));
+    verifying(client.sendAsync(GET(serverUri), BodyHandlers.ofString()).join())
+        .assertCode(200)
+        .assertBody("I'm back!");
   }
 
   private static String acceptEncodingValue() {

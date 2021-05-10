@@ -71,6 +71,11 @@ public final class ResponseBuilder<T> {
     return this;
   }
 
+  public ResponseBuilder<T> removeHeader(String name) {
+    headersBuilder.remove(name);
+    return this;
+  }
+
   public ResponseBuilder<T> request(HttpRequest request) {
     this.request = request;
     return this;
