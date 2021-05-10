@@ -886,18 +886,23 @@ public final class Methanol extends HttpClient {
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException {
-      return stripContentEncoding(decoding(chain).forward(request));
+      return stripContentEncoding(decoding(request, chain).forward(request));
     }
 
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      return decoding(chain)
+      return decoding(request, chain)
           .forwardAsync(request)
           .thenApply(AutoDecompressingInterceptor::stripContentEncoding);
     }
 
-    private static <T> Chain<T> decoding(Chain<T> chain) {
+    private static <T> Chain<T> decoding(HttpRequest request, Chain<T> chain) {
+      // Skip auto decompression if this is a HEAD
+      if ("HEAD".equalsIgnoreCase(request.method())) {
+        return chain;
+      }
+
       return chain.with(
           MoreBodyHandlers.decoding(chain.bodyHandler()),
           chain
@@ -912,15 +917,16 @@ public final class Methanol extends HttpClient {
     }
 
     private static <T> HttpResponse<T> stripContentEncoding(HttpResponse<T> response) {
-      // Strip outdated Content-Encoding & Content-Length
-      if (response.headers().map().containsKey("Content-Encoding")) {
-        return ResponseBuilder.newBuilder(response)
-            .removeHeader("Content-Encoding")
-            .removeHeader("Content-Length")
-            .build();
+      // Don't strip if the response wasn't decompressed
+      if ("HEAD".equalsIgnoreCase(response.request().method())
+          || !response.headers().map().containsKey("Content-Encoding")) {
+        return response;
       }
 
-      return response;
+      return ResponseBuilder.newBuilder(response)
+          .removeHeader("Content-Encoding")
+          .removeHeader("Content-Length")
+          .build();
     }
   }
 
