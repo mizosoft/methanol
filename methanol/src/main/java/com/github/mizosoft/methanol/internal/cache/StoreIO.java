@@ -23,7 +23,7 @@ public class StoreIO {
     var buffer = ByteBuffer.allocate(byteCount);
     int totalRead = 0;
     for (int read = 0; read >= 0 && buffer.hasRemaining(); totalRead += read) {
-      read = position < 0 ? channel.read(buffer) : channel.read(buffer, position);
+      read = position >= 0 ? channel.read(buffer, position) : channel.read(buffer);
       if (read >= 0) {
         totalRead += read;
         if (position >= 0) {
@@ -96,8 +96,10 @@ public class StoreIO {
             nextPosition,
             dst,
             new ReadCompletionHandler(channel, future, nextPosition, totalRead + read));
+      } else if (totalRead > 0) {
+        future.complete(totalRead + Math.max(0, read));
       } else {
-        future.complete(totalRead + Math.max(read, 0));
+        future.complete(read);
       }
     }
 
@@ -140,7 +142,7 @@ public class StoreIO {
             src,
             new WriteCompletionHandler(channel, future, nextPosition, totalWritten + written));
       } else {
-        future.complete(written);
+        future.complete(totalWritten + written);
       }
     }
 
