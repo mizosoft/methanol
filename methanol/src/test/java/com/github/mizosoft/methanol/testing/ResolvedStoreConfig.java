@@ -179,7 +179,7 @@ public final class ResolvedStoreConfig {
     var appVersion = (int) tuple.get(i++);
     long indexUpdateDelaySeconds = (long) tuple.get(i++);
     var indexUpdateDelay =
-        indexUpdateDelaySeconds != StoreConfig.DEFAULT_FLUSH_DELAY
+        indexUpdateDelaySeconds != StoreConfig.DEFAULT_INDEX_UPDATE_DELAY
             ? Duration.ofSeconds(indexUpdateDelaySeconds)
             : null;
     boolean autoInit = (boolean) tuple.get(i++);

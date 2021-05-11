@@ -28,6 +28,7 @@ import com.github.mizosoft.methanol.testutils.adapter.DecoderVerifier.BodySubscr
 import com.github.mizosoft.methanol.testutils.adapter.EncoderVerifier;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodySubscriber;
 
 public class Verification {
@@ -43,6 +44,10 @@ public class Verification {
 
   public static RequestVerifier verifyThat(HttpRequest request) {
     return new RequestVerifier(request);
+  }
+
+  public static <T> ResponseVerifier<T> verifyThat(HttpResponse<T> response) {
+    return new ResponseVerifier<>(response);
   }
 
   public static EncoderVerifier verifyThat(BodyAdapter.Encoder encoder) {

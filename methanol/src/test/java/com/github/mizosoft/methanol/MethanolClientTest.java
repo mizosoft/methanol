@@ -25,9 +25,9 @@ package com.github.mizosoft.methanol;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.MutableRequest.POST;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
-import static com.github.mizosoft.methanol.testutils.ResponseVerifier.verifying;
 import static com.github.mizosoft.methanol.testutils.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testutils.TestUtils.gzip;
+import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -96,11 +96,11 @@ class MethanolClientTest {
         .defaultHeader("Accept", "text/plain")
         .build();
 
-    verifying(client.send(GET("relative?q=value"), BodyHandlers.ofString()))
-        .assertCode(200)
-        .assertBody("unzip me!")
-        .assertAbsentHeader("Content-Encoding")
-        .assertAbsentHeader("Content-Length");
+    verifyThat(client.send(GET("relative?q=value"), BodyHandlers.ofString()))
+        .hasCode(200)
+        .hasBody("unzip me!")
+        .doesNotContainHeader("Content-Encoding")
+        .doesNotContainHeader("Content-Length");
 
     var sentRequest = server.takeRequest();
     assertThat(sentRequest.getHeader("User-Agent")).isEqualTo("Will Smith");
@@ -124,11 +124,11 @@ class MethanolClientTest {
         .defaultHeader("Accept", "text/plain")
         .build();
 
-    verifying(client.sendAsync(GET("relative?q=value"), BodyHandlers.ofString()).join())
-        .assertCode(200)
-        .assertBody("unzip me!")
-        .assertAbsentHeader("Content-Encoding")
-        .assertAbsentHeader("Content-Length");
+    verifyThat(client.sendAsync(GET("relative?q=value"), BodyHandlers.ofString()).join())
+        .hasCode(200)
+        .hasBody("unzip me!")
+        .doesNotContainHeader("Content-Encoding")
+        .doesNotContainHeader("Content-Length");
 
     var sentRequest = server.takeRequest();
     assertThat(sentRequest.getHeader("User-Agent")).isEqualTo("Will Smith");
@@ -170,27 +170,27 @@ class MethanolClientTest {
         GET(serverUri),
         BodyHandlers.ofString(),
         PushPromiseHandler.of(__ -> BodyHandlers.ofString(), pushes));
-    verifying(responseFuture.join())
-        .assertCode(200)
-        .assertBody("Pikachu")
-        .assertAbsentHeader("Content-Encoding")
-        .assertAbsentHeader("Content-Length");
+    verifyThat(responseFuture.join())
+        .hasCode(200)
+        .hasBody("Pikachu")
+        .doesNotContainHeader("Content-Encoding")
+        .doesNotContainHeader("Content-Length");
 
     pushes.forEachValue(
         Long.MAX_VALUE,
         push -> {
           var response = push.join();
           if (decompressedPaths.contains(response.uri().getPath())) {
-            verifying(response)
-                .assertCode(200)
-                .assertBody("pika pika!")
-                .assertAbsentHeader("Content-Encoding")
-                .assertAbsentHeader("Content-Length");
+            verifyThat(response)
+                .hasCode(200)
+                .hasBody("pika pika!")
+                .doesNotContainHeader("Content-Encoding")
+                .doesNotContainHeader("Content-Length");
           } else {
-            verifying(response)
-                .assertCode(200)
-                .assertBody("pika pika!")
-                .assertHeader("Content-Length", "pika pika!".length());
+            verifyThat(response)
+                .hasCode(200)
+                .hasBody("pika pika!")
+                .containsHeader("Content-Length", "pika pika!".length());
           }
         });
   }
@@ -204,10 +204,10 @@ class MethanolClientTest {
 
     var client = clientBuilder.autoAcceptEncoding(false).build();
     var response = client.send(GET(serverUri), BodyHandlers.ofByteArray());
-    verifying(response)
-        .assertBody(gzippedBytes)
-        .assertHeader("Content-Encoding", "gzip")
-        .assertHeader("Content-Length", gzippedBytes.length);
+    verifyThat(response)
+        .hasBody(gzippedBytes)
+        .containsHeader("Content-Encoding", "gzip")
+        .containsHeader("Content-Length", gzippedBytes.length);
 
     assertThat(server.takeRequest().getHeader("Accept-Encoding")).isNull();
   }
@@ -291,11 +291,11 @@ class MethanolClientTest {
 
     assertThat(subscriber.lastError).isNull();
     assertThat(subscriber.items).hasSize(1);
-    verifying(subscriber.items.peekFirst())
-        .assertCode(200)
-        .assertBody("Pikachu")
-        .assertAbsentHeader("Content-Encoding")
-        .assertAbsentHeader("Content-Length");
+    verifyThat(subscriber.items.peekFirst())
+        .hasCode(200)
+        .hasBody("Pikachu")
+        .doesNotContainHeader("Content-Encoding")
+        .doesNotContainHeader("Content-Length");
   }
 
   @Test
@@ -340,23 +340,23 @@ class MethanolClientTest {
       if (path.startsWith("/push")) {
         assertThat(path).isNotEqualTo("/push0"); // First push promise isn't accepted
         if (decompressedPaths.contains(path)) {
-          verifying(response)
-              .assertCode(200)
-              .assertBody("pika pika!")
-              .assertAbsentHeader("Content-Encoding")
-              .assertAbsentHeader("Content-Length");
+          verifyThat(response)
+              .hasCode(200)
+              .hasBody("pika pika!")
+              .doesNotContainHeader("Content-Encoding")
+              .doesNotContainHeader("Content-Length");
         } else {
-          verifying(response)
-              .assertCode(200)
-              .assertBody("pika pika!")
-              .assertHeader("Content-Length", "pika pika!".length());
+          verifyThat(response)
+              .hasCode(200)
+              .hasBody("pika pika!")
+              .containsHeader("Content-Length", "pika pika!".length());
         }
       } else {
-        verifying(response)
-            .assertCode(200)
-            .assertBody("Pikachu")
-            .assertAbsentHeader("Content-Encoding")
-            .assertAbsentHeader("Content-Length");
+        verifyThat(response)
+            .hasCode(200)
+            .hasBody("Pikachu")
+            .doesNotContainHeader("Content-Encoding")
+            .doesNotContainHeader("Content-Length");
       }
     }
   }
@@ -372,9 +372,9 @@ class MethanolClientTest {
     }
     server.enqueue(new MockResponse().setBody("I'm back!"));
 
-    verifying(client.send(GET(serverUri), BodyHandlers.ofString()))
-        .assertCode(200)
-        .assertBody("I'm back!");
+    verifyThat(client.send(GET(serverUri), BodyHandlers.ofString()))
+        .hasCode(200)
+        .hasBody("I'm back!");
   }
 
   @Test
@@ -388,9 +388,9 @@ class MethanolClientTest {
     }
     server.enqueue(new MockResponse().setBody("I'm back!"));
 
-    verifying(client.sendAsync(GET(serverUri), BodyHandlers.ofString()).join())
-        .assertCode(200)
-        .assertBody("I'm back!");
+    verifyThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()).join())
+        .hasCode(200)
+        .hasBody("I'm back!");
   }
 
   @Test
@@ -407,17 +407,17 @@ class MethanolClientTest {
     var client = clientBuilder.build();
 
     var headRequest = MutableRequest.create(serverUri).method("HEAD", BodyPublishers.noBody());
-    verifying(client.send(headRequest, BodyHandlers.ofString()))
-        .assertCode(200)
-        .assertBody("")
-        .assertHeader("Content-Encoding", "gzip")
-        .assertHeader("Content-Length", gzippedBody.length);
+    verifyThat(client.send(headRequest, BodyHandlers.ofString()))
+        .hasCode(200)
+        .hasBody("")
+        .containsHeader("Content-Encoding", "gzip")
+        .containsHeader("Content-Length", gzippedBody.length);
 
-    verifying(client.send(GET(serverUri), BodyHandlers.ofString()))
-        .assertCode(200)
-        .assertBody("Pikachu")
-        .assertAbsentHeader("Content-Encoding")
-        .assertAbsentHeader("Content-Length");
+    verifyThat(client.send(GET(serverUri), BodyHandlers.ofString()))
+        .hasCode(200)
+        .hasBody("Pikachu")
+        .doesNotContainHeader("Content-Encoding")
+        .doesNotContainHeader("Content-Length");
   }
 
   private static String acceptEncodingValue() {

@@ -37,7 +37,7 @@ import java.util.concurrent.Executors;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface StoreConfig {
 
-  int DEFAULT_FLUSH_DELAY = -1;
+  int DEFAULT_INDEX_UPDATE_DELAY = -1;
 
   long maxSize() default Long.MAX_VALUE;
 
@@ -52,7 +52,7 @@ public @interface StoreConfig {
   int appVersion() default 1;
 
   /** Delay between automatic index updates done by the disk store. */
-  long indexUpdateDelaySeconds() default DEFAULT_FLUSH_DELAY;
+  long indexUpdateDelaySeconds() default DEFAULT_INDEX_UPDATE_DELAY;
 
   /** Automatically initialize a created store. */
   boolean autoInit() default true;

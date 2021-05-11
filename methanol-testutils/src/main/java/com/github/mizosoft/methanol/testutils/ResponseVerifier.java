@@ -34,6 +34,7 @@ import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.CacheAwareResponse;
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
+import com.github.mizosoft.methanol.HttpStatus;
 import com.github.mizosoft.methanol.TrackedResponse;
 import java.net.URI;
 import java.net.http.HttpHeaders;
@@ -61,100 +62,110 @@ public final class ResponseVerifier<T> {
         response instanceof CacheAwareResponse<?> ? (CacheAwareResponse<T>) response : null;
   }
 
-  public ResponseVerifier<T> assertUri(URI uri) {
+  public ResponseVerifier<T> hasUri(URI uri) {
     assertThat(response.uri()).isEqualTo(uri);
     return this;
   }
 
-  public ResponseVerifier<T> assertCode(int code) {
+  public ResponseVerifier<T> isSuccessful() {
+    assertThat(response.statusCode()).matches(HttpStatus::isSuccessful);
+    return this;
+  }
+
+  public ResponseVerifier<T> hasCode(int code) {
     assertThat(response.statusCode()).isEqualTo(code);
     return this;
   }
 
-  public ResponseVerifier<T> assertBody(T body) {
+  public ResponseVerifier<T> hasBody(T body) {
     assertThat(response.body()).isEqualTo(body);
     return this;
   }
 
-  public ResponseVerifier<T> assertHeader(String name, String value) {
-    assertHeader(name, value, response.headers());
+  public ResponseVerifier<T> containsHeader(String name, String value) {
+    assertContainsHeader(name, value, response.headers());
     return this;
   }
 
-  public ResponseVerifier<T> assertHeader(String name, long value) {
-    assertHeader(name, value, response.headers());
+  public ResponseVerifier<T> containsHeader(String name, long value) {
+    assertContainsHeader(name, value, response.headers());
     return this;
   }
 
-  public ResponseVerifier<T> assertHeader(String name, List<String> values) {
+  public ResponseVerifier<T> containsHeader(String name, List<String> values) {
     assertThat(response.headers().allValues(name)).as(name).isEqualTo(values);
     return this;
   }
 
-  public ResponseVerifier<T> assertAbsentHeader(String name) {
+  public ResponseVerifier<T> doesNotContainHeader(String name) {
     assertThat(response.headers().allValues(name)).as(name).isEmpty();
     return this;
   }
 
-  public ResponseVerifier<T> assertHasHeaders(Map<String, List<String>> multiMap) {
-    multiMap.forEach(this::assertHeader);
+  public ResponseVerifier<T> containsHeaders(Map<String, List<String>> multimap) {
+    assertThat(multimap).allSatisfy(this::containsHeader);
     return this;
   }
 
-  public ResponseVerifier<T> assertHeaders(HttpHeaders headers) {
+  public ResponseVerifier<T> hasHeadersExactly(String... headers) {
+    return hasHeadersExactly(headers(headers));
+  }
+
+  public ResponseVerifier<T> hasHeadersExactly(HttpHeaders headers) {
     assertThat(response.headers()).isEqualTo(headers);
     return this;
   }
 
-  public ResponseVerifier<T> assertHeadersDiscardingStrippedContentEncoding(HttpHeaders headers) {
+  public ResponseVerifier<T> hasHeadersExactlyDiscardingStrippedContentEncoding(
+      HttpHeaders headers) {
     // Discard Content-Encoding & Content-Length if Content-Encoding is included in the given
     // headers but not our response's headers. When these are present in a network/cache response,
     // Methanol removes them from the returned response. This is because transparently decompressing
     // the response obsoletes these headers.
     if (headers.map().containsKey("Content-Encoding")
         && !response.headers().map().containsKey("Content-Encoding")) {
-      assertHeaders(
+      hasHeadersExactly(
           HttpHeaders.of(
               headers.map(),
               (name, __) ->
                   !"Content-Encoding".equalsIgnoreCase(name)
                       && !"Content-Length".equalsIgnoreCase(name)));
     } else {
-      assertHeaders(headers);
+      hasHeadersExactly(headers);
     }
     return this;
   }
 
-  public ResponseVerifier<T> assertRequestHeader(String name, String value) {
-    assertHeader(name, value, response.request().headers());
+  public ResponseVerifier<T> containsRequestHeader(String name, String value) {
+    assertContainsHeader(name, value, response.request().headers());
     return this;
   }
 
-  public ResponseVerifier<T> assertAbsentRequestHeader(String name) {
+  public ResponseVerifier<T> doesNotContainRequestHeader(String name) {
     assertThat(response.request().headers().allValues(name)).as(name).isEmpty();
     return this;
   }
 
-  public ResponseVerifier<T> assertRequestHeaders(String... headers) {
-    return assertRequestHeaders(headers(headers));
+  public ResponseVerifier<T> hasRequestHeadersExactly(String... headers) {
+    return hasRequestHeadersExactly(headers(headers));
   }
 
-  public ResponseVerifier<T> assertRequestHeaders(HttpHeaders headers) {
+  public ResponseVerifier<T> hasRequestHeadersExactly(HttpHeaders headers) {
     assertThat(response.request().headers()).isEqualTo(headers);
     return this;
   }
 
-  public ResponseVerifier<T> assertSecure() {
+  public ResponseVerifier<T> isSecure() {
     assertThat(response.sslSession()).isPresent();
     return this;
   }
 
-  public ResponseVerifier<T> assertNotSecure() {
+  public ResponseVerifier<T> isNotSecure() {
     assertThat(response.sslSession()).isEmpty();
     return this;
   }
 
-  public ResponseVerifier<T> assertSslSession(SSLSession expected) {
+  public ResponseVerifier<T> hasSslSession(SSLSession expected) {
     assertThat(sslSession())
         .returns(expected.getCipherSuite(), from(SSLSession::getCipherSuite))
         .returns(expected.getProtocol(), from(SSLSession::getProtocol))
@@ -164,84 +175,84 @@ public final class ResponseVerifier<T> {
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  public ResponseVerifier<T> assertSslSession(Optional<SSLSession> expected) {
-    expected.ifPresentOrElse(this::assertSslSession, this::assertNotSecure);
+  public ResponseVerifier<T> hasSslSession(Optional<SSLSession> expected) {
+    expected.ifPresentOrElse(this::hasSslSession, this::isNotSecure);
     return this;
   }
 
-  public ResponseVerifier<T> assertRequestSentAt(Instant expected) {
+  public ResponseVerifier<T> requestWasSentAt(Instant expected) {
     assertTracked();
     assertThat(tracked.timeRequestSent()).isEqualTo(expected);
     return this;
   }
 
-  public ResponseVerifier<T> assertResponseReceivedAt(Instant expected) {
+  public ResponseVerifier<T> responseWasReceivedAt(Instant expected) {
     assertTracked();
     assertThat(tracked.timeResponseReceived()).isEqualTo(expected);
     return this;
   }
 
-  public ResponseVerifier<T> assertCacheStatus(CacheStatus expected) {
+  public ResponseVerifier<T> hasCacheStatus(CacheStatus expected) {
     assertCacheAware();
     assertThat(cacheAware.cacheStatus()).isEqualTo(expected);
     return this;
   }
 
-  public ResponseVerifier<T> assertHasNetworkResponse() {
+  public ResponseVerifier<T> hasNetworkResponse() {
     assertCacheAware();
     assertThat(cacheAware.networkResponse()).isPresent();
     return this;
   }
 
-  public ResponseVerifier<T> assertHasCacheResponse() {
+  public ResponseVerifier<T> hasCacheResponse() {
     assertCacheAware();
     assertThat(cacheAware.cacheResponse()).isPresent();
     return this;
   }
 
-  public ResponseVerifier<T> assertHasNoNetworkResponse() {
+  public ResponseVerifier<T> hasNoNetworkResponse() {
     assertCacheAware();
     assertThat(cacheAware.networkResponse()).isEmpty();
     return this;
   }
 
-  public ResponseVerifier<T> assertHasNoCacheResponse() {
+  public ResponseVerifier<T> hasNoCacheResponse() {
     assertCacheAware();
     assertThat(cacheAware.cacheResponse()).isEmpty();
     return this;
   }
 
-  public ResponseVerifier<T> assertHit() {
-    assertCacheStatus(HIT);
-    assertHasCacheResponse();
-    assertHasNoNetworkResponse();
+  public ResponseVerifier<T> isCacheHit() {
+    hasCacheStatus(HIT);
+    hasCacheResponse();
+    hasNoNetworkResponse();
 
     var cacheResponse = cacheResponse().get();
-    assertUri(cacheResponse.uri())
-        .assertCode(cacheResponse.statusCode())
-        .assertHeadersDiscardingStrippedContentEncoding(cacheResponse.headers())
-        .assertSslSession(cacheResponse.sslSession());
+    hasUri(cacheResponse.uri())
+        .hasCode(cacheResponse.statusCode())
+        .hasHeadersExactlyDiscardingStrippedContentEncoding(cacheResponse.headers())
+        .hasSslSession(cacheResponse.sslSession());
     return this;
   }
 
-  public ResponseVerifier<T> assertConditionalHit() {
-    assertCacheStatus(CONDITIONAL_HIT);
-    assertHasCacheResponse();
-    assertHasNetworkResponse();
+  public ResponseVerifier<T> isConditionalHit() {
+    hasCacheStatus(CONDITIONAL_HIT);
+    hasCacheResponse();
+    hasNetworkResponse();
 
-    networkResponse().assertCode(HTTP_NOT_MODIFIED);
+    networkResponse().hasCode(HTTP_NOT_MODIFIED);
 
     var networkResponse = networkResponse().getTracked();
-    assertUri(networkResponse.uri());
+    hasUri(networkResponse.uri());
 
     // Timestamps are updated to these of the network response
-    assertRequestSentAt(networkResponse.timeRequestSent())
-        .assertResponseReceivedAt(networkResponse.timeResponseReceived());
+    requestWasSentAt(networkResponse.timeRequestSent())
+        .responseWasReceivedAt(networkResponse.timeResponseReceived());
 
     var cacheResponse = cacheResponse().getTracked();
-    assertUri(cacheResponse.uri())
-        .assertCode(cacheResponse.statusCode())
-        .assertSslSession(cacheResponse.sslSession());
+    hasUri(cacheResponse.uri())
+        .hasCode(cacheResponse.statusCode())
+        .hasSslSession(cacheResponse.sslSession());
 
     // Make sure headers are merged correctly as specified in
     // https://httpwg.org/specs/rfc7234.html#freshening.responses
@@ -259,7 +270,7 @@ public final class ResponseVerifier<T> {
               assertThat(networkValues != null || cacheValues != null).isTrue();
 
               // Network values override stored ones unless the header is Content-Length.
-              // This is because some servers misbehave by sending a Content-Length: 0 to
+              // This is because some servers misbehave by sending a Content-Length: 0 with
               // their 304 responses.
               if ("Content-Length".equalsIgnoreCase(name)) {
                 assertThat(values).as(name).isEqualTo(cacheValues);
@@ -282,70 +293,78 @@ public final class ResponseVerifier<T> {
     return this;
   }
 
-  public ResponseVerifier<T> assertConditionalMiss() {
-    assertCacheStatus(MISS);
-    assertHasNetworkResponse();
-    assertHasCacheResponse();
+  public ResponseVerifier<T> isConditionalMiss() {
+    hasCacheStatus(MISS);
+    hasNetworkResponse();
+    hasCacheResponse();
     assertThat(networkResponse().get().statusCode()).isNotEqualTo(HTTP_NOT_MODIFIED);
     assertEqualToNetworkResponse(networkResponse().getTracked());
     return this;
   }
 
-  public ResponseVerifier<T> assertMiss() {
-    assertCacheStatus(MISS);
-    assertHasNetworkResponse();
-    assertHasNoCacheResponse();
+  public ResponseVerifier<T> isCacheMiss() {
+    hasCacheStatus(MISS);
+    hasNetworkResponse();
+    hasNoCacheResponse();
+    assertEqualToNetworkResponse(networkResponse().getTracked());
+    return this;
+  }
+
+  public ResponseVerifier<T> isCacheMissWithCacheResponse() {
+    hasCacheStatus(MISS);
+    hasNetworkResponse();
+    hasCacheResponse();
     assertEqualToNetworkResponse(networkResponse().getTracked());
     return this;
   }
 
   private ResponseVerifier<T> assertEqualToNetworkResponse(TrackedResponse<?> networkResponse) {
-    assertUri(networkResponse.uri())
-        .assertCode(networkResponse.statusCode())
-        .assertHeadersDiscardingStrippedContentEncoding(networkResponse.headers())
-        .assertSslSession(networkResponse.sslSession())
-        .assertRequestSentAt(networkResponse.timeRequestSent())
-        .assertResponseReceivedAt(networkResponse.timeResponseReceived());
+    hasUri(networkResponse.uri())
+        .hasCode(networkResponse.statusCode())
+        .hasHeadersExactlyDiscardingStrippedContentEncoding(networkResponse.headers())
+        .hasSslSession(networkResponse.sslSession())
+        .requestWasSentAt(networkResponse.timeRequestSent())
+        .responseWasReceivedAt(networkResponse.timeResponseReceived());
     return this;
   }
 
-  public ResponseVerifier<T> assertUnsatisfiable() {
-    assertCacheStatus(UNSATISFIABLE);
-    assertHasNoNetworkResponse();
-    assertHasNoCacheResponse();
+  public ResponseVerifier<T> isCacheUnsatisfaction() {
+    hasCacheStatus(UNSATISFIABLE);
+    hasNoNetworkResponse();
+    hasNoCacheResponse();
     assertThat(response.statusCode()).isEqualTo(HTTP_GATEWAY_TIMEOUT);
     return this;
   }
 
-  public ResponseVerifier<T> assertCachedWithSsl() {
+  public ResponseVerifier<T> isCachedWithSsl() {
     assertCacheAware();
 
-    assertHasCacheResponse();
-    assertSslSession(cacheResponse().sslSession());
+    hasCacheResponse();
+    hasSslSession(cacheResponse().sslSession());
 
     // Network response can be absent
     if (cacheAware.networkResponse().isPresent()) {
-      assertSslSession(networkResponse().sslSession());
+      hasSslSession(networkResponse().sslSession());
     }
     return this;
   }
 
   public ResponseVerifier<?> networkResponse() {
-    assertHasNetworkResponse();
-    return verifying(cacheAware.networkResponse().orElseThrow());
+    hasNetworkResponse();
+    return new ResponseVerifier<>(cacheAware.networkResponse().orElseThrow());
   }
 
   public ResponseVerifier<?> cacheResponse() {
-    assertHasCacheResponse();
-    return verifying(cacheAware.cacheResponse().orElseThrow());
+    hasCacheResponse();
+    return new ResponseVerifier<>(cacheAware.cacheResponse().orElseThrow());
   }
 
   public ResponseVerifier<T> previousResponse() {
-    assertHasPreviousResponse();
-    return verifying(response.previousResponse().orElseThrow());
+    hasPreviousResponse();
+    return new ResponseVerifier<>(response.previousResponse().orElseThrow());
   }
 
-  public ResponseVerifier<T> assertHasPreviousResponse() {
+  public ResponseVerifier<T> hasPreviousResponse() {
     assertThat(response.previousResponse()).isPresent();
     return this;
   }
@@ -359,7 +378,7 @@ public final class ResponseVerifier<T> {
   }
 
   public SSLSession sslSession() {
-    assertSecure();
+    isSecure();
     return response.sslSession().orElseThrow();
   }
 
@@ -375,16 +394,11 @@ public final class ResponseVerifier<T> {
     return cacheAware;
   }
 
-  public boolean hasCacheStatus(CacheStatus status) {
-    assertCacheAware();
-    return cacheAware.cacheStatus() == status;
+  private static void assertContainsHeader(String name, long value, HttpHeaders headers) {
+    assertContainsHeader(name, Long.toString(value), headers);
   }
 
-  private static void assertHeader(String name, long value, HttpHeaders headers) {
-    assertHeader(name, Long.toString(value), headers);
-  }
-
-  private static void assertHeader(String name, String value, HttpHeaders headers) {
+  private static void assertContainsHeader(String name, String value, HttpHeaders headers) {
     assertThat(headers.allValues(name)).as(name).singleElement().isEqualTo(value);
   }
 
@@ -394,9 +408,5 @@ public final class ResponseVerifier<T> {
     } catch (SSLPeerUnverifiedException e) {
       return null;
     }
-  }
-
-  public static <T> ResponseVerifier<T> verifying(HttpResponse<T> response) {
-    return new ResponseVerifier<>(response);
   }
 }
