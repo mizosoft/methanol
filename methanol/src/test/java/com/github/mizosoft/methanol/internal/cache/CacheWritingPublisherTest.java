@@ -12,7 +12,7 @@ import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
-import com.github.mizosoft.methanol.testing.SubmittableSubscription;
+import com.github.mizosoft.methanol.testing.SubmittablePublisher;
 import com.github.mizosoft.methanol.testutils.BodyCollector;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
 import com.github.mizosoft.methanol.testutils.Logging;
@@ -26,8 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Flow.Publisher;
-import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -399,44 +397,6 @@ class CacheWritingPublisherTest {
       var body = BodyCollector.collect(
           items.stream().flatMap(Collection::stream).collect(Collectors.toUnmodifiableList()));
       return UTF_8.decode(body).toString();
-    }
-  }
-
-  /**
-   * Similar to {@link java.util.concurrent.SubmissionPublisher} but doesn't require the executor to
-   * operate concurrently.
-   */
-  private static final class SubmittablePublisher<T> implements Publisher<T>, AutoCloseable {
-    private final List<SubmittableSubscription<T>> subscriptions = new CopyOnWriteArrayList<>();
-    private final Executor executor;
-
-    SubmittablePublisher(Executor executor) {
-      this.executor = executor;
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-      var subscription = new SubmittableSubscription<T>(subscriber, executor);
-      subscriptions.add(subscription);
-      subscription.signal(true); // Apply onSubscribe
-    }
-
-    SubmittableSubscription<T> firstSubscription() {
-      assertThat(subscriptions).withFailMessage("nothing has subscribed yet").isNotEmpty();
-      return subscriptions.get(0);
-    }
-
-    void submit(T item) {
-      subscriptions.forEach(s -> s.submit(item));
-    }
-
-    void submitAll(Iterable<T> items) {
-      items.forEach(this::submit);
-    }
-
-    @Override
-    public void close() {
-      subscriptions.forEach(SubmittableSubscription::complete);
     }
   }
 }
