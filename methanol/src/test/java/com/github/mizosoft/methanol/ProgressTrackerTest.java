@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,525 +22,1570 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static java.util.function.Predicate.not;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.from;
+import static org.awaitility.Awaitility.await;
 
-import com.github.mizosoft.methanol.ProgressTracker.Builder;
-import com.github.mizosoft.methanol.ProgressTracker.ImmutableProgress;
+import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
 import com.github.mizosoft.methanol.ProgressTracker.Listener;
 import com.github.mizosoft.methanol.ProgressTracker.MultipartListener;
 import com.github.mizosoft.methanol.ProgressTracker.MultipartProgress;
 import com.github.mizosoft.methanol.ProgressTracker.Progress;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.ProgressTracker.ProgressSnapshot;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
-import com.github.mizosoft.methanol.testutils.BodyCollector;
-import com.github.mizosoft.methanol.testutils.BuffIterator;
-import com.github.mizosoft.methanol.testutils.BuffListIterator;
-import com.github.mizosoft.methanol.testutils.FailingPublisher;
+import com.github.mizosoft.methanol.testing.SubmittablePublisher;
+import com.github.mizosoft.methanol.testutils.MockClock;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
-import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
-import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Flow;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.reactivestreams.FlowAdapters;
-import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
-@ExtendWith(ExecutorExtension.class)
 class ProgressTrackerTest {
-
-  // Virtual tick between each onXXXX method
-  private static final Duration virtualTick = Duration.ofSeconds(1);
-
-  private Executor upstreamExecutor;
+  private MockClock clock;
 
   @BeforeEach
-  @ExecutorConfig(FIXED_POOL)
-  void setupUpstreamExecutor(Executor executor) {
-    upstreamExecutor = executor;
+  void setUp() {
+    clock = new MockClock();
   }
 
   @Test
   void buildTracker() {
-    var bytesThreshold = 1024;
-    var timeThreshold = Duration.ofSeconds(1);
-    Executor executor = r -> { throw new RejectedExecutionException(); };
-    var tracker = ProgressTracker.newBuilder()
-        .bytesTransferredThreshold(bytesThreshold)
-        .timePassedThreshold(timeThreshold)
-        .enclosedProgress(false)
-        .executor(executor)
-        .build();
-    assertEquals(bytesThreshold, tracker.bytesTransferredThreshold());
-    assertEquals(Optional.of(timeThreshold), tracker.timePassedThreshold());
-    assertFalse(tracker.enclosedProgress());
-    assertEquals(Optional.of(executor), tracker.executor());
+    Executor executor =
+        r -> {
+          throw new RejectedExecutionException();
+        };
+    var tracker =
+        ProgressTracker.newBuilder()
+            .bytesTransferredThreshold(1024)
+            .timePassedThreshold(Duration.ofSeconds(1))
+            .enclosedProgress(false)
+            .executor(executor)
+            .build();
+    assertThat(tracker.bytesTransferredThreshold()).isEqualTo(1024);
+    assertThat(tracker.timePassedThreshold()).hasValue(Duration.ofSeconds(1));
+    assertThat(tracker.enclosedProgress()).isFalse();
+    assertThat(tracker.executor()).hasValue(executor);
   }
 
   @Test
   void defaultTracker() {
     var tracker = ProgressTracker.create();
-    assertEquals(0, tracker.bytesTransferredThreshold());
-    assertEquals(Optional.empty(), tracker.timePassedThreshold());
-    assertTrue(tracker.enclosedProgress());
-    assertEquals(Optional.empty(), tracker.executor());
+    assertThat(tracker.bytesTransferredThreshold()).isZero();
+    assertThat(tracker.timePassedThreshold()).isEmpty();
+    assertThat(tracker.enclosedProgress()).isTrue();
+    assertThat(tracker.executor()).isEmpty();
+  }
+
+  @ExecutorParameterizedTest
+  void downloadProgress(Executor executor) {
+    var tracker = ProgressTracker.newBuilder().clockForTesting(clock).executor(executor).build();
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
+    upstream.subscribe(subscriber);
+
+    // Receive enclosing 0% progress
+    listener.awaitSubscribe();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffers(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(2, 2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(1)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(2);
+    upstream.submit(buffers()); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffers(1, 1, 2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(10)
+        .isDone();
+    listener.assertNoProgress();
+
+    upstream.close();
+    listener.awaitComplete();
+
+    // No enclosing progress is received as 100% progress has already been signaled
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void downloadProgressWithUnknownContentLength(Executor executor) {
+    var tracker = ProgressTracker.newBuilder().clockForTesting(clock).executor(executor).build();
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, -1);
+    upstream.subscribe(subscriber);
+
+    // Receive enclosing 0% progress
+    listener.awaitSubscribe();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffers(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(2, 2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(1)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(2);
+    upstream.submit(buffers()); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffers(1, 1, 2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone(); // The tracker doesn't yet know the body is completed
+    listener.assertNoProgress();
+
+    // Receive enclosing 100% progress
+    clock.advanceSeconds(1);
+    upstream.close();
+    listener.awaitComplete();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(4)
+        .hasContentLength(-1)
+        .isDone();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void downloadProgressWithUnknownContentLengthWithoutEnclosedProgress(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .enclosedProgress(false)
+            .build();
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, -1);
+    upstream.subscribe(subscriber);
+
+    // No enclosing 0% progress
+    listener.awaitSubscribe();
+    listener.assertNoProgress();
+
+    upstream.submit(buffers(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(2, 2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(1)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(2);
+    upstream.submit(buffers()); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffers(1, 1, 2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone(); // The tracker doesn't yet know the body is completed
+    listener.assertNoProgress();
+
+    // No enclosing 100% progress
+    clock.advanceSeconds(1);
+    upstream.close();
+    listener.awaitComplete();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void downloadProgressWithByteThreshold(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .bytesTransferredThreshold(2)
+            .build();
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
+    upstream.subscribe(subscriber);
+
+    // Receive enclosing 0% progress
+    listener.awaitSubscribe();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 2 bytes (>= to threshold)
+    upstream.submit(buffers(1));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 5 bytes (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(2, 2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(5)
+        .hasTotalBytesTransferred(7)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 2 bytes (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(9)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold, but received in enclosing 100% progress)
+    upstream.close();
+    listener.awaitComplete();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(1)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(5)
+        .hasContentLength(10)
+        .isDone();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void downloadProgressWithByteThresholdWithoutEnclosedProgress(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .bytesTransferredThreshold(2)
+            .enclosedProgress(false)
+            .build();
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
+    upstream.subscribe(subscriber);
+
+    // No enclosing 0% progress
+    listener.awaitSubscribe();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 2 bytes (>= to threshold)
+    upstream.submit(buffers(1));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 5 bytes (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(2, 2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(5)
+        .hasTotalBytesTransferred(7)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 0 bytes (< threshold)
+    upstream.submit(buffers()); // Transfer nothing
+    listener.assertNoProgress();
+
+    // Pending progress: 2 bytes (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(9)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    // No enclosing 100% progress
+    upstream.close();
+    listener.awaitComplete();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void downloadProgressWithTimeThreshold(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .timePassedThreshold(Duration.ofSeconds(2))
+            .build();
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
+    upstream.subscribe(subscriber);
+
+    // Receive enclosing 0% progress
+    listener.awaitSubscribe();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 2 seconds (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(3)
+        .hasTotalBytesTransferred(3)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 2 seconds (>= threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffers()); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(3)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(4)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 0 seconds (< threshold)
+    upstream.submit(buffers(4));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 seconds (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 3 seconds (>= threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffers(1));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(6)
+        .hasTotalBytesTransferred(9)
+        .hasTimePassedInSeconds(3)
+        .hasTotalTimePassedInSeconds(7)
+        .hasContentLength(10)
+        .isNotDone();
+
+    // Pending progress: 1 second (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold, but received in enclosing 100% progress)
+    upstream.close();
+    listener.awaitComplete();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(1)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(8)
+        .hasContentLength(10)
+        .isDone();
+  }
+
+  @ExecutorParameterizedTest
+  void downloadProgressWithTimeThresholdWithoutEnclosedProgress(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .timePassedThreshold(Duration.ofSeconds(2))
+            .enclosedProgress(false)
+            .build();
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
+    upstream.subscribe(subscriber);
+
+    // No enclosing 0% progress
+    listener.awaitSubscribe();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 2 seconds (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(3)
+        .hasTotalBytesTransferred(3)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 2 seconds (>= threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffers()); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(3)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(4)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 0 seconds (< threshold)
+    upstream.submit(buffers(4));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 seconds (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 3 seconds (>= threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffers(1));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(6)
+        .hasTotalBytesTransferred(9)
+        .hasTimePassedInSeconds(3)
+        .hasTotalTimePassedInSeconds(7)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffers(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold)
+    // No enclosing 100% progress
+    upstream.close();
+    listener.awaitComplete();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void downloadProgressWithError(Executor executor) {
+    var tracker = ProgressTracker.newBuilder().clockForTesting(clock).executor(executor).build();
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var downstream = new TestSubscriber<>();
+    var subscriber = tracker.tracking(BodySubscribers.fromSubscriber(downstream), listener, -1);
+    upstream.subscribe(subscriber);
+    listener.awaitSubscribe();
+    upstream.firstSubscription().signalError(new TestException());
+
+    listener.awaitError();
+    assertThat(listener.lastError).isInstanceOf(TestException.class);
+
+    downstream.awaitError();
+    assertThat(downstream.lastError).isInstanceOf(TestException.class);
+  }
+
+  @ExecutorParameterizedTest
+  void uploadProgress(Executor executor) {
+    var tracker = ProgressTracker.newBuilder().clockForTesting(clock).executor(executor).build();
+    var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
+    publisher.subscribe(new TestSubscriber<>());
+
+    // Receive enclosing 0% progress
+    listener.awaitSubscribe();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffer(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(4));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(1)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(2);
+    upstream.submit(buffer(0)); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffer(4));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(10)
+        .isDone();
+    listener.assertNoProgress();
+
+    upstream.close();
+    listener.awaitComplete();
+
+    // No enclosing progress is received as 100% progress has already been signaled
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void uploadProgressWithUnknownContentLength(Executor executor) {
+    var tracker = ProgressTracker.newBuilder().clockForTesting(clock).executor(executor).build();
+    var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream), listener);
+    publisher.subscribe(new TestSubscriber<>());
+
+    // Receive enclosing 0% progress
+    listener.awaitSubscribe();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffer(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(4));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(1)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(2);
+    upstream.submit(buffer(0)); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffer(4));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone(); // The tracker doesn't yet know the body is completed
+    listener.assertNoProgress();
+
+    // Receive enclosing 100% progress
+    clock.advanceSeconds(1);
+    upstream.close();
+    listener.awaitComplete();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(4)
+        .hasContentLength(-1)
+        .isDone();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void uploadProgressWithUnknownContentLengthWithoutEnclosedProgress(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .enclosedProgress(false)
+            .build();
+    var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream), listener);
+    publisher.subscribe(new TestSubscriber<>());
+
+    // No enclosing 0% progress
+    listener.awaitSubscribe();
+    listener.assertNoProgress();
+
+    upstream.submit(buffer(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(4));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(1)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(2);
+    upstream.submit(buffer(0)); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(6)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    upstream.submit(buffer(4));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(4)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone(); // The tracker doesn't yet know the body is completed
+    listener.assertNoProgress();
+
+    // No enclosing 100% progress
+    clock.advanceSeconds(1);
+    upstream.close();
+    listener.awaitComplete();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void uploadProgressWithByteThreshold(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .bytesTransferredThreshold(2)
+            .build();
+    var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
+    publisher.subscribe(new TestSubscriber<>());
+
+    // Receive enclosing 0% progress
+    listener.awaitSubscribe();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 2 bytes (>= to threshold)
+    upstream.submit(buffer(1));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 5 bytes (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(4));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(5)
+        .hasTotalBytesTransferred(7)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 2 bytes (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(9)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold, but received in enclosing 100% progress)
+    upstream.close();
+    listener.awaitComplete();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(1)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(5)
+        .hasContentLength(10)
+        .isDone();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void uploadProgressWithByteThresholdWithoutEnclosedProgress(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .bytesTransferredThreshold(2)
+            .enclosedProgress(false)
+            .build();
+    var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
+    publisher.subscribe(new TestSubscriber<>());
+
+    // No enclosing 0% progress
+    listener.awaitSubscribe();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 2 bytes (>= to threshold)
+    upstream.submit(buffer(1));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(2)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 5 bytes (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(4));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(5)
+        .hasTotalBytesTransferred(7)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 0 bytes (< threshold)
+    upstream.submit(buffer(0)); // Transfer nothing
+    listener.assertNoProgress();
+
+    // Pending progress: 2 bytes (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(9)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 byte (< threshold)
+    // No enclosing 100% progress
+    upstream.close();
+    listener.awaitComplete();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void uploadProgressWithTimeThreshold(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .timePassedThreshold(Duration.ofSeconds(2))
+            .build();
+    var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
+    publisher.subscribe(new TestSubscriber<>());
+
+    // Receive enclosing 0% progress
+    listener.awaitSubscribe();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 2 seconds (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(3)
+        .hasTotalBytesTransferred(3)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 2 seconds (>= threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffer(0)); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(3)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(4)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 0 seconds (< threshold)
+    upstream.submit(buffer(4));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 seconds (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 3 seconds (>= threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffer(1));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(6)
+        .hasTotalBytesTransferred(9)
+        .hasTimePassedInSeconds(3)
+        .hasTotalTimePassedInSeconds(7)
+        .hasContentLength(10)
+        .isNotDone();
+
+    // Pending progress: 1 second (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold, but received in enclosing 100% progress)
+    upstream.close();
+    listener.awaitComplete();
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(1)
+        .hasTotalBytesTransferred(10)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(8)
+        .hasContentLength(10)
+        .isDone();
+  }
+
+  @ExecutorParameterizedTest
+  void uploadProgressWithTimeThresholdWithoutEnclosedProgress(Executor executor) {
+    var tracker =
+        ProgressTracker.newBuilder()
+            .clockForTesting(clock)
+            .executor(executor)
+            .timePassedThreshold(Duration.ofSeconds(2))
+            .enclosedProgress(false)
+            .build();
+    var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
+    publisher.subscribe(new TestSubscriber<>());
+
+    // No enclosing 0% progress
+    listener.awaitSubscribe();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 2 seconds (>= threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(2));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(3)
+        .hasTotalBytesTransferred(3)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 2 seconds (>= threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffer(0)); // Transfer nothing
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(3)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(4)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 0 seconds (< threshold)
+    upstream.submit(buffer(4));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 seconds (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 3 seconds (>= threshold)
+    clock.advanceSeconds(2);
+    upstream.submit(buffer(1));
+    verifyThat(listener.awaitProgress())
+        .hasBytesTransferred(6)
+        .hasTotalBytesTransferred(9)
+        .hasTimePassedInSeconds(3)
+        .hasTotalTimePassedInSeconds(7)
+        .hasContentLength(10)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold)
+    clock.advanceSeconds(1);
+    upstream.submit(buffer(1));
+    listener.assertNoProgress();
+
+    // Pending progress: 1 second (< threshold)
+    // No enclosing 100% progress
+    upstream.close();
+    listener.awaitComplete();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void multipartUploadProgress(Executor executor) {
+    var tracker = ProgressTracker.newBuilder().clockForTesting(clock).executor(executor).build();
+    var firstUpstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var secondUpstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var multipartBody =
+        MultipartBodyPublisher.newBuilder()
+            .formPart(
+                "part1", BodyPublishers.fromPublisher(firstUpstream, 5)) // Part with known length
+            .formPart(
+                "part2", BodyPublishers.fromPublisher(secondUpstream)) // Part with unknown length
+            .build();
+    var listener = new MultipartProgressSubscriber();
+    var publisher = tracker.trackingMultipart(multipartBody, listener);
+    var subscriber = new TestSubscriber<ByteBuffer>();
+    subscriber.request = 0;
+    publisher.subscribe(subscriber);
+    subscriber.awaitSubscribe();
+
+    // Receive enclosing 0% progress
+    listener.awaitSubscribe();
+    verifyThat(listener.awaitProgress())
+        .partChanged(true)
+        .hasPartWithName("part1")
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(-1)
+        .isNotDone()
+        .verifyPartProgress()
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(5)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    // Receive progress of first part's multipart metadata. This is not recorded in the progress
+    // of the part itself.
+    clock.advanceSeconds(1);
+    subscriber.subscription.request(1);
+    int firstPartMetadataLength = subscriber.awaitNextItem().remaining();
+    verifyThat(listener.awaitProgress())
+        .partChanged(true)
+        .hasPartWithName("part1")
+        .hasBytesTransferred(firstPartMetadataLength)
+        .hasTotalBytesTransferred(firstPartMetadataLength)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(1)
+        .hasContentLength(-1)
+        .isNotDone()
+        .verifyPartProgress()
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(
+            0) // 0 seconds has passed since this part started, not the multipart body
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(5)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    subscriber.subscription.request(1);
+    clock.advanceSeconds(1);
+    firstUpstream.submit(buffer(5));
+    verifyThat(listener.awaitProgress())
+        .partChanged(false)
+        .hasPartWithName("part1")
+        .hasBytesTransferred(5)
+        .hasTotalBytesTransferred(firstPartMetadataLength + 5)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(-1)
+        .isNotDone()
+        .verifyPartProgress()
+        .hasBytesTransferred(5)
+        .hasTotalBytesTransferred(5)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(1)
+        .hasContentLength(5)
+        .isDone();
+    listener.assertNoProgress();
+
+    // Receive progress of second part's multipart metadata. This is not recorded in the progress
+    // of the part itself.
+    subscriber.subscription.request(1);
+    firstUpstream.close();
+    int secondPartMetadataLength = subscriber.awaitNextItem().remaining();
+    verifyThat(listener.awaitProgress())
+        .partChanged(true)
+        .hasPartWithName("part2")
+        .hasBytesTransferred(secondPartMetadataLength)
+        .hasTotalBytesTransferred(firstPartMetadataLength + 5 + secondPartMetadataLength)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(2)
+        .hasContentLength(-1)
+        .isNotDone()
+        .verifyPartProgress()
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(0)
+        .hasTimePassedInSeconds(
+            0) // 0 seconds has passed since this part started, not the multipart body
+        .hasTotalTimePassedInSeconds(0)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(1);
+    subscriber.subscription.request(1);
+    secondUpstream.submit(buffer(3));
+    verifyThat(listener.awaitProgress())
+        .partChanged(false)
+        .hasPartWithName("part2")
+        .hasBytesTransferred(3)
+        .hasTotalBytesTransferred(firstPartMetadataLength + 5 + secondPartMetadataLength + 3)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone()
+        .verifyPartProgress()
+        .hasBytesTransferred(3)
+        .hasTotalBytesTransferred(3)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(1)
+        .hasContentLength(-1)
+        .isNotDone();
+    listener.assertNoProgress();
+
+    clock.advanceSeconds(2);
+    subscriber.subscription.request(1);
+    secondUpstream.submit(buffer(2));
+    verifyThat(listener.awaitProgress())
+        .partChanged(false)
+        .hasPartWithName("part2")
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(firstPartMetadataLength + 5 + secondPartMetadataLength + 5)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(5)
+        .hasContentLength(-1)
+        .isNotDone()
+        .verifyPartProgress()
+        .hasBytesTransferred(2)
+        .hasTotalBytesTransferred(5)
+        .hasTimePassedInSeconds(2)
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone(); // The tracker doesn't yet know this part has completed
+    listener.assertNoProgress();
+
+    // Receive progress for the multipart closing boundary
+    clock.advanceSeconds(1);
+    subscriber.subscription.request(1);
+    secondUpstream.close();
+    int closingBoundaryLength = subscriber.awaitNextItem().remaining();
+    verifyThat(listener.awaitProgress())
+        .partChanged(false)
+        .hasPartWithName("part2")
+        .hasBytesTransferred(closingBoundaryLength)
+        .hasTotalBytesTransferred(
+            firstPartMetadataLength + 5 + secondPartMetadataLength + 5 + closingBoundaryLength)
+        .hasTimePassedInSeconds(1)
+        .hasTotalTimePassedInSeconds(6)
+        .hasContentLength(-1)
+        .isNotDone() // The tracker doesn't yet know the body has completed
+        .verifyPartProgress()
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(5)
+        .hasTimePassedInSeconds(0) // Last part's time progression stops
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1)
+        .isNotDone();
+
+    // Receive enclosing 100% progress
+    verifyThat(listener.awaitProgress())
+        .partChanged(false)
+        .hasPartWithName("part2")
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(
+            firstPartMetadataLength + 5 + secondPartMetadataLength + 5 + closingBoundaryLength)
+        .hasTimePassedInSeconds(0)
+        .hasTotalTimePassedInSeconds(6)
+        .hasContentLength(-1)
+        .isDone()
+        .verifyPartProgress()
+        .hasBytesTransferred(0)
+        .hasTotalBytesTransferred(5)
+        .hasTimePassedInSeconds(0) // Last part's time progression stops
+        .hasTotalTimePassedInSeconds(3)
+        .hasContentLength(-1);
+
+    listener.awaitComplete();
+    listener.assertNoProgress();
+  }
+
+  @ExecutorParameterizedTest
+  void uploadProgressWithError(Executor executor) {
+    var tracker = ProgressTracker.newBuilder().clockForTesting(clock).executor(executor).build();
+    var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
+    var listener = new ProgressSubscriber();
+    var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream), listener);
+    var subscriber = new TestSubscriber<>();
+    publisher.subscribe(subscriber);
+    listener.awaitSubscribe();
+    upstream.firstSubscription().signalError(new TestException());
+
+    listener.awaitError();
+    assertThat(listener.lastError).isInstanceOf(TestException.class);
+
+    subscriber.awaitError();
+    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
   }
 
   @Test
   void progressToString() {
-    var progress = new ImmutableProgress(
-        1024,
-        8969,
-        10000,
-        Duration.ofSeconds(1),
-        Duration.ofSeconds(10),
-        false);
-    var progressUnknownLength = new ImmutableProgress(
-        1024,
-        8969,
-        -1,
-        Duration.ofSeconds(1),
-        Duration.ofSeconds(10),
-        false);
-    assertEquals(
-        "Progress[bytes=1024, totalBytes=8969, time=PT1S, totalTime=PT10S, contentLength=10000] 89.69%",
-        progress.toString());
-    assertEquals(
-        "Progress[bytes=1024, totalBytes=8969, time=PT1S, totalTime=PT10S, contentLength=UNKNOWN]",
-        progressUnknownLength.toString());
+    var progress =
+        new ProgressSnapshot(
+            1024, 8969, Duration.ofSeconds(1), Duration.ofSeconds(10), 10000, false);
+    var progressWithUnknownLength =
+        new ProgressSnapshot(1024, 8969, Duration.ofSeconds(1), Duration.ofSeconds(10), -1, false);
+    assertThat(progress)
+        .hasToString(
+            "Progress[bytesTransferred=1024, totalBytesTransferred=8969, timePassed=PT1S, totalTimePassed=PT10S, contentLength=10000] 89.69%");
+    assertThat(progressWithUnknownLength)
+        .hasToString(
+            "Progress[bytesTransferred=1024, totalBytesTransferred=8969, timePassed=PT1S, totalTimePassed=PT10S, contentLength=UNKNOWN]");
   }
 
   @Test
   void progressValue() {
-    var duration = Duration.ofSeconds(1);
-    var progress1 = new ImmutableProgress(0L, 0L, 0L, duration, duration, false);
-    var progress8 = new ImmutableProgress(1L, 8L, 10L, duration, duration, false);
-    var progressNaN = new ImmutableProgress(0L, 0L, -1, duration, duration, false);
-    assertEquals(1.d, progress1.value());
-    assertEquals(0.8d, progress8.value());
-    assertTrue(Double.isNaN(progressNaN.value()));
+    var progress1 =
+        new ProgressSnapshot(0L, 0L, Duration.ofSeconds(1), Duration.ofSeconds(1), 0L, false);
+    var progress8 =
+        new ProgressSnapshot(1L, 8L, Duration.ofSeconds(1), Duration.ofSeconds(1), 10L, false);
+    var progressNaN =
+        new ProgressSnapshot(0L, 0L, Duration.ofSeconds(1), Duration.ofSeconds(1), -1, false);
+    assertThat(progress1.value()).isEqualTo(1.d);
+    assertThat(progress8.value()).isEqualTo(0.8d);
+    assertThat(progressNaN.value()).isNaN();
   }
 
-  @ExecutorParameterizedTest
-  void trackUploadProgressNoThreshold(Executor executor) {
-    int batchSize = 64;
-    int count = 20;
-    var tracker = withVirtualClock(executor).build();
-    var listener = new TestListener();
-    var trackedUpstream = tracker.tracking(bodyPublisher(batchSize, count), listener);
-
-    var downstream = new TestSubscriber<ByteBuffer>();
-    trackedUpstream.subscribe(downstream);
-    assertBodyForwarded(downstream, batchSize, count);
-
-    testProgressSequenceNoThreshold(listener, batchSize, count);
+  private static ByteBuffer buffer(int size) {
+    return ByteBuffer.allocate(size);
   }
 
-  @ExecutorParameterizedTest
-  void trackUploadProgressWithError(Executor executor) {
-    var tracker = withExecutor(executor).build();
-    var listener = new TestListener();
-    var trackedUpstream = tracker.tracking(
-        BodyPublishers.fromPublisher(new FailingPublisher<>(TestException::new)), listener);
-
-    var downstream = new TestSubscriber<ByteBuffer>();
-    upstreamExecutor.execute(
-        () -> trackedUpstream.subscribe(downstream));
-    downstream.awaitError();
-
-    listener.awaitComplete();
-    assertEquals(1, listener.errors);
+  private static List<ByteBuffer> buffers(int... sizes) {
+    return IntStream.of(sizes)
+        .mapToObj(ByteBuffer::allocate)
+        .collect(Collectors.toUnmodifiableList());
   }
 
-  @ExecutorParameterizedTest
-  void trackMultipartUploadProgressNoThreshold(Executor executor) {
-    int batchSize = 64;
-    int[] partCounts = {4, 2, 1};
-    int count = IntStream.of(partCounts).sum();
-    var tracker = withVirtualClock(executor).build();
-    var listener = new TestMultipartListener();
-    var builder = MultipartBodyPublisher.newBuilder();
-    for (int i = 0; i < partCounts.length; i++) {
-      builder.formPart("part_" + i, bodyPublisher(batchSize, partCounts[i]));
-    }
-    var multipartBody = builder.build();
-    var trackedUpstream = tracker.trackingMultipart(multipartBody, listener);
+  private static ProgressVerifier verifyThat(Progress progress) {
+    return new ProgressVerifier(progress);
+  }
 
-    trackedUpstream.subscribe(new TestSubscriber<>());
+  private static MultipartProgressVerifier verifyThat(MultipartProgress progress) {
+    return new MultipartProgressVerifier(progress);
+  }
 
-    listener.awaitComplete();
-    // enclosed progress receives additional 0%
-    // 100% will already be received from onNext as there is no lastly missed progress
-    // also each part will account for an additional progress event for each headers
-    // and finally 1 for the ending boundary
-    int signalCount = count + 1 + partCounts.length + 1;
-    assertEquals(signalCount, listener.nexts);
+  private abstract static class AbstractProgressVerifier<
+      P extends Progress, VERIFIER extends AbstractProgressVerifier<P, VERIFIER>> {
+    final P progress;
 
-    // 0% progress
-    assertProgress(
-        listener.items.remove(),
-        0L,
-        0L,
-        multipartBody.contentLength(),
-        Duration.ZERO,
-        Duration.ZERO,
-        false);
-
-    for (int partIndex = 0; partIndex < partCounts.length; partIndex++) {
-      // for each part we get: part headers batch + batches representing part's body
-      int progressCountForPart = partCounts[partIndex] + 1;
-      for (int i = 0; i < progressCountForPart; i++) {
-        var progress = listener.items.remove();
-        assertEquals(multipartBody.parts().get(partIndex), progress.part());
-        assertEquals(i == 0, progress.partChanged(), i + ", " + partIndex);
-
-        long length = progress.part().bodyPublisher().contentLength();
-        assertProgress(
-            progress.partProgress(),
-            i > 0 ? batchSize : 0, // current
-            i * batchSize, // total
-            length,
-            i > 0 ? virtualTick : Duration.ZERO, // current
-            virtualTick.multipliedBy(i), // total
-            i * batchSize == length);
-      }
+    AbstractProgressVerifier(P progress) {
+      this.progress = progress;
     }
 
-    // end boundary
-    assertProgress(
-        listener.items.remove(),
-        -1, // ¯\_(ツ)_/¯
-        multipartBody.contentLength(),
-        multipartBody.contentLength(),
-        virtualTick,
-        virtualTick.multipliedBy(signalCount - 1),
-        true);
+    abstract VERIFIER self();
 
-    assertTrue(listener.items.isEmpty());
-  }
+    VERIFIER hasBytesTransferred(long bytesTransferred) {
+      assertThat(progress).returns(bytesTransferred, from(Progress::bytesTransferred));
+      return self();
+    }
 
-  @ExecutorParameterizedTest
-  void trackUploadProgressWithByteThreshold(Executor executor) {
-    int batchSize = 64;
-    int count = 20;
-    for (int scale = 1; scale <= count; scale++) {
-      int finalScale = scale;
-      testUploadWithThreshold(
-          batchSize,
-          count,
-          scale,
-          b -> b.bytesTransferredThreshold(batchSize * finalScale),
-          executor);
+    VERIFIER hasTotalBytesTransferred(long totalBytesTransferred) {
+      assertThat(progress).returns(totalBytesTransferred, from(Progress::totalBytesTransferred));
+      return self();
+    }
+
+    VERIFIER hasTimePassedInSeconds(int seconds) {
+      return hasTimePassed(Duration.ofSeconds(seconds));
+    }
+
+    VERIFIER hasTotalTimePassedInSeconds(int totalSeconds) {
+      return hasTotalTimePassed(Duration.ofSeconds(totalSeconds));
+    }
+
+    VERIFIER hasTimePassed(Duration timePassed) {
+      assertThat(progress).returns(timePassed, from(Progress::timePassed));
+      return self();
+    }
+
+    VERIFIER hasTotalTimePassed(Duration totalTimePassed) {
+      assertThat(progress).returns(totalTimePassed, from(Progress::totalTimePassed));
+      return self();
+    }
+
+    VERIFIER hasContentLength(long contentLength) {
+      assertThat(progress).returns(contentLength, from(Progress::contentLength));
+      return self();
+    }
+
+    VERIFIER isDone() {
+      assertThat(progress).returns(true, from(Progress::done));
+      return self();
+    }
+
+    VERIFIER isNotDone() {
+      assertThat(progress).returns(false, from(Progress::done));
+      return self();
     }
   }
 
-  @ExecutorParameterizedTest
-  void trackUploadProgressWithTimeThreshold(Executor executor) {
-    int batchSize = 64;
-    int count = 20;
-    for (int scale = 1; scale <= count; scale++) {
-      int finalScale = scale;
-      testUploadWithThreshold(
-          batchSize,
-          count,
-          scale,
-          b -> b.timePassedThreshold(virtualTick.multipliedBy(finalScale)),
-          executor);
-    }
-  }
-
-  @ExecutorParameterizedTest
-  void trackDownloadProgressNoThresholds(Executor executor) {
-    int batchSize = 64;
-    int count = 20;
-    int length = batchSize * count;
-    var tracker = withVirtualClock(executor).build();
-    var listener = new TestListener();
-    var downstream = new TestSubscriber<List<ByteBuffer>>();
-    var trackedDownstream = tracker.tracking(
-        BodySubscribers.fromSubscriber(downstream, d -> countBytes(d.items)), listener, length);
-
-    var publisher = listPublisher(batchSize, count);
-    publisher.subscribe(trackedDownstream);
-    downstream.awaitComplete();
-    assertEquals(count, downstream.nexts);
-    assertEquals(length, trackedDownstream.getBody().toCompletableFuture().join());
-
-    testProgressSequenceNoThreshold(listener, batchSize, count);
-  }
-
-  @ExecutorParameterizedTest
-  void trackDownloadProgressWithError(Executor executor) {
-    var tracker = withExecutor(executor).build();
-    var listener = new TestListener();
-    var downstream = new TestSubscriber<List<ByteBuffer>>();
-    var trackedDownstream = tracker.tracking(
-        BodySubscribers.fromSubscriber(downstream), listener, -1);
-
-    var publisher = new FailingPublisher<List<ByteBuffer>>(TestException::new);
-    upstreamExecutor.execute(() -> publisher.subscribe(trackedDownstream));
-    downstream.awaitError();
-
-    listener.awaitComplete();
-    assertEquals(1, listener.errors);
-  }
-
-  @ExecutorParameterizedTest
-  void trackDownloadProgressWithByteThreshold(Executor executor) {
-    int batchSize = 64;
-    int count = 20;
-    for (int scale = 1; scale <= count; scale++) {
-      int finalScale = scale;
-      testDownloadWithThreshold(
-          batchSize,
-          count,
-          scale,
-          b -> b.bytesTransferredThreshold(batchSize * finalScale),
-          executor);
-    }
-  }
-
-  @ExecutorParameterizedTest
-  void trackDownloadProgressWithTimeThreshold(Executor executor) {
-    int batchSize = 64;
-    int count = 20;
-    for (int scale = 1; scale <= count; scale++) {
-      int finalScale = scale;
-      testDownloadWithThreshold(
-          batchSize,
-          count,
-          scale,
-          b -> b.timePassedThreshold(virtualTick.multipliedBy(finalScale)),
-          executor);
-    }
-  }
-
-  private void testProgressSequenceNoThreshold(TestListener listener, int batchSize, int count) {
-    listener.awaitComplete();
-    // enclosed progress receives additional 0%
-    // 100% will already be received from onNext as there is no lastly missed progress
-    assertEquals(count + 1, listener.nexts);
-
-    int length = batchSize * count;
-    for (int i = 0; i < count + 1; i++) {
-      listener.assertNext(
-          i > 0 ? batchSize : 0, // current
-          i * batchSize, // total
-          length,
-          i > 0 ? virtualTick : Duration.ZERO, // current
-          virtualTick.multipliedBy(i), // total
-          i * batchSize == length);
-    }
-  }
-
-  /*
-  For easier testing and predictability of trackers with thresholds, thresholds are scaled with an
-  integer from actual signal difference (batchSize for byte count and virtualTick for time passed).
-   */
-
-  private void testUploadWithThreshold(
-      int batchSize,
-      int count,
-      int thresholdScale,
-      Consumer<Builder> thresholdApplier,
-      Executor executor) {
-    var builder = withVirtualClock(executor);
-    thresholdApplier.accept(builder);
-    var tracker = builder.build();
-    var listener = new TestListener();
-    var trackedUpstream = tracker.tracking(bodyPublisher(batchSize, count), listener);
-
-    var downstream = new TestSubscriber<ByteBuffer>();
-    trackedUpstream.subscribe(downstream);
-    assertBodyForwarded(downstream, batchSize, count);
-
-    int lastlyMissed = count % thresholdScale; // missed progresses before onComplete due to threshold
-    listener.awaitComplete();
-    // 1 (0%) + count / thresholdScale (not missed) + 1 (100% from onComplete if any last progress is missed)
-    assertEquals(1 + (count / thresholdScale) + (lastlyMissed > 0 ? 1 : 0), listener.nexts);
-
-    testProgressSequenceWithThreshold(listener, batchSize, count, thresholdScale);
-  }
-
-  private void testDownloadWithThreshold(
-      int batchSize,
-      int count,
-      int thresholdScale,
-      Consumer<Builder> thresholdApplier,
-      Executor executor) {
-    var builder = withVirtualClock(executor);
-    thresholdApplier.accept(builder);
-    var tracker = builder.build();
-    var listener = new TestListener();
-    var downstream = new TestSubscriber<List<ByteBuffer>>();
-    int length = batchSize * count;
-    var trackedDownstream = tracker.tracking(
-        BodySubscribers.fromSubscriber(downstream, d -> countBytes(d.items)), listener, length);
-
-    var publisher = listPublisher(batchSize, count);
-    publisher.subscribe(trackedDownstream);
-    downstream.awaitComplete();
-    assertEquals(count, downstream.nexts);
-    assertEquals(length, trackedDownstream.getBody().toCompletableFuture().join());
-
-    int lastlyMissed = count % thresholdScale; // missed progresses before onComplete due to threshold
-    listener.awaitComplete();
-    // 1 (0%) + count / thresholdScale (not missed) + 1 (100% from onComplete if any last progress is missed)
-    assertEquals(1 + (count / thresholdScale) + (lastlyMissed > 0 ? 1 : 0), listener.nexts);
-
-    testProgressSequenceWithThreshold(listener, batchSize, count, thresholdScale);
-  }
-
-  private void testProgressSequenceWithThreshold(
-      TestListener listener,
-      int batchSize,
-      int count,
-      int thresholdScale) {
-    // e.g. if scale = 2
-    // Progress[    count,     total,     time,    total]
-    // Progress[       0L,        0L,     ZERO,     ZERO] (signalled)
-    // Progress[    batch,     batch,     tick,     tick] (missed)
-    // Progress[2 * batch, 2 * batch, 2 * tick, 2 * tick] (signalled and reset)
-    // Progress[    batch, 3 * batch,     tick, 3 * tick] (missed)
-    // Progress[2 * batch, 4 * batch, 2 * tick, 4 * tick] (signalled and reset)
-    // etc...
-    int length = batchSize * count;
-    int lastlyMissed = count % thresholdScale;
-    for (int i = 0; i <= count / thresholdScale; i++) {
-      int thresholdBatchSize = batchSize * thresholdScale;
-      int totalTransferred = i * thresholdBatchSize;
-      listener.assertNext(
-          i > 0 ? thresholdBatchSize : 0, // current
-          totalTransferred, // total
-          length,
-          i > 0 ? virtualTick.multipliedBy(thresholdScale) : Duration.ZERO, // current
-          virtualTick.multipliedBy(i * thresholdScale), // total
-          totalTransferred == length);
-    }
-    if (lastlyMissed > 0) { // with enclosing 100% from onComplete
-      listener.assertNext(
-          batchSize * lastlyMissed, // missed progress
-          length, // total
-          length,
-          virtualTick.multipliedBy(lastlyMissed + 1), // scale by lastlyMissed (missed ticks) + 1 (tick from onComplete)
-          virtualTick.multipliedBy(count + 1), // scale by count (all ticks) + 1 (tick from onComplete)
-          true);
-    }
-  }
-
-  // ensure body is forwarded to actual downstream
-  private static void assertBodyForwarded(
-      TestSubscriber<ByteBuffer> downstream, int batchSize, int count) {
-    downstream.awaitComplete();
-    assertEquals(count, downstream.nexts);
-    assertEquals(
-        batchSize * count,
-        BodyCollector.collect(List.copyOf(downstream.items)).remaining());
-  }
-
-  private BodyPublisher bodyPublisher(int batchSize, int count) {
-    int length = batchSize * count;
-    return BodyPublishers.fromPublisher(
-        FlowAdapters.toFlowPublisher(
-            new AsyncIterablePublisher<>(
-                () -> new BuffIterator(ByteBuffer.allocate(length), batchSize), upstreamExecutor)),
-        length);
-  }
-
-  private Flow.Publisher<List<ByteBuffer>> listPublisher(int batchSize, int count) {
-    int length = batchSize * count;
-    return FlowAdapters.toFlowPublisher(
-        new AsyncIterablePublisher<>(
-            () -> new BuffListIterator(ByteBuffer.allocate(length), batchSize, 1),
-            upstreamExecutor));
-  }
-
-  private ProgressTracker.Builder withExecutor(Executor executor) {
-    return  ProgressTracker.newBuilder().executor(executor);
-  }
-
-  private ProgressTracker.Builder withVirtualClock(Executor executor) {
-    return withExecutor(executor).clock(new VirtualClock(virtualTick));
-  }
-
-  private static long countBytes(Collection<List<ByteBuffer>> items) {
-    return items.stream().flatMap(Collection::stream).mapToLong(ByteBuffer::remaining).sum();
-  }
-
-  private static void assertProgress(
-      Progress progress,
-      long transferred, long totalTransferred, long contentLength,
-      Duration time, Duration totalTime,
-      boolean completed) {
-    if (transferred >= 0) {
-      assertEquals(transferred, progress.bytesTransferred());
-    }
-    assertEquals(totalTransferred, progress.totalBytesTransferred());
-    assertEquals(contentLength, progress.contentLength());
-    assertEquals(time, progress.timePassed());
-    assertEquals(totalTime, progress.totalTimePassed());
-    assertEquals(completed, progress.done());
-  }
-
-  private static final class TestListener
-      extends TestSubscriber<Progress> implements Listener {
-
-    TestListener() {}
-
-    void assertNext(
-        long transferred, long totalTransferred, long contentLength,
-        Duration time, Duration totalTime,
-        boolean completed) {
-      assertFalse(items.isEmpty());
-      assertProgress(
-          items.poll(),
-          transferred, totalTransferred, contentLength,
-          time, totalTime, completed);
-    }
-  }
-
-  private static final class TestMultipartListener
-      extends TestSubscriber<MultipartProgress> implements MultipartListener {
-
-    TestMultipartListener() {}
-  }
-
-  private static final class VirtualClock extends Clock {
-
-    private final Duration tick;
-    private Instant current;
-
-    private VirtualClock(Duration tick) {
-      this.tick = tick;
-      current = Instant.now();
+  private static final class ProgressVerifier
+      extends AbstractProgressVerifier<Progress, ProgressVerifier> {
+    ProgressVerifier(Progress progress) {
+      super(progress);
     }
 
     @Override
-    public Instant instant() {
-      Instant instant = current;
-      current = instant.plus(tick);
-      return instant;
+    ProgressVerifier self() {
+      return this;
+    }
+  }
+
+  private static final class MultipartProgressVerifier
+      extends AbstractProgressVerifier<MultipartProgress, MultipartProgressVerifier> {
+    MultipartProgressVerifier(MultipartProgress progress) {
+      super(progress);
     }
 
-    @Override public ZoneId getZone() { throw new AssertionError(); }
-    @Override public Clock withZone(ZoneId zone) { throw new AssertionError(); }
+    @Override
+    MultipartProgressVerifier self() {
+      return this;
+    }
+
+    MultipartProgressVerifier partChanged(boolean partChanged) {
+      assertThat(progress.partChanged()).isEqualTo(partChanged);
+      return this;
+    }
+
+    MultipartProgressVerifier hasPartWithName(String name) {
+      assertThat(name(progress.part())).isEqualTo(name);
+      return this;
+    }
+
+    ProgressVerifier verifyPartProgress() {
+      return new ProgressVerifier(progress.partProgress());
+    }
+
+    private static String name(Part part) {
+      var contentDisposition = part.headers().firstValue("Content-Disposition");
+      assertThat(contentDisposition).isNotEmpty();
+
+      var tokenizer = new HeaderValueTokenizer(contentDisposition.orElseThrow());
+
+      // Consume disposition type
+      tokenizer.nextToken();
+      tokenizer.consumeDelimiter(';');
+
+      do {
+        if ("name".equalsIgnoreCase(tokenizer.nextToken()) && tokenizer.consumeCharIfPresent('=')) {
+          return tokenizer.nextTokenOrQuotedString();
+        }
+      } while (tokenizer.consumeDelimiter(';'));
+
+      throw new AssertionError("absent name property");
+    }
+  }
+
+  private static class AbstractProgressSubscriber<P extends Progress> extends TestSubscriber<P> {
+    AbstractProgressSubscriber() {}
+
+    P awaitProgress() {
+      await()
+          .atMost(Duration.ofSeconds(10))
+          .pollDelay(Duration.ZERO)
+          .until(() -> items, not(Collection::isEmpty));
+      return items.pollFirst();
+    }
+
+    void assertNoProgress() {
+      assertThat(items).isEmpty();
+    }
+  }
+
+  private static final class ProgressSubscriber extends AbstractProgressSubscriber<Progress>
+      implements Listener {
+    ProgressSubscriber() {}
+  }
+
+  private static final class MultipartProgressSubscriber
+      extends AbstractProgressSubscriber<MultipartProgress> implements MultipartListener {
+    MultipartProgressSubscriber() {}
   }
 }

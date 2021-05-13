@@ -44,6 +44,8 @@ public class TestSubscriber<T> implements Subscriber<T> {
   public volatile boolean throwOnCall;
   public final Deque<T> items = new ArrayDeque<>();
 
+  private volatile int pendingNexsts;
+
   @Override
   public synchronized void onSubscribe(Subscription subscription) {
     requireNonNull(subscription);
@@ -63,8 +65,9 @@ public class TestSubscriber<T> implements Subscriber<T> {
   @Override
   public synchronized void onNext(T item) {
     requireNonNull(item);
-    nexts++;
     items.addLast(item);
+    nexts++;
+    pendingNexsts++;
     notifyAll();
     if (throwOnCall) {
       throw new TestException();
@@ -106,6 +109,18 @@ public class TestSubscriber<T> implements Subscriber<T> {
         throw new AssertionError(ex);
       }
     }
+  }
+
+  public synchronized T awaitNextItem() {
+    while (pendingNexsts <= 0) {
+      try {
+        wait();
+      } catch (Exception e) {
+        throw new AssertionError(e);
+      }
+    }
+    pendingNexsts--;
+    return items.peekLast();
   }
 
   public synchronized void awaitComplete() {

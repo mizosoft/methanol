@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,18 +22,17 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
+import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDuration;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
-import com.github.mizosoft.methanol.MultipartBodyPublisher.PartPeeker;
-import com.github.mizosoft.methanol.internal.Validate;
+import com.github.mizosoft.methanol.MultipartBodyPublisher.PartSequenceListener;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.ForwardingBodyPublisher;
 import com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber;
-import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -48,26 +47,24 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
+import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Allows attaching a listener to un upload or download operation for tracking progress. */
+/** A progress tracker for upload and download operations. */
 public final class ProgressTracker {
-
-  private static final long UNKNOWN_CONTENT_LENGTH = -1;
-
   private final Options options;
-  private final boolean userExecutor;
+  private final boolean userVisibleExecutor;
 
   private ProgressTracker(Builder builder) {
     var configuredExecutor = builder.executor;
     Executor executor;
     if (configuredExecutor != null) {
       executor = configuredExecutor;
-      userExecutor = true;
+      userVisibleExecutor = true;
     } else {
       executor = FlowSupport.SYNC_EXECUTOR;
-      userExecutor = false;
+      userVisibleExecutor = false;
     }
 
     options =
@@ -99,7 +96,7 @@ public final class ProgressTracker {
 
   /** Returns the optional executor on which {@link Listener} methods are called. */
   public Optional<Executor> executor() {
-    return userExecutor ? Optional.of(options.executor) : Optional.empty();
+    return userVisibleExecutor ? Optional.of(options.executor) : Optional.empty();
   }
 
   /**
@@ -108,11 +105,7 @@ public final class ProgressTracker {
   public BodyPublisher tracking(BodyPublisher upstream, Listener listener) {
     requireNonNull(upstream, "upstream");
     requireNonNull(listener, "listener");
-    if (upstream instanceof MultipartBodyPublisher) {
-      return new MultipartTrackingBodyPublisher(
-          options, new MultipartListenerAdapter(listener), (MultipartBodyPublisher) upstream);
-    }
-    return new UnipartTrackingBodyPublisher(options, listener, upstream);
+    return new TrackingBodyPublisher(upstream, listener, options);
   }
 
   /**
@@ -123,7 +116,7 @@ public final class ProgressTracker {
       MultipartBodyPublisher upstream, MultipartListener listener) {
     requireNonNull(upstream, "upstream");
     requireNonNull(listener, "listener");
-    return new MultipartTrackingBodyPublisher(options, listener, upstream);
+    return new MultipartTrackingBodyPublisher(upstream, listener, options);
   }
 
   /**
@@ -135,7 +128,7 @@ public final class ProgressTracker {
       BodySubscriber<T> downstream, Listener listener, long contentLengthIfKnown) {
     requireNonNull(downstream, "downstream");
     requireNonNull(listener, "listener");
-    return new TrackingBodySubscriber<>(options, listener, contentLengthIfKnown, downstream);
+    return new TrackingBodySubscriber<>(downstream, listener, options, contentLengthIfKnown);
   }
 
   /**
@@ -145,11 +138,11 @@ public final class ProgressTracker {
   public <T> BodyHandler<T> tracking(BodyHandler<T> handler, Listener listener) {
     requireNonNull(handler, "handler");
     requireNonNull(listener, "listener");
-    return info -> tracking(handler.apply(info), listener, contentLengthIfKnown(info.headers()));
-  }
-
-  private static long contentLengthIfKnown(HttpHeaders headers) {
-    return headers.firstValueAsLong("Content-Length").orElse(UNKNOWN_CONTENT_LENGTH);
+    return responseInfo ->
+        tracking(
+            handler.apply(responseInfo),
+            listener,
+            responseInfo.headers().firstValueAsLong("Content-Length").orElse(-1));
   }
 
   /** Returns a default {@code ProgressTracker} with no thresholds or executor. */
@@ -164,7 +157,6 @@ public final class ProgressTracker {
 
   @FunctionalInterface
   private interface BaseListener<P extends Progress> extends Subscriber<P> {
-
     @Override
     default void onSubscribe(Subscription subscription) {
       subscription.request(Long.MAX_VALUE);
@@ -202,14 +194,14 @@ public final class ProgressTracker {
     /** Returns the total number of bytes transferred so far. */
     long totalBytesTransferred();
 
-    /** Returns content length, or a value less than zero if unknown. */
-    long contentLength();
-
     /** Returns the time passed between this and the previous progress events. */
     Duration timePassed();
 
     /** Returns the total time passed since the upload or download operation has begun. */
     Duration totalTimePassed();
+
+    /** Returns content length, or a value less than zero if unknown. */
+    long contentLength();
 
     /** Returns {@code true} if the upload or download operation is done. */
     boolean done();
@@ -239,31 +231,27 @@ public final class ProgressTracker {
   /** A progress event for a multipart body with per-part progress info. */
   public interface MultipartProgress extends Progress {
 
-    /** Returns {@code true} if the currently progressing part has changed. */
-    boolean partChanged();
-
     /** Returns the currently progressing part. */
     Part part();
 
     /** Returns current part's progress. */
     Progress partProgress();
+
+    /** Returns {@code true} if the currently progressing part has changed from the last event. */
+    boolean partChanged();
   }
 
   /** A builder of {@code ProgressTrackers}. */
   public static final class Builder {
-
     private long bytesTransferredThreshold;
-    private boolean enclosedProgress;
     private @MonotonicNonNull Duration timePassedThreshold;
     private @MonotonicNonNull Executor executor;
-    private Clock clock;
+    private boolean enclosedProgress = true;
+    private Clock clock = Clock.systemUTC();
 
-    Builder() {
-      enclosedProgress = true;
-      clock = Clock.systemUTC();
-    }
+    Builder() {}
 
-    Builder clock(Clock clock) {
+    Builder clockForTesting(Clock clock) {
       this.clock = requireNonNull(clock);
       return this;
     }
@@ -286,7 +274,7 @@ public final class ProgressTracker {
      * @throws IllegalArgumentException if duration is not positive
      */
     public Builder timePassedThreshold(Duration duration) {
-      requirePositiveDuration(duration);
+      requireNonNegativeDuration(duration);
       this.timePassedThreshold = duration;
       return this;
     }
@@ -316,7 +304,6 @@ public final class ProgressTracker {
   }
 
   private static final class Options {
-
     final long bytesTransferredThreshold;
     final @Nullable Duration timePassedThreshold;
     final Executor executor;
@@ -337,211 +324,28 @@ public final class ProgressTracker {
     }
   }
 
-  private static final class MultipartListenerAdapter
-      extends ForwardingSubscriber<MultipartProgress> implements MultipartListener {
-
-    private final Listener listener;
-
-    MultipartListenerAdapter(Listener listener) {
-      this.listener = listener;
-    }
-
-    @Override
-    protected Subscriber<? super MultipartProgress> downstream() {
-      return listener;
-    }
-  }
-
-  private abstract static class Progression<P extends Progress> {
-
-    final long bytesTransferredThreshold;
-    final long contentLength;
-    final @Nullable Duration timePassedThreshold;
-    final Instant startTime;
-    long bytesTransferred;
-    long totalBytesTransferred;
-    Instant lastUpdateTime;
-    Instant updateTime;
-
-    Progression(
-        Instant startTime,
-        long bytesTransferredThreshold,
-        @Nullable Duration timePassedThreshold,
-        long contentLength) {
-      this.bytesTransferredThreshold = bytesTransferredThreshold;
-      this.startTime = startTime;
-      this.timePassedThreshold = timePassedThreshold;
-      this.contentLength = contentLength;
-      lastUpdateTime = startTime;
-      updateTime = startTime;
-    }
-
-    void updateProgress(Instant updateTime, long byteCount) {
-      this.updateTime = updateTime;
-      bytesTransferred += byteCount;
-      totalBytesTransferred += byteCount;
-    }
-
-    boolean shouldSignalProgress() {
-      return bytesTransferred >= bytesTransferredThreshold
-          && (timePassedThreshold == null
-              || updateTime.compareTo(lastUpdateTime.plus(timePassedThreshold)) >= 0);
-    }
-
-    void rewind() {
-      bytesTransferred = 0L;
-      lastUpdateTime = updateTime;
-    }
-
-    abstract P snapshot(boolean lastlyEnclosing);
-
-    abstract P zeroProgress();
-  }
-
-  private static final class UnipartProgression extends Progression<Progress> {
-
-    UnipartProgression(
-        Instant startTime,
-        long bytesTransferredThreshold,
-        @Nullable Duration timePassedThreshold,
-        long contentLength) {
-      super(startTime, bytesTransferredThreshold, timePassedThreshold, contentLength);
-    }
-
-    @Override
-    Progress snapshot(boolean lastlyEnclosing) {
-      return new ImmutableProgress(
-          bytesTransferred,
-          totalBytesTransferred,
-          contentLength,
-          Duration.between(lastUpdateTime, updateTime),
-          Duration.between(startTime, updateTime),
-          lastlyEnclosing);
-    }
-
-    @Override
-    Progress zeroProgress() {
-      return new ImmutableProgress(0L, 0L, contentLength, Duration.ZERO, Duration.ZERO, false);
-    }
-  }
-
-  private static final class MultipartProgression extends Progression<MultipartProgress> {
-
-    private final PartPeeker peeker;
-    private int currentPartIndex;
-
-    // becomes non-null on first updateProgress() call
-    private @MonotonicNonNull UnipartProgression currentPartProgression;
-
-    // The part is prefixed with headers (a ByteBuffer signal) so
-    // one signal must be ignored to begin progressing the part itself
-    private boolean partIsProgressing;
-
-    // true only right after a part is updated before a MultipartProgress snapshot
-    private boolean partChangePending;
-
-    MultipartProgression(
-        Instant startTime,
-        long bytesTransferredThreshold,
-        @Nullable Duration timePassedThreshold,
-        long contentLength,
-        PartPeeker peeker) {
-      super(startTime, bytesTransferredThreshold, timePassedThreshold, contentLength);
-      this.peeker = peeker;
-    }
-
-    @Override
-    void updateProgress(Instant updateTime, long byteCount) {
-      super.updateProgress(updateTime, byteCount);
-
-      long partByteCount;
-      if (partIsProgressing) {
-        partByteCount = byteCount;
-      } else {
-        partIsProgressing = true;
-        partByteCount = 0L;
-      }
-
-      var progression = Validate.castNonNull(currentPartProgression);
-      progression.updateProgress(updateTime, partByteCount);
-    }
-
-    @Override
-    void rewind() {
-      super.rewind();
-
-      var progression = Validate.castNonNull(currentPartProgression);
-      progression.rewind();
-    }
-
-    @Override
-    MultipartProgress snapshot(boolean lastlyEnclosing) {
-      return new ImmutableMultipartProgress(
-          bytesTransferred,
-          totalBytesTransferred,
-          contentLength,
-          Duration.between(lastUpdateTime, updateTime),
-          Duration.between(startTime, updateTime),
-          lastlyEnclosing,
-          partChanged(),
-          peeker.at(currentPartIndex),
-          Validate.castNonNull(currentPartProgression).snapshot(lastlyEnclosing));
-    }
-
-    @Override
-    MultipartProgress zeroProgress() {
-      var firstPart = peeker.at(0); // at least one part is guaranteed to exist
-      return new ImmutableMultipartProgress(
-          0L, 0L, contentLength, Duration.ZERO, Duration.ZERO, false, true, firstPart,
-          new ImmutableProgress(0L, 0L, firstPart.bodyPublisher().contentLength(),
-              Duration.ZERO, Duration.ZERO, false));
-    }
-
-    void updatePartIfNeeded(Instant newPartStartTime) {
-      if (currentPartProgression == null || currentPartIndex != peeker.peekIndex()) {
-        currentPartIndex = peeker.peekIndex();
-        currentPartProgression = newPartProgression(newPartStartTime, peeker.at(currentPartIndex));
-        partChangePending = true;
-        partIsProgressing = false;
-      }
-    }
-
-    private boolean partChanged() {
-      if (partChangePending) {
-        partChangePending = false;
-        return true;
-      } else {
-        return false;
-      }
-    }
-
-    private UnipartProgression newPartProgression(Instant startTime, Part part) {
-      return new UnipartProgression(startTime, 0, null, part.bodyPublisher().contentLength());
-    }
-  }
-
-  static class ImmutableProgress implements Progress {
-
+  // @VisibleForTesting
+  static class ProgressSnapshot implements Progress {
     private final long bytesTransferred;
     private final long totalBytesTransferred;
     private final long contentLength;
     private final Duration timePassed;
     private final Duration totalTimePassed;
-    private final boolean lastlyEnclosing;
+    private final boolean lastProgress;
 
-    ImmutableProgress(
+    ProgressSnapshot(
         long bytesTransferred,
         long totalBytesTransferred,
-        long contentLength,
         Duration timePassed,
         Duration totalTimePassed,
-        boolean lastlyEnclosing) {
+        long contentLength,
+        boolean lastProgress) {
       this.bytesTransferred = bytesTransferred;
       this.totalBytesTransferred = totalBytesTransferred;
       this.contentLength = contentLength;
       this.timePassed = timePassed;
       this.totalTimePassed = totalTimePassed;
-      this.lastlyEnclosing = lastlyEnclosing;
+      this.lastProgress = lastProgress;
     }
 
     @Override
@@ -555,11 +359,6 @@ public final class ProgressTracker {
     }
 
     @Override
-    public long contentLength() {
-      return contentLength;
-    }
-
-    @Override
     public Duration timePassed() {
       return timePassed;
     }
@@ -570,55 +369,54 @@ public final class ProgressTracker {
     }
 
     @Override
+    public long contentLength() {
+      return contentLength;
+    }
+
+    @Override
     public boolean done() {
-      return lastlyEnclosing || (determinate() && totalBytesTransferred >= contentLength);
+      return lastProgress || (determinate() && totalBytesTransferred >= contentLength);
     }
 
     @Override
     public String toString() {
       return String.format(
-          "Progress[bytes=%d, totalBytes=%d, time=%s, totalTime=%s, contentLength=%s]%s",
+          "Progress[bytesTransferred=%d, totalBytesTransferred=%d, timePassed=%s, totalTimePassed=%s, contentLength=%s]%s",
           bytesTransferred,
           totalBytesTransferred,
           timePassed,
           totalTimePassed,
           determinate() ? contentLength : "UNKNOWN",
-          determinate() ? " " + Math.round(10000 * value()) / 100.d + "%" : "");
+          determinate() ? " " + (Math.round(10000.d * value()) / 100.d) + "%" : "");
     }
   }
 
-  static final class ImmutableMultipartProgress extends ImmutableProgress
+  private static final class MultipartProgressSnapshot extends ProgressSnapshot
       implements MultipartProgress {
-
-    private final boolean partChanged;
     private final Part part;
     private final Progress partProgress;
+    private final boolean partChanged;
 
-    ImmutableMultipartProgress(
+    MultipartProgressSnapshot(
         long bytesTransferred,
         long totalBytesTransferred,
-        long contentLength,
         Duration timePassed,
         Duration totalTimePassed,
-        boolean lastlyEnclosing,
-        boolean partChanged,
+        long contentLength,
+        boolean lastProgress,
         Part part,
-        Progress partProgress) {
+        Progress partProgress,
+        boolean partChanged) {
       super(
           bytesTransferred,
           totalBytesTransferred,
-          contentLength,
           timePassed,
           totalTimePassed,
-          lastlyEnclosing);
-      this.partChanged = partChanged;
+          contentLength,
+          lastProgress);
       this.part = part;
       this.partProgress = partProgress;
-    }
-
-    @Override
-    public boolean partChanged() {
-      return partChanged;
+      this.partChanged = partChanged;
     }
 
     @Override
@@ -630,47 +428,174 @@ public final class ProgressTracker {
     public Progress partProgress() {
       return partProgress;
     }
+
+    @Override
+    public boolean partChanged() {
+      return partChanged;
+    }
+  }
+
+  private abstract static class Progression<P extends Progress> {
+    private final long bytesTransferredThreshold;
+    private final Duration timePassedThreshold;
+    final long contentLength;
+    long bytesTransferred;
+    long totalBytesTransferred;
+    Instant startTime = Instant.MIN;
+    Instant lastUpdateTime = Instant.MIN;
+    Instant updateTime = Instant.MIN;
+
+    Progression(
+        long bytesTransferredThreshold,
+        @Nullable Duration timePassedThreshold,
+        long contentLength) {
+      this.bytesTransferredThreshold = bytesTransferredThreshold;
+      this.timePassedThreshold = requireNonNullElse(timePassedThreshold, Duration.ZERO);
+      this.contentLength = contentLength;
+    }
+
+    void start(Instant startTime) {
+      this.startTime = startTime;
+      lastUpdateTime = startTime;
+      updateTime = startTime;
+    }
+
+    void update(Instant updateTime, long byteCount) {
+      this.updateTime = updateTime;
+      bytesTransferred += byteCount;
+      totalBytesTransferred += byteCount;
+    }
+
+    boolean hasPendingProgress() {
+      return bytesTransferred >= bytesTransferredThreshold
+          && Duration.between(lastUpdateTime, updateTime).compareTo(timePassedThreshold) >= 0;
+    }
+
+    void rewind() {
+      bytesTransferred = 0L;
+      lastUpdateTime = updateTime;
+    }
+
+    abstract P snapshot(boolean completed);
+  }
+
+  private static final class UnipartProgression extends Progression<Progress> {
+    UnipartProgression(
+        long bytesTransferredThreshold,
+        @Nullable Duration timePassedThreshold,
+        long contentLength) {
+      super(bytesTransferredThreshold, timePassedThreshold, contentLength);
+    }
+
+    @Override
+    Progress snapshot(boolean completed) {
+      return new ProgressSnapshot(
+          bytesTransferred,
+          totalBytesTransferred,
+          Duration.between(lastUpdateTime, updateTime),
+          Duration.between(startTime, updateTime),
+          contentLength,
+          completed);
+    }
+  }
+
+  private static final class MultipartProgression extends Progression<MultipartProgress> {
+    private Part currentPart;
+    private UnipartProgression partProgression;
+    private boolean partChangePending;
+
+    MultipartProgression(
+        long bytesTransferredThreshold,
+        @Nullable Duration timePassedThreshold,
+        long contentLength,
+        Part firstPart) {
+      super(bytesTransferredThreshold, timePassedThreshold, contentLength);
+      currentPart = firstPart;
+      partProgression =
+          new UnipartProgression(0, Duration.ZERO, firstPart.bodyPublisher().contentLength());
+      partChangePending = true;
+    }
+
+    @Override
+    void rewind() {
+      super.rewind();
+      partProgression.rewind();
+    }
+
+    void updatePart(Part part, Instant progressionStartTime) {
+      currentPart = part;
+      partProgression =
+          new UnipartProgression(0, Duration.ZERO, part.bodyPublisher().contentLength());
+      partProgression.start(progressionStartTime);
+      partChangePending = true;
+    }
+
+    void updatePartProgress(Instant updateTime, long partByteCount) {
+      partProgression.update(updateTime, partByteCount);
+    }
+
+    @Override
+    MultipartProgress snapshot(boolean completed) {
+      boolean partChanged = partChangePending;
+      partChangePending = false;
+      return new MultipartProgressSnapshot(
+          bytesTransferred,
+          totalBytesTransferred,
+          Duration.between(lastUpdateTime, updateTime),
+          Duration.between(startTime, updateTime),
+          contentLength,
+          completed,
+          currentPart,
+          partProgression.snapshot(false),
+          partChanged);
+    }
   }
 
   private abstract static class AbstractTrackingSubscriber<
           B, P extends Progress, R extends Progression<P>>
       extends ForwardingSubscriber<B> {
+    private final Subscriber<? super B> downstream;
+    private final ProgressSubscription listenerSubscription;
 
-    final Options options;
-    final BaseListener<P> listener;
-    final long contentLength;
-
-    private @Nullable ProgressSubscription progressSubscription;
-    private boolean signalledCompletedProgress;
-
-    AbstractTrackingSubscriber(Options options, BaseListener<P> listener, long contentLength) {
-      this.options = options;
-      this.listener = listener;
-      this.contentLength = contentLength;
+    AbstractTrackingSubscriber(
+        Subscriber<? super B> downstream,
+        BaseListener<P> listener,
+        Options options,
+        R progression) {
+      this.downstream = downstream;
+      listenerSubscription = new ProgressSubscription(listener, options, progression);
     }
 
     abstract long countBytes(B batch);
 
-    abstract R createProgression(Instant startTime, Subscription upstreamSubscription);
+    abstract void updateProgression(R progression, Instant updateTime, long byteCount);
+
+    @Override
+    protected Subscriber<? super B> downstream() {
+      return downstream;
+    }
 
     @Override
     public void onSubscribe(Subscription subscription) {
       if (upstream.setOrCancel(subscription)) {
-        downstream().onSubscribe(subscription);
-        listenerOnSubscribe(createProgression(options.clock.instant(), subscription));
+        try {
+          listenerSubscription.onSubscribe();
+        } finally {
+          downstream().onSubscribe(subscription);
+        }
       }
     }
 
     @Override
-    public void onNext(B batch) {
-      listenerOnNext(countBytes(batch));
-      super.onNext(batch);
+    public void onNext(B item) {
+      listenerSubscription.onNext(countBytes(item));
+      super.onNext(item);
     }
 
     @Override
     public void onError(Throwable throwable) {
       try {
-        listenerOnComplete(throwable);
+        listenerSubscription.onError(throwable);
       } finally {
         super.onError(throwable);
       }
@@ -679,70 +604,28 @@ public final class ProgressTracker {
     @Override
     public void onComplete() {
       try {
-        listenerOnComplete(null);
+        listenerSubscription.onComplete();
       } finally {
         super.onComplete();
       }
     }
 
-    @Nullable P updateProgress(R progression, Instant updateTime, long bytesTransferred) {
-      progression.updateProgress(updateTime, bytesTransferred);
-      return progression.shouldSignalProgress() ? progression.snapshot(false) : null;
-    }
-
-    private void listenerOnSubscribe(R progression) {
-      var subscription = new ProgressSubscription(progression);
-      progressSubscription = subscription;
-      if (options.enclosedProgress) {
-        // put 0% progress
-        subscription.progressEvents.offer(progression.zeroProgress());
-      }
-      subscription.signal(true);
-    }
-
-    private void listenerOnNext(long bytesTransferred) {
-      var subscription = progressSubscription;
-      if (subscription != null) {
-        var progression = subscription.progression;
-        var progress = updateProgress(progression, options.clock.instant(), bytesTransferred);
-        if (progress != null) {
-          signalledCompletedProgress = progress.done();
-
-          progression.rewind();
-          subscription.signalProgress(progress);
-        }
-      }
-    }
-
-    private void listenerOnComplete(@Nullable Throwable throwable) {
-      var subscription = progressSubscription;
-      if (subscription != null) {
-        if (throwable != null) {
-          subscription.signalError(throwable);
-        } else {
-          var progression = subscription.progression;
-          // signal 100% progress if enclosing & not signalled from onNext
-          if (options.enclosedProgress && !signalledCompletedProgress) {
-            progression.updateProgress(options.clock.instant(), 0L); // update time
-            subscription.progressEvents.offer(progression.snapshot(true));
-          }
-
-          subscription.signalCompletion();
-        }
-      }
-    }
-
     private final class ProgressSubscription extends AbstractSubscription<P> {
-
-      final R progression;
-      final ConcurrentLinkedQueue<P> progressEvents;
-
+      private final Options options;
+      private final R progression;
+      private final ConcurrentLinkedQueue<P> progressEvents = new ConcurrentLinkedQueue<>();
       private volatile boolean complete;
 
-      ProgressSubscription(R progression) {
+      /**
+       * Whether to signal a 100% progress from onComplete(). This can be avoided in case a 100%
+       * progress is already signalled from onNext().
+       */
+      private boolean signaledLastProgress;
+
+      ProgressSubscription(BaseListener<P> listener, Options options, R progression) {
         super(listener, options.executor);
+        this.options = options;
         this.progression = progression;
-        progressEvents = new ConcurrentLinkedQueue<>();
       }
 
       @Override
@@ -754,7 +637,7 @@ public final class ProgressTracker {
             cancelOnComplete(downstream);
             return 0L;
           } else if (submitted >= emit
-              || (progress = progressEvents.poll()) == null) { // exhausted demand or progresses
+              || (progress = progressEvents.poll()) == null) { // Exhausted demand or progresses
             return submitted;
           } else if (submitOnNext(downstream, progress)) {
             submitted++;
@@ -764,190 +647,199 @@ public final class ProgressTracker {
         }
       }
 
-      @Override
-      protected void abort(boolean flowInterrupted) {
-        // make parent loose reference to `this`
-        AbstractTrackingSubscriber.this.progressSubscription = null;
+      void onSubscribe() {
+        progression.start(options.clock.instant());
+        if (options.enclosedProgress) {
+          // Publish a 0% progress event
+          progressEvents.offer(progression.snapshot(false));
+        }
+        signal(true);
       }
 
-      void signalProgress(P progress) {
-        progressEvents.offer(progress);
-        signal(false); // signal drain task
+      void onNext(long byteCount) {
+        updateProgression(progression, options.clock.instant(), byteCount);
+        if (progression.hasPendingProgress()) {
+          var progress = progression.snapshot(false);
+          signaledLastProgress = progress.done();
+          progressEvents.offer(progress);
+          progression.rewind();
+          signal(false);
+        }
       }
 
-      void signalCompletion() {
+      void onError(Throwable error) {
+        signalError(error);
+      }
+
+      void onComplete() {
+        if (options.enclosedProgress && !signaledLastProgress) {
+          // Signal 100% progress after updating time
+          updateProgression(progression, options.clock.instant(), 0);
+          progressEvents.offer(progression.snapshot(true));
+        }
         complete = true;
-        signal(true); // force completion signal
+        signal(true);
       }
-    }
-  }
-
-  /** Common superclass for request Unipart and Multipart tracking subscribers. */
-  private abstract static class AbstractRequestTrackingSubscriber<
-          P extends Progress, R extends Progression<P>>
-      extends AbstractTrackingSubscriber<ByteBuffer, P, R> {
-
-    private final Subscriber<? super ByteBuffer> downstream;
-
-    AbstractRequestTrackingSubscriber(
-        Options options,
-        BaseListener<P> listener,
-        long contentLength,
-        Subscriber<? super ByteBuffer> downstream) {
-      super(options, listener, contentLength);
-      this.downstream = downstream;
-    }
-
-    @Override
-    long countBytes(ByteBuffer batch) {
-      return batch.remaining();
-    }
-
-    @Override
-    protected Subscriber<? super ByteBuffer> downstream() {
-      return downstream;
     }
   }
 
   private static final class TrackingBodySubscriber<T>
       extends AbstractTrackingSubscriber<List<ByteBuffer>, Progress, UnipartProgression>
       implements BodySubscriber<T> {
-
-    private final BodySubscriber<T> downstream;
+    private final Supplier<CompletionStage<T>> bodySupplier;
 
     TrackingBodySubscriber(
-        Options options, Listener listener, long contentLength, BodySubscriber<T> downstream) {
-      super(options, listener, contentLength);
-      this.downstream = downstream;
+        BodySubscriber<T> downstream,
+        BaseListener<Progress> listener,
+        Options options,
+        long contentLength) {
+      super(
+          downstream,
+          listener,
+          options,
+          new UnipartProgression(
+              options.bytesTransferredThreshold, options.timePassedThreshold, contentLength));
+      bodySupplier = downstream::getBody;
     }
 
     @Override
-    long countBytes(List<ByteBuffer> batch) {
-      long count = 0L;
-      for (var buffer : batch) {
-        count += buffer.remaining();
-      }
-      return count;
+    long countBytes(List<ByteBuffer> buffers) {
+      return buffers.stream().mapToLong(ByteBuffer::remaining).sum();
     }
 
     @Override
-    UnipartProgression createProgression(Instant startTime, Subscription ignored) {
-      return new UnipartProgression(
-          startTime, options.bytesTransferredThreshold, options.timePassedThreshold, contentLength);
-    }
-
-    @Override
-    protected Subscriber<? super List<ByteBuffer>> downstream() {
-      return downstream;
+    void updateProgression(UnipartProgression progression, Instant updateTime, long byteCount) {
+      progression.update(updateTime, byteCount);
     }
 
     @Override
     public CompletionStage<T> getBody() {
-      return downstream.getBody();
+      return bodySupplier.get();
     }
   }
 
-  private abstract static class AbstractTrackingBodyPublisher<
-          P extends Progress, R extends Progression<P>>
-      extends ForwardingBodyPublisher {
+  private static final class TrackingBodyPublisher extends ForwardingBodyPublisher {
+    private final Listener listener;
+    private final Options options;
 
-    final Options options;
-    final BaseListener<P> listener;
-
-    AbstractTrackingBodyPublisher(
-        Options options, BaseListener<P> listener, BodyPublisher upstream) {
+    TrackingBodyPublisher(BodyPublisher upstream, Listener listener, Options options) {
       super(upstream);
-      this.options = options;
       this.listener = listener;
+      this.options = options;
     }
-
-    abstract AbstractRequestTrackingSubscriber<P, R> tracking(
-        Subscriber<? super ByteBuffer> downstream);
 
     @Override
     public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
       requireNonNull(subscriber);
-      upstream().subscribe(tracking(subscriber));
-    }
-  }
-
-  private static final class UnipartTrackingBodyPublisher
-      extends AbstractTrackingBodyPublisher<Progress, UnipartProgression> {
-
-    UnipartTrackingBodyPublisher(Options options, Listener listener, BodyPublisher upstream) {
-      super(options, listener, upstream);
+      upstream().subscribe(new TrackingSubscriber(subscriber, listener, options, contentLength()));
     }
 
-    @Override
-    AbstractRequestTrackingSubscriber<Progress, UnipartProgression> tracking(
-        Subscriber<? super ByteBuffer> downstream) {
-      return new UnipartTrackingSubscriber(options, listener, contentLength(), downstream);
-    }
-
-    private static final class UnipartTrackingSubscriber
-        extends AbstractRequestTrackingSubscriber<Progress, UnipartProgression> {
-
-      UnipartTrackingSubscriber(
+    private static final class TrackingSubscriber
+        extends AbstractTrackingSubscriber<ByteBuffer, Progress, UnipartProgression> {
+      TrackingSubscriber(
+          Subscriber<? super ByteBuffer> downstream,
+          Listener listener,
           Options options,
-          BaseListener<Progress> listener,
-          long contentLength,
-          Subscriber<? super ByteBuffer> downstream) {
-        super(options, listener, contentLength, downstream);
+          long contentLength) {
+        super(
+            downstream,
+            listener,
+            options,
+            new UnipartProgression(
+                options.bytesTransferredThreshold, options.timePassedThreshold, contentLength));
       }
 
       @Override
-      UnipartProgression createProgression(Instant startTime, Subscription ignored) {
-        return new UnipartProgression(
-            startTime,
-            options.bytesTransferredThreshold,
-            options.timePassedThreshold,
-            contentLength);
+      long countBytes(ByteBuffer buffer) {
+        return buffer.remaining();
+      }
+
+      @Override
+      void updateProgression(UnipartProgression progression, Instant updateTime, long byteCount) {
+        progression.update(updateTime, byteCount);
       }
     }
   }
 
-  private static final class MultipartTrackingBodyPublisher
-      extends AbstractTrackingBodyPublisher<MultipartProgress, MultipartProgression> {
+  private static final class MultipartTrackingBodyPublisher extends ForwardingBodyPublisher {
+    private final MultipartListener listener;
+    private final Options options;
+    private final List<Part> parts;
 
     MultipartTrackingBodyPublisher(
-        Options options,
-        BaseListener<MultipartProgress> listener,
-        MultipartBodyPublisher upstream) {
-      super(options, listener, upstream);
+        MultipartBodyPublisher upstream, MultipartListener listener, Options options) {
+      super(upstream);
+      this.listener = listener;
+      this.options = options;
+      this.parts = upstream.parts();
     }
 
     @Override
-    AbstractRequestTrackingSubscriber<MultipartProgress, MultipartProgression> tracking(
-        Subscriber<? super ByteBuffer> downstream) {
-      return new MultipartProgressSubscriber(options, listener, contentLength(), downstream);
+    public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
+      requireNonNull(subscriber);
+      upstream()
+          .subscribe(
+              new MultipartTrackingSubscriber(
+                  subscriber, listener, options, contentLength(), parts.get(0)));
     }
 
-    private static final class MultipartProgressSubscriber
-        extends AbstractRequestTrackingSubscriber<MultipartProgress, MultipartProgression> {
+    private static final class MultipartTrackingSubscriber
+        extends AbstractTrackingSubscriber<ByteBuffer, MultipartProgress, MultipartProgression>
+        implements PartSequenceListener {
+      private Part currentPart;
+      private boolean partUpdatePending;
+      private boolean partSequenceCompleted;
 
-      MultipartProgressSubscriber(
+      MultipartTrackingSubscriber(
+          Subscriber<? super ByteBuffer> downstream,
+          MultipartListener listener,
           Options options,
-          BaseListener<MultipartProgress> listener,
           long contentLength,
-          Subscriber<? super ByteBuffer> downstream) {
-        super(options, listener, contentLength, downstream);
+          Part firstPart) {
+        super(
+            downstream,
+            listener,
+            options,
+            new MultipartProgression(
+                options.bytesTransferredThreshold,
+                options.timePassedThreshold,
+                contentLength,
+                firstPart));
+        currentPart = firstPart;
       }
 
       @Override
-      MultipartProgression createProgression(Instant startTime, Subscription upstreamSubscription) {
-        return new MultipartProgression(
-            startTime,
-            options.bytesTransferredThreshold,
-            options.timePassedThreshold,
-            contentLength,
-            PartPeeker.peeking(upstreamSubscription));
+      public void onSubscribe(Subscription subscription) {
+        PartSequenceListener.register(subscription, this);
+        super.onSubscribe(subscription);
       }
 
       @Override
-      @Nullable MultipartProgress updateProgress(
-          MultipartProgression progression, Instant updateTime, long bytesTransferred) {
-        progression.updatePartIfNeeded(updateTime); // updateTime is to be the start time of the next part
-        return super.updateProgress(progression, updateTime, bytesTransferred);
+      long countBytes(ByteBuffer buffer) {
+        return buffer.remaining();
+      }
+
+      @Override
+      synchronized void updateProgression(
+          MultipartProgression progression, Instant updateTime, long byteCount) {
+        if (partUpdatePending) {
+          partUpdatePending = false;
+          progression.updatePart(currentPart, updateTime);
+        } else if (!partSequenceCompleted) {
+          progression.updatePartProgress(updateTime, byteCount);
+        }
+        progression.update(updateTime, byteCount);
+      }
+
+      @Override
+      public synchronized void onNextPart(Part part) {
+        currentPart = part;
+        partUpdatePending = true;
+      }
+
+      @Override
+      public synchronized void onSequenceCompletion() {
+        partSequenceCompleted = true;
       }
     }
   }

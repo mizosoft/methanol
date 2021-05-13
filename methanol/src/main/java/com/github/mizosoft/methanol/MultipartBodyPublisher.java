@@ -38,6 +38,8 @@ import com.github.mizosoft.methanol.internal.flow.Upstream;
 import com.github.mizosoft.methanol.internal.text.CharMatcher;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.http.HttpHeaders;
@@ -54,6 +56,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -66,6 +69,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
 public final class MultipartBodyPublisher implements MimeBodyPublisher {
+  private static final Logger logger = System.getLogger(MultipartBodyPublisher.class.getName());
 
   private static final long UNKNOWN_LENGTH = -1;
   private static final long UNINITIALIZED_LENGTH = -2;
@@ -421,17 +425,42 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
   }
 
-  /** Used by {@code ProgressTracker} to peek part info from a {@code MultipartSubscription}. */
-  interface PartPeeker {
+  /** Listener for changes in the sequence of parts during transmission. */
+  interface PartSequenceListener {
+    void onNextPart(Part part);
 
-    int peekIndex();
+    void onSequenceCompletion();
 
-    Part at(int index);
+    default PartSequenceListener guarded() {
+      return new PartSequenceListener() {
+        @Override
+        public void onNextPart(Part part) {
+          try {
+            PartSequenceListener.this.onNextPart(part);
+          } catch (Throwable error) {
+            logger.log(
+                Level.WARNING, "exception thrown by PartSequenceListener::onNextPart", error);
+          }
+        }
 
-    static PartPeeker peeking(Subscription subscription) {
+        @Override
+        public void onSequenceCompletion() {
+          try {
+            PartSequenceListener.this.onSequenceCompletion();
+          } catch (Throwable error) {
+            logger.log(
+                Level.WARNING,
+                "exception thrown by PartSequenceListener::onSequenceCompletion",
+                error);
+          }
+        }
+      };
+    }
+
+    static void register(Subscription subscription, PartSequenceListener listener) {
       requireArgument(
           subscription instanceof MultipartSubscription, "not a multipart subscription");
-      return ((MultipartSubscription) subscription).partPeeker();
+      ((MultipartSubscription) subscription).registerListener(listener);
     }
   }
 
@@ -472,15 +501,24 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       }
     }
 
-    // A tombstone to protect against race conditions that would otherwise occur if a
-    // thread tries to abort() while another tries to nextPartHeaders(), which might lead
-    // to a newly subscribed part being missed by abort().
+    /**
+     * A tombstone indicating no more parts are to be subscribed to. This protects against race
+     * conditions that would otherwise occur if a thread tries to abort() while another tries to
+     * nextPartHeaders(), which might lead to a newly subscribed part being missed by abort().
+     */
     private static final Subscriber<ByteBuffer> CANCELLED =
         new Subscriber<>() {
-          @Override public void onSubscribe(Subscription subscription) {}
-          @Override public void onNext(ByteBuffer item) {}
-          @Override public void onError(Throwable throwable) {}
-          @Override public void onComplete() {}
+          @Override
+          public void onSubscribe(Subscription subscription) {}
+
+          @Override
+          public void onNext(ByteBuffer item) {}
+
+          @Override
+          public void onError(Throwable throwable) {}
+
+          @Override
+          public void onComplete() {}
         };
 
     private final String boundary;
@@ -489,6 +527,8 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     private int partIndex;
     private boolean complete;
 
+    private final List<PartSequenceListener> listeners = new CopyOnWriteArrayList<>();
+
     MultipartSubscription(
         MultipartBodyPublisher upstream, Subscriber<? super ByteBuffer> downstream) {
       super(downstream, FlowSupport.SYNC_EXECUTOR);
@@ -496,21 +536,8 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       parts = upstream.parts();
     }
 
-    // The peeker is called serially (within downstream's onNext)
-    // by ProgressTracker so no need for synchronization.
-    PartPeeker partPeeker() {
-      return new PartPeeker() {
-        @Override
-        public int peekIndex() {
-          // subtract 1 as partIndex actually indicates the next part to subscribe, not the current
-          return Math.max(0, partIndex - 1);
-        }
-
-        @Override
-        public Part at(int index) {
-          return parts.get(index);
-        }
-      };
+    void registerListener(PartSequenceListener listener) {
+      listeners.add(listener.guarded());
     }
 
     @Override
@@ -563,9 +590,13 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
         }
         appendPartHeaders(heading, part);
         heading.append("\r\n");
+
+        listeners.forEach(listener -> listener.onNextPart(part));
       } else {
         partSubscriber = CANCELLED; // race against abort() here is OK
         complete = true;
+
+        listeners.forEach(PartSequenceListener::onSequenceCompletion);
       }
       return UTF_8.encode(CharBuffer.wrap(heading));
     }
