@@ -34,7 +34,6 @@ import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.CacheAwareResponse;
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
-import com.github.mizosoft.methanol.HttpStatus;
 import com.github.mizosoft.methanol.TrackedResponse;
 import java.net.URI;
 import java.net.http.HttpHeaders;
@@ -64,11 +63,6 @@ public final class ResponseVerifier<T> {
 
   public ResponseVerifier<T> hasUri(URI uri) {
     assertThat(response.uri()).isEqualTo(uri);
-    return this;
-  }
-
-  public ResponseVerifier<T> isSuccessful() {
-    assertThat(response.statusCode()).matches(HttpStatus::isSuccessful);
     return this;
   }
 
@@ -105,10 +99,6 @@ public final class ResponseVerifier<T> {
   public ResponseVerifier<T> containsHeaders(Map<String, List<String>> multimap) {
     assertThat(multimap).allSatisfy(this::containsHeader);
     return this;
-  }
-
-  public ResponseVerifier<T> hasHeadersExactly(String... headers) {
-    return hasHeadersExactly(headers(headers));
   }
 
   public ResponseVerifier<T> hasHeadersExactly(HttpHeaders headers) {

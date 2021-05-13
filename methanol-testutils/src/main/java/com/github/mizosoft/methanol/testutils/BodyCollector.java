@@ -22,8 +22,6 @@
 
 package com.github.mizosoft.methanol.testutils;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.ByteBuffer;
@@ -92,17 +90,5 @@ public class BodyCollector implements Flow.Subscriber<ByteBuffer> {
   public static CompletableFuture<String> collectStringAsync(
       Publisher<ByteBuffer> publisher, Charset charset) {
     return collectAsync(publisher).thenApply(bytes -> charset.decode(bytes).toString());
-  }
-
-  public static String collectAscii(Publisher<ByteBuffer> publisher) {
-    return collectString(publisher, US_ASCII);
-  }
-
-  public static String collectUtf8(Publisher<ByteBuffer> publisher) {
-    return collectString(publisher, UTF_8);
-  }
-
-  public static String collectString(Publisher<ByteBuffer> publisher, Charset charset) {
-    return charset.decode(collect(publisher)).toString();
   }
 }
