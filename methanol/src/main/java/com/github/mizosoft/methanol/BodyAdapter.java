@@ -104,7 +104,7 @@ public interface BodyAdapter {
    * {@code BodyAdapter} specialization for converting response bodies into objects.
    *
    * @see <a
-   *     href="https://github.com/mizosoft/methanol/blob/master/UserGuide.md#deferred-conversion">
+   *     href="http://localhost:8000/object_mapping/#buffering-vs-streaming">
    *     {@code T} vs {@code Supplier<}{@code T>}</a>
    */
   interface Decoder extends BodyAdapter {

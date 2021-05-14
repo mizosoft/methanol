@@ -4,8 +4,6 @@ Adapters for XML using [JAXB][jaxb].
 
 ## Installation
 
-First, add `methanol-jaxb` as a dependency.
-
 ### Gradle
 
 ```gradle
@@ -22,8 +20,8 @@ implementation 'com.github.mizosoft.methanol:methanol-jaxb:1.5.0'
 </dependency>
 ```
 
-Next, register the adapters as [service providers][serviceloader_javadoc] so Methanol knows they're
-there. The way this is done depends on your project setup.
+The adapters need to be registered as [service providers][serviceloader_javadoc] so Methanol knows they're there.
+The way this is done depends on your project setup.
 
 ### Module Path
 
@@ -50,35 +48,73 @@ Follow these steps if your project uses the Java module system.
 2. Add the corresponding provider declarations in your `module-info.java` file.
 
     ```java
+    requires methanol.adapter.jaxb;   
+   
     provides BodyAdapter.Encoder with JaxbProviders.EncoderProvider;
     provides BodyAdapter.Decoder with JaxbProviders.DecoderProvider;
     ```
 
 ### Classpath
 
-Registering adapters from the classpath requires declaring the adapter's implementation classes in
-provider-configuration files that are bundled with your JAR. You'll first need to implement
-delegating `Encoder` & `Decoder` that forward to the instances created by `JaxbAdapterFactory`.
-Extending from `ForwardingEncoder` & `ForwardingDecoder` makes this easier.
+Registering adapters from the classpath requires declaring the implementation classes in provider-configuration
+files that are bundled with your JAR. You'll first need to implement delegating `Encoder` & `Decoder`
+that forward to the instances created by `JaxbAdapterFactory`. Extending from `ForwardingEncoder` &
+`ForwardingDecoder` makes this easier.
 
-It is recommended to use Google's [AutoService][autoservice] to generate the provider-configuration
-files automatically, so you won't bother writing them.
+You can use Google's [AutoService][autoservice] to generate the provider-configuration files automatically,
+so you won't bother writing them.
 
 #### Using AutoService
 
-After [installing AutoService][autoservice_getting_started], add this class to your project:
+First, [install AutoService][autoservice_getting_started].
+
+##### Gradle
+
+```gradle
+implementation "com.google.auto.service:auto-service-annotations:$autoServiceVersion"
+annotationProcessor "com.google.auto.service:auto-service:$autoServiceVersion"
+```
+
+##### Maven
+
+```xml
+<dependency>
+  <groupId>com.google.auto.service</groupId>
+  <artifactId>auto-service-annotations</artifactId>
+  <version>${autoServiceVersion}</version>
+</dependency>
+```
+
+Configure the annotation processor with the compiler plugin.
+
+```xml
+<plugin>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <configuration>
+    <annotationProcessorPaths>
+      <path>
+        <groupId>com.google.auto.service</groupId>
+        <artifactId>auto-service</artifactId>
+        <version>${autoServiceVersion}</version>
+      </path>
+    </annotationProcessorPaths>
+  </configuration>
+</plugin>
+```
+
+Next, add this class to your project:
 
 ```java
 public class JaxbAdapters {
   @AutoService(BodyAdapter.Encoder.class)
-  public class JaxbEncoder extends ForwardingEncoder {
+  public static class JaxbEncoder extends ForwardingEncoder {
     public JaxbEncoder() {
       super(JaxbAdapterFactory.createEncoder());
     }
   }
   
   @AutoService(BodyAdapter.Decoder.class)
-  public class JaxbDecoder extends ForwardingDecoder {
+  public static class JaxbDecoder extends ForwardingDecoder {
     public JaxbDecoder() {
       super(JaxbAdapterFactory.createDecoder());
     }
@@ -88,17 +124,17 @@ public class JaxbAdapters {
 
 #### Manual Configuration
 
-First, add this class to your project:
+You can also write the configuration files manually. First, add this class to your project:
 
 ```java
 public class JaxbAdapters {
-  public class JaxbEncoder extends ForwardingEncoder {
+  public static class JaxbEncoder extends ForwardingEncoder {
     public JaxbEncoder() {
       super(JaxbAdapterFactory.createEncoder());
     }
   }
   
-  public class JaxbDecoder extends ForwardingDecoder {
+  public static class JaxbDecoder extends ForwardingDecoder {
     public JaxbDecoder() {
       super(JaxbAdapterFactory.createDecoder());
     }
@@ -135,7 +171,7 @@ and contains:
 com.example.JaxbAdapters$JaxbDecoder
 ```
 
-[JAXB]: https://javaee.github.io/jaxb-v2/
+[jaxb]: https://javaee.github.io/jaxb-v2/
 [autoservice]: https://github.com/google/auto/tree/master/service
 [autoservice_getting_started]: https://github.com/google/auto/tree/master/service#getting-started
 [serviceloader_javadoc]: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceLoader.html

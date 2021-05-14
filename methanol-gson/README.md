@@ -4,8 +4,6 @@ Adapters for JSON using [Gson][gson].
 
 ## Installation
 
-First, add `methanol-gson` as a dependency.
-
 ### Gradle
 
 ```gradle
@@ -22,8 +20,8 @@ implementation 'com.github.mizosoft.methanol:methanol-gson:1.5.0'
 </dependency>
 ```
 
-Next, register the adapters as [service providers][serviceloader_javadoc] so Methanol knows they're
-there. The way this is done depends on your project setup.
+The adapters need to be registered as [service providers][serviceloader_javadoc] so Methanol knows they're there.
+The way this is done depends on your project setup.
 
 ### Module Path
 
@@ -34,16 +32,16 @@ Follow these steps if your project uses the Java module system.
     ```java
     public class GsonProviders {
       private static final Gson gson = new Gson();
-      
-      public static class DecoderProvider {
-        public static BodyAdapter.Decoder provider() {
-          return GsonAdapterFactory.createDecoder(gson);
-        }
-      }
    
       public static class EncoderProvider {
         public static BodyAdapter.Encoder provider() {
           return GsonAdapterFactory.createEncoder(gson);
+        }
+      }
+   
+      public static class DecoderProvider {
+        public static BodyAdapter.Decoder provider() {
+          return GsonAdapterFactory.createDecoder(gson);
         }
       }
     }
@@ -52,37 +50,75 @@ Follow these steps if your project uses the Java module system.
 2. Add the corresponding provider declarations in your `module-info.java` file.
 
     ```java
-    provides BodyAdapter.Decoder with GsonProviders.DecoderProvider;
+    requires methanol.adapter.gson;
+    
     provides BodyAdapter.Encoder with GsonProviders.EncoderProvider;
+    provides BodyAdapter.Decoder with GsonProviders.DecoderProvider;
     ```
 
 ### Classpath
 
-Registering adapters from the classpath requires declaring the adapter's implementation classes in
-provider-configuration files that are bundled with your JAR. You'll first need to implement
-delegating `Encoder` & `Decoder` that forward to the instances created by `GsonAdapterFactory`.
-Extending from `ForwardingEncoder` & `ForwardingDecoder` makes this easier.
+Registering adapters from the classpath requires declaring the implementation classes in provider-configuration
+files that are bundled with your JAR. You'll first need to implement delegating `Encoder` & `Decoder`
+that forward to the instances created by `GsonAdapterFactory`. Extending from `ForwardingEncoder` &
+`ForwardingDecoder` makes this easier.
 
-It is recommended to use Google's [AutoService][autoservice] to generate the provider-configuration
-files automatically, so you won't bother writing them.
+You can use Google's [AutoService][autoservice] to generate the provider-configuration files automatically,
+so you won't bother writing them.
 
 #### Using AutoService
 
-After [installing AutoService][autoservice_getting_started], add this class to your project:
+First, [install AutoService][autoservice_getting_started].
+
+##### Gradle
+
+```gradle
+implementation "com.google.auto.service:auto-service-annotations:$autoServiceVersion"
+annotationProcessor "com.google.auto.service:auto-service:$autoServiceVersion"
+```
+
+##### Maven
+
+```xml
+<dependency>
+  <groupId>com.google.auto.service</groupId>
+  <artifactId>auto-service-annotations</artifactId>
+  <version>${autoServiceVersion}</version>
+</dependency>
+```
+
+Configure the annotation processor with the compiler plugin.
+
+```xml
+<plugin>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <configuration>
+    <annotationProcessorPaths>
+      <path>
+        <groupId>com.google.auto.service</groupId>
+        <artifactId>auto-service</artifactId>
+        <version>${autoServiceVersion}</version>
+      </path>
+    </annotationProcessorPaths>
+  </configuration>
+</plugin>
+```
+
+Next, add this class to your project:
 
 ```java
 public class GsonAdapters {
   private static final Gson gson = new Gson();
   
   @AutoService(BodyAdapter.Encoder.class)
-  public class GsonEncoder extends ForwardingEncoder {
+  public static class GsonEncoder extends ForwardingEncoder {
     public GsonEncoder() {
       super(GsonAdapterFactory.createEncoder(gson));
     }
   }
 
   @AutoService(BodyAdapter.Decoder.class)
-  public class GsonDecoder extends ForwardingDecoder {
+  public static class GsonDecoder extends ForwardingDecoder {
     public GsonDecoder() {
       super(GsonAdapterFactory.createDecoder(gson));
     }
@@ -92,19 +128,19 @@ public class GsonAdapters {
 
 #### Manual Configuration
 
-First, add this class to your project:
+You can also write the configuration files manually. First, add this class to your project:
 
 ```java
 public class GsonAdapters {
   private static final Gson gson = new Gson();
   
-  public class GsonEncoder extends ForwardingEncoder {
+  public static class GsonEncoder extends ForwardingEncoder {
     public GsonEncoder() {
       super(GsonAdapterFactory.createEncoder(gson));
     }
   }
   
-  public class GsonDecoder extends ForwardingDecoder {
+  public static class GsonDecoder extends ForwardingDecoder {
     public GsonDecoder() {
       super(GsonAdapterFactory.createDecoder(gson));
     }

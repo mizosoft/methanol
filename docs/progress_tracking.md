@@ -21,7 +21,7 @@ bytes transferred & time passed, both calculated since the last event.
     ```java
     // Receive a progress event at least each half a second
     var tracker = ProgressTracker.newBuilder()
-        .timePassedThreshold(Duration.ofSeconds(1).divideBy(2))
+        .timePassedThreshold(Duration.ofSeconds(1).dividedBy(2))
         .build();
     ```
 
@@ -108,10 +108,4 @@ progress is tracked by registering a `Listener` with a request's `BodyPublisher`
     }
     ```
 
-!!! tip
-    By default, the tracker doesn't fire `0%` and `100%` progress events. You can enable builder's
-    `enclosedProgress` option to receive these. That way, you're notified when downloads or uploads
-    begin or end.
-
 [comment]: <> (TODO mention multipart tracking?)
-    

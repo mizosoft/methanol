@@ -112,9 +112,8 @@ of implications.
 
 !!! attention
     If a cache is installed, `Methanol` does automatic redirection by itself, which would otherwise
-    be done by the backend. This allows redirects to be cached, 
-    increasing cache efficiency. As a consequence, backend interceptors may be invoked more than
-    once in the presence of a cache.
+    be done by the backend. This allows redirects to be cached, increasing cache efficiency. As a
+    consequence, backend interceptors may get invoked more than once in the presence of a cache.
 
 ## Registration
 

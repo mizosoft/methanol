@@ -14,7 +14,7 @@ final Methanol client = Methanol.create();
 <T> HttpResponse<T> get(String url, BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
   // No need to worry about adding Accept-Encoding and
   // decompressing the response. The client does that for you!
-  return client.send(MutableRequest.GET(url), bodyHandler));
+  return client.send(MutableRequest.GET(url), bodyHandler);
 }
 ```
 
@@ -23,27 +23,27 @@ support.
 
 ## Decoding BodyHandler
 
-The entry point to response body decompression is `MoreBodyHandlers::decoding`. This method takes your
-desired `BodyHandler` and gives you one that decompresses the response body as your handler's `BodySubscriber`
-receives it.
+The entry point to response body decompression is [`MoreBodyHandlers::decoding`][morebodyhandlers_decoding_javadoc].
+This method takes your desired `BodyHandler` and gives you one that decompresses the response body as
+your handler's `BodySubscriber` receives it.
 
 ```java
 var response = client.send(request, MoreBodyHandlers.decoding(BodyHandlers.ofString()));
 ```
 
-The new `BodyHandler` intercepts the response, checking if there's a `Content-Encoding` header. If
+<!-- The new `BodyHandler` intercepts the response, checking if there's a `Content-Encoding` header. If
 so, the body is decompressed accordingly, and your handler won't see any `Content-Encoding` or
 `Content-Length` headers. This is because they're outdated in that case. Otherwise, the handler acts
-as a no-op and delegates to your handler directly.
+as a no-op and delegates to your handler directly. -->
 
 Note that it doesn't matter which `BodyHandler` you're using; you can have whatever response body
 type you want.
 
 ## BodyDecoder
 
-A `BodyDecoder` is a `BodySubscriber` with the added semantics of a `Flow.Processor`. It intercepts
-the flow of bytes on its way down from the HTTP client, decoding each `List<ByteBuffer>` individually.
-The decoded bytes are forwarded to a downstream `BodySubscriber`, which converts them into the desired
+A [`BodyDecoder`][bodydecoder_javadoc] is a `BodySubscriber` with the added semantics of a `Flow.Processor`.
+It intercepts the flow of bytes on its way down from the HTTP client, decoding each `List<ByteBuffer>`
+individually. The decoded bytes are forwarded to a downstream `BodySubscriber`, which converts them into the desired
 response body.
 
 A `BodyDecoder.Factory` associates itself with a defined encoding that's suitable as a `Content-Encoding`
@@ -199,3 +199,5 @@ module my.module {
 [methanol-brotli]: https://github.com/mizosoft/methanol/tree/master/methanol-brotli
 [brotli]: https://github.com/google/brotli
 [jzlib]: https://www.jcraft.com/jzlib/
+[morebodyhandlers_decoding_javadoc]: https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MoreBodyHandlers.html#decoding(java.net.http.HttpResponse.BodyHandler)
+[bodydecoder_javadoc]: https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/BodyDecoder.html

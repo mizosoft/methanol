@@ -77,7 +77,7 @@ nav:
   - Adapters:
     - methanol-gson: adapters/gson.md
     - methanol-jackson: adapters/jackson.md
-    - methanol-jackson-flux: adapters/README.md
+    - methanol-jackson-flux: adapters/jackson_flux.md
     - methanol-jaxb: adapters/jaxb.md
     - methanol-protobuf: adapters/protobuf.md
   - Brotli: brotli.md

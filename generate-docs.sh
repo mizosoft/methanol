@@ -9,7 +9,7 @@ set -e
 rm -rf site
 
 # Make the necessary files locatable by MkDocs
-mkdir docs/adapters
+mkdir -p docs/adapters
 cp -f methanol-gson/README.md docs/adapters/gson.md
 cp -f methanol-jackson/README.md docs/adapters/jackson.md
 cp -f methanol-jackson-flux/README.md docs/adapters/jackson_flux.md
@@ -32,11 +32,7 @@ mkdir -p site/$JAVADOC_SITE_PATH
 cp -rf build/docs/javadoc/* site/$JAVADOC_SITE_PATH
 
 # Remove copied files, which is desirable when the script is run locally
-rm -f docs/adapters/gson.md
-rm -f docs/adapters/jackson.md
-rm -f docs/adapters/jackson_flux.md
-rm -f docs/adapters/jaxb.md
-rm -f docs/adapters/protobuf.md
+rm -rf docs/adapters
 rm -f docs/brotli.md
 rm -f docs/benchmarks.md
 rm -f docs/CHANGELOG.md

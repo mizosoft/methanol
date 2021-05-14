@@ -51,7 +51,7 @@ var client = Methanol.newBuilder(prebuiltClient)
 ### Transparent Compression
 
 If `autoAcceptEncoding` is enabled, the client complements requests with an `Accept-Encoding` header
-which accepts all supported encodings (i.e. available `BodyDecoder` providers). Additionally,
+which accepts all supported encodings (i.e. available [`BodyDecoder`](decompression.md) providers). Additionally,
 the response is transparently decompressed according to its `Content-Encoding`.
 
 Since `deflate` & `gzip` are supported out of the box, they're always included in `Accept-Encoding`.
@@ -95,8 +95,8 @@ If you like reactive streams, use `Methanol::exchange`, which is like `sendAsync
     var request = MutableRequest.GET("https://http2-push.appspot.com/?nopush");
     var publisher = client.exchange(request, BodyHandlers.ofFile(Path.of("page.html")));
 
-    JdkFlowAdapters.flowPublisherToFlux(publisher)
-        .subscribe(response -> System.out.println("%s: %s", response, response.body()))
+    JdkFlowAdapter.flowPublisherToFlux(publisher)
+        .doOnNext(response -> System.out.printf("%s: %s", response, response.body()))
         .blockLast();
     ```
 
@@ -111,8 +111,8 @@ If you like reactive streams, use `Methanol::exchange`, which is like `sendAsync
         BodyHandlers.ofFile(Path.of("page.html")), 
         pushPromise -> BodyHandlers.ofFile(Path.of(pushPromise.uri().getPath()).getFileName()));
 
-    JdkFlowAdapters.flowPublisherToFlux(publisher)
-        .subscribe(response -> System.out.println("%s: %s", response, response.body()))
+    JdkFlowAdapter.flowPublisherToFlux(publisher)
+        .doOnNext(response -> System.out.printf("%s: %s%n", response, response.body()))
         .blockLast();
     ```
 

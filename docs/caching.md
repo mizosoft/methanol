@@ -12,7 +12,7 @@ it stores entries and how much space it can occupy.
 
     ```java
     // Select a size limit thats suitable for your application
-    long maxSizeInBytes = 500 * 1024 * 1024; // 500 MBs
+    long maxSizeInBytes = 100 * 1024 * 1024; // 100 MBs
 
     var cache = HttpCache.newBuilder()
         .cacheOnDisk(Path.of("my-cache-dir"), maxSizeInBytes)
@@ -23,7 +23,7 @@ it stores entries and how much space it can occupy.
         .cache(cache)
         .build();
 
-    // Close the cache after you're done to ensure everything is flushed to disk
+    // It's important that you close the disk cache after you're done
     cache.close();
     ```
 
@@ -72,8 +72,8 @@ it behaves. This is done using `CacheControl`.
     ```java
     // Specify your cache directives
     var cacheControl = CacheControl.newBuilder()
-        .maxAge(Duration.ofHours(10))
-        .staleWhileRevalidate(Duration.ofSeconds(30))
+        .maxAge(Duration.ofMinutes(30))
+        .staleIfError(Duration.ofSeconds(60))
         .build();
     
     // Apply the directives to your request
@@ -84,9 +84,9 @@ it behaves. This is done using `CacheControl`.
 === "Cache-Control header"
 
     ```java
-    // Cache-Control headers work too
+    // Cache-Control headers work as well
     var request = MutableRequest.GET("...")
-        .header("Cache-Control", "max-age=36000", "stale-while-revalidate=30");
+        .header("Cache-Control", "max-age=1800, stale-if-error=60");
     ```
 
 In order to properly use `CacheControl`, we need to understand the key attributes of a cached
@@ -197,7 +197,7 @@ response if it's there or otherwise nothing.
 Use `no-store` if you don't want the cache to store anything about the response.
 
 ```java
-var request =  CacheControl.newBuilder() 
+var cacheControl =  CacheControl.newBuilder() 
     .noStore()
     .build();
 ```
@@ -219,9 +219,11 @@ is updated in background, keeping things fresh.
 `HttpCache` has APIs that give you more control over what's stored.
 
 ```java
-var cache = ...
+var cache = HttpCache.newBuilder()
+    .cacheOnDisk(Path.of("my-cache-dir"), 100 * 1024 * 1024)
+    .build();
 
-// Remove the entry cached under a particular URI
+// Remove the entry mapped to a particular URI
 cache.remove(URI.create("https://i.imgur.com/NYvl8Sy.mp4"));
 
 // Remove the response matching a particular response variant
@@ -241,7 +243,7 @@ while (iterator.hasNext()) {
 // Remove all entries
 cache.clear();
 
-// Dispose of the cache by deleting its entrires then closing it in an atomic fashion.
+// Dispose of the cache by deleting its entries then closing it in an atomic fashion.
 // The cache is rendered unusable after this call. This is meant for applications that
 // use a temporary directory for caching in case persistence isn't needed.
 cache.dispose();
@@ -249,8 +251,7 @@ cache.dispose();
 
 ## Cache Operation & Statistics
 
-The cache is accompanied by APIs that reflect its operation & effectiveness. Cache operation
-typically involves 3 scenarios.
+Cache operation typically involves 3 scenarios.
 
  * **Cache Hit** The blessed scenario; everything was entirely served from cache and no network was
    used.
@@ -268,12 +269,15 @@ installed, any `HttpResponse<T>` returned by `Methanol` is also a `CacheAwareRes
 can use to know which of the previous scenarios was the case.
 
 ```java
-var cache = ...
+var cache = HttpCache.newBuilder()
+    .cacheOnDisk(Path.of("my-cache-dir"), 100 * 1024 * 1024)
+    .build();
 var client = Methanol.newBuilder()
     .cache(cache)
-    .build(); 
-       
-var response = (CacheAwareResponse<String>) client.send(MutableRequest.GET(url), BodyHandlers.ofString());
+    .build();
+
+var response = (CacheAwareResponse<Path>) client.send(
+    MutableRequest.GET("https://i.imgur.com/NYvl8Sy.mp4"), BodyHandlers.ofFile(Path.of("banana_cat.mp4")));
 var timeElapsed  = Duration.between(response.timeRequestSent(), response.timeResponseReceived());
 System.out.println("Time elapsed: " + timeElapsed);
 
@@ -282,27 +286,29 @@ var networkResponse = response.networkResponse();
 var cacheResponse = response.cacheResponse();
 switch (response.cacheStatus()) {
   case HIT:
-    assertTrue(networkResponse.isAbsent());
-    assertTrue(cacheResponse.isPresent());
+    assert networkResponse.isEmpty();
+    assert cacheResponse.isPresent();
     break;
 
   case CONDITIONAL_HIT:
-    assertTrue(networkResponse.isPresent());
-    assertTrue(cacheResponse.isPresent());
+    assert networkResponse.isPresent();
+    assert cacheResponse.isPresent();
     break;
 
   case MISS:
-    assertTrue(networkResponse.isPresent());
+    assert networkResponse.isPresent();
     // cacheResponse can be absent or present
     break;
 
-  case LOCALLY_GENERATED:
+  case UNSATISFIABLE:
     // Network was forbidden by only-if-cached but there was no valid cache response
-    assertEquals(HttpURLConnection.HTTP_GATEWAY_TIMEOUT, response.statusCode());
-    assertTrue(networkResponse.isAbsent());
+    assert response.statusCode() == HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
+    assert networkResponse.isEmpty();
     // cacheResponse can be absent or present
     break;
 }
+
+cache.close();
 ```
 
 ### HttpCache.Stats
@@ -312,9 +318,12 @@ global or correspond to a specific `URI`.
 
 === "Global Stats"
 
-    ```java
-    var stats = cache.stats();
+    ```java 
+    var cache = HttpCache.newBuilder()
+        .cacheOnDisk(Path.of("my-cache-dir"), 100 * 1024 * 1024)
+        .build();
 
+    var stats = cache.stats();
     System.out.println(stats.hitRate());
     System.out.println(stats.missRate());
     ```
@@ -322,8 +331,13 @@ global or correspond to a specific `URI`.
 === "URI-specific Stats"
 
     ```java
-    var stats = cache.stats(URI.create("https://i.imgur.com/NYvl8Sy.mp4"));
+    // Per URI statistics aren't recorder by default
+    var cache = HttpCache.newBuilder()
+        .cacheOnDisk(Path.of("my-cache-dir"), 100 * 1024 * 1024)
+        .statsRecorder(StatsRecorder.createConcurrentPerUriRecorder())
+        .build();
 
+    var stats = cache.stats(URI.create("https://i.imgur.com/NYvl8Sy.mp4"));
     System.out.println(stats.hitRate());
     System.out.println(stats.missRate());
     ```
@@ -336,6 +350,9 @@ See [`HttpCache.Stats`][httpcache-stats] for all recorded statistics.
 * The cache never stores [partial responses][partial-content-mdn].  
 * Only the most recent response [variant][vary-mdn] can be stored. Cache efficiency isn't pronounced
   as much if requests frequently have different values for the headers specified by `Vary`.
+* The cache doesn't store responses that have a `Vary` header with any of the values: `Cookie`, 
+  `Cookie2`, `Authorization`, `Proxy-Authroization`. That's because the `HttpClient` can implicitly
+  add these to requests, so Methanol won't be able to access their values to match responses against.
 
 [rfc7234]: https://tools.ietf.org/html/rfc7234
 [range-requests-mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests

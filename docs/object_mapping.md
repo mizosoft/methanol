@@ -28,12 +28,12 @@ in return.
 
 ```java hl_lines="8"
 final Methanol client = Methanol.newBuilder()
-    .baseUri("https://api.github.com")
+    .baseUri("https://api.github.com/")
     .defaultHeader("Accept", "application/vnd.github.v3+json")
     .build();
 
 GitHubUser getUser(String username) throws IOException, InterruptedException {
-  var request = MutableRequest.GET("/user/" + username);
+  var request = MutableRequest.GET("user/" + username);
   var response = client.send(request, MoreBodyHandlers.ofObject(GitHubUser.class));
 
   return response.body();
@@ -44,15 +44,21 @@ public static final class GitHubUser {
   public long id;
   public String url;
   
-  // Other fields omitted
+  // Other fields omitted. 
+  // Annotate with @JsonIgnoreProperties(ignoreUnknown = true) to run with Jackson.
 }
 ```
 
 If you want to get fancier with generics, use a `TypeRef<T>`.
 
-```java hl_lines="4"
+```java hl_lines="9"
+final Methanol client = Methanol.newBuilder()
+    .baseUri("https://api.github.com/")
+    .defaultHeader("Accept", "application/vnd.github.v3+json")
+    .build();
+    
 List<GitHubIssue> getIssuesForRepo(String owner, String repo) throws IOException, InterruptedException {
-  var request = MutableRequest.GET("repos/" + owner + "/" + repo "/issues");
+  var request = MutableRequest.GET("repos/" + owner + "/" + repo +  "/issues");
   var response = client.send(
     request, MoreBodyHandlers.ofObject(new TypeRef<List<GitHubIssue>>() {}));
 
@@ -64,7 +70,8 @@ public static final class GitHubIssue {
   public GitHubUser user;
   public String body;
 
-  // Other fields omitted
+  // Other fields omitted. 
+  // Annotate with @JsonIgnoreProperties(ignoreUnknown = true) to run with Jackson.
 }
 ```
 
@@ -77,15 +84,15 @@ fails, an `UnsupportedOperationException` is thrown.
 Get a `BodyPubilsher` for whatever object you've got by passing it in along with a `MediaType` describing
 which adapter you prefer selected.
 
-```java hl_lines="6"
+```java hl_lines="7"
 final Methanol client = Methanol.newBuilder()
-    .baseUri("https://api.github.com")
+    .baseUri("https://api.github.com/")
+    .defaultHeader("Accept", "application/vnd.github.v3+json")
     .build();
 
 String renderMarkdown(RenderRequest renderRequest) throws IOException, InterruptedException {
   var requestBody = MoreBodyPublishers.ofObject(renderRequest, MediaType.APPLICATION_JSON);
-  var request = MutableRequest.POST("/user/" + username, requestBody)
-      .header("Accept", "application/html");
+  var request = MutableRequest.POST("markdown", requestBody);
   var response = client.send(request, BodyHandlers.ofString());
 
   return response.body();
@@ -98,12 +105,13 @@ public static final class RenderRequest {
 
 ##  Adapters
 
-An adapter provides `Encoder` and/or `Decoder` implementations. Both interfaces implement `BodyAdapter`,
-which defines the methods necessary for Methanol to know which  object types the adapter believes it
-can handle, and in what scheme. An `Encoder` creates a `BodyPublisher` that streams a given object's
-serialized form. Similarly, a `Decoder` supplies `BodySubscriber<T>` instances for a given `TypeRef<T>`
-that convert the response body into `T`. An optional `MediaType` is passed to encoders & decoders to
-further describe the desired mapping scheme (e.g. specify a character set).
+An adapter provides [`Encoder`][encoder_javadoc] and/or [`Decoder`][decoder_javadoc] implementations.
+Both interfaces implement [`BodyAdapter`][bodyadapter_javadoc], which defines the methods necessary
+for Methanol to know which  object types the adapter believes it can handle, and in what scheme. An
+`Encoder` creates a `BodyPublisher` that streams a given object's serialized form. Similarly, a `Decoder`
+supplies `BodySubscriber<T>` instances for a given `TypeRef<T>` that convert the response body into `T`.
+An optional `MediaType` is passed to encoders & decoders to further describe the desired mapping scheme 
+(e.g. specify a character set).
 
 ### Example - An HTML Adapter
 
@@ -140,7 +148,7 @@ public abstract class JsoupAdapter extends AbstractBodyAdapter implements BodyAd
       requireCompatibleOrNull(mediaType);
       var charset = charsetOrUtf8(mediaType);
       var publisher = BodyPublishers.ofString(((Document) object).outerHtml(), charset);
-      return attachMediaType(pubisher, mediaType);
+      return attachMediaType(publisher, mediaType);
     }
   }
 }
@@ -166,6 +174,8 @@ module my.module {
 }
 ```
 
+See any of the [supported adapters](#setup) for more registration methods.
+
 ### Usage
 
 Now Methanol can send and receive HTML `Documents`!
@@ -173,9 +183,8 @@ Now Methanol can send and receive HTML `Documents`!
 ```java
 final Methanol client = Methanol.create();
 
-HttpResponse<Document> downloadHtml(String url) IOException, InterruptedException {
-  var request = MutableRequest.GET(url)
-      .header("Accept", "application/html");
+HttpResponse<Document> downloadHtml(String url) throws IOException, InterruptedException {
+  var request = MutableRequest.GET(url).header("Accept", "text/html");
       
   return client.send(request, MoreBodyHandlers.ofObject(Document.class));
 }
@@ -196,12 +205,26 @@ appropriate `BodySubscriber<T>` from a chosen adapter. Such subscriber typically
 into memory then decodes from there. If your responses tend to have large bodies, or you'd prefer the
 memory efficiency afforded by streaming sources, `MoreBodyHandlers::ofDeferredObject` is the way to go.
 
-```java hl_lines="3"
+```java hl_lines="8"
+final Methanol client = Methanol.newBuilder()
+    .baseUri("https://api.github.com/")
+    .defaultHeader("Accept", "application/vnd.github.v3+json")
+    .build();
+
 GitHubUser getUser(String username) throws IOException, InterruptedException {
-  var request = MutableRequest.GET("/user/" + username);
+  var request = MutableRequest.GET("user/" + username);
   var response = client.send(request, MoreBodyHandlers.ofDeferredObject(GitHubUser.class));
 
   return response.body().get();
+}
+
+public static final class GitHubUser {
+  public String login;
+  public long id;
+  public String url;
+  
+  // Other fields omitted. 
+  // Annotate with @JsonIgnoreProperties(ignoreUnknown = true) to run with Jackson.
 }
 ```
 
@@ -222,12 +245,15 @@ public <T> BodySubscriber<Supplier<T>> toDeferredObject(
   var charset = charsetOrUtf8(mediaType);
   BodySubscriber<Supplier<Document>> subscriber = BodySubscribers.mapping(
       MoreBodySubscribers.ofReader(charset),
-      reader -> () -> Parser.htmlParser().parseInput(reader, "")); // Note the deferred parsing  
+      reader -> () -> Parser.htmlParser().parseInput(new BufferedReader(reader), "")); // Note the deferred parsing
   return BodySubscribers.mapping(
       subscriber,
-      supplier -> () -> type.exactRawType().cast(supplier.get())); // Safely cast Document to T  
+      supplier -> () -> type.exactRawType().cast(supplier.get())); // Safely cast Document to T
 }
 ```
 
 [methanol_jackson]: https://github.com/mizosoft/methanol/tree/master/methanol-jackson
 [jsoup]: https://jsoup.org/
+[encoder_javadoc]: ../api/latest/methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html
+[decoder_javadoc]: ../api/latest/methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html
+[bodyadapter_javadoc]: ../api/latest/methanol/com/github/mizosoft/methanol/BodyAdapter.html

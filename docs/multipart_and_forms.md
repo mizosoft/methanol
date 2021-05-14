@@ -36,8 +36,8 @@ back to `applciation/octet-stream` if that doesn't work.
 
 ### Generic Form Parts
 
-Use the builder's `formPart` method to add a form part from an arbitrary `BodyPublisher`. It
-takes a field name and an optional file name.
+Use builder's `formPart` method to add a form part from an arbitrary `BodyPublisher`. It takes a field
+name and an optional file name.
 
 ```java
 // Substitute with your client ID. Visit https://api.imgur.com/oauth2/addclient to get one
@@ -61,7 +61,7 @@ HttpResponse<String> uploadPng(String title, InputStream pngImageInputStream)
 ```
 
 !!! tip
-    Use `formPart` to add a file part from something that's not a `Path` (e.g. `InputStream`) or
+    You can use `formPart` to add a file part from something that's not a `Path` (e.g. `InputStream`) or
     to override the part's `filename` property, which is not possible with `filePart`.
 
 ## Form Bodies
@@ -70,17 +70,17 @@ Use `FormBodyPublisher` to send form data as a set of URL-encoded queries. Data 
 name-value pairs.
 
 ```java
-final Methanol client = Methanol.newBuilder()
-    .followRedirects(HttpClient.Redirect.NORMAL)
-    .build();
+final Methanol client = Methanol.create();
 
-HttpResponse<Path> downloadArticle(String title) throws IOException, InterruptedException {
-  var formBody = FormBodyPublisher.newBuilder()
-      .query("search", title)
-      .build();
-  var request = MutableRequest.POST("https://en.wikipedia.org/wiki/Main_Page", searchQuery);
+HttpResponse<String> sendQueries(String url, Map<String, String> queries)
+    throws IOException, InterruptedException {
+  var builder = FormBodyPublisher.newBuilder();
+  queries.forEach(builder::query);
+  
+  var formBody = builder.build();
+  var request = MutableRequest.POST(url, formBody);
 
-  return client.send(request, BodyHandlers.ofFile(Path.of(title + ".html")));
+  return client.send(request, BodyHandlers.ofString());
 }
 ```
 
