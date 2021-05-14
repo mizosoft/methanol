@@ -17,7 +17,7 @@ plugins {
   id 'jacoco'
   id 'com.github.kt3k.coveralls' version '2.12.0'
   id 'com.github.ben-manes.versions' version '0.38.0'
-  id 'io.github.gradle-nexus.publish-plugin' version '1.0.0'
+  id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
 }
 
 ext {
@@ -25,16 +25,16 @@ ext {
       'junitJupiter'    : '5.7.0',
       'junitPlatform'   : '1.7.0',
       'reactiveStreams' : '1.0.3',
-      'checkerFramework': '3.12.0',
+      'checkerFramework': '3.13.0',
       'gson'            : '2.8.6',
       'jackson'         : '2.12.3',
       'protobuf'        : '3.12.2',
       'errorprone'      : '2.6.0',
       'brotliDec'       : '0.1.2',
       'okhttp'          : '5.0.0-alpha.2',
-      'jmh'             : '1.29',
+      'jmh'             : '1.31',
       'jacoco'          : '0.8.5',
-      'reactor'         : '3.4.5',
+      'reactor'         : '3.4.6',
       'nullAway'        : '0.7.9',
       'jaxb'            : '2.3.1',
       'jaxbRuntime'     : '2.7.6',
@@ -43,7 +43,7 @@ ext {
       'junitParams'     : '5.7.0',
       'jimfs'           : '1.2',
       'assertj'         : '3.19.0',
-      'awaitability'    : '4.0.3',
+      'awaitability'    : '4.1.0',
       'hamcrest'        : '2.2'
   ]
 
