@@ -32,7 +32,6 @@ jobs:
         if: startsWith(${{ matrix.os }}, 'ubuntu') || startsWith(${{ matrix.os }}, 'macos')
         run: chmod +x gradlew
 
-
       - name: Run tests
         shell: bash
         run: | # brotli is not currently supported for mac so tests are excluded on macos
@@ -98,7 +97,6 @@ jobs:
       - name: Make gradlew executable
         if: startsWith(${{ matrix.os }}, 'ubuntu') || startsWith(${{ matrix.os }}, 'macos')
         run: chmod +x gradlew
-
 
       - name: Run Gradle publish
         env:
