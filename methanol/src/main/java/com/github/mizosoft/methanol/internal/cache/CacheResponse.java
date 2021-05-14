@@ -95,9 +95,9 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
     private final Duration age;
     private final Duration freshness;
     private final Duration staleness;
-    private final LocalDateTime lastModified;
+    private final boolean usesHeuristics;
+    private final LocalDateTime effectiveLastModified;
     private final Optional<String> etag;
-    private final boolean usingHeuristics;
 
     CacheStrategy(HttpRequest request, TrackedResponse<?> response, Instant now) {
       this.requestCacheControl = CacheControl.parse(request.headers());
@@ -105,16 +105,12 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
 
       var maxAge = requestCacheControl.maxAge().or(responseCacheControl::maxAge);
       var freshnessPolicy = new FreshnessPolicy(maxAge, response);
-      var freshnessLifetime =
-          freshnessPolicy
-              .computeFreshnessLifetime()
-              .orElseGet(freshnessPolicy::computeHeuristicLifetime);
+      var freshnessLifetime = freshnessPolicy.computeFreshnessLifetime();
       age = freshnessPolicy.computeAge(now);
       freshness = freshnessLifetime.minus(age);
       staleness = freshness.negated();
-      usingHeuristics = freshnessPolicy.usesHeuristics();
-
-      lastModified = freshnessPolicy.lastModified();
+      usesHeuristics = freshnessPolicy.usesHeuristics();
+      effectiveLastModified = freshnessPolicy.effectiveLastModified();
       etag = response.headers().firstValue("ETag");
     }
 
@@ -143,14 +139,14 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
       if (freshness.isNegative()) {
         builder.header("Warning", "110 - \"Response is Stale\"");
       }
-      if (usingHeuristics && age.compareTo(ONE_DAY) > 0) {
+      if (usesHeuristics && age.compareTo(ONE_DAY) > 0) {
         builder.header("Warning", "113 - \"Heuristic Expiration\"");
       }
     }
 
     HttpRequest toValidationRequest(HttpRequest request) {
       return MutableRequest.copyOf(request)
-          .setHeader("If-Modified-Since", formatHttpDate(lastModified))
+          .setHeader("If-Modified-Since", formatHttpDate(effectiveLastModified))
           .apply(builder -> etag.ifPresent(etag -> builder.setHeader("If-None-Match", etag)));
     }
 
