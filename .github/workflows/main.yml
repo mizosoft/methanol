@@ -74,6 +74,14 @@ jobs:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: ./gradlew coveralls
 
+      # Save test results as artifacts
+      - name: Save test results
+        uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: coverage-report-ubuntu-latest-java-16-test-results
+          path: ./*/build/test-results/**/*.xml
+
   publish_snapshot:
     name: Publish snapshot artifacts
     runs-on: ubuntu-latest
