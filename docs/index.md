@@ -1,6 +1,3 @@
-!!! caution
-    🚧 Under construction 🚧
-
 # Methanol
 
 [![CI status](https://img.shields.io/github/workflow/status/mizosoft/methanol/CI?logo=github&style=flat-square)](https://github.com/mizosoft/methanol/actions)
