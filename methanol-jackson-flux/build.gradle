@@ -1,7 +1,7 @@
 dependencies {
   api project(':methanol')
   api deps.jacksonDatabind
-  implementation deps.reactorCore
+  api deps.reactorCore
   implementation deps.reactiveStreams
   implementation project(':methanol-jackson')
 
