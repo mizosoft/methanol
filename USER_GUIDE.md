@@ -1,3 +1,6 @@
+**CAUTION**: This user guide is stale and won't be updated for future versions. Please visit the 
+[project website](https://mizosoft.github.io/methanol) instead.
+
 # Methanol's User Guide
 
 * [Overview](#overview)

@@ -107,7 +107,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * entries, the index is transparently updated in a time-limited manner. By default, there's at most
  * one index update every 4 seconds. This rate can be changed by setting the system property: {@code
  * com.github.mizosoft.methanol.internal.cache.DiskStore.indexUpdateDelayMillis}. Setting a small
- * delay can result in too often index updates, which extracts a noticeable toll on IO & CPU,
+ * delay can result in too often index updates, which extracts a noticeable toll on IO and CPU,
  * especially if there's a relatively large number of entries (updating entails reconstructing then
  * rewriting the whole index). On the other hand, scarcely updating the index affords less
  * durability against crashes as entries that aren't indexed are dropped on initialization. Calling

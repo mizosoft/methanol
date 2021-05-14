@@ -1,110 +1,202 @@
 # methanol-jackson-flux
 
-`Publisher`-based `BodyAdapter` implementations for JSON using [Jackson][jackson_github] and
-[Project Reactor][reactor_github].
+Adapters for JSON & Reactive Streams using [Jackson][jackson] & [Reactor][reactor].
 
-## Encoding and Decoding
+## Decoding
 
-Any subtype of `org.reactivestreams.Publisher` or `Flow.Publisher` is encoded to a JSON array
-containing zero or more elements corresponding to each published object. `Mono` sources are instead
-encoded into a single JSON object (if completed with any).
+This adapter converts response bodies into publisher-based sources. Supported types are
+`Mono`, `Flux`, `org.reactivestreams.Publisher` and `java.util.concurrent.Flow.Publisher`. For all
+these types except `Mono`, the response body is expected to be a JSON array. The array is tokenized
+into its individual elements, each mapped to the publisher's element type.
 
-Decodable types are `Flux`, `Mono`, `org.reactivestreams.Publisher` and `Flow.Publisher`. For all
-these types except `Mono`, a JSON array is first tokenized into its individual elements before
-deserialization.
+Note that an `HttpResponse` handled with this adapter is completed immediately after the response headers
+are received. Body completion is handled by the returned publisher source. Additionally, the decoder
+always uses Jackson's non-blocking parser. This makes `MoreBodyHandlers::ofDeferredObject` redundant
+with this decoder.
 
-An `HttpResponse` handled with such a decoder is completed immediately after the response headers
-are received. Additionally, the decoder always uses Jackson's non-blocking parser (using a streaming
-source is not possible). [Deferring][wiki_t_vs_supplier] the response body into a `Supplier` gives
-no benefits with this decoder.
+## Encoding
+
+With the exception of `Mono`, any subtype of `org.reactivestreams.Publisher` or
+`java.util.concurrent.Flow.Publisher` is encoded to a JSON array containing zero or more elements, each mapped from each published object.
+`Mono` sources are encoded to a single JSON object (if completed with any).
 
 ## Installation
-
-Add this module as a dependency:
 
 ### Gradle
 
 ```gradle
-dependencies {
-  implementation 'com.github.mizosoft.methanol:methanol-jackson-flux:1.4.1'
-}
+implementation 'com.github.mizosoft.methanol:methanol-jackson-flux:1.5.0'
 ```
 
 ### Maven
 
 ```xml
-<dependencies>
-  <dependency>
-    <groupId>com.github.mizosoft.methanol</groupId>
-    <artifactId>methanol-jackson-flux</artifactId>
-    <version>1.4.1</version>
-  </dependency>
-</dependencies>
+<dependency>
+  <groupId>com.github.mizosoft.methanol</groupId>
+  <artifactId>methanol-jackson-flux</artifactId>
+  <version>1.5.0</version>
+</dependency>
 ```
 
-### Registering providers
+The adapters need to be registered as [service providers][serviceloader_javadoc] so Methanol knows they're there.
+The way this is done depends on your project setup.
 
-`Encoder` and `Decoder` implementations are not service-provided by default. You must add
-provider declarations yourself if you intend to use them for dynamic request/response conversion.
+### Module Path
 
-#### Module path
+Follow these steps if your project uses the Java module system.
 
-Add this class to your module:
+1. Add this class to your module:
+
+    ```java
+    public class JacksonFluxProviders {
+      private static final ObjectMapper mapper = new ObjectMapper();
+ 
+      public static class EncoderProvider {
+        public static BodyAdapter.Encoder provider() {
+          return JacksonFluxAdapterFactory.createEncoder(mapper);
+        }
+      }
+   
+      public static class DecoderProvider {
+        public static BodyAdapter.Decoder provider() {
+          return JacksonFluxAdapterFactory.createDecoder(mapper);
+        }
+      }
+    }
+    ```
+
+2. Add the corresponding provider declarations in your `module-info.java` file.
+
+    ```java
+    requires methanol.adapter.jackson.flux;
+   
+    provides BodyAdapter.Encoder with JacksonFluxProviders.EncoderProvider;
+    provides BodyAdapter.Decoder with JacksonFluxProviders.DecoderProvider;
+    ```
+
+### Classpath
+
+Registering adapters from the classpath requires declaring the implementation classes in provider-configuration
+files that are bundled with your JAR. You'll first need to implement delegating `Encoder` & `Decoder`
+that forward to the instances created by `JacksonAdapterFactory`. Extending from `ForwardingEncoder` &
+`ForwardingDecoder` makes this easier.
+
+You can use Google's [AutoService][autoservice] to generate the provider-configuration files automatically,
+so you won't bother writing them.
+
+#### Using AutoService
+
+First, [install AutoService][autoservice_getting_started].
+
+##### Gradle
+
+```gradle
+implementation "com.google.auto.service:auto-service-annotations:$autoServiceVersion"
+annotationProcessor "com.google.auto.service:auto-service:$autoServiceVersion"
+```
+
+##### Maven
+
+```xml
+<dependency>
+  <groupId>com.google.auto.service</groupId>
+  <artifactId>auto-service-annotations</artifactId>
+  <version>${autoServiceVersion}</version>
+</dependency>
+```
+
+Configure the annotation processor with the compiler plugin.
+
+```xml
+<plugin>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <configuration>
+    <annotationProcessorPaths>
+      <path>
+        <groupId>com.google.auto.service</groupId>
+        <artifactId>auto-service</artifactId>
+        <version>${autoServiceVersion}</version>
+      </path>
+    </annotationProcessorPaths>
+  </configuration>
+</plugin>
+```
+
+Next, add this class to your project:
 
 ```java
-public class JacksonFluxProviders {
-  private JacksonFluxProviders() {}
+public class JacksonFluxAdapters {
+  private static final ObjectMapper mapper = new ObjectMapper();
 
-  public static class EncoderProvider {
-    private EncoderProvider() {}
-
-    public static BodyAdapter.Encoder provider() {
-      // Use a default ObjectMapper
-      return JacksonFluxAdapterFactory.createEncoder();
+  @AutoService(BodyAdapter.Encoder.class)
+  public static class JacksonFluxEncoder extends ForwardingEncoder {
+    public JacksonFluxEncoder() {
+      super(JacksonFluxAdapterFactory.createEncoder(mapper));
     }
   }
-
-  public static class DecoderProvider {
-    private DecoderProvider() {}
-
-    public static BodyAdapter.Decoder provider() {
-      // Or may use custom ObjectMapper
-      ObjectMapper mapper = ...
-      return JacksonFluAdapterFactory.createDecoder(mapper);
+  
+  @AutoService(BodyAdapter.Decoder.class)
+  public static class JacksonFluxDecoder extends ForwardingDecoder {
+    public JacksonFluxDecoder() {
+      super(JacksonFluxAdapterFactory.createDecoder(mapper));
     }
   }
 }
 ```
 
-Then add provider declarations in your `module-info.java`:
+#### Manual Configuration
+
+You can also write the configuration files manually. First, add this class to your project:
 
 ```java
-provides BodyAdapter.Encoder with JacksonFluxProviders.EncoderProvider;
-provides BodyAdapter.Decoder with JacksonFluxProviders.DecoderProvider;
+public class JacksonFluxAdapters {
+  private static final ObjectMapper mapper = new ObjectMapper();
+
+  public static class JacksonFluxEncoder extends ForwardingEncoder {
+    public JacksonFluxEncoder() {
+      super(JacksonFluxAdapterFactory.createEncoder(mapper));
+    }
+  }
+  
+  public static class JacksonFluxDecoder extends ForwardingDecoder {
+    public JacksonFluxDecoder() {
+      super(JacksonFluxAdapterFactory.createDecoder(mapper));
+    }
+  }
+}
 ```
 
-#### Class path
+Next, create two provider-configuration files in the resource directory: `META-INF/services`,
+one for the encoder and the other for the decoder. Each file must contain the fully qualified
+name of the implementation class.
 
-If you're running from the classpath, you must instead implement delegating `Encoder` and `Decoder`
-that forward to the instances created by `JacksonFluxAdapterFactory`. Then declare them in
-`META-INF/services` entries as described in `ServiceLoader`'s [Javadoc][ServiceLoader].
+Let's say the above class is in a package named `com.example`. You'll want to have one file for the
+encoder named:
 
-## Usage
-
-```java
-// For request
-Mono<MyDto> mono = ...
-HttpRequest request = HttpRequest.newBuilder(...)
-    .POST(MoreBodyPublishers.ofObject(mono, MediaType.APPLICATION_JSON))
-     ...
-    .build();
-
-// For response
-HttpResponse<Flux<MyDto>> response =
-    client.send(request, MoreBodyHandlers.ofObject(new TypeRef<Flux<MyDto>>() {}));
+```
+META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 ```
 
-[jackson_github]: https://github.com/fasterXML/jackson
-[reactor_github]: https://github.com/reactor/reactor-core
-[wiki_t_vs_supplier]: https://github.com/mizosoft/methanol/wiki/ConversionWiki#t-vs-suppliert
-[ServiceLoader]: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceLoader.html
+and contains the following line:
+
+```
+com.example.JacksonFluxAdapters$JacksonFluxEncoder
+```
+
+Similarly, the decoder's file is named:
+
+```
+META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
+```
+
+and contains:
+
+```
+com.example.JacksonFluxAdapters$JacksonFluxDecoder
+```
+
+[jackson]: https://github.com/FasterXML/jackson
+[reactor]: https://github.com/reactor/reactor-core
+[autoservice]: https://github.com/google/auto/tree/master/service
+[autoservice_getting_started]: https://github.com/google/auto/tree/master/service#getting-started
+[serviceloader_javadoc]: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceLoader.html

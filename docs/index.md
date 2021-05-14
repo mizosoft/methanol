@@ -1,5 +1,3 @@
-Visit the [project website](https://mizosoft.github.io/methanol) for more info.
-
 # Methanol
 
 [![CI status](https://img.shields.io/github/workflow/status/mizosoft/methanol/CI?logo=github&style=flat-square)](https://github.com/mizosoft/methanol/actions)
@@ -34,10 +32,10 @@ implementation 'com.github.mizosoft.methanol:methanol:1.5.0'
 </dependency>
 ```
 
-## Contributing 
+## Contributing
 
-See [CONTRIBUTING](/CONTRIBUTING.md)
+See [CONTRIBUTING](CONTRIBUTING.md)
 
-## License
+# License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[MIT](https://opensource.org/licenses/MIT)

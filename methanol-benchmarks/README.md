@@ -2,10 +2,9 @@
 
 [JMH][jmh] tests for Methanol's performance.
 
-## Run
+## Running Benchmarks
 
-Benchmarks are available as a runnable Jar in [Maven][benchmarks_maven]. Download then run as
-following:
+Benchmarks are available as a runnable Jar in [Maven][benchmarks_maven]. You run them as following:
 
 ```bsh
 java -jar benchmarks-1.4.1-all.jar
@@ -13,21 +12,21 @@ java -jar benchmarks-1.4.1-all.jar
 
 ## Results
 
-### `BodyDecoder` vs `InputStream`
+### BodyDecoder vs InputStream
 
 Compare Methanol's non-blocking decoders with available `InputStream` ones:
 
-| Encoding | Decoder               | Mode  | Cnt | Score    | Error   | Units |
-|----------|-----------------------|-------|-----|----------|---------|-------|
-| gzip     | `BodyDecoder`         | thrpt | 5   | 4170.501 | 50.458  | ops/s |
-| gzip     | `GZIPInputStream`     | thrpt | 5   | 4108.730 | 70.605  | ops/s |
-| deflate  | `BodyDecoder`         | thrpt | 5   | 4037.943 | 51.947  | ops/s |
-| deflate  | `InflaterInputStream` | thrpt | 5   | 4035.100 | 162.641 | ops/s |
-| brotli   | `BodyDecoder`         | thrpt | 5   | 4186.791 | 213.283 | ops/s |
-| brotli   | `BrotliInputStream`   | thrpt | 5   | 2631.312 | 136.291 | ops/s |
+| Decoder               | Mode  | Cnt | Score    | Error   | Units |
+|-----------------------|-------|-----|----------|---------|-------|
+| Gzip `BodyDecoder`    | thrpt | 5   | 4170.501 | 50.458  | ops/s |
+| `GZIPInputStream`     | thrpt | 5   | 4108.730 | 70.605  | ops/s |
+| Deflate `BodyDecoder` | thrpt | 5   | 4037.943 | 51.947  | ops/s |
+| `InflaterInputStream` | thrpt | 5   | 4035.100 | 162.641 | ops/s |
+| Brotli `BodyDecoder`  | thrpt | 5   | 4186.791 | 213.283 | ops/s |
+| `BrotliInputStream`   | thrpt | 5   | 2631.312 | 136.291 | ops/s |
 
 Results show that `BodyDecoder` implementations are on par with available `InputStream` based
-decoders (brotli result is biased as it also compares native C vs pure Java implementations).
+decoders. Note that the brotli benchmark is biased as it also compares native C vs pure Java implementations.
 
 ### Jackson UTF-8 coercion
 

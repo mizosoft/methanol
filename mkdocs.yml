@@ -1,0 +1,85 @@
+site_name: Methanol
+repo_name: mizosoft/methanol
+repo_url: https://github.com/mizosoft/methanol/
+site_url: https://mizosoft.github.io/methanol/
+site_description: 'Lightweight HTTP extensions for Java'
+site_author: Moataz Abdelnasser
+edit_uri: ""
+copyright: Copyright &copy; 2021 Moataz Abdelnasser
+
+extra_css:
+  - css/style.css
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - admonition
+  - pymdownx.details
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/mizosoft
+      name: mizosoft on GitHub
+
+google_analytics:
+  - UA-195982536-1
+  - auto
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/flask
+  favicon: images/flask.png
+  features:
+    - navigation.top
+    - navigation.sections
+  #    - navigation.expand
+  #    - navigation.tabs
+
+  palette:
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/lightbulb
+        name: Switch to light mode
+
+    # Light mode
+    - purple: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue grey
+      accent: indigo
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to dark mode
+
+nav:
+  - Overview: index.md
+  - 🔗 Javadoc: api/latest/
+  - Documentation:
+    - Enhanced HttpClient: enhanced_httpclient.md
+    - Caching: caching.md
+    - Object Mapping: object_mapping.md
+    - Interceptors: interceptors.md
+    - Decompression: decompression.md
+    - Meida Types: media_types.md
+    - Multipart & Forms: multipart_and_forms.md
+    - Progress Tracking: progress_tracking.md
+    - Interruptible Reading: interruptible_reading.md
+    - WritableBodyPublisher: writablebodypublisher.md
+  - Adapters:
+    - methanol-gson: adapters/gson.md
+    - methanol-jackson: adapters/jackson.md
+    - methanol-jackson-flux: adapters/jackson_flux.md
+    - methanol-jaxb: adapters/jaxb.md
+    - methanol-protobuf: adapters/protobuf.md
+  - Brotli: brotli.md
+  - Benchmarks: benchmarks.md
+  - Change Log: CHANGELOG.md
