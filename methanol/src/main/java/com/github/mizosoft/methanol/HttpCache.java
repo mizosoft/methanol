@@ -93,7 +93,13 @@ public final class HttpCache implements AutoCloseable, Flushable {
       executor = userExecutor;
       userVisibleExecutor = true;
     } else {
-      executor = Executors.newCachedThreadPool();
+      executor =
+          Executors.newCachedThreadPool(
+              runnable -> {
+                var thread = new Thread(runnable);
+                thread.setDaemon(true);
+                return thread;
+              });
       userVisibleExecutor = false;
     }
 

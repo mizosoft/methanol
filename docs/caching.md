@@ -48,7 +48,7 @@ it stores entries and how much space it can occupy.
 
 !!! hint
     You can pass the builder a custom `Executor` for launching asynchronous tasks needed by the
-    cache. By default, an unbounded thread pool of non-daemon threads is used.
+    cache. By default, an unbounded thread pool of daemon threads is used.
 
 !!! caution
     To avoid surprises, make sure the disk directory is exclusively owned by a single cache instance
