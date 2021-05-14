@@ -81,7 +81,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
     return strategy.toValidationRequest(request);
   }
 
-  /** Add the additional cache headers advised by rfc7234 like Age & Warning. */
+  /** Add the additional cache headers advised by rfc7234 like Age and Warning. */
   public CacheResponse withCacheHeaders() {
     return with(strategy::addCacheHeaders);
   }

@@ -67,9 +67,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * <p>{@code CacheControl} provides type-safe accessors for the directives specified in <a
  * href="https://tools.ietf.org/html/rfc7234#section-5.2">RFC 7234</a>. Additionally, there's
- * support for the {@code stale-while-revalidate} & {@code stale-if-error} extensions specified in
- * <a href="https://tools.ietf.org/html/rfc5861">RFC 5861</a>. Other {@code Cache-Control}
- * extensions can be accessed using the {@link #directives()} map.
+ * support for the {@code stale-while-revalidate} {@literal &} {@code stale-if-error} extensions
+ * specified in <a href="https://tools.ietf.org/html/rfc5861">RFC 5861</a>. Other {@code
+ * Cache-Control} extensions can be accessed using the {@link #directives()} map.
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class CacheControl {
