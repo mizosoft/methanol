@@ -7,6 +7,7 @@ import static java.util.Objects.requireNonNull;
 import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
+import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listener;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.testing.ResolvedStoreConfig;
 import com.github.mizosoft.methanol.testing.StoreConfig.StoreType;
@@ -29,7 +30,6 @@ import java.util.stream.Stream;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
@@ -48,14 +48,6 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
   public CacheWritingPublisherTck(StoreType storeType) {
     super(TckUtils.testEnvironment());
     storeConfig = ResolvedStoreConfig.createDefault(storeType);
-  }
-
-  // Some tests go nuts if cancellation is not forwarded upstream
-  @BeforeClass
-  static void configureUpstreamCancellation() {
-    System.setProperty(
-        "com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.propagateCancellation",
-        String.valueOf(true));
   }
 
   @BeforeMethod
@@ -85,7 +77,9 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
 
     return new CacheWritingPublisher(
         toFlowPublisher(new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
-        editor);
+        editor,
+        Listener.disabled(),
+        true);
   }
 
   @Override
