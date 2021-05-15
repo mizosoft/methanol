@@ -248,18 +248,15 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     @Override
     public void cancel() {
+      getAndClearDownstream();
+
       // Downstream isn't interested in the body anymore. However, we are! So we'll keep
       // writing the body to cache. This will be done in background since downstream
       // is probably done by now.
-      if (getAndClearDownstream() != null) {
-        assert upstream.isSet();
-
-        // Propagate cancellation if nothing is being written or propagation is allowed
-        if (state == DISPOSED || propagateCancellation) {
-          upstream.cancel();
-        } else {
-          upstream.request(Long.MAX_VALUE); // Drain the whole body
-        }
+      if (state == DISPOSED || propagateCancellation) {
+        upstream.cancel();
+      } else {
+        upstream.request(Long.MAX_VALUE); // Drain the whole body
       }
     }
 
