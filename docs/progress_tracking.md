@@ -48,11 +48,11 @@ progress is tracked by registering a `Listener` with a request's `BodyPublisher`
     final Methanol client = Methanol.create();
     
     final ProgressTracker tracker = ProgressTracker.newBuilder()
-        .timePassedThreshold(Duration.ofMillis(100))
+        .bytesTransferredThreshold(60 * 1024) // 60 kB
         .build();
         
     HttpResponse<Path> downloadVeryInterestingVideo() throws IOException, InterruptedException {
-      var request = MutableReqeust.GET("https://i.imgur.com/NYvl8Sy.mp4");
+      var request = MutableRequest.GET("https://i.imgur.com/NYvl8Sy.mp4");
 
       var downloadingBodyHandler = BodyHandlers.ofFile(
           Path.of("interesting-video.mp4"), CREATE, WRITE);
@@ -62,16 +62,17 @@ progress is tracked by registering a `Listener` with a request's `BodyPublisher`
     }
     
     void onProgress(Progress progress) {
+      if (progress.determinate()) { // Overall progress can be measured
+        var percent = 100 * progress.value();
+        System.out.printf(
+            "Downloaded %d from %d bytes (%.2f%%)%n", 
+            progress.totalBytesTransferred(), progress.contentLength(), percent);
+      } else {
+        System.out.println("Downloaded " + progress.totalBytesTransferred());
+      }
+
       if (progress.done()) {
         System.out.println("Done!");
-      } else if (progress.determinate()) { // Overall progress can be measured
-        var percent = 100 * progress.value();
-        var roundedPercent = Math.round(100 * percent) / 100.0;
-        System.out.printf(
-            "Downloaded %d from %d (%d)%n", 
-            progress.bytesTransferred(), progress.contentLength(), roundedPercent);
-      } else {
-        System.out.println("Downloaded " + progress.bytesTransferred());
       }
     }
     ```
@@ -82,28 +83,29 @@ progress is tracked by registering a `Listener` with a request's `BodyPublisher`
     final Methanol client = Methanol.create();
     
     final ProgressTracker tracker = ProgressTracker.newBuilder()
-        .timePassedThreshold(Duration.ofMillis(100))
+        .bytesTransferredThreshold(60 * 1024) // 60 kB
         .build();
         
     <T> HttpResponse<T> upload(Path file, BodyHandler<T> bodyHandler)
         throws IOException, InterruptedException {
       var trackingRequestBody = tracker.tracking(BodyPublishers.ofFile(file), this::onProgress);
-      var request = MutableReqeust.POST("https://httpbin.org/post", trackingRequestBody);
+      var request = MutableRequest.POST("https://httpbin.org/post", trackingRequestBody);
       
       return client.send(request, bodyHandler);
     }
     
     void onProgress(Progress progress) {
+      if (progress.determinate()) { // Overall progress can be measured
+        var percent = 100 * progress.value();
+        System.out.printf(
+            "Downloaded %d from %d bytes (%.2f%%)%n", 
+            progress.totalBytesTransferred(), progress.contentLength(), percent);
+      } else {
+        System.out.println("Downloaded " + progress.totalBytesTransferred());
+      }
+
       if (progress.done()) {
         System.out.println("Done!");
-      } if (progress.determinate()) { // Overall progress can be measured
-        var percent = 100 * progress.value();
-        var roundedPercent = Math.round(100 * percent) / 100.0;
-        System.out.printf(
-            "Uploaded %d from %d (%d)%n", 
-            progress.bytesTransferred(), progress.contentLength(), roundedPercent);
-      } else {
-        System.out.println("Uploaded " + progress.bytesTransferred());
       }
     }
     ```
