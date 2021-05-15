@@ -32,6 +32,8 @@ import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -55,6 +57,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
 public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
+  private static final Logger logger = System.getLogger(AsyncBodyDecoder.class.getName());
 
   private static final String BUFFER_SIZE_PROP =
       "com.github.mizosoft.methanol.decoder.AsyncBodyDecoder.bufferSize";
@@ -73,6 +76,7 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   private final StackByteSink sink;
   private final ConcurrentLinkedQueue<List<ByteBuffer>> decodedBuffers;
   private volatile @MonotonicNonNull SubscriptionImpl downstreamSubscription;
+  private boolean completed;
 
   /**
    * Creates an {@code AsyncBodyDecoder} in sync mode.
@@ -142,6 +146,10 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   @Override
   public void onNext(List<ByteBuffer> buffers) {
     requireNonNull(buffers);
+    if (completed) {
+      return;
+    }
+
     source.push(buffers);
     try {
       decoder.decode(source, sink);
@@ -160,6 +168,12 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
+    if (completed) {
+      logger.log(Level.WARNING, "upstream error received after completion", throwable);
+      return;
+    }
+    completed = true;
+
     upstream.clear();
     SubscriptionImpl subscription = downstreamSubscription;
     if (subscription != null) {
@@ -169,6 +183,11 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
   @Override
   public void onComplete() {
+    if (completed) {
+      return;
+    }
+    completed = true;
+
     upstream.clear();
     SubscriptionImpl subscription = downstreamSubscription;
     try (decoder) {
@@ -300,9 +319,7 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       }
       List<ByteBuffer> slice = sinkBuffers.subList(0, snapshotSize);
       List<ByteBuffer> snapshot =
-          slice.stream()
-              .map(ByteBuffer::asReadOnlyBuffer)
-              .collect(Collectors.toUnmodifiableList());
+          slice.stream().map(ByteBuffer::asReadOnlyBuffer).collect(Collectors.toUnmodifiableList());
       snapshot.forEach(ByteBuffer::flip); // Flip for downstream to read
       slice.clear(); // Drop references
       return snapshot;
