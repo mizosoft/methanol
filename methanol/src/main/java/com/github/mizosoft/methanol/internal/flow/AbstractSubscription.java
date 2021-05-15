@@ -113,7 +113,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
   }
 
   public final void signalError(Throwable error) {
-    propagateError(error);
+    recordError(error);
     signal();
   }
 
@@ -195,9 +195,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
         downstream.onNext(item);
         return true;
       } catch (Throwable t) {
-        Throwable error = propagateError(t);
-        pendingError = null;
-        cancelOnError(downstream, error, true);
+        cancelOnError(downstream, recordError(t), true);
       }
     }
     return false;
@@ -232,7 +230,6 @@ public abstract class AbstractSubscription<T> implements Subscription {
       long emitted;
       Throwable error = pendingError;
       if (error != null) {
-        pendingError = null;
         cancelOnError(d, error, false);
       } else if ((emitted = emit(d, r - x)) > 0L) {
         x += emitted;
@@ -267,22 +264,19 @@ public abstract class AbstractSubscription<T> implements Subscription {
       try {
         downstream.onSubscribe(this);
       } catch (Throwable t) {
-        Throwable e = propagateError(t);
-        pendingError = null;
-        cancelOnError(downstream, e, true);
+        cancelOnError(downstream, recordError(t), true);
       }
     }
   }
 
   /** Sets pending error or adds a new one as suppressed in case of multiple error sources. */
-  private Throwable propagateError(Throwable error) {
+  private Throwable recordError(Throwable error) {
     while (true) {
       Throwable currentError = pendingError;
       if (currentError != null) {
         currentError.addSuppressed(error); // addSuppressed is thread-safe
         return currentError;
-      }
-      if (PENDING_ERROR.compareAndSet(this, null, error)) {
+      } else if (PENDING_ERROR.compareAndSet(this, null, error)) {
         return error;
       }
     }
