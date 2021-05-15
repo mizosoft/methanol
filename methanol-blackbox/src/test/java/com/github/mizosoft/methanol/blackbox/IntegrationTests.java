@@ -310,9 +310,7 @@ class IntegrationTests {
     // If a concat member has a corrupt header, it is considered trailing garbage (end of gzip stream)
     assertEquals("gzip stream finished prematurely", ex.getMessage());
     // Will suppress read header failure
-    var suppressed = ex.getCause().getSuppressed();
-    assertEquals(1, suppressed.length);
-    var suppressedIoe = suppressed[0];
+    var suppressedIoe = ex.getCause().getSuppressed()[0];
     assertTrue(suppressedIoe instanceof IOException);
     assertEquals("unsupported flags: 0xe0", suppressedIoe.getMessage());
   }
