@@ -8,7 +8,7 @@ Java enjoys a neat, built-in [HTTP client](https://openjdk.java.net/groups/net/h
 However, it lacks key HTTP features like multipart uploads, caching and response decompression.
 ***Methanol*** comes in to fill these gaps. The library comprises a set of lightweight, yet powerful
 extensions aimed at making it much easier & more productive to work with `java.net.http`. You can
-say it's an `HttClient` wrapper, but you'll see it almost seamlessly integrates with the standard
+say it's an `HttpClient` wrapper, but you'll see it almost seamlessly integrates with the standard
 API you might already know.
 
 Methanol isn't invasive. The core library has zero runtime dependencies. However, special attention
