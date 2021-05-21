@@ -61,7 +61,7 @@ assertTrue(textHtml.isCompatibleWith(anyTextType));
 
 `MimeBodyPublisher` is a mixin-style interface that associates a `MediaType` with a `BodyPublisher`. 
 It's recognized by `Methanol` and [multipart bodies](multipart_and_forms.md#multipart-bodies) in that
-they get the appropriate `Content-Type` header implicitly added.
+it gets the appropriate `Content-Type` header implicitly added.
 
 You can adapt an arbitrary `BodyPublisher` into a `MimeBodyPublisher`. Here's a factory method that
 creates `MimeBodyPublihers` for files. The file's media type is probed from the system, falling

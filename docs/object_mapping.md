@@ -17,7 +17,7 @@ Adapters for the most popular serialization libraries are provided in separate m
   * [`methanol-protobuf`](adapters/protobuf.md): Google's Protocol Buffers
 
 Adapters are dynamically located using Java's `ServiceLoader`. You can find clear installation steps
-in each module's README. We'll later see how to implement custom adapters as well.
+in each module. We'll see how to implement custom adapters as well.
 
 If you want to run examples presented here, get started by installing your favorite JSON adapter!
 
@@ -70,6 +70,15 @@ public static final class GitHubIssue {
   public GitHubUser user;
   public String body;
 
+  // Other fields omitted. 
+  // Annotate with @JsonIgnoreProperties(ignoreUnknown = true) to run with Jackson.
+}
+
+public static final class GitHubUser {
+  public String login;
+  public long id;
+  public String url;
+  
   // Other fields omitted. 
   // Annotate with @JsonIgnoreProperties(ignoreUnknown = true) to run with Jackson.
 }
@@ -135,6 +144,7 @@ public abstract class JsoupAdapter extends AbstractBodyAdapter implements BodyAd
     public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
+      
       var charset = charsetOrUtf8(mediaType);
       var subscriber = BodySubscribers.mapping(BodySubscribers.ofString(charset), Jsoup::parse);
       return BodySubscribers.mapping(subscriber, type.exactRawType()::cast); // Safely cast Document to T
@@ -146,6 +156,7 @@ public abstract class JsoupAdapter extends AbstractBodyAdapter implements BodyAd
     public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
       requireSupport(object.getClass());
       requireCompatibleOrNull(mediaType);
+      
       var charset = charsetOrUtf8(mediaType);
       var publisher = BodyPublishers.ofString(((Document) object).outerHtml(), charset);
       return attachMediaType(publisher, mediaType);
@@ -242,6 +253,7 @@ public <T> BodySubscriber<Supplier<T>> toDeferredObject(
     TypeRef<T> type, @Nullable MediaType mediaType) {
   requireSupport(type);
   requireCompatibleOrNull(mediaType);
+  
   var charset = charsetOrUtf8(mediaType);
   BodySubscriber<Supplier<Document>> subscriber = BodySubscribers.mapping(
       MoreBodySubscribers.ofReader(charset),

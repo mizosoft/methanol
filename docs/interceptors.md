@@ -12,7 +12,7 @@ call. Here's an interceptor that logs requests and their responses.
 
 ```java
 public final class LoggingInterceptor implements Methanol.Interceptor {
-  private static final Logger LOGGER = Logger.getLogger(LoggingInterceptor.class.getName());
+  private static final Logger logger = Logger.getLogger(LoggingInterceptor.class.getName());
 
   @Override
   public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
@@ -29,13 +29,13 @@ public final class LoggingInterceptor implements Methanol.Interceptor {
   }
 
   private static void logRequest(HttpRequest request) {
-    LOGGER.info(() -> String.format("Sending %s%n%s", request, headersToString(request.headers())));
+    logger.info(() -> String.format("Sending %s%n%s", request, headersToString(request.headers())));
   }
 
   private static <T> Chain<T> toLoggingChain(HttpRequest request, Chain<T> chain) {
     var sentAt = Instant.now();
     return chain.withBodyHandler(responseInfo -> {
-        LOGGER.info(() -> String.format(
+        logger.info(() -> String.format(
             "Completed %s %s with %d in %sms%n%s",
             request.method(),
             request.uri(),

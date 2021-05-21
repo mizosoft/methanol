@@ -1,7 +1,7 @@
 # Interruptible Reading
 
 Reading from blocking sources like `InputStream` isn't always avoidable. Once they're needed, JDK's
-`BodyHandlers::ofInputStream` can be used to obtain an `HttpResponse<InputStream>`. However, reading
+`BodyHandlers::ofInputStream` can be used. However, reading
 from such stream blocks your threads indefinitely, which causes troubles when you want to close the
 application or change contexts amid reading. Methanol has support for [interruptible channels][interruptible-channel-jdk].
 These are asynchronously closeable and respond to thread interrupts. Using them, you can voluntarily
