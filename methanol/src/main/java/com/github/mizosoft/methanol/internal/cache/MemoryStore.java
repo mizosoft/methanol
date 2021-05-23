@@ -488,7 +488,7 @@ public final class MemoryStore implements Store {
     }
   }
 
-  /** Growable buffer allowing writing/reading to arbitrary positions within last-written bounds. */
+  /** Growable buffer allowing writing to arbitrary positions within last-written bounds. */
   private static final class GrowableBuffer {
     private final SeekableByteArrayOutputStream output = new SeekableByteArrayOutputStream();
 

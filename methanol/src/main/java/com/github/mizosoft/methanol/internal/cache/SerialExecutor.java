@@ -99,7 +99,7 @@ class SerialExecutor implements Executor {
     while (true) {
       // Try to execute drain task or keep it alive if it's already running or about
       // to run (submitted to delegate executor). In case of contention, multiple
-      // threads might succeed to submit the drain task after observing  the absence
+      // threads might succeed to submit the drain task after observing the absence
       // of RUNNING and SUBMITTED bits, but that's OK since the drain task itself ensures
       // it's only run once.
       long s = sync;

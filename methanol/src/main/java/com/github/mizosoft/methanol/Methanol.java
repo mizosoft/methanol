@@ -83,7 +83,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * </ul>
  *
  * <p>A {@code Methanol} client relies on a standard {@code HttpClient} instance for sending
- * requests, referred to as it's backend. You can obtain builders for {@code Methanol} using either
+ * requests, referred to as its backend. You can obtain builders for {@code Methanol} using either
  * {@link #newBuilder()} or {@link #newBuilder(HttpClient)}. The latter takes a prebuilt backend,
  * while the former allows configuring a backend to be newly created each time {@link
  * BaseBuilder#build()} is invoked. Note that {@code HttpCaches} are not usable with a prebuilt

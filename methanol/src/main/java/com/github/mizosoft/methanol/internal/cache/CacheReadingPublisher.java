@@ -172,7 +172,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
      */
     private boolean tryScheduleRead(boolean maintainReadingState) {
       if (readQueue.size() < PREFETCH
-          && (maintainReadingState && state == READING
+          && ((maintainReadingState && state == READING)
               || STATE.compareAndSet(this, IDLE, READING))) {
         scheduleRead();
         return true;

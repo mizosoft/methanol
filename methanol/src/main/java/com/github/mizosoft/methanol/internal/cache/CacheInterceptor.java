@@ -136,8 +136,8 @@ public final class CacheInterceptor implements Interceptor {
     assert networkResponse != null || error != null;
 
     if (networkResponse != null) {
-      // Release the network response properly. If this is a cache miss and we're updating a
-      // cache entry, discarding will drain the response body in background so it's fully
+      // Make sure the network response is released properly. If this is a cache miss and we're
+      // updating a cache entry, discarding will drain the response body in background so it's fully
       // written and the entry is committed.
       networkResponse.discard(handlerExecutor);
     } else {
@@ -170,6 +170,7 @@ public final class CacheInterceptor implements Interceptor {
    * we won't be able to match them with the correct response.
    */
   private static boolean isImplicitField(String name) {
+    // Expect, Content-Length, Host, Transfer-Encoding
     return "Cookie".equalsIgnoreCase(name)
         || "Cookie2".equalsIgnoreCase(name)
         || "Authorization".equalsIgnoreCase(name)
@@ -235,7 +236,7 @@ public final class CacheInterceptor implements Interceptor {
 
   /**
    * Returns whether a response with the given code is cacheable by default (can be cached even if
-   * there's no explicit caching headers like Cache-Control & Expires). Based on rfc7231 6.1.
+   * not explicitly allowed by cache headers). Based on rfc7231 6.1.
    */
   private static boolean isCacheableByDefault(int statusCode) {
     switch (statusCode) {
