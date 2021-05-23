@@ -75,7 +75,7 @@ public class Validate {
     return (@NonNull T) ref;
   }
 
-  @SuppressWarnings("TypeParameterUnusedInFormals")
+  @SuppressWarnings({"TypeParameterUnusedInFormals", "unused"})
   public static <T> T TODO() {
     throw new UnsupportedOperationException("not implemented");
   }

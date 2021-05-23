@@ -36,6 +36,8 @@ import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -63,9 +65,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * setting a {@code URI} entirely. This is for the case when the request is used with a {@link
  * Methanol} client that has a base URL, with which this request's URL is resolved.
  */
-public final class MutableRequest extends HttpRequest implements HttpRequest.Builder {
+public final class MutableRequest extends TaggableRequest implements TaggableRequest.Builder {
   private static final URI EMPTY_URI = URI.create("");
 
+  private final Map<TypeRef<?>, Object> tags;
   private final HeadersBuilder headersBuilder;
   private String method;
   private URI uri;
@@ -76,6 +79,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
   private boolean expectContinue;
 
   private MutableRequest() {
+    tags = new HashMap<>();
     headersBuilder = new HeadersBuilder();
     method = "GET";
     uri = EMPTY_URI;
@@ -83,6 +87,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
 
   // for copy()
   private MutableRequest(MutableRequest other) {
+    tags = new HashMap<>(other.tags);
     headersBuilder = other.headersBuilder.deepCopy();
     method = other.method;
     uri = other.uri;
@@ -149,12 +154,39 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
 
   /** Sets the {@code Cache-Control} header. */
   public MutableRequest cacheControl(CacheControl cacheControl) {
+    requireNonNull(cacheControl);
     return header("Cache-Control", cacheControl.toString());
   }
 
   /** Calls the given consumer against this request. */
   public MutableRequest apply(Consumer<? super MutableRequest> consumer) {
+    requireNonNull(consumer);
     consumer.accept(this);
+    return this;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> Optional<T> tag(TypeRef<T> type) {
+    requireNonNull(type);
+    return Optional.ofNullable((T) tags.get(type));
+  }
+
+  @Override
+  Map<TypeRef<?>, Object> tags() {
+    return Map.copyOf(tags); // Make a defensive copy
+  }
+
+  @Override
+  public <T> MutableRequest tag(Class<T> type, T value) {
+    return tag(TypeRef.from(type), value);
+  }
+
+  @Override
+  public <T> MutableRequest tag(TypeRef<T> type, T value) {
+    requireNonNull(type);
+    requireNonNull(value);
+    tags.put(type, value);
     return this;
   }
 
@@ -293,12 +325,12 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
 
   /** Prefer {@link #toImmutableRequest()}. */
   @Override
-  public HttpRequest build() {
+  public TaggableRequest build() {
     return new ImmutableRequest(this);
   }
 
   /** Returns an immutable copy of this request. */
-  public HttpRequest toImmutableRequest() {
+  public TaggableRequest toImmutableRequest() {
     return new ImmutableRequest(this);
   }
 
@@ -326,9 +358,12 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
         .setMethod(other.method(), other.bodyPublisher().orElse(null))
         .expectContinue(other.expectContinue())
         .apply(
-            req -> {
-              other.timeout().ifPresent(req::timeout);
-              other.version().ifPresent(req::version);
+            self -> {
+              other.timeout().ifPresent(self::timeout);
+              other.version().ifPresent(self::version);
+              if (other instanceof TaggableRequest) {
+                self.tags.putAll(((TaggableRequest) other).tags());
+              }
             });
   }
 
@@ -373,7 +408,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private static final class ImmutableRequest extends HttpRequest {
+  private static final class ImmutableRequest extends TaggableRequest {
     private final String method;
     private final URI uri;
     private final HttpHeaders headers;
@@ -381,6 +416,7 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
     private final Optional<Duration> timeout;
     private final Optional<Version> version;
     private final boolean expectContinue;
+    private final Map<TypeRef<?>, Object> tags;
 
     ImmutableRequest(MutableRequest other) {
       method = other.method;
@@ -390,6 +426,19 @@ public final class MutableRequest extends HttpRequest implements HttpRequest.Bui
       timeout = Optional.ofNullable(other.timeout);
       version = Optional.ofNullable(other.version);
       expectContinue = other.expectContinue;
+      tags = Map.copyOf(other.tags); // Make a immutable/defensive copy
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> Optional<T> tag(TypeRef<T> type) {
+      requireNonNull(type);
+      return Optional.ofNullable((T) tags.get(type));
+    }
+
+    @Override
+    Map<TypeRef<?>, Object> tags() {
+      return tags;
     }
 
     @Override

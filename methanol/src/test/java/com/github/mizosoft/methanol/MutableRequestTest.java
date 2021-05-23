@@ -31,6 +31,7 @@ import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class MutableRequestTest {
@@ -253,6 +254,31 @@ class MutableRequestTest {
 
     request.removeHeadersIf((__, ___) -> true);
     verifyThat(request).hasNoHeaders();
+  }
+
+  @Test
+  void tags() {
+    var request = MutableRequest.create()
+        .tag(Integer.class, 1)
+        .tag(new TypeRef<>() {}, List.of("a", "b"));
+    assertThat(request.tag(Integer.class)).hasValue(1);
+    assertThat(request.tag(new TypeRef<List<String>>() {})).hasValue(List.of("a", "b"));
+    assertThat(request.tag(String.class)).isEmpty();
+    assertThat(request.tags()).containsValues(1, List.of("a", "b"));
+
+    var immutableRequest = request.toImmutableRequest();
+    assertThat(immutableRequest.tag(Integer.class)).hasValue(1);
+    assertThat(immutableRequest.tag(new TypeRef<List<String>>() {})).hasValue(List.of("a", "b"));
+    assertThat(immutableRequest.tag(String.class)).isEmpty();
+    assertThat(immutableRequest.tags()).containsValues(1, List.of("a", "b"));
+  }
+
+  @Test
+  void copyWithTags() {
+    var request = MutableRequest.create().tag(Integer.class, 1);
+    assertThat(request.copy().tag(Integer.class)).hasValue(1);
+    assertThat(MutableRequest.copyOf(request).tag(Integer.class)).hasValue(1);
+    assertThat(MutableRequest.copyOf(request.toImmutableRequest()).tag(Integer.class)).hasValue(1);
   }
 
   @Test
