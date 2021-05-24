@@ -26,8 +26,10 @@ import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_PARTIAL;
 
+import com.github.mizosoft.methanol.CacheAwareResponse;
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
 import com.github.mizosoft.methanol.CacheControl;
+import com.github.mizosoft.methanol.HttpCache.Listener;
 import com.github.mizosoft.methanol.HttpStatus;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.TrackedResponse;
@@ -72,13 +74,19 @@ public final class CacheInterceptor implements Interceptor {
   private static final Logger logger = System.getLogger(CacheInterceptor.class.getName());
 
   private final InternalCache cache;
+  private final Listener listener;
   private final Executor cacheExecutor;
   private final Executor handlerExecutor;
   private final Clock clock;
 
   public CacheInterceptor(
-      InternalCache cache, Executor cacheExecutor, Executor handlerExecutor, Clock clock) {
+      InternalCache cache,
+      Listener listener,
+      Executor cacheExecutor,
+      Executor handlerExecutor,
+      Clock clock) {
     this.cache = cache;
+    this.listener = listener;
     this.cacheExecutor = cacheExecutor;
     this.handlerExecutor = handlerExecutor;
     this.clock = clock;
@@ -100,7 +108,7 @@ public final class CacheInterceptor implements Interceptor {
 
   public CompletableFuture<RawResponse> exchange(
       HttpRequest request, Chain<?> chain, boolean async) {
-    cache.onRequest(request.uri());
+    listener.onRequest(request);
 
     var requestTime = clock.instant();
     var asyncAdapter = new AsyncAdapter(async);
@@ -111,7 +119,12 @@ public final class CacheInterceptor implements Interceptor {
             cacheResponse ->
                 new Exchange(request, publisherChain, cacheResponse, requestTime, asyncAdapter))
         .thenCompose(Exchange::evaluate)
-        .thenApply(Exchange::serveResponse);
+        .thenApply(Exchange::serveResponse)
+        .thenApply(
+            response -> {
+              listener.onResponse(request, (CacheAwareResponse<?>) response.get());
+              return response;
+            });
   }
 
   private CompletableFuture<@Nullable CacheResponse> getCacheResponse(
@@ -419,7 +432,7 @@ public final class CacheInterceptor implements Interceptor {
         return CompletableFuture.completedFuture(this);
       }
 
-      cache.onNetworkUse(request.uri());
+      listener.onNetworkUse(request, cacheResponse != null ? cacheResponse.get() : null);
       return networkExchange()
           .handle(this::handleNetworkOrServerError)
           .thenApply(Exchange::updateCache);
@@ -441,7 +454,7 @@ public final class CacheInterceptor implements Interceptor {
       }
 
       if (isCacheable(request, networkResponse.get())) {
-        var cacheUpdatingNetworkResponse = cache.put(cacheResponse, networkResponse);
+        var cacheUpdatingNetworkResponse = cache.put(request, cacheResponse, networkResponse);
         if (cacheUpdatingNetworkResponse != null) {
           // The entry is populated as cacheUpdatingNetworkResponse is consumed
           return withNetworkResponse(cacheUpdatingNetworkResponse);
@@ -461,7 +474,6 @@ public final class CacheInterceptor implements Interceptor {
             && (cacheResponse.isServable()
                 || cacheResponse.isServableWhileRevalidating()
                 || cacheResponse.isServableOnError())) {
-          cache.onStatus(request.uri(), CacheStatus.HIT);
           var cacheResponse = this.cacheResponse.withCacheHeaders();
           return cacheResponse.with(
               builder ->
@@ -480,7 +492,6 @@ public final class CacheInterceptor implements Interceptor {
 
         // If neither cache nor network was applicable, this is an unsatisfiable request.
         // So serve a 504 Gateway Timeout response as per rfc7234 5.2.1.7.
-        cache.onStatus(request.uri(), CacheStatus.UNSATISFIABLE);
         return NetworkResponse.from(
             new ResponseBuilder<>()
                 .uri(request.uri())
@@ -510,7 +521,6 @@ public final class CacheInterceptor implements Interceptor {
         cacheResponse.close();
       }
 
-      cache.onStatus(request.uri(), CacheStatus.MISS);
       return networkResponse.with(
           builder ->
               builder

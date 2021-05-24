@@ -86,9 +86,9 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       Editor editor,
       Listener listener,
       boolean propagateCancellation) {
-    this.upstream = upstream;
-    this.editor = editor;
-    this.listener = listener;
+    this.upstream = requireNonNull(upstream);
+    this.editor = requireNonNull(editor);
+    this.listener = requireNonNull(listener);
     this.propagateCancellation = propagateCancellation;
   }
 
@@ -106,7 +106,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
   public interface Listener {
     void onWriteSuccess();
 
-    void onWriteFailure();
+    void onWriteFailure(Throwable error);
 
     default Listener guarded() {
       return new Listener() {
@@ -114,17 +114,17 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         public void onWriteSuccess() {
           try {
             Listener.this.onWriteSuccess();
-          } catch (Throwable error) {
-            logger.log(Level.WARNING, "exception thrown by Listener::onWriteSuccess", error);
+          } catch (Throwable e) {
+            logger.log(Level.WARNING, "exception thrown by Listener::onWriteSuccess", e);
           }
         }
 
         @Override
-        public void onWriteFailure() {
+        public void onWriteFailure(Throwable error) {
           try {
-            Listener.this.onWriteFailure();
-          } catch (Throwable error) {
-            logger.log(Level.WARNING, "exception thrown by Listener::onWriteFailure", error);
+            Listener.this.onWriteFailure(error);
+          } catch (Throwable e) {
+            logger.log(Level.WARNING, "exception thrown by Listener::onWriteFailure", e);
           }
         }
       };
@@ -142,7 +142,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     public void onWriteSuccess() {}
 
     @Override
-    public void onWriteFailure() {}
+    public void onWriteFailure(Throwable unused) {}
   }
 
   private static final class CacheWritingSubscriber implements Subscriber<List<ByteBuffer>> {
@@ -348,16 +348,16 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     private void commitEdit() {
       if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
-        boolean failedToCommitEdit = false;
+        IOException commitFailure = null;
         try (editor) {
           editor.commitOnClose();
         } catch (IOException e) {
-          failedToCommitEdit = true;
+          commitFailure = e;
           logger.log(Level.WARNING, "Editor::close failure while committing edit", e);
         }
 
-        if (failedToCommitEdit) {
-          listener.onWriteFailure();
+        if (commitFailure != null) {
+          listener.onWriteFailure(commitFailure);
         } else {
           listener.onWriteSuccess();
         }
@@ -372,7 +372,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
               "aborting cache edit as a problem occurred while writing",
               writeFailure);
 
-          listener.onWriteFailure();
+          listener.onWriteFailure(writeFailure);
         }
 
         writeQueue.clear();

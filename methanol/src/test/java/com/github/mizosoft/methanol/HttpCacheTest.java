@@ -44,9 +44,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 
+import com.github.mizosoft.methanol.HttpCache.Listener;
 import com.github.mizosoft.methanol.HttpCache.Stats;
 import com.github.mizosoft.methanol.HttpCache.StatsRecorder;
+import com.github.mizosoft.methanol.HttpCacheTest.RecordingListener.EventType;
+import com.github.mizosoft.methanol.HttpCacheTest.RecordingListener.OnNetworkUse;
+import com.github.mizosoft.methanol.HttpCacheTest.RecordingListener.OnReadFailure;
+import com.github.mizosoft.methanol.HttpCacheTest.RecordingListener.OnReadSuccess;
+import com.github.mizosoft.methanol.HttpCacheTest.RecordingListener.OnRequest;
+import com.github.mizosoft.methanol.HttpCacheTest.RecordingListener.OnResponse;
+import com.github.mizosoft.methanol.HttpCacheTest.RecordingListener.OnWriteFailure;
+import com.github.mizosoft.methanol.HttpCacheTest.RecordingListener.OnWriteSuccess;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
@@ -88,10 +98,12 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.RejectedExecutionException;
@@ -108,6 +120,8 @@ import mockwebserver3.QueueDispatcher;
 import mockwebserver3.RecordedRequest;
 import mockwebserver3.SocketPolicy;
 import okhttp3.Headers;
+import org.assertj.core.api.InstanceOfAssertFactories;
+import org.assertj.core.api.ObjectAssert;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -180,10 +194,15 @@ class HttpCacheTest {
   }
 
   private void setUpCache(Store store) {
-    setUpCache(store, null);
+    setUpCache(store, null, null);
   }
 
   private void setUpCache(Store store, @Nullable StatsRecorder statsRecorder) {
+    setUpCache(store, statsRecorder, null);
+  }
+
+  private void setUpCache(
+      Store store, @Nullable StatsRecorder statsRecorder, @Nullable Listener listener) {
     editAwaiter = new EditAwaiter();
 
     var cacheBuilder = HttpCache.newBuilder()
@@ -192,6 +211,9 @@ class HttpCacheTest {
         .executor(threadPool);
     if (statsRecorder != null) {
       cacheBuilder.statsRecorder(statsRecorder);
+    }
+    if (listener != null) {
+      cacheBuilder.listener(listener);
     }
     cache = cacheBuilder.build();
     client = clientBuilder.cache(cache).build();
@@ -2976,6 +2998,240 @@ class HttpCacheTest {
         .hasBody("Will Smith")
         .doesNotContainHeader("Content-Encoding")
         .doesNotContainHeader("Content-Length");
+  }
+
+  @StoreParameterizedTest
+  void requestResponseListener(Store store) throws Exception {
+    var listener = new RecordingListener(EventType.REQUEST_RESPONSE);
+    setUpCache(store, null, listener);
+
+    server.enqueue(new MockResponse()
+        .setHeader("Cache-Control", "max-age=1")
+        .setBody("Pikachu"));
+    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+    server.enqueue(new MockResponse()
+        .setHeader("Cache-Control", "max-age=1")
+        .setBody("Eevee"));
+
+    var request = GET(serverUri).tag(Integer.class, 1);
+
+    get(request);
+    listener.assertNext(OnRequest.class, request);
+    listener.assertNext(OnNetworkUse.class, request)
+        .extracting(event -> event.cacheResponse)
+        .isNull();
+    listener.assertNext(OnResponse.class, request)
+        .satisfies(event -> verifyThat(event.response).isCacheMiss());
+
+    get(request);
+    listener.assertNext(OnRequest.class, request);
+    listener.assertNext(OnResponse.class, request)
+        .satisfies(event -> verifyThat(event.response).isCacheHit());
+
+    // Make response stale
+    clock.advanceSeconds(2);
+
+    get(request);
+    listener.assertNext(OnRequest.class, request);
+    listener.assertNext(OnNetworkUse.class, request)
+        .extracting(event -> event.cacheResponse)
+        .isNotNull();
+    listener.assertNext(OnResponse.class, request)
+        .satisfies(event -> verifyThat(event.response).isConditionalHit());
+
+    // Make response stale
+    clock.advanceSeconds(2);
+
+    get(request);
+    listener.assertNext(OnRequest.class, request);
+    listener.assertNext(OnNetworkUse.class, request)
+        .extracting(event -> event.cacheResponse)
+        .isNotNull();
+    listener.assertNext(OnResponse.class, request)
+        .satisfies(event -> verifyThat(event.response).isConditionalMiss());
+
+    // Make response stale
+    clock.advanceSeconds(2);
+
+    get(request.header("Cache-Control", "only-if-cached"));
+    listener.assertNext(OnRequest.class, request);
+    listener.assertNext(OnResponse.class, request)
+        .satisfies(event -> verifyThat(event.response).isCacheUnsatisfaction());
+  }
+
+  @StoreParameterizedTest
+  void readWriteListener(Store store) throws Exception {
+    var listener = new RecordingListener(EventType.READ_WRITE);
+    var failingStore = new FailingStore(store);
+    setUpCache(failingStore, null, listener);
+
+    server.enqueue(new MockResponse()
+        .setHeader("Cache-Control", "max-age=1")
+        .setBody("Pikachu"));
+    server.enqueue(new MockResponse()
+        .setHeader("Cache-Control", "max-age=1")
+        .setBody("Pikachu"));
+
+    var request = GET(serverUri).tag(Integer.class, 1);
+
+    get(request);
+    listener.assertNext(OnWriteFailure.class, request)
+        .extracting(event -> Utils.getDeepCompletionCause(event.error)) // Can be a CompletionException
+        .isInstanceOf(TestException.class);
+
+    failingStore.allowWrites = true;
+    get(request);
+    listener.assertNext(OnWriteSuccess.class, request);
+
+    assertThatExceptionOfType(TestException.class).isThrownBy(() -> get(request));
+    listener.assertNext(OnReadFailure.class, request)
+        .extracting(event -> Utils.getDeepCompletionCause(event.error)) // Can be a CompletionException
+        .isInstanceOf(TestException.class);
+
+    failingStore.allowReads = true;
+    get(request);
+    listener.assertNext(OnReadSuccess.class, request);
+  }
+
+  static final class RecordingListener implements Listener {
+    final EventType toRecord;
+    final Queue<Event> events = new ConcurrentLinkedQueue<>();
+
+    enum EventType {
+      READ_WRITE,
+      REQUEST_RESPONSE
+    }
+
+    RecordingListener(EventType toRecord) {
+      this.toRecord = toRecord;
+    }
+
+    <T extends Event> ObjectAssert<T> assertNext(Class<T> expected) {
+      return assertThat(events.poll()).asInstanceOf(InstanceOfAssertFactories.type(expected));
+    }
+
+    <T extends Event> ObjectAssert<T> assertNext(Class<T> expected, TaggableRequest request) {
+      return assertNext(expected)
+          .satisfies(
+              event -> {
+                verifyThat(event.request).hasUri(request.uri()).containsHeaders(request.headers());
+
+                // Make sure tags aren't lost
+                assertThat(TaggableRequest.from(event.request).tags())
+                    .containsAllEntriesOf(request.tags());
+              });
+    }
+
+    @Override
+    public void onRequest(HttpRequest request) {
+      if (toRecord == EventType.REQUEST_RESPONSE) {
+        events.add(new OnRequest(request));
+      }
+    }
+
+    @Override
+    public void onNetworkUse(HttpRequest request, @Nullable TrackedResponse<?> cacheResponse) {
+      if (toRecord == EventType.REQUEST_RESPONSE) {
+        events.add(new OnNetworkUse(request, cacheResponse));
+      }
+    }
+
+    @Override
+    public void onResponse(HttpRequest request, CacheAwareResponse<?> response) {
+      if (toRecord == EventType.REQUEST_RESPONSE) {
+        events.add(new OnResponse(request, response));
+      }
+    }
+
+    @Override
+    public void onReadSuccess(HttpRequest request) {
+      if (toRecord == EventType.READ_WRITE) {
+        events.add(new OnReadSuccess(request));
+      }
+    }
+
+    @Override
+    public void onReadFailure(HttpRequest request, Throwable error) {
+      if (toRecord == EventType.READ_WRITE) {
+        events.add(new OnReadFailure(request, error));
+      }
+    }
+
+    @Override
+    public void onWriteSuccess(HttpRequest request) {
+      if (toRecord == EventType.READ_WRITE) {
+        events.add(new OnWriteSuccess(request));
+      }
+    }
+
+    @Override
+    public void onWriteFailure(HttpRequest request, Throwable error) {
+      if (toRecord == EventType.READ_WRITE) {
+        events.add(new OnWriteFailure(request, error));
+      }
+    }
+
+    static class Event {
+      final HttpRequest request;
+
+      Event(HttpRequest request) {
+        this.request = request;
+      }
+    }
+
+    static final class OnRequest extends Event {
+      OnRequest(HttpRequest request) {
+        super(request);
+      }
+    }
+
+    static final class OnNetworkUse extends Event {
+      final @Nullable TrackedResponse<?> cacheResponse;
+
+      OnNetworkUse(HttpRequest request, @Nullable TrackedResponse<?> cacheResponse) {
+        super(request);
+        this.cacheResponse = cacheResponse;
+      }
+    }
+
+    static final class OnResponse extends Event {
+      final CacheAwareResponse<?> response;
+
+      OnResponse(HttpRequest request, CacheAwareResponse<?> response) {
+        super(request);
+        this.response = response;
+      }
+    }
+
+    static final class OnReadSuccess extends Event {
+      OnReadSuccess(HttpRequest request) {
+        super(request);
+      }
+    }
+
+    static final class OnReadFailure extends Event {
+      final Throwable error;
+
+      OnReadFailure(HttpRequest request, Throwable error) {
+        super(request);
+        this.error = error;
+      }
+    }
+
+    static final class OnWriteSuccess extends Event {
+      OnWriteSuccess(HttpRequest request) {
+        super(request);
+      }
+    }
+
+    static final class OnWriteFailure extends Event {
+      final Throwable error;
+
+      OnWriteFailure(HttpRequest request, Throwable error) {
+        super(request);
+        this.error = error;
+      }
+    }
   }
 
   private HttpResponse<String> get(URI uri) throws IOException, InterruptedException {

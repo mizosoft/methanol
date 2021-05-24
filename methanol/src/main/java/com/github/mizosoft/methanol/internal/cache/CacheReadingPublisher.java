@@ -31,6 +31,8 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
@@ -45,23 +47,73 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Publisher for the response body read from a cached entry's {@code Viewer}. */
 public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> {
+  private static final Logger logger = System.getLogger(CacheReadingPublisher.class.getName());
+
   private final Viewer viewer;
   private final Executor executor;
+  private final Listener listener;
   private final AtomicBoolean subscribed = new AtomicBoolean();
 
   public CacheReadingPublisher(Viewer viewer, Executor executor) {
+    this(viewer, executor, DisabledListener.INSTANCE);
+  }
+
+  public CacheReadingPublisher(Viewer viewer, Executor executor, Listener listener) {
     this.viewer = requireNonNull(viewer);
     this.executor = requireNonNull(executor);
+    this.listener = requireNonNull(listener);
   }
 
   @Override
   public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      new CacheReadingSubscription(subscriber, executor, viewer).signal(true);
+      new CacheReadingSubscription(subscriber, executor, viewer, listener).signal(true);
     } else {
       FlowSupport.refuse(subscriber, FlowSupport.multipleSubscribersToUnicast());
     }
+  }
+
+  public interface Listener {
+    void onReadSuccess();
+
+    void onReadFailure(Throwable error);
+
+    default Listener guarded() {
+      return new Listener() {
+        @Override
+        public void onReadSuccess() {
+          try {
+            Listener.this.onReadSuccess();
+          } catch (Throwable e) {
+            logger.log(Level.WARNING, "exception thrown by Listener::onReadSuccess", e);
+          }
+        }
+
+        @Override
+        public void onReadFailure(Throwable error) {
+          try {
+            Listener.this.onReadFailure(error);
+          } catch (Throwable e) {
+            logger.log(Level.WARNING, "exception thrown by Listener::onReadFailure", e);
+          }
+        }
+      };
+    }
+
+    static Listener disabled() {
+      return DisabledListener.INSTANCE;
+    }
+  }
+
+  private enum DisabledListener implements Listener {
+    INSTANCE;
+
+    @Override
+    public void onReadSuccess() {}
+
+    @Override
+    public void onReadFailure(Throwable unused) {}
   }
 
   @SuppressWarnings("unused") // VarHandle indirection
@@ -95,6 +147,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     private final Viewer viewer;
+    private final Listener listener;
     private final ConcurrentLinkedQueue<ByteBuffer> readQueue = new ConcurrentLinkedQueue<>();
 
     private volatile ReadingState state = INITIAL;
@@ -109,9 +162,13 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     CacheReadingSubscription(
-        Subscriber<? super List<ByteBuffer>> downstream, Executor executor, Viewer viewer) {
+        Subscriber<? super List<ByteBuffer>> downstream,
+        Executor executor,
+        Viewer viewer,
+        Listener listener) {
       super(downstream, executor);
       this.viewer = viewer;
+      this.listener = listener.guarded(); // Ensure the listener doesn't throw
     }
 
     @Override
@@ -203,10 +260,12 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
 
       if (error != null) {
         state = DISPOSED;
+        listener.onReadFailure(error);
         signalError(error);
       } else if (read < 0) {
         endOfFile = true;
         state = DISPOSED;
+        listener.onReadSuccess();
         signal(true); // Force completion signal
       } else {
         if (read > 0) {

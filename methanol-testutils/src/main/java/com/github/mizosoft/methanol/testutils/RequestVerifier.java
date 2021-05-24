@@ -121,7 +121,11 @@ public final class RequestVerifier {
   }
 
   public RequestVerifier containsHeaders(HttpHeaders headers) {
-    assertThat(request.headers().map()).containsAllEntriesOf(headers.map());
+    if (!headers.map().isEmpty()) {
+      // containsAllEntriesOf fails if headers.map() is empty
+      // https://github.com/assertj/assertj-core/issues/2226
+      assertThat(request.headers().map()).containsAllEntriesOf(headers.map());
+    }
     return this;
   }
 

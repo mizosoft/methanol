@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -39,13 +38,8 @@ public interface InternalCache {
   void update(CacheResponse cacheResponse);
 
   @Nullable
-  NetworkResponse put(@Nullable CacheResponse cacheResponse, NetworkResponse networkResponse);
+  NetworkResponse put(
+      HttpRequest request, @Nullable CacheResponse cacheResponse, NetworkResponse networkResponse);
 
   void remove(URI uri);
-
-  void onRequest(URI uri);
-
-  void onNetworkUse(URI uri);
-
-  void onStatus(URI uri, CacheStatus status);
 }

@@ -29,10 +29,10 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 
-import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.CacheInterceptor;
+import com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher;
 import com.github.mizosoft.methanol.internal.cache.CacheResponse;
 import com.github.mizosoft.methanol.internal.cache.CacheResponseMetadata;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
@@ -84,6 +84,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
   private final Executor executor;
   private final boolean userVisibleExecutor;
   private final StatsRecorder statsRecorder;
+  private final CacheListener listener;
   private final Clock clock;
   private final InternalCache internalCache = new InternalCacheView();
 
@@ -109,9 +110,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
             builder.store,
             () -> storeFactory.create(builder.cacheDirectory, builder.maxSize, executor));
 
-    this.statsRecorder =
+    statsRecorder =
         requireNonNullElseGet(builder.statsRecorder, StatsRecorder::createConcurrentRecorder);
-    this.clock = requireNonNullElseGet(builder.clock, Utils::systemMillisUtc);
+    listener = new CacheListener(statsRecorder, builder.listener);
+    clock = requireNonNullElseGet(builder.clock, Utils::systemMillisUtc);
   }
 
   Store storeForTesting() {
@@ -133,6 +135,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
   /** Returns an {@code Optional} containing this cache's executor if one is explicitly set. */
   public Optional<Executor> executor() {
     return userVisibleExecutor ? Optional.of(executor) : Optional.empty();
+  }
+
+  /** Returns this cache's listener if one is specified. */
+  public Optional<Listener> listener() {
+    return listener.userListener();
   }
 
   /** Returns the size this cache occupies in bytes. */
@@ -278,7 +285,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
   /** Called by {@code Methanol} when building the interceptor chain. */
   Interceptor interceptor(@Nullable Executor clientExecutor) {
     return new CacheInterceptor(
-        internalCache, executor, requireNonNullElse(clientExecutor, executor), clock);
+        internalCache, listener, executor, requireNonNullElse(clientExecutor, executor), clock);
   }
 
   private static String key(HttpRequest request) {
@@ -322,7 +329,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     private @Nullable CacheResponse getCacheResponse(HttpRequest request, Viewer viewer) {
       var metadata = tryRecoverMetadata(viewer);
       if (metadata != null && metadata.matches(request)) {
-        return new CacheResponse(metadata, viewer, executor, request, clock.instant());
+        return new CacheResponse(
+            metadata, viewer, executor, listener.readListener(request), request, clock.instant());
       }
 
       viewer.close();
@@ -344,17 +352,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public @Nullable NetworkResponse put(
-        @Nullable CacheResponse cacheResponse, NetworkResponse networkResponse) {
+        HttpRequest request,
+        @Nullable CacheResponse cacheResponse,
+        NetworkResponse networkResponse) {
       try {
-        var editor =
-            cacheResponse != null
-                ? cacheResponse.edit()
-                : store.edit(key(networkResponse.get().uri()));
-
+        var editor = cacheResponse != null ? cacheResponse.edit() : store.edit(key(request));
         if (editor != null) {
           editor.metadata(CacheResponseMetadata.from(networkResponse.get()).encode());
-          return networkResponse.writingWith(
-              editor, new RecordingWriteListener(networkResponse.get().uri(), statsRecorder));
+          return networkResponse.writingWith(editor, listener.writeListener(request));
         }
       } catch (IOException e) {
         logger.log(Level.WARNING, "failed to start cache edit", e);
@@ -370,53 +375,137 @@ public final class HttpCache implements AutoCloseable, Flushable {
         logger.log(Level.WARNING, "entry removal failure", e);
       }
     }
+  }
 
-    @Override
-    public void onRequest(URI uri) {
-      statsRecorder.recordRequest(uri);
+  /** A listener to request/response & read/write events within the cache. */
+  public interface Listener {
+
+    /** Called when the cache receives a request. */
+    default void onRequest(HttpRequest request) {}
+
+    /**
+     * Called when the cache is about to use network due to a cache miss. The given response
+     * represents the inapplicable stored response if one was available.
+     */
+    default void onNetworkUse(HttpRequest request, @Nullable TrackedResponse<?> cacheResponse) {}
+
+    /**
+     * Called when the cache is ready to serve the response. The given response's {@link
+     * CacheAwareResponse#cacheStatus() cache status} can be examined to know how the response was
+     * constructed by the cache. This method is called before the response body is read.
+     */
+    default void onResponse(HttpRequest request, CacheAwareResponse<?> response) {}
+
+    /** Called when the response body is successfully read from cache. */
+    default void onReadSuccess(HttpRequest request) {}
+
+    /** Called when a read failure is encountered while reading the response body from cache. */
+    default void onReadFailure(HttpRequest request, Throwable error) {}
+
+    /** Called when the response body is successfully written to cache. */
+    default void onWriteSuccess(HttpRequest request) {}
+
+    /** Called when a write failure is encountered while writing the response body to cache. */
+    default void onWriteFailure(HttpRequest request, Throwable error) {}
+  }
+
+  private enum DisabledListener implements Listener {
+    INSTANCE
+  }
+
+  private static final class CacheListener implements Listener {
+    private final StatsRecorder statsRecorder;
+    private final Listener userListener;
+
+    CacheListener(StatsRecorder statsRecorder, @Nullable Listener userListener) {
+      this.statsRecorder = statsRecorder;
+      this.userListener = requireNonNullElse(userListener, DisabledListener.INSTANCE);
+    }
+
+    CacheReadingPublisher.Listener readListener(HttpRequest request) {
+      return new CacheReadingPublisher.Listener() {
+        @Override
+        public void onReadSuccess() {
+          CacheListener.this.onReadSuccess(request);
+        }
+
+        @Override
+        public void onReadFailure(Throwable error) {
+          CacheListener.this.onReadFailure(request, error);
+        }
+      };
+    }
+
+    CacheWritingPublisher.Listener writeListener(HttpRequest request) {
+      return new CacheWritingPublisher.Listener() {
+        @Override
+        public void onWriteSuccess() {
+          CacheListener.this.onWriteSuccess(request);
+        }
+
+        @Override
+        public void onWriteFailure(Throwable error) {
+          CacheListener.this.onWriteFailure(request, error);
+        }
+      };
+    }
+
+    Optional<Listener> userListener() {
+      return Optional.of(userListener).filter(listener -> listener != DisabledListener.INSTANCE);
     }
 
     @Override
-    public void onNetworkUse(URI uri) {
-      statsRecorder.recordNetworkUse(uri);
+    public void onRequest(HttpRequest request) {
+      statsRecorder.recordRequest(request.uri());
+      userListener.onRequest(request);
     }
 
     @Override
-    public void onStatus(URI uri, CacheStatus status) {
-      switch (status) {
+    public void onNetworkUse(HttpRequest request, @Nullable TrackedResponse<?> cacheResponse) {
+      statsRecorder.recordNetworkUse(request.uri());
+      userListener.onNetworkUse(request, cacheResponse);
+    }
+
+    @Override
+    public void onResponse(HttpRequest request, CacheAwareResponse<?> response) {
+      switch (response.cacheStatus()) {
         case MISS:
         case UNSATISFIABLE:
-          statsRecorder.recordMiss(uri);
+          statsRecorder.recordMiss(request.uri());
           break;
 
         case HIT:
         case CONDITIONAL_HIT:
-          statsRecorder.recordHit(uri);
+          statsRecorder.recordHit(request.uri());
           break;
 
         default:
-          throw new AssertionError("unexpected status: " + status);
+          throw new AssertionError("unexpected status: " + response.cacheStatus());
       }
-    }
-  }
 
-  private static final class RecordingWriteListener implements CacheWritingPublisher.Listener {
-    private final URI uri;
-    private final StatsRecorder recorder;
-
-    RecordingWriteListener(URI uri, StatsRecorder recorder) {
-      this.uri = uri;
-      this.recorder = recorder;
+      userListener.onResponse(request, response);
     }
 
     @Override
-    public void onWriteSuccess() {
-      recorder.recordWriteSuccess(uri);
+    public void onReadSuccess(HttpRequest request) {
+      userListener.onReadSuccess(request);
     }
 
     @Override
-    public void onWriteFailure() {
-      recorder.recordWriteFailure(uri);
+    public void onReadFailure(HttpRequest request, Throwable error) {
+      userListener.onReadFailure(request, error);
+    }
+
+    @Override
+    public void onWriteSuccess(HttpRequest request) {
+      statsRecorder.recordWriteSuccess(request.uri());
+      userListener.onWriteSuccess(request);
+    }
+
+    @Override
+    public void onWriteFailure(HttpRequest request, Throwable error) {
+      statsRecorder.recordWriteFailure(request.uri());
+      userListener.onWriteFailure(request, error);
     }
   }
 
@@ -782,6 +871,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     @MonotonicNonNull Path cacheDirectory;
     @MonotonicNonNull Executor executor;
     @MonotonicNonNull StatsRecorder statsRecorder;
+    @MonotonicNonNull Listener listener;
 
     @MonotonicNonNull Clock clock;
     @MonotonicNonNull Store store;
@@ -817,6 +907,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
     /** Sets the cache's {@code StatsRecorder}. */
     public Builder statsRecorder(StatsRecorder statsRecorder) {
       this.statsRecorder = requireNonNull(statsRecorder);
+      return this;
+    }
+
+    /** Sets the cache's {@code Listener}. */
+    public Builder listener(Listener listener) {
+      this.listener = requireNonNull(listener);
       return this;
     }
 

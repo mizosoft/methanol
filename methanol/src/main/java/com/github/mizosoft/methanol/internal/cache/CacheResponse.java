@@ -32,9 +32,12 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
       CacheResponseMetadata metadata,
       Viewer viewer,
       Executor executor,
+      CacheReadingPublisher.Listener readListener,
       HttpRequest request,
       Instant now) {
-    super(metadata.toResponseBuilder().buildTracked(), new CacheReadingPublisher(viewer, executor));
+    super(
+        metadata.toResponseBuilder().buildTracked(),
+        new CacheReadingPublisher(viewer, executor, readListener));
     this.viewer = viewer;
     this.strategy = new CacheStrategy(request, response, now);
   }
