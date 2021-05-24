@@ -1,4 +1,6 @@
+import java.nio.file.Files
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 dependencies {
@@ -28,6 +30,10 @@ test {
   systemProperty 'junit.jupiter.execution.timeout.mode', 'disabled_on_debug'
 }
 
+ext {
+  tckLoggers = new ConcurrentHashMap<String, PrintWriter>()
+}
+
 task tckTest(type: Test) {
   useTestNG()
   include '**/tck/**'
@@ -42,15 +48,54 @@ task tckTest(type: Test) {
     systemProperties.TCK_NO_SIGNAL_TIMEOUT_MILLIS = 100
   }
 
-  timeout = Duration.ofMinutes(15)
+  timeout = Duration.ofMinutes(10)
 
-  def runningTckTestClassName = new AtomicReference<String>()
-  beforeTest { descriptor ->
-    if (runningTckTestClassName.getAndSet(descriptor.className) != descriptor.className) {
-      println "Running TCK test: ${descriptor.className.tokenize('.').last()}"
+  def runningTckTest = new AtomicReference<String>()
+
+  beforeTest { TestDescriptor descriptor ->
+    file('build/test-results/tckTest/logs').mkdirs()
+
+    def logger = tckLoggers.computeIfAbsent(descriptor.className) {
+      new PrintWriter(
+          Files.newBufferedWriter(
+              file("build/test-results/tckTest/logs/${descriptor.className}.log").toPath()), true)
     }
+
+    if (runningTckTest.getAndSet(descriptor.className) != descriptor.className) {
+      println "Running TCK test: ${descriptor.className.tokenize('.').last()}"
+    } else {
+      logger.println()
+    }
+
+    logger.println("Running ${descriptor.displayName}")
+  }
+
+  afterTest { TestDescriptor descriptor, TestResult result ->
+    def logger = tckLoggers.get(descriptor.className)
+    logger.println("Result: ${result.resultType}")
+    if (!result.exceptions.empty) {
+      if (result.exceptions.size() == 1) {
+        result.exceptions.first().printStackTrace(logger)
+      } else {
+        def exception = new Throwable("multiple test failures")
+        result.exceptions.forEach { exception.addSuppressed(it) }
+        exception.printStackTrace(logger)
+      }
+    }
+
+    logger.println()
+    logger.println('*'.repeat(120))
   }
 }
+
+task closeTckLoggers {
+  doFirst {
+    tckLoggers.values().forEach { it.close() }
+    tckLoggers.clear()
+  }
+}
+
+tckTest.finalizedBy closeTckLoggers
 
 check.dependsOn tckTest
 

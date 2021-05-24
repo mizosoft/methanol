@@ -63,8 +63,8 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   private StoreContext storeContext;
 
   /**
-   * The list of viewers opened during a test method execution. CacheReadingPublisher already closes
-   * the viewer when the body is consumed or an error is signalled amid transmission. However, some
+   * The list of viewers opened during a test method execution. CacheReadingPublisher closes the
+   * viewer when the body is consumed or an error is signalled amid transmission. However, some
    * tests don't lead to that (e.g. trying to subscribe with a null subscriber). So we double-check
    * after each test.
    */
