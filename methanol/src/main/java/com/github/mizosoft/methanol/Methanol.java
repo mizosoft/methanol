@@ -837,15 +837,12 @@ public final class Methanol extends HttpClient {
     private HttpRequest rewriteRequest(HttpRequest request) {
       var rewrittenRequest = MutableRequest.copyOf(request);
 
-      // Resolve with base URI
-      baseUri
-          .map(baseUri -> validateUri(baseUri.resolve(request.uri())))
-          .ifPresent(rewrittenRequest::uri);
+      baseUri.map(baseUri -> baseUri.resolve(request.uri())).ifPresent(rewrittenRequest::uri);
+      validateUri(rewrittenRequest.uri());
 
       var originalHeadersMap = request.headers().map();
       var defaultHeadersMap = defaultHeaders.map();
 
-      // Add default headers if absent from the request
       defaultHeadersMap.forEach(
           (name, values) -> {
             if (!originalHeadersMap.containsKey(name)) {
@@ -853,7 +850,6 @@ public final class Methanol extends HttpClient {
             }
           });
 
-      // Add Accept-Encoding if absent from the request
       if (autoAcceptEncoding
           && !originalHeadersMap.containsKey("Accept-Encoding")
           && !defaultHeadersMap.containsKey("Accept-Encoding")) {
@@ -870,7 +866,6 @@ public final class Methanol extends HttpClient {
           .map(body -> ((MimeBodyPublisher) body).mediaType())
           .ifPresent(mediaType -> rewrittenRequest.setHeader("Content-Type", mediaType.toString()));
 
-      // Add default timeout if not already present
       if (request.timeout().isEmpty()) {
         requestTimeout.ifPresent(rewrittenRequest::timeout);
       }

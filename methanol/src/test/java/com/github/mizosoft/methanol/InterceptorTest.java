@@ -196,11 +196,11 @@ class InterceptorTest {
     var client = Methanol.newBuilder(backend)
         .backendInterceptor(mutatingInterceptor)
         .build();
-    var request = GET("https:/example.com/").headers("X-My-Header", "abc");
+    var request = GET("https://example.com/").headers("X-My-Header", "abc");
 
     client.send(request, BodyHandlers.discarding());
     verifyThat(backend.request)
-        .hasUri("https:/example.com/?q=val")
+        .hasUri("https://example.com/?q=val")
         .hasHeadersExactly(
             "Accept", "text/html",
             "Accept-Encoding", acceptEncodingValue())
@@ -208,7 +208,7 @@ class InterceptorTest {
 
     client.sendAsync(request, BodyHandlers.discarding());
     verifyThat(backend.request)
-        .hasUri("https:/example.com/?q=val")
+        .hasUri("https://example.com/?q=val")
         .hasHeadersExactly(
             "Accept", "text/html",
             "Accept-Encoding", acceptEncodingValue())
@@ -293,13 +293,13 @@ class InterceptorTest {
         .backendInterceptor(fourthInterceptor)
         .build();
 
-    client.send(GET(""), BodyHandlers.discarding());
+    client.send(GET("https://example.com"), BodyHandlers.discarding());
     firstInterceptor.assertTag(1);
     secondInterceptor.assertTag(2);
     thirdInterceptor.assertTag(3);
     fourthInterceptor.assertTag(4);
 
-    client.sendAsync(GET(""), BodyHandlers.discarding());
+    client.sendAsync(GET("https://example.com"), BodyHandlers.discarding());
     firstInterceptor.assertAsyncTag(1);
     secondInterceptor.assertAsyncTag(2);
     thirdInterceptor.assertAsyncTag(3);
@@ -387,7 +387,7 @@ class InterceptorTest {
         .interceptor(clientInterceptor)
         .backendInterceptor(backendInterceptor)
         .build();
-    var request = MutableRequest.create().tag(Double.class, 1.0);
+    var request = GET("https://example.com").tag(Double.class, 1.0);
 
     client.send(request, BodyHandlers.discarding());
     verifyThat(clientInterceptorRequest.get())

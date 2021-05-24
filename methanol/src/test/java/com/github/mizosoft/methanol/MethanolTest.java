@@ -321,7 +321,7 @@ class MethanolTest {
   void tagging() throws Exception {
     var backend = new RecordingClient();
     var client = Methanol.newBuilder(backend).build();
-    var request = MutableRequest.create().tag(Integer.class, 1);
+    var request = GET("https://example.com").tag(Integer.class, 1);
     client.send(request, BodyHandlers.discarding());
     verifyThat(backend.request).containsTag(Integer.class, 1);
   }
