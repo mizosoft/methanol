@@ -261,24 +261,26 @@ class MutableRequestTest {
     var request = MutableRequest.create()
         .tag(Integer.class, 1)
         .tag(new TypeRef<>() {}, List.of("a", "b"));
-    assertThat(request.tag(Integer.class)).hasValue(1);
-    assertThat(request.tag(new TypeRef<List<String>>() {})).hasValue(List.of("a", "b"));
-    assertThat(request.tag(String.class)).isEmpty();
+    verifyThat(request)
+        .containsTag(Integer.class, 1)
+        .containsTag(new TypeRef<>() {}, List.of("a", "b"))
+        .doesNotContainTag(String.class);
     assertThat(request.tags()).containsValues(1, List.of("a", "b"));
-
+    
     var immutableRequest = request.toImmutableRequest();
-    assertThat(immutableRequest.tag(Integer.class)).hasValue(1);
-    assertThat(immutableRequest.tag(new TypeRef<List<String>>() {})).hasValue(List.of("a", "b"));
-    assertThat(immutableRequest.tag(String.class)).isEmpty();
+    verifyThat(immutableRequest)
+        .containsTag(Integer.class, 1)
+        .containsTag(new TypeRef<>() {}, List.of("a", "b"))
+        .doesNotContainTag(String.class);
     assertThat(immutableRequest.tags()).containsValues(1, List.of("a", "b"));
   }
 
   @Test
   void copyWithTags() {
     var request = MutableRequest.create().tag(Integer.class, 1);
-    assertThat(request.copy().tag(Integer.class)).hasValue(1);
-    assertThat(MutableRequest.copyOf(request).tag(Integer.class)).hasValue(1);
-    assertThat(MutableRequest.copyOf(request.toImmutableRequest()).tag(Integer.class)).hasValue(1);
+    verifyThat(request.copy()).containsTag(Integer.class, 1);
+    verifyThat(MutableRequest.copyOf(request)).containsTag(Integer.class, 1);
+    verifyThat(MutableRequest.copyOf(request.toImmutableRequest())).containsTag(Integer.class, 1);
   }
 
   @Test

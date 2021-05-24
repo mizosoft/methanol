@@ -25,6 +25,8 @@ package com.github.mizosoft.methanol.testutils;
 import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.mizosoft.methanol.TaggableRequest;
+import com.github.mizosoft.methanol.TypeRef;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
@@ -32,6 +34,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.time.Duration;
 import java.util.Optional;
+import org.assertj.core.api.Assertions;
+import org.assertj.core.api.InstanceOfAssertFactories;
 
 /** A small DSL for testing {@code HttpRequests}. */
 @SuppressWarnings({"UnusedReturnValue", "OptionalUsedAsFieldOrParameterType"})
@@ -118,6 +122,29 @@ public final class RequestVerifier {
 
   public RequestVerifier containsHeaders(HttpHeaders headers) {
     assertThat(request.headers().map()).containsAllEntriesOf(headers.map());
+    return this;
+  }
+
+  public <T> RequestVerifier containsTag(Class<T> type, T value) {
+    assertThat(request)
+        .asInstanceOf(InstanceOfAssertFactories.type(TaggableRequest.class))
+        .extracting(request -> request.tag(type), Assertions.OPTIONAL)
+        .hasValue(value);
+    return this;
+  }
+
+  public <T> RequestVerifier containsTag(TypeRef<T> type, T value) {
+    assertThat(request)
+        .asInstanceOf(InstanceOfAssertFactories.type(TaggableRequest.class))
+        .extracting(request -> request.tag(type), Assertions.OPTIONAL)
+        .hasValue(value);
+    return this;
+  }
+
+  public RequestVerifier doesNotContainTag(Class<?> type) {
+    assertThat(TaggableRequest.from(request))
+        .extracting(request -> request.tag(type), Assertions.OPTIONAL)
+        .isEmpty();
     return this;
   }
 

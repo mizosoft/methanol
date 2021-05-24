@@ -40,6 +40,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -247,7 +248,6 @@ class InterceptorTest {
     private int tag;
     private int asyncTag;
 
-
     TaggedInterceptor(
         @Nullable HttpResponseStub<?> response, AtomicInteger tagger, AtomicInteger asyncTagger) {
       super(response);
@@ -368,6 +368,48 @@ class InterceptorTest {
 
     client.sendAsync(GET(""), BodyHandlers.discarding());
     assertThat(recordingInterceptor.pushPromiseHandler).isSameAs(pushPromiseHandler);
+  }
+
+  @Test
+  void taggingRequests() throws Exception {
+    var backend = new RecordingClient();
+    var clientInterceptorRequest = new AtomicReference<HttpRequest>();
+    var backendInterceptorRequest = new AtomicReference<HttpRequest>();
+    var clientInterceptor = Interceptor.create(request -> {
+      clientInterceptorRequest.set(request);
+      return MutableRequest.copyOf(request).tag(Integer.class, 1);
+    });
+    var backendInterceptor = Interceptor.create(request -> {
+      backendInterceptorRequest.set(request);
+      return MutableRequest.copyOf(request).tag(String.class, "a");
+    });
+    var client = Methanol.newBuilder(backend)
+        .interceptor(clientInterceptor)
+        .backendInterceptor(backendInterceptor)
+        .build();
+    var request = MutableRequest.create().tag(Double.class, 1.0);
+
+    client.send(request, BodyHandlers.discarding());
+    verifyThat(clientInterceptorRequest.get())
+        .containsTag(Double.class, 1.0);
+    verifyThat(backendInterceptorRequest.get())
+        .containsTag(Double.class, 1.0)
+        .containsTag(Integer.class, 1);
+    verifyThat(backend.request)
+        .containsTag(Double.class, 1.0)
+        .containsTag(Integer.class, 1)
+        .containsTag(String.class, "a");
+
+    client.sendAsync(request, BodyHandlers.discarding()).join();
+    verifyThat(clientInterceptorRequest.get())
+        .containsTag(Double.class, 1.0);
+    verifyThat(backendInterceptorRequest.get())
+        .containsTag(Double.class, 1.0)
+        .containsTag(Integer.class, 1);
+    verifyThat(backend.request)
+        .containsTag(Double.class, 1.0)
+        .containsTag(Integer.class, 1)
+        .containsTag(String.class, "a");
   }
 
   private static String acceptEncodingValue() {
