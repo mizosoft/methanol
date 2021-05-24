@@ -36,6 +36,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static java.time.ZoneOffset.UTC;
 import static java.util.function.Predicate.isEqual;
+import static java.util.function.Predicate.not;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIOException;
@@ -94,6 +95,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -3075,12 +3077,14 @@ class HttpCacheTest {
     var request = GET(serverUri).tag(Integer.class, 1);
 
     get(request);
+    await().pollDelay(Duration.ZERO).until(() -> listener.events, not(Collection::isEmpty));
     listener.assertNext(OnWriteFailure.class, request)
         .extracting(event -> Utils.getDeepCompletionCause(event.error)) // Can be a CompletionException
         .isInstanceOf(TestException.class);
 
     failingStore.allowWrites = true;
     get(request);
+    await().pollDelay(Duration.ZERO).until(() -> listener.events, not(Collection::isEmpty));
     listener.assertNext(OnWriteSuccess.class, request);
 
     assertThatExceptionOfType(TestException.class).isThrownBy(() -> get(request));
