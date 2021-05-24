@@ -1,0 +1,1238 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Lightweight HTTP extensions for Java">
+      
+      
+      
+        <meta name="author" content="Moataz Abdelnasser">
+      
+      
+        <link rel="canonical" href="https://mizosoft.github.io/methanol/caching/">
+      
+      <link rel="icon" href="../images/flask.png">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-7.1.5">
+    
+    
+      
+        <title>Caching - Methanol</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.bde7dde4.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ef6f36e2.min.css">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>:root{--md-text-font-family:"Roboto";--md-code-font-family:"Roboto Mono"}</style>
+      
+    
+    
+    
+      <link rel="stylesheet" href="../css/style.css">
+    
+    
+      
+        
+<script>window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga("create","UA-195982536-1","auto"),ga("set","anonymizeIp",!0),ga("send","pageview"),document.addEventListener("DOMContentLoaded",function(){document.forms.search&&document.forms.search.query.addEventListener("blur",function(){var e;this.value&&(e=document.location.pathname,ga("send","pageview",e+"?q="+this.value))}),"undefined"!=typeof location$&&location$.subscribe(function(e){ga("send","pageview",e.pathname)})})</script>
+<script async src="https://www.google-analytics.com/analytics.js"></script>
+      
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    <script>function __prefix(e){return new URL("..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+    
+      <script>var palette=__get("__palette");if(null!==palette&&"object"==typeof palette.color)for(var key in palette.color)document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#caching" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Methanol" class="md-header__button md-logo" aria-label="Methanol" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 22a3 3 0 0 1-3-3c0-.6.18-1.16.5-1.63L9 7.81V6a1 1 0 0 1-1-1V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1v1.81l5.5 9.56c.32.47.5 1.03.5 1.63a3 3 0 0 1-3 3H6m-1-3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1c0-.21-.07-.41-.18-.57l-2.29-3.96L14 17l-5.07-5.07-3.75 6.5c-.11.16-.18.36-.18.57m8-9a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Methanol
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Caching
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <form class="md-header__option" data-md-component="palette">
+        
+          
+          
+          <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo" type="radio" name="__palette" id="__palette_1">
+          
+            <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_2" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9v1z"/></svg>
+            </label>
+          
+        
+          
+          
+          <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="indigo" type="radio" name="__palette" id="__palette_2">
+          
+            <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-.77 3-2.53 3-4.58a5 5 0 0 0-5-5z"/></svg>
+            </label>
+          
+        
+      </form>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        
+<a href="https://github.com/mizosoft/methanol/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    mizosoft/methanol
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Methanol" class="md-nav__button md-logo" aria-label="Methanol" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 22a3 3 0 0 1-3-3c0-.6.18-1.16.5-1.63L9 7.81V6a1 1 0 0 1-1-1V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1v1.81l5.5 9.56c.32.47.5 1.03.5 1.63a3 3 0 0 1-3 3H6m-1-3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1c0-.21-.07-.41-.18-.57l-2.29-3.96L14 17l-5.07-5.07-3.75 6.5c-.11.16-.18.36-.18.57m8-9a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1z"/></svg>
+
+    </a>
+    Methanol
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/mizosoft/methanol/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    mizosoft/methanol
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/latest/" class="md-nav__link">
+        🔗 Javadoc
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
+      
+      <label class="md-nav__link" for="__nav_3">
+        Documentation
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Documentation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Documentation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../enhanced_httpclient/" class="md-nav__link">
+        Enhanced HttpClient
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Caching
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Caching
+      </a>
+      
+        
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    Setup
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cachecontrol" class="md-nav__link">
+    CacheControl
+  </a>
+  
+    <nav class="md-nav" aria-label="CacheControl">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#age" class="md-nav__link">
+    Age
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#freshness" class="md-nav__link">
+    Freshness
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#staleness" class="md-nav__link">
+    Staleness
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-cache" class="md-nav__link">
+    No Cache
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#only-if-cached" class="md-nav__link">
+    Only If Cached
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prohibiting-storage" class="md-nav__link">
+    Prohibiting Storage
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-revalidation" class="md-nav__link">
+    Asynchronous Revalidation
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invalidation" class="md-nav__link">
+    Invalidation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-operation-statistics" class="md-nav__link">
+    Cache Operation &amp; Statistics
+  </a>
+  
+    <nav class="md-nav" aria-label="Cache Operation &amp; Statistics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cacheawareresponse" class="md-nav__link">
+    CacheAwareResponse
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#httpcachestats" class="md-nav__link">
+    HttpCache.Stats
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    Limitations
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../object_mapping/" class="md-nav__link">
+        Object Mapping
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interceptors/" class="md-nav__link">
+        Interceptors
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decompression/" class="md-nav__link">
+        Decompression
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../media_types/" class="md-nav__link">
+        Meida Types
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multipart_and_forms/" class="md-nav__link">
+        Multipart & Forms
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../progress_tracking/" class="md-nav__link">
+        Progress Tracking
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interruptible_reading/" class="md-nav__link">
+        Interruptible Reading
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../writablebodypublisher/" class="md-nav__link">
+        WritableBodyPublisher
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      <label class="md-nav__link" for="__nav_4">
+        Adapters
+        <span class="md-nav__icon md-icon"></span>
+      </label>
+      <nav class="md-nav" aria-label="Adapters" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          Adapters
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/gson/" class="md-nav__link">
+        methanol-gson
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/jackson/" class="md-nav__link">
+        methanol-jackson
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/jackson_flux/" class="md-nav__link">
+        methanol-jackson-flux
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/jaxb/" class="md-nav__link">
+        methanol-jaxb
+      </a>
+    </li>
+  
+
+          
+            
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/protobuf/" class="md-nav__link">
+        methanol-protobuf
+      </a>
+    </li>
+  
+
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../brotli/" class="md-nav__link">
+        Brotli
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/" class="md-nav__link">
+        Benchmarks
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHANGELOG/" class="md-nav__link">
+        Change Log
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    Setup
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cachecontrol" class="md-nav__link">
+    CacheControl
+  </a>
+  
+    <nav class="md-nav" aria-label="CacheControl">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#age" class="md-nav__link">
+    Age
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#freshness" class="md-nav__link">
+    Freshness
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#staleness" class="md-nav__link">
+    Staleness
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-cache" class="md-nav__link">
+    No Cache
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#only-if-cached" class="md-nav__link">
+    Only If Cached
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prohibiting-storage" class="md-nav__link">
+    Prohibiting Storage
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-revalidation" class="md-nav__link">
+    Asynchronous Revalidation
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invalidation" class="md-nav__link">
+    Invalidation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cache-operation-statistics" class="md-nav__link">
+    Cache Operation &amp; Statistics
+  </a>
+  
+    <nav class="md-nav" aria-label="Cache Operation &amp; Statistics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cacheawareresponse" class="md-nav__link">
+    CacheAwareResponse
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#httpcachestats" class="md-nav__link">
+    HttpCache.Stats
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    Limitations
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                <h1 id="caching">Caching<a class="headerlink" href="#caching" title="Permanent link">&para;</a></h1>
+<p>Methanol comes with an <a href="https://tools.ietf.org/html/rfc7234">RFC-compliant</a> HTTP cache that supports both disk &amp; memory storage
+backends.</p>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<p>An <code>HttpCache</code> is utilized by injecting it into a <code>Methanol</code> client. First, it needs to know where
+it stores entries and how much space it can occupy.</p>
+<div class="tabbed-set" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><label for="__tabbed_1_1">Disk</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="c1">// Select a size limit thats suitable for your application</span>
+<span class="kt">long</span> <span class="n">maxSizeInBytes</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span> <span class="c1">// 100 MBs</span>
+
+<span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="n">maxSizeInBytes</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="c1">// The cache intercepts requests you send through this client</span>
+<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="c1">// It&#39;s important that you close the disk cache after you&#39;re done</span>
+<span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><label for="__tabbed_1_2">Memory</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="c1">// Select a size limit thats suitable for your application</span>
+<span class="kt">long</span> <span class="n">maxSizeInBytes</span> <span class="o">=</span> <span class="mi">50</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span> <span class="c1">// 50 MBs</span>
+
+<span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">cacheOnMemory</span><span class="p">(</span><span class="n">maxSizeInBytes</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="c1">// The cache intercepts requests you send through this client</span>
+<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="c1">// No need to close, but doing so avoids surprises if you later switch to disk</span>
+<span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span>
+</code></pre></div>
+</div>
+</div>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p>You can pass the builder a custom <code>Executor</code> for launching asynchronous tasks needed by the
+cache. By default, an unbounded thread pool of daemon threads is used.</p>
+</div>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>To avoid surprises, make sure the disk directory is exclusively owned by a single cache instance
+as long as it's open and nothing else. The cache enforces that to some degree by complaining with
+an <code>IOException</code> if it's initialized with a directory that's already in use by another instance
+in the same or a different JVM. Note that you can use the same <code>HttpCache</code> with multiple clients.</p>
+</div>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
+<p>An HTTP cache is a transparent layer between you and the origin server. Its main goal is to save
+time &amp; bandwidth by avoiding network if requested resources are locally retrievable. It does so
+while preserving the typical HTTP client-server semantics. Thus, it should be OK for modules to
+start using a cache-configured <code>Methanol</code> (and hence <code>HttpClient</code>) instance as a drop-in replacement
+without further setup.</p>
+<h2 id="cachecontrol">CacheControl<a class="headerlink" href="#cachecontrol" title="Permanent link">&para;</a></h2>
+<p>Requests override default cache behaviour using <code>CacheControl</code>.</p>
+<div class="tabbed-set" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><label for="__tabbed_2_1">CacheControl</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="c1">// Specify your cache directives</span>
+<span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">maxAge</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofMinutes</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
+    <span class="p">.</span><span class="na">staleIfError</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">60</span><span class="p">))</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="c1">// Apply the directives to your request</span>
+<span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">cacheControl</span><span class="p">(</span><span class="n">cacheControl</span><span class="p">);</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><label for="__tabbed_2_2">Cache-Control header</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="c1">// Cache-Control headers work as well</span>
+<span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Cache-Control&quot;</span><span class="p">,</span> <span class="s">&quot;max-age=1800, stale-if-error=60&quot;</span><span class="p">);</span>
+</code></pre></div>
+</div>
+</div>
+<p>To properly use <code>CacheControl</code>, it is good to understand the key attributes of a cached response.</p>
+<h3 id="age">Age<a class="headerlink" href="#age" title="Permanent link">&para;</a></h3>
+<p>The <em>age</em> of a stored response is the time it has been resident in your cache or any other cache
+along the route to the origin. In other words, a response's age is the time evaluated since it was
+last generated by the server.</p>
+<h3 id="freshness">Freshness<a class="headerlink" href="#freshness" title="Permanent link">&para;</a></h3>
+<p>A fresh response is one that is servable by the cache without contacting the origin. A server
+specifies how long a stored response stays fresh. This is known as the response's <em>freshness lifetime</em>.
+The <em>freshness value</em> of a response is its age subtracted from its freshness lifetime. A response is
+fresh if its freshness value is <code>&gt;= 0</code>.</p>
+<p><code>CacheControl</code> lets you override a response's freshness lifetime by setting the <code>max-age</code> directive.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
+    <span class="p">.</span><span class="na">maxAge</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="c1">// Override the lifetime set by the server, if any</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+<p>You can specify how fresh you'd like the response to be by putting a lower bound on its freshness value.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
+    <span class="p">.</span><span class="na">minFresh</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofMinutes</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="c1">// Accept a response that stays fresh for at least the next 10 minutes</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Sometimes, a response lacks an explicit freshness lifetime. As encouraged by the standard &amp;
+followed by browsers, Methanol uses a heuristic of 10% of the time between a response's
+generation &amp; last modification times in such cases.</p>
+</div>
+<h3 id="staleness">Staleness<a class="headerlink" href="#staleness" title="Permanent link">&para;</a></h3>
+<p>Responses with negative freshness values are said to be stale. The <em>staleness value</em> of a stored
+response is simply its freshness value negated. Normally, the cache won't serve a stale response until
+it's revalidated with the server. Revalidation causes the cache to ask the server, using special headers
+like <code>If-None-Match</code> &amp; <code>If-Modified-Since</code>, if it can serve the stale response at its disposal. 
+If the server doesn't mind, the cache serves said response without re-downloading its payload.
+Otherwise, the response is re-fetched.</p>
+<p>You can let the cache tolerate some stalness so it doesn't trigger revalidation.</p>
+<div class="tabbed-set" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><label for="__tabbed_3_1">Bounded Staleness</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
+    <span class="p">.</span><span class="na">maxStale</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span> <span class="c1">// Allow at most 30 seconds of staleness</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><label for="__tabbed_3_2">Arbitrary Staleness</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
+    <span class="p">.</span><span class="na">anyMaxStale</span><span class="p">()</span> <span class="c1">// Allow any staleness</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+</div>
+</div>
+<p><code>stale-if-error</code> makes the cache recover from network or server failures if there's a stored response.
+In such occasions, the cache falls back to the stored response if it satisfies the specified staleness.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
+    <span class="p">.</span><span class="na">staleIfError</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+<h3 id="no-cache">No Cache<a class="headerlink" href="#no-cache" title="Permanent link">&para;</a></h3>
+<p>You might want the cache to forward your request to origin even if there's a fresh stored response
+(e.g. refreshing a page). That's what <code>no-cache</code> is meant for.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
+    <span class="p">.</span><span class="na">noCache</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+<p>The cache will use network efficiently. If there's a stored response, its presence is communicated
+to the server, so it can decide to let the cache serve said response if nothing has changed.</p>
+<h3 id="only-if-cached">Only If Cached<a class="headerlink" href="#only-if-cached" title="Permanent link">&para;</a></h3>
+<p>Use <code>only-if-cached</code> to avoid network in all cases. As usual, a stored response is served if it's
+suitable. Otherwise, however, the cache immediately serves a locally generated <code>504 Gateway Timeout</code>
+response.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
+    <span class="p">.</span><span class="na">onlyIfCached</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+<p>A perfect use-case is when network is down or the app is offline. You'd want to get a cached
+response if it's there or otherwise nothing.</p>
+<h3 id="prohibiting-storage">Prohibiting Storage<a class="headerlink" href="#prohibiting-storage" title="Permanent link">&para;</a></h3>
+<p>Use <code>no-store</code> if you don't want the cache to store anything about the response.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span>  <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
+    <span class="p">.</span><span class="na">noStore</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+<p>Note that this, however, doesn't prohibit the cache from serving an already stored response.</p>
+<h3 id="asynchronous-revalidation">Asynchronous Revalidation<a class="headerlink" href="#asynchronous-revalidation" title="Permanent link">&para;</a></h3>
+<p>Sometimes you need a balance between responsiveness &amp; freshness. You are willing to get a response
+immediately even if it's stale, but ensure it is freshened for later access. That's exactly what
+<code>stale-while-revalidate</code> does.</p>
+<p>If the directive is found on a stale response, the cache serves it immediately provided it satisfies
+allowed staleness. What's interesting is that an  asynchronous revalidation is triggered and the response
+is updated in background, keeping things fresh.</p>
+<h2 id="invalidation">Invalidation<a class="headerlink" href="#invalidation" title="Permanent link">&para;</a></h2>
+<p><code>HttpCache</code> has APIs that give you more control over what's stored.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="c1">// Remove the entry mapped to a particular URI</span>
+<span class="n">cache</span><span class="p">.</span><span class="na">remove</span><span class="p">(</span><span class="n">URI</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">));</span>
+
+<span class="c1">// Remove the response variant matching a particular request</span>
+<span class="n">cache</span><span class="p">.</span><span class="na">remove</span><span class="p">(</span>
+    <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">URI</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">))</span>
+        <span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Accept-Encoding&quot;</span><span class="p">,</span> <span class="s">&quot;gzip&quot;</span><span class="p">));</span>
+
+<span class="c1">// Remove specific entries by examining their URIs</span>
+<span class="kd">var</span> <span class="n">iterator</span> <span class="o">=</span> <span class="n">cache</span><span class="p">.</span><span class="na">uris</span><span class="p">();</span>
+<span class="k">while</span> <span class="p">(</span><span class="n">iterator</span><span class="p">.</span><span class="na">hasNext</span><span class="p">())</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="n">uri</span> <span class="o">=</span> <span class="n">iterator</span><span class="p">.</span><span class="na">next</span><span class="p">();</span>  
+  <span class="k">if</span> <span class="p">(</span><span class="n">uri</span><span class="p">.</span><span class="na">getHost</span><span class="p">().</span><span class="na">equals</span><span class="p">(</span><span class="s">&quot;i.imgur.com&quot;</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">iterator</span><span class="p">.</span><span class="na">remove</span><span class="p">();</span>  
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// Remove all entries</span>
+<span class="n">cache</span><span class="p">.</span><span class="na">clear</span><span class="p">();</span>
+
+<span class="c1">// Dispose of the cache by deleting its entries then closing it in an atomic fashion.</span>
+<span class="c1">// The cache is rendered unusable after this call. This is meant for applications that</span>
+<span class="c1">// use a temporary directory for caching in case persistence isn&#39;t needed.</span>
+<span class="n">cache</span><span class="p">.</span><span class="na">dispose</span><span class="p">();</span>
+</code></pre></div>
+<h2 id="cache-operation-statistics">Cache Operation &amp; Statistics<a class="headerlink" href="#cache-operation-statistics" title="Permanent link">&para;</a></h2>
+<p>Cache operation typically involves 3 scenarios.</p>
+<ul>
+<li><strong>Cache Hit</strong>: The blessed scenario; everything was entirely served from cache and no network was
+   used.</li>
+<li><strong>Conditional Cache Hit</strong>: The cache had to contact the origin to revalidate its copy of the
+   response and the server decided it was valid. The cache uses server's response to update some 
+   metadata in background. Response payload isn't downloaded so network is used efficiently.</li>
+<li><strong>Cache Miss</strong>: Either the cache had no matching response or the server decided such response is
+   too stale to be server. In both cases, the whole response is fetched from network.
+   This is when the cache populates or updates its entries if appropriate.</li>
+</ul>
+<h3 id="cacheawareresponse">CacheAwareResponse<a class="headerlink" href="#cacheawareresponse" title="Permanent link">&para;</a></h3>
+<p><code>CacheAwareResponse</code> complements <code>HttpResponse</code> to better reflect cache interference. If a cache is
+installed, any <code>HttpResponse&lt;T&gt;</code> returned by <code>Methanol</code> is also a <code>CacheAwareResponse&lt;T&gt;</code>, which you
+can use to know which of the previous scenarios was the case.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="kd">var</span> <span class="n">response</span> <span class="o">=</span> <span class="p">(</span><span class="n">CacheAwareResponse</span><span class="o">&lt;</span><span class="n">Path</span><span class="o">&gt;</span><span class="p">)</span> <span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span>
+    <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">),</span> <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;banana_cat.mp4&quot;</span><span class="p">)));</span>
+
+<span class="kd">var</span> <span class="n">timeElapsed</span>  <span class="o">=</span> <span class="n">Duration</span><span class="p">.</span><span class="na">between</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">timeRequestSent</span><span class="p">(),</span> <span class="n">response</span><span class="p">.</span><span class="na">timeResponseReceived</span><span class="p">());</span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Time elapsed: &quot;</span> <span class="o">+</span> <span class="n">timeElapsed</span><span class="p">);</span>
+
+<span class="c1">// networkResponse &amp; cacheResponse are optional HttpResponses that you can further investigate</span>
+<span class="kd">var</span> <span class="n">networkResponse</span> <span class="o">=</span> <span class="n">response</span><span class="p">.</span><span class="na">networkResponse</span><span class="p">();</span>
+<span class="kd">var</span> <span class="n">cacheResponse</span> <span class="o">=</span> <span class="n">response</span><span class="p">.</span><span class="na">cacheResponse</span><span class="p">();</span>
+<span class="k">switch</span> <span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">cacheStatus</span><span class="p">())</span> <span class="p">{</span>
+  <span class="k">case</span> <span class="n">HIT</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">networkResponse</span><span class="p">.</span><span class="na">isEmpty</span><span class="p">();</span>
+    <span class="k">assert</span> <span class="n">cacheResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span>
+    <span class="k">break</span><span class="p">;</span>
+
+  <span class="k">case</span> <span class="n">CONDITIONAL_HIT</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">networkResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span>
+    <span class="k">assert</span> <span class="n">cacheResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span>
+    <span class="k">break</span><span class="p">;</span>
+
+  <span class="k">case</span> <span class="n">MISS</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">networkResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span>
+    <span class="c1">// cacheResponse can be absent or present</span>
+    <span class="k">break</span><span class="p">;</span>
+
+  <span class="k">case</span> <span class="n">UNSATISFIABLE</span><span class="p">:</span>
+    <span class="c1">// Network was forbidden by only-if-cached but there was no valid cache response</span>
+    <span class="k">assert</span> <span class="n">response</span><span class="p">.</span><span class="na">statusCode</span><span class="p">()</span> <span class="o">==</span> <span class="n">HttpURLConnection</span><span class="p">.</span><span class="na">HTTP_GATEWAY_TIMEOUT</span><span class="p">;</span>
+    <span class="k">assert</span> <span class="n">networkResponse</span><span class="p">.</span><span class="na">isEmpty</span><span class="p">();</span>
+    <span class="c1">// cacheResponse can be absent or present</span>
+    <span class="k">break</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span>
+</code></pre></div>
+<h3 id="httpcachestats">HttpCache.Stats<a class="headerlink" href="#httpcachestats" title="Permanent link">&para;</a></h3>
+<p>You can examine cache statistics to measure its effectiveness. Statistics are either global or
+correspond to a specific <code>URI</code>.</p>
+<div class="tabbed-set" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><label for="__tabbed_4_1">Global Stats</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="kd">var</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">cache</span><span class="p">.</span><span class="na">stats</span><span class="p">();</span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">hitRate</span><span class="p">());</span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">missRate</span><span class="p">());</span>
+</code></pre></div>
+</div>
+<input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><label for="__tabbed_4_2">URI-specific Stats</label><div class="tabbed-content">
+<div class="highlight"><pre><span></span><code><span class="c1">// Per URI statistics aren&#39;t recorder by default</span>
+<span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">statsRecorder</span><span class="p">(</span><span class="n">StatsRecorder</span><span class="p">.</span><span class="na">createConcurrentPerUriRecorder</span><span class="p">())</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="kd">var</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">cache</span><span class="p">.</span><span class="na">stats</span><span class="p">(</span><span class="n">URI</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">));</span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">hitRate</span><span class="p">());</span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">missRate</span><span class="p">());</span>
+</code></pre></div>
+</div>
+</div>
+<p>See <a href="../api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Stats.html"><code>HttpCache.Stats</code></a> for all recorded statistics.</p>
+<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li>The cache only stores responses to GETs. This is typical for most caches.</li>
+<li>The cache never stores <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/206">partial responses</a>.  </li>
+<li>Only the most recent response <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Vary">variant</a> can be stored.</li>
+<li>The cache doesn't store responses that have a <code>Vary</code> header with any of the values: <code>Cookie</code>, 
+  <code>Cookie2</code>, <code>Authorization</code>, <code>Proxy-Authroization</code>. That's because the <code>HttpClient</code> can implicitly
+  add these to requests, so Methanol won't be able to access their values to match responses against.</li>
+</ul>
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+        
+          <a href="#" class="md-top md-icon" title="Back to top" data-md-component="top" data-md-state="hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"/></svg>
+          </a>
+        
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        <a href="../enhanced_httpclient/" class="md-footer__link md-footer__link--prev" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Enhanced HttpClient
+            </div>
+          </div>
+        </a>
+      
+      
+        <a href="../object_mapping/" class="md-footer__link md-footer__link--next" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Object Mapping
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; 2021 Moataz Abdelnasser
+          </div>
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+        
+      </div>
+      
+  <div class="md-footer-social">
+    
+      
+      
+      <a href="https://github.com/mizosoft" target="_blank" rel="noopener" title="mizosoft on GitHub" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+      </a>
+    
+  </div>
+
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}, "search": "../assets/javascripts/workers/search.d351de03.min.js", "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a1609d9a.min.js"></script>
+      
+    
+  </body>
+</html>
