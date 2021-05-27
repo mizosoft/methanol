@@ -26,9 +26,10 @@ import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuratio
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
+import com.github.mizosoft.methanol.internal.delay.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.AsyncSubscriberAdapter;
 import com.github.mizosoft.methanol.internal.extensions.ByteChannelSubscriber;
-import com.github.mizosoft.methanol.internal.extensions.TimeoutSubscriber;
+import com.github.mizosoft.methanol.internal.extensions.TimeoutBodySubscriber;
 import java.io.Reader;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
@@ -76,11 +77,12 @@ public class MoreBodySubscribers {
    *
    * @throws IllegalArgumentException if the timeout is non-positive
    */
-  public static <T> BodySubscriber<T> withReadTimeout(BodySubscriber<T> base, Duration timeout) {
-    requireNonNull(base, "base");
-    requireNonNull(timeout, "timeout");
+  public static <T> BodySubscriber<T> withReadTimeout(
+      BodySubscriber<T> downstream, Duration timeout) {
+    requireNonNull(downstream);
+    requireNonNull(timeout);
     requirePositiveDuration(timeout);
-    return new TimeoutSubscriber<>(base, timeout, null);
+    return new TimeoutBodySubscriber<>(timeout, Delayer.systemDelayer(), downstream);
   }
 
   /**
@@ -91,12 +93,12 @@ public class MoreBodySubscribers {
    * @throws IllegalArgumentException if the timeout is non-positive
    */
   public static <T> BodySubscriber<T> withReadTimeout(
-      BodySubscriber<T> base, Duration timeout, ScheduledExecutorService scheduler) {
-    requireNonNull(base, "base");
-    requireNonNull(timeout, "timeout");
-    requireNonNull(timeout, "scheduler");
+      BodySubscriber<T> downstream, Duration timeout, ScheduledExecutorService scheduler) {
+    requireNonNull(downstream);
+    requireNonNull(timeout);
+    requireNonNull(timeout);
     requirePositiveDuration(timeout);
-    return new TimeoutSubscriber<>(base, timeout, scheduler);
+    return new TimeoutBodySubscriber<>(timeout, Delayer.of(scheduler), downstream);
   }
 
   /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.cache;
+package com.github.mizosoft.methanol.internal.flow;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,7 +35,7 @@ import java.util.concurrent.RejectedExecutionException;
  * An {@code Executor} that ensures submitted tasks are executed serially. This is similar to
  * Guava's {@code SequentialExecutor} but completely relies on atomics for synchronization.
  */
-class SerialExecutor implements Executor {
+public final class SerialExecutor implements Executor {
   private static final int DRAIN_COUNT_BITS = Long.SIZE - 4; // There're 4 state bits
 
   /** Mask for the drain count maintained in the lower 60 bits of {@link #sync} field. */
@@ -83,7 +83,7 @@ class SerialExecutor implements Executor {
   @SuppressWarnings("unused") // VarHandle indirection
   private volatile long sync;
 
-  SerialExecutor(Executor delegate) {
+  public SerialExecutor(Executor delegate) {
     this.delegate = delegate;
   }
 
@@ -121,7 +121,7 @@ class SerialExecutor implements Executor {
     }
   }
 
-  void shutdown() {
+  public void shutdown() {
     SYNC.getAndBitwiseOr(this, SHUTDOWN);
   }
 

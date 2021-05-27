@@ -40,6 +40,8 @@ import static java.util.Objects.requireNonNullElse;
 import static java.util.Objects.requireNonNullElseGet;
 
 import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.delay.Delayer;
+import com.github.mizosoft.methanol.internal.flow.SerialExecutor;
 import com.github.mizosoft.methanol.internal.function.ThrowingRunnable;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.EOFException;
@@ -82,7 +84,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -922,34 +923,6 @@ public final class DiskStore implements Store {
       @MonotonicNonNull Path dirtyFile;
 
       EntryFiles() {}
-    }
-  }
-
-  /** Delays the execution of a given task. */
-  public interface Delayer {
-
-    /** Arranges for the task to be submitted to the executor after the delay is evaluated. */
-    CompletableFuture<Void> delay(Executor executor, Runnable task, Duration delay);
-
-    /** A Delayer that uses the system-wide scheduler through CompletableFuture::delayedExecutor. */
-    static Delayer systemDelayer() {
-      return SystemDelayer.INSTANCE;
-    }
-  }
-
-  private enum SystemDelayer implements Delayer {
-    INSTANCE;
-
-    @Override
-    public CompletableFuture<Void> delay(Executor executor, Runnable task, Duration delay) {
-      return CompletableFuture.runAsync(task, delayedExecutor(executor, delay));
-    }
-
-    private static Executor delayedExecutor(Executor delegate, Duration delay) {
-      long millis = TimeUnit.MILLISECONDS.convert(delay);
-      return millis <= 0
-          ? delegate // Execute immediately
-          : CompletableFuture.delayedExecutor(millis, TimeUnit.MILLISECONDS, delegate);
     }
   }
 

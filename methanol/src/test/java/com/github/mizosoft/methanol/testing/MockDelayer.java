@@ -22,7 +22,10 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import com.github.mizosoft.methanol.internal.cache.DiskStore.Delayer;
+import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.github.mizosoft.methanol.internal.delay.Delayer;
 import com.github.mizosoft.methanol.testutils.MockClock;
 import java.time.Duration;
 import java.time.Instant;
@@ -31,6 +34,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 
 /** A Delayer that delays tasks based on a MockClock's time. */
@@ -39,14 +43,14 @@ public final class MockDelayer implements Delayer {
   private final Queue<TimestampedTask> taskQueue =
       new PriorityQueue<>(Comparator.comparing(task -> task.stamp));
 
-  MockDelayer(MockClock clock) {
+  public MockDelayer(MockClock clock) {
     this.clock = clock;
     clock.onTick((instant, ticks) -> dispatchExpiredTasks(instant.plus(ticks), false));
   }
 
   @Override
-  public CompletableFuture<Void> delay(Executor executor, Runnable task, Duration delay) {
-    var now = clock.peekInstant(); // Do not advance clock
+  public Future<Void> delay(Executor executor, Runnable task, Duration delay) {
+    var now = clock.peekInstant(); // Do not advance clock if auto-advancing
     var timestampedTask = new TimestampedTask(executor, task, now.plus(delay));
     synchronized (taskQueue) {
       taskQueue.add(timestampedTask);
@@ -62,9 +66,28 @@ public final class MockDelayer implements Delayer {
     }
   }
 
-  void dispatchExpiredTasks(Instant now, boolean ignoreRejected) {
-    TimestampedTask task;
+  public CompletableFuture<Void> peekEarliestTaskFuture() {
     synchronized (taskQueue) {
+      assertThat(taskQueue).isNotEmpty();
+      return taskQueue.element().future;
+    }
+  }
+
+  public CompletableFuture<Void> peekLatestTaskFuture() {
+    synchronized (taskQueue) {
+      assertThat(taskQueue).isNotEmpty();
+
+      TimestampedTask last = null;
+      for (var task : taskQueue) {
+        last = task;
+      }
+      return requireNonNull(last).future;
+    }
+  }
+
+  void dispatchExpiredTasks(Instant now, boolean ignoreRejected) {
+    synchronized (taskQueue) {
+      TimestampedTask task;
       while ((task = taskQueue.peek()) != null && now.compareTo(task.stamp) >= 0) {
         taskQueue.poll();
         try {
