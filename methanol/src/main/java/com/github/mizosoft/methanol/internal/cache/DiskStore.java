@@ -949,7 +949,7 @@ public final class DiskStore implements Store {
       long millis = TimeUnit.MILLISECONDS.convert(delay);
       return millis <= 0
           ? delegate // Execute immediately
-          : CompletableFuture.delayedExecutor(millis, TimeUnit.MILLISECONDS);
+          : CompletableFuture.delayedExecutor(millis, TimeUnit.MILLISECONDS, delegate);
     }
   }
 
