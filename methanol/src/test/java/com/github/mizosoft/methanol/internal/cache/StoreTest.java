@@ -67,7 +67,7 @@ class StoreTest {
   @StoreParameterizedTest
   @ExecutorConfig(CACHED_POOL)
   void concurrentViewers(Store store, Executor threadPool) throws IOException {
-    writeEntry(store, "e1", "Pockemon", "Charmander");
+    writeEntry(store, "e1", "Pokemon", "Charmander");
 
     // Create viewerCount concurrent viewers
     int viewerCount = 10;
@@ -76,12 +76,12 @@ class StoreTest {
     for (int i = 0; i < viewerCount; i++) {
       var task = Unchecked.runAsync(() -> {
         awaitUninterruptibly(arrival);
-        assertEntryEquals(store, "e1", "Pockemon", "Charmander");
+        assertEntryEquals(store, "e1", "Pokemon", "Charmander");
       }, threadPool);
 
       assertionTasks.add(task);
     }
-    
+
     assertAll(assertionTasks.stream().map(cf -> cf::join));
   }
 

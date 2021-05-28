@@ -144,6 +144,7 @@ public final class StoreContext implements AutoCloseable {
       case DISK:
         var builder =
             DiskStore.newBuilder()
+                .debugIndexOperations(true)
                 .maxSize(config.maxSize())
                 .directory(directory)
                 .executor(executor)

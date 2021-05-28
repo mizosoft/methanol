@@ -43,14 +43,13 @@ ext {
       'junitParams'     : '5.7.0',
       'jimfs'           : '1.2',
       'assertj'         : '3.19.0',
-      'awaitability'    : '4.1.0',
+      'awaitility'      : '4.1.0',
       'hamcrest'        : '2.2'
   ]
 
   deps = [
       'junitApi'               : "org.junit.jupiter:junit-jupiter-api:${versions.junitJupiter}",
       'junitEngine'            : "org.junit.jupiter:junit-jupiter-engine:${versions.junitJupiter}",
-      'junitPlatformLauncher'  : "org.junit.platform:junit-platform-launcher:${versions.junitPlatform}",
       'reactiveStreamsTckFlow' : "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
       'checkerFramework'       : "org.checkerframework:checker:${versions.checkerFramework}",
       'checkerFrameworkQual'   : "org.checkerframework:checker-qual:${versions.checkerFramework}",
@@ -76,7 +75,7 @@ ext {
       'junitParams'            : "org.junit.jupiter:junit-jupiter-params:${versions.junitParams}",
       'jimfs'                  : "com.google.jimfs:jimfs:${versions.jimfs}",
       'assertj'                : "org.assertj:assertj-core:${versions.assertj}",
-      'awaitability'           : "org.awaitility:awaitility:${versions.awaitability}",
+      'awaitility'             : "org.awaitility:awaitility:${versions.awaitility}",
       'hamcrest'               : "org.hamcrest:hamcrest:${versions.hamcrest}"
   ]
 
@@ -163,9 +162,9 @@ subprojects { subproject ->
     testImplementation deps.junitApi
     testRuntimeOnly deps.junitEngine
 
-    // TODO start incorporating AssertJ & awaitability in tests
+    // TODO start incorporating AssertJ & awaitility in tests
     testImplementation deps.assertj
-    testImplementation deps.awaitability
+    testImplementation deps.awaitility
     testImplementation deps.hamcrest
   }
 
@@ -237,7 +236,6 @@ subprojects { subproject ->
     useJUnitPlatform()
     testLogging {
       events 'skipped', 'failed'
-      exceptionFormat 'full'
       showCauses true
     }
   }

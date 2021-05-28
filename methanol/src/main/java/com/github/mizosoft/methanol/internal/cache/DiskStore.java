@@ -37,7 +37,6 @@ import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
-import static java.util.Objects.requireNonNullElseGet;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.delay.Delayer;
@@ -168,6 +167,9 @@ public final class DiskStore implements Store {
 
   private static final Logger logger = System.getLogger(DiskStore.class.getName());
 
+  /** Indicates whether a task is run by the index executor. */
+  private static final ThreadLocal<Boolean> isIndexExecutor = ThreadLocal.withInitial(() -> false);
+
   // Visible for testing
   static final long INDEX_MAGIC = 0x6d657468616e6f6cL;
   static final long ENTRY_MAGIC = 0x7b6368332d6f687dL;
@@ -230,16 +232,39 @@ public final class DiskStore implements Store {
     this.executor = requireNonNull(builder.executor);
     this.appVersion = builder.appVersion;
     this.hasher = requireNonNullElse(builder.hasher, Hasher.TRUNCATED_SHA_256);
-    this.clock = requireNonNullElseGet(builder.clock, Utils::systemMillisUtc);
-    indexExecutor = new SerialExecutor(executor);
-    indexOperator = new IndexOperator(directory, appVersion);
+    this.clock = requireNonNullElse(builder.clock, Utils.systemMillisUtc());
+
+    boolean debugIndexOperations = builder.debugIndexOperations;
+    Executor indexExecutorDelegate;
+    if (debugIndexOperations) {
+      indexExecutorDelegate =
+          runnable -> {
+            executor.execute(
+                () -> {
+                  isIndexExecutor.set(true);
+                  try {
+                    runnable.run();
+                  } finally {
+                    isIndexExecutor.set(false);
+                  }
+                });
+          };
+    } else {
+      indexExecutorDelegate = executor;
+    }
+
+    indexExecutor = new SerialExecutor(indexExecutorDelegate);
+    indexOperator =
+        debugIndexOperations
+            ? new DebugIndexOperator(directory, appVersion)
+            : new IndexOperator(directory, appVersion);
     indexWriteScheduler =
         new IndexWriteScheduler(
             indexOperator,
             indexExecutor,
             this::entrySetSnapshot,
             requireNonNullElse(builder.indexUpdateDelay, DEFAULT_INDEX_UPDATE_DELAY),
-            requireNonNullElseGet(builder.delayer, Delayer::systemDelayer),
+            requireNonNullElse(builder.delayer, Delayer.systemDelayer()),
             clock);
     evictionScheduler = new EvictionScheduler(this, executor);
   }
@@ -266,7 +291,7 @@ public final class DiskStore implements Store {
    * calling {@link #initialize()} (except flush(), which is a NO-OP for an uninitialized store).
    */
   private void doInitialize() throws IOException {
-    if (initialized) { // Recheck as another initialize() might have taken over indexExecutor
+    if (initialized) { // Recheck as another initialize() might have taken over
       return;
     }
 
@@ -440,7 +465,6 @@ public final class DiskStore implements Store {
     evictionScheduler.shutdown();
     entries.clear();
 
-    // Finally release the directory
     var lock = directoryLock;
     if (lock != null) {
       lock.release();
@@ -658,10 +682,10 @@ public final class DiskStore implements Store {
           parent.resolve(
               RIP_FILE_PREFIX + Long.toHexString(ThreadLocalRandom.current().nextLong()));
       try {
-        Files.move(file, ripFile);
+        Files.move(file, ripFile, ATOMIC_MOVE);
         isolated = true;
       } catch (FileAlreadyExistsException | AccessDeniedException possiblyDuplicateRipFile) {
-        // The RIP file name is in use.  We can then try again with a new random name.
+        // The RIP file name is in use. We can then try again with a new random name.
       } catch (NoSuchFileException e) {
         // The file couldn't be found. It's already gone!
         return;
@@ -691,7 +715,7 @@ public final class DiskStore implements Store {
     }
   }
 
-  private class ConcurrentViewerIterator implements Iterator<Viewer> {
+  private final class ConcurrentViewerIterator implements Iterator<Viewer> {
     private final Iterator<Entry> entryIterator = entries.values().iterator();
 
     private @Nullable Viewer nextViewer;
@@ -764,7 +788,7 @@ public final class DiskStore implements Store {
     }
   }
 
-  private static final class IndexOperator {
+  private static class IndexOperator {
     private final Path directory;
     private final Path indexFile;
     private final Path tempIndexFile;
@@ -794,6 +818,7 @@ public final class DiskStore implements Store {
           }
         }
       }
+
       // Delete untracked entries found on disk. This can happen if the index
       // couldn't be successfully updated after these entries were created,
       // probably due to a crash or missing a close().
@@ -817,27 +842,8 @@ public final class DiskStore implements Store {
       return Collections.unmodifiableSet(processedEntrySet);
     }
 
-    void writeIndex(Set<EntryDescriptor> entrySet) throws IOException {
-      try (var channel = FileChannel.open(tempIndexFile, CREATE, WRITE)) {
-        var header =
-            ByteBuffer.allocate(INDEX_HEADER_SIZE)
-                .putLong(INDEX_MAGIC)
-                .putInt(STORE_VERSION)
-                .putInt(appVersion)
-                .putLong(entrySet.size());
-        StoreIO.writeBytes(channel, header.flip());
-        if (entrySet.size() > 0) {
-          var entryTable = ByteBuffer.allocate(entrySet.size() * ENTRY_DESCRIPTOR_SIZE);
-          entrySet.forEach(descriptor -> descriptor.writeTo(entryTable));
-          StoreIO.writeBytes(channel, entryTable.flip());
-        }
-        channel.force(false);
-      }
-      replace(tempIndexFile, indexFile);
-    }
-
     private Set<EntryDescriptor> readOrCreateIndexIfAbsent() throws IOException {
-      // Delete the temp index file if it exists as a result of a previous crash
+      // Delete any left over temp index file
       Files.deleteIfExists(tempIndexFile);
       try {
         return readIndex();
@@ -857,7 +863,7 @@ public final class DiskStore implements Store {
     }
 
     // TODO add an upgrade routine if version changes
-    private Set<EntryDescriptor> readIndex() throws IOException {
+    Set<EntryDescriptor> readIndex() throws IOException {
       try (var channel = FileChannel.open(indexFile, READ)) {
         var header = StoreIO.readNBytes(channel, INDEX_HEADER_SIZE);
         checkValue(INDEX_MAGIC, header.getLong(), "not in index format");
@@ -879,6 +885,25 @@ public final class DiskStore implements Store {
         }
         return Collections.unmodifiableSet(result);
       }
+    }
+
+    void writeIndex(Set<EntryDescriptor> entrySet) throws IOException {
+      try (var channel = FileChannel.open(tempIndexFile, CREATE, WRITE)) {
+        var header =
+            ByteBuffer.allocate(INDEX_HEADER_SIZE)
+                .putLong(INDEX_MAGIC)
+                .putInt(STORE_VERSION)
+                .putInt(appVersion)
+                .putLong(entrySet.size());
+        StoreIO.writeBytes(channel, header.flip());
+        if (entrySet.size() > 0) {
+          var entryTable = ByteBuffer.allocate(entrySet.size() * ENTRY_DESCRIPTOR_SIZE);
+          entrySet.forEach(descriptor -> descriptor.writeTo(entryTable));
+          StoreIO.writeBytes(channel, entryTable.flip());
+        }
+        channel.force(false);
+      }
+      replace(tempIndexFile, indexFile);
     }
 
     private Map<Hash, EntryFiles> scanDirectoryForEntries() throws IOException {
@@ -923,6 +948,60 @@ public final class DiskStore implements Store {
       @MonotonicNonNull Path dirtyFile;
 
       EntryFiles() {}
+    }
+  }
+
+  private static final class DebugIndexOperator extends IndexOperator {
+    private static final Logger logger = System.getLogger(DebugIndexOperator.class.getName());
+
+    private final AtomicReference<@Nullable String> runningOperation = new AtomicReference<>();
+
+    DebugIndexOperator(Path directory, int appVersion) {
+      super(directory, appVersion);
+    }
+
+    @Override
+    Set<EntryDescriptor> readIndex() throws IOException {
+      enter("readIndex");
+      try {
+        return super.readIndex();
+      } finally {
+        exit();
+      }
+    }
+
+    @Override
+    void writeIndex(Set<EntryDescriptor> entrySet) throws IOException {
+      enter("writeIndex");
+      try {
+        super.writeIndex(entrySet);
+      } finally {
+        exit();
+      }
+    }
+
+    private void enter(String operation) {
+      if (!isIndexExecutor.get()) {
+        logger.log(
+            Level.ERROR,
+            () -> "IndexOperator::" + operation + " isn't called by the index executor");
+      }
+
+      var currentOperation = runningOperation.compareAndExchange(null, operation);
+      if (currentOperation != null) {
+        logger.log(
+            Level.ERROR,
+            () ->
+                "IndexOperator::"
+                    + operation
+                    + " is called while IndexOperator::"
+                    + currentOperation
+                    + " is running");
+      }
+    }
+
+    private void exit() {
+      runningOperation.set(null);
     }
   }
 
@@ -1203,26 +1282,13 @@ public final class DiskStore implements Store {
       acquiredLocks.remove(directory, this);
     }
 
-    static DirectoryLock acquire(Path directory) throws IOException {
-      var lock = new DirectoryLock(directory);
-      boolean inserted = acquiredLocks.putIfAbsent(directory, lock) == null;
-      if (!inserted || !tryLock(lock)) {
-        lock.release();
-        throw new IOException(
-            format(
-                "cache directory <%s> is being used by another %s",
-                directory, (inserted ? "process" : "instance")));
-      }
-      return lock;
-    }
-
-    private static boolean tryLock(DirectoryLock lock) throws IOException {
+    private boolean tryLock() throws IOException {
       // Opening the channel with WRITE is needed for an exclusive FileLock
-      var channel = FileChannel.open(lock.lockFile, CREATE, WRITE);
-      lock.channel = channel;
+      var channel = FileChannel.open(lockFile, CREATE, WRITE);
+      this.channel = channel;
       try {
         var fileLock = channel.tryLock();
-        lock.fileLock = fileLock;
+        this.fileLock = fileLock;
         return fileLock != null;
       } catch (OverlappingFileLockException e) {
         return false;
@@ -1231,6 +1297,19 @@ public final class DiskStore implements Store {
         closeQuietly(channel);
         throw e;
       }
+    }
+
+    static DirectoryLock acquire(Path directory) throws IOException {
+      var lock = new DirectoryLock(directory);
+      boolean inserted = acquiredLocks.putIfAbsent(directory, lock) == null;
+      if (!inserted || !lock.tryLock()) {
+        lock.release();
+        throw new IOException(
+            format(
+                "cache directory <%s> is being used by another %s",
+                directory, (inserted ? "process" : "instance")));
+      }
+      return lock;
     }
   }
 
@@ -2013,6 +2092,7 @@ public final class DiskStore implements Store {
     private @MonotonicNonNull Clock clock;
     private @MonotonicNonNull Delayer delayer;
     private @MonotonicNonNull Duration indexUpdateDelay;
+    private boolean debugIndexOperations;
 
     Builder() {}
 
@@ -2055,6 +2135,15 @@ public final class DiskStore implements Store {
     public Builder indexUpdateDelay(Duration duration) {
       requireNonNegativeDuration(duration);
       this.indexUpdateDelay = duration;
+      return this;
+    }
+
+    /**
+     * If set, the store complains when the index is accessed or modified either concurrently or not
+     * within the index executor.
+     */
+    public Builder debugIndexOperations(boolean debugIndexOperations) {
+      this.debugIndexOperations = debugIndexOperations;
       return this;
     }
 
