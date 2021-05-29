@@ -21,7 +21,7 @@ is given to object mapping, so integration with libraries like Jackson or Gson b
 ### Gradle
 
 ```gradle
-implementation 'com.github.mizosoft.methanol:methanol:1.5.0'
+implementation 'com.github.mizosoft.methanol:methanol:1.6.0'
 ```
 
 ### Maven
@@ -30,7 +30,7 @@ implementation 'com.github.mizosoft.methanol:methanol:1.5.0'
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
   <artifactId>methanol</artifactId>
-  <version>1.5.0</version>
+  <version>1.6.0</version>
 </dependency>
 ```
 

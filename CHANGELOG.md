@@ -1,5 +1,41 @@
 # Change Log
 
+## Version 1.6.0
+
+*30-5-2021* 
+
+* Added [`HttpCache.Listener`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Listener.html).
+* Added `TaggableRequest`. This facilitates carrying application-specific data throughout interceptors & listeners.
+  
+  ```java
+  var interceptor = Interceptor.create(request -> {
+      var taggableRequest = TaggableRequest.from(request);
+      var myContext = taggableRequest.tag(MyContext.class).orElseGet(MyContext::empty);
+      ...
+  });
+  var client = Methanol.newBuilder()
+      .interceptor(interceptor)
+      .build();
+  
+  var myContext = ...
+  var request = MutableRequest.GET("https://example.com")
+      .tag(MyContext.class, myContext);
+  var response = client.send(request, BodyHandlers.ofString());
+  ```
+  
+* Fixed disk cache possibly manipulating the disk index concurrently. This could happen if an index
+  update is delayed, as the scheduler mistakenly ran the index write immediately after the delay evaluates instead
+  of queuing it with the sequential index executor.
+* Fixed `TimeoutSubscriber` (used in `MoreBodySubscribers::withReadTimeout`) possibly calling
+  downstream's `onNext` & `onError` concurrently. This could happen if timeout evaluates while downstream's
+  `onNext` is still executing.
+* Made `AsyncBodyDecoder` ignore upstream signals after decoding in `onNext` fails and the error is
+  reported to `onError`. This prevents receiving further `onXXXX` by upstream if it doesn't immediately
+  detect cancellation.
+* Made the disk cache catch and log `StoreCorruptionException` thrown when opening an entry. This is
+  done instead of rethrowing.
+* Upgraded [gson to 2.8.7](https://github.com/google/gson/blob/master/CHANGELOG.md#version-287).
+
 ## Version 1.5.0
 
 *14-5-2021*
