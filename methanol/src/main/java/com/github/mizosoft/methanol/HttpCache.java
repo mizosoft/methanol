@@ -378,7 +378,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
   }
 
-  /** A listener to request/response & read/write events within the cache. */
+  /** A listener to request/response {@literal &} read/write events within the cache. */
   public interface Listener {
 
     /** Called when the cache receives a request. */

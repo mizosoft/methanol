@@ -36,6 +36,8 @@ import java.util.Optional;
  * are mapped by their type. One type cannot map to more than one tag.
  */
 public abstract class TaggableRequest extends HttpRequest {
+  TaggableRequest() {}
+
   public <T> Optional<T> tag(Class<T> type) {
     return tag(TypeRef.from(type));
   }
