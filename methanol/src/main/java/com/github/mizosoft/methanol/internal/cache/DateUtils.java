@@ -28,7 +28,7 @@ public class DateUtils {
             PREFERRED_FORMATTER,
             // Add obsolete formats
             DateTimeFormatter.ofPattern("EEEE, dd-MMM-yy HH:mm:ss 'GMT'"), // rfc850
-            DateTimeFormatter.ofPattern("EEEE MMM pdd HH:mm:ss yyyy")); // // C's asctime()
+            DateTimeFormatter.ofPattern("EEEE MMM pdd HH:mm:ss yyyy")); // C's asctime()
   }
 
   public static String formatHttpDate(LocalDateTime dateTime) {
@@ -58,6 +58,8 @@ public class DateUtils {
           return offset == null || offset.equals(ZoneOffset.UTC)
               ? dateTime
               : toUtcDateTime(dateTime.toInstant(offset));
+        } else if (logFailure) {
+          throw new DateTimeException("unsupported zone: " + zone);
         }
       } catch (DateTimeException e) {
         if (logFailure) {
