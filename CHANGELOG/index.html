@@ -570,6 +570,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#version-160" class="md-nav__link">
+    Version 1.6.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#version-150" class="md-nav__link">
     Version 1.5.0
   </a>
@@ -652,6 +659,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#version-160" class="md-nav__link">
+    Version 1.6.0
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#version-150" class="md-nav__link">
     Version 1.5.0
   </a>
@@ -714,6 +728,40 @@
                 
                 
                 <h1 id="change-log">Change Log<a class="headerlink" href="#change-log" title="Permanent link">&para;</a></h1>
+<h2 id="version-160">Version 1.6.0<a class="headerlink" href="#version-160" title="Permanent link">&para;</a></h2>
+<p><em>30-5-2021</em> </p>
+<ul>
+<li>Added <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Listener.html"><code>HttpCache.Listener</code></a>.</li>
+<li>Added <code>TaggableRequest</code>. This facilitates carrying application-specific data throughout interceptors &amp; listeners.</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">interceptor</span> <span class="o">=</span> <span class="n">Interceptor</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="n">request</span> <span class="o">-&gt;</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="n">taggableRequest</span> <span class="o">=</span> <span class="n">TaggableRequest</span><span class="p">.</span><span class="na">from</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
+    <span class="kd">var</span> <span class="n">myContext</span> <span class="o">=</span> <span class="n">taggableRequest</span><span class="p">.</span><span class="na">tag</span><span class="p">(</span><span class="n">MyContext</span><span class="p">.</span><span class="na">class</span><span class="p">).</span><span class="na">orElseGet</span><span class="p">(</span><span class="n">MyContext</span><span class="p">::</span><span class="n">empty</span><span class="p">);</span>
+    <span class="p">...</span>
+<span class="p">});</span>
+<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+    <span class="p">.</span><span class="na">interceptor</span><span class="p">(</span><span class="n">interceptor</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+
+<span class="kd">var</span> <span class="n">myContext</span> <span class="o">=</span> <span class="p">...</span>
+<span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://example.com&quot;</span><span class="p">)</span>
+    <span class="p">.</span><span class="na">tag</span><span class="p">(</span><span class="n">MyContext</span><span class="p">.</span><span class="na">class</span><span class="p">,</span> <span class="n">myContext</span><span class="p">);</span>
+<span class="kd">var</span> <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofString</span><span class="p">());</span>
+</code></pre></div>
+<ul>
+<li>Fixed disk cache possibly manipulating the disk index concurrently. This could happen if an index
+  update is delayed, as the scheduler mistakenly ran the index write immediately after the delay evaluates instead
+  of queuing it with the sequential index executor.</li>
+<li>Fixed <code>TimeoutSubscriber</code> (used in <code>MoreBodySubscribers::withReadTimeout</code>) possibly calling
+  downstream's <code>onNext</code> &amp; <code>onError</code> concurrently. This could happen if timeout evaluates while downstream's
+  <code>onNext</code> is still executing.</li>
+<li>Made <code>AsyncBodyDecoder</code> ignore upstream signals after decoding in <code>onNext</code> fails and the error is
+  reported to <code>onError</code>. This prevents receiving further <code>onXXXX</code> by upstream if it doesn't immediately
+  detect cancellation.</li>
+<li>Made the disk cache catch and log <code>StoreCorruptionException</code> thrown when opening an entry. This is
+  done instead of rethrowing.</li>
+<li>Upgraded <a href="https://github.com/google/gson/blob/master/CHANGELOG.md#version-287">gson to 2.8.7</a>.</li>
+</ul>
 <h2 id="version-150">Version 1.5.0<a class="headerlink" href="#version-150" title="Permanent link">&para;</a></h2>
 <p><em>14-5-2021</em></p>
 <ul>
