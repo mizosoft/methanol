@@ -120,7 +120,7 @@ public final class RedirectingInterceptor implements Interceptor {
     private final Chain<Publisher<List<ByteBuffer>>> chain;
     private final boolean async;
 
-    private SendAdapter(Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
+    SendAdapter(Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
       this.chain = chain;
       this.async = async;
     }

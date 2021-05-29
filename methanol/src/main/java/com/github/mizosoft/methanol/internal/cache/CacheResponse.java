@@ -128,7 +128,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
             || freshness.compareTo(requestCacheControl.minFresh().get()) >= 0;
       }
 
-      // The server might impose network use for stale responses
+      // The server can impose revalidation for stale responses
       if (responseCacheControl.mustRevalidate()) {
         return false;
       }
@@ -150,7 +150,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
     HttpRequest toValidationRequest(HttpRequest request) {
       return MutableRequest.copyOf(request)
           .setHeader("If-Modified-Since", formatHttpDate(effectiveLastModified))
-          .apply(builder -> etag.ifPresent(etag -> builder.setHeader("If-None-Match", etag)));
+          .apply(self -> etag.ifPresent(etag -> self.setHeader("If-None-Match", etag)));
     }
 
     enum StalenessLimit {

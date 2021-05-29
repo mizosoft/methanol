@@ -25,15 +25,12 @@ package com.github.mizosoft.methanol.internal.cache;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
-import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** An {@code HttpCache} view used internally. */
 public interface InternalCache {
   @Nullable
   CacheResponse get(HttpRequest request) throws IOException;
-
-  CompletableFuture<@Nullable CacheResponse> getAsync(HttpRequest request);
 
   void update(CacheResponse cacheResponse);
 

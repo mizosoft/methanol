@@ -42,7 +42,6 @@ import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.Flushable;
 import java.io.IOException;
 import java.lang.System.Logger;
@@ -317,16 +316,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
     @Override
     public @Nullable CacheResponse get(HttpRequest request) throws IOException {
       var viewer = store.view(key(request));
-      return viewer != null ? getCacheResponse(request, viewer) : null;
-    }
+      if (viewer == null) {
+        return null;
+      }
 
-    @Override
-    public CompletableFuture<@Nullable CacheResponse> getAsync(HttpRequest request) {
-      return Unchecked.supplyAsync(() -> store.view(key(request)), executor)
-          .thenApply(viewer -> viewer != null ? getCacheResponse(request, viewer) : null);
-    }
-
-    private @Nullable CacheResponse getCacheResponse(HttpRequest request, Viewer viewer) {
       var metadata = tryRecoverMetadata(viewer);
       if (metadata != null && metadata.matches(request)) {
         return new CacheResponse(
@@ -872,7 +865,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
     @MonotonicNonNull Executor executor;
     @MonotonicNonNull StatsRecorder statsRecorder;
     @MonotonicNonNull Listener listener;
-
     @MonotonicNonNull Clock clock;
     @MonotonicNonNull Store store;
 

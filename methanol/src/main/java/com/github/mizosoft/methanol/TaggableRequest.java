@@ -32,7 +32,8 @@ import java.util.Optional;
 
 /**
  * An {@code HttpRequest} that can be attached with arbitrary values, referred to as tags. Tags can
- * be used to carry application-specific data throughout {@link Interceptor interceptors}.
+ * be used to carry application-specific data throughout {@link Interceptor interceptors} and
+ * listeners.
  */
 public abstract class TaggableRequest extends HttpRequest {
   public <T> Optional<T> tag(Class<T> type) {

@@ -139,7 +139,7 @@ public final class CacheInterceptor implements Interceptor {
       return CompletableFuture.completedFuture(null);
     }
 
-    return asyncAdapter.get(cache, request);
+    return asyncAdapter.get(cache, request, cacheExecutor);
   }
 
   private void handleAsyncRevalidation(
@@ -361,10 +361,10 @@ public final class CacheInterceptor implements Interceptor {
           : Unchecked.supplyAsync(() -> chain.forward(request), FlowSupport.SYNC_EXECUTOR);
     }
 
-    CompletableFuture<@Nullable CacheResponse> get(InternalCache cache, HttpRequest request) {
-      return async
-          ? cache.getAsync(request)
-          : Unchecked.supplyAsync(() -> cache.get(request), FlowSupport.SYNC_EXECUTOR);
+    CompletableFuture<@Nullable CacheResponse> get(
+        InternalCache cache, HttpRequest request, Executor cacheExecutor) {
+      var executor = async ? cacheExecutor : FlowSupport.SYNC_EXECUTOR;
+      return Unchecked.supplyAsync(() -> cache.get(request), executor);
     }
   }
 
