@@ -39,9 +39,12 @@ module methanol {
   exports com.github.mizosoft.methanol.internal.flow to
       methanol.adapter.jackson,
       methanol.adapter.jackson.flux;
+  exports com.github.mizosoft.methanol.internal.extensions to
+      methanol.adapter.jackson;
+  exports com.github.mizosoft.methanol.internal.concurrent to
+      methanol.adapter.jackson;
 
   uses com.github.mizosoft.methanol.BodyDecoder.Factory;
-
   uses com.github.mizosoft.methanol.BodyAdapter.Encoder;
   uses com.github.mizosoft.methanol.BodyAdapter.Decoder;
 

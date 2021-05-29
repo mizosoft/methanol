@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.delay;
+package com.github.mizosoft.methanol.internal.concurrent;
 
 import java.time.Duration;
 import java.util.concurrent.Executor;

@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.flow;
+package com.github.mizosoft.methanol.internal.concurrent;
 
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;

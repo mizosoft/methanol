@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.flow;
+package com.github.mizosoft.methanol.internal.concurrent;
 
 import static java.util.Objects.requireNonNull;
 

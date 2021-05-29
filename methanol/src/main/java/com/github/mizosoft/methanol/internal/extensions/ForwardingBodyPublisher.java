@@ -20,29 +20,33 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.delay;
+package com.github.mizosoft.methanol.internal.extensions;
 
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import static java.util.Objects.requireNonNull;
 
-enum SystemDelayer implements Delayer {
-  INSTANCE;
+import java.net.http.HttpRequest.BodyPublisher;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Flow.Subscriber;
 
-  @Override
-  public Future<Void> delay(Executor executor, Runnable task, Duration delay) {
-    // Having the task run as in a dependent CompletableFuture makes cancellation work
-    return CompletableFuture.runAsync(() -> {}, delayedExecutor(delay))
-        .thenRunAsync(task, executor);
+public class ForwardingBodyPublisher implements BodyPublisher {
+  private final BodyPublisher upstream;
+
+  protected ForwardingBodyPublisher(BodyPublisher upstream) {
+    this.upstream = requireNonNull(upstream);
   }
 
-  private static Executor delayedExecutor(Duration delay) {
-    long delayMillis = TimeUnit.MILLISECONDS.convert(delay);
-    return delayMillis <= 0
-        ? FlowSupport.SYNC_EXECUTOR
-        : CompletableFuture.delayedExecutor(delayMillis, TimeUnit.MILLISECONDS);
+  protected final BodyPublisher upstream() {
+    return upstream;
+  }
+
+  @Override
+  public long contentLength() {
+    return upstream.contentLength();
+  }
+
+  @Override
+  public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
+    requireNonNull(subscriber);
+    upstream.subscribe(subscriber);
   }
 }

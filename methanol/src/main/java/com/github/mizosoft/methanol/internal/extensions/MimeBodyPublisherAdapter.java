@@ -20,32 +20,25 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.flow;
+package com.github.mizosoft.methanol.internal.extensions;
 
-import java.net.http.HttpResponse.BodySubscriber;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CompletionStage;
+import static java.util.Objects.requireNonNull;
 
-/** A {@code BodySubscriber<T>} forwarding to another {@code BodySubscriber<T>}. */
-public class ForwardingBodySubscriber<T>
-    extends ForwardingSubscriber<List<ByteBuffer>>
-    implements BodySubscriber<T> {
+import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.MimeBodyPublisher;
+import java.net.http.HttpRequest.BodyPublisher;
 
-  private final BodySubscriber<T> downstream;
+public final class MimeBodyPublisherAdapter extends ForwardingBodyPublisher
+    implements MimeBodyPublisher {
+  private final MediaType mediaType;
 
-  /** Creates a {@code ForwardingBodySubscriber} that forwards to the given downstream. */
-  protected ForwardingBodySubscriber(BodySubscriber<T> downstream) {
-    this.downstream = downstream;
+  public MimeBodyPublisherAdapter(BodyPublisher upstream, MediaType mediaType) {
+    super(upstream);
+    this.mediaType = requireNonNull(mediaType);
   }
 
   @Override
-  protected final BodySubscriber<T> downstream() {
-    return downstream;
-  }
-
-  @Override
-  public CompletionStage<T> getBody() {
-    return downstream.getBody();
+  public MediaType mediaType() {
+    return mediaType;
   }
 }

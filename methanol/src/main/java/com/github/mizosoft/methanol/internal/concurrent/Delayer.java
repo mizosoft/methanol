@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.delay;
+package com.github.mizosoft.methanol.internal.concurrent;
 
 import static java.util.Objects.requireNonNull;
 

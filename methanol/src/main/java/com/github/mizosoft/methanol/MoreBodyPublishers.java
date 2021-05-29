@@ -23,13 +23,12 @@
 package com.github.mizosoft.methanol;
 
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
-import com.github.mizosoft.methanol.internal.extensions.ForwardingMimeBodyPublisher;
+import com.github.mizosoft.methanol.internal.extensions.MimeBodyPublisherAdapter;
 import java.net.http.HttpRequest.BodyPublisher;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Provides additional {@link BodyPublisher} implementations. */
 public class MoreBodyPublishers {
-
   private MoreBodyPublishers() {} // non-instantiable
 
   /**
@@ -40,7 +39,7 @@ public class MoreBodyPublishers {
    * @param mediaType the body's media type
    */
   public static MimeBodyPublisher ofMediaType(BodyPublisher bodyPublisher, MediaType mediaType) {
-    return new ForwardingMimeBodyPublisher(bodyPublisher, mediaType);
+    return new MimeBodyPublisherAdapter(bodyPublisher, mediaType);
   }
 
   /**

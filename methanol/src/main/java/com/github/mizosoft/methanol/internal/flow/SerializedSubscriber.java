@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.internal.flow;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.concurrent.SerialExecutor;
 import java.util.concurrent.Flow.Subscription;
 
 /** A forwarding subscriber that ensures signals aren't called concurrently. */

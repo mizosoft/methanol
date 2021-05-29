@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,34 +20,29 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.flow;
+package com.github.mizosoft.methanol.internal.concurrent;
 
-import static java.util.Objects.requireNonNull;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
-import java.net.http.HttpRequest.BodyPublisher;
-import java.nio.ByteBuffer;
-import java.util.concurrent.Flow.Subscriber;
-
-public class ForwardingBodyPublisher implements BodyPublisher {
-
-  private final BodyPublisher upstream;
-
-  protected ForwardingBodyPublisher(BodyPublisher upstream) {
-    this.upstream = requireNonNull(upstream);
-  }
-
-  protected final BodyPublisher upstream() {
-    return upstream;
-  }
+enum SystemDelayer implements Delayer {
+  INSTANCE;
 
   @Override
-  public long contentLength() {
-    return upstream.contentLength();
+  public Future<Void> delay(Executor executor, Runnable task, Duration delay) {
+    // Having the task run as a dependent CompletableFuture makes cancellation work
+    return CompletableFuture.runAsync(() -> {}, delayedExecutor(delay))
+        .thenRunAsync(task, executor);
   }
 
-  @Override
-  public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
-    requireNonNull(subscriber);
-    upstream.subscribe(subscriber);
+  private static Executor delayedExecutor(Duration delay) {
+    long delayMillis = TimeUnit.MILLISECONDS.convert(delay);
+    return delayMillis <= 0
+        ? FlowSupport.SYNC_EXECUTOR
+        : CompletableFuture.delayedExecutor(delayMillis, TimeUnit.MILLISECONDS);
   }
 }

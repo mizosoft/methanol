@@ -39,8 +39,8 @@ import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.delay.Delayer;
-import com.github.mizosoft.methanol.internal.flow.SerialExecutor;
+import com.github.mizosoft.methanol.internal.concurrent.Delayer;
+import com.github.mizosoft.methanol.internal.concurrent.SerialExecutor;
 import com.github.mizosoft.methanol.internal.function.ThrowingRunnable;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.EOFException;

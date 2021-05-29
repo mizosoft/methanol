@@ -29,9 +29,9 @@ import static java.util.Objects.requireNonNullElse;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.PartSequenceListener;
+import com.github.mizosoft.methanol.internal.extensions.ForwardingBodyPublisher;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.flow.ForwardingBodyPublisher;
 import com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodyHandler;

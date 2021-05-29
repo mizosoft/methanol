@@ -26,7 +26,7 @@ import static com.github.mizosoft.methanol.internal.flow.FlowSupport.getAndAddDe
 import static com.github.mizosoft.methanol.internal.flow.FlowSupport.subtractAndGetDemand;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.delay.Delayer;
+import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.time.Duration;
@@ -69,11 +69,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   private final Delayer delayer;
   private final Upstream unwrappedUpstream = new Upstream();
 
-  /**
-   * Tracks downstream demand to know when to schedule timeouts. A timeout is scheduled from
-   * onNext() if demand remains positive after decrementing, and from request() if demand was zero
-   * before incrementing.
-   */
+  /** Tracks downstream demand to know when to schedule timeouts. */
   private volatile long demand;
 
   /**
@@ -85,6 +81,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   /** Timeout scheduled for the currently awaited item. */
   private volatile @Nullable Future<Void> timeoutTask;
 
+  @SuppressWarnings("ClassEscapesDefinedScope") // TimeoutSubscriber & Delayer are both encapsulated
   public TimeoutSubscriber(Duration timeout, Delayer delayer) {
     this.timeout = timeout;
     this.delayer = delayer;
@@ -108,8 +105,8 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
       var currentTimeoutTask = timeoutTask;
       if (currentTimeoutTask == DISABLED_TIMEOUT
           || !TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, null)) {
-        // If the CAS fails, the only possible contention would be with cancel() (or onError() &
-        // onComplete() if upstream is misbehaving), so return.
+        // If the CAS fails, the only possible contention would be with cancel() (or a concurrent
+        // onNext(), onError() or onComplete() if upstream is misbehaving), so return.
         return;
       }
       if (currentTimeoutTask != null) {
@@ -141,10 +138,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
     if ((long) INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) { // Could reach before timeout?
-      var currentTimeoutTask = disableTimeouts();
-      if (currentTimeoutTask != null) {
-        currentTimeoutTask.cancel(true);
-      }
+      disableTimeouts();
       super.onError(throwable);
     }
   }
@@ -152,10 +146,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   @Override
   public void onComplete() {
     if ((long) INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) { // Could reach before timeout?
-      var currentTimeoutTask = disableTimeouts();
-      if (currentTimeoutTask != null) {
-        currentTimeoutTask.cancel(true);
-      }
+      disableTimeouts();
       super.onComplete();
     }
   }
@@ -171,7 +162,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
       var newTimeoutTask =
           delayer.delay(FlowSupport.SYNC_EXECUTOR, () -> onTimeout(index), timeout);
       if (!TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, newTimeoutTask)) {
-        // Discard timeout on failed CAS. Possible contention is with onError, onComplete or
+        // Discard timeout on failed CAS. Possible contention is with onError(), onComplete() or
         // cancel(), all marking stream termination.
         newTimeoutTask.cancel(true);
       }
@@ -188,8 +179,11 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   }
 
   @SuppressWarnings("unchecked")
-  private @Nullable Future<Void> disableTimeouts() {
-    return (Future<Void>) TIMEOUT_TASK.getAndSet(this, DISABLED_TIMEOUT);
+  private void disableTimeouts() {
+    var future = (Future<Void>) TIMEOUT_TASK.getAndSet(this, DISABLED_TIMEOUT);
+    if (future != null) {
+      future.cancel(true);
+    }
   }
 
   private final class TimeoutSubscription implements Subscription {
@@ -214,10 +208,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
     @Override
     public void cancel() {
       index = TOMBSTONE;
-      var currentTimeoutTask = disableTimeouts();
-      if (currentTimeoutTask != null) {
-        currentTimeoutTask.cancel(true);
-      }
+      disableTimeouts();
       unwrappedUpstream.cancel();
     }
   }

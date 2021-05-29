@@ -27,7 +27,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Validate;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
-import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.http.HttpClient;

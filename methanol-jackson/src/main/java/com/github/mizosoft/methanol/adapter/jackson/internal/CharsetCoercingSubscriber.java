@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.adapter.jackson.internal;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.flow.ForwardingBodySubscriber;
+import com.github.mizosoft.methanol.internal.extensions.ForwardingBodySubscriber;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -43,7 +43,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * to coerce response into UTF-8 if not already to be parsable by the non-blocking parser.
  */
 final class CharsetCoercingSubscriber<T> extends ForwardingBodySubscriber<T> {
-
   private static final int TEMP_BUFFER_SIZE = 4 * 1024;
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 

@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.internal.extensions;
 
 import com.github.mizosoft.methanol.HttpReadTimeoutException;
-import com.github.mizosoft.methanol.internal.delay.Delayer;
+import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.flow.TimeoutSubscriber;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;

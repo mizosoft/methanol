@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,25 +22,27 @@
 
 package com.github.mizosoft.methanol.internal.extensions;
 
-import static java.util.Objects.requireNonNull;
+import com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.CompletionStage;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.MimeBodyPublisher;
-import com.github.mizosoft.methanol.internal.flow.ForwardingBodyPublisher;
-import java.net.http.HttpRequest.BodyPublisher;
+public class ForwardingBodySubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
+    implements BodySubscriber<T> {
+  private final BodySubscriber<T> downstream;
 
-public final class ForwardingMimeBodyPublisher extends ForwardingBodyPublisher
-    implements MimeBodyPublisher {
-
-  private final MediaType mediaType;
-
-  public ForwardingMimeBodyPublisher(BodyPublisher upstream, MediaType mediaType) {
-    super(upstream);
-    this.mediaType = requireNonNull(mediaType);
+  protected ForwardingBodySubscriber(BodySubscriber<T> downstream) {
+    this.downstream = downstream;
   }
 
   @Override
-  public MediaType mediaType() {
-    return mediaType;
+  protected final BodySubscriber<T> downstream() {
+    return downstream;
+  }
+
+  @Override
+  public CompletionStage<T> getBody() {
+    return downstream.getBody();
   }
 }

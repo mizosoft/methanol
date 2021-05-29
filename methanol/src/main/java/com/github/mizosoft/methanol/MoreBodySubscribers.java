@@ -26,7 +26,7 @@ import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuratio
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
-import com.github.mizosoft.methanol.internal.delay.Delayer;
+import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.AsyncSubscriberAdapter;
 import com.github.mizosoft.methanol.internal.extensions.ByteChannelSubscriber;
 import com.github.mizosoft.methanol.internal.extensions.TimeoutBodySubscriber;
@@ -49,7 +49,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Provides additional {@link BodySubscriber} implementations. */
 public class MoreBodySubscribers {
-
   private MoreBodySubscribers() {} // non-instantiable
 
   /**

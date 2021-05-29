@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.internal.extensions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.github.mizosoft.methanol.internal.delay.Delayer;
+import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.TimeoutSubscriber;
 import com.github.mizosoft.methanol.testing.MockDelayer;

@@ -25,7 +25,7 @@ package com.github.mizosoft.methanol.testing;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.github.mizosoft.methanol.internal.delay.Delayer;
+import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.testutils.MockClock;
 import java.time.Duration;
 import java.time.Instant;
