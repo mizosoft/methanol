@@ -89,9 +89,9 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public abstract class </span><span class="element-name type-name-label">TaggableRequest</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></span></div>
-<div class="block">An <code>HttpRequest</code> that can be attached with arbitrary values, referred to as tags. Tags can
- be used to carry application-specific data throughout <a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol"><code>interceptors</code></a> and
- listeners.</div>
+<div class="block">An <code>HttpRequest</code> that can carry arbitrary values, referred to as tags. Tags can be used to
+ carry application-specific data throughout <a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol"><code>interceptors</code></a> and listeners. Tags
+ are mapped by their type. One type cannot map to more than one tag.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -142,8 +142,8 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code>static <a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></code></div>
 <div class="col-second even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#from(java.net.http.HttpRequest)">from</a></span>&#8203;(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</code></div>
 <div class="col-last even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table">
-<div class="block">Returns either the given request if it is taggable or a new <code>TaggableRequest</code> copy with
- empty tags.</div>
+<div class="block">Returns either the given request if it's a <code>TaggableRequest</code> or a new <code>
+ TaggableRequest</code> copy with no tags otherwise.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table-tab2 method-summary-table method-summary-table-tab3"><code>abstract &lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;T&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table-tab2 method-summary-table method-summary-table-tab3"><code><span class="member-name-link"><a href="#tag(com.github.mizosoft.methanol.TypeRef)">tag</a></span>&#8203;(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type)</code></div>
@@ -204,8 +204,8 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="from(java.net.http.HttpRequest)">
 <h3>from</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></span>&nbsp;<span class="element-name">from</span>&#8203;<span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</span></div>
-<div class="block">Returns either the given request if it is taggable or a new <code>TaggableRequest</code> copy with
- empty tags.</div>
+<div class="block">Returns either the given request if it's a <code>TaggableRequest</code> or a new <code>
+ TaggableRequest</code> copy with no tags otherwise.</div>
 </section>
 </li>
 </ul>

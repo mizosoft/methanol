@@ -1464,8 +1464,8 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html#from(java.net.http.HttpRequest)">from(HttpRequest)</a></span> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></dt>
 <dd>
-<div class="block">Returns either the given request if it is taggable or a new <code>TaggableRequest</code> copy with
- empty tags.</div>
+<div class="block">Returns either the given request if it's a <code>TaggableRequest</code> or a new <code>
+ TaggableRequest</code> copy with no tags otherwise.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ImmutableResponseInfo.html#from(java.net.http.HttpResponse)">from(HttpResponse&lt;?&gt;)</a></span> - Static method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ImmutableResponseInfo.html" title="class in com.github.mizosoft.methanol.internal.extensions">ImmutableResponseInfo</a></dt>
 <dd>&nbsp;</dd>
@@ -2991,6 +2991,18 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#removeIf(java.util.function.BiPredicate)">removeIf(BiPredicate&lt;String, String&gt;)</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
 <dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#removeTag(com.github.mizosoft.methanol.TypeRef)">removeTag(TypeRef&lt;?&gt;)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#removeTag(com.github.mizosoft.methanol.TypeRef)">removeTag(TypeRef&lt;?&gt;)</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
+<dd>
+<div class="block">Removes the tag associated with the given type.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#removeTag(java.lang.Class)">removeTag(Class&lt;?&gt;)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#removeTag(java.lang.Class)">removeTag(Class&lt;?&gt;)</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
+<dd>
+<div class="block">Removes the tag associated with the given type.</div>
+</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/TestSubscriber.html#request">request</a></span> - Variable in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testutils">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#request(long)">request(long)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractSubscription</a></dt>
@@ -3304,16 +3316,26 @@ loadScripts(document, 'script');</script>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#tag(com.github.mizosoft.methanol.TypeRef,T)">tag(TypeRef&lt;T&gt;, T)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#tag(com.github.mizosoft.methanol.TypeRef,T)">tag(TypeRef&lt;T&gt;, T)</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block">Adds a tag mapped to the given type.</div>
+</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html#tag(java.lang.Class)">tag(Class&lt;T&gt;)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#tag(java.lang.Class,T)">tag(Class&lt;T&gt;, T)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#tag(java.lang.Class,T)">tag(Class&lt;T&gt;, T)</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
+<dd>
+<div class="block">Adds a tag mapped to the given type.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#tag(java.lang.Object)">tag(Object)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#tag(java.lang.Object)">tag(Object)</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
+<dd>
+<div class="block">Adds a tag mapped to the given object's runtime type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html" title="class in com.github.mizosoft.methanol"><span class="type-name-link">TaggableRequest</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">An <code>HttpRequest</code> that can be attached with arbitrary values, referred to as tags.</div>
+<div class="block">An <code>HttpRequest</code> that can carry arbitrary values, referred to as tags.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html#%3Cinit%3E()">TaggableRequest()</a></span> - Constructor for class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></dt>
 <dd>&nbsp;</dd>
