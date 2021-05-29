@@ -177,6 +177,13 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     return Map.copyOf(tags); // Make a defensive copy
   }
 
+  @SuppressWarnings("unchecked")
+  @Override
+  public MutableRequest tag(Object value) {
+    requireNonNull(value);
+    return tag((Class<Object>) value.getClass(), value);
+  }
+
   @Override
   public <T> MutableRequest tag(Class<T> type, T value) {
     return tag(TypeRef.from(type), value);
@@ -187,6 +194,18 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     requireNonNull(type);
     requireNonNull(value);
     tags.put(type, value);
+    return this;
+  }
+
+  @Override
+  public MutableRequest removeTag(Class<?> type) {
+    return removeTag(TypeRef.from(type));
+  }
+
+  @Override
+  public MutableRequest removeTag(TypeRef<?> type) {
+    requireNonNull(type);
+    tags.remove(type);
     return this;
   }
 

@@ -48,7 +48,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Provides additional {@link java.net.http.HttpResponse.BodyHandler} implementations. */
 public class MoreBodyHandlers {
-
   private MoreBodyHandlers() {} // non-instantiable
 
   /**

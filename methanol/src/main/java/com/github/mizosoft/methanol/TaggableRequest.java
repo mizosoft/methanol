@@ -31,9 +31,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * An {@code HttpRequest} that can be attached with arbitrary values, referred to as tags. Tags can
- * be used to carry application-specific data throughout {@link Interceptor interceptors} and
- * listeners.
+ * An {@code HttpRequest} that can carry arbitrary values, referred to as tags. Tags can be used to
+ * carry application-specific data throughout {@link Interceptor interceptors} and listeners. Tags
+ * are mapped by their type. One type cannot map to more than one tag.
  */
 public abstract class TaggableRequest extends HttpRequest {
   public <T> Optional<T> tag(Class<T> type) {
@@ -46,20 +46,32 @@ public abstract class TaggableRequest extends HttpRequest {
   abstract Map<TypeRef<?>, Object> tags();
 
   /**
-   * Returns either the given request if it is taggable or a new {@code TaggableRequest} copy with
-   * empty tags.
+   * Returns either the given request if it's a {@code TaggableRequest} or a new {@code
+   * TaggableRequest} copy with no tags otherwise.
    */
   public static TaggableRequest from(HttpRequest request) {
     return request instanceof TaggableRequest
-        ? ((TaggableRequest) request)
+        ? (TaggableRequest) request
         : MutableRequest.copyOf(request).toImmutableRequest();
   }
 
   /** An {@code HttpRequest.Builder} that allows attaching tags. */
   public interface Builder extends HttpRequest.Builder {
+
+    /** Adds a tag mapped to the given object's runtime type. */
+    Builder tag(Object value);
+
+    /** Adds a tag mapped to the given type. */
     <T> Builder tag(Class<T> type, T value);
 
+    /** Adds a tag mapped to the given type. */
     <T> Builder tag(TypeRef<T> type, T value);
+
+    /** Removes the tag associated with the given type. */
+    Builder removeTag(Class<?> type);
+
+    /** Removes the tag associated with the given type. */
+    Builder removeTag(TypeRef<?> type);
 
     @Override
     Builder uri(URI uri);

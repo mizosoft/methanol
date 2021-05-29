@@ -284,6 +284,14 @@ class MutableRequestTest {
   }
 
   @Test
+  void removeTag() {
+    var request = MutableRequest.create().tag(1);
+    verifyThat(request).containsTag(Integer.class, 1);
+    request.removeTag(Integer.class);
+    verifyThat(request).doesNotContainTag(Integer.class);
+  }
+
+  @Test
   void headersWithInvalidNumberOfArguments() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> MutableRequest.create().headers(new String[0]));
