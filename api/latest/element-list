@@ -5,6 +5,7 @@ com.github.mizosoft.methanol.decoder
 com.github.mizosoft.methanol.internal
 com.github.mizosoft.methanol.internal.annotations
 com.github.mizosoft.methanol.internal.cache
+com.github.mizosoft.methanol.internal.concurrent
 com.github.mizosoft.methanol.internal.decoder
 com.github.mizosoft.methanol.internal.extensions
 com.github.mizosoft.methanol.internal.flow

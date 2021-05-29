@@ -664,6 +664,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a> - package com.github.mizosoft.methanol.internal.cache</dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/package-summary.html">com.github.mizosoft.methanol.internal.concurrent</a> - package com.github.mizosoft.methanol.internal.concurrent</dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/decoder/package-summary.html">com.github.mizosoft.methanol.internal.decoder</a> - package com.github.mizosoft.methanol.internal.decoder</dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a> - package com.github.mizosoft.methanol.internal.extensions</dt>
@@ -732,7 +734,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html#contentLength()">contentLength()</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html" title="class in com.github.mizosoft.methanol">FormBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodyPublisher.html#contentLength()">contentLength()</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingBodyPublisher</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html#contentLength()">contentLength()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.html#contentLength()">contentLength()</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
@@ -944,6 +946,11 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html#%3Cinit%3E()">DateUtils()</a></span> - Constructor for class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html" title="class in com.github.mizosoft.methanol.internal.cache">DateUtils</a></dt>
 <dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html#debugIndexOperations(boolean)">debugIndexOperations(boolean)</a></span> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></dt>
+<dd>
+<div class="block">If set, the store complains when the index is accessed or modified either concurrently or not
+ within the index executor.</div>
+</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncDecoder.html#decode(com.github.mizosoft.methanol.decoder.AsyncDecoder.ByteSource,com.github.mizosoft.methanol.decoder.AsyncDecoder.ByteSink)">decode(AsyncDecoder.ByteSource, AsyncDecoder.ByteSink)</a></span> - Method in interface com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncDecoder.html" title="interface in com.github.mizosoft.methanol.decoder">AsyncDecoder</a></dt>
 <dd>
 <div class="block">Processes whatever data available from the given source, writing decompressed bytes to the
@@ -1010,12 +1017,16 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates a new <code>DeflateBodyDecoderFactory</code>.</div>
 </dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Delayer.html#delay(java.util.concurrent.Executor,java.lang.Runnable,java.time.Duration)">delay(Executor, Runnable, Duration)</a></span> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Delayer.html" title="interface in com.github.mizosoft.methanol.internal.cache">DiskStore.Delayer</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html#delay(java.util.concurrent.Executor,java.lang.Runnable,java.time.Duration)">delay(Executor, Runnable, Duration)</a></span> - Method in interface com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a></dt>
 <dd>
-<div class="block">Arranges for the task to be submitted to the executor after the delay is evaluated.</div>
+<div class="block">Arranges for the task to be submitted to the given executor after the delay is evaluated.</div>
 </dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html#delayer(com.github.mizosoft.methanol.internal.cache.DiskStore.Delayer)">delayer(DiskStore.Delayer)</a></span> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html#delayer(com.github.mizosoft.methanol.internal.concurrent.Delayer)">delayer(Delayer)</a></span> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent"><span class="type-name-link">Delayer</span></a> - Interface in <a href="methanol/com/github/mizosoft/methanol/internal/concurrent/package-summary.html">com.github.mizosoft.methanol.internal.concurrent</a></dt>
+<dd>
+<div class="block">Delays the execution of a given task.</div>
+</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingBodyAdapter.html#delegate()">delegate()</a></span> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingBodyAdapter</a></dt>
 <dd>
 <div class="block">Returns the adapter calls are being forwarded to.</div>
@@ -1080,10 +1091,6 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache"><span class="type-name-link">DiskStore.Builder</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Delayer.html" title="interface in com.github.mizosoft.methanol.internal.cache"><span class="type-name-link">DiskStore.Delayer</span></a> - Interface in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
-<dd>
-<div class="block">Delays the execution of a given task.</div>
-</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Hash.html" title="class in com.github.mizosoft.methanol.internal.cache"><span class="type-name-link">DiskStore.Hash</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
 <dd>
 <div class="block">An immutable 80-bit hash code.</div>
@@ -1126,7 +1133,9 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/AsyncSubscriberAdapter.html#downstream()">downstream()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/AsyncSubscriberAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions">AsyncSubscriberAdapter</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodySubscriber.html#downstream()">downstream()</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingBodySubscriber</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodySubscriber.html#downstream()">downstream()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingBodySubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html#downstream()">downstream()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">TimeoutBodySubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html#downstream()">downstream()</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingSubscriber</a></dt>
 <dd>
@@ -1255,6 +1264,8 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a <code>Publisher</code> for the sequence of <code>HttpResponse&lt;T&gt;</code> resulting from
  asynchronously sending the given request along with accepting incoming <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.net.http/java/net/http/HttpResponse.PushPromiseHandler.html" title="class or interface in java.net.http" class="external-link"><code>push promises</code></a> using the given <code>Function</code>.</div>
 </dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/SerialExecutor.html#execute(java.lang.Runnable)">execute(Runnable)</a></span> - Method in class com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/SerialExecutor.html" title="class in com.github.mizosoft.methanol.internal.concurrent">SerialExecutor</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockExecutor.html#execute(java.lang.Runnable)">execute(Runnable)</a></span> - Method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockExecutor.html" title="class in com.github.mizosoft.methanol.testutils">MockExecutor</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockExecutor.html#executeOnSameThread(boolean)">executeOnSameThread(boolean)</a></span> - Method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockExecutor.html" title="class in com.github.mizosoft.methanol.testutils">MockExecutor</a></dt>
@@ -1409,18 +1420,14 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingBodyAdapter.html#%3Cinit%3E()">ForwardingBodyAdapter()</a></span> - Constructor for class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingBodyAdapter</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.flow"><span class="type-name-link">ForwardingBodyPublisher</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/flow/package-summary.html">com.github.mizosoft.methanol.internal.flow</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions"><span class="type-name-link">ForwardingBodyPublisher</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodyPublisher.html#%3Cinit%3E(java.net.http.HttpRequest.BodyPublisher)">ForwardingBodyPublisher(HttpRequest.BodyPublisher)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingBodyPublisher</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html#%3Cinit%3E(java.net.http.HttpRequest.BodyPublisher)">ForwardingBodyPublisher(HttpRequest.BodyPublisher)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow"><span class="type-name-link">ForwardingBodySubscriber</span></a>&lt;<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodySubscriber.html" title="type parameter in ForwardingBodySubscriber">T</a>&gt; - Class in <a href="methanol/com/github/mizosoft/methanol/internal/flow/package-summary.html">com.github.mizosoft.methanol.internal.flow</a></dt>
-<dd>
-<div class="block">A <code>BodySubscriber&lt;T&gt;</code> forwarding to another <code>BodySubscriber&lt;T&gt;</code>.</div>
-</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodySubscriber.html#%3Cinit%3E(java.net.http.HttpResponse.BodySubscriber)">ForwardingBodySubscriber(HttpResponse.BodySubscriber&lt;T&gt;)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingBodySubscriber</a></dt>
-<dd>
-<div class="block">Creates a <code>ForwardingBodySubscriber</code> that forwards to the given downstream.</div>
-</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions"><span class="type-name-link">ForwardingBodySubscriber</span></a>&lt;<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodySubscriber.html" title="type parameter in ForwardingBodySubscriber">T</a>&gt; - Class in <a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodySubscriber.html#%3Cinit%3E(java.net.http.HttpResponse.BodySubscriber)">ForwardingBodySubscriber(HttpResponse.BodySubscriber&lt;T&gt;)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingBodySubscriber</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingDecoder.html" title="class in com.github.mizosoft.methanol.adapter"><span class="type-name-link">ForwardingDecoder</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/adapter/package-summary.html">com.github.mizosoft.methanol.adapter</a></dt>
 <dd>
 <div class="block">A <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that forwards calls to another.</div>
@@ -1436,10 +1443,6 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/io/file/ForwardingFileChannel.html" title="class in com.github.mizosoft.methanol.testutils.io.file"><span class="type-name-link">ForwardingFileChannel</span></a> - Class in <a href="methanol.testutils/com/github/mizosoft/methanol/testutils/io/file/package-summary.html">com.github.mizosoft.methanol.testutils.io.file</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/io/file/ForwardingFileChannel.html#%3Cinit%3E(java.nio.channels.FileChannel)">ForwardingFileChannel(FileChannel)</a></span> - Constructor for class com.github.mizosoft.methanol.testutils.io.file.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/io/file/ForwardingFileChannel.html" title="class in com.github.mizosoft.methanol.testutils.io.file">ForwardingFileChannel</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingMimeBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions"><span class="type-name-link">ForwardingMimeBodyPublisher</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></dt>
-<dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingMimeBodyPublisher.html#%3Cinit%3E(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)">ForwardingMimeBodyPublisher(HttpRequest.BodyPublisher, MediaType)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingMimeBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingMimeBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow"><span class="type-name-link">ForwardingSubscriber</span></a>&lt;<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html" title="type parameter in ForwardingSubscriber">T</a>&gt; - Class in <a href="methanol/com/github/mizosoft/methanol/internal/flow/package-summary.html">com.github.mizosoft.methanol.internal.flow</a></dt>
 <dd>
@@ -1505,8 +1508,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds given count to demand not exceeding <code>Long.MAX_VALUE</code>.</div>
 </dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/cache/InternalCache.html#getAsync(java.net.http.HttpRequest)">getAsync(HttpRequest)</a></span> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/InternalCache.html" title="interface in com.github.mizosoft.methanol.internal.cache">InternalCache</a></dt>
-<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html#getBody()">getBody()</a></span> - Method in class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/BodyDecoder.html#getBody()">getBody()</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a></dt>
@@ -1517,7 +1518,9 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html#getBody()">getBody()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ByteChannelSubscriber</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodySubscriber.html#getBody()">getBody()</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingBodySubscriber</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodySubscriber.html#getBody()">getBody()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingBodySubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html#getBody()">getBody()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">TimeoutBodySubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockGzipMember.html#getBytes()">getBytes()</a></span> - Method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockGzipMember.html" title="class in com.github.mizosoft.methanol.testutils">MockGzipMember</a></dt>
 <dd>&nbsp;</dd>
@@ -2194,7 +2197,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html#mediaType()">mediaType()</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html" title="class in com.github.mizosoft.methanol">FormBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingMimeBodyPublisher.html#mediaType()">mediaType()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingMimeBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingMimeBodyPublisher</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/MimeBodyPublisherAdapter.html#mediaType()">mediaType()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/MimeBodyPublisherAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions">MimeBodyPublisherAdapter</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MimeBodyPublisher.html#mediaType()">mediaType()</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol">MimeBodyPublisher</a></dt>
 <dd>
@@ -2297,6 +2300,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">A <code>BodyPublisher</code> with a <a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">media type</a>.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/MimeBodyPublisherAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions"><span class="type-name-link">MimeBodyPublisherAdapter</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/MimeBodyPublisherAdapter.html#%3Cinit%3E(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)">MimeBodyPublisherAdapter(HttpRequest.BodyPublisher, MediaType)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/MimeBodyPublisherAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions">MimeBodyPublisherAdapter</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/CacheControl.html#minFresh()">minFresh()</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.html" title="class in com.github.mizosoft.methanol">CacheControl</a></dt>
 <dd>
 <div class="block">Returns the value of the <code>min-fresh</code> directive if present.</div>
@@ -2496,6 +2503,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a new <code>MediaType</code> with the given type, subtype and parameters.</div>
 </dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html#of(java.util.concurrent.ScheduledExecutorService)">of(ScheduledExecutorService)</a></span> - Static method in interface com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MoreBodyHandlers.html#ofByteChannel()">ofByteChannel()</a></span> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MoreBodyHandlers.html" title="class in com.github.mizosoft.methanol">MoreBodyHandlers</a></dt>
 <dd>
 <div class="block">Returns a <code>BodyHandler</code> of <code>ReadableByteChannel</code> as specified by <a href="methanol/com/github/mizosoft/methanol/MoreBodySubscribers.html#ofByteChannel()"><code>MoreBodySubscribers.ofByteChannel()</code></a>.</div>
@@ -2560,9 +2569,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html#onComplete()">onComplete()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ByteChannelSubscriber</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html#onComplete()">onComplete()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">TimeoutSubscriber</a></dt>
-<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html#onComplete()">onComplete()</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html#onComplete()">onComplete()</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html#onComplete()">onComplete()</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/ProgressTracker.MultipartListener.html#onComplete()">onComplete()</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ProgressTracker.MultipartListener.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.MultipartListener</a></dt>
 <dd>&nbsp;</dd>
@@ -2576,9 +2587,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html#onError(java.lang.Throwable)">onError(Throwable)</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ByteChannelSubscriber</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html#onError(java.lang.Throwable)">onError(Throwable)</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">TimeoutSubscriber</a></dt>
-<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html#onError(java.lang.Throwable)">onError(Throwable)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html#onError(java.lang.Throwable)">onError(Throwable)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html#onError(java.lang.Throwable)">onError(Throwable)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/ProgressTracker.MultipartListener.html#onError(java.lang.Throwable)">onError(Throwable)</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ProgressTracker.MultipartListener.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.MultipartListener</a></dt>
 <dd>&nbsp;</dd>
@@ -2606,9 +2619,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html#onNext(java.util.List)">onNext(List&lt;ByteBuffer&gt;)</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ByteChannelSubscriber</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html#onNext(java.util.List)">onNext(List&lt;ByteBuffer&gt;)</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">TimeoutSubscriber</a></dt>
-<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html#onNext(T)">onNext(T)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html#onNext(T)">onNext(T)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html#onNext(T)">onNext(T)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/TestSubscriber.html#onNext(T)">onNext(T)</a></span> - Method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testutils">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
@@ -2638,9 +2653,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe(Flow.Subscription)</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ByteChannelSubscriber</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe(Flow.Subscription)</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">TimeoutSubscriber</a></dt>
-<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe(Flow.Subscription)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe(Flow.Subscription)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe(Flow.Subscription)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/ProgressTracker.MultipartListener.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe(Flow.Subscription)</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ProgressTracker.MultipartListener.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.MultipartListener</a></dt>
 <dd>&nbsp;</dd>
@@ -3057,6 +3074,18 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler,java.net.http.HttpResponse.PushPromiseHandler)">sendAsync(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;, HttpResponse.PushPromiseHandler&lt;T&gt;)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/SerialExecutor.html" title="class in com.github.mizosoft.methanol.internal.concurrent"><span class="type-name-link">SerialExecutor</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/concurrent/package-summary.html">com.github.mizosoft.methanol.internal.concurrent</a></dt>
+<dd>
+<div class="block">An <code>Executor</code> that ensures submitted tasks are executed serially.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/SerialExecutor.html#%3Cinit%3E(java.util.concurrent.Executor)">SerialExecutor(Executor)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/SerialExecutor.html" title="class in com.github.mizosoft.methanol.internal.concurrent">SerialExecutor</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow"><span class="type-name-link">SerializedSubscriber</span></a>&lt;<a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html" title="type parameter in SerializedSubscriber">T</a>&gt; - Class in <a href="methanol/com/github/mizosoft/methanol/internal/flow/package-summary.html">com.github.mizosoft.methanol.internal.flow</a></dt>
+<dd>
+<div class="block">A forwarding subscriber that ensures signals aren't called concurrently.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html#%3Cinit%3E()">SerializedSubscriber()</a></span> - Constructor for class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceCache.html" title="class in com.github.mizosoft.methanol.internal.spi"><span class="type-name-link">ServiceCache</span></a>&lt;<a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceCache.html" title="type parameter in ServiceCache">S</a>&gt; - Class in <a href="methanol/com/github/mizosoft/methanol/internal/spi/package-summary.html">com.github.mizosoft.methanol.internal.spi</a></dt>
 <dd>
 <div class="block">Utility class for loading/caching service providers.</div>
@@ -3082,6 +3111,8 @@ loadScripts(document, 'script');</script>
 <div class="block">Sets incoming subscription, cancels it if already set.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockGzipMember.Builder.html#setText()">setText()</a></span> - Method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockGzipMember.Builder.html" title="class in com.github.mizosoft.methanol.testutils">MockGzipMember.Builder</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/SerialExecutor.html#shutdown()">shutdown()</a></span> - Method in class com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/SerialExecutor.html" title="class in com.github.mizosoft.methanol.internal.concurrent">SerialExecutor</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/TestUtils.html#shutdown(java.util.concurrent.Executor...)">shutdown(Executor...)</a></span> - Static method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/TestUtils.html" title="class in com.github.mizosoft.methanol.testutils">TestUtils</a></dt>
 <dd>&nbsp;</dd>
@@ -3191,7 +3222,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html#subscribe(java.util.concurrent.Flow.Subscriber)">subscribe(Flow.Subscriber&lt;? super ByteBuffer&gt;)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html" title="class in com.github.mizosoft.methanol">FormBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodyPublisher.html#subscribe(java.util.concurrent.Flow.Subscriber)">subscribe(Flow.Subscriber&lt;? super ByteBuffer&gt;)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingBodyPublisher</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html#subscribe(java.util.concurrent.Flow.Subscriber)">subscribe(Flow.Subscriber&lt;? super ByteBuffer&gt;)</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.html#subscribe(java.util.concurrent.Flow.Subscriber)">subscribe(Flow.Subscriber&lt;? super ByteBuffer&gt;)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
@@ -3255,7 +3286,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html#SYNC_EXECUTOR">SYNC_EXECUTOR</a></span> - Static variable in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html" title="class in com.github.mizosoft.methanol.internal.flow">FlowSupport</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Delayer.html#systemDelayer()">systemDelayer()</a></span> - Static method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Delayer.html" title="interface in com.github.mizosoft.methanol.internal.cache">DiskStore.Delayer</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html#systemDelayer()">systemDelayer()</a></span> - Static method in interface com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a></dt>
 <dd>
 <div class="block">A Delayer that uses the system-wide scheduler through CompletableFuture::delayedExecutor.</div>
 </dd>
@@ -3365,12 +3396,20 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#timeout(java.time.Duration)">timeout(Duration)</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions"><span class="type-name-link">TimeoutSubscriber</span></a>&lt;<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt; - Class in <a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions"><span class="type-name-link">TimeoutBodySubscriber</span></a>&lt;<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html" title="type parameter in TimeoutBodySubscriber">T</a>&gt; - Class in <a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html#%3Cinit%3E(java.time.Duration,com.github.mizosoft.methanol.internal.concurrent.Delayer,java.net.http.HttpResponse.BodySubscriber)">TimeoutBodySubscriber(Duration, Delayer, HttpResponse.BodySubscriber&lt;T&gt;)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">TimeoutBodySubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html#timeoutError(long,java.time.Duration)">timeoutError(long, Duration)</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">TimeoutBodySubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html#timeoutError(long,java.time.Duration)">timeoutError(long, Duration)</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow"><span class="type-name-link">TimeoutSubscriber</span></a>&lt;<a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt; - Class in <a href="methanol/com/github/mizosoft/methanol/internal/flow/package-summary.html">com.github.mizosoft.methanol.internal.flow</a></dt>
 <dd>
-<div class="block">Intercepts requests to upstream and schedules error completion with <code>
- HttpReadTimeoutException</code> if each not fulfilled within a timeout.</div>
+<div class="block">A subscriber that intercepts requests to upstream and schedules error completion if each
+ requested item isn't received within a timeout.</div>
 </dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html#%3Cinit%3E(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)">TimeoutSubscriber(HttpResponse.BodySubscriber&lt;T&gt;, Duration, ScheduledExecutorService)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">TimeoutSubscriber</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html#%3Cinit%3E(java.time.Duration,com.github.mizosoft.methanol.internal.concurrent.Delayer)">TimeoutSubscriber(Duration, Delayer)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/ProgressTracker.Progress.html#timePassed()">timePassed()</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ProgressTracker.Progress.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.Progress</a></dt>
 <dd>
@@ -3555,7 +3594,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html#upstream">upstream</a></span> - Variable in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingSubscriber</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodyPublisher.html#upstream()">upstream()</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingBodyPublisher</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html#upstream()">upstream()</a></span> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/Upstream.html" title="class in com.github.mizosoft.methanol.internal.flow"><span class="type-name-link">Upstream</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/flow/package-summary.html">com.github.mizosoft.methanol.internal.flow</a></dt>
 <dd>
