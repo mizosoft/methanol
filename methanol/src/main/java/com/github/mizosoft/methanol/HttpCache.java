@@ -42,6 +42,7 @@ import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
+import com.github.mizosoft.methanol.internal.cache.StoreCorruptionException;
 import java.io.Flushable;
 import java.io.IOException;
 import java.lang.System.Logger;
@@ -315,7 +316,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public @Nullable CacheResponse get(HttpRequest request) throws IOException {
-      var viewer = store.view(key(request));
+      Viewer viewer;
+      try {
+        viewer = store.view(key(request));
+      } catch (StoreCorruptionException e) {
+        logger.log(Level.WARNING, "unrecoverable cache entry", e);
+        return null;
+      }
+
       if (viewer == null) {
         return null;
       }
