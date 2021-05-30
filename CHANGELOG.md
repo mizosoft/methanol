@@ -6,7 +6,6 @@
 
 * Added [`HttpCache.Listener`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Listener.html).
 * Added `TaggableRequest`. This facilitates carrying application-specific data throughout interceptors & listeners.
-  
   ```java
   var interceptor = Interceptor.create(request -> {
       var taggableRequest = TaggableRequest.from(request);
