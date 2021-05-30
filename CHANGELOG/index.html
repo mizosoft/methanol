@@ -16,7 +16,7 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/CHANGELOG/">
       
       <link rel="icon" href="../images/flask.png">
-      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-7.1.5">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-7.1.6">
     
     
       
@@ -24,10 +24,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.bde7dde4.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.875de78c.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ef6f36e2.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.f1a3b89f.min.css">
         
       
     
@@ -732,9 +732,9 @@
 <p><em>30-5-2021</em> </p>
 <ul>
 <li>Added <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Listener.html"><code>HttpCache.Listener</code></a>.</li>
-<li>Added <code>TaggableRequest</code>. This facilitates carrying application-specific data throughout interceptors &amp; listeners.</li>
-</ul>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">interceptor</span> <span class="o">=</span> <span class="n">Interceptor</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="n">request</span> <span class="o">-&gt;</span> <span class="p">{</span>
+<li>
+<p>Added <code>TaggableRequest</code>. This facilitates carrying application-specific data throughout interceptors &amp; listeners.
+  <div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">interceptor</span> <span class="o">=</span> <span class="n">Interceptor</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="n">request</span> <span class="o">-&gt;</span> <span class="p">{</span>
     <span class="kd">var</span> <span class="n">taggableRequest</span> <span class="o">=</span> <span class="n">TaggableRequest</span><span class="p">.</span><span class="na">from</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
     <span class="kd">var</span> <span class="n">myContext</span> <span class="o">=</span> <span class="n">taggableRequest</span><span class="p">.</span><span class="na">tag</span><span class="p">(</span><span class="n">MyContext</span><span class="p">.</span><span class="na">class</span><span class="p">).</span><span class="na">orElseGet</span><span class="p">(</span><span class="n">MyContext</span><span class="p">::</span><span class="n">empty</span><span class="p">);</span>
     <span class="p">...</span>
@@ -747,11 +747,13 @@
 <span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://example.com&quot;</span><span class="p">)</span>
     <span class="p">.</span><span class="na">tag</span><span class="p">(</span><span class="n">MyContext</span><span class="p">.</span><span class="na">class</span><span class="p">,</span> <span class="n">myContext</span><span class="p">);</span>
 <span class="kd">var</span> <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofString</span><span class="p">());</span>
-</code></pre></div>
-<ul>
-<li>Fixed disk cache possibly manipulating the disk index concurrently. This could happen if an index
+</code></pre></div></p>
+</li>
+<li>
+<p>Fixed disk cache possibly manipulating the disk index concurrently. This could happen if an index
   update is delayed, as the scheduler mistakenly ran the index write immediately after the delay evaluates instead
-  of queuing it with the sequential index executor.</li>
+  of queuing it with the sequential index executor.</p>
+</li>
 <li>Fixed <code>TimeoutSubscriber</code> (used in <code>MoreBodySubscribers::withReadTimeout</code>) possibly calling
   downstream's <code>onNext</code> &amp; <code>onError</code> concurrently. This could happen if timeout evaluates while downstream's
   <code>onNext</code> is still executing.</li>
@@ -922,7 +924,7 @@
     <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing"}, "search": "../assets/javascripts/workers/search.d351de03.min.js", "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.a1609d9a.min.js"></script>
+      <script src="../assets/javascripts/bundle.34eae1b6.min.js"></script>
       
     
   </body>
