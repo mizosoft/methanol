@@ -33,6 +33,8 @@
   detect cancellation.
 * Made the disk cache catch and log `StoreCorruptionException` thrown when opening an entry. This is
   done instead of rethrowing.
+* `Methanol` now always validates request's `URI` after being resolved with the optional base `URI`.
+  Previously, the `URI` was only validated if there was a base `URI`.
 * Upgraded [gson to 2.8.7](https://github.com/google/gson/blob/master/CHANGELOG.md#version-287).
 
 ## Version 1.5.0
