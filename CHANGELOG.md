@@ -72,7 +72,7 @@
   interceptors. It was tempting to name the latter 'network interceptors', but that seemed rather confusing
   as not all 'network' requests can be intercepted (`HttpClient` can make its own intermediate requests
   like redirects & retries).
-* Added `HttpStats`, which contains functions for checking response codes.
+* Added `HttpStatus`, which contains functions for checking response codes.
 * Added `ForwardingEncoder` & `ForwardingDecoder`. These are meant for easier installation of adapters
   from the classpath.
 * `System.Logger` API is now used instead of `java.util.logging`.
