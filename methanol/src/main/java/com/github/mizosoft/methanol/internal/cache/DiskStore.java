@@ -238,17 +238,16 @@ public final class DiskStore implements Store {
     Executor indexExecutorDelegate;
     if (debugIndexOperations) {
       indexExecutorDelegate =
-          runnable -> {
-            executor.execute(
-                () -> {
-                  isIndexExecutor.set(true);
-                  try {
-                    runnable.run();
-                  } finally {
-                    isIndexExecutor.set(false);
-                  }
-                });
-          };
+          runnable ->
+              executor.execute(
+                  () -> {
+                    isIndexExecutor.set(true);
+                    try {
+                      runnable.run();
+                    } finally {
+                      isIndexExecutor.set(false);
+                    }
+                  });
     } else {
       indexExecutorDelegate = executor;
     }
