@@ -183,7 +183,6 @@ public final class CacheInterceptor implements Interceptor {
    * we won't be able to match them with the correct response.
    */
   private static boolean isImplicitField(String name) {
-    // Expect, Content-Length, Host, Transfer-Encoding
     return "Cookie".equalsIgnoreCase(name)
         || "Cookie2".equalsIgnoreCase(name)
         || "Authorization".equalsIgnoreCase(name)
@@ -276,12 +275,12 @@ public final class CacheInterceptor implements Interceptor {
   /** Updates the cache response after successful revalidation as specified in rfc7234 4.3.4. */
   private static CacheResponse updateCacheResponse(
       CacheResponse cacheResponse, NetworkResponse networkResponse) {
-    var mergedHeaders =
-        mergeHeaders(cacheResponse.get().headers(), networkResponse.get().headers());
     return cacheResponse.with(
         builder ->
             builder
-                .setHeaders(mergedHeaders)
+                .clearHeaders()
+                .headers(
+                    mergeHeaders(cacheResponse.get().headers(), networkResponse.get().headers()))
                 .timeRequestSent(networkResponse.get().timeRequestSent())
                 .timeResponseReceived(networkResponse.get().timeResponseReceived()));
   }

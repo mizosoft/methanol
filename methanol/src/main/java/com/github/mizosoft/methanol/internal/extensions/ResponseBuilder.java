@@ -61,13 +61,12 @@ public final class ResponseBuilder<T> {
   }
 
   public ResponseBuilder<T> headers(HttpHeaders headers) {
-    headersBuilder.addAll(headers.map());
+    headersBuilder.addAll(headers);
     return this;
   }
 
-  public ResponseBuilder<T> setHeaders(HttpHeaders headers) {
+  public ResponseBuilder<T> clearHeaders() {
     headersBuilder.clear();
-    headersBuilder.addAll(headers.map());
     return this;
   }
 
