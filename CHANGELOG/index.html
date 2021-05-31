@@ -762,6 +762,8 @@
   detect cancellation.</li>
 <li>Made the disk cache catch and log <code>StoreCorruptionException</code> thrown when opening an entry. This is
   done instead of rethrowing.</li>
+<li><code>Methanol</code> now always validates request's <code>URI</code> after being resolved with the optional base <code>URI</code>.
+  Previously, the <code>URI</code> was only validated if there was a base <code>URI</code>.</li>
 <li>Upgraded <a href="https://github.com/google/gson/blob/master/CHANGELOG.md#version-287">gson to 2.8.7</a>.</li>
 </ul>
 <h2 id="version-150">Version 1.5.0<a class="headerlink" href="#version-150" title="Permanent link">&para;</a></h2>
@@ -802,7 +804,7 @@
   interceptors. It was tempting to name the latter 'network interceptors', but that seemed rather confusing
   as not all 'network' requests can be intercepted (<code>HttpClient</code> can make its own intermediate requests
   like redirects &amp; retries).</li>
-<li>Added <code>HttpStats</code>, which contains functions for checking response codes.</li>
+<li>Added <code>HttpStatus</code>, which contains functions for checking response codes.</li>
 <li>Added <code>ForwardingEncoder</code> &amp; <code>ForwardingDecoder</code>. These are meant for easier installation of adapters
   from the classpath.</li>
 <li><code>System.Logger</code> API is now used instead of <code>java.util.logging</code>.</li>
