@@ -1,6 +1,7 @@
 // TODO get 1.8.0 from main upstream when released
 buildscript {
   repositories {
+    gradlePluginPortal()
     maven { url "https://jitpack.io" }
     mavenCentral()
   }
