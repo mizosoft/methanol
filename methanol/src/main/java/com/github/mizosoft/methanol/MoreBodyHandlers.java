@@ -28,6 +28,7 @@ import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.internal.extensions.ImmutableResponseInfo;
 import java.io.Reader;
 import java.net.http.HttpHeaders;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.ResponseInfo;
@@ -43,6 +44,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -177,6 +179,30 @@ public class MoreBodyHandlers {
   public static <T> BodyHandler<Supplier<T>> ofDeferredObject(TypeRef<T> type) {
     requireSupport(type);
     return info -> MoreBodySubscribers.ofDeferredObject(type, mediaTypeOrNull(info.headers()));
+  }
+
+  /**
+   * Returns a {@code BodyHandler} that checks if response has an error or not
+   * and uses right {@code BodyHandler} to process response
+   * @param errorPredicate if this predicate returns true, errorHandler will be used
+   * @param responseHandler this handler is used for response body
+   * @param errorHandler this handler is used if errorPredicate returns true
+   * @param <T> type that responseHandler returns
+   * @param <E> type that errorHandler returns
+   */
+  public static <T, E> BodyHandler<Result<T, E>> ofResponseOrError(Predicate<ResponseInfo> errorPredicate,
+                                                                   BodyHandler<T> responseHandler,
+                                                                   BodyHandler<E> errorHandler) {
+    requireNonNull(errorPredicate);
+    requireNonNull(responseHandler);
+    requireNonNull(errorHandler);
+    return responseInfo -> {
+      if (errorPredicate.test(responseInfo)) {
+        return HttpResponse.BodySubscribers.mapping(errorHandler.apply(responseInfo), Result::ofError);
+      } else {
+        return HttpResponse.BodySubscribers.mapping(responseHandler.apply(responseInfo), Result::ofResponse);
+      }
+    };
   }
 
   /**
