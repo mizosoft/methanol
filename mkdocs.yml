@@ -69,7 +69,7 @@ nav:
     - Object Mapping: object_mapping.md
     - Interceptors: interceptors.md
     - Decompression: decompression.md
-    - Meida Types: media_types.md
+    - Media Types: media_types.md
     - Multipart & Forms: multipart_and_forms.md
     - Progress Tracking: progress_tracking.md
     - Interruptible Reading: interruptible_reading.md
