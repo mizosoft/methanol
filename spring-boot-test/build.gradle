@@ -1,0 +1,30 @@
+plugins {
+  id 'org.springframework.boot' version '2.5.6'
+  id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+}
+
+sourceCompatibility = JavaVersion.VERSION_17
+
+dependencies {
+  implementation project(':methanol')
+  implementation project(':methanol-jackson')
+  implementation project(':methanol-testutils')
+  implementation deps.mockWebServer
+  // Must explicitly declare okhttp dep to avoid a weird NoClassDefFoundError due to an old
+  // okhttp version spring-boot puts in the boot jar.
+  implementation deps.okhttp
+  implementation deps.springBootStarterWeb
+  implementation deps.autoServiceAnnotations
+  annotationProcessor deps.autoServiceAnnProcessor
+}
+
+bootJar {
+  mainClass = 'com.github.mizosoft.methanol.springboot.SpringBootApp'
+}
+
+test {
+  dependsOn bootJar
+  doFirst {
+    systemProperty('com.github.mizosoft.methanol.bootJar.path', bootJar.archiveFile.get())
+  }
+}
