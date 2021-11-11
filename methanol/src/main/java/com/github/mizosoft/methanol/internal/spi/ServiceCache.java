@@ -69,8 +69,8 @@ public final class ServiceCache<S> {
 
   private List<S> loadProviders() {
     List<S> providers = new ArrayList<>();
-    ServiceLoader.load(service, ClassLoader.getSystemClassLoader()).stream()
-        .forEach(p -> addProviderLenient(p, providers));
+    ServiceLoader.load(service, ServiceCache.class.getClassLoader()).stream()
+        .forEach(provider -> addProviderLenient(provider, providers));
     return Collections.unmodifiableList(providers);
   }
 

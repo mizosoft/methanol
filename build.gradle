@@ -12,7 +12,7 @@ plugins {
 ext {
   versions = [
       'junitJupiter'    : '5.8.1',
-      'junitPlatform'   : '1.7.0',
+      'junitPlatform'   : '1.8.1',
       'reactiveStreams' : '1.0.3',
       'checkerFramework': '3.19.0',
       'gson'            : '2.8.9',
@@ -34,11 +34,14 @@ ext {
       'assertj'         : '3.21.0',
       'awaitility'      : '4.1.1',
       'hamcrest'        : '2.2',
+      'springBoot'      : '2.5.6',
+      'autoService'     : '1.0.1',
   ]
 
   deps = [
       'junitApi'               : "org.junit.jupiter:junit-jupiter-api:${versions.junitJupiter}",
       'junitEngine'            : "org.junit.jupiter:junit-jupiter-engine:${versions.junitJupiter}",
+      'junitPlatformCommons'   : "org.junit.platform:junit-platform-commons:$versions.junitPlatform",
       'reactiveStreamsTckFlow' : "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
       'checkerFramework'       : "org.checkerframework:checker:${versions.checkerFramework}",
       'checkerFrameworkQual'   : "org.checkerframework:checker-qual:${versions.checkerFramework}",
@@ -55,6 +58,7 @@ ext {
       'jmhCore'                : "org.openjdk.jmh:jmh-core:$versions.jmh",
       'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh",
       'okhttpTls'              : "com.squareup.okhttp3:okhttp-tls:${versions.okhttp}",
+      'okhttp'                 : "com.squareup.okhttp3:okhttp:$versions.okhttp",
       'reactorCore'            : "io.projectreactor:reactor-core:${versions.reactor}",
       'nullAway'               : "com.uber.nullaway:nullaway:${versions.nullAway}",
       'jaxbApi'                : "javax.xml.bind:jaxb-api:${versions.jaxb}",
@@ -65,7 +69,10 @@ ext {
       'jimfs'                  : "com.google.jimfs:jimfs:${versions.jimfs}",
       'assertj'                : "org.assertj:assertj-core:${versions.assertj}",
       'awaitility'             : "org.awaitility:awaitility:${versions.awaitility}",
-      'hamcrest'               : "org.hamcrest:hamcrest:${versions.hamcrest}"
+      'hamcrest'               : "org.hamcrest:hamcrest:${versions.hamcrest}",
+      'springBootStarterWeb'   : "org.springframework.boot:spring-boot-starter-web:$versions.springBoot",
+      'autoServiceAnnotations' : "com.google.auto.service:auto-service-annotations:$versions.autoService",
+      'autoServiceAnnProcessor': "com.google.auto.service:auto-service:$versions.autoService",
   ]
 
   isJavaProject = { project ->
@@ -155,6 +162,9 @@ subprojects { subproject ->
     testImplementation deps.assertj
     testImplementation deps.awaitility
     testImplementation deps.hamcrest
+
+    // https://stackoverflow.com/questions/69395613/hello-got-an-error-with-junit-platform-v-5-8-1-java-lang-nosuchmethoderror-org
+    testImplementation deps.junitPlatformCommons
   }
 
   // Add helper extensions for modular subprojects
