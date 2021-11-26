@@ -1407,6 +1407,24 @@ class ProgressTrackerTest {
   }
 
   @Test
+  void mediaTypeIsPreserved() {
+    var tracker = ProgressTracker.create();
+    var upstream = MoreBodyPublishers.ofMediaType(BodyPublishers.noBody(), MediaType.TEXT_PLAIN);
+    var publisher = tracker.tracking(upstream, progress -> {});
+    assertThat(publisher)
+        .isInstanceOf(MimeBodyPublisher.class)
+        .returns(MediaType.TEXT_PLAIN, pub -> ((MimeBodyPublisher) pub).mediaType());
+  }
+
+  @Test
+  void multipartMediaTypeIsPreserved() {
+    var tracker = ProgressTracker.create();
+    var upstream = MultipartBodyPublisher.newBuilder().textPart("a", "b").build();
+    var publisher = tracker.trackingMultipart(upstream, progress -> {});
+    assertThat(publisher).returns(publisher.mediaType(), from(MimeBodyPublisher::mediaType));
+  }
+
+  @Test
   void progressToString() {
     var progress =
         new ProgressSnapshot(

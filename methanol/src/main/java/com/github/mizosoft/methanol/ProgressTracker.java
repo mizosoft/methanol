@@ -105,14 +105,19 @@ public final class ProgressTracker {
   public BodyPublisher tracking(BodyPublisher upstream, Listener listener) {
     requireNonNull(upstream, "upstream");
     requireNonNull(listener, "listener");
-    return new TrackingBodyPublisher(upstream, listener, options);
+    var trackingPublisher = new TrackingBodyPublisher(upstream, listener, options);
+    // Don't swallow upstream's MediaType if there's one
+    return upstream instanceof MimeBodyPublisher
+        ? MoreBodyPublishers.ofMediaType(
+            trackingPublisher, ((MimeBodyPublisher) upstream).mediaType())
+        : trackingPublisher;
   }
 
   /**
    * Returns a {@code BodyPublisher} that tracks the given {@code MultipartBodyPublisher}'s upload
    * progress with per-part progress events.
    */
-  public BodyPublisher trackingMultipart(
+  public MimeBodyPublisher trackingMultipart(
       MultipartBodyPublisher upstream, MultipartListener listener) {
     requireNonNull(upstream, "upstream");
     requireNonNull(listener, "listener");
@@ -568,7 +573,10 @@ public final class ProgressTracker {
 
     abstract long countBytes(B batch);
 
-    abstract void updateProgression(R progression, Instant updateTime, long byteCount);
+    // Overriden by MultipartTrackingSubscriber
+    void updateProgression(R progression, Instant updateTime, long byteCount) {
+      progression.update(updateTime, byteCount);
+    }
 
     @Override
     protected Subscriber<? super B> downstream() {
@@ -708,11 +716,6 @@ public final class ProgressTracker {
     }
 
     @Override
-    void updateProgression(UnipartProgression progression, Instant updateTime, long byteCount) {
-      progression.update(updateTime, byteCount);
-    }
-
-    @Override
     public CompletionStage<T> getBody() {
       return bodySupplier.get();
     }
@@ -753,18 +756,15 @@ public final class ProgressTracker {
       long countBytes(ByteBuffer buffer) {
         return buffer.remaining();
       }
-
-      @Override
-      void updateProgression(UnipartProgression progression, Instant updateTime, long byteCount) {
-        progression.update(updateTime, byteCount);
-      }
     }
   }
 
-  private static final class MultipartTrackingBodyPublisher extends ForwardingBodyPublisher {
+  private static final class MultipartTrackingBodyPublisher extends ForwardingBodyPublisher
+      implements MimeBodyPublisher {
     private final MultipartListener listener;
     private final Options options;
     private final List<Part> parts;
+    private final MediaType mediaType;
 
     MultipartTrackingBodyPublisher(
         MultipartBodyPublisher upstream, MultipartListener listener, Options options) {
@@ -772,6 +772,7 @@ public final class ProgressTracker {
       this.listener = listener;
       this.options = options;
       this.parts = upstream.parts();
+      this.mediaType = upstream.mediaType();
     }
 
     @Override
@@ -781,6 +782,11 @@ public final class ProgressTracker {
           .subscribe(
               new MultipartTrackingSubscriber(
                   subscriber, listener, options, contentLength(), parts.get(0)));
+    }
+
+    @Override
+    public MediaType mediaType() {
+      return mediaType;
     }
 
     private static final class MultipartTrackingSubscriber
