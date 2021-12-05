@@ -332,14 +332,14 @@ public final class Methanol extends HttpClient {
 
   private static <T> PushPromiseHandler<T> transformPushPromises(
       PushPromiseHandler<T> pushPromiseHandler,
-      UnaryOperator<BodyHandler<T>> bodyHandlerTransform,
+      UnaryOperator<BodyHandler<T>> bodyHandlerTransformer,
       UnaryOperator<HttpResponse<T>> responseTransformer) {
     return (initial, push, acceptor) ->
         pushPromiseHandler.applyPushPromise(
             initial,
             push,
             acceptor
-                .compose(bodyHandlerTransform)
+                .compose(bodyHandlerTransformer)
                 .andThen(future -> future.thenApply(responseTransformer)));
   }
 

@@ -67,7 +67,7 @@ The core module has support for `gzip` & `deflate` out of the box. There's also 
 
 Adding support for more encodings or overriding supported ones is a matter of writing a `BodyDecoder`
 implementation and providing a corresponding factory. However, implementing the decoder's `Flow.Publisher`
-semantics can be tricky. Instead, implement an `AsyncDecoder` and wrap in an `AsyncBodyDecoder`, so
+semantics can be tricky. Instead, implement an `AsyncDecoder` and wrap it in an `AsyncBodyDecoder`, so
 you're only concerned with your decompression logic.
 
 ### Writing an AsyncDecoder
@@ -107,8 +107,9 @@ class JZlibDecoder implements AsyncDecoder {
     synchronized (inflater) {
       while (source.hasRemaining()) {
         // Prepare input for this iteration
+        refillInput(source);
         inflater.setNextInIndex(0);
-        inflater.setAvailIn(refillInput(source));
+        inflater.setAvailIn(input.limit());
 
         // Continue inflating as long as there's more input or there's pending output
 
@@ -141,13 +142,10 @@ class JZlibDecoder implements AsyncDecoder {
     }
   }
 
-  private int refillInput(ByteSource source) {
-    // Pull as much bytes from the source as possible
+  private void refillInput(ByteSource source) {
     input.clear();
-    while (source.hasRemaining() && input.hasRemaining()) {
-      source.pullBytes(input);
-    }
-    return input.flip().limit();
+    source.pullBytes(input);
+    input.flip();
   }
 
   @Override

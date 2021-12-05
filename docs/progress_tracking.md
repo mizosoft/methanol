@@ -98,10 +98,10 @@ progress is tracked by registering a `Listener` with a request's `BodyPublisher`
       if (progress.determinate()) { // Overall progress can be measured
         var percent = 100 * progress.value();
         System.out.printf(
-            "Downloaded %d from %d bytes (%.2f%%)%n", 
+            "Uploaded %d from %d bytes (%.2f%%)%n", 
             progress.totalBytesTransferred(), progress.contentLength(), percent);
       } else {
-        System.out.println("Downloaded " + progress.totalBytesTransferred());
+        System.out.println("Uploaded " + progress.totalBytesTransferred());
       }
 
       if (progress.done()) {
