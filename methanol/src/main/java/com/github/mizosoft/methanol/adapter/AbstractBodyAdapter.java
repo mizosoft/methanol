@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.adapter;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter;
@@ -31,7 +32,6 @@ import com.github.mizosoft.methanol.MoreBodyPublishers;
 import com.github.mizosoft.methanol.TypeRef;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -40,7 +40,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * specifying a set of {@code MediaTypes} the adapter is compatible with.
  */
 public abstract class AbstractBodyAdapter implements BodyAdapter {
-
   private final Set<MediaType> compatibleMediaTypes;
 
   /** Creates an {@code AbstractBodyAdapter} compatible with the given media types. */
@@ -51,12 +50,7 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
   @Override
   public final boolean isCompatibleWith(MediaType mediaType) {
     requireNonNull(mediaType);
-    for (MediaType supported : compatibleMediaTypes) {
-      if (supported.isCompatibleWith(mediaType)) {
-        return true;
-      }
-    }
-    return false;
+    return compatibleMediaTypes.stream().anyMatch(mediaType::isCompatibleWith);
   }
 
   /** Returns an immutable set containing the media types this adapter is compatible with. */
@@ -108,11 +102,11 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
   }
 
   /**
-   * Returns either the result of {@link MediaType#charsetOrDefault(Charset)} or {@code
-   * UTF-8} directly if {@code mediaType} is null.
+   * Returns either the result of {@link MediaType#charsetOrDefault(Charset)} or {@code UTF-8}
+   * directly if {@code mediaType} is null.
    */
   public static Charset charsetOrUtf8(@Nullable MediaType mediaType) {
-    return charsetOrDefault(mediaType, StandardCharsets.UTF_8);
+    return charsetOrDefault(mediaType, UTF_8);
   }
 
   /**

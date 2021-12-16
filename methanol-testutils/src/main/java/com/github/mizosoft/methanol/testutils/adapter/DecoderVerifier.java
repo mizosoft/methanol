@@ -101,13 +101,13 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
 
     public BodySubscriberVerifier<T> withBody(ByteBuffer body) {
       var subscriber = decoder.toObject(type, mediaType);
-      publisherBody(subscriber, body);
+      publishBody(subscriber, body);
       return new BodySubscriberVerifier<>(subscriber);
     }
 
     public BodySubscriberVerifier<T> withFailure(Throwable error) {
       var subscriber = decoder.toObject(type, mediaType);
-      publisherError(subscriber, error);
+      publishError(subscriber, error);
       return new BodySubscriberVerifier<>(subscriber);
     }
 
@@ -121,13 +121,13 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
 
     public SupplierVerifier<T> withDeferredBody(ByteBuffer body) {
       var subscriber = decoder.toDeferredObject(type, mediaType);
-      publisherBody(subscriber, body);
+      publishBody(subscriber, body);
       return verifySupplier(subscriber);
     }
 
     public SupplierVerifier<T> withDeferredFailure(Throwable error) {
       var subscriber = decoder.toDeferredObject(type, mediaType);
-      publisherError(subscriber, error);
+      publishError(subscriber, error);
       return verifySupplier(subscriber);
     }
 
@@ -137,14 +137,14 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
       return new SupplierVerifier<>(bodyFuture.toCompletableFuture().join());
     }
 
-    private static void publisherBody(BodySubscriber<?> subscriber, ByteBuffer buffer) {
+    private static void publishBody(BodySubscriber<?> subscriber, ByteBuffer buffer) {
       try (var publisher = new SubmissionPublisher<List<ByteBuffer>>()) {
         publisher.subscribe(subscriber);
         publisher.submit(List.of(buffer));
       }
     }
 
-    private static void publisherError(BodySubscriber<?> subscriber, Throwable error) {
+    private static void publishError(BodySubscriber<?> subscriber, Throwable error) {
       try (var publisher = new SubmissionPublisher<List<ByteBuffer>>()) {
         publisher.subscribe(subscriber);
         publisher.closeExceptionally(error);

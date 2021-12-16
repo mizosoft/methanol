@@ -27,29 +27,79 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
+import com.github.mizosoft.methanol.MediaType;
 
 /** Provides {@link BodyAdapter} implementations for the JSON format using Jackson. */
 public class JacksonAdapterFactory {
-
   private JacksonAdapterFactory() {} // non-instantiable
 
-  /** Returns a {@code Encoder} that uses a default {@code ObjectMapper} instance. */
+  /** Returns an {@code Encoder} that uses a default {@code ObjectMapper} for JSON. */
   public static Encoder createEncoder() {
     return createEncoder(new JsonMapper());
   }
 
-  /** Returns a {@code Encoder} that uses the given {@code ObjectMapper} instance. */
+  /**
+   * Returns an {@code Encoder} that uses the given {@code ObjectMapper} and is only compatible with
+   * {@code application/json}.
+   */
   public static Encoder createEncoder(ObjectMapper mapper) {
-    return new JacksonAdapter.Encoder(mapper);
+    return createEncoder(mapper, MediaType.APPLICATION_JSON);
   }
 
-  /** Returns a {@code Decoder} that uses a default {@code ObjectMapper} instance. */
+  /**
+   * Returns an {@code Encoder} that uses the given {@code ObjectMapper} and is compatible with the
+   * given media types.
+   */
+  public static Encoder createEncoder(ObjectMapper mapper, MediaType... mediaTypes) {
+    checkMediaTypes(mediaTypes);
+    return createEncoder(mapper, ObjectWriterFactory.getDefault(), mediaTypes);
+  }
+
+  /**
+   * Returns an {@code Encoder} that uses the given {@code ObjectMapper} and is compatible with the
+   * given media types. The encoder creates {@code ObjectWriters} using the given factory.
+   */
+  public static Encoder createEncoder(
+      ObjectMapper mapper, ObjectWriterFactory writerFactory, MediaType... mediaTypes) {
+    checkMediaTypes(mediaTypes);
+    return new JacksonAdapter.Encoder(mapper, writerFactory, mediaTypes);
+  }
+
+  /** Returns a {@code Decoder} that uses a default {@code ObjectMapper} for JSON. */
   public static Decoder createDecoder() {
     return createDecoder(new JsonMapper());
   }
 
-  /** Returns a {@code Decoder} that uses the given {@code ObjectMapper} instance. */
+  /**
+   * Returns a {@code Decoder} that uses the given {@code ObjectMapper} and is only compatible with
+   * {@code application/json}.
+   */
   public static Decoder createDecoder(ObjectMapper mapper) {
-    return new JacksonAdapter.Decoder(mapper);
+    return createDecoder(mapper, MediaType.APPLICATION_JSON);
+  }
+
+  /**
+   * Returns a {@code Decoder} that uses the given {@code ObjectMapper} and is compatible with the
+   * given media types.
+   */
+  public static Decoder createDecoder(ObjectMapper mapper, MediaType... mediaTypes) {
+    checkMediaTypes(mediaTypes);
+    return createDecoder(mapper, ObjectReaderFactory.getDefault(), mediaTypes);
+  }
+
+  /**
+   * Returns a {@code Decoder} that uses the given {@code ObjectMapper} and is compatible with the
+   * given media types. The decoder creates {@code ObjectReaders} using the given factory.
+   */
+  public static Decoder createDecoder(
+      ObjectMapper mapper, ObjectReaderFactory readerFactory, MediaType... mediaTypes) {
+    checkMediaTypes(mediaTypes);
+    return new JacksonAdapter.Decoder(mapper, readerFactory, mediaTypes);
+  }
+
+  private static void checkMediaTypes(MediaType[] mediaTypes) {
+    if (mediaTypes.length == 0) {
+      throw new IllegalArgumentException("at least one media type has to be specified");
+    }
   }
 }

@@ -32,6 +32,7 @@ import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import com.github.mizosoft.methanol.adapter.jackson.ObjectReaderFactory;
 import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
 import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonSubscriber;
 import java.io.ByteArrayOutputStream;
@@ -57,7 +58,6 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 
 abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
-
   final ObjectMapper mapper;
 
   JacksonFluxAdapter(ObjectMapper mapper) {
@@ -66,7 +66,6 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
   }
 
   static final class Encoder extends JacksonFluxAdapter implements BodyAdapter.Encoder {
-
     Encoder(ObjectMapper mapper) {
       super(mapper);
     }
@@ -153,7 +152,6 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
   }
 
   static final class Decoder extends JacksonFluxAdapter implements BodyAdapter.Decoder {
-
     Decoder(ObjectMapper mapper) {
       super(mapper);
     }
@@ -179,7 +177,11 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
       if (rawPublisherType == Mono.class) {
         subscriber =
             MoreBodySubscribers.fromAsyncSubscriber(
-                new JacksonSubscriber<>(mapper, TypeRef.from(elementType), asyncParser),
+                new JacksonSubscriber<>(
+                    mapper,
+                    TypeRef.from(elementType),
+                    ObjectReaderFactory.getDefault(),
+                    asyncParser),
                 s -> CompletableFuture.completedStage(Mono.fromCompletionStage(s.getBody())));
       } else {
         JacksonFluxSubscriber<?> fluxSubscriber =

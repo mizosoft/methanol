@@ -3,6 +3,8 @@ dependencies {
   api deps.jacksonDatabind
 
   testImplementation project(':methanol-testutils')
+  testImplementation deps.jacksonXml
+  testImplementation deps.jacksonProtobuf
 }
 
 compileJava {
@@ -12,6 +14,11 @@ compileJava {
 
 [compileTestJava, test].each { task ->
   addReads(task, 'methanol.testutils')
+  addReads(task, 'com.fasterxml.jackson.dataformat.xml')
+  addReads(task, 'com.fasterxml.jackson.dataformat.protobuf')
 }
 
 addOpens(test, 'com.github.mizosoft.methanol.adapter.jackson', 'com.fasterxml.jackson.databind')
+
+// JacksonAdapterFactoryTest calls the protected AbstractBodyAdapter.compatibleMediaTypes reflectively
+addOpensFromSource(test, 'methanol', 'com.github.mizosoft.methanol.adapter', 'methanol.adapter.jackson')

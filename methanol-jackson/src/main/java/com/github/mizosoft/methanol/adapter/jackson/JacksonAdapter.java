@@ -25,9 +25,7 @@ package com.github.mizosoft.methanol.adapter.jackson;
 import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
@@ -40,7 +38,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.UncheckedIOException;
-import java.io.Writer;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -49,18 +46,19 @@ import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class JacksonAdapter extends AbstractBodyAdapter {
-
   final ObjectMapper mapper;
 
-  JacksonAdapter(ObjectMapper mapper) {
-    super(MediaType.APPLICATION_JSON);
+  JacksonAdapter(ObjectMapper mapper, MediaType... mediaTypes) {
+    super(mediaTypes);
     this.mapper = requireNonNull(mapper);
   }
 
   static final class Encoder extends JacksonAdapter implements BodyAdapter.Encoder {
+    private final ObjectWriterFactory writerFactory;
 
-    Encoder(ObjectMapper mapper) {
-      super(mapper);
+    Encoder(ObjectMapper mapper, ObjectWriterFactory writerFactory, MediaType... mediaTypes) {
+      super(mapper, mediaTypes);
+      this.writerFactory = writerFactory;
     }
 
     @Override
@@ -73,23 +71,23 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       requireNonNull(object);
       requireSupport(object.getClass());
       requireCompatibleOrNull(mediaType);
-      ObjectWriter objWriter = mapper.writerFor(object.getClass());
-      ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
-      try (Writer writer = new OutputStreamWriter(outBuffer, charsetOrUtf8(mediaType))) {
+      var objWriter = writerFactory.createWriter(mapper, TypeRef.from(object.getClass()));
+      var buffer = new ByteArrayOutputStream();
+      try (var writer = new OutputStreamWriter(buffer, charsetOrUtf8(mediaType))) {
         objWriter.writeValue(writer, object);
-      } catch (JsonProcessingException e) {
+      } catch (IOException e) {
         throw new UncheckedIOException(e);
-      } catch (IOException ioe) {
-        throw new AssertionError(ioe); // writing to a memory buffer
       }
-      return attachMediaType(BodyPublishers.ofByteArray(outBuffer.toByteArray()), mediaType);
+      return attachMediaType(BodyPublishers.ofByteArray(buffer.toByteArray()), mediaType);
     }
   }
 
   static final class Decoder extends JacksonAdapter implements BodyAdapter.Decoder {
+    private final ObjectReaderFactory readerFactory;
 
-    Decoder(ObjectMapper mapper) {
-      super(mapper);
+    Decoder(ObjectMapper mapper, ObjectReaderFactory readerFactory, MediaType... mediaTypes) {
+      super(mapper, mediaTypes);
+      this.readerFactory = readerFactory;
     }
 
     @Override
@@ -111,7 +109,8 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
             BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(type, bytes));
       }
       return JacksonAdapterUtils.coerceUtf8(
-          new JacksonSubscriber<>(mapper, type, asyncParser), charsetOrUtf8(mediaType));
+          new JacksonSubscriber<>(mapper, type, readerFactory, asyncParser),
+          charsetOrUtf8(mediaType));
     }
 
     @Override
@@ -127,18 +126,18 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
 
     private <T> T readValueUnchecked(TypeRef<T> type, byte[] body) {
       try {
-        JsonParser parser = mapper.getFactory().createParser(body);
-        return mapper.readerFor(mapper.constructType(type.type())).readValue(parser);
-      } catch (IOException ioe) {
-        throw new UncheckedIOException(ioe);
+        var parser = mapper.getFactory().createParser(body);
+        return readerFactory.createReader(mapper, type).readValue(parser);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
       }
     }
 
     private <T> T readValueUnchecked(TypeRef<T> type, Reader reader) {
       try {
-        return mapper.readerFor(mapper.constructType(type.type())).readValue(reader);
-      } catch (IOException ioe) {
-        throw new UncheckedIOException(ioe);
+        return readerFactory.createReader(mapper, type).readValue(reader);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
       }
     }
   }
