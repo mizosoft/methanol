@@ -45,14 +45,15 @@ final class FreshnessPolicy {
     var dateServed = response.headers().firstValue("Date").map(DateUtils::toHttpDate);
     date = dateServed.orElseGet(() -> toUtcDateTime(timeResponseReceived));
     expires = response.headers().firstValue("Expires").map(DateUtils::toHttpDate);
+    effectiveLastModified =
+        response.headers().firstValue("Last-Modified").map(DateUtils::toHttpDate).orElse(date);
+    // Assume age is zero if there's no Age header or such header can't be parsed
     age =
         response
             .headers()
             .firstValue("Age")
             .map(DateUtils::toDeltaSecondsOrNull)
             .orElse(Duration.ZERO);
-    effectiveLastModified =
-        response.headers().firstValue("Last-Modified").map(DateUtils::toHttpDate).orElse(date);
   }
 
   LocalDateTime effectiveLastModified() {

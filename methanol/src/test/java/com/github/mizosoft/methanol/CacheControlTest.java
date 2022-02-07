@@ -106,8 +106,9 @@ class CacheControlTest {
 
   @Test
   void directivesWithFieldNames() {
-    var cacheControl = CacheControl.parse(
-        "no-cache=\"Language\", no-store=Content-Encoding, private=\"Authorization, X-My-Private-Header\"");
+    var cacheControl =
+        CacheControl.parse(
+            "no-cache=\"Language\", no-store=Content-Encoding, private=\"Authorization, X-My-Private-Header\"");
     assertThat(cacheControl.noCacheFields()).containsExactly("language");
     assertThat(cacheControl.noStoreFields()).containsExactly("content-encoding");
     assertThat(cacheControl.privateFields())
@@ -131,18 +132,19 @@ class CacheControlTest {
   void builder() {
     assertThat(CacheControl.newBuilder().build()).isEqualTo(CacheControl.empty());
 
-    var cacheControl = CacheControl.newBuilder()
-        .directive("my-directive")
-        .directive("my-directive-with-argument", "123")
-        .maxAge(Duration.ofSeconds(1))
-        .minFresh(Duration.ofSeconds(2))
-        .maxStale(Duration.ofSeconds(3))
-        .staleIfError(Duration.ofSeconds(4))
-        .noCache()
-        .noStore()
-        .noTransform()
-        .onlyIfCached()
-        .build();
+    var cacheControl =
+        CacheControl.newBuilder()
+            .directive("my-directive")
+            .directive("my-directive-with-argument", "123")
+            .maxAge(Duration.ofSeconds(1))
+            .minFresh(Duration.ofSeconds(2))
+            .maxStale(Duration.ofSeconds(3))
+            .staleIfError(Duration.ofSeconds(4))
+            .noCache()
+            .noStore()
+            .noTransform()
+            .onlyIfCached()
+            .build();
     assertThat(cacheControl.maxAge()).hasValue(Duration.ofSeconds(1));
     assertThat(cacheControl.minFresh()).hasValue(Duration.ofSeconds(2));
     assertThat(cacheControl.maxStale()).hasValue(Duration.ofSeconds(3));
@@ -152,26 +154,57 @@ class CacheControlTest {
     assertThat(cacheControl.noTransform()).isTrue();
     assertThat(cacheControl.onlyIfCached()).isTrue();
 
-    var headerValue = "my-directive, my-directive-with-argument=123, "
-        + "max-age=1, min-fresh=2, max-stale=3, stale-if-error=4, "
-        + "no-cache, no-store, no-transform, only-if-cached";
+    var headerValue =
+        "max-age=1, min-fresh=2, max-stale=3, stale-if-error=4, "
+            + "no-cache, no-store, no-transform, only-if-cached, "
+            + "my-directive-with-argument=123, my-directive";
     assertThat(cacheControl).hasToString(headerValue);
     assertThat(cacheControl).isEqualTo(CacheControl.parse(headerValue));
   }
 
   @Test
-  void durationIsTruncated() {
-    var cacheControl = CacheControl.newBuilder()
-        .maxAge(Duration.ofSeconds(1).plusNanos(1))
-        .build();
+  void durationIsTruncatedToSeconds() {
+    var cacheControl = CacheControl.newBuilder().maxAge(Duration.ofSeconds(1).plusNanos(1)).build();
     assertThat(cacheControl.maxAge()).hasValue(Duration.ofSeconds(1));
+    assertThat(cacheControl).hasToString("max-age=1");
   }
 
   @Test
-  void buildAnyMaxStale() {
-    var cacheControl = CacheControl.newBuilder()
-        .anyMaxStale()
-        .build();
+  void tooLargeDuration() {
+    var cacheControl = CacheControl.parse("max-age=" + (Integer.MAX_VALUE + 1L));
+    assertThat(cacheControl.maxAge()).hasValue(Duration.ofSeconds(Integer.MAX_VALUE));
+
+    // The toString value isn't changed
+    assertThat(cacheControl).hasToString("max-age=" + (Integer.MAX_VALUE + 1L));
+  }
+
+  @Test
+  void anyMaxStaleAfterMaxStale() {
+    var cacheControl =
+        CacheControl.newBuilder().maxStale(Duration.ofSeconds(1)).anyMaxStale().build();
+    assertThat(cacheControl.maxStale()).isEmpty();
+    assertThat(cacheControl).hasToString("max-stale");
+  }
+
+  @Test
+  void maxStaleAfterAnyMaxStale() {
+    var cacheControl =
+        CacheControl.newBuilder().anyMaxStale().maxStale(Duration.ofSeconds(1)).build();
+    assertThat(cacheControl.maxStale()).hasValue(Duration.ofSeconds(1));
+    assertThat(cacheControl).hasToString("max-stale=1");
+  }
+
+  @Test
+  void danglingDelimiters() {
+    var cacheControl = CacheControl.parse(",, ,max-age=1, ,, min-fresh=2,, ,");
+    assertThat(cacheControl.maxAge()).hasValue(Duration.ofSeconds(1));
+    assertThat(cacheControl.minFresh()).hasValue(Duration.ofSeconds(2));
+    assertThat(cacheControl).hasToString("max-age=1, min-fresh=2");
+  }
+
+  @Test
+  void anyMaxStale() {
+    var cacheControl = CacheControl.newBuilder().anyMaxStale().build();
     assertThat(cacheControl.anyMaxStale()).isTrue();
     assertThat(cacheControl.maxStale()).isEmpty();
   }
@@ -189,12 +222,9 @@ class CacheControlTest {
 
   @Test
   void parseInvalid() {
-    assertThatIllegalArgumentException()
-        .isThrownBy(() -> CacheControl.parse(""));
-    assertThatIllegalArgumentException()
-        .isThrownBy(() -> CacheControl.parse("no-c@che"));
-    assertThatIllegalArgumentException()
-        .isThrownBy(() -> CacheControl.parse(List.of("no-c@che")));
+    assertThatIllegalArgumentException().isThrownBy(() -> CacheControl.parse(""));
+    assertThatIllegalArgumentException().isThrownBy(() -> CacheControl.parse("no-c@che"));
+    assertThatIllegalArgumentException().isThrownBy(() -> CacheControl.parse(List.of("no-c@che")));
     assertThatIllegalArgumentException()
         .isThrownBy(() -> CacheControl.parse("max-age")); // No required argument
     assertThatIllegalArgumentException()
@@ -217,20 +247,15 @@ class CacheControlTest {
   @Test
   void buildInvalid() {
     var builder = CacheControl.newBuilder();
-    assertThatIllegalArgumentException().
-        isThrownBy(() -> builder.directive(""));
-    assertThatIllegalArgumentException().
-        isThrownBy(() -> builder.directive("illeg@l"));
-    assertThatIllegalArgumentException().
-        isThrownBy(() -> builder.directive("legal", "ba\r")); // Illegal value
-    assertThatIllegalArgumentException().
-        isThrownBy(() -> builder.maxAge(Duration.ofSeconds(-1)));
-    assertThatIllegalArgumentException().
-        isThrownBy(() -> builder.minFresh(Duration.ofSeconds(-1)));
-    assertThatIllegalArgumentException().
-        isThrownBy(() -> builder.maxStale(Duration.ofSeconds(-1)));
-    assertThatIllegalArgumentException().
-        isThrownBy(() -> builder.staleIfError(Duration.ofSeconds(-1)));
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.directive(""));
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.directive("illeg@l"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.directive("legal", "ba\r")); // Illegal value
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.maxAge(Duration.ofSeconds(-1)));
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.minFresh(Duration.ofSeconds(-1)));
+    assertThatIllegalArgumentException().isThrownBy(() -> builder.maxStale(Duration.ofSeconds(-1)));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> builder.staleIfError(Duration.ofSeconds(-1)));
   }
 
   private static void assertHasNoKnownDirectives(CacheControl cacheControl) {

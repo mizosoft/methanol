@@ -1,5 +1,7 @@
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.time.DateTimeException;
@@ -78,14 +80,22 @@ public class DateUtils {
     return null;
   }
 
+  // TODO tolerate -ve values by truncating to 0?
+  public static Duration toDeltaSeconds(String value) {
+    long secondsLong = Long.parseLong(value);
+    requireArgument(secondsLong >= 0, "delta seconds can't be negative");
+
+    // Truncate to Integer.MAX_VALUE to avoid overflows (e.g. when calculating freshness)
+    int secondsInt = (int) Math.min(secondsLong, Integer.MAX_VALUE);
+    return Duration.ofSeconds(secondsInt);
+  }
+
   static @Nullable Duration toDeltaSecondsOrNull(String value) {
-    long longValue;
     try {
-      longValue = Long.parseLong(value);
-    } catch (NumberFormatException e) {
+      return toDeltaSeconds(value);
+    } catch (NumberFormatException ignored) {
       return null;
     }
-    return longValue >= 0 ? Duration.ofSeconds(longValue) : null;
   }
 
   static LocalDateTime toUtcDateTime(Instant instant) {

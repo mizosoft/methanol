@@ -41,7 +41,7 @@ public final class HeaderValueTokenizer {
 
   public String nextToken() {
     buffer.mark();
-    consumeIfPresent(TOKEN_MATCHER);
+    consumeCharsMatching(TOKEN_MATCHER);
     int tokenLimit = buffer.position();
     buffer.reset();
     requireState(buffer.position() < tokenLimit, "expected a token at %d", buffer.position());
@@ -55,7 +55,7 @@ public final class HeaderValueTokenizer {
     return consumeCharIfPresent('"') ? finishQuotedString() : nextToken();
   }
 
-  public void consumeIfPresent(CharMatcher matcher) {
+  public void consumeCharsMatching(CharMatcher matcher) {
     while (buffer.hasRemaining() && matcher.matches(buffer.get(buffer.position()))) {
       buffer.get(); // consume
     }
@@ -82,15 +82,24 @@ public final class HeaderValueTokenizer {
     return buffer.hasRemaining();
   }
 
-  public boolean consumeDelimiter(char delimiterChar) {
-    // 1*( OWS <delimiterChar> OWS )
+  public boolean consumeDelimiter(char delimiter) {
+    return consumeDelimiter(delimiter, true);
+  }
+
+  public boolean consumeDelimiter(char delimiter, boolean requireDelimiter) {
+    // 1*( OWS <delimiter> OWS ) | <empty-string> | OWS ; Last OWS if requireDelimiter is false
     if (hasRemaining()) {
-      consumeIfPresent(OWS_MATCHER);
-      requireCharacter(delimiterChar); // First delimiter must exist
+      consumeCharsMatching(OWS_MATCHER);
+      if (requireDelimiter) {
+        requireCharacter(delimiter); // First delimiter must exist
+      } else {
+        consumeCharIfPresent(delimiter);
+      }
+
       // Ignore dangling delimiters, https://github.com/google/guava/issues/1726
       do {
-        consumeIfPresent(OWS_MATCHER);
-      } while (consumeCharIfPresent(delimiterChar));
+        consumeCharsMatching(OWS_MATCHER);
+      } while (consumeCharIfPresent(delimiter));
     }
     return hasRemaining();
   }
