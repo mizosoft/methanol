@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createEncoder;
+import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createJsonEncoder;
 import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 
@@ -31,10 +31,10 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class JacksonEncoderTest {
+class JsonEncoderTest {
   @Test
   void compatibleMediaTypes() {
-    verifyThat(createEncoder())
+    verifyThat(createJsonEncoder())
         .isCompatibleWith("application/json")
         .isCompatibleWith("application/json; charset=utf-8")
         .isCompatibleWith("application/*")
@@ -43,21 +43,17 @@ class JacksonEncoderTest {
 
   @Test
   void incompatibleMediaTypes() {
-    verifyThat(createEncoder())
-        .isNotCompatibleWith("text/html")
-        .isNotCompatibleWith("text/*");
+    verifyThat(createJsonEncoder()).isNotCompatibleWith("text/html").isNotCompatibleWith("text/*");
   }
 
   @Test
   void serialize() {
-    verifyThat(createEncoder())
-        .converting(new Point(1, 2))
-        .succeedsWith("{\"x\":1,\"y\":2}");
+    verifyThat(createJsonEncoder()).converting(new Point(1, 2)).succeedsWith("{\"x\":1,\"y\":2}");
   }
 
   @Test
   void serializeWithUtf16() {
-    verifyThat(createEncoder())
+    verifyThat(createJsonEncoder())
         .converting(new Point(1, 2))
         .withMediaType("application/json; charset=utf-16")
         .succeedsWith("{\"x\":1,\"y\":2}", UTF_16);
@@ -65,27 +61,27 @@ class JacksonEncoderTest {
 
   @Test
   void serializeWithCustomSerializer() {
-    var mapper = new JsonMapper()
-        .registerModule(
-            new SimpleModule().addSerializer(Point.class, new CompactPointSerializer()));
-    verifyThat(createEncoder(mapper))
-        .converting(new Point(1, 2))
-        .succeedsWith("[1,2]");
+    var mapper =
+        new JsonMapper()
+            .registerModule(
+                new SimpleModule().addSerializer(Point.class, new CompactPointSerializer()));
+    verifyThat(createJsonEncoder(mapper)).converting(new Point(1, 2)).succeedsWith("[1,2]");
   }
 
   @Test
   void serializeList() {
-    verifyThat(createEncoder())
+    verifyThat(createJsonEncoder())
         .converting(List.of(new Point(1, 2), new Point(3, 4)))
         .succeedsWith("[{\"x\":1,\"y\":2},{\"x\":3,\"y\":4}]");
   }
 
   @Test
   void serializeListWithCustomSerializer() {
-    var mapper = new JsonMapper()
-        .registerModule(
-            new SimpleModule().addSerializer(Point.class, new CompactPointSerializer()));
-    verifyThat(createEncoder(mapper))
+    var mapper =
+        new JsonMapper()
+            .registerModule(
+                new SimpleModule().addSerializer(Point.class, new CompactPointSerializer()));
+    verifyThat(createJsonEncoder(mapper))
         .converting(List.of(new Point(1, 2), new Point(3, 4)))
         .succeedsWith("[[1,2],[3,4]]");
   }
@@ -98,14 +94,14 @@ class JacksonEncoderTest {
       UnserializableByDefaultMapper() {}
     }
 
-    verifyThat(createEncoder())
+    verifyThat(createJsonEncoder())
         .converting(new UnserializableByDefaultMapper())
         .isNotSupported();
   }
 
   @Test
   void serializeWithUnsupportedMediaType() {
-    verifyThat(createEncoder())
+    verifyThat(createJsonEncoder())
         .converting(new Point(1, 2))
         .withMediaType("application/xml")
         .isNotSupported();
@@ -113,7 +109,7 @@ class JacksonEncoderTest {
 
   @Test
   void mediaTypeIsAttached() {
-    verifyThat(createEncoder())
+    verifyThat(createJsonEncoder())
         .converting(new Point(1, 2))
         .withMediaType("application/json")
         .asBodyPublisher()
@@ -122,7 +118,7 @@ class JacksonEncoderTest {
 
   @Test
   void mediaTypeWithCharsetIsAttached() {
-    verifyThat(createEncoder())
+    verifyThat(createJsonEncoder())
         .converting(new Point(1, 2))
         .withMediaType("application/json; charset=utf-16")
         .asBodyPublisher()

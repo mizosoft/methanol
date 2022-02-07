@@ -5,6 +5,8 @@ import static com.github.mizosoft.methanol.MediaType.APPLICATION_XHTML_XML;
 import static com.github.mizosoft.methanol.MediaType.APPLICATION_XML;
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createDecoder;
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createEncoder;
+import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createJsonDecoder;
+import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createJsonEncoder;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,9 +19,9 @@ import org.junit.jupiter.api.Test;
 
 class JacksonAdapterFactoryTest {
   @Test
-  void defaultAdapterHasJsonMediaType() {
-    assertThat(mediaTypes(createEncoder())).containsOnly(APPLICATION_JSON);
-    assertThat(mediaTypes(createDecoder())).containsOnly(APPLICATION_JSON);
+  void jsonEncoderHasApplicationJsonMediaType() {
+    assertThat(mediaTypes(createJsonEncoder())).containsOnly(APPLICATION_JSON);
+    assertThat(mediaTypes(createJsonDecoder())).containsOnly(APPLICATION_JSON);
   }
 
   @Test
@@ -28,15 +30,27 @@ class JacksonAdapterFactoryTest {
             mediaTypes(createEncoder(new ObjectMapper(), APPLICATION_XML, APPLICATION_XHTML_XML)))
         .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
     assertThat(
-            mediaTypes(createDecoder(new ObjectMapper(), APPLICATION_XML, APPLICATION_XHTML_XML)))
+            mediaTypes(
+                JacksonAdapterFactory.createDecoder(
+                    new ObjectMapper(), APPLICATION_XML, APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createEncoder(
+                    new ObjectMapper(), APPLICATION_XML, APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createDecoder(
+                    new ObjectMapper(), APPLICATION_XML, APPLICATION_XHTML_XML)))
         .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
   }
 
   @Test
-  void adaptersWithCustomCodecAndMediaTypes() {
+  void adaptersWithCustomCodecFactoryAndMediaTypes() {
     assertThat(
             mediaTypes(
-                createEncoder(
+                JacksonAdapterFactory.createEncoder(
                     new ObjectMapper(),
                     ObjectWriterFactory.getDefault(),
                     APPLICATION_XML,
@@ -45,6 +59,22 @@ class JacksonAdapterFactoryTest {
     assertThat(
             mediaTypes(
                 createDecoder(
+                    new ObjectMapper(),
+                    ObjectReaderFactory.getDefault(),
+                    APPLICATION_XML,
+                    APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createEncoder(
+                    new ObjectMapper(),
+                    ObjectWriterFactory.getDefault(),
+                    APPLICATION_XML,
+                    APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createDecoder(
                     new ObjectMapper(),
                     ObjectReaderFactory.getDefault(),
                     APPLICATION_XML,

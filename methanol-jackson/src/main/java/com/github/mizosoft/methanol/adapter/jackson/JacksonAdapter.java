@@ -24,19 +24,18 @@ package com.github.mizosoft.methanol.adapter.jackson;
 
 import static java.util.Objects.requireNonNull;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
-import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
-import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonSubscriber;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -45,6 +44,7 @@ import java.net.http.HttpResponse.BodySubscribers;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+// TODO optimize code paths where UTF-8 is expected
 abstract class JacksonAdapter extends AbstractBodyAdapter {
   final ObjectMapper mapper;
 
@@ -53,12 +53,14 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     this.mapper = requireNonNull(mapper);
   }
 
-  static final class Encoder extends JacksonAdapter implements BodyAdapter.Encoder {
-    private final ObjectWriterFactory writerFactory;
+  private abstract static class AbstractEncoder extends JacksonAdapter
+      implements BodyAdapter.Encoder {
+    final ObjectWriterFactory writerFactory;
 
-    Encoder(ObjectMapper mapper, ObjectWriterFactory writerFactory, MediaType... mediaTypes) {
+    AbstractEncoder(
+        ObjectMapper mapper, ObjectWriterFactory writerFactory, MediaType... mediaTypes) {
       super(mapper, mediaTypes);
-      this.writerFactory = writerFactory;
+      this.writerFactory = requireNonNull(writerFactory);
     }
 
     @Override
@@ -71,23 +73,58 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       requireNonNull(object);
       requireSupport(object.getClass());
       requireCompatibleOrNull(mediaType);
+      byte[] bytes;
       var objWriter = writerFactory.createWriter(mapper, TypeRef.from(object.getClass()));
-      var buffer = new ByteArrayOutputStream();
-      try (var writer = new OutputStreamWriter(buffer, charsetOrUtf8(mediaType))) {
-        objWriter.writeValue(writer, object);
+      try {
+        bytes = getBytes(objWriter, object, mediaType);
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
-      return attachMediaType(BodyPublishers.ofByteArray(buffer.toByteArray()), mediaType);
+      return attachMediaType(BodyPublishers.ofByteArray(bytes), mediaType);
+    }
+
+    abstract byte[] getBytes(ObjectWriter objWriter, Object value, @Nullable MediaType mediaType)
+        throws IOException;
+  }
+
+  static final class TextFormatEncoder extends AbstractEncoder {
+    TextFormatEncoder(
+        ObjectMapper mapper, ObjectWriterFactory writerFactory, MediaType... mediaTypes) {
+      super(mapper, writerFactory, mediaTypes);
+    }
+
+    @Override
+    byte[] getBytes(ObjectWriter objWriter, Object value, @Nullable MediaType mediaType)
+        throws IOException {
+      var buffer = new ByteArrayOutputStream();
+      try (var writer = new OutputStreamWriter(buffer, charsetOrUtf8(mediaType))) {
+        objWriter.writeValue(writer, value);
+      }
+      return buffer.toByteArray();
     }
   }
 
-  static final class Decoder extends JacksonAdapter implements BodyAdapter.Decoder {
-    private final ObjectReaderFactory readerFactory;
+  static final class BinaryFormatEncoder extends AbstractEncoder {
+    BinaryFormatEncoder(
+        ObjectMapper mapper, ObjectWriterFactory writerFactory, MediaType... mediaTypes) {
+      super(mapper, writerFactory, mediaTypes);
+    }
 
-    Decoder(ObjectMapper mapper, ObjectReaderFactory readerFactory, MediaType... mediaTypes) {
+    @Override
+    byte[] getBytes(ObjectWriter objWriter, Object value, @Nullable MediaType mediaType)
+        throws IOException {
+      return objWriter.writeValueAsBytes(value);
+    }
+  }
+
+  private abstract static class AbstractDecoder extends JacksonAdapter
+      implements BodyAdapter.Decoder {
+    final ObjectReaderFactory readerFactory;
+
+    AbstractDecoder(
+        ObjectMapper mapper, ObjectReaderFactory readerFactory, MediaType... mediaTypes) {
       super(mapper, mediaTypes);
-      this.readerFactory = readerFactory;
+      this.readerFactory = requireNonNull(readerFactory);
     }
 
     @Override
@@ -100,17 +137,9 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
-      JsonParser asyncParser;
-      try {
-        asyncParser = mapper.getFactory().createNonBlockingByteArrayParser();
-      } catch (IOException | UnsupportedOperationException ignored) {
-        // Fallback to de-serializing from byte array
-        return BodySubscribers.mapping(
-            BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(type, bytes));
-      }
-      return JacksonAdapterUtils.coerceUtf8(
-          new JacksonSubscriber<>(mapper, type, readerFactory, asyncParser),
-          charsetOrUtf8(mediaType));
+      var objReader = readerFactory.createReader(mapper, type);
+      return BodySubscribers.mapping(
+          BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(objReader, bytes, mediaType));
     }
 
     @Override
@@ -119,23 +148,63 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       requireNonNull(type);
       requireSupport(type);
       requireCompatibleOrNull(mediaType);
+      var objReader = readerFactory.createReader(mapper, type);
       return BodySubscribers.mapping(
-          MoreBodySubscribers.ofReader(charsetOrUtf8(mediaType)),
-          reader -> () -> readValueUnchecked(type, reader));
+          BodySubscribers.ofInputStream(),
+          inputStream -> () -> readValueUnchecked(objReader, inputStream, mediaType));
     }
 
-    private <T> T readValueUnchecked(TypeRef<T> type, byte[] body) {
+    abstract <T> T readValueUnchecked(
+        ObjectReader reader, byte[] bytes, @Nullable MediaType mediaType);
+
+    abstract <T> T readValueUnchecked(
+        ObjectReader reader, InputStream inputStream, @Nullable MediaType mediaType);
+  }
+
+  static final class TextFormatDecoder extends AbstractDecoder {
+    TextFormatDecoder(
+        ObjectMapper mapper, ObjectReaderFactory readerFactory, MediaType... mediaTypes) {
+      super(mapper, readerFactory, mediaTypes);
+    }
+
+    <T> T readValueUnchecked(ObjectReader objReader, byte[] bytes, @Nullable MediaType mediaType) {
       try {
-        var parser = mapper.getFactory().createParser(body);
-        return readerFactory.createReader(mapper, type).readValue(parser);
+        return objReader.readValue(new String(bytes, charsetOrUtf8(mediaType)));
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
     }
 
-    private <T> T readValueUnchecked(TypeRef<T> type, Reader reader) {
+    <T> T readValueUnchecked(
+        ObjectReader objReader, InputStream inputStream, @Nullable MediaType mediaType) {
+      try (var reader = new InputStreamReader(inputStream, charsetOrUtf8(mediaType))) {
+        return objReader.readValue(reader);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+  }
+
+  static final class BinaryFormatDecoder extends AbstractDecoder {
+    BinaryFormatDecoder(
+        ObjectMapper mapper, ObjectReaderFactory readerFactory, MediaType... mediaTypes) {
+      super(mapper, readerFactory, mediaTypes);
+    }
+
+    @Override
+    <T> T readValueUnchecked(ObjectReader objReader, byte[] bytes, @Nullable MediaType mediaType) {
       try {
-        return readerFactory.createReader(mapper, type).readValue(reader);
+        return objReader.readValue(bytes);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+
+    @Override
+    <T> T readValueUnchecked(
+        ObjectReader objReader, InputStream inputStream, @Nullable MediaType mediaType) {
+      try {
+        return objReader.readValue(inputStream);
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }

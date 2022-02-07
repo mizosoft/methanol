@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createDecoder;
+import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createJsonDecoder;
 import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 
@@ -33,135 +33,105 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.testutils.TestException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class JacksonDecoderTest {
-  @Test
-  void compatibleMediaTypes() {
-    verifyThat(createDecoder())
-        .isCompatibleWith("application/json")
-        .isCompatibleWith("application/json; charset=utf-8")
-        .isCompatibleWith("application/*")
-        .isCompatibleWith("*/*");
-  }
-
-  @Test
-  void incompatibleMediaTypes() {
-    verifyThat(createDecoder())
-        .isNotCompatibleWith("text/html")
-        .isNotCompatibleWith("text/*");
-  }
-
+class JsonDeferredDecoderTest {
   @Test
   void deserialize() {
-    verifyThat(createDecoder())
+    verifyThat(createJsonDecoder())
         .converting(Point.class)
-        .withBody("{\"x\":1, \"y\":2}")
+        .withDeferredBody("{\"x\":1, \"y\":2}")
         .succeedsWith(new Point(1, 2));
   }
 
   @Test
   void deserializeWithUtf16() {
-    verifyThat(createDecoder())
+    verifyThat(createJsonDecoder())
         .converting(Point.class)
         .withMediaType("application/json; charset=utf-16")
-        .withBody("{\"x\":1, \"y\":2}", UTF_16)
+        .withDeferredBody("{\"x\":1, \"y\":2}", UTF_16)
         .succeedsWith(new Point(1, 2));
   }
 
   @Test
   void deserializeWithCustomDeserializer() {
-    var mapper = new JsonMapper()
-        .registerModule(
-            new SimpleModule().addDeserializer(Point.class, new CompactPointDeserializer()));
-    verifyThat(createDecoder(mapper))
+    var mapper =
+        new JsonMapper()
+            .registerModule(
+                new SimpleModule().addDeserializer(Point.class, new CompactPointDeserializer()));
+    verifyThat(createJsonDecoder(mapper))
         .converting(Point.class)
-        .withBody("[1, 2]")
+        .withDeferredBody("[1, 2]")
         .succeedsWith(new Point(1, 2));
   }
 
   @Test
   void deserializeWithGenerics() {
-    verifyThat(createDecoder())
+    verifyThat(createJsonDecoder())
         .converting(new TypeRef<List<Point>>() {})
-        .withBody("[{\"x\":1, \"y\":2}, {\"x\":3, \"y\":4}]")
+        .withDeferredBody("[{\"x\":1, \"y\":2}, {\"x\":3, \"y\":4}]")
         .succeedsWith(List.of(new Point(1, 2), new Point(3, 4)));
   }
 
   @Test
   void deserializeWithGenericsAndCustomDeserializer() {
-    var mapper = new JsonMapper()
-        .registerModule(
-            new SimpleModule().addDeserializer(Point.class, new CompactPointDeserializer()));
-    verifyThat(createDecoder(mapper))
+    var mapper =
+        new JsonMapper()
+            .registerModule(
+                new SimpleModule().addDeserializer(Point.class, new CompactPointDeserializer()));
+    verifyThat(createJsonDecoder(mapper))
         .converting(new TypeRef<List<Point>>() {})
-        .withBody("[[1, 2], [3, 4]]")
+        .withDeferredBody("[[1, 2], [3, 4]]")
         .succeedsWith(List.of(new Point(1, 2), new Point(3, 4)));
   }
 
   @Test
   void deserializeWithLenientMapper() {
-    var mapper = new ObjectMapper()
-        .enable(Feature.ALLOW_COMMENTS)
-        .enable(Feature.ALLOW_SINGLE_QUOTES)
-        .enable(Feature.ALLOW_UNQUOTED_FIELD_NAMES);
-    verifyThat(createDecoder(mapper))
+    var mapper =
+        new ObjectMapper()
+            .enable(Feature.ALLOW_COMMENTS)
+            .enable(Feature.ALLOW_SINGLE_QUOTES)
+            .enable(Feature.ALLOW_UNQUOTED_FIELD_NAMES);
+    verifyThat(createJsonDecoder(mapper))
         .converting(Point.class)
-        .withBody(
-              "{\n"
-            + "  x: '1',\n"
-            + "  y: '2' // This is a comment \n"
-            + "}")
+        .withDeferredBody("{\n" + "  x: '1',\n" + "  y: '2' // This is a comment \n" + "}")
         .succeedsWith(new Point(1, 2));
   }
 
-  /** Test that the used parser has access to the underlying ObjectMapper. */
+  /** Tests that the used parser has access to the underlying ObjectMapper. */
   @Test
   void deserializeWithCustomDeserializerThatNeedsParserCodec() {
-    var mapper = new ObjectMapper()
-        .registerModule(
-            new SimpleModule().addDeserializer(Point.class, new PointTreeNodeDeserializer()));
-    verifyThat(createDecoder(mapper))
+    var mapper =
+        new ObjectMapper()
+            .registerModule(
+                new SimpleModule().addDeserializer(Point.class, new TreeNodePointDeserializer()));
+    verifyThat(createJsonDecoder(mapper))
         .converting(Point.class)
-        .withBody("{\"x\":1, \"y\":2}")
+        .withDeferredBody("{\"x\":1, \"y\":2}")
         .succeedsWith(new Point(1, 2));
   }
 
   @Test
   void deserializeBadJson() {
-    verifyThat(createDecoder())
+    verifyThat(createJsonDecoder())
         .converting(Point.class)
-        .withBody("{x:\"1\", y:\"2\"") // Missing enclosing bracket
-        .failsWith(JsonProcessingException.class);
+        .withDeferredBody("{x:\"1\", y:\"2\"") // Missing enclosing bracket
+        .failsWith(UncheckedIOException.class) // IOExceptions are rethrown as UncheckedIOExceptions
+        .withCauseInstanceOf(JsonProcessingException.class);
   }
 
   @Test
   void deserializeWithError() {
-    verifyThat(createDecoder())
+    // Upstream errors cause the stream used by the supplier to throw
+    // an IOException with the error as its cause. The IOException is
+    // rethrown as an UncheckedIOException.
+    verifyThat(createJsonDecoder())
         .converting(Point.class)
-        .withFailure(new TestException())
-        .failsWith(TestException.class);
-  }
-
-  @Test
-  void deserializeWithUnsupportedType() {
-    class UnserializableByDefaultMapper {
-      final int i = 1;
-
-      UnserializableByDefaultMapper() {}
-    }
-
-    verifyThat(createDecoder())
-        .converting(UnserializableByDefaultMapper.class)
-        .isNotSupported();
-  }
-
-  @Test
-  void deserializeWithUnsupportedMediaType() {
-    verifyThat(createDecoder())
-        .converting(Point.class)
-        .withMediaType("text/plain")
-        .isNotSupported();
+        .withDeferredFailure(new TestException())
+        .failsWith(UncheckedIOException.class)
+        .havingCause()
+        .withCauseInstanceOf(TestException.class);
   }
 }

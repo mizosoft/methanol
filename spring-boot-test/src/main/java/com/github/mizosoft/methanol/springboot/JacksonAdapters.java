@@ -37,14 +37,14 @@ public class JacksonAdapters {
   @AutoService(BodyAdapter.Encoder.class)
   public static class JacksonEncoder extends ForwardingEncoder {
     public JacksonEncoder() {
-      super(JacksonAdapterFactory.createEncoder(mapper));
+      super(JacksonAdapterFactory.createJsonEncoder(mapper));
     }
   }
 
   @AutoService(BodyAdapter.Decoder.class)
   public static class JacksonDecoder extends ForwardingDecoder {
     public JacksonDecoder() {
-      super(JacksonAdapterFactory.createDecoder(mapper));
+      super(JacksonAdapterFactory.createJsonDecoder(mapper));
     }
   }
 }

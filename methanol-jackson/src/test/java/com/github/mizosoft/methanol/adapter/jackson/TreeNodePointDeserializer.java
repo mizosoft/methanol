@@ -28,8 +28,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import java.io.IOException;
 
-final class PointTreeNodeDeserializer extends StdDeserializer<Point> {
-  PointTreeNodeDeserializer() {
+final class TreeNodePointDeserializer extends StdDeserializer<Point> {
+  TreeNodePointDeserializer() {
     super(Point.class);
   }
 

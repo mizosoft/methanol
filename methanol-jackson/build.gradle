@@ -5,6 +5,8 @@ dependencies {
   testImplementation project(':methanol-testutils')
   testImplementation deps.jacksonXml
   testImplementation deps.jacksonProtobuf
+  testImplementation deps.jacksonAvro
+  testImplementation deps.bson4jackson
 }
 
 compileJava {
@@ -16,6 +18,9 @@ compileJava {
   addReads(task, 'methanol.testutils')
   addReads(task, 'com.fasterxml.jackson.dataformat.xml')
   addReads(task, 'com.fasterxml.jackson.dataformat.protobuf')
+  addReads(task, 'com.fasterxml.jackson.dataformat.avro')
+  addReads(task, 'avro') // org.apache.avro
+  addReads(task, 'bson4jackson') // de.undercouch.bson4jackson
 }
 
 addOpens(test, 'com.github.mizosoft.methanol.adapter.jackson', 'com.fasterxml.jackson.databind')
