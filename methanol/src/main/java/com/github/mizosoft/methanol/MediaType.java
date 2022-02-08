@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2019, 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -132,8 +131,10 @@ public final class MediaType {
   private final String type;
   private final String subtype;
   private final Map<String, String> parameters;
-  private @MonotonicNonNull Charset charset;
-  private boolean charsetIsParsed;
+  private @MonotonicNonNull Charset lazyCharset;
+  private boolean isCharsetParsed;
+
+  private @MonotonicNonNull String cachedToString;
 
   private MediaType(String type, String subtype) {
     this.type = type;
@@ -171,14 +172,14 @@ public final class MediaType {
    *     supported in this JVM
    */
   public Optional<Charset> charset() {
-    if (!charsetIsParsed) {
+    if (!isCharsetParsed) {
       String charsetName = parameters.get(CHARSET_ATTRIBUTE);
       if (charsetName != null) {
-        charset = Charset.forName(charsetName);
+        lazyCharset = Charset.forName(charsetName);
       }
-      charsetIsParsed = true;
+      isCharsetParsed = true;
     }
-    return Optional.ofNullable(charset);
+    return Optional.ofNullable(lazyCharset);
   }
 
   /**
@@ -242,8 +243,8 @@ public final class MediaType {
   public MediaType withCharset(Charset charset) {
     requireNonNull(charset);
     MediaType mediaType = withParameter(CHARSET_ATTRIBUTE, charset.name());
-    mediaType.charset = charset;
-    mediaType.charsetIsParsed = true;
+    mediaType.lazyCharset = charset;
+    mediaType.isCharsetParsed = true;
     return mediaType;
   }
 
@@ -303,15 +304,21 @@ public final class MediaType {
    */
   @Override
   public String toString() {
-    String str = type + "/" + subtype;
-    if (!parameters.isEmpty()) {
-      String joinedParameters =
-          parameters.entrySet().stream()
-              .map(e -> e.getKey() + "=" + escapeAndQuoteValueIfNeeded(e.getValue()))
-              .collect(Collectors.joining("; "));
-      str += "; " + joinedParameters;
+    var result = cachedToString;
+    if (result == null) {
+      result = computeToString();
+      cachedToString = result;
     }
-    return str;
+    return result;
+  }
+
+  private String computeToString() {
+    var sb = new StringBuilder();
+    sb.append(type).append("/").append(subtype);
+    parameters.forEach(
+        (name, value) ->
+            sb.append("; ").append(name).append("=").append(escapeAndQuoteValueIfNeeded(value)));
+    return sb.toString();
   }
 
   /**
