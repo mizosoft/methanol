@@ -101,7 +101,7 @@ public class Crawler {
       }
     }
 
-    return document != null;
+    return true;
   }
 
   void onPageReceived(URI uri, int responseCode, Document document) {
