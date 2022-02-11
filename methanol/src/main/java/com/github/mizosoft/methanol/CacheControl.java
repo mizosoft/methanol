@@ -99,7 +99,7 @@ public final class CacheControl {
    */
   private final Map<String, String> unrecognizedAddedDirectives;
 
-  private @MonotonicNonNull String lazyToString;
+  private @MonotonicNonNull String cachedToString;
 
   private CacheControl(Builder builder) {
     maxAge = Optional.ofNullable(builder.maxAge);
@@ -302,10 +302,10 @@ public final class CacheControl {
 
   @Override
   public String toString() {
-    var result = lazyToString;
+    var result = cachedToString;
     if (result == null) {
       result = computeToString();
-      lazyToString = result;
+      cachedToString = result;
     }
     return result;
   }
@@ -375,12 +375,12 @@ public final class CacheControl {
     var tokenizer = new HeaderValueTokenizer(value);
     tokenizer.consumeDelimiter(',', false); // First delimiter is optional
     do {
-      var name = normalizeToken(tokenizer.nextToken());
+      var normalizedDirective = normalizeToken(tokenizer.nextToken());
       var argument = "";
       if (tokenizer.consumeCharIfPresent('=')) {
         argument = tokenizer.nextTokenOrQuotedString();
       }
-      directives.put(name, argument);
+      directives.put(normalizedDirective, argument);
     } while (tokenizer.consumeDelimiter(','));
   }
 
@@ -429,7 +429,7 @@ public final class CacheControl {
 
     Builder(Map<String, String> parsedDirectives) {
       this.parsedDirectives = Collections.unmodifiableMap(parsedDirectives);
-      parsedDirectives.forEach(this::uncheckedDirective);
+      parsedDirectives.forEach(this::setNormalizedDirective);
     }
 
     /**
@@ -449,14 +449,16 @@ public final class CacheControl {
      *     invalid
      */
     public Builder directive(String directive, String argument) {
+      requireNonNull(directive);
+      requireNonNull(argument);
       validateToken(directive);
       validateHeaderValue(argument);
-      uncheckedDirective(normalizeToken(directive), argument);
+      setNormalizedDirective(normalizeToken(directive), argument);
       return this;
     }
 
-    // Add directive directly without validation (directive is expected to be normalized)
-    private void uncheckedDirective(String normalizedDirective, String argument) {
+    /** Sets directive directly without validation (directive is expected to be normalized). */
+    private void setNormalizedDirective(String normalizedDirective, String argument) {
       if (!setStandardDirective(normalizedDirective, argument)) {
         unrecognizedDirectives.put(normalizedDirective, argument);
       }

@@ -117,7 +117,7 @@ class BootJarTest {
           .isNotNull();
       processOutput.add(line);
 
-      if (line.matches("Web server failed to start. Port \\d{1,4} was already in use.")) {
+      if (line.matches("Web server failed to start. Port \\d{1,5} was already in use.")) {
         return false;
       }
 

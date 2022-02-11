@@ -460,8 +460,13 @@ public final class Methanol extends HttpClient {
       return self();
     }
 
-    /** Sets a default {@code User-Agent} header to use when sending requests. */
+    /**
+     * Sets a default {@code User-Agent} header to use when sending requests.
+     *
+     * @throws IllegalArgumentException if {@code userAgent} is an invalid header value
+     */
     public B userAgent(String userAgent) {
+      requireNonNull(userAgent);
       validateHeaderValue(userAgent);
       this.userAgent = userAgent;
       headersBuilder.set("User-Agent", userAgent); // overwrite previous if any
@@ -488,6 +493,8 @@ public final class Methanol extends HttpClient {
 
     /** Adds the given header as default. */
     public B defaultHeader(String name, String value) {
+      requireNonNull(name);
+      requireNonNull(value);
       validateHeader(name, value);
       if ("User-Agent".equalsIgnoreCase(name)) {
         userAgent = value;
@@ -509,6 +516,7 @@ public final class Methanol extends HttpClient {
 
     /** Sets a default request timeout to use when not explicitly by an {@code HttpRequest}. */
     public B requestTimeout(Duration requestTimeout) {
+      requireNonNull(requestTimeout);
       requirePositiveDuration(requestTimeout);
       this.requestTimeout = requestTimeout;
       return self();
@@ -519,6 +527,7 @@ public final class Methanol extends HttpClient {
      * timeout}. Timeout events are scheduled using a system-wide {@code ScheduledExecutorService}.
      */
     public B readTimeout(Duration readTimeout) {
+      requireNonNull(readTimeout);
       requirePositiveDuration(readTimeout);
       this.readTimeout = readTimeout;
       return self();
@@ -530,8 +539,9 @@ public final class Methanol extends HttpClient {
      * scheduling timeout events.
      */
     public B readTimeout(Duration readTimeout, ScheduledExecutorService scheduler) {
-      requirePositiveDuration(readTimeout);
+      requireNonNull(readTimeout);
       requireNonNull(scheduler);
+      requirePositiveDuration(readTimeout);
       this.readTimeout = readTimeout;
       this.readTimeoutScheduler = scheduler;
       return self();

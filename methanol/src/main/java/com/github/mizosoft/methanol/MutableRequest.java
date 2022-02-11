@@ -276,6 +276,8 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest header(String name, String value) {
+    requireNonNull(name);
+    requireNonNull(value);
     validateHeader(name, value);
     cachedHeaders = null; // invalidated
     headersBuilder.add(name, value);
@@ -291,6 +293,8 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     for (int i = 0; i < len; i += 2) {
       String name = headers[i];
       String value = headers[i + 1];
+      requireNonNull(name);
+      requireNonNull(value);
       validateHeader(name, value);
       headersBuilder.add(name, value);
     }
@@ -299,6 +303,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest timeout(Duration timeout) {
+    requireNonNull(timeout);
     requirePositiveDuration(timeout);
     this.timeout = timeout;
     return this;

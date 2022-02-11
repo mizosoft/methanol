@@ -95,7 +95,7 @@ public class MoreBodySubscribers {
       BodySubscriber<T> downstream, Duration timeout, ScheduledExecutorService scheduler) {
     requireNonNull(downstream);
     requireNonNull(timeout);
-    requireNonNull(timeout);
+    requireNonNull(scheduler);
     requirePositiveDuration(timeout);
     return new TimeoutBodySubscriber<>(timeout, Delayer.of(scheduler), downstream);
   }

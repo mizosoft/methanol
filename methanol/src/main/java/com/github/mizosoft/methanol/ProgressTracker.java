@@ -279,6 +279,7 @@ public final class ProgressTracker {
      * @throws IllegalArgumentException if duration is not positive
      */
     public Builder timePassedThreshold(Duration duration) {
+      requireNonNull(duration);
       requireNonNegativeDuration(duration);
       this.timePassedThreshold = duration;
       return this;

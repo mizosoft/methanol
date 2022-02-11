@@ -25,7 +25,6 @@ package com.github.mizosoft.methanol.internal;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_VALUE_MATCHER;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
-import static java.util.Objects.requireNonNull;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -55,22 +54,19 @@ public class Utils {
   }
 
   public static String normalizeToken(String token) {
-    requireArgument(isValidToken(token), "illegal token: '%s'", token);
+    validateToken(token);
     return toAsciiLowerCase(token);
   }
 
   public static void validateToken(String token) {
-    requireNonNull(token);
     requireArgument(isValidToken(token), "illegal token: '%s'", token);
   }
 
   public static void validateHeaderName(String name) {
-    requireNonNull(name);
     requireArgument(isValidToken(name), "illegal header name: '%s'", name);
   }
 
   public static void validateHeaderValue(String value) {
-    requireNonNull(value);
     requireArgument(FIELD_VALUE_MATCHER.allMatch(value), "illegal header value: '%s'", value);
   }
 
@@ -80,13 +76,11 @@ public class Utils {
   }
 
   public static void requirePositiveDuration(Duration duration) {
-    requireNonNull(duration);
     requireArgument(
         !(duration.isNegative() || duration.isZero()), "non-positive duration: %s", duration);
   }
 
   public static void requireNonNegativeDuration(Duration duration) {
-    requireNonNull(duration);
     requireArgument(!duration.isNegative(), "negative duration: %s", duration);
   }
 
@@ -119,30 +113,31 @@ public class Utils {
    * @param wrapInterruptedException if {@code InterruptedException} is to be wrapped in {@code
    *     InterruptedIOException}
    */
-  private static RuntimeException rethrowAsyncIOFailure(
-      Throwable cause, boolean wrapInterruptedException) throws IOException, InterruptedException {
-    var rethrownCause = tryGetRethrownCause(cause);
-    if (rethrownCause instanceof RuntimeException) {
-      throw (RuntimeException) rethrownCause;
-    } else if (rethrownCause instanceof Error) {
-      throw (Error) rethrownCause;
-    } else if (rethrownCause instanceof IOException) {
-      throw (IOException) rethrownCause;
-    } else if (rethrownCause instanceof InterruptedException) {
+  private static RuntimeException rethrowAsyncThrowable(
+      Throwable throwable, boolean wrapInterruptedException)
+      throws IOException, InterruptedException {
+    var clonedThrowable = tryCloneThrowable(throwable);
+    if (clonedThrowable instanceof RuntimeException) {
+      throw (RuntimeException) clonedThrowable;
+    } else if (clonedThrowable instanceof Error) {
+      throw (Error) clonedThrowable;
+    } else if (clonedThrowable instanceof IOException) {
+      throw (IOException) clonedThrowable;
+    } else if (clonedThrowable instanceof InterruptedException) {
       if (wrapInterruptedException) {
-        var interruptedIO = new InterruptedIOException(cause.getMessage());
-        interruptedIO.initCause(cause);
+        var interruptedIO = new InterruptedIOException(throwable.getMessage());
+        interruptedIO.initCause(throwable);
         throw interruptedIO;
       } else {
-        throw (InterruptedException) rethrownCause;
+        throw (InterruptedException) clonedThrowable;
       }
     } else {
-      throw new IOException(cause.getMessage(), cause);
+      throw new IOException(throwable.getMessage(), throwable);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private static @Nullable Throwable tryGetRethrownCause(Throwable cause) {
+  private static @Nullable Throwable tryCloneThrowable(Throwable cause) {
     var message = cause.getMessage();
     var causeType = cause.getClass();
     try {
@@ -160,7 +155,7 @@ public class Utils {
         }
       }
     } catch (ReflectiveOperationException ignored) {
-      // Return null
+      // Fallback to null
     }
     return null;
   }
@@ -181,7 +176,7 @@ public class Utils {
     try {
       return future.get();
     } catch (ExecutionException failed) {
-      throw rethrowAsyncIOFailure(getDeepCompletionCause(failed), false);
+      throw rethrowAsyncThrowable(getDeepCompletionCause(failed), false);
     }
   }
 
@@ -194,7 +189,7 @@ public class Utils {
       return future.get();
     } catch (ExecutionException failed) {
       try {
-        throw rethrowAsyncIOFailure(getDeepCompletionCause(failed), true);
+        throw rethrowAsyncThrowable(getDeepCompletionCause(failed), true);
       } catch (InterruptedException unexpected) {
         throw new AssertionError(unexpected); // Can't happen
       }
