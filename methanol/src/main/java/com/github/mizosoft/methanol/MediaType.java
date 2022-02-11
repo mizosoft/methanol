@@ -184,9 +184,9 @@ public final class MediaType {
 
   /**
    * Returns either the value of the charset parameter or the given default charset if no such
-   * parameter exists or if the charset has not support in this JVM.
+   * parameter exists or if the charset has no support in this JVM.
    *
-   * @param defaultCharset the charset to fallback to
+   * @param defaultCharset the charset to fall back to
    * @throws IllegalCharsetNameException if a charset parameter exists the value of which is invalid
    */
   public Charset charsetOrDefault(Charset defaultCharset) {

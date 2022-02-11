@@ -24,372 +24,440 @@ package com.github.mizosoft.methanol;
 
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.entry;
+import static org.assertj.core.api.Assertions.from;
+import static org.assertj.core.api.InstanceOfAssertFactories.MAP;
 
-import java.nio.charset.Charset;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 class MediaTypeTest {
-
   @Test
   void constantsSanityTest() {
-    assertEquals("*/*", MediaType.ANY.toString());
-    assertEquals("application/*", MediaType.APPLICATION_ANY.toString());
-    assertEquals("image/*", MediaType.IMAGE_ANY.toString());
-    assertEquals("text/*", MediaType.TEXT_ANY.toString());
-    assertEquals(
-        "application/x-www-form-urlencoded",
-        MediaType.APPLICATION_FORM_URLENCODED.toString());
-    assertEquals("application/json", MediaType.APPLICATION_JSON.toString());
-    assertEquals("application/octet-stream", MediaType.APPLICATION_OCTET_STREAM.toString());
-    assertEquals("application/xhtml+xml", MediaType.APPLICATION_XHTML_XML.toString());
-    assertEquals("application/xml", MediaType.APPLICATION_XML.toString());
-    assertEquals("application/x-protobuf", MediaType.APPLICATION_X_PROTOBUF.toString());
-    assertEquals("image/gif", MediaType.IMAGE_GIF.toString());
-    assertEquals("image/jpeg", MediaType.IMAGE_JPEG.toString());
-    assertEquals("image/png", MediaType.IMAGE_PNG.toString());
-    assertEquals("text/html", MediaType.TEXT_HTML.toString());
-    assertEquals("text/markdown", MediaType.TEXT_MARKDOWN.toString());
-    assertEquals("text/plain", MediaType.TEXT_PLAIN.toString());
-    assertEquals("text/xml", MediaType.TEXT_XML.toString());
+    assertThat(MediaType.ANY).hasToString("*/*");
+    assertThat(MediaType.APPLICATION_ANY).hasToString("application/*");
+    assertThat(MediaType.APPLICATION_ANY).hasToString("application/*");
+    assertThat(MediaType.IMAGE_ANY).hasToString("image/*");
+    assertThat(MediaType.TEXT_ANY).hasToString("text/*");
+    assertThat(MediaType.APPLICATION_FORM_URLENCODED)
+        .hasToString("application/x-www-form-urlencoded");
+    assertThat(MediaType.APPLICATION_JSON).hasToString("application/json");
+    assertThat(MediaType.APPLICATION_OCTET_STREAM).hasToString("application/octet-stream");
+    assertThat(MediaType.APPLICATION_XHTML_XML).hasToString("application/xhtml+xml");
+    assertThat(MediaType.APPLICATION_XML).hasToString("application/xml");
+    assertThat(MediaType.APPLICATION_X_PROTOBUF).hasToString("application/x-protobuf");
+    assertThat(MediaType.IMAGE_GIF).hasToString("image/gif");
+    assertThat(MediaType.IMAGE_JPEG).hasToString("image/jpeg");
+    assertThat(MediaType.IMAGE_PNG).hasToString("image/png");
+    assertThat(MediaType.TEXT_HTML).hasToString("text/html");
+    assertThat(MediaType.TEXT_MARKDOWN).hasToString("text/markdown");
+    assertThat(MediaType.TEXT_PLAIN).hasToString("text/plain");
+    assertThat(MediaType.TEXT_XML).hasToString("text/xml");
   }
 
   @Test
-  void parse_simpleType() {
-    var type = MediaType.parse("text/plain");
-    assertEquals("text", type.type());
-    assertEquals("plain", type.subtype());
+  void parseSimpleMediaType() {
+    assertThat(MediaType.parse("text/plain"))
+        .returns("text", from(MediaType::type))
+        .returns("plain", from(MediaType::subtype))
+        .hasToString("text/plain")
+        .extracting(MediaType::parameters, MAP)
+        .isEmpty();
   }
 
   @Test
-  void of_simpleType() {
-    var type = MediaType.of("text", "plain");
-    assertEquals("text", type.type());
-    assertEquals("plain", type.subtype());
+  void createSimpleMediaType() {
+    assertThat(MediaType.of("text", "plain"))
+        .returns("text", from(MediaType::type))
+        .returns("plain", from(MediaType::subtype))
+        .hasToString("text/plain")
+        .extracting(MediaType::parameters, MAP)
+        .isEmpty();
   }
 
   @Test
-  void parse_typeWithSpecialTokenChars() {
+  void parseWithSpecialTokenChars() {
     var generalType = "!#$%&'*+";
     var subtype = "-.^_`|~";
-    var type = MediaType.parse(generalType + "/" + subtype);
-    assertEquals(generalType, type.type());
-    assertEquals(subtype, type.subtype());
+    assertThat(MediaType.parse(generalType + "/" + subtype))
+        .returns(generalType, from(MediaType::type))
+        .returns(subtype, from(MediaType::subtype))
+        .hasToString(generalType + "/" + subtype)
+        .extracting(MediaType::parameters, MAP)
+        .isEmpty();
   }
 
   @Test
-  void of_typeWithSpecialTokenChars() {
-    var generalType = "!#$%'*";
-    var subtype = "+-.^_`|~";
-    var type = MediaType.of(generalType, subtype);
-    assertEquals(generalType, type.type());
-    assertEquals(subtype, type.subtype());
+  void createWithSpecialTokenChars() {
+    var generalType = "!#$%&'*+";
+    var subtype = "-.^_`|~";
+    assertThat(MediaType.parse(generalType + "/" + subtype))
+        .returns(generalType, from(MediaType::type))
+        .returns(subtype, from(MediaType::subtype))
+        .hasToString(generalType + "/" + subtype)
+        .extracting(MediaType::parameters, MAP)
+        .isEmpty();
   }
 
   @Test
-  void parse_typeWithParameters() {
-    var type = MediaType.parse(
-        "text/plain; charset=utf-8; foo=bar; foo_again=bar_again");
-    assertHasCharset(type, UTF_8);
-    assertEquals("bar", type.parameters().get("foo"));
-    assertEquals("bar_again", type.parameters().get("foo_again"));
+  void parseWithParameters() {
+    assertThat(MediaType.parse("text/plain; charset=utf-8; a=pikachu; b=ditto"))
+        .returns("text", from(MediaType::type))
+        .returns("plain", from(MediaType::subtype))
+        .returns(Optional.of(UTF_8), from(MediaType::charset))
+        .hasToString("text/plain; charset=utf-8; a=pikachu; b=ditto")
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("charset", "utf-8"), entry("a", "pikachu"), entry("b", "ditto"));
   }
 
   @Test
-  void withParameter_newParameter() {
-    var type = MediaType.parse("text/plain; foo=bar")
-        .withParameter("foo_again", "bar_again");
-    assertEquals("bar", type.parameters().get("foo")); // old param not removed
-    assertEquals("bar_again", type.parameters().get("foo_again"));
+  void addParameterAfterParse() {
+    assertThat(MediaType.parse("text/plain; a=pikachu").withParameter("b", "ditto"))
+        .hasToString("text/plain; a=pikachu; b=ditto")
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", "pikachu"), entry("b", "ditto"));
   }
 
   @Test
-  void withParameter_clashingParameter() {
-    var type = MediaType.parse("text/plain; foo=bar")
-        .withParameter("foo", "bar_replaced");
-    assertEquals("bar_replaced", type.parameters().get("foo"));
+  void replaceParameterAfterParse() {
+    assertThat(MediaType.parse("text/plain; a=pikachu").withParameter("a", "eevee"))
+        .hasToString("text/plain; a=eevee")
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", "eevee"));
   }
 
   @Test
-  void withParameters_newParameters() {
-    var parameters = Map.of(
-        "foo", "bar",
-        "foo_again", "bar_again");
-    var type = MediaType.parse("text/plain; charset=utf-8")
-        .withParameters(parameters);
-    assertHasCharset(type, UTF_8); // Charset not removed
-    assertEquals("bar", type.parameters().get("foo"));
-    assertEquals("bar_again", type.parameters().get("foo_again"));
+  void addParameterAfterCreate() {
+    assertThat(MediaType.of("text", "plain", Map.of("a", "pikachu")).withParameter("b", "ditto"))
+        .hasToString("text/plain; a=pikachu; b=ditto")
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", "pikachu"), entry("b", "ditto"));
   }
 
   @Test
-  void withParameters_clashingParameters() {
-    var parameters = Map.of(
-        "foo", "bar_replaced",
-        "foo_again", "bar_again_replaced");
-    var type = MediaType.parse("text/plain; foo=bar; foo_again=bar_again")
-        .withParameters(parameters);
-    assertEquals("bar_replaced", type.parameters().get("foo"));
-    assertEquals("bar_again_replaced", type.parameters().get("foo_again"));
+  void replaceParameterAfterCreate() {
+    assertThat(MediaType.of("text", "plain", Map.of("a", "pikachu")).withParameter("a", "eevee"))
+        .hasToString("text/plain; a=eevee")
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", "eevee"));
   }
 
   @Test
-  void withCharset_newCharset() {
-    var type = MediaType.parse("text/plain")
-        .withCharset(UTF_8);
-    assertHasCharset(type, UTF_8);
+  void addMultipleParametersAfterParse() {
+    assertThat(
+            MediaType.parse("text/plain; charset=utf-8")
+                .withParameters(linkedHashMap("a", "pikachu", "b", "ditto")))
+        .hasToString("text/plain; charset=utf-8; a=pikachu; b=ditto")
+        .returns(Optional.of(UTF_8), from(MediaType::charset))
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("charset", "utf-8"), entry("a", "pikachu"), entry("b", "ditto"));
   }
 
   @Test
-  void withCharset_clashingCharset() {
-    var type = MediaType.parse("text/plain; charset=utf-8")
-        .withCharset(US_ASCII);
-    assertHasCharset(type, US_ASCII);
+  void addMultipleParametersAfterCreate() {
+    var parameters = new LinkedHashMap<String, String>(); // Preserve order
+    parameters.put("a", "pikachu");
+    parameters.put("b", "ditto");
+    assertThat(MediaType.of("text", "plain", Map.of("charset", "utf-8")).withParameters(parameters))
+        .hasToString("text/plain; charset=utf-8; a=pikachu; b=ditto")
+        .returns(Optional.of(UTF_8), from(MediaType::charset))
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("charset", "utf-8"), entry("a", "pikachu"), entry("b", "ditto"));
   }
 
   @Test
-  void parse_caseInsensitiveAttributesAreLowerCased() {
-    var type = MediaType.parse("TEXT/PLAIN; FOO=bar; CHARSET=UTF-8");
-    assertEquals("text", type.type());
-    assertEquals("plain", type.subtype());
-    assertEquals(Set.of("foo", "charset"), type.parameters().keySet());
-    assertEquals("utf-8", type.parameters().get("charset"));
+  void replaceMultipleParametersAfterParse() {
+    assertThat(
+            MediaType.parse("text/plain; charset=utf-8; a=pikachu")
+                .withParameters(linkedHashMap("charset", "utf-16", "a", "eevee", "b", "ditto")))
+        .hasToString("text/plain; charset=utf-16; a=eevee; b=ditto")
+        .returns(Optional.of(UTF_16), from(MediaType::charset))
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("charset", "utf-16"), entry("a", "eevee"), entry("b", "ditto"));
   }
 
   @Test
-  void of_caseInsensitiveAttributesAreLowerCased() {
-    var parameters = Map.of(
-        "FOO", "bar",
-        "CHARSET", "UTF-8");
-    var type = MediaType.of("TEXT", "PLAIN", parameters);
-    assertEquals("text", type.type());
-    assertEquals("plain", type.subtype());
-    assertEquals(Set.of("foo", "charset"), type.parameters().keySet());
-    assertEquals("utf-8", type.parameters().get("charset"));
+  void replaceMultipleParametersAfterCreate() {
+    assertThat(
+            MediaType.of("text", "plain", linkedHashMap("charset", "utf-8", "a", "pikachu"))
+                .withParameters(linkedHashMap("charset", "utf-16", "a", "eevee", "b", "ditto")))
+        .hasToString("text/plain; charset=utf-16; a=eevee; b=ditto")
+        .returns(Optional.of(UTF_16), from(MediaType::charset))
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("charset", "utf-16"), entry("a", "eevee"), entry("b", "ditto"));
   }
 
   @Test
-  void parse_quotedToken() {
-    var type = MediaType.parse("text/plain; foo=\"bar\"");
-    assertEquals("bar", type.parameters().get("foo"));
-    assertEquals("text/plain; foo=bar", type.toString()); // token not requoted
+  void addCharset() {
+    assertThat(MediaType.parse("text/plain").withCharset(UTF_8))
+        .hasToString("text/plain; charset=utf-8")
+        .returns(Optional.of(UTF_8), from(MediaType::charset))
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("charset", "utf-8"));
   }
 
   @Test
-  void parse_quotedValue() {
-    var type = MediaType.parse("text/plain; foo=\"b@r\"");
-    assertEquals("b@r", type.parameters().get("foo"));
-    assertEquals("text/plain; foo=\"b@r\"", type.toString()); // requotes non-token
+  void replaceCharset() {
+    assertThat(MediaType.parse("text/plain; charset=ascii").withCharset(UTF_8))
+        .hasToString("text/plain; charset=utf-8")
+        .returns(Optional.of(UTF_8), from(MediaType::charset))
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("charset", "utf-8"));
   }
 
   @Test
-  void parse_emptyQuotedValue() {
-    var type = MediaType.parse("text/plain; foo=\"\"");
-    assertEquals("", type.parameters().get("foo"));
-    assertEquals("text/plain; foo=\"\"", type.toString()); // requotes empty value
+  void caseInsensitiveAttributesAreLowerCasedWhenParsed() {
+    assertThat(MediaType.parse("TEXT/PLAIN; a=PIKACHU; CHARSET=UTF-8"))
+        .returns(Optional.of(UTF_8), from(MediaType::charset))
+        .hasToString("text/plain; a=PIKACHU; charset=utf-8")
+        .extracting(MediaType::parameters, MAP)
+        .containsKeys("a", "charset")
+        .containsExactly(
+            entry("a", "PIKACHU" /* non-charset param value is untouched */),
+            entry("charset", "utf-8"));
   }
 
   @Test
-  void parse_quotedValueWithQuotedPairs() {
+  void caseInsensitiveAttributesAreLowerCasedWhenCreated() {
+    assertThat(MediaType.of("TEXT", "PLAIN", linkedHashMap("a", "PIKACHU", "CHARSET", "UTF-8")))
+        .returns(Optional.of(UTF_8), from(MediaType::charset))
+        .hasToString("text/plain; a=PIKACHU; charset=utf-8")
+        .extracting(MediaType::parameters, MAP)
+        .containsKeys("a", "charset")
+        .containsExactly(
+            entry("a", "PIKACHU" /* non-charset param value is untouched */),
+            entry("charset", "utf-8"));
+  }
+
+  @Test
+  void parseQuotedToken() {
+    assertThat(MediaType.parse("text/plain; a=\"pikachu\""))
+        .hasToString("text/plain; a=pikachu") // Unnecessarily quoted token in unquoted
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", "pikachu"));
+  }
+
+  @Test
+  void parseQuotedNonTokenValue() {
+    assertThat(MediaType.parse("text/plain; a=\"b@r\""))
+        .hasToString("text/plain; a=\"b@r\"") // Quotes for non-tokens are maintained
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", "b@r"));
+  }
+
+  @Test
+  void parseEmptyQuotedValue() {
+    assertThat(MediaType.parse("text/plain; a=\"\""))
+        .hasToString("text/plain; a=\"\"") // Quotes for empty string (a non-token) are maintained
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", ""));
+  }
+
+  @Test
+  void parseQuotedValueWithQuotedPairs() {
     var escapedValue = "\\\"\\\\\\a"; // \"\\\a unescaped to -> "\a
     var unescapedValue = "\"\\a"; // "\a
-    var reescaped = "\\\"\\\\a"; // \"\\a (only backslash and quotes are requoted)
-    var type = MediaType.parse("text/plain; foo=\"" + escapedValue + "\"");
-    assertEquals(unescapedValue, type.parameters().get("foo"));
-    assertEquals("text/plain; foo=\"" + reescaped + "\"", type.toString());
+    var reespacedValue = "\\\"\\\\a"; // \"\\a (only backslash and quotes are re-quoted)
+    assertThat(MediaType.parse("text/plain; a=\"" + escapedValue + "\""))
+        .hasToString("text/plain; a=\"" + reespacedValue + "\"")
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", unescapedValue));
   }
 
   @Test
-  void of_nonTokenValues() {
-    var parameters = new LinkedHashMap<String, String>(); // order-based
-    parameters.put("foo", "bar\\");     // bar\   escaped to bar\\
-    parameters.put("bar", "\"foo\\\""); // "foo\" escaped to \"foo\\\"
-    parameters.put("foobar", "");
-    var type = MediaType.of("text", "plain", parameters);
-    assertEquals("bar\\", type.parameters().get("foo"));
-    assertEquals("\"foo\\\"", type.parameters().get("bar"));
-    assertEquals("", type.parameters().get("foobar"));
-    // values are escaped and quoted
-    assertEquals("text/plain; foo=\"bar\\\\\"; bar=\"\\\"foo\\\\\\\"\"; foobar=\"\"",
-        type.toString());
+  void createWithNonTokenParameterValues() {
+    assertThat(
+            MediaType.of(
+                "text",
+                "plain",
+                linkedHashMap(
+                    "a", "bar\\", // bar\ should be escaped to bar\\
+                    "b", "\"foo\\\"", // "foo\" should be escaped to \"foo\\\"
+                    "c", "" // <empty-str> should be escaped to quoted
+                    )))
+        .hasToString("text/plain; a=\"bar\\\\\"; b=\"\\\"foo\\\\\\\"\"; c=\"\"")
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", "bar\\"), entry("b", "\"foo\\\""), entry("c", ""));
   }
 
   @Test
-  void parse_withOptionalWhiteSpace() {
-    var type = MediaType.parse("text/plain \t ;  \t foo=bar \t ; foo_again=bar_again");
-    assertEquals("text", type.type());
-    assertEquals("plain", type.subtype());
-    assertEquals("bar", type.parameters().get("foo"));
-    assertEquals("bar_again", type.parameters().get("foo_again"));
+  void parseWithOptionalWhiteSpace() {
+    assertThat(MediaType.parse("text/plain \t ;  \t a=pikachu \t ; b=ditto"))
+        .returns("text", from(MediaType::type))
+        .returns("plain", from(MediaType::subtype))
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", "pikachu"), entry("b", "ditto"));
   }
 
   @Test
-  void parse_withoutOptionalWhiteSpace() {
-    var type = MediaType.parse("text/plain;foo=bar;foo_again=bar_again");
-    assertEquals("text", type.type());
-    assertEquals("plain", type.subtype());
-    assertEquals("bar", type.parameters().get("foo"));
-    assertEquals("bar_again", type.parameters().get("foo_again"));
+  void parseWithoutOptionalWhiteSpace() {
+    assertThat(MediaType.parse("text/plain;a=pikachu;b=ditto"))
+        .returns("text", from(MediaType::type))
+        .returns("plain", from(MediaType::subtype))
+        .extracting(MediaType::parameters, MAP)
+        .containsExactly(entry("a", "pikachu"), entry("b", "ditto"));
   }
 
   @Test
-  void parse_danglingSemicolons() {
-    Function<String, String> normalize = s -> MediaType.parse(s).toString();
-    assertEquals("text/plain", normalize.apply("text/plain;"));
-    assertEquals("text/plain", normalize.apply("text/plain; "));
-    assertEquals("text/plain", normalize.apply("text/plain ;"));
-    assertEquals("text/plain", normalize.apply("text/plain ; "));
-    assertEquals("text/plain", normalize.apply("text/plain ; ;; ; ;"));
-    assertEquals("text/plain; charset=utf-8",
-        normalize.apply("text/plain ; ;; charset=utf-8;"));
-    assertEquals("text/plain; charset=utf-8; foo=bar",
-        normalize.apply("text/plain ;; ; charset=utf-8;; ;foo=bar;; ;"));
+  void parseWithDanglingSemicolons() {
+    assertThat(MediaType.parse("text/plain;")).hasToString("text/plain");
+    assertThat(MediaType.parse("text/plain; ;")).hasToString("text/plain");
+    assertThat(MediaType.parse("text/plain ; ;\t; ; \t ")).hasToString("text/plain");
+    assertThat(MediaType.parse("text/plain; ;;charset=utf-8; ;a=pikachu;"))
+        .hasToString("text/plain; charset=utf-8; a=pikachu");
   }
 
   @Test
   void charsetOrDefault() {
-    var textPlain = MediaType.of("text", "plain");
-    var textPlainAscii = textPlain.withCharset(US_ASCII);
-    assertEquals(textPlain.charsetOrDefault(UTF_8), UTF_8);
-    assertEquals(textPlainAscii.charsetOrDefault(UTF_8), US_ASCII);
+    assertThat(MediaType.parse("text/plain"))
+        .returns(UTF_8, from(mediaType -> mediaType.charsetOrDefault(UTF_8)));
+    assertThat(MediaType.parse("text/plain; charset=ascii"))
+        .returns(US_ASCII, from(mediaType -> mediaType.charsetOrDefault(UTF_8)));
   }
 
   @Test
-  void charsetOrDefault_unsupportedCharset() {
-    var type = MediaType.of("text", "plain")
-        .withParameter("charset", "baby-yoda");
-    assertEquals(UTF_8, type.charsetOrDefault(UTF_8));
+  void charsetOrDefaultWithUnsupportedCharset() {
+    assertThat(MediaType.parse("text/plain; charset=baby-yoda"))
+        .returns(US_ASCII, from(mediaType -> mediaType.charsetOrDefault(US_ASCII)));
   }
 
   @Test
   void hasWildcard() {
-    assertTrue(MediaType.parse("*/*").hasWildcard());
-    assertTrue(MediaType.parse("text/*").hasWildcard());
-    assertFalse(MediaType.parse("text/plain").hasWildcard());
+    assertThat(MediaType.parse("*/*")).returns(true, from(MediaType::hasWildcard));
+    assertThat(MediaType.parse("text/*")).returns(true, from(MediaType::hasWildcard));
+    assertThat(MediaType.parse("text/plain")).returns(false, from(MediaType::hasWildcard));
   }
 
   @Test
-  void includes_isCompatibleWith() {
+  void inclusion() {
     assertInclusion(MediaType.parse("*/*"), MediaType.parse("*/*"));
     assertInclusion(MediaType.parse("*/*; foo=bar"), MediaType.parse("text/*; foo=bar"));
     assertInclusion(MediaType.parse("*/*"), MediaType.parse("text/plain"));
     assertInclusion(MediaType.parse("text/*"), MediaType.parse("text/*; foo=bar"));
     assertInclusion(MediaType.parse("text/*"), MediaType.parse("text/plain"));
-    assertInclusion(MediaType.parse("text/*; foo=bar; foo=bar_again"),
+    assertInclusion(
+        MediaType.parse("text/*; foo=bar; foo=bar_again"),
         MediaType.parse("text/plain; foo=bar; foo=bar_again; foo_again=bar_again_again"));
     assertInclusion(MediaType.parse("text/plain"), MediaType.parse("text/plain; foo=bar"));
-    assertFalse(MediaType.parse("*/*; foo=bar").includes(MediaType.parse("*/*")));
-    assertFalse(MediaType.parse("text/*").includes(MediaType.parse("audio/*")));
-    assertFalse(MediaType.parse("text/plain; foo=bar").includes(MediaType.parse("text/plain")));
-    assertFalse(MediaType.parse("text/plain").includes(MediaType.parse("text/*")));
+
+    assertThat(MediaType.parse("*/*; foo=bar").includes(MediaType.parse("*/*"))).isFalse();
+    assertThat(MediaType.parse("text/*").includes(MediaType.parse("audio/*"))).isFalse();
+    assertThat(MediaType.parse("text/plain; foo=bar").includes(MediaType.parse("text/plain")))
+        .isFalse();
+    assertThat(MediaType.parse("text/plain").includes(MediaType.parse("text/*"))).isFalse();
   }
 
   @Test
-  void equals_hashCode() {
-    var type1 = MediaType.parse("text/plain; charset=utf-8; foo=bar");
-    var type2 = MediaType.of("text", "plain", Map.of(
-        "foo", "bar",
-        "charset", "utf-8"));
-    var type3 = MediaType.of("text", "plain")
-        .withParameter("foo", "bar")
-        .withParameter("charset", "ascii");
-    assertEquals(type1, type1);
-    assertEquals(type1, type2);
-    assertEquals(type1.hashCode(), type2.hashCode());
-    assertNotEquals(type1, "I am an instance of class String");
-    assertNotEquals(type1, type3);
+  void equalsAndHashcode() {
+    assertThat(MediaType.parse("text/plain; charset=utf-8; a=pikachu"))
+        .isEqualTo(MediaType.parse("text/plain; charset=utf-8; a=pikachu"));
+    assertThat(MediaType.parse("text/plain; charset=utf-8; a=pikachu"))
+        .isEqualTo(
+            MediaType.of(
+                "text",
+                "plain",
+                Map.of(
+                    "a", "pikachu",
+                    "charset", "utf-8")))
+        .hasSameHashCodeAs(
+            MediaType.of(
+                "text",
+                "plain",
+                Map.of(
+                    "a", "pikachu",
+                    "charset", "utf-8")));
+    assertThat(MediaType.parse("text/plain").equals("text/plain")).isFalse();
   }
 
-  // exceptional behaviour
+  // Exceptional behaviour
 
   @Test
-  void parse_invalidType() {
-    assertInvalidParse("text/pl@in");
-    assertInvalidParse("t@xt/plain");
-  }
-
-  @Test
-  void parse_invalidParameters() {
-    assertInvalidParse("text/plain; b@r=foo");
-    assertInvalidParse("text/plain; foo=b@r");
-    assertInvalidParse("text/plain; foo=ba\r");
-    assertInvalidParse("text/plain; foo=\"ba\r\"");
-    assertInvalidParse("text/plain; foo=\"ba\\\r\""); // even if escaped
+  void parseInvalidTypeOrSubtype() {
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/pl@in"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("t@xt/plain"));
   }
 
   @Test
-  void parse_invalidInput() {
-    assertInvalidParse("text");
-    assertInvalidParse("text/");
-    assertInvalidParse("/plain");
-    assertInvalidParse("text/plain ");
-    assertInvalidParse(" text/plain");
-    assertInvalidParse("text /plain");
-    assertInvalidParse("text/ plain");
-    assertInvalidParse("text/plain; foo");
-    assertInvalidParse("text/plain; for=");
-    assertInvalidParse("text/plain; =bar");
-    assertInvalidParse("text/plain; foo=\"bar");
-    assertInvalidParse("text/plain; foo=\"bar\\\"");
+  void parseInvalidParameters() {
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/plain; b@r=foo"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/plain; foo=b@r"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/plain; foo=ba\r"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MediaType.parse("text/plain; foo=\"ba\r\""));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MediaType.parse("text/plain; foo=\"ba\\\r\""));
   }
 
   @Test
-  void parse_wildcardTypeWithConcreteSubtype() {
-    assertIllegalArg(() -> MediaType.parse("*/plain; "));
-    assertIllegalArg(() -> MediaType.parse("*/plain; charset=utf-8"));
+  void parseInvalidInput() {
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("/plain"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/plain "));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse(" text/plain"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text /plain"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/ plain"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/plain; foo"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/plain; for="));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/plain; =bar"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("text/plain; foo=\"bar"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MediaType.parse("text/plain; foo=\"bar\\\""));
   }
 
   @Test
-  void of_invalidType() {
-    assertIllegalArg(() -> MediaType.of("text", "pl@in"));
-    assertIllegalArg(() -> MediaType.of("t@xt", "plain"));
-    assertIllegalArg(() -> MediaType.of("", "plain"));
-    assertIllegalArg(() -> MediaType.of("text", ""));
+  void parseWildcardTypeWithConcreteSubtype() {
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.parse("*/plain; "));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MediaType.parse("*/plain; charset=utf-8"));
   }
 
   @Test
-  void of_invalidParameters() {
-    var invalidNameParams = Map.of("b@r", "foo");
-    var emptyNameParams = Map.of("", "ops");
-    var invalidValueParams = Map.of("foo", "ba\r");
-    assertIllegalArg(() -> MediaType.of("text", "plain", invalidNameParams));
-    assertIllegalArg(() -> MediaType.of("text", "plain", emptyNameParams));
-    assertIllegalArg(() -> MediaType.of("text", "plain", invalidValueParams));
+  void createWithInvalidType() {
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.of("text", "pl@in"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.of("t@xt", "plain"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.of("", "plain"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.of("text", ""));
   }
 
   @Test
-  void of_wildcardTypeWithConcreteSubtype() {
-    assertIllegalArg(() -> MediaType.of("*", "plain"));
-    assertIllegalArg(() -> MediaType.of("*", "plain", Map.of()));
+  void createWithInvalidParameters() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(
+            () -> MediaType.of("text", "plain", Map.of("b@r", "foo"))); // Invalid param name
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> MediaType.of("text", "plain", Map.of("", "ops"))); // Empty param name
+    assertThatIllegalArgumentException()
+        .isThrownBy(
+            () -> MediaType.of("text", "plain", Map.of("foo", "ba\r"))); // Invalid param value
   }
 
-  private static void assertHasCharset(MediaType type, Charset charset) {
-    assertEquals(Optional.of(charset), type.charset());
-    assertEquals(charset.name().toLowerCase(),
-        type.parameters().get("charset"));
+  @Test
+  void createWithWildcardTypeWithConcreteSubtype() {
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.of("*", "plain"));
+    assertThatIllegalArgumentException().isThrownBy(() -> MediaType.of("*", "plain", Map.of()));
   }
 
   private static void assertInclusion(MediaType range, MediaType type) {
-    assertTrue(range.includes(type), format("<%s> not including <%s>", range, type));
-    assertTrue(range.isCompatibleWith(type) && type.isCompatibleWith(range));
+    assertThat(range.includes(type))
+        .withFailMessage(() -> format("<%s> & <%s>", range, type))
+        .isTrue();
+    assertThat(range.isCompatibleWith(type) && type.isCompatibleWith(range))
+        .withFailMessage(() -> format("<%s> & <%s>", range, type))
+        .isTrue();
   }
 
-  private static void assertInvalidParse(String value) {
-    assertIllegalArg(() -> MediaType.parse(value));
-  }
-
-  private static void assertIllegalArg(Executable action) {
-    assertThrows(IllegalArgumentException.class, action);
+  private static Map<String, String> linkedHashMap(String... keyVals) {
+    var m = new LinkedHashMap<String, String>();
+    for (int i = 0; i < keyVals.length; i += 2) {
+      m.put(keyVals[i], keyVals[i + 1]);
+    }
+    return m;
   }
 }
