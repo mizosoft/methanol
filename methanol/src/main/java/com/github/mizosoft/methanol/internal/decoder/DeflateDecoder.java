@@ -57,27 +57,33 @@ final class DeflateDecoder implements AsyncDecoder {
 
   @Override
   public void decode(ByteSource source, ByteSink sink) throws IOException {
-    Inflater inflater;
     var inflaterPlaceholder = inflaterReference.get();
-    if (inflaterPlaceholder == null) {
-      if (source.remaining() < Short.BYTES) {
-        return; // Expect more bytes next round
-      }
+    if (inflaterPlaceholder == CLOSED) {
+      return;
+    }
 
+    Inflater inflater;
+    if (inflaterPlaceholder != null) {
+      inflater = (Inflater) inflaterPlaceholder;
+    } else if (source.remaining() >= Short.BYTES) {
       var header = ByteBuffer.allocate(Short.BYTES);
       source.pullBytes(header);
       header.flip();
+
+      // Don't tell the Inflater to expect zlib wrapping if such wrapping couldn't be detected
       boolean nowrap = !isProbablyZLibHeader(header.getShort());
       inflater = new Inflater(nowrap);
       if (!inflaterReference.compareAndSet(null, inflater)) {
-        inflater.end();
+        inflater.end(); // The decoder was closed concurrently
         return;
       }
-      inflater.setInput(header.rewind()); // The inflater still has to consume the peeked header
-    } else if (inflaterPlaceholder != CLOSED) {
-      inflater = (Inflater) inflaterPlaceholder;
+
+      // The inflater still has to consume the peeked header
+      inflater.setInput(header.rewind());
+    } else if (source.finalSource()) {
+      throw new EOFException("unexpected end of deflate stream");
     } else {
-      return; // The decoder is closed
+      return; // Expect more input
     }
 
     InflaterUtils.inflateSource(inflater, source, sink);
