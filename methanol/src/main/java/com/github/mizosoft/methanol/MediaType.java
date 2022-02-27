@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.escapeAndQuoteValueIfNeeded;
-import static com.github.mizosoft.methanol.internal.Utils.normalizeToken;
+import static com.github.mizosoft.methanol.internal.Utils.validateAndNormalizeToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.QUOTED_PAIR_MATCHER;
 import static java.lang.String.format;
@@ -356,13 +356,13 @@ public final class MediaType {
     requireArgument(
         !WILDCARD.equals(type) || WILDCARD.equals(subtype),
         "cannot have a wildcard type with a concrete subtype");
-    String normalizedType = normalizeToken(type);
-    String normalizedSubtype = normalizeToken(subtype);
+    String normalizedType = validateAndNormalizeToken(type);
+    String normalizedSubtype = validateAndNormalizeToken(subtype);
     for (var entry : parameters.entrySet()) {
-      String normalizedAttribute = normalizeToken(entry.getKey());
+      String normalizedAttribute = validateAndNormalizeToken(entry.getKey());
       String normalizedValue;
       if (CHARSET_ATTRIBUTE.equals(normalizedAttribute)) {
-        normalizedValue = normalizeToken(entry.getValue());
+        normalizedValue = validateAndNormalizeToken(entry.getValue());
       } else {
         normalizedValue = entry.getValue();
         requireArgument(

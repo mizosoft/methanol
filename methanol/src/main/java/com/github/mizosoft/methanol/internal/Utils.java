@@ -53,8 +53,12 @@ public class Utils {
     return !token.isEmpty() && TOKEN_MATCHER.allMatch(token);
   }
 
-  public static String normalizeToken(String token) {
+  public static String validateAndNormalizeToken(String token) {
     validateToken(token);
+    return toAsciiLowerCase(token);
+  }
+
+  public static String normalizeToken(String token) {
     return toAsciiLowerCase(token);
   }
 
