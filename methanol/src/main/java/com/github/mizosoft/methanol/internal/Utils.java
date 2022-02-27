@@ -32,7 +32,6 @@ import java.io.InterruptedIOException;
 import java.lang.System.Logger.Level;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.ZoneOffset;
@@ -217,10 +216,9 @@ public class Utils {
 
   private static String escapeAndQuote(String value) {
     var escaped = new StringBuilder();
-    var buffer = CharBuffer.wrap(value);
     escaped.append('"');
-    while (buffer.hasRemaining()) {
-      char c = buffer.get();
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
       if (c == '"' || c == '\\') {
         escaped.append('\\');
       }
