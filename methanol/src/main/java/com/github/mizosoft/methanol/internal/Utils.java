@@ -53,15 +53,6 @@ public class Utils {
     return !token.isEmpty() && TOKEN_MATCHER.allMatch(token);
   }
 
-  public static String validateAndNormalizeToken(String token) {
-    validateToken(token);
-    return toAsciiLowerCase(token);
-  }
-
-  public static String normalizeToken(String token) {
-    return toAsciiLowerCase(token);
-  }
-
   public static void validateToken(String token) {
     requireArgument(isValidToken(token), "illegal token: '%s'", token);
   }
@@ -237,13 +228,5 @@ public class Utils {
     }
     escaped.append('"');
     return escaped.toString();
-  }
-
-  private static String toAsciiLowerCase(CharSequence value) {
-    var lower = new StringBuilder(value.length());
-    for (int i = 0; i < value.length(); i++) {
-      lower.append(Character.toLowerCase(value.charAt(i)));
-    }
-    return lower.toString();
   }
 }

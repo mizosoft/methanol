@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.escapeAndQuoteValueIfNeeded;
-import static com.github.mizosoft.methanol.internal.Utils.normalizeToken;
 import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDuration;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
 import static com.github.mizosoft.methanol.internal.Utils.validateToken;
@@ -40,6 +39,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -375,7 +375,7 @@ public final class CacheControl {
     var tokenizer = new HeaderValueTokenizer(value);
     tokenizer.consumeDelimiter(',', false); // First delimiter is optional
     do {
-      var normalizedDirective = normalizeToken(tokenizer.nextToken());
+      var normalizedDirective = tokenizer.nextToken().toLowerCase(Locale.ROOT);
       var argument = "";
       if (tokenizer.consumeCharIfPresent('=')) {
         argument = tokenizer.nextTokenOrQuotedString();
@@ -453,7 +453,7 @@ public final class CacheControl {
       requireNonNull(argument);
       validateToken(directive);
       validateHeaderValue(argument);
-      setNormalizedDirective(normalizeToken(directive), argument);
+      setNormalizedDirective(directive.toLowerCase(Locale.ROOT), argument);
       return this;
     }
 
@@ -655,7 +655,7 @@ public final class CacheControl {
       var tokenizer = new HeaderValueTokenizer(value);
       var fields = new LinkedHashSet<String>();
       do {
-        fields.add(normalizeToken(tokenizer.nextToken()));
+        fields.add(tokenizer.nextToken().toLowerCase(Locale.ROOT));
       } while (tokenizer.consumeDelimiter(','));
       return Collections.unmodifiableSet(fields);
     }

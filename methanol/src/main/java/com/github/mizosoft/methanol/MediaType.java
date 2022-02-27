@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.escapeAndQuoteValueIfNeeded;
-import static com.github.mizosoft.methanol.internal.Utils.validateAndNormalizeToken;
+import static com.github.mizosoft.methanol.internal.Utils.validateToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.QUOTED_PAIR_MATCHER;
 import static java.lang.String.format;
@@ -35,6 +35,7 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -372,6 +373,11 @@ public final class MediaType {
     }
     return new MediaType(
         normalizedType, normalizedSubtype, Collections.unmodifiableMap(newParameters));
+  }
+
+  private static String validateAndNormalizeToken(String token) {
+    validateToken(token);
+    return token.toLowerCase(Locale.ROOT);
   }
 
   /**

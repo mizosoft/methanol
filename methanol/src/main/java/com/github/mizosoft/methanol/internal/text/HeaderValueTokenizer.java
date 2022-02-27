@@ -31,7 +31,7 @@ import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_
 
 import java.nio.CharBuffer;
 
-/** Tokenizes common delimited header values into individual components. */
+/** Tokenizes delimited header values into individual components. */
 public final class HeaderValueTokenizer {
   private final CharBuffer buffer;
 
