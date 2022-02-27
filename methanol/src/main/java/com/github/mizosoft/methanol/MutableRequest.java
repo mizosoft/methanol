@@ -46,9 +46,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A mutable {@code HttpRequest}. This class implements {@link HttpRequest.Builder} for setting the
- * request's fields. Querying a field before it's been set will return it's default value. Invoking
+ * request's fields. Querying a field before it's been set will return its default value. Invoking
  * the {@link #toImmutableRequest()} method will return an immutable {@code HttpRequest} copy that
- * is independent from this instance.
+ * is independent of this instance.
  *
  * <p>{@code MutableRequest} adds some convenience when the {@code HttpRequest} is used immediately
  * after creation:
@@ -132,8 +132,9 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   /** Removes all headers matched by the given predicate. */
   public MutableRequest removeHeadersIf(BiPredicate<String, String> filter) {
     requireNonNull(filter);
-    headersBuilder.removeIf(filter);
-    cachedHeaders = null; // Invalidated
+    if (headersBuilder.removeIf(filter)) {
+      cachedHeaders = null; // Invalidated
+    }
     return this;
   }
 

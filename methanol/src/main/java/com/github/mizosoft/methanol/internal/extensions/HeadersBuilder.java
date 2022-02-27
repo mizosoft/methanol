@@ -50,16 +50,18 @@ public final class HeadersBuilder {
     return headersMap.remove(name) != null;
   }
 
-  public void removeIf(BiPredicate<String, String> filter) {
+  public boolean removeIf(BiPredicate<String, String> filter) {
+    boolean mutated = false;
     for (var iter = headersMap.entrySet().iterator(); iter.hasNext(); ) {
       var entry = iter.next();
       var name = entry.getKey();
       var values = entry.getValue();
-      values.removeIf(value -> filter.test(name, value));
+      mutated |= values.removeIf(value -> filter.test(name, value));
       if (values.isEmpty()) {
         iter.remove();
       }
     }
+    return mutated;
   }
 
   public void clear() {
