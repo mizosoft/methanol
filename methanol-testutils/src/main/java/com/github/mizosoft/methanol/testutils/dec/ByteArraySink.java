@@ -27,7 +27,6 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 
 final class ByteArraySink implements AsyncDecoder.ByteSink {
-
   private final ByteBuffer buffer;
   private final ByteArrayOutputStream dump;
 
@@ -50,7 +49,7 @@ final class ByteArraySink implements AsyncDecoder.ByteSink {
   void flush() {
     buffer.flip();
     if (buffer.hasRemaining()) {
-      dump.write(buffer.array(), buffer.position(), buffer.limit());
+      dump.write(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.limit());
     }
   }
 }

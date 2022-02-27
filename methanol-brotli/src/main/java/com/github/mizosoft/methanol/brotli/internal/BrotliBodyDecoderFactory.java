@@ -30,7 +30,6 @@ import java.util.concurrent.Executor;
 
 /** {@code BodyDecoder.Factory} provider for brotli encoding. */
 public final class BrotliBodyDecoderFactory implements BodyDecoder.Factory {
-
   static final String BROTLI_ENCODING = "br";
 
   /**

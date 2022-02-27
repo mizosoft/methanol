@@ -22,13 +22,12 @@
 
 package com.github.mizosoft.methanol.brotli.internal;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIOException;
 
 import com.github.mizosoft.methanol.testutils.dec.Decode;
-import com.github.mizosoft.methanol.testutils.dec.Decode.BuffSizeOption;
+import com.github.mizosoft.methanol.testutils.dec.Decode.BufferSizeOption;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -40,9 +39,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class BrotliDecoderTest {
-
-  private static final String GOOD = "ocAXACEazuXPqLgaOX42Jj+EdAT91430gPT27km/6WbK3kTpTWJBJkmAeWoBWebW3oK/qHGuI8e6WIjsH5Qqmrt4ByakvCwb73IT2E7OA3MDpxszTNgAn1xJrzB3qoFjKUOWYBi+VYYbqmhiWlHmHtjbjdVfy3jnR9rs6X7PuzmVyW93/LLKaujeyU6O/8yJu4RSPpCDX8afTBrKXY6Vh/5ZqGfsC9oJGm3XX+klIwK/5sMFqil13dFUJH/xZhMm/JyLMb+HN6gerSzhhBGBAbNBkYaDVHKTZyy28+4XjDnIaY83AkYLSCJ7BIUq0b90zmwYPG4A";
-  private static final String BAD = "ocAXACEazuXPqLgaOX42Jj+EdAT91430gPT27km/6WbK3kTpTWJBJkmAeWoBWebW3oK/qHGuI8e6WIjsH5Qqmrt4ByakvCwb73IT2E7OA3MDpxszTNgAn1xJrzB3qoFjKUOWYBi+VYYbqmhiWlHmHtjbjdVfy3jnR9rs0D/xwqbv7QEf2rLKaujeyU6O/8yJu4RSPpCDX8afTBrKXY6Vh/5ZqGfsC9oJGm3XX+klIwK/5sMFqil13dFUJH/xZhMm/JyLMb+HN6gerSzhhBGBAbNBkYaDVHKTZyy28+4XjDnIaY83AkYLSCJ7BIUq0b90zmwYPG4A";
+  private static final String GOOD =
+      "ocAXACEazuXPqLgaOX42Jj+EdAT91430gPT27km/6WbK3kTpTWJBJkmAeWoBWebW3oK/qHGuI8e6WIjsH5Qqmrt4ByakvCwb73IT2E7OA3MDpxszTNgAn1xJrzB3qoFjKUOWYBi+VYYbqmhiWlHmHtjbjdVfy3jnR9rs6X7PuzmVyW93/LLKaujeyU6O/8yJu4RSPpCDX8afTBrKXY6Vh/5ZqGfsC9oJGm3XX+klIwK/5sMFqil13dFUJH/xZhMm/JyLMb+HN6gerSzhhBGBAbNBkYaDVHKTZyy28+4XjDnIaY83AkYLSCJ7BIUq0b90zmwYPG4A";
+  private static final String BAD =
+      "ocAXACEazuXPqLgaOX42Jj+EdAT91430gPT27km/6WbK3kTpTWJBJkmAeWoBWebW3oK/qHGuI8e6WIjsH5Qqmrt4ByakvCwb73IT2E7OA3MDpxszTNgAn1xJrzB3qoFjKUOWYBi+VYYbqmhiWlHmHtjbjdVfy3jnR9rs0D/xwqbv7QEf2rLKaujeyU6O/8yJu4RSPpCDX8afTBrKXY6Vh/5ZqGfsC9oJGm3XX+klIwK/5sMFqil13dFUJH/xZhMm/JyLMb+HN6gerSzhhBGBAbNBkYaDVHKTZyy28+4XjDnIaY83AkYLSCJ7BIUq0b90zmwYPG4A";
 
   private static final Base64.Decoder BASE64_DEC = Base64.getDecoder();
 
@@ -53,55 +53,55 @@ class BrotliDecoderTest {
 
   @Test
   void correctEncoding() {
-    try (var dec = new BrotliDecoder()) {
-      assertEquals("br", dec.encoding()); // Sanity check
+    try (var decoder = new BrotliDecoder()) {
+      assertThat(decoder.encoding()).isEqualTo("br"); // Sanity check
     }
   }
 
   @Test
   void decodesGoodStream() throws IOException {
-    byte[] goodStream = BASE64_DEC.decode(GOOD);
-    for (var so : BuffSizeOption.values()) {
-      byte[] decoded = Decode.decode(new BrotliDecoder(), goodStream, so);
-      assertArrayEquals(brotli(goodStream), decoded);
+    var goodStream = BASE64_DEC.decode(GOOD);
+    for (var option : BufferSizeOption.values()) {
+      assertThat(Decode.decode(new BrotliDecoder(), goodStream, option))
+          .isEqualTo(brotliUnzip(goodStream));
     }
   }
 
   @Test
   void throwsOnBadStream() {
-    byte[] badStream = BASE64_DEC.decode(BAD);
-    for (var so : BuffSizeOption.values()) {
-      assertThrows(IOException.class, () -> Decode.decode(new BrotliDecoder(), badStream, so));
+    var badStream = BASE64_DEC.decode(BAD);
+    for (var option : BufferSizeOption.values()) {
+      assertThatIOException()
+          .isThrownBy(() -> Decode.decode(new BrotliDecoder(), badStream, option));
     }
   }
 
   @Test
   void throwsOnOverflow() {
-    byte[] goodStream = BASE64_DEC.decode(GOOD);
-    byte[] overflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length + 2);
-    for (var so : BuffSizeOption.values()) {
+    var goodStream = BASE64_DEC.decode(GOOD);
+    var overflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length + 2);
+    for (var option : BufferSizeOption.values()) {
       // Overflow can throw from two places: either from decoder_jni setting ERROR status
       // if more input is detected in the pushed block, or if decode() loop detects more
       // input in source after decoder_jni sets DONE flag
-      var t = assertThrows(IOException.class,
-          () -> Decode.decode(new BrotliDecoder(), overflowedStream, so));
-      var msg = t.getMessage();
-      assertTrue(msg.equals("corrupt brotli stream") ||
-          msg.equals("brotli stream finished prematurely"));
+      assertThatIOException()
+          .isThrownBy(() -> Decode.decode(new BrotliDecoder(), overflowedStream, option))
+          .withMessageNotContainingAny(
+              "corrupt brotli stream", "brotli stream finished prematurely");
     }
   }
 
   @Test
   void throwsOnUnderflow() {
-    byte[] goodStream = BASE64_DEC.decode(GOOD);
-    byte[] underflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length - 2);
-    for (var so : BuffSizeOption.values()) {
-      assertThrows(EOFException.class,
-          () -> Decode.decode(new BrotliDecoder(), underflowedStream, so));
+    var goodStream = BASE64_DEC.decode(GOOD);
+    var underflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length - 2);
+    for (var option : BufferSizeOption.values()) {
+      assertThatExceptionOfType(EOFException.class)
+          .isThrownBy(() -> Decode.decode(new BrotliDecoder(), underflowedStream, option));
     }
   }
 
-  private static byte[] brotli(byte[] compressed) {
+  private static byte[] brotliUnzip(byte[] compressed) {
     try {
       return new BrotliInputStream(new ByteArrayInputStream(compressed)).readAllBytes();
     } catch (IOException ioe) {

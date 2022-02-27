@@ -158,7 +158,6 @@ subprojects { subproject ->
     testImplementation deps.junitApi
     testRuntimeOnly deps.junitEngine
 
-    // TODO start incorporating AssertJ & awaitility in tests
     testImplementation deps.assertj
     testImplementation deps.awaitility
     testImplementation deps.hamcrest

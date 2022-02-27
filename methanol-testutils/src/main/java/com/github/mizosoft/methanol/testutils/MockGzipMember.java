@@ -35,7 +35,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -50,7 +49,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A mock gzip member with configurable FLG related data and corruption modes. */
 public final class MockGzipMember {
-
   private static final int GZIP_MAGIC = 0x8B1F;
   private static final int CM_DEFLATE = 8;
   private static final int BYTE_MASK = 0xFF;
@@ -62,10 +60,16 @@ public final class MockGzipMember {
   private final byte[] data;
   private final Map<CorruptionMode, Integer> corruptions;
 
+  private MockGzipMember(Builder builder) {
+    flagMap = Map.copyOf(builder.flags);
+    data = builder.data;
+    corruptions = Collections.unmodifiableMap(new EnumMap<>(builder.corruptions));
+  }
+
   private InputStream openStream() {
-    CRC32 dataCrc = new CRC32();
-    Deflater def = new Deflater(Deflater.DEFAULT_COMPRESSION, true); // no deflate-wrapping
-    Iterator<InputStream> ins =
+    var dataCrc = new CRC32();
+    var def = new Deflater(Deflater.DEFAULT_COMPRESSION, true); // no deflate-wrapping
+    var ins =
         Stream.<Supplier<InputStream>>builder()
             .add(() -> new ByteArrayInputStream(getHeader()))
             .add(
@@ -79,10 +83,11 @@ public final class MockGzipMember {
             .build()
             .map(Supplier::get) // Will be lazily evaluated
             .iterator();
-    // SequenceInputStream only takes Enumeration (can't use Collections.enumeration(List)
+    // SequenceInputStream only takes Enumerations (can't use Collections.enumeration(List)
     // as impl relies on lazy evaluation of stream's iterator)
-    @SuppressWarnings("JdkObsolete") Enumeration<InputStream> enumeration =
-        new Enumeration<>() {
+    @SuppressWarnings("JdkObsolete")
+    var enumeration =
+        new Enumeration<InputStream>() {
           @Override
           public boolean hasMoreElements() {
             return ins.hasNext();
@@ -106,12 +111,6 @@ public final class MockGzipMember {
     return outBuff.toByteArray();
   }
 
-  private MockGzipMember(Builder builder) {
-    flagMap = Map.copyOf(builder.flags);
-    data = builder.data;
-    corruptions = Collections.unmodifiableMap(new EnumMap<>(builder.corruptions));
-  }
-
   public byte[] getBytes() {
     try {
       return openStream().readAllBytes();
@@ -121,7 +120,7 @@ public final class MockGzipMember {
   }
 
   private static byte[] rndAscii(int len) {
-    byte[] ascii =
+    var ascii =
         ThreadLocalRandom.current()
             .ints(len, 0x21, 0x7F) // 0x21 to 0x7E
             .collect(StringBuilder::new, (sb, ic) -> sb.append((char) ic), StringBuilder::append)
@@ -134,7 +133,7 @@ public final class MockGzipMember {
     var outBuff = new ByteArrayOutputStream();
     writeMainHeader(outBuff);
     if (flagMap.containsKey(FLG.FHCRC)) {
-      CRC32 crc32 = new CRC32();
+      var crc32 = new CRC32();
       crc32.update(outBuff.toByteArray());
       writeFlagData(new CheckedOutputStream(outBuff, crc32), crc32);
     } else {
@@ -163,7 +162,7 @@ public final class MockGzipMember {
         // anyways so the data is randomly generated
         int len = flagMap.get(FLG.FEXTRA) & SHORT_MASK;
         writeShort(out, len);
-        byte[] b = new byte[len];
+        var b = new byte[len];
         ThreadLocalRandom.current().nextBytes(b);
         out.write(b);
       }
@@ -202,15 +201,14 @@ public final class MockGzipMember {
   }
 
   public static final class Builder {
-
     private final Map<FLG, Integer> flags;
-    private byte[] data;
     private final Map<CorruptionMode, Integer> corruptions;
+    private byte[] data;
 
     Builder() {
       flags = new EnumMap<>(FLG.class);
-      data = new byte[0];
       corruptions = new EnumMap<>(CorruptionMode.class);
+      data = new byte[0];
     }
 
     public Builder setText() {

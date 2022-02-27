@@ -22,14 +22,12 @@
 
 package com.github.mizosoft.methanol.internal.decoder;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.testutils.dec.Decode;
-import com.github.mizosoft.methanol.testutils.dec.Decode.BuffSizeOption;
+import com.github.mizosoft.methanol.testutils.dec.Decode.BufferSizeOption;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
@@ -38,7 +36,6 @@ import java.util.zip.ZipException;
 import org.junit.jupiter.api.Test;
 
 abstract class ZLibDecoderTest {
-
   static final Base64.Decoder BASE64_DEC = Base64.getDecoder();
 
   ZLibDecoderTest() {}
@@ -55,46 +52,47 @@ abstract class ZLibDecoderTest {
 
   @Test
   void correctEncoding() {
-    try (var dec = newDecoder()) {
-      assertEquals(encoding(), dec.encoding()); // Sanity check
+    try (var decoder = newDecoder()) {
+      assertThat(decoder.encoding()).isEqualTo(encoding()); // Sanity check
     }
   }
 
   @Test
   void decodesGoodStream() throws IOException {
-    byte[] goodStream = BASE64_DEC.decode(good());
-    for (var so : BuffSizeOption.values()) {
-      byte[] decoded = Decode.decode(newDecoder(), goodStream, so);
-      assertArrayEquals(nativeDecode(goodStream), decoded);
+    var goodStream = BASE64_DEC.decode(good());
+    for (var option : BufferSizeOption.values()) {
+      assertThat(Decode.decode(newDecoder(), goodStream, option))
+          .isEqualTo(nativeDecode(goodStream));
     }
   }
 
   @Test
   void throwsOnBadStream() {
-    byte[] badStream = BASE64_DEC.decode(bad());
-    for (var so : BuffSizeOption.values()) {
-      assertThrows(ZipException.class, () -> Decode.decode(newDecoder(), badStream, so));
+    var badStream = BASE64_DEC.decode(bad());
+    for (var option : BufferSizeOption.values()) {
+      assertThatExceptionOfType(ZipException.class)
+          .isThrownBy(() -> Decode.decode(newDecoder(), badStream, option));
     }
   }
 
   @Test
   void throwsOnOverflow() {
-    byte[] goodStream = BASE64_DEC.decode(good());
-    byte[] overflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length + 2);
-    for (var so : BuffSizeOption.values()) {
-      var t = assertThrows(IOException.class,
-          () -> Decode.decode(newDecoder(), overflowedStream, so));
-      assertTrue(t.getMessage().contains("stream finished prematurely"));
+    var goodStream = BASE64_DEC.decode(good());
+    var overflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length + 2);
+    for (var option : BufferSizeOption.values()) {
+      assertThatExceptionOfType(IOException.class)
+          .isThrownBy(() -> Decode.decode(newDecoder(), overflowedStream, option))
+          .withMessageContaining("stream finished prematurely");
     }
   }
 
   @Test
   void throwsOnUnderflow() {
-    byte[] goodStream = BASE64_DEC.decode(good());
-    byte[] underflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length - 2);
-    for (var so : BuffSizeOption.values()) {
-      assertThrows(EOFException.class,
-          () -> Decode.decode(newDecoder(), underflowedStream, so));
+    var goodStream = BASE64_DEC.decode(good());
+    var underflowedStream = Arrays.copyOfRange(goodStream, 0, goodStream.length - 2);
+    for (var option : BufferSizeOption.values()) {
+      assertThatExceptionOfType(EOFException.class)
+          .isThrownBy(() -> Decode.decode(newDecoder(), underflowedStream, option));
     }
   }
 }

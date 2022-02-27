@@ -26,18 +26,17 @@ import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.io.IOException;
 
 public class Decode {
-
   private static final int BUFFER_SIZE_MANY = 64;
-
   private static final int SOURCE_INCREMENT_SCALE = 3;
 
   private Decode() {}
 
-  public static byte[] decode(AsyncDecoder decoder, byte[] compressed, BuffSizeOption sizeOption)
+  public static byte[] decode(AsyncDecoder decoder, byte[] compressed, BufferSizeOption option)
       throws IOException {
-    var source = new IncrementalByteArraySource(
-            compressed, sizeOption.inSize, SOURCE_INCREMENT_SCALE * sizeOption.inSize);
-    var sink = new ByteArraySink(sizeOption.outSize);
+    var source =
+        new IncrementalByteArraySource(
+            compressed, option.inSize, SOURCE_INCREMENT_SCALE * option.inSize);
+    var sink = new ByteArraySink(option.outSize);
     try (decoder) {
       do {
         source.increment();
@@ -52,7 +51,7 @@ public class Decode {
 
   // Make sure the decoder works well with different buffer size configs
   @SuppressWarnings("unused")
-  public enum BuffSizeOption {
+  public enum BufferSizeOption {
     IN_MANY_OUT_MANY(BUFFER_SIZE_MANY, BUFFER_SIZE_MANY),
     IN_ONE_OUT_MANY(1, BUFFER_SIZE_MANY),
     IN_MANY_OUT_ONE(BUFFER_SIZE_MANY, 1),
@@ -61,13 +60,13 @@ public class Decode {
     final int inSize;
     final int outSize;
 
-    BuffSizeOption(int inSize, int outSize) {
+    BufferSizeOption(int inSize, int outSize) {
       this.inSize = inSize;
       this.outSize = outSize;
     }
 
-    static BuffSizeOption[] inOptions() {
-      return new BuffSizeOption[] {IN_MANY_OUT_MANY, IN_ONE_OUT_MANY};
+    public static BufferSizeOption[] inOptions() {
+      return new BufferSizeOption[] {IN_MANY_OUT_MANY, IN_ONE_OUT_MANY};
     }
   }
 }

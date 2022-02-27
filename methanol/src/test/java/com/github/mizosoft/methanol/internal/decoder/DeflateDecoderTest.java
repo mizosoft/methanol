@@ -23,18 +23,18 @@
 package com.github.mizosoft.methanol.internal.decoder;
 
 import static com.github.mizosoft.methanol.testutils.TestUtils.inflate;
-import static com.github.mizosoft.methanol.testutils.TestUtils.inflateNowrap;
 import static com.github.mizosoft.methanol.testutils.TestUtils.zlibUnwrap;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.testutils.dec.Decode;
-import com.github.mizosoft.methanol.testutils.dec.Decode.BuffSizeOption;
+import com.github.mizosoft.methanol.testutils.dec.Decode.BufferSizeOption;
+import java.io.EOFException;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
 
 class DeflateDecoderTest extends ZLibDecoderTest {
-
   @Override
   String good() {
     return "eJzlkTFuwzAMRXed4m9eegejCIrCQMcCmRmLiQTLoiHJMXT7UgrQokN6gQ5aPsnHz6+zozJkBL4WFEGmOppPx5mxJaqcMsjHoeCQtPh4A8W6SmLzdudUm2qRnRRYOSJ8xDXQytmcf2Ot4PDFoXTyJcnCEZvnmTMkNlkHRdJopmFFkNxWrRV38TNjphCaoJ1VdmOGE+2KmYa7slhJ2VEzZ36UC0fbRi40Lwclm1F8CGj0vt2cqcyuH6Tyw5ZNTGvGTbBv7ZS8tkbzwUVxtJeKWVaG7AVyBWUd+rv4Gi0Op26mHmYL4l1s3zhpywKfzYniU8BoellvRrv34bIw6acoamud+np4PmmS6lkzy7KH8TsjRGbbEY4Tv+iPkft3CT4tfwERoAh6";
@@ -62,11 +62,21 @@ class DeflateDecoderTest extends ZLibDecoderTest {
 
   @Test
   void decodesUnwrappedGoodStream() throws IOException {
-    byte[] goodStream = BASE64_DEC.decode(good());
-    byte[] goodStreamNowrap = zlibUnwrap(goodStream);
-    for (var so : BuffSizeOption.values()) {
-      byte[] decoded = Decode.decode(newDecoder(), goodStreamNowrap, so);
-      assertArrayEquals(inflateNowrap(goodStreamNowrap), decoded);
+    var goodStream = BASE64_DEC.decode(good());
+    var goodStreamNowrap = zlibUnwrap(goodStream);
+    for (var option : BufferSizeOption.values()) {
+      assertThat(Decode.decode(newDecoder(), goodStreamNowrap, option))
+          .isEqualTo(inflate(goodStream));
     }
+  }
+
+  @Test
+  void throwsEOFExceptionWhenLessThanTwoBytesAreReceived() {
+    assertThatExceptionOfType(EOFException.class)
+        .isThrownBy(
+            () -> Decode.decode(newDecoder(), new byte[0], BufferSizeOption.IN_ONE_OUT_ONE));
+    assertThatExceptionOfType(EOFException.class)
+        .isThrownBy(
+            () -> Decode.decode(newDecoder(), new byte[] {0xf}, BufferSizeOption.IN_ONE_OUT_ONE));
   }
 }

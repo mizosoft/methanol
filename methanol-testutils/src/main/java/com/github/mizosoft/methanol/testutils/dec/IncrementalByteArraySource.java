@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 
 /** A ByteSource that reads from a byte array up to a limit that can be incremented each round. */
 final class IncrementalByteArraySource implements AsyncDecoder.ByteSource {
-
   private final byte[] source;
   private final ByteBuffer buffer;
   private final int increment;
@@ -36,8 +35,8 @@ final class IncrementalByteArraySource implements AsyncDecoder.ByteSource {
 
   IncrementalByteArraySource(byte[] source, int bufferSize, int increment) {
     this.source = source;
-    buffer = ByteBuffer.allocate(bufferSize);
     this.increment = increment;
+    buffer = ByteBuffer.allocate(bufferSize);
     buffer.flip(); // Mark as empty initially
   }
 
