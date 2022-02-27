@@ -1970,7 +1970,7 @@ public final class DiskStore implements Store {
       lock.lock();
       try {
         requireNotCommitted();
-        this.metadata = Utils.copy(metadata, this.metadata);
+        this.metadata = Utils.copy(metadata).asReadOnlyBuffer();
         editedMetadata = true;
       } finally {
         lock.unlock();
@@ -2045,7 +2045,7 @@ public final class DiskStore implements Store {
 
         channel = lazyChannel;
         if (committed) {
-          newMetadata = editedMetadata ? Utils.copy(metadata) : null;
+          newMetadata = editedMetadata ? metadata : null;
           dataSize = writtenCount;
         }
       } finally {

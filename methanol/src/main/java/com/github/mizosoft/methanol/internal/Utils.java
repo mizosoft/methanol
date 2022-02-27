@@ -91,10 +91,6 @@ public class Utils {
     return ByteBuffer.allocate(buffer.remaining()).put(buffer).flip();
   }
 
-  public static ByteBuffer copy(ByteBuffer source, ByteBuffer target) {
-    return target.remaining() >= source.remaining() ? target.put(source) : copy(source);
-  }
-
   public static Clock systemMillisUtc() {
     return SYSTEM_MILLIS_UTC;
   }

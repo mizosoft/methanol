@@ -437,7 +437,7 @@ public final class MemoryStore implements Store {
       lock.lock();
       try {
         requireNotCommitted();
-        this.metadata = Utils.copy(metadata, this.metadata);
+        this.metadata = Utils.copy(metadata).asReadOnlyBuffer();
         editedMetadata = true;
       } finally {
         lock.unlock();
@@ -474,7 +474,7 @@ public final class MemoryStore implements Store {
       lock.lock();
       try {
         if (committed) {
-          newMetadata = editedMetadata ? Utils.copy(metadata) : null;
+          newMetadata = editedMetadata ? metadata : null;
           newData = editedData ? data.snapshot() : null;
         }
       } finally {
