@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.brotli.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIOException;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import com.github.mizosoft.methanol.testutils.dec.Decode;
 import com.github.mizosoft.methanol.testutils.dec.Decode.BufferSizeOption;
@@ -86,8 +87,8 @@ class BrotliDecoderTest {
       // input in source after decoder_jni sets DONE flag
       assertThatIOException()
           .isThrownBy(() -> Decode.decode(new BrotliDecoder(), overflowedStream, option))
-          .withMessageNotContainingAny(
-              "corrupt brotli stream", "brotli stream finished prematurely");
+          .extracting(Throwable::getMessage, STRING)
+          .containsAnyOf("corrupt brotli stream", "brotli stream finished prematurely");
     }
   }
 
