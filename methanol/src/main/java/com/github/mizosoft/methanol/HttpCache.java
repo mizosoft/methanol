@@ -182,15 +182,15 @@ public final class HttpCache implements AutoCloseable, Flushable {
    */
   public Iterator<URI> uris() throws IOException {
     return new Iterator<>() {
-      private final Iterator<Viewer> storeIterator = store.iterator();
+      private final Iterator<Viewer> viewerIterator = store.iterator();
 
       private @Nullable URI nextUri;
       private boolean canRemove;
 
       @Override
       public boolean hasNext() {
-        // Prevent any later remove() from removing the wrong entry as hasNext
-        // causes the underlying store iterator to advance.
+        // Prevent any later remove() from removing the wrong entry as hasNext (called by
+        // findNextUri()) causes the underlying store iterator to advance.
         canRemove = false;
         return nextUri != null || findNextUri();
       }
@@ -210,12 +210,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
       public void remove() {
         requireState(canRemove, "next() must be called before remove()");
         canRemove = false;
-        storeIterator.remove();
+        viewerIterator.remove();
       }
 
       private boolean findNextUri() {
-        while (nextUri == null && storeIterator.hasNext()) {
-          try (var viewer = storeIterator.next()) {
+        while (nextUri == null && viewerIterator.hasNext()) {
+          try (var viewer = viewerIterator.next()) {
             var metadata = tryRecoverMetadata(viewer);
             if (metadata != null) {
               nextUri = metadata.uri();
@@ -251,8 +251,18 @@ public final class HttpCache implements AutoCloseable, Flushable {
   public boolean remove(HttpRequest request) throws IOException {
     requireNonNull(request);
     try (var viewer = store.view(key(request))) {
-      if (viewer != null && CacheResponseMetadata.decode(viewer.metadata()).matches(request)) {
-        return viewer.removeEntry();
+      if (viewer != null) {
+        var metadata = tryRecoverMetadata(viewer);
+        if (metadata != null && metadata.matches(request)) {
+          return viewer.removeEntry();
+        } else if (metadata == null) {
+          // The entry is corrupt, try removing it anyway
+          try {
+            viewer.removeEntry();
+          } catch (IOException e) {
+            logger.log(Level.WARNING, "exception while removing corrupt entry", e);
+          }
+        }
       }
     }
     return false;
@@ -417,10 +427,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
   private static final class CacheListener implements Listener {
     private final StatsRecorder statsRecorder;
     private final Listener userListener;
+    private final boolean hasUserListener;
 
     CacheListener(StatsRecorder statsRecorder, @Nullable Listener userListener) {
       this.statsRecorder = statsRecorder;
       this.userListener = requireNonNullElse(userListener, DisabledListener.INSTANCE);
+      hasUserListener = userListener != null;
     }
 
     CacheReadingPublisher.Listener readListener(HttpRequest request) {
@@ -452,7 +464,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     Optional<Listener> userListener() {
-      return Optional.of(userListener).filter(listener -> listener != DisabledListener.INSTANCE);
+      return hasUserListener ? Optional.of(userListener) : Optional.empty();
     }
 
     @Override
@@ -928,7 +940,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     /** Builds a new {@code HttpCache}. */
     public HttpCache build() {
-      requireState(storeFactory != null || store != null, "caching method must be specified");
+      requireState(storeFactory != null || store != null, "caching backend must be specified");
       return new HttpCache(this);
     }
 
