@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2019, 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,6 @@ import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static java.time.ZoneOffset.UTC;
 import static java.util.function.Predicate.isEqual;
-import static java.util.function.Predicate.not;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIOException;
@@ -95,7 +94,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -2739,10 +2737,10 @@ class HttpCacheTest {
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
 
-    var request = GET(serverUri).tag(Integer.class, 1);
+    var request = GET(serverUri);
 
     get(request);
-    await().pollDelay(Duration.ZERO).until(() -> listener.events, not(Collection::isEmpty));
+    await().pollDelay(Duration.ZERO).until(() -> !listener.events.isEmpty());
     listener
         .assertNext(OnWriteFailure.class, request)
         .extracting(
@@ -2751,7 +2749,7 @@ class HttpCacheTest {
 
     failingStore.allowWrites = true;
     get(request);
-    await().pollDelay(Duration.ZERO).until(() -> listener.events, not(Collection::isEmpty));
+    await().pollDelay(Duration.ZERO).until(() -> !listener.events.isEmpty());
     listener.assertNext(OnWriteSuccess.class, request);
 
     assertThatExceptionOfType(TestException.class).isThrownBy(() -> get(request));

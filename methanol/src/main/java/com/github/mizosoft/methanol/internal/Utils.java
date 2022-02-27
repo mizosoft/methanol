@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2019, 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,6 @@ import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.System.Logger.Level;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
@@ -96,15 +95,11 @@ public class Utils {
   }
 
   /**
-   * Tries to rethrow {@code cause} with the current stack trace or rethrows an {@code IOException}
-   * if not possible. Return type is only declared for this method to be used in a {@code throw}
-   * statement.
-   *
-   * @param wrapInterruptedException if {@code InterruptedException} is to be wrapped in {@code
-   *     InterruptedIOException}
+   * Tries to clone & rethrow {@code throwable} to capture the current stack trace, or throws an
+   * {@code IOException} with {@code throwable} as its cause if cloning is not possible. Return type
+   * is only declared for this method to be conveniently used in a {@code throw} statement.
    */
-  private static RuntimeException rethrowAsyncThrowable(
-      Throwable throwable, boolean wrapInterruptedException)
+  private static RuntimeException rethrowAsyncThrowable(Throwable throwable)
       throws IOException, InterruptedException {
     var clonedThrowable = tryCloneThrowable(throwable);
     if (clonedThrowable instanceof RuntimeException) {
@@ -114,34 +109,41 @@ public class Utils {
     } else if (clonedThrowable instanceof IOException) {
       throw (IOException) clonedThrowable;
     } else if (clonedThrowable instanceof InterruptedException) {
-      if (wrapInterruptedException) {
-        var interruptedIO = new InterruptedIOException(throwable.getMessage());
-        interruptedIO.initCause(throwable);
-        throw interruptedIO;
-      } else {
-        throw (InterruptedException) clonedThrowable;
-      }
+      throw (InterruptedException) clonedThrowable;
     } else {
-      throw new IOException(throwable.getMessage(), throwable);
+      // Just wrap the original throwable in a generic IOException
+      throw new IOException(throwable);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private static @Nullable Throwable tryCloneThrowable(Throwable cause) {
-    var message = cause.getMessage();
-    var causeType = cause.getClass();
+  private static @Nullable Throwable tryCloneThrowable(Throwable t) {
+    // Clone the main cause in a CompletionException|ExecutionException chain
+    var throwableToClone = getDeepCompletionCause(t);
+
+    // Don't try cloning if we can't rethrow the cloned exception and we'll end up wrapping it in an
+    // IOException anyway
+    if (!(throwableToClone instanceof RuntimeException
+        || throwableToClone instanceof Error
+        || throwableToClone instanceof IOException
+        || throwableToClone instanceof InterruptedException)) {
+      return null;
+    }
+
     try {
-      for (var constructor : (Constructor<? extends Throwable>[]) causeType.getConstructors()) {
+      for (var constructor :
+          (Constructor<? extends Throwable>[]) throwableToClone.getClass().getConstructors()) {
         var paramTypes = constructor.getParameterTypes();
-        int len = paramTypes.length;
-        if (len == 2 && paramTypes[0] == String.class && paramTypes[1] == Throwable.class) {
-          return constructor.newInstance(message, cause);
-        } else if (len == 1 && paramTypes[0] == String.class) {
-          return constructor.newInstance(message).initCause(cause);
-        } else if (len == 1 && paramTypes[0] == Throwable.class) {
-          return constructor.newInstance(cause);
-        } else if (len == 0) {
-          return constructor.newInstance().initCause(cause);
+        if (paramTypes.length == 2
+            && paramTypes[0] == String.class
+            && paramTypes[1] == Throwable.class) {
+          return constructor.newInstance(t.getMessage(), t);
+        } else if (paramTypes.length == 1 && paramTypes[0] == String.class) {
+          return constructor.newInstance(t.getMessage()).initCause(t);
+        } else if (paramTypes.length == 1 && paramTypes[0] == Throwable.class) {
+          return constructor.newInstance(t);
+        } else if (paramTypes.length == 0) {
+          return constructor.newInstance().initCause(t);
         }
       }
     } catch (ReflectiveOperationException ignored) {
@@ -165,8 +167,8 @@ public class Utils {
   public static <T> T block(Future<T> future) throws IOException, InterruptedException {
     try {
       return future.get();
-    } catch (ExecutionException failed) {
-      throw rethrowAsyncThrowable(getDeepCompletionCause(failed), false);
+    } catch (ExecutionException e) {
+      throw rethrowAsyncThrowable(e.getCause());
     }
   }
 
@@ -177,14 +179,14 @@ public class Utils {
   public static <T> T blockOnIO(Future<T> future) throws IOException {
     try {
       return future.get();
-    } catch (ExecutionException failed) {
+    } catch (ExecutionException e) {
       try {
-        throw rethrowAsyncThrowable(getDeepCompletionCause(failed), true);
-      } catch (InterruptedException unexpected) {
-        throw new AssertionError(unexpected); // Can't happen
+        throw rethrowAsyncThrowable(e.getCause());
+      } catch (InterruptedException t) {
+        throw new IOException("interrupted while waiting for I/O", t);
       }
-    } catch (InterruptedException interrupted) {
-      throw new InterruptedIOException();
+    } catch (InterruptedException e) {
+      throw new IOException("interrupted while waiting for I/O", e);
     }
   }
 
@@ -192,8 +194,8 @@ public class Utils {
     if (closeable != null) {
       try {
         closeable.close();
-      } catch (IOException ioe) {
-        logger.log(Level.WARNING, "exception while closing: " + closeable, ioe);
+      } catch (IOException e) {
+        logger.log(Level.WARNING, "exception while closing: " + closeable, e);
       }
     }
   }
