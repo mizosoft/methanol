@@ -68,8 +68,7 @@ public interface Store extends AutoCloseable, Flushable {
    *
    * @throws IllegalStateException if the store is closed
    */
-  @Nullable
-  Viewer view(String key) throws IOException;
+  @Nullable Viewer view(String key) throws IOException;
 
   /**
    * Returns an {@code Editor} for the entry associated with the given key (atomically creating a
@@ -77,8 +76,7 @@ public interface Store extends AutoCloseable, Flushable {
    *
    * @throws IllegalStateException if the store is closed
    */
-  @Nullable
-  Editor edit(String key) throws IOException;
+  @Nullable Editor edit(String key) throws IOException;
 
   /**
    * Returns a iterator of {@code Viewers} over the entries in this store. The iterator doesn't
@@ -153,8 +151,7 @@ public interface Store extends AutoCloseable, Flushable {
      *
      * @throws IllegalStateException if the store is closed
      */
-    @Nullable
-    Editor edit() throws IOException;
+    @Nullable Editor edit() throws IOException;
 
     /**
      * Removes the entry associated with this viewer only if it hasn't changed since this viewer was

@@ -242,8 +242,7 @@ public final class MemoryStore implements Store {
       this.key = key;
     }
 
-    @Nullable
-    MemoryViewer view() {
+    @Nullable MemoryViewer view() {
       lock.lock();
       try {
         return version > 0
@@ -254,13 +253,11 @@ public final class MemoryStore implements Store {
       }
     }
 
-    @Nullable
-    MemoryEditor edit() {
+    @Nullable MemoryEditor edit() {
       return edit(ANY_VERSION);
     }
 
-    @Nullable
-    MemoryEditor edit(int targetVersion) {
+    @Nullable MemoryEditor edit(int targetVersion) {
       lock.lock();
       try {
         if (currentEditor == null
@@ -364,7 +361,7 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public final ByteBuffer metadata() {
+    public ByteBuffer metadata() {
       return metadata.duplicate(); // Duplicate for independent position/limit
     }
 

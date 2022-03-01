@@ -1521,8 +1521,7 @@ public final class DiskStore implements Store {
       }
     }
 
-    @Nullable
-    EntryDescriptor descriptor() {
+    @Nullable EntryDescriptor descriptor() {
       lock.lock();
       try {
         return isReadable() ? new EntryDescriptor(hash, lastUsed, entrySize) : null;
@@ -1531,9 +1530,10 @@ public final class DiskStore implements Store {
       }
     }
 
-    /** @param key expected entry key or {@code null} to open for any key. */
-    @Nullable
-    Viewer openViewer(@Nullable String key) throws IOException {
+    /**
+     * @param key expected entry key or {@code null} to open for any key.
+     */
+    @Nullable Viewer openViewer(@Nullable String key) throws IOException {
       lock.lock();
       try {
         var result = tryReadEntry(key);
@@ -1552,8 +1552,7 @@ public final class DiskStore implements Store {
       }
     }
 
-    @Nullable
-    Editor newEditor(String key, int targetVersion) {
+    @Nullable Editor newEditor(String key, int targetVersion) {
       lock.lock();
       try {
         if (currentEditor != null // An edit is already in progress
