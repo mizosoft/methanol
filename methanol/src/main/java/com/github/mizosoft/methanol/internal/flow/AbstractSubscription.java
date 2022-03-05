@@ -22,9 +22,11 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.flow.FlowSupport.getAndAddDemand;
 import static com.github.mizosoft.methanol.internal.flow.FlowSupport.subtractAndGetDemand;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
@@ -56,18 +58,21 @@ public abstract class AbstractSubscription<T> implements Subscription {
   /** Signaller task should keep running to process recently arrived signals. */
   private static final int KEEP_ALIVE = 0x2;
 
-  /** The subscription is cancelled. */
-  private static final int CANCELLED = 0x4;
-
   /** Downstream's onSubscribe has been invoked. */
-  private static final int SUBSCRIBED = 0x8;
+  private static final int SUBSCRIBED = 0x4;
+
+  /** The subscription has a pending error that should be passed downstream if not done yet. */
+  private static final int ERROR = 0x8;
+
+  /** The subscription is cancelled. */
+  private static final int CANCELLED = 0x10;
 
   private static final VarHandle STATE;
   private static final VarHandle PENDING_ERROR;
   private static final VarHandle DEMAND;
 
   static {
-    MethodHandles.Lookup lookup = MethodHandles.lookup();
+    var lookup = MethodHandles.lookup();
     try {
       STATE = lookup.findVarHandle(AbstractSubscription.class, "state", int.class);
       DEMAND = lookup.findVarHandle(AbstractSubscription.class, "demand", long.class);
@@ -91,6 +96,14 @@ public abstract class AbstractSubscription<T> implements Subscription {
 
   @Override
   public final void request(long n) {
+    // Only try to signal on previously exhausted (zero) demand. This is to not fire the signaller
+    // needlessly and call emit(...) knowing there's demand residue that it couldn't previously
+    // satisfy (i.e. it ran out of items). Note that this assumes emit(...) exhausts its source and
+    // doesn't, for instance, selectively choose to reject demand despite having 'items'. Otherwise,
+    // it would never be called unless signal() here is called regardless of demand (or some other
+    // part calls signal(boolean)), but this is not how current use cases go. In addition to the
+    // first assumption, it's also assumed that signal(boolean) is called when items later become
+    // available or arrive from another producer, so missed demand will be satisfied.
     if (n > 0 && getAndAddDemand(this, DEMAND, n) == 0) {
       signal();
     } else if (n <= 0) {
@@ -121,8 +134,8 @@ public abstract class AbstractSubscription<T> implements Subscription {
    * Main method for item emission. At most {@code e} items are emitted to the downstream using
    * {@link #submitOnNext(Subscriber, Object)} as long as it returns {@code true}. The actual number
    * of emitted items is returned, may be 0 in case of cancellation or if no items are emitted,
-   * perhaps due to lack thereof. If the underlying source is finished, the subscriber is completed
-   * with {@link #cancelOnComplete(Subscriber)}.
+   * perhaps due to lack thereof, or if {@code emit} itself is zero. If the underlying source is
+   * finished, the subscriber is completed with {@link #cancelOnComplete(Subscriber)}.
    */
   protected abstract long emit(Subscriber<? super T> downstream, long emit);
 
@@ -188,7 +201,11 @@ public abstract class AbstractSubscription<T> implements Subscription {
     }
   }
 
-  /** Submits given item to the downstream, returning {@code false} and cancelling on failure. */
+  /**
+   * Submits given item to the downstream, returning {@code false} and cancelling on failure. {@code
+   * false} is also returned if the subscription is cancelled or has pending errors. On such cases,
+   * caller should stop emitting items.
+   */
   protected final boolean submitOnNext(Subscriber<? super T> downstream, T item) {
     if (!(isCancelled() || hasPendingErrors())) {
       try {
@@ -228,9 +245,8 @@ public abstract class AbstractSubscription<T> implements Subscription {
     subscribeOnDrain(d);
     for (long x = 0L, r = demand; ((s = state) & CANCELLED) == 0; ) {
       long emitted;
-      Throwable error = pendingError;
-      if (error != null) {
-        cancelOnError(d, error, false);
+      if ((s & ERROR) != 0) {
+        cancelOnError(d, castNonNull(pendingError), false);
       } else if ((emitted = emit(d, r - x)) > 0L) {
         x += emitted;
         r = demand; // Get fresh demand
@@ -250,9 +266,11 @@ public abstract class AbstractSubscription<T> implements Subscription {
           exhausted = r <= 0L;
         }
 
-        int unsetBit = (s & KEEP_ALIVE) != 0 ? KEEP_ALIVE : RUNNING;
-        if (exhausted && STATE.compareAndSet(this, s, s & ~unsetBit) && unsetBit == RUNNING) {
-          break;
+        if (exhausted) {
+          int unsetBit = (s & KEEP_ALIVE) != 0 ? KEEP_ALIVE : RUNNING;
+          if (STATE.compareAndSet(this, s, s & ~unsetBit) && unsetBit == RUNNING) {
+            break;
+          }
         }
       }
     }
@@ -270,13 +288,15 @@ public abstract class AbstractSubscription<T> implements Subscription {
   }
 
   /** Sets pending error or adds a new one as suppressed in case of multiple error sources. */
+  @CanIgnoreReturnValue
   private Throwable recordError(Throwable error) {
     while (true) {
-      Throwable currentError = pendingError;
-      if (currentError != null) {
-        currentError.addSuppressed(error); // addSuppressed is thread-safe
-        return currentError;
+      var currentPendingError = pendingError;
+      if (currentPendingError != null) {
+        currentPendingError.addSuppressed(error); // addSuppressed is thread-safe
+        return currentPendingError;
       } else if (PENDING_ERROR.compareAndSet(this, null, error)) {
+        getAndBitwiseOrState(ERROR);
         return error;
       }
     }
