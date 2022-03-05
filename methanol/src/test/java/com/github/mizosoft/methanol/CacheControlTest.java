@@ -129,7 +129,7 @@ class CacheControlTest {
   }
 
   @Test
-  void builder() {
+  void createWithBuilder() {
     assertThat(CacheControl.newBuilder().build()).isEqualTo(CacheControl.empty());
 
     var cacheControl =
@@ -157,8 +157,19 @@ class CacheControlTest {
     var headerValue =
         "max-age=1, min-fresh=2, max-stale=3, stale-if-error=4, "
             + "no-cache, no-store, no-transform, only-if-cached, "
-            + "my-directive-with-argument=123, my-directive";
-    assertThat(cacheControl).hasToString(headerValue);
+            + "my-directive, my-directive-with-argument=123";
+    // Map.copyOf, which CacheControl uses to copy added non-standard directives, has a pretty
+    // chaotic order which seems to change with different runs, so also check with non-standard
+    // fields' order switched.
+    assertThat(cacheControl)
+        .satisfiesAnyOf(
+            cc -> assertThat(cc).hasToString(headerValue),
+            cc ->
+                assertThat(cc)
+                    .hasToString(
+                        "max-age=1, min-fresh=2, max-stale=3, stale-if-error=4, "
+                            + "no-cache, no-store, no-transform, only-if-cached, "
+                            + "my-directive-with-argument=123, my-directive"));
     assertThat(cacheControl).isEqualTo(CacheControl.parse(headerValue));
   }
 
