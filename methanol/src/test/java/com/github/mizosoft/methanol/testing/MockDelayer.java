@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
@@ -77,11 +76,12 @@ public final class MockDelayer implements Delayer {
     synchronized (taskQueue) {
       assertThat(taskQueue).isNotEmpty();
 
-      TimestampedTask last = null;
-      for (var task : taskQueue) {
-        last = task;
-      }
-      return requireNonNull(last).future;
+      var iter = taskQueue.iterator();
+      TimestampedTask last;
+      do {
+        last = iter.next();
+      } while (iter.hasNext());
+      return last.future;
     }
   }
 
