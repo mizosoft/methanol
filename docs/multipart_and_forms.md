@@ -29,7 +29,7 @@ HttpResponse<String> uploadGif() throws IOException, InterruptedException {
 ```
 
 If `filePart` isn't given a `MediaType`, it asks the system for one using the given `Path`, falling
-back to `applciation/octet-stream` if that doesn't work.
+back to `application/octet-stream` if that doesn't work.
 
 !!! hint
     A part's `Content-Type` is automatically added if it's created with a `MimeBodyPublisher`.
