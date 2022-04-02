@@ -60,6 +60,7 @@ class MethanolTest {
     assertThat(client.baseUri()).isEmpty();
     assertThat(client.userAgent()).isEmpty();
     assertThat(client.requestTimeout()).isEmpty();
+    assertThat(client.headersTimeout()).isEmpty();
     assertThat(client.readTimeout()).isEmpty();
     assertThat(client.cache()).isEmpty();
     assertThat(client.interceptors()).isEmpty();
@@ -72,20 +73,23 @@ class MethanolTest {
   void settingFields() {
     var interceptor = Interceptor.create(UnaryOperator.identity());
     var backendInterceptor = Interceptor.create(UnaryOperator.identity());
-    var client = Methanol.newBuilder()
-        .userAgent("Will Smith")
-        .baseUri("https://example.com")
-        .requestTimeout(Duration.ofSeconds(1))
-        .readTimeout(Duration.ofSeconds(2))
-        .defaultHeader("Accept", "text/html")
-        .autoAcceptEncoding(false)
-        .interceptor(interceptor)
-        .backendInterceptor(backendInterceptor)
-        .build();
+    var client =
+        Methanol.newBuilder()
+            .userAgent("Will Smith")
+            .baseUri("https://example.com")
+            .requestTimeout(Duration.ofSeconds(1))
+            .readTimeout(Duration.ofSeconds(2))
+            .headersTimeout(Duration.ofSeconds(3))
+            .defaultHeader("Accept", "text/html")
+            .autoAcceptEncoding(false)
+            .interceptor(interceptor)
+            .backendInterceptor(backendInterceptor)
+            .build();
     assertThat(client.userAgent()).hasValue("Will Smith");
     assertThat(client.baseUri()).hasValue(URI.create("https://example.com"));
     assertThat(client.requestTimeout()).hasValue(Duration.ofSeconds(1));
     assertThat(client.readTimeout()).hasValue(Duration.ofSeconds(2));
+    assertThat(client.headersTimeout()).hasValue(Duration.ofSeconds(3));
     assertThat(client.defaultHeaders())
         .isEqualTo(
             headers(

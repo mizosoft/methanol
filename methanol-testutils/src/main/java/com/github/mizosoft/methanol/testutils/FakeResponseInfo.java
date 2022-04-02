@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,48 +20,41 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.flow;
+package com.github.mizosoft.methanol.testutils;
 
-import static java.util.Objects.requireNonNull;
+import static java.net.HttpURLConnection.HTTP_OK;
 
-import java.util.concurrent.Flow.Subscriber;
-import java.util.concurrent.Flow.Subscription;
+import java.net.http.HttpClient.Version;
+import java.net.http.HttpHeaders;
+import java.net.http.HttpResponse.ResponseInfo;
 
-/** A {@code Subscriber<T>} that forwards to a downstream {@code Subscriber<? super T>}. */
-public abstract class ForwardingSubscriber<T> implements Subscriber<T> {
-  protected final Upstream upstream;
+public final class FakeResponseInfo implements ResponseInfo {
+  private final int statusCode;
+  private final HttpHeaders headers;
+  private final Version version;
 
-  protected ForwardingSubscriber() {
-    upstream = new Upstream();
+  public FakeResponseInfo() {
+    this(HTTP_OK, TestUtils.headers(/* empty */ ), Version.HTTP_1_1);
   }
 
-  /** Returns the downstream to which signals are forwarded. */
-  protected abstract Subscriber<? super T> downstream();
-
-  @Override
-  public void onSubscribe(Subscription subscription) {
-    requireNonNull(subscription);
-    if (upstream.setOrCancel(subscription)) {
-      downstream().onSubscribe(subscription);
-    }
+  public FakeResponseInfo(int statusCode, HttpHeaders headers, Version version) {
+    this.statusCode = statusCode;
+    this.headers = headers;
+    this.version = version;
   }
 
   @Override
-  public void onNext(T item) {
-    requireNonNull(item);
-    downstream().onNext(item);
+  public int statusCode() {
+    return statusCode;
   }
 
   @Override
-  public void onError(Throwable throwable) {
-    requireNonNull(throwable);
-    upstream.clear();
-    downstream().onError(throwable);
+  public HttpHeaders headers() {
+    return headers;
   }
 
   @Override
-  public void onComplete() {
-    upstream.clear();
-    downstream().onComplete();
+  public Version version() {
+    return version;
   }
 }
