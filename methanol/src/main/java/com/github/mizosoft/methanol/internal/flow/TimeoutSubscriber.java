@@ -160,7 +160,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
     var currentTimeoutTask = timeoutTask;
     if (currentTimeoutTask != DISABLED_TIMEOUT) {
       var newTimeoutTask =
-          delayer.delay(FlowSupport.SYNC_EXECUTOR, () -> onTimeout(index), timeout);
+          delayer.delay(() -> onTimeout(index), timeout, FlowSupport.SYNC_EXECUTOR);
       if (!TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, newTimeoutTask)) {
         // Discard timeout on failed CAS. Possible contention is with onError(), onComplete() or
         // cancel(), all marking stream termination.

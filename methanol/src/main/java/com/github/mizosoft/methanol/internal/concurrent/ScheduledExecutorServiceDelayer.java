@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.internal.concurrent;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,9 +38,10 @@ class ScheduledExecutorServiceDelayer implements Delayer {
 
   @SuppressWarnings("unchecked")
   @Override
-  public Future<Void> delay(Executor executor, Runnable runnable, Duration delay) {
-    long delayMillis = TimeUnit.MILLISECONDS.convert(delay);
-    return (Future<Void>)
-        service.schedule(() -> executor.execute(runnable), delayMillis, TimeUnit.MILLISECONDS);
+  public Future<Void> delay(Runnable task, Duration delay, Executor executor) {
+    return delay.isZero()
+        ? CompletableFuture.runAsync(task, executor)
+        : (Future<Void>)
+            service.schedule(() -> executor.execute(task), delay.toNanos(), TimeUnit.NANOSECONDS);
   }
 }

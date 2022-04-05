@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,7 +48,7 @@ public final class MockDelayer implements Delayer {
   }
 
   @Override
-  public Future<Void> delay(Executor executor, Runnable task, Duration delay) {
+  public Future<Void> delay(Runnable task, Duration delay, Executor executor) {
     var now = clock.peekInstant(); // Do not advance clock if auto-advancing
     var timestampedTask = new TimestampedTask(executor, task, now.plus(delay));
     synchronized (taskQueue) {

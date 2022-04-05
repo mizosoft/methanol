@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -33,16 +32,13 @@ enum SystemDelayer implements Delayer {
   INSTANCE;
 
   @Override
-  public Future<Void> delay(Executor executor, Runnable task, Duration delay) {
-    // Having the task run as a dependent CompletableFuture makes cancellation work
-    return CompletableFuture.runAsync(() -> {}, delayedExecutor(delay))
-        .thenRunAsync(task, executor);
+  public Future<Void> delay(Runnable task, Duration delay, Executor executor) {
+    return CompletableFuture.runAsync(task, delayedExecutor(delay, executor));
   }
 
-  private static Executor delayedExecutor(Duration delay) {
-    long delayMillis = TimeUnit.MILLISECONDS.convert(delay);
-    return delayMillis <= 0
-        ? FlowSupport.SYNC_EXECUTOR
-        : CompletableFuture.delayedExecutor(delayMillis, TimeUnit.MILLISECONDS);
+  private static Executor delayedExecutor(Duration delay, Executor executor) {
+    return delay.isZero()
+        ? executor
+        : CompletableFuture.delayedExecutor(delay.toNanos(), TimeUnit.NANOSECONDS, executor);
   }
 }

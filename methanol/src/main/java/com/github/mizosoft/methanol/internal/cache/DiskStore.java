@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1103,7 +1103,7 @@ public final class DiskStore implements Store {
         // Attempt to CAS to a new task that is run after the computed delay
         var nextTask = new WriteTask(now.plus(delay));
         if (scheduledWriteTask.compareAndSet(currentTask, nextTask)) {
-          delayer.delay(indexExecutor, nextTask.logOnFailure(), delay);
+          delayer.delay(nextTask.logOnFailure(), delay, indexExecutor);
           break;
         }
       }

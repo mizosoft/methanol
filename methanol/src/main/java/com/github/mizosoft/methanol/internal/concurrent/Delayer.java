@@ -33,7 +33,7 @@ import java.util.concurrent.ScheduledExecutorService;
 public interface Delayer {
 
   /** Arranges for the task to be submitted to the given executor after the delay is evaluated. */
-  Future<Void> delay(Executor executor, Runnable runnable, Duration delay);
+  Future<Void> delay(Runnable task, Duration delay, Executor executor);
 
   /** A Delayer that uses the system-wide scheduler through CompletableFuture::delayedExecutor. */
   static Delayer systemDelayer() {
