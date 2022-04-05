@@ -67,6 +67,10 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
 
   private final Duration timeout;
   private final Delayer delayer;
+
+  /**
+   * The upstream as received from this.onSubscribe(...), without wrapping in a TimeoutSubscription.
+   */
   private final Upstream unwrappedUpstream = new Upstream();
 
   /** Tracks downstream demand to know when to schedule timeouts. */
@@ -81,7 +85,6 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   /** Timeout scheduled for the currently awaited item. */
   private volatile @Nullable Future<Void> timeoutTask;
 
-  @SuppressWarnings("ClassEscapesDefinedScope") // TimeoutSubscriber & Delayer are both encapsulated
   public TimeoutSubscriber(Duration timeout, Delayer delayer) {
     this.timeout = timeout;
     this.delayer = delayer;
@@ -99,38 +102,53 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   public void onNext(T item) {
     requireNonNull(item);
 
-    // Could we receive this item before timeout?
-    long currentIndex = index;
-    if (currentIndex != TOMBSTONE && INDEX.compareAndSet(this, currentIndex, ++currentIndex)) {
+    long currentDemand = subtractAndGetDemand(this, DEMAND, 1);
+    if (currentDemand < 0) { // Demand was 0. This means upstream is trying to overflow us.
+      upstream.cancel();
+      super.onError(
+          new IllegalStateException("missing backpressure: receiving more items than requested"));
+      return;
+    }
+
+    // Note that this retries on CAS failures. Such failures would be either due to termination, on
+    // such case we return immediately, or due to a concurrent onNext(...) trying to add to `index`.
+    // We tolerate the latter case as everything is eventually serialized by our superclass.
+    long currentIndex;
+    do {
+      currentIndex = index;
+      if (currentIndex == TOMBSTONE) { // The stream is terminated
+        return;
+      }
+    } while (!INDEX.compareAndSet(this, currentIndex, ++currentIndex));
+
+    // Discard the current timeout task. We consider cases when there is contention over
+    // timeoutTask with either of cancel(), onNext(), onError() or onComplete(). The latter 3 can
+    // only be caused by a misbehaving upstream. Our superclass takes care of such misbehaviour.
+    while (true) {
       var currentTimeoutTask = timeoutTask;
-      if (currentTimeoutTask == DISABLED_TIMEOUT
-          || !TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, null)) {
-        // If the CAS fails, the only possible contention would be with cancel() (or a concurrent
-        // onNext(), onError() or onComplete() if upstream is misbehaving), so return.
+      if (currentTimeoutTask == DISABLED_TIMEOUT) { // The stream is terminated
         return;
       }
-      if (currentTimeoutTask != null) {
-        currentTimeoutTask.cancel(true);
-      }
 
-      long currentDemand = subtractAndGetDemand(this, DEMAND, 1);
-      if (currentDemand > 0) {
-        // We still have requests, so start a new timeout for the next item
-        try {
-          scheduleTimeout(currentIndex);
-        } catch (RuntimeException | Error e) { // delay() can throw
-          upstream.cancel();
-          super.onError(e);
-          return;
+      if (currentTimeoutTask == null
+          || TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, null)) {
+        if (currentTimeoutTask != null) {
+          currentTimeoutTask.cancel(true);
         }
-      } else if (currentDemand < 0) { // This means upstream is trying to overflow us
-        upstream.cancel();
-        super.onError(
-            new IllegalStateException("missing backpressure: receiving more items than requested"));
-        return;
+        break;
       }
+    }
 
-      super.onNext(item);
+    super.onNext(item);
+
+    if (currentDemand > 0) {
+      // We still have requests, so start a new timeout for the next item
+      try {
+        scheduleTimeout(currentIndex);
+      } catch (RuntimeException | Error e) { // delay() can throw
+        upstream.cancel();
+        super.onError(e);
+      }
     }
   }
 
@@ -180,9 +198,9 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
 
   @SuppressWarnings("unchecked")
   private void disableTimeouts() {
-    var future = (Future<Void>) TIMEOUT_TASK.getAndSet(this, DISABLED_TIMEOUT);
-    if (future != null) {
-      future.cancel(true);
+    var currentTimeout = (Future<Void>) TIMEOUT_TASK.getAndSet(this, DISABLED_TIMEOUT);
+    if (currentTimeout != null) {
+      currentTimeout.cancel(true);
     }
   }
 
