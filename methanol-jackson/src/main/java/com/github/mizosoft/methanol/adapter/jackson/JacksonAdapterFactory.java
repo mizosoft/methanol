@@ -179,12 +179,6 @@ public class JacksonAdapterFactory {
 
   private static boolean isBinaryFormat(ObjectMapper mapper) {
     var factory = mapper.getFactory();
-
-    // Return true if the factory thinks it can handle raw binary data
-    if (factory.canHandleBinaryNatively()) {
-      return true;
-    }
-
     try {
       // Attempt to create a generator from a Writer
       factory.createGenerator(Writer.nullWriter());
