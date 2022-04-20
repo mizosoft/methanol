@@ -22,12 +22,13 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 class ScheduledExecutorServiceDelayer implements Delayer {
   private final ScheduledExecutorService service;
@@ -42,6 +43,6 @@ class ScheduledExecutorServiceDelayer implements Delayer {
     return delay.isZero()
         ? CompletableFuture.runAsync(task, executor)
         : (Future<Void>)
-            service.schedule(() -> executor.execute(task), delay.toNanos(), TimeUnit.NANOSECONDS);
+            service.schedule(() -> executor.execute(task), NANOSECONDS.convert(delay), NANOSECONDS);
   }
 }

@@ -22,11 +22,12 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 enum SystemDelayer implements Delayer {
   INSTANCE;
@@ -39,6 +40,6 @@ enum SystemDelayer implements Delayer {
   private static Executor delayedExecutor(Duration delay, Executor executor) {
     return delay.isZero()
         ? executor
-        : CompletableFuture.delayedExecutor(delay.toNanos(), TimeUnit.NANOSECONDS, executor);
+        : CompletableFuture.delayedExecutor(NANOSECONDS.convert(delay), NANOSECONDS, executor);
   }
 }
