@@ -409,15 +409,19 @@ class MoreBodySubscribersTest {
     var timeoutSubscriber = withReadTimeout(
         fromSubscriber(baseSubscriber), Duration.ofSeconds(Long.MAX_VALUE), busyScheduler);
     var subscription = new ToBeCancelledSubscription();
-    // Request 2 items to trigger a timeout task from onNext when it receives the first item
-    baseSubscriber.request = 2;
+
+    baseSubscriber.request = 0;
     timeoutSubscriber.onSubscribe(subscription);
-    baseSubscriber.request = 0; // Don't request more
-    timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
+
+    // Request 2 items to trigger a second timeout task from onNext when it receives the first item
+    baseSubscriber.awaitSubscribe();
+    baseSubscriber.subscription.request(2L);
+
+    timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1))); // Second timeout is rejected
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     timeoutSubscriber.onComplete();
     baseSubscriber.awaitError();
-    assertThat(baseSubscriber.nexts).isEqualTo(0);
+    assertThat(baseSubscriber.nexts).isEqualTo(1); // First item is received
     assertThat(baseSubscriber.lastError).isInstanceOf(RejectedExecutionException.class);
     subscription.assertCancelled();
     assertThat(scheduledFuture)
