@@ -48,6 +48,7 @@ import java.util.stream.Collectors;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 
+/** A small DSL for testing {@code HttpResponses}. */
 @SuppressWarnings("UnusedReturnValue")
 public final class ResponseVerifier<T> {
   private final HttpResponse<T> response;

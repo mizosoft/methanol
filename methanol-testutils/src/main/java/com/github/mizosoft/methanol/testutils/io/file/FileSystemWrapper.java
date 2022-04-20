@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Spliterators;
 import java.util.stream.StreamSupport;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A {@code FileSystem} wrapper that ensures created {@code Paths} and {@code FileSystems} are all
@@ -216,7 +217,7 @@ abstract class FileSystemWrapper extends ForwardingFileSystem {
           .iterator();
     }
 
-    private Path wrap(Path delegate) {
+    private Path wrap(@Nullable Path delegate) {
       // Sometimes a resulted Path can be null (e.g. Path::getRoot)
       return delegate != null ? fileSystem.provider().wrap(delegate) : null;
     }

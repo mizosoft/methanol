@@ -26,17 +26,21 @@ import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuratio
 import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
 import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static com.github.mizosoft.methanol.internal.flow.FlowSupport.SYNC_EXECUTOR;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
 import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
+import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.net.Authenticator;
 import java.net.CookieHandler;
 import java.net.ProxySelector;
@@ -48,16 +52,22 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.PushPromiseHandler;
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscription;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -97,9 +107,9 @@ public final class Methanol extends HttpClient {
   private final Optional<HttpCache> cache;
   private final Optional<String> userAgent;
   private final Optional<URI> baseUri;
+  private final Optional<Duration> headersTimeout;
   private final Optional<Duration> requestTimeout;
   private final Optional<Duration> readTimeout;
-  private final @Nullable ScheduledExecutorService readTimeoutScheduler;
   private final boolean autoAcceptEncoding;
   private final List<Interceptor> interceptors;
   private final List<Interceptor> backendInterceptors;
@@ -114,9 +124,9 @@ public final class Methanol extends HttpClient {
     cache = Optional.ofNullable(builder.cache);
     userAgent = Optional.ofNullable(builder.userAgent);
     baseUri = Optional.ofNullable(builder.baseUri);
+    headersTimeout = Optional.ofNullable(builder.headersTimeout);
     requestTimeout = Optional.ofNullable(builder.requestTimeout);
     readTimeout = Optional.ofNullable(builder.readTimeout);
-    readTimeoutScheduler = builder.readTimeoutScheduler;
     autoAcceptEncoding = builder.autoAcceptEncoding;
     interceptors = List.copyOf(builder.interceptors);
     backendInterceptors = List.copyOf(builder.backendInterceptors);
@@ -128,9 +138,14 @@ public final class Methanol extends HttpClient {
     if (autoAcceptEncoding) {
       chainInterceptors.add(AutoDecompressingInterceptor.INSTANCE);
     }
+    headersTimeout.ifPresent(
+        timeout ->
+            chainInterceptors.add(
+                new HeadersTimeoutInterceptor(timeout, builder.headersTimeoutDelayer)));
     readTimeout.ifPresent(
         timeout ->
-            chainInterceptors.add(new ReadTimeoutInterceptor(timeout, readTimeoutScheduler)));
+            chainInterceptors.add(
+                new ReadTimeoutInterceptor(timeout, builder.readTimeoutScheduler)));
     cache.ifPresent(
         cache -> {
           var executor = backend.executor().orElse(null);
@@ -150,7 +165,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(request, "request");
     requireNonNull(bodyHandler, "bodyHandler");
     return new HttpResponsePublisher<>(
-        this, request, bodyHandler, null, executor().orElse(FlowSupport.SYNC_EXECUTOR));
+        this, request, bodyHandler, null, executor().orElse(SYNC_EXECUTOR));
   }
 
   /**
@@ -171,11 +186,7 @@ public final class Methanol extends HttpClient {
     requireNonNull(bodyHandler, "bodyHandler");
     requireNonNull(pushPromiseAcceptor, "pushPromiseAcceptor");
     return new HttpResponsePublisher<>(
-        this,
-        request,
-        bodyHandler,
-        pushPromiseAcceptor,
-        executor().orElse(FlowSupport.SYNC_EXECUTOR));
+        this, request, bodyHandler, pushPromiseAcceptor, executor().orElse(SYNC_EXECUTOR));
   }
 
   /** Returns the underlying {@code HttpClient} used for sending requests. */
@@ -196,6 +207,11 @@ public final class Methanol extends HttpClient {
   /** Returns the default request timeout used when not set in an {@code HttpRequest}. */
   public Optional<Duration> requestTimeout() {
     return requestTimeout;
+  }
+
+  /** Returns the headers' timeout. */
+  public Optional<Duration> headersTimeout() {
+    return headersTimeout;
   }
 
   /**
@@ -334,10 +350,10 @@ public final class Methanol extends HttpClient {
       PushPromiseHandler<T> pushPromiseHandler,
       UnaryOperator<BodyHandler<T>> bodyHandlerTransformer,
       UnaryOperator<HttpResponse<T>> responseTransformer) {
-    return (initial, push, acceptor) ->
+    return (initialRequest, pushRequest, acceptor) ->
         pushPromiseHandler.applyPushPromise(
-            initial,
-            push,
+            initialRequest,
+            pushRequest,
             acceptor
                 .compose(bodyHandlerTransformer)
                 .andThen(future -> future.thenApply(responseTransformer)));
@@ -438,6 +454,8 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull String userAgent;
     @MonotonicNonNull URI baseUri;
     @MonotonicNonNull Duration requestTimeout;
+    @MonotonicNonNull Duration headersTimeout;
+    @MonotonicNonNull Delayer headersTimeoutDelayer;
     @MonotonicNonNull Duration readTimeout;
     @MonotonicNonNull ScheduledExecutorService readTimeoutScheduler;
     boolean autoAcceptEncoding;
@@ -519,6 +537,31 @@ public final class Methanol extends HttpClient {
       requireNonNull(requestTimeout);
       requirePositiveDuration(requestTimeout);
       this.requestTimeout = requestTimeout;
+      return self();
+    }
+
+    /**
+     * Sets a timeout that will raise an {@link HttpHeadersTimeoutException} if all response headers
+     * aren't received within the timeout.
+     */
+    public B headersTimeout(Duration headersTimeout) {
+      return headersTimeout(headersTimeout, Delayer.systemDelayer());
+    }
+
+    /**
+     * Same as {@link #headersTimeout(Duration)} but specifies a {@code ScheduledExecutorService} to
+     * use for scheduling timeout events.
+     */
+    public B headersTimeout(Duration headersTimeout, ScheduledExecutorService scheduler) {
+      return headersTimeout(headersTimeout, Delayer.of(scheduler));
+    }
+
+    B headersTimeout(Duration headersTimeout, Delayer delayer) {
+      requireNonNull(headersTimeout);
+      requireNonNull(delayer);
+      requirePositiveDuration(headersTimeout);
+      this.headersTimeout = headersTimeout;
+      this.headersTimeoutDelayer = delayer;
       return self();
     }
 
@@ -932,6 +975,132 @@ public final class Methanol extends HttpClient {
           .removeHeader("Content-Encoding")
           .removeHeader("Content-Length")
           .build();
+    }
+  }
+
+  private static final class HeadersTimeoutInterceptor implements Interceptor {
+    private static final Logger logger =
+        System.getLogger(HeadersTimeoutInterceptor.class.getName());
+
+    private final Duration headersTimeout;
+    private final Delayer delayer;
+
+    HeadersTimeoutInterceptor(Duration headersTimeout, Delayer delayer) {
+      this.headersTimeout = headersTimeout;
+      this.delayer = delayer;
+    }
+
+    @Override
+    public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+        throws IOException, InterruptedException {
+      return Utils.block(interceptAsync(request, chain));
+    }
+
+    @Override
+    public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+        HttpRequest request, Chain<T> chain) {
+      var timeoutTask = new HeadersTimeoutTask(headersTimeout, delayer);
+      var responseFuture = withHeadersTimeout(chain, timeoutTask).forwardAsync(request);
+      return timeoutTask.scheduleFor(responseFuture);
+    }
+
+    private <T> Chain<T> withHeadersTimeout(Chain<T> chain, HeadersTimeoutTask timeoutTask) {
+      // TODO handle push promises
+      return chain.withBodyHandler(
+          responseInfo ->
+              timeoutTask.cancel()
+                  ? chain.bodyHandler().apply(responseInfo)
+                  : new TimedOutSubscriber<>());
+    }
+
+    private static final class HeadersTimeoutTask {
+      private static final Future<Void> EVALUATED_FUTURE = CompletableFuture.completedFuture(null);
+      private static final Future<Void> CANCELLED_FUTURE =
+          CompletableFuture.failedFuture(new CancellationException());
+
+      private final Duration timeout;
+      private final Delayer delayer;
+      private final AtomicReference<@Nullable Future<Void>> timeoutFuture = new AtomicReference<>();
+
+      HeadersTimeoutTask(Duration timeout, Delayer delayer) {
+        this.timeout = timeout;
+        this.delayer = delayer;
+      }
+
+      <T> CompletableFuture<HttpResponse<T>> scheduleFor(
+          CompletableFuture<HttpResponse<T>> responseFuture) {
+        // Make a dependent copy of the original response future, so we can cancel the latter and
+        // complete the former exceptionally on timeout. Cancelling the original future may lead
+        // to cancelling the actual request on JDK 16 or higher.
+        var responseFutureCopy = responseFuture.copy();
+        var scheduledFuture =
+            delayer.delay(
+                () -> {
+                  while (true) {
+                    var currentFuture = timeoutFuture.get();
+                    if (currentFuture != null && currentFuture.isCancelled()) {
+                      return;
+                    }
+                    if (timeoutFuture.compareAndSet(currentFuture, EVALUATED_FUTURE)) {
+                      responseFutureCopy.completeExceptionally(
+                          new HttpHeadersTimeoutException("couldn't receive headers on time"));
+                      responseFuture.cancel(true);
+                      return;
+                    }
+                  }
+                },
+                timeout,
+                SYNC_EXECUTOR);
+
+        while (true) {
+          var currentFuture = timeoutFuture.get();
+          if (currentFuture != null && currentFuture.isCancelled()) {
+            scheduledFuture.cancel(false);
+            return responseFuture;
+          }
+          if ((currentFuture == null && timeoutFuture.compareAndSet(null, scheduledFuture))
+              || (currentFuture != null && currentFuture.isDone())) {
+            // Either we could CAS to scheduledFuture or scheduledFuture actually finished and CASed
+            // to EVALUATED_FUTURE before we had a chance to set it.
+            return responseFutureCopy;
+          }
+        }
+      }
+
+      boolean cancel() {
+        var future = timeoutFuture.getAndSet(CANCELLED_FUTURE);
+        return future == null || future.cancel(false);
+      }
+    }
+
+    private static final class TimedOutSubscriber<T> implements BodySubscriber<T> {
+      TimedOutSubscriber() {}
+
+      @Override
+      public CompletionStage<T> getBody() {
+        return CompletableFuture.failedFuture(
+            new HttpHeadersTimeoutException("couldn't receive headers ont time"));
+      }
+
+      @Override
+      public void onSubscribe(Subscription subscription) {
+        requireNonNull(subscription);
+        subscription.cancel();
+      }
+
+      @Override
+      public void onNext(List<ByteBuffer> item) {
+        requireNonNull(item);
+      }
+
+      @Override
+      public void onError(Throwable throwable) {
+        requireNonNull(throwable);
+        logger.log(Level.WARNING, "exception received after headers timeout", throwable);
+      }
+
+      @Override
+      public void onComplete() {}
     }
   }
 
