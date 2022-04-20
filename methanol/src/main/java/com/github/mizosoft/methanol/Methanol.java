@@ -1035,7 +1035,6 @@ public final class Methanol extends HttpClient {
         var responseFutureCopy = responseFuture.copy();
         var scheduledFuture =
             delayer.delay(
-                SYNC_EXECUTOR,
                 () -> {
                   while (true) {
                     var currentFuture = timeoutFuture.get();
@@ -1050,7 +1049,8 @@ public final class Methanol extends HttpClient {
                     }
                   }
                 },
-                timeout);
+                timeout,
+                SYNC_EXECUTOR);
 
         while (true) {
           var currentFuture = timeoutFuture.get();
