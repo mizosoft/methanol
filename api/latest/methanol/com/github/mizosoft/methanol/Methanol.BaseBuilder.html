@@ -150,6 +150,19 @@ loadScripts(document, 'script');</script>
 <div class="block">Adds each of the given headers as default.</div>
 </div>
 <div class="col-first even-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second even-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#headersTimeout(java.time.Duration)">headersTimeout</a></span>&#8203;(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout)</code></div>
+<div class="col-last even-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table">
+<div class="block">Sets a timeout that will raise an <a href="HttpHeadersTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpHeadersTimeoutException</code></a> if all response headers
+ aren't received within the timeout.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second odd-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#headersTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)">headersTimeout</a></span>&#8203;(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout,
+ <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</code></div>
+<div class="col-last odd-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table">
+<div class="block">Same as <a href="#headersTimeout(java.time.Duration)"><code>headersTimeout(Duration)</code></a> but specifies a <code>ScheduledExecutorService</code> to
+ use for scheduling timeout events.</div>
+</div>
+<div class="col-first even-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
 <div class="col-second even-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#interceptor(com.github.mizosoft.methanol.Methanol.Interceptor)">interceptor</a></span>&#8203;(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</code></div>
 <div class="col-last even-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table">
 <div class="block">Adds an interceptor that is invoked right after the client receives a request.</div>
@@ -253,6 +266,23 @@ loadScripts(document, 'script');</script>
 <h3>requestTimeout</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">requestTimeout</span>&#8203;<span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;requestTimeout)</span></div>
 <div class="block">Sets a default request timeout to use when not explicitly by an <code>HttpRequest</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="headersTimeout(java.time.Duration)">
+<h3>headersTimeout</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">headersTimeout</span>&#8203;<span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout)</span></div>
+<div class="block">Sets a timeout that will raise an <a href="HttpHeadersTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpHeadersTimeoutException</code></a> if all response headers
+ aren't received within the timeout.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="headersTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)">
+<h3>headersTimeout</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">headersTimeout</span>&#8203;<span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout,
+ <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</span></div>
+<div class="block">Same as <a href="#headersTimeout(java.time.Duration)"><code>headersTimeout(Duration)</code></a> but specifies a <code>ScheduledExecutorService</code> to
+ use for scheduling timeout events.</div>
 </section>
 </li>
 <li>
