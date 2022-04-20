@@ -23,8 +23,16 @@
 package com.github.mizosoft.methanol;
 
 import java.net.http.HttpTimeoutException;
+import java.time.Duration;
 
+/**
+ * Thrown when all response headers aren't received within a timeout.
+ *
+ * @see Methanol.Builder#headersTimeout(Duration)
+ */
 public class HttpHeadersTimeoutException extends HttpTimeoutException {
+
+  /** Creates a new {@code HttpHeadersTimeoutException} with the given message. */
   public HttpHeadersTimeoutException(String message) {
     super(message);
   }
