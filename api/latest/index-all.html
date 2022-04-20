@@ -446,7 +446,8 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html" title="class in com.github.mizosoft.methanol"><span class="type-name-link">CacheControl.Builder</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">A builder of <code>CacheControl</code> instances declaring request cache directives.</div>
+<div class="block">A builder of <code>CacheControl</code> instances, with explicit directive setters for request cache
+ directives.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheInterceptor.html" title="class in com.github.mizosoft.methanol.internal.cache"><span class="type-name-link">CacheInterceptor</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
 <dd>
@@ -551,7 +552,7 @@ loadScripts(document, 'script');</script>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MediaType.html#charsetOrDefault(java.nio.charset.Charset)">charsetOrDefault(Charset)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></dt>
 <dd>
 <div class="block">Returns either the value of the charset parameter or the given default charset if no such
- parameter exists or if the charset has not support in this JVM.</div>
+ parameter exists or if the charset has no support in this JVM.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#charsetOrUtf8(com.github.mizosoft.methanol.MediaType)">charsetOrUtf8(MediaType)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
 <dd>
@@ -712,9 +713,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html#consumeCharIfPresent(char)">consumeCharIfPresent(char)</a></span> - Method in class com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html" title="class in com.github.mizosoft.methanol.internal.text">HeaderValueTokenizer</a></dt>
 <dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html#consumeCharsMatching(com.github.mizosoft.methanol.internal.text.CharMatcher)">consumeCharsMatching(CharMatcher)</a></span> - Method in class com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html" title="class in com.github.mizosoft.methanol.internal.text">HeaderValueTokenizer</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html#consumeDelimiter(char)">consumeDelimiter(char)</a></span> - Method in class com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html" title="class in com.github.mizosoft.methanol.internal.text">HeaderValueTokenizer</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html#consumeIfPresent(com.github.mizosoft.methanol.internal.text.CharMatcher)">consumeIfPresent(CharMatcher)</a></span> - Method in class com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html" title="class in com.github.mizosoft.methanol.internal.text">HeaderValueTokenizer</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html#consumeDelimiter(char,boolean)">consumeDelimiter(char, boolean)</a></span> - Method in class com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html" title="class in com.github.mizosoft.methanol.internal.text">HeaderValueTokenizer</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/ResponseVerifier.html#containsHeader(java.lang.String,long)">containsHeader(String, long)</a></span> - Method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testutils">ResponseVerifier</a></dt>
 <dd>&nbsp;</dd>
@@ -764,8 +767,6 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#copy(java.nio.ByteBuffer)">copy(ByteBuffer)</a></span> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#copy(java.nio.ByteBuffer,java.nio.ByteBuffer)">copy(ByteBuffer, ByteBuffer)</a></span> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
-<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#copyOf(java.net.http.HttpRequest)">copyOf(HttpRequest)</a></span> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#copyRemaining(java.nio.ByteBuffer,java.nio.ByteBuffer)">copyRemaining(ByteBuffer, ByteBuffer)</a></span> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
@@ -811,7 +812,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.brotli/com/github/mizosoft/methanol/brotli/internal/BrotliBodyDecoderFactory.html#create(java.net.http.HttpResponse.BodySubscriber)">create(HttpResponse.BodySubscriber&lt;T&gt;)</a></span> - Method in class com.github.mizosoft.methanol.brotli.internal.<a href="methanol.brotli/com/github/mizosoft/methanol/brotli/internal/BrotliBodyDecoderFactory.html" title="class in com.github.mizosoft.methanol.brotli.internal">BrotliBodyDecoderFactory</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/decoder/GzipBodyDecoderFactory.html#create(java.net.http.HttpResponse.BodySubscriber)">create(HttpResponse.BodySubscriber&lt;T&gt;)</a></span> - Method in class com.github.mizosoft.methanol.internal.decoder.<a href="methanol/com/github/mizosoft/methanol/internal/decoder/GzipBodyDecoderFactory.html" title="class in com.github.mizosoft.methanol.internal.decoder">GzipBodyDecoderFactory</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/decoder/DeflateBodyDecoderFactory.html#create(java.net.http.HttpResponse.BodySubscriber)">create(HttpResponse.BodySubscriber&lt;T&gt;)</a></span> - Method in class com.github.mizosoft.methanol.internal.decoder.<a href="methanol/com/github/mizosoft/methanol/internal/decoder/DeflateBodyDecoderFactory.html" title="class in com.github.mizosoft.methanol.internal.decoder">DeflateBodyDecoderFactory</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html#create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)">create(HttpResponse.BodySubscriber&lt;T&gt;, Executor)</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a></dt>
 <dd>
@@ -819,7 +820,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.brotli/com/github/mizosoft/methanol/brotli/internal/BrotliBodyDecoderFactory.html#create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)">create(HttpResponse.BodySubscriber&lt;T&gt;, Executor)</a></span> - Method in class com.github.mizosoft.methanol.brotli.internal.<a href="methanol.brotli/com/github/mizosoft/methanol/brotli/internal/BrotliBodyDecoderFactory.html" title="class in com.github.mizosoft.methanol.brotli.internal">BrotliBodyDecoderFactory</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/decoder/GzipBodyDecoderFactory.html#create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)">create(HttpResponse.BodySubscriber&lt;T&gt;, Executor)</a></span> - Method in class com.github.mizosoft.methanol.internal.decoder.<a href="methanol/com/github/mizosoft/methanol/internal/decoder/GzipBodyDecoderFactory.html" title="class in com.github.mizosoft.methanol.internal.decoder">GzipBodyDecoderFactory</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/decoder/DeflateBodyDecoderFactory.html#create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)">create(HttpResponse.BodySubscriber&lt;T&gt;, Executor)</a></span> - Method in class com.github.mizosoft.methanol.internal.decoder.<a href="methanol/com/github/mizosoft/methanol/internal/decoder/DeflateBodyDecoderFactory.html" title="class in com.github.mizosoft.methanol.internal.decoder">DeflateBodyDecoderFactory</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#create(java.net.URI)">create(URI)</a></span> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
@@ -958,13 +959,13 @@ loadScripts(document, 'script');</script>
 <div class="block">Processes whatever data available from the given source, writing decompressed bytes to the
  given sink.</div>
 </dd>
-<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.html#decode(com.github.mizosoft.methanol.decoder.AsyncDecoder,byte%5B%5D,com.github.mizosoft.methanol.testutils.dec.Decode.BuffSizeOption)">decode(AsyncDecoder, byte[], Decode.BuffSizeOption)</a></span> - Static method in class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.html" title="class in com.github.mizosoft.methanol.testutils.dec">Decode</a></dt>
+<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.html#decode(com.github.mizosoft.methanol.decoder.AsyncDecoder,byte%5B%5D,com.github.mizosoft.methanol.testutils.dec.Decode.BufferSizeOption)">decode(AsyncDecoder, byte[], Decode.BufferSizeOption)</a></span> - Static method in class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.html" title="class in com.github.mizosoft.methanol.testutils.dec">Decode</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheResponseMetadata.html#decode(java.nio.ByteBuffer)">decode(ByteBuffer)</a></span> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheResponseMetadata.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheResponseMetadata</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.html" title="class in com.github.mizosoft.methanol.testutils.dec"><span class="type-name-link">Decode</span></a> - Class in <a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/package-summary.html">com.github.mizosoft.methanol.testutils.dec</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec"><span class="type-name-link">Decode.BuffSizeOption</span></a> - Enum Class in <a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/package-summary.html">com.github.mizosoft.methanol.testutils.dec</a></dt>
+<dt><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec"><span class="type-name-link">Decode.BufferSizeOption</span></a> - Enum Class in <a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/package-summary.html">com.github.mizosoft.methanol.testutils.dec</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/DecoderFactoryFinder.html" title="class in com.github.mizosoft.methanol.internal.spi"><span class="type-name-link">DecoderFactoryFinder</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/spi/package-summary.html">com.github.mizosoft.methanol.internal.spi</a></dt>
 <dd>
@@ -1019,7 +1020,7 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Creates a new <code>DeflateBodyDecoderFactory</code>.</div>
 </dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html#delay(java.util.concurrent.Executor,java.lang.Runnable,java.time.Duration)">delay(Executor, Runnable, Duration)</a></span> - Method in interface com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a></dt>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html#delay(java.lang.Runnable,java.time.Duration,java.util.concurrent.Executor)">delay(Runnable, Duration, Executor)</a></span> - Method in interface com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a></dt>
 <dd>
 <div class="block">Arranges for the task to be submitted to the given executor after the delay is evaluated.</div>
 </dd>
@@ -1053,7 +1054,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html#directive(java.lang.String)">directive(String)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></dt>
 <dd>
-<div class="block">Sets the given directive.</div>
+<div class="block">Sets the given directive with no argument.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html#directive(java.lang.String,java.lang.String)">directive(String, String)</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></dt>
 <dd>
@@ -1744,7 +1745,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html" title="class in com.github.mizosoft.methanol.internal.text"><span class="type-name-link">HeaderValueTokenizer</span></a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/text/package-summary.html">com.github.mizosoft.methanol.internal.text</a></dt>
 <dd>
-<div class="block">Tokenizes common delimited header values into individual components.</div>
+<div class="block">Tokenizes delimited header values into individual components.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html#%3Cinit%3E(java.lang.String)">HeaderValueTokenizer(String)</a></span> - Constructor for class com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html" title="class in com.github.mizosoft.methanol.internal.text">HeaderValueTokenizer</a></dt>
 <dd>&nbsp;</dd>
@@ -1839,13 +1840,13 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/io/file/ForwardingFileChannel.html#implCloseChannel()">implCloseChannel()</a></span> - Method in class com.github.mizosoft.methanol.testutils.io.file.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/io/file/ForwardingFileChannel.html" title="class in com.github.mizosoft.methanol.testutils.io.file">ForwardingFileChannel</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html#IN_MANY_OUT_MANY">IN_MANY_OUT_MANY</a></span> - Enum constant in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BuffSizeOption</a></dt>
+<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html#IN_MANY_OUT_MANY">IN_MANY_OUT_MANY</a></span> - Enum constant in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BufferSizeOption</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html#IN_MANY_OUT_ONE">IN_MANY_OUT_ONE</a></span> - Enum constant in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BuffSizeOption</a></dt>
+<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html#IN_MANY_OUT_ONE">IN_MANY_OUT_ONE</a></span> - Enum constant in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BufferSizeOption</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html#IN_ONE_OUT_MANY">IN_ONE_OUT_MANY</a></span> - Enum constant in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BuffSizeOption</a></dt>
+<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html#IN_ONE_OUT_MANY">IN_ONE_OUT_MANY</a></span> - Enum constant in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BufferSizeOption</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html#IN_ONE_OUT_ONE">IN_ONE_OUT_ONE</a></span> - Enum constant in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BuffSizeOption</a></dt>
+<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html#IN_ONE_OUT_ONE">IN_ONE_OUT_ONE</a></span> - Enum constant in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BufferSizeOption</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockClock.html#inception()">inception()</a></span> - Method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/MockClock.html" title="class in com.github.mizosoft.methanol.testutils">MockClock</a></dt>
 <dd>&nbsp;</dd>
@@ -1885,6 +1886,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Asynchronously initializes this store.</div>
 </dd>
+<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html#inOptions()">inOptions()</a></span> - Static method in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BufferSizeOption</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#installed()">installed()</a></span> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></dt>
 <dd>
 <div class="block">Returns an immutable list containing the installed decoders.</div>
@@ -2470,8 +2473,6 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/TestUtils.html#NOOP_SUBSCRIPTION">NOOP_SUBSCRIPTION</a></span> - Static variable in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/TestUtils.html" title="class in com.github.mizosoft.methanol.testutils">TestUtils</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#normalizeToken(java.lang.String)">normalizeToken(String)</a></span> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
-<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html#noStore()">noStore()</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></dt>
 <dd>
 <div class="block">Sets the <code>no-store</code> directive.</div>
@@ -2698,7 +2699,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/CacheControl.html#parse(java.lang.String)">parse(String)</a></span> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.html" title="class in com.github.mizosoft.methanol">CacheControl</a></dt>
 <dd>
-<div class="block">Parses cache directives represented by the given value.</div>
+<div class="block">Parses the cache directives specified by the given value.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MediaType.html#parse(java.lang.String)">parse(String)</a></span> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></dt>
 <dd>
@@ -2710,7 +2711,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/CacheControl.html#parse(java.util.List)">parse(List&lt;String&gt;)</a></span> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.html" title="class in com.github.mizosoft.methanol">CacheControl</a></dt>
 <dd>
-<div class="block">Parses cache directives represented by each of the given values.</div>
+<div class="block">Parses the cache directives specified by each of the given values.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/ProgressTracker.MultipartProgress.html#part()">part()</a></span> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ProgressTracker.MultipartProgress.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.MultipartProgress</a></dt>
 <dd>
@@ -3473,6 +3474,8 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a completed <code>BodySubscriber</code> that lazily decodes the response body into an
  object of the given type using the format specified by the given media type.</div>
 </dd>
+<dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html#toDeltaSeconds(java.lang.String)">toDeltaSeconds(String)</a></span> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html" title="class in com.github.mizosoft.methanol.internal.cache">DateUtils</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/Validate.html#TODO()">TODO()</a></span> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Validate.html" title="class in com.github.mizosoft.methanol.internal">Validate</a></dt>
 <dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#toImmutableRequest()">toImmutableRequest()</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
@@ -3675,7 +3678,7 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the enum constant of this class with the specified name.</div>
 </dd>
-<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html#valueOf(java.lang.String)">valueOf(String)</a></span> - Static method in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BuffSizeOption</a></dt>
+<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html#valueOf(java.lang.String)">valueOf(String)</a></span> - Static method in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BufferSizeOption</a></dt>
 <dd>
 <div class="block">Returns the enum constant of this class with the specified name.</div>
 </dd>
@@ -3688,7 +3691,7 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns an array containing the constants of this enum class, in
 the order they are declared.</div>
 </dd>
-<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html#values()">values()</a></span> - Static method in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BuffSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BuffSizeOption</a></dt>
+<dt><span class="member-name-link"><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html#values()">values()</a></span> - Static method in enum class com.github.mizosoft.methanol.testutils.dec.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/dec/Decode.BufferSizeOption.html" title="enum class in com.github.mizosoft.methanol.testutils.dec">Decode.BufferSizeOption</a></dt>
 <dd>
 <div class="block">Returns an array containing the constants of this enum class, in
 the order they are declared.</div>

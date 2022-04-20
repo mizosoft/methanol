@@ -253,8 +253,8 @@ implements <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base
 <div class="block">Main method for item emission. At most <code>e</code> items are emitted to the downstream using
  <a href="#submitOnNext(java.util.concurrent.Flow.Subscriber,T)"><code>submitOnNext(Subscriber, Object)</code></a> as long as it returns <code>true</code>. The actual number
  of emitted items is returned, may be 0 in case of cancellation or if no items are emitted,
- perhaps due to lack thereof. If the underlying source is finished, the subscriber is completed
- with <a href="#cancelOnComplete(java.util.concurrent.Flow.Subscriber)"><code>cancelOnComplete(Subscriber)</code></a>.</div>
+ perhaps due to lack thereof, or if <code>emit</code> itself is zero. If the underlying source is
+ finished, the subscriber is completed with <a href="#cancelOnComplete(java.util.concurrent.Flow.Subscriber)"><code>cancelOnComplete(Subscriber)</code></a>.</div>
 </section>
 </li>
 <li>
@@ -305,7 +305,9 @@ implements <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base
 <h3 id="submitOnNext(java.util.concurrent.Flow.Subscriber,java.lang.Object)">submitOnNext</h3>
 <div class="member-signature"><span class="modifiers">protected final</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">submitOnNext</span>&#8203;<span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
  <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&nbsp;item)</span></div>
-<div class="block">Submits given item to the downstream, returning <code>false</code> and cancelling on failure.</div>
+<div class="block">Submits given item to the downstream, returning <code>false</code> and cancelling on failure. <code>
+ false</code> is also returned if the subscription is cancelled or has pending errors. On such cases,
+ caller should stop emitting items.</div>
 </section>
 </li>
 <li>

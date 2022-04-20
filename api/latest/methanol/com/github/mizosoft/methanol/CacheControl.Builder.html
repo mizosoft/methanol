@@ -87,10 +87,13 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public static final class </span><span class="element-name type-name-label">CacheControl.Builder</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">A builder of <code>CacheControl</code> instances declaring request cache directives.
+<div class="block">A builder of <code>CacheControl</code> instances, with explicit directive setters for request cache
+ directives.
 
  <p>Methods that accept a <code>Duration</code> drop any precision finer than that of a second, which
- is the only precision allowed by cache directives representing durations.</div>
+ is the only precision allowed by cache directives representing durations. Additionally, any
+ duration with number of seconds that's larger than <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/Integer.html#MAX_VALUE" title="class or interface in java.lang" class="external-link"><code>Integer.MAX_VALUE</code></a> is truncated to
+ that value.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -118,7 +121,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><a href="CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></code></div>
 <div class="col-second even-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#directive(java.lang.String)">directive</a></span>&#8203;(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;directive)</code></div>
 <div class="col-last even-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table">
-<div class="block">Sets the given directive.</div>
+<div class="block">Sets the given directive with no argument.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><a href="CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></code></div>
 <div class="col-second odd-row-color method-summary-table-tab2 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#directive(java.lang.String,java.lang.String)">directive</a></span>&#8203;(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;directive,
@@ -187,7 +190,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="directive(java.lang.String)">
 <h3>directive</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></span>&nbsp;<span class="element-name">directive</span>&#8203;<span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;directive)</span></div>
-<div class="block">Sets the given directive.</div>
+<div class="block">Sets the given directive with no argument.</div>
 <dl class="notes">
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if <code>directive</code> is invalid</dd>
@@ -199,7 +202,8 @@ loadScripts(document, 'script');</script>
 <h3>directive</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></span>&nbsp;<span class="element-name">directive</span>&#8203;<span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;directive,
  <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;argument)</span></div>
-<div class="block">Sets the given directive to the given argument.</div>
+<div class="block">Sets the given directive to the given argument. If <code>argument</code> is an empty string, the
+ directive is considered one without argument.</div>
 <dl class="notes">
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if either of <code>directive</code> or <code>argument</code> is
