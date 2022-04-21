@@ -83,7 +83,7 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public class </span><span class="element-name type-name-label">JacksonAdapterFactory</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">Provides <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for the JSON format using Jackson.</div>
+<div class="block">Provides <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for the Jackson library.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -92,31 +92,97 @@ loadScripts(document, 'script');</script>
 <section class="method-summary" id="method.summary">
 <h2>Method Summary</h2>
 <div id="method-summary-table">
-<div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab1" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab1', 3)" class="table-tab">Static Methods</button><button id="method-summary-table-tab4" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab4', 3)" class="table-tab">Concrete Methods</button></div>
+<div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab1" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab1', 3)" class="table-tab">Static Methods</button><button id="method-summary-table-tab4" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab4', 3)" class="table-tab">Concrete Methods</button><button id="method-summary-table-tab6" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab6', 3)" class="table-tab">Deprecated Methods</button></div>
 <div id="method-summary-table.tabpanel" role="tabpanel">
 <div class="summary-table three-column-summary" aria-labelledby="method-summary-table-tab0">
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
+<div class="col-first even-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
+<div class="col-second even-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createDecoder()">createDecoder</a></span>()</code></div>
+<div class="col-last even-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table">
+<div class="block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="#createJsonDecoder()"><code>createJsonDecoder()</code></a>.</div>
+</div>
+</div>
+<div class="col-first odd-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
+<div class="col-second odd-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createDecoder(com.fasterxml.jackson.databind.ObjectMapper)">createDecoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
+<div class="col-last odd-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table">
+<div class="block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="#createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)"><code>createJsonDecoder(ObjectMapper)</code></a>.</div>
+</div>
+</div>
 <div class="col-first even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
-<div class="col-second even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createDecoder()">createDecoder</a></span>()</code></div>
+<div class="col-second even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createDecoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.adapter.jackson.ObjectReaderFactory,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">createDecoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
+ <a href="ObjectReaderFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectReaderFactory</a>&nbsp;readerFactory,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</code></div>
 <div class="col-last even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table">
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
-<div class="col-second odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createDecoder(com.fasterxml.jackson.databind.ObjectMapper)">createDecoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
+<div class="col-second odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createDecoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">createDecoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</code></div>
 <div class="col-last odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table">
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
+</div>
+<div class="col-first even-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
+<div class="col-second even-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createEncoder()">createEncoder</a></span>()</code></div>
+<div class="col-last even-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table">
+<div class="block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="#createJsonEncoder()"><code>createJsonEncoder()</code></a>.</div>
+</div>
+</div>
+<div class="col-first odd-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
+<div class="col-second odd-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createEncoder(com.fasterxml.jackson.databind.ObjectMapper)">createEncoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
+<div class="col-last odd-row-color method-summary-table-tab1 method-summary-table-tab6 method-summary-table-tab4 method-summary-table">
+<div class="block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="#createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)"><code>createJsonEncoder(ObjectMapper)</code></a>.</div>
+</div>
 </div>
 <div class="col-first even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
-<div class="col-second even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createEncoder()">createEncoder</a></span>()</code></div>
+<div class="col-second even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createEncoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.adapter.jackson.ObjectWriterFactory,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">createEncoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
+ <a href="ObjectWriterFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectWriterFactory</a>&nbsp;writerFactory,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</code></div>
 <div class="col-last even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table">
-<div class="block">Returns a <code>Encoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
-<div class="col-second odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createEncoder(com.fasterxml.jackson.databind.ObjectMapper)">createEncoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
+<div class="col-second odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createEncoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">createEncoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</code></div>
 <div class="col-last odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table">
-<div class="block">Returns a <code>Encoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
+</div>
+<div class="col-first even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
+<div class="col-second even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createJsonDecoder()">createJsonDecoder</a></span>()</code></div>
+<div class="col-last even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table">
+<div class="block">Returns an <code>Decoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+ compatible with <code>application/json</code>.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
+<div class="col-second odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)">createJsonDecoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
+<div class="col-last odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table">
+<div class="block">Returns an <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+ <code>application/json</code>.</div>
+</div>
+<div class="col-first even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
+<div class="col-second even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createJsonEncoder()">createJsonEncoder</a></span>()</code></div>
+<div class="col-last even-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table">
+<div class="block">Returns an <code>Encoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+ compatible with <code>application/json</code>.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
+<div class="col-second odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table"><code><span class="member-name-link"><a href="#createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)">createJsonEncoder</a></span>&#8203;(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
+<div class="col-last odd-row-color method-summary-table-tab1 method-summary-table-tab4 method-summary-table">
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+ <code>application/json</code>.</div>
 </div>
 </div>
 </div>
@@ -138,29 +204,123 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="createEncoder()">
 <h3>createEncoder</h3>
-<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span>()</div>
-<div class="block">Returns a <code>Encoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="member-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>
+</span><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span>()</div>
+<div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="#createJsonEncoder()"><code>createJsonEncoder()</code></a>.</div>
+</div>
+<div class="block">Returns an <code>Encoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+ compatible with <code>application/json</code>.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="createEncoder(com.fasterxml.jackson.databind.ObjectMapper)">
 <h3>createEncoder</h3>
-<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
-<div class="block">Returns a <code>Encoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="member-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>
+</span><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
+<div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="#createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)"><code>createJsonEncoder(ObjectMapper)</code></a>.</div>
+</div>
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+ <code>application/json</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="createJsonEncoder()">
+<h3>createJsonEncoder</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createJsonEncoder</span>()</div>
+<div class="block">Returns an <code>Encoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+ compatible with <code>application/json</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)">
+<h3>createJsonEncoder</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createJsonEncoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+ <code>application/json</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="createEncoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">
+<h3>createEncoder</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</span></div>
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="createEncoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.adapter.jackson.ObjectWriterFactory,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">
+<h3>createEncoder</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
+ <a href="ObjectWriterFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectWriterFactory</a>&nbsp;writerFactory,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</span></div>
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types. The encoder creates <code>ObjectWriters</code> using the given factory.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="createDecoder()">
 <h3>createDecoder</h3>
-<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span>()</div>
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="member-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>
+</span><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span>()</div>
+<div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="#createJsonDecoder()"><code>createJsonDecoder()</code></a>.</div>
+</div>
+<div class="block">Returns an <code>Decoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+ compatible with <code>application/json</code>.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="createDecoder(com.fasterxml.jackson.databind.ObjectMapper)">
 <h3>createDecoder</h3>
-<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="member-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>
+</span><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
+<div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="#createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)"><code>createJsonDecoder(ObjectMapper)</code></a>.</div>
+</div>
+<div class="block">Returns an <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+ <code>application/json</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="createJsonDecoder()">
+<h3>createJsonDecoder</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createJsonDecoder</span>()</div>
+<div class="block">Returns an <code>Decoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+ compatible with <code>application/json</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)">
+<h3>createJsonDecoder</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createJsonDecoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
+<div class="block">Returns an <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+ <code>application/json</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="createDecoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">
+<h3>createDecoder</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</span></div>
+<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="createDecoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.adapter.jackson.ObjectReaderFactory,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">
+<h3>createDecoder</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span>&#8203;<span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
+ <a href="ObjectReaderFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectReaderFactory</a>&nbsp;readerFactory,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
+ <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</span></div>
+<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types. The decoder creates <code>ObjectReaders</code> using the given factory.</div>
 </section>
 </li>
 </ul>

@@ -560,8 +560,8 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#charsetOrUtf8(com.github.mizosoft.methanol.MediaType)">charsetOrUtf8(MediaType)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
 <dd>
-<div class="block">Returns either the result of <a href="methanol/com/github/mizosoft/methanol/MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a> or <code>
- UTF-8</code> directly if <code>mediaType</code> is null.</div>
+<div class="block">Returns either the result of <a href="methanol/com/github/mizosoft/methanol/MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a> or <code>UTF-8</code>
+ directly if <code>mediaType</code> is null.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/HttpCache.html#clear()">clear()</a></span> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></dt>
 <dd>
@@ -862,7 +862,9 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createDecoder()">createDecoder()</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonDecoder()"><code>JacksonAdapterFactory.createJsonDecoder()</code></a>.</div>
+</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbAdapterFactory.html#createDecoder()">createDecoder()</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jaxb.<a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jaxb">JaxbAdapterFactory</a></dt>
 <dd>
@@ -878,7 +880,19 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createDecoder(com.fasterxml.jackson.databind.ObjectMapper)">createDecoder(ObjectMapper)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)"><code>JacksonAdapterFactory.createJsonDecoder(ObjectMapper)</code></a>.</div>
+</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createDecoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.adapter.jackson.ObjectReaderFactory,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">createDecoder(ObjectMapper, ObjectReaderFactory, MediaType, MediaType...)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
+<dd>
+<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createDecoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">createDecoder(ObjectMapper, MediaType, MediaType...)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
+<dd>
+<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbAdapterFactory.html#createDecoder(com.github.mizosoft.methanol.adapter.jaxb.JaxbBindingFactory)">createDecoder(JaxbBindingFactory)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jaxb.<a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jaxb">JaxbAdapterFactory</a></dt>
 <dd>
@@ -902,7 +916,9 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createEncoder()">createEncoder()</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Encoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonEncoder()"><code>JacksonAdapterFactory.createJsonEncoder()</code></a>.</div>
+</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbAdapterFactory.html#createEncoder()">createEncoder()</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jaxb.<a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jaxb">JaxbAdapterFactory</a></dt>
 <dd>
@@ -918,7 +934,19 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createEncoder(com.fasterxml.jackson.databind.ObjectMapper)">createEncoder(ObjectMapper)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Encoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
+<div class="deprecation-comment">Use <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)"><code>JacksonAdapterFactory.createJsonEncoder(ObjectMapper)</code></a>.</div>
+</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createEncoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.adapter.jackson.ObjectWriterFactory,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">createEncoder(ObjectMapper, ObjectWriterFactory, MediaType, MediaType...)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
+<dd>
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createEncoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)">createEncoder(ObjectMapper, MediaType, MediaType...)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
+<dd>
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+ given media types.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbAdapterFactory.html#createEncoder(com.github.mizosoft.methanol.adapter.jaxb.JaxbBindingFactory)">createEncoder(JaxbBindingFactory)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jaxb.<a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jaxb">JaxbAdapterFactory</a></dt>
 <dd>
@@ -928,13 +956,41 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a <code>Encoder</code> that uses the given <code>Gson</code> instance.</div>
 </dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonDecoder()">createJsonDecoder()</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
+<dd>
+<div class="block">Returns an <code>Decoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+ compatible with <code>application/json</code>.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)">createJsonDecoder(ObjectMapper)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
+<dd>
+<div class="block">Returns an <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+ <code>application/json</code>.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonEncoder()">createJsonEncoder()</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
+<dd>
+<div class="block">Returns an <code>Encoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+ compatible with <code>application/json</code>.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)">createJsonEncoder(ObjectMapper)</a></span> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
+<dd>
+<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+ <code>application/json</code>.</div>
+</dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbBindingFactory.html#createMarshaller(java.lang.Class)">createMarshaller(Class&lt;?&gt;)</a></span> - Method in interface com.github.mizosoft.methanol.adapter.jaxb.<a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbBindingFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jaxb">JaxbBindingFactory</a></dt>
 <dd>
 <div class="block">Returns a new <code>Marshaller</code> for encoding an object of the given class.</div>
 </dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectReaderFactory.html#createReader(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.TypeRef)">createReader(ObjectMapper, TypeRef&lt;?&gt;)</a></span> - Method in interface com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectReaderFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectReaderFactory</a></dt>
+<dd>
+<div class="block">Uses the given mapper to create an <code>ObjectReader</code> for the given type.</div>
+</dd>
 <dt><span class="member-name-link"><a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbBindingFactory.html#createUnmarshaller(java.lang.Class)">createUnmarshaller(Class&lt;?&gt;)</a></span> - Method in interface com.github.mizosoft.methanol.adapter.jaxb.<a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbBindingFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jaxb">JaxbBindingFactory</a></dt>
 <dd>
 <div class="block">Returns a new <code>Unmarshaller</code> for decoding to an object of the given class.</div>
+</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectWriterFactory.html#createWriter(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.TypeRef)">createWriter(ObjectMapper, TypeRef&lt;?&gt;)</a></span> - Method in interface com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectWriterFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectWriterFactory</a></dt>
+<dd>
+<div class="block">Uses the given mapper to create an <code>ObjectWriter</code> for the given type.</div>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#currentDemand()">currentDemand()</a></span> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractSubscription</a></dt>
 <dd>&nbsp;</dd>
@@ -1564,6 +1620,10 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#getDeepCompletionCause(java.lang.Throwable)">getDeepCompletionCause(Throwable)</a></span> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
 <dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectReaderFactory.html#getDefault()">getDefault()</a></span> - Static method in interface com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectReaderFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectReaderFactory</a></dt>
+<dd>&nbsp;</dd>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectWriterFactory.html#getDefault()">getDefault()</a></span> - Static method in interface com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectWriterFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectWriterFactory</a></dt>
+<dd>&nbsp;</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html#getEncoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">getEncoder(TypeRef&lt;?&gt;, MediaType)</a></span> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></dt>
 <dd>
 <div class="block">Returns an <code>Optional</code> containing an <code>Encoder</code> that supports the given object type
@@ -2130,7 +2190,7 @@ loadScripts(document, 'script');</script>
 <dl class="index">
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson"><span class="type-name-link">JacksonAdapterFactory</span></a> - Class in <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/package-summary.html">com.github.mizosoft.methanol.adapter.jackson</a></dt>
 <dd>
-<div class="block">Provides <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for the JSON format using Jackson.</div>
+<div class="block">Provides <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for the Jackson library.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonAdapterUtils.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal"><span class="type-name-link">JacksonAdapterUtils</span></a> - Class in <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/package-summary.html">com.github.mizosoft.methanol.adapter.jackson.internal</a></dt>
 <dd>&nbsp;</dd>
@@ -2140,7 +2200,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal"><span class="type-name-link">JacksonSubscriber</span></a>&lt;<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="type parameter in JacksonSubscriber">T</a>&gt; - Class in <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/package-summary.html">com.github.mizosoft.methanol.adapter.jackson.internal</a></dt>
 <dd>&nbsp;</dd>
-<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html#%3Cinit%3E(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.TypeRef,com.fasterxml.jackson.core.JsonParser)">JacksonSubscriber(ObjectMapper, TypeRef&lt;T&gt;, JsonParser)</a></span> - Constructor for class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber</a></dt>
+<dt><span class="member-name-link"><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html#%3Cinit%3E(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.adapter.jackson.ObjectReaderFactory,com.fasterxml.jackson.core.JsonParser)">JacksonSubscriber(ObjectMapper, TypeRef&lt;T&gt;, ObjectReaderFactory, JsonParser)</a></span> - Constructor for class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/JaxbAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jaxb"><span class="type-name-link">JaxbAdapterFactory</span></a> - Class in <a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/package-summary.html">com.github.mizosoft.methanol.adapter.jaxb</a></dt>
 <dd>
@@ -2548,6 +2608,14 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:O">O</h2>
 <dl class="index">
+<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectReaderFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson"><span class="type-name-link">ObjectReaderFactory</span></a> - Interface in <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/package-summary.html">com.github.mizosoft.methanol.adapter.jackson</a></dt>
+<dd>
+<div class="block">A strategy for creating an <code>ObjectReader</code> for a given type.</div>
+</dd>
+<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/ObjectWriterFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson"><span class="type-name-link">ObjectWriterFactory</span></a> - Interface in <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/package-summary.html">com.github.mizosoft.methanol.adapter.jackson</a></dt>
+<dd>
+<div class="block">A strategy for creating an <code>ObjectWriter</code> for a given type.</div>
+</dd>
 <dt><span class="member-name-link"><a href="methanol/com/github/mizosoft/methanol/MediaType.html#of(java.lang.String,java.lang.String)">of(String, String)</a></span> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></dt>
 <dd>
 <div class="block">Returns a new <code>MediaType</code> with the given type and subtype.</div>
