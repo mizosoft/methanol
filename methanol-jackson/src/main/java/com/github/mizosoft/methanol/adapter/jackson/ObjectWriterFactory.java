@@ -20,31 +20,19 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.springboot;
+package com.github.mizosoft.methanol.adapter.jackson;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.adapter.ForwardingDecoder;
-import com.github.mizosoft.methanol.adapter.ForwardingEncoder;
-import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
-import com.google.auto.service.AutoService;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.github.mizosoft.methanol.TypeRef;
 
-public class JacksonAdapters {
-  private static final ObjectMapper mapper = new ObjectMapper();
+/** A strategy for creating an {@link ObjectWriter} for a given type. */
+public interface ObjectWriterFactory {
 
-  private JacksonAdapters() {}
+  /** Uses the given mapper to create an {@link ObjectWriter} for the given type. */
+  ObjectWriter createWriter(ObjectMapper mapper, TypeRef<?> type);
 
-  @AutoService(BodyAdapter.Encoder.class)
-  public static class JacksonEncoder extends ForwardingEncoder {
-    public JacksonEncoder() {
-      super(JacksonAdapterFactory.createJsonEncoder(mapper));
-    }
-  }
-
-  @AutoService(BodyAdapter.Decoder.class)
-  public static class JacksonDecoder extends ForwardingDecoder {
-    public JacksonDecoder() {
-      super(JacksonAdapterFactory.createJsonDecoder(mapper));
-    }
+  static ObjectWriterFactory getDefault() {
+    return (mapper, type) -> mapper.writerFor(mapper.constructType(type.type()));
   }
 }

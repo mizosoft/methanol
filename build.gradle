@@ -1,6 +1,6 @@
 plugins {
   id 'org.checkerframework' version '0.6.10' apply false
-  id 'org.javamodularity.moduleplugin'  version '1.8.10' apply false
+  id 'org.javamodularity.moduleplugin' version '1.8.10' apply false
   id 'net.ltgt.errorprone' version '2.0.2' apply false
   id 'net.ltgt.nullaway' version '1.3.0' apply false
   id 'jacoco'
@@ -36,6 +36,10 @@ ext {
       'hamcrest'        : '2.2',
       'springBoot'      : '2.6.6',
       'autoService'     : '1.0.1',
+      'jacksonXml'      : '2.13.2',
+      'jacksonProtobuf' : '2.13.2',
+      'jacksonAvro'     : '2.13.2',
+      'bson4jackson'    : '2.13.1',
   ]
 
   deps = [
@@ -73,6 +77,10 @@ ext {
       'springBootStarterWeb'   : "org.springframework.boot:spring-boot-starter-web:$versions.springBoot",
       'autoServiceAnnotations' : "com.google.auto.service:auto-service-annotations:$versions.autoService",
       'autoServiceAnnProcessor': "com.google.auto.service:auto-service:$versions.autoService",
+      'jacksonXml'             : "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$versions.jacksonXml",
+      'jacksonProtobuf'        : "com.fasterxml.jackson.dataformat:jackson-dataformat-protobuf:$versions.jacksonProtobuf",
+      'jacksonAvro'            : "com.fasterxml.jackson.dataformat:jackson-dataformat-avro:$versions.jacksonAvro",
+      'bson4jackson'           : "de.undercouch:bson4jackson:$versions.bson4jackson",
   ]
 
   isJavaProject = { project ->
@@ -179,10 +187,20 @@ subprojects { subproject ->
         }
       }
 
+      add('addOpensFromSource') { task, sourceModule, openedPackage, targetModule ->
+        configure(task) {
+          moduleOptions {
+            addModules += [sourceModule, targetModule]
+            def opensExpr = "$sourceModule/$openedPackage" as String;
+            addOpens.merge(opensExpr, targetModule) { v1, v2 -> "$v1,$v2" as String }
+          }
+        }
+      }
+
       add('addOpens') { task, openedPackage, targetModule ->
         configure(task) {
           moduleOptions {
-            addModules += [targetModule]
+            addModules += [moduleName, targetModule]
             def opensExpr = "$moduleName/$openedPackage" as String;
             addOpens.merge(opensExpr, targetModule) { v1, v2 -> "$v1,$v2" as String }
           }

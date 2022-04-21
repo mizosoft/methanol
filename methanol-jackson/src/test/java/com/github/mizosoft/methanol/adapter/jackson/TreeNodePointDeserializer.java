@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2021 Moataz Abdelnasser
+ * Copyright (c) 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,31 +20,22 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.springboot;
+package com.github.mizosoft.methanol.adapter.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.adapter.ForwardingDecoder;
-import com.github.mizosoft.methanol.adapter.ForwardingEncoder;
-import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
-import com.google.auto.service.AutoService;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import java.io.IOException;
 
-public class JacksonAdapters {
-  private static final ObjectMapper mapper = new ObjectMapper();
-
-  private JacksonAdapters() {}
-
-  @AutoService(BodyAdapter.Encoder.class)
-  public static class JacksonEncoder extends ForwardingEncoder {
-    public JacksonEncoder() {
-      super(JacksonAdapterFactory.createJsonEncoder(mapper));
-    }
+final class TreeNodePointDeserializer extends StdDeserializer<Point> {
+  TreeNodePointDeserializer() {
+    super(Point.class);
   }
 
-  @AutoService(BodyAdapter.Decoder.class)
-  public static class JacksonDecoder extends ForwardingDecoder {
-    public JacksonDecoder() {
-      super(JacksonAdapterFactory.createJsonDecoder(mapper));
-    }
+  @Override
+  public Point deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    var node = p.<JsonNode>readValueAsTree();
+    return new Point(node.get("x").asInt(), node.get("y").asInt());
   }
 }

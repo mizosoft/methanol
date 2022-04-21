@@ -31,31 +31,29 @@ import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
 
 public class JacksonProviders {
-
   static final ObjectMapper configuredMapper =
-      new JsonMapper()
+      JsonMapper.builder()
           .disable(MapperFeature.AUTO_DETECT_GETTERS)
           .disable(MapperFeature.AUTO_DETECT_SETTERS)
           .disable(MapperFeature.AUTO_DETECT_IS_GETTERS)
+          .build()
           .setVisibility(PropertyAccessor.ALL, Visibility.ANY);
 
   private JacksonProviders() {}
 
   public static class EncoderProvider {
-
     private EncoderProvider() {}
 
     public static BodyAdapter.Encoder provider() {
-      return JacksonAdapterFactory.createEncoder(configuredMapper);
+      return JacksonAdapterFactory.createJsonEncoder(configuredMapper);
     }
   }
 
   public static class DecoderProvider {
-
     private DecoderProvider() {}
 
     public static BodyAdapter.Decoder provider() {
-      return JacksonAdapterFactory.createDecoder(configuredMapper);
+      return JacksonAdapterFactory.createJsonDecoder(configuredMapper);
     }
   }
 }

@@ -39,8 +39,8 @@ import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Decodes body using {@code sourceCharset} then encodes it again to {@code targetCharset}. Used
- * to coerce response into UTF-8 if not already to be parsable by the non-blocking parser.
+ * Decodes body using {@code sourceCharset} then encodes it again to {@code targetCharset}. Used to
+ * coerce response into UTF-8 if not already to be parsable by the non-blocking parser.
  */
 final class CharsetCoercingSubscriber<T> extends ForwardingBodySubscriber<T> {
   private static final int TEMP_BUFFER_SIZE = 4 * 1024;
@@ -52,8 +52,7 @@ final class CharsetCoercingSubscriber<T> extends ForwardingBodySubscriber<T> {
   private @Nullable ByteBuffer leftover;
 
   CharsetCoercingSubscriber(
-      BodySubscriber<T> downstream,
-      Charset sourceCharset, Charset targetCharset) {
+      BodySubscriber<T> downstream, Charset sourceCharset, Charset targetCharset) {
     super(downstream);
     decoder = sourceCharset.newDecoder();
     encoder = targetCharset.newEncoder();
@@ -115,10 +114,7 @@ final class CharsetCoercingSubscriber<T> extends ForwardingBodySubscriber<T> {
     }
     // allocate estimate capacity and grow when full
     int capacity =
-        (int)
-            (input.remaining()
-                * decoder.averageCharsPerByte()
-                * encoder.averageBytesPerChar());
+        (int) (input.remaining() * decoder.averageCharsPerByte() * encoder.averageBytesPerChar());
     ByteBuffer output = ByteBuffer.allocate(capacity);
     while (true) {
       CoderResult decoderResult = decoder.decode(input, tempCharBuff, endOfInput);
@@ -130,8 +126,7 @@ final class CharsetCoercingSubscriber<T> extends ForwardingBodySubscriber<T> {
       }
       // it's not eoi for encoder unless decoder also finished (underflow result)
       boolean endOfInputForEncoder = decoderResult.isUnderflow() && endOfInput;
-      CoderResult encoderResult =
-          encoder.encode(tempCharBuff.flip(), output, endOfInputForEncoder);
+      CoderResult encoderResult = encoder.encode(tempCharBuff.flip(), output, endOfInputForEncoder);
       tempCharBuff.compact(); // might not have been completely consumed
       if (encoderResult.isUnderflow() && endOfInputForEncoder) {
         encoderResult = encoder.flush(output);

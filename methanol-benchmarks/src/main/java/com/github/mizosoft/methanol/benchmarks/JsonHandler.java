@@ -37,7 +37,7 @@ public enum JsonHandler {
   ASYNC_PARSER {
     @Override
     BodySubscriber<List<Map<String, Object>>> createSubscriber(JsonMapper mapper, Charset charset) {
-      return JacksonAdapterFactory.createDecoder(mapper)
+      return JacksonAdapterFactory.createJsonDecoder(mapper)
           .toObject(ARRAY_OF_OBJECTS, MediaType.APPLICATION_JSON.withCharset(charset));
     }
   },

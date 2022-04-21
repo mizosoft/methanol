@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2019, 2021 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,20 +22,17 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import java.io.IOException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.github.mizosoft.methanol.TypeRef;
 
-final class PointTreeNodeDeserializer extends StdDeserializer<Point> {
-  PointTreeNodeDeserializer() {
-    super(Point.class);
-  }
+/** A strategy for creating an {@link ObjectReader} for a given type. */
+public interface ObjectReaderFactory {
 
-  @Override
-  public Point deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-    var node = p.<JsonNode>readValueAsTree();
-    return new Point(node.get("x").asInt(), node.get("y").asInt());
+  /** Uses the given mapper to create an {@link ObjectReader} for the given type. */
+  ObjectReader createReader(ObjectMapper mapper, TypeRef<?> type);
+
+  static ObjectReaderFactory getDefault() {
+    return (mapper, type) -> mapper.readerFor(mapper.constructType(type.type()));
   }
 }

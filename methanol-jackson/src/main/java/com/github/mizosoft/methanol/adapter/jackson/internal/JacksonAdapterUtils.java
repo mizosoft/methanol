@@ -29,14 +29,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class JacksonAdapterUtils {
-
   private JacksonAdapterUtils() {}
 
   public static byte[] collectBytes(List<ByteBuffer> buffers) {
     int size = buffers.stream().mapToInt(ByteBuffer::remaining).sum();
     byte[] bytes = new byte[size];
     int offset = 0;
-    for (ByteBuffer buff : buffers) {
+    for (var buff : buffers) {
       int remaining = buff.remaining();
       buff.get(bytes, offset, buff.remaining());
       offset += remaining;

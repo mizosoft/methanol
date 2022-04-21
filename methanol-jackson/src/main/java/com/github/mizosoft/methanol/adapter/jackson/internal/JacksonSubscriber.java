@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.util.TokenBuffer;
 import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.adapter.jackson.ObjectReaderFactory;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
 import java.io.IOException;
@@ -42,30 +43,30 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow.Subscription;
 
 public final class JacksonSubscriber<T> implements BodySubscriber<T> {
-
   private final ObjectMapper mapper;
   private final ObjectReader objReader;
   private final JsonParser parser;
   private final ByteArrayFeeder feeder;
   private final TokenBuffer tokenBuffer;
-  private final CompletableFuture<T> valueFuture;
+  private final CompletableFuture<T> bodyFuture;
   private final Upstream upstream;
   private final Prefetcher prefetcher;
 
-  public JacksonSubscriber(ObjectMapper mapper, TypeRef<T> type, JsonParser parser) {
+  public JacksonSubscriber(
+      ObjectMapper mapper, TypeRef<T> type, ObjectReaderFactory readerFactory, JsonParser parser) {
     this.mapper = mapper;
-    this.objReader = mapper.readerFor(mapper.constructType(type.type()));
     this.parser = parser;
+    objReader = readerFactory.createReader(mapper, type);
     feeder = (ByteArrayFeeder) parser.getNonBlockingInputFeeder();
-    tokenBuffer = new TokenBuffer(this.parser);
-    valueFuture = new CompletableFuture<>();
+    tokenBuffer = new TokenBuffer(parser);
+    bodyFuture = new CompletableFuture<>();
     upstream = new Upstream();
     prefetcher = new Prefetcher();
   }
 
   @Override
   public CompletionStage<T> getBody() {
-    return valueFuture;
+    return bodyFuture;
   }
 
   @Override
@@ -84,7 +85,7 @@ public final class JacksonSubscriber<T> implements BodySubscriber<T> {
       feeder.feedInput(bytes, 0, bytes.length);
       flushParser();
     } catch (Throwable t) {
-      valueFuture.completeExceptionally(t);
+      bodyFuture.completeExceptionally(t);
       upstream.cancel();
       return;
     }
@@ -95,7 +96,7 @@ public final class JacksonSubscriber<T> implements BodySubscriber<T> {
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
     upstream.clear();
-    valueFuture.completeExceptionally(throwable);
+    bodyFuture.completeExceptionally(throwable);
   }
 
   @Override
@@ -104,9 +105,9 @@ public final class JacksonSubscriber<T> implements BodySubscriber<T> {
     feeder.endOfInput();
     try {
       flushParser();
-      valueFuture.complete(objReader.readValue(tokenBuffer.asParser(mapper)));
+      bodyFuture.complete(objReader.readValue(tokenBuffer.asParser(mapper)));
     } catch (Throwable t) {
-      valueFuture.completeExceptionally(t);
+      bodyFuture.completeExceptionally(t);
     }
   }
 
