@@ -36,6 +36,10 @@ ext {
       'hamcrest'        : '2.2',
       'springBoot'      : '2.6.6',
       'autoService'     : '1.0.1',
+      'jacksonXml'      : '2.13.2',
+      'jacksonProtobuf' : '2.13.2',
+      'jacksonAvro'     : '2.13.2',
+      'bson4jackson'    : '2.13.1',
   ]
 
   deps = [
