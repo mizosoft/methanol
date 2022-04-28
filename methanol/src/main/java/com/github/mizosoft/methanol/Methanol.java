@@ -101,6 +101,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
+  private static final Logger logger = System.getLogger(HeadersTimeoutInterceptor.class.getName());
+
   private final HttpClient backend;
   private final Redirect redirectPolicy;
   private final HttpHeaders defaultHeaders;
@@ -979,9 +981,6 @@ public final class Methanol extends HttpClient {
   }
 
   private static final class HeadersTimeoutInterceptor implements Interceptor {
-    private static final Logger logger =
-        System.getLogger(HeadersTimeoutInterceptor.class.getName());
-
     private final Duration headersTimeout;
     private final Delayer delayer;
 
