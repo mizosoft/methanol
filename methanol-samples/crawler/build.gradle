@@ -5,5 +5,5 @@ plugins {
 mainClassName = "$moduleName/com.github.mizosoft.methanol.samples.crawler.Crawler"
 
 dependencies {
-  implementation deps.jsoup
+  implementation libs.jsoup
 }

@@ -3,14 +3,14 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor deps.jmhAnnotationProcessor
+  annotationProcessor libs.jmh.annprocess
   implementation project(':methanol')
   implementation project(':methanol-jackson')
   implementation project(':methanol-brotli')
   implementation project(':methanol-testutils')
-  implementation deps.mockWebServer
-  implementation deps.jmhCore
-  implementation deps.brotliDec
+  implementation libs.mockwebserver
+  implementation libs.jmh.core
+  implementation libs.brotli.dec
 }
 
 shadowJar {

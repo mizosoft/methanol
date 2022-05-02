@@ -1,12 +1,12 @@
 dependencies {
   api project(':methanol')
-  api deps.jacksonDatabind
+  api libs.jackson.databind
 
   testImplementation project(':methanol-testutils')
-  testImplementation deps.jacksonXml
-  testImplementation deps.jacksonProtobuf
-  testImplementation deps.jacksonAvro
-  testImplementation deps.bson4jackson
+  testImplementation libs.jackson.xml
+  testImplementation libs.jackson.protobuf
+  testImplementation libs.jackson.avro
+  testImplementation libs.bson4jackson
 }
 
 compileJava {

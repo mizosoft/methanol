@@ -1,5 +1,5 @@
 dependencies {
   api project(':methanol')
-  implementation deps.okhttpTls
-  implementation deps.assertj
+  implementation libs.okhttp.tls
+  implementation libs.assertj
 }

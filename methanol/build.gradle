@@ -4,14 +4,14 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 dependencies {
-  testImplementation(deps.testng) {
+  testImplementation(libs.testng) {
     exclude group: 'junit'
     exclude group: 'org.checkerframework', module: 'checker-compat-qual'
   }
-  testImplementation deps.junitParams
-  testImplementation deps.reactiveStreamsTckFlow
-  testImplementation deps.mockWebServer
-  testImplementation deps.jimfs
+  testImplementation libs.junit.params
+  testImplementation libs.reactivestreams.tck.flow
+  testImplementation libs.mockwebserver
+  testImplementation libs.jimfs
   testImplementation project(':methanol-testutils')
 }
 

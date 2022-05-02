@@ -10,79 +10,6 @@ plugins {
 }
 
 ext {
-  versions = [
-      'junitJupiter'    : '5.8.2',
-      'junitPlatform'   : '1.8.2',
-      'reactiveStreams' : '1.0.3',
-      'checkerFramework': '3.21.4',
-      'gson'            : '2.9.0',
-      'jackson'         : '2.13.2.2',
-      'protobuf'        : '3.12.2',
-      'errorprone'      : '2.13.1',
-      'brotliDec'       : '0.1.2',
-      'okhttp'          : '5.0.0-alpha.2',
-      'jmh'             : '1.35',
-      'jacoco'          : '0.8.5',
-      'reactor'         : '3.4.17',
-      'nullAway'        : '0.9.6',
-      'jaxb'            : '2.3.1',
-      'jaxbRuntime'     : '2.7.6',
-      'jsoup'           : '1.14.3',
-      'testng'          : '7.5',
-      'junitParams'     : '5.8.1',
-      'jimfs'           : '1.2',
-      'assertj'         : '3.22.0',
-      'awaitility'      : '4.2.0',
-      'hamcrest'        : '2.2',
-      'springBoot'      : '2.6.6',
-      'autoService'     : '1.0.1',
-      'jacksonXml'      : '2.13.2',
-      'jacksonProtobuf' : '2.13.2',
-      'jacksonAvro'     : '2.13.2',
-      'bson4jackson'    : '2.13.1',
-  ]
-
-  deps = [
-      'junitApi'               : "org.junit.jupiter:junit-jupiter-api:${versions.junitJupiter}",
-      'junitEngine'            : "org.junit.jupiter:junit-jupiter-engine:${versions.junitJupiter}",
-      'junitPlatformCommons'   : "org.junit.platform:junit-platform-commons:$versions.junitPlatform",
-      'reactiveStreamsTckFlow' : "org.reactivestreams:reactive-streams-tck-flow:${versions.reactiveStreams}",
-      'checkerFramework'       : "org.checkerframework:checker:${versions.checkerFramework}",
-      'checkerFrameworkQual'   : "org.checkerframework:checker-qual:${versions.checkerFramework}",
-      'gson'                   : "com.google.code.gson:gson:${versions.gson}",
-      'jacksonDatabind'        : "com.fasterxml.jackson.core:jackson-databind:${versions.jackson}",
-      'protobufJava'           : "com.google.protobuf:protobuf-java:${versions.protobuf}",
-      'protobufCompiler'       : "com.google.protobuf:protoc:${versions.protobuf}",
-      'errorprone'             : "com.google.errorprone:error_prone_core:${versions.errorprone}",
-      'errorproneAnnotations'  : "com.google.errorprone:error_prone_annotations:${versions.errorprone}",
-      'brotliDec'              : "org.brotli:dec:${versions.brotliDec}",
-      'mockWebServer'          : "com.squareup.okhttp3:mockwebserver3:${versions.okhttp}",
-      'reactiveStreams'        : "org.reactivestreams:reactive-streams:${versions.reactiveStreams}",
-      'reactiveStreamsExamples': "org.reactivestreams:reactive-streams-examples:${versions.reactiveStreams}",
-      'jmhCore'                : "org.openjdk.jmh:jmh-core:$versions.jmh",
-      'jmhAnnotationProcessor' : "org.openjdk.jmh:jmh-generator-annprocess:$versions.jmh",
-      'okhttpTls'              : "com.squareup.okhttp3:okhttp-tls:${versions.okhttp}",
-      'okhttp'                 : "com.squareup.okhttp3:okhttp:$versions.okhttp",
-      'reactorCore'            : "io.projectreactor:reactor-core:${versions.reactor}",
-      'nullAway'               : "com.uber.nullaway:nullaway:${versions.nullAway}",
-      'jaxbApi'                : "javax.xml.bind:jaxb-api:${versions.jaxb}",
-      'jaxbRuntime'            : "org.eclipse.persistence:org.eclipse.persistence.moxy:${versions.jaxbRuntime}",
-      'jsoup'                  : "org.jsoup:jsoup:${versions.jsoup}",
-      'testng'                 : "org.testng:testng:${versions.testng}",
-      'junitParams'            : "org.junit.jupiter:junit-jupiter-params:${versions.junitParams}",
-      'jimfs'                  : "com.google.jimfs:jimfs:${versions.jimfs}",
-      'assertj'                : "org.assertj:assertj-core:${versions.assertj}",
-      'awaitility'             : "org.awaitility:awaitility:${versions.awaitility}",
-      'hamcrest'               : "org.hamcrest:hamcrest:${versions.hamcrest}",
-      'springBootStarterWeb'   : "org.springframework.boot:spring-boot-starter-web:$versions.springBoot",
-      'autoServiceAnnotations' : "com.google.auto.service:auto-service-annotations:$versions.autoService",
-      'autoServiceAnnProcessor': "com.google.auto.service:auto-service:$versions.autoService",
-      'jacksonXml'             : "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$versions.jacksonXml",
-      'jacksonProtobuf'        : "com.fasterxml.jackson.dataformat:jackson-dataformat-protobuf:$versions.jacksonProtobuf",
-      'jacksonAvro'            : "com.fasterxml.jackson.dataformat:jackson-dataformat-avro:$versions.jacksonAvro",
-      'bson4jackson'           : "de.undercouch:bson4jackson:$versions.bson4jackson",
-  ]
-
   isJavaProject = { project ->
     !(project.name in ['methanol-parent', 'brotli-jni'])
   }
@@ -135,10 +62,6 @@ allprojects {
   repositories {
     mavenCentral()
   }
-
-  jacoco {
-    toolVersion = versions.jacoco
-  }
 }
 
 subprojects { subproject ->
@@ -155,23 +78,19 @@ subprojects { subproject ->
   sourceCompatibility = JavaVersion.VERSION_11
 
   dependencies {
-    compileOnly deps.checkerFrameworkQual
-    compileOnly deps.errorproneAnnotations
-    checkerFramework deps.checkerFramework
-    errorprone deps.errorprone
-    errorprone deps.nullAway
+    compileOnly libs.checkerframework.qual
+    compileOnly libs.errorprone.annotations
 
-    testCompileOnly deps.checkerFrameworkQual
-    testCompileOnly deps.errorproneAnnotations
-    testImplementation deps.junitApi
-    testRuntimeOnly deps.junitEngine
+    checkerFramework libs.checkerframework
+    errorprone libs.errorprone
+    errorprone libs.nullaway
 
-    testImplementation deps.assertj
-    testImplementation deps.awaitility
-    testImplementation deps.hamcrest
+    testImplementation platform(libs.junit.bom)
+    testImplementation libs.junit.jupiter
 
-    // https://stackoverflow.com/questions/69395613/hello-got-an-error-with-junit-platform-v-5-8-1-java-lang-nosuchmethoderror-org
-    testImplementation deps.junitPlatformCommons
+    testImplementation libs.assertj
+    testImplementation libs.awaitility
+    testImplementation libs.hamcrest
   }
 
   // Add helper extensions for modular subprojects
@@ -254,6 +173,10 @@ subprojects { subproject ->
       events 'skipped', 'failed'
       showCauses true
     }
+  }
+
+  jacoco {
+    toolVersion = libs.versions.jacoco.get()
   }
 }
 
@@ -346,9 +269,9 @@ task jacocoRootReport(type: JacocoReport) {
     }
   }
   reports {
-    xml.enabled true
-    html.enabled true
-    csv.enabled false
+    xml.required = true
+    html.required = true
+    csv.required = false
   }
 }
 

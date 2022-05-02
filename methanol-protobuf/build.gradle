@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
   api project(':methanol')
-  api deps.protobufJava
+  api libs.protobuf.java
 
   testImplementation project(':methanol-testutils')
 }
@@ -15,6 +15,6 @@ dependencies {
 
 protobuf {
   protoc {
-    artifact = deps.protobufCompiler
+    artifact = libs.protobuf.compiler.get()
   }
 }

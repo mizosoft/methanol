@@ -1,9 +1,9 @@
 dependencies {
   api project(':methanol')
-  api deps.jaxbApi
+  api libs.jaxb.api
 
   testImplementation project(':methanol-testutils')
-  testImplementation deps.jaxbRuntime
+  testImplementation libs.moxy
 }
 
 test {

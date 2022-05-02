@@ -10,13 +10,13 @@ dependencies {
   implementation project(':methanol-jaxb')
   implementation project(':methanol-brotli')
   implementation project(':methanol-testutils')
-  implementation deps.reactorCore
+  implementation libs.reactor.core
 
-  testImplementation deps.mockWebServer
-  testImplementation deps.brotliDec
-  testImplementation deps.reactiveStreams
-  testImplementation deps.reactiveStreamsExamples
-  testImplementation deps.jaxbRuntime
+  testImplementation libs.mockwebserver
+  testImplementation libs.brotli.dec
+  testImplementation libs.reactivestreams
+  testImplementation libs.reactivestreams.examples
+  testImplementation libs.moxy
 }
 
 [compileTestJava, test].each { task ->
@@ -26,7 +26,7 @@ dependencies {
 
 protobuf {
   protoc {
-    artifact = deps.protobufCompiler
+    artifact = libs.protobuf.compiler.get()
   }
 }
 

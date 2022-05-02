@@ -1,6 +1,6 @@
 dependencies {
   api project(':methanol')
-  api deps.gson
+  api libs.gson
 
   testImplementation project(':methanol-testutils')
 }
