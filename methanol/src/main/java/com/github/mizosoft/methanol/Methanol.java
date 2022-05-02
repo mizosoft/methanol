@@ -65,9 +65,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -998,12 +996,26 @@ public final class Methanol extends HttpClient {
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      var timeoutTask = new HeadersTimeoutTask(headersTimeout, delayer);
+      var timeoutTask = new TimeoutTask();
+      var timeoutFuture = delayer.delay(timeoutTask::onTimeout, headersTimeout, SYNC_EXECUTOR);
+      timeoutTask.whenCancelled(() -> timeoutFuture.cancel(false));
+
       var responseFuture = withHeadersTimeout(chain, timeoutTask).forwardAsync(request);
-      return timeoutTask.scheduleFor(responseFuture);
+
+      // Make a dependent copy of the original response future, so we can cancel the original and
+      // complete the copy exceptionally on timeout. Cancelling the original future may lead
+      // to cancelling the actual request on JDK 16 or higher.
+      var responseFutureCopy = responseFuture.copy();
+      timeoutTask.whenTimedOut(
+          () -> {
+            responseFutureCopy.completeExceptionally(
+                new HttpHeadersTimeoutException("couldn't receive headers on time"));
+            responseFuture.cancel(true);
+          });
+      return responseFutureCopy;
     }
 
-    private <T> Chain<T> withHeadersTimeout(Chain<T> chain, HeadersTimeoutTask timeoutTask) {
+    private <T> Chain<T> withHeadersTimeout(Chain<T> chain, TimeoutTask timeoutTask) {
       // TODO handle push promises
       return chain.withBodyHandler(
           responseInfo ->
@@ -1012,63 +1024,30 @@ public final class Methanol extends HttpClient {
                   : new TimedOutSubscriber<>());
     }
 
-    private static final class HeadersTimeoutTask {
-      private static final Future<Void> EVALUATED_FUTURE = CompletableFuture.completedFuture(null);
-      private static final Future<Void> CANCELLED_FUTURE =
-          CompletableFuture.failedFuture(new CancellationException());
+    private static final class TimeoutTask {
+      private final CompletableFuture<Void> onTimeout = new CompletableFuture<>();
 
-      private final Duration timeout;
-      private final Delayer delayer;
-      private final AtomicReference<@Nullable Future<Void>> timeoutFuture = new AtomicReference<>();
+      TimeoutTask() {}
 
-      HeadersTimeoutTask(Duration timeout, Delayer delayer) {
-        this.timeout = timeout;
-        this.delayer = delayer;
+      void onTimeout() {
+        onTimeout.complete(null);
       }
 
-      <T> CompletableFuture<HttpResponse<T>> scheduleFor(
-          CompletableFuture<HttpResponse<T>> responseFuture) {
-        // Make a dependent copy of the original response future, so we can cancel the latter and
-        // complete the former exceptionally on timeout. Cancelling the original future may lead
-        // to cancelling the actual request on JDK 16 or higher.
-        var responseFutureCopy = responseFuture.copy();
-        var scheduledFuture =
-            delayer.delay(
-                () -> {
-                  while (true) {
-                    var currentFuture = timeoutFuture.get();
-                    if (currentFuture != null && currentFuture.isCancelled()) {
-                      return;
-                    }
-                    if (timeoutFuture.compareAndSet(currentFuture, EVALUATED_FUTURE)) {
-                      responseFutureCopy.completeExceptionally(
-                          new HttpHeadersTimeoutException("couldn't receive headers on time"));
-                      responseFuture.cancel(true);
-                      return;
-                    }
-                  }
-                },
-                timeout,
-                SYNC_EXECUTOR);
+      void whenTimedOut(Runnable action) {
+        onTimeout.thenRun(action);
+      }
 
-        while (true) {
-          var currentFuture = timeoutFuture.get();
-          if (currentFuture != null && currentFuture.isCancelled()) {
-            scheduledFuture.cancel(false);
-            return responseFuture;
-          }
-          if ((currentFuture == null && timeoutFuture.compareAndSet(null, scheduledFuture))
-              || (currentFuture != null && currentFuture.isDone())) {
-            // Either we could CAS to scheduledFuture or scheduledFuture actually finished and CASed
-            // to EVALUATED_FUTURE before we had a chance to set it.
-            return responseFutureCopy;
-          }
-        }
+      void whenCancelled(Runnable action) {
+        onTimeout.whenComplete(
+            (__, e) -> {
+              if (e instanceof CancellationException) {
+                action.run();
+              }
+            });
       }
 
       boolean cancel() {
-        var future = timeoutFuture.getAndSet(CANCELLED_FUTURE);
-        return future == null || future.cancel(false);
+        return onTimeout.cancel(false);
       }
     }
 
