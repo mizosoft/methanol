@@ -1030,25 +1030,25 @@ public final class DiskStore implements Store {
     private final AtomicReference<WriteTaskView> scheduledWriteTask = new AtomicReference<>();
 
     /**
-     * A barrier for shutdowns to await the currently running task. Scheduled WriteTasks normally
-     * (if there're no flushes) have the following transitions:
+     * A barrier for shutdowns to await the currently running task. Scheduled WriteTasks have the
+     * following transitions:
      *
      * <pre>{@code
      * T1 -> T2 -> .... -> Tn
      * }</pre>
      *
      * Where Tn is the currently scheduled and hence the only referenced task, and the time between
-     * two consecutive Ts is at minimum the index update delay (note that Ts don't overlap since the
-     * executor is serialized). Ensuring no Ts are running after shutdown entails awaiting for the
-     * currently running task (if any) to finish then preventing ones following it from starting. If
-     * the update delay is small enough, or if the executor and/or the system-wide scheduler are
-     * busy, the currently running task might be lagging behind Tn by multiple Ts, so it's not ideal
-     * to somehow keep a reference to it in order to await it when needed. This Phaser solves this
-     * issue by having the currently running T to register itself then arriveAndDeregister when
-     * finished. During shutdown, the scheduler deregisters from, then attempts to await, the
-     * phaser, where it is only awaited if there is still one registered party (a running T). When
-     * registerers reach 0, the phaser is terminated, preventing yet to arrive tasks from
-     * registering, so they won't run.
+     * two consecutive Ts is generally the index update delay, or less if there are immediate
+     * flushes (note that Ts don't overlap since the executor is serialized). Ensuring no Ts are
+     * running after shutdown entails awaiting the currently running task (if any) to finish then
+     * preventing ones following it from starting. If the update delay is small enough, or if the
+     * executor and/or the system-wide scheduler are busy, the currently running task might be
+     * lagging behind Tn by multiple Ts, so it's not ideal to somehow keep a reference to it in
+     * order to await it when needed. This Phaser solves this issue by having the currently running
+     * T to register itself then arriveAndDeregister when finished. During shutdown, the scheduler
+     * de-registers from, then attempts to await, the phaser, where it is only awaited if there is
+     * still one registered party (a running T). When registerers reach 0, the phaser is terminated,
+     * preventing yet to arrive tasks from registering, so they won't run.
      */
     private final Phaser runningTaskAwaiter = new Phaser(1); // Register self
 
@@ -2131,6 +2131,7 @@ public final class DiskStore implements Store {
     }
 
     public Builder indexUpdateDelay(Duration duration) {
+      requireNonNull(duration);
       requireNonNegativeDuration(duration);
       this.indexUpdateDelay = duration;
       return this;
