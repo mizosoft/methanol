@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/decompression/">
       
       <link rel="icon" href="../images/flask.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.11">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
     
     
       
@@ -23,10 +23,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.8c5ef100.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.e411adfe.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.9647289d.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
         
       
     
@@ -790,13 +790,13 @@ that matches response's <code>Content-Encoding</code>. However, such approach is
 with <code>InputStreams</code>.</p>
 <p>The straightforward and recommended solution is to use Methanol's <a href="../enhanced_httpclient/">enhanced HTTP client</a>,
 which gives you transparent response decompression for <code>gzip</code> &amp; <code>deflate</code> out of the box.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">final</span> <span class="n">Methanol</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">final</span><span class="w"> </span><span class="n">Methanol</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span><span class="w"></span>
 
-<span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">HttpResponse</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">get</span><span class="p">(</span><span class="n">String</span> <span class="n">url</span><span class="p">,</span> <span class="n">BodyHandler</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">bodyHandler</span><span class="p">)</span> <span class="kd">throws</span> <span class="n">IOException</span><span class="p">,</span> <span class="n">InterruptedException</span> <span class="p">{</span>
-  <span class="c1">// No need to worry about adding Accept-Encoding and</span>
-  <span class="c1">// decompressing the response. The client does that for you!</span>
-  <span class="k">return</span> <span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">url</span><span class="p">),</span> <span class="n">bodyHandler</span><span class="p">);</span>
-<span class="p">}</span>
+<span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">HttpResponse</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">url</span><span class="p">,</span><span class="w"> </span><span class="n">BodyHandler</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">bodyHandler</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="p">,</span><span class="w"> </span><span class="n">InterruptedException</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="c1">// No need to worry about adding Accept-Encoding and</span><span class="w"></span>
+<span class="w">  </span><span class="c1">// decompressing the response. The client does that for you!</span><span class="w"></span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">url</span><span class="p">),</span><span class="w"> </span><span class="n">bodyHandler</span><span class="p">);</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 <p>Read on if you're interested in knowing how that's accomplished or you want to extend decompression
 support.</p>
@@ -804,7 +804,7 @@ support.</p>
 <p>The entry point to response body decompression is <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MoreBodyHandlers.html#decoding(java.net.http.HttpResponse.BodyHandler)"><code>MoreBodyHandlers::decoding</code></a>.
 This method takes your desired <code>BodyHandler</code> and gives you one that decompresses the response body as
 your handler's <code>BodySubscriber</code> receives it.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">MoreBodyHandlers</span><span class="p">.</span><span class="na">decoding</span><span class="p">(</span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofString</span><span class="p">()));</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">MoreBodyHandlers</span><span class="p">.</span><span class="na">decoding</span><span class="p">(</span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofString</span><span class="p">()));</span><span class="w"></span>
 </code></pre></div>
 <!-- The new `BodyHandler` intercepts the response, checking if there's a `Content-Encoding` header. If
 so, the body is decompressed accordingly, and your handler won't see any `Content-Encoding` or
@@ -840,112 +840,112 @@ you're only concerned with your decompression logic.</p>
 with the currently available input. After the final round, your <code>AsyncDecoder</code> must've completely
 exhausted its source. Here's a decoder implementation that uses <a href="https://www.jcraft.com/jzlib/">jzlib</a> for <code>gzip</code> &amp; <code>deflate</code>
 decompression.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">class</span> <span class="nc">JZlibDecoder</span> <span class="kd">implements</span> <span class="n">AsyncDecoder</span> <span class="p">{</span>
-  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">BUFFER_SIZE</span> <span class="o">=</span> <span class="mi">8096</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="kd">class</span> <span class="nc">JZlibDecoder</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">AsyncDecoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">BUFFER_SIZE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8096</span><span class="p">;</span><span class="w"></span>
 
-  <span class="kd">private</span> <span class="kd">final</span> <span class="n">String</span> <span class="n">encoding</span><span class="p">;</span>
-  <span class="kd">private</span> <span class="kd">final</span> <span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">Inflater</span> <span class="n">inflater</span><span class="p">;</span>
-  <span class="kd">private</span> <span class="kd">final</span> <span class="n">ByteBuffer</span> <span class="n">input</span> <span class="o">=</span> <span class="n">ByteBuffer</span><span class="p">.</span><span class="na">allocate</span><span class="p">(</span><span class="n">BUFFER_SIZE</span><span class="p">);</span>
-  <span class="kd">private</span> <span class="kd">final</span> <span class="n">ByteBuffer</span> <span class="n">output</span> <span class="o">=</span> <span class="n">ByteBuffer</span><span class="p">.</span><span class="na">allocate</span><span class="p">(</span><span class="n">BUFFER_SIZE</span><span class="p">);</span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">encoding</span><span class="p">;</span><span class="w"></span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">Inflater</span><span class="w"> </span><span class="n">inflater</span><span class="p">;</span><span class="w"></span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ByteBuffer</span><span class="w"> </span><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ByteBuffer</span><span class="p">.</span><span class="na">allocate</span><span class="p">(</span><span class="n">BUFFER_SIZE</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ByteBuffer</span><span class="w"> </span><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ByteBuffer</span><span class="p">.</span><span class="na">allocate</span><span class="p">(</span><span class="n">BUFFER_SIZE</span><span class="p">);</span><span class="w"></span>
 
-  <span class="n">JZlibDecoder</span><span class="p">(</span><span class="n">String</span> <span class="n">encoding</span><span class="p">,</span> <span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">WrapperType</span> <span class="n">wrapperType</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">try</span> <span class="p">{</span>
-      <span class="k">this</span><span class="p">.</span><span class="na">encoding</span> <span class="o">=</span> <span class="n">encoding</span><span class="p">;</span>
-      <span class="n">inflater</span> <span class="o">=</span> <span class="k">new</span> <span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">Inflater</span><span class="p">(</span><span class="n">wrapperType</span><span class="p">);</span>
-      <span class="n">inflater</span><span class="p">.</span><span class="na">setInput</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="na">array</span><span class="p">());</span>
-      <span class="n">inflater</span><span class="p">.</span><span class="na">setOutput</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="na">array</span><span class="p">());</span>
-    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">GZIPException</span> <span class="n">e</span><span class="p">)</span> <span class="p">{</span>
-      <span class="k">throw</span> <span class="k">new</span> <span class="n">RuntimeException</span><span class="p">(</span><span class="n">e</span><span class="p">);</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
+<span class="w">  </span><span class="n">JZlibDecoder</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">encoding</span><span class="p">,</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">WrapperType</span><span class="w"> </span><span class="n">wrapperType</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="k">this</span><span class="p">.</span><span class="na">encoding</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">encoding</span><span class="p">;</span><span class="w"></span>
+<span class="w">      </span><span class="n">inflater</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">Inflater</span><span class="p">(</span><span class="n">wrapperType</span><span class="p">);</span><span class="w"></span>
+<span class="w">      </span><span class="n">inflater</span><span class="p">.</span><span class="na">setInput</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="na">array</span><span class="p">());</span><span class="w"></span>
+<span class="w">      </span><span class="n">inflater</span><span class="p">.</span><span class="na">setOutput</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="na">array</span><span class="p">());</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">GZIPException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">RuntimeException</span><span class="p">(</span><span class="n">e</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="nd">@Override</span>
-  <span class="kd">public</span> <span class="n">String</span> <span class="nf">encoding</span><span class="p">()</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">encoding</span><span class="p">;</span>
-  <span class="p">}</span>
+<span class="w">  </span><span class="nd">@Override</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">encoding</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">encoding</span><span class="p">;</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="nd">@Override</span>
-  <span class="kd">public</span> <span class="kt">void</span> <span class="nf">decode</span><span class="p">(</span><span class="n">ByteSource</span> <span class="n">source</span><span class="p">,</span> <span class="n">ByteSink</span> <span class="n">sink</span><span class="p">)</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="p">{</span>
-    <span class="kd">synchronized</span> <span class="p">(</span><span class="n">inflater</span><span class="p">)</span> <span class="p">{</span>
-      <span class="k">while</span> <span class="p">(</span><span class="n">source</span><span class="p">.</span><span class="na">hasRemaining</span><span class="p">())</span> <span class="p">{</span>
-        <span class="c1">// Prepare input for this iteration</span>
-        <span class="n">refillInput</span><span class="p">(</span><span class="n">source</span><span class="p">);</span>
-        <span class="n">inflater</span><span class="p">.</span><span class="na">setNextInIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
-        <span class="n">inflater</span><span class="p">.</span><span class="na">setAvailIn</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="na">limit</span><span class="p">());</span>
+<span class="w">  </span><span class="nd">@Override</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">decode</span><span class="p">(</span><span class="n">ByteSource</span><span class="w"> </span><span class="n">source</span><span class="p">,</span><span class="w"> </span><span class="n">ByteSink</span><span class="w"> </span><span class="n">sink</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">synchronized</span><span class="w"> </span><span class="p">(</span><span class="n">inflater</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">source</span><span class="p">.</span><span class="na">hasRemaining</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="c1">// Prepare input for this iteration</span><span class="w"></span>
+<span class="w">        </span><span class="n">refillInput</span><span class="p">(</span><span class="n">source</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="n">inflater</span><span class="p">.</span><span class="na">setNextInIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+<span class="w">        </span><span class="n">inflater</span><span class="p">.</span><span class="na">setAvailIn</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="na">limit</span><span class="p">());</span><span class="w"></span>
 
-        <span class="c1">// Continue inflating as long as there&#39;s more input or there&#39;s pending output</span>
+<span class="w">        </span><span class="c1">// Continue inflating as long as there&#39;s more input or there&#39;s pending output</span><span class="w"></span>
 
-        <span class="kt">boolean</span> <span class="n">mightHavePendingOutput</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">boolean</span><span class="w"> </span><span class="n">mightHavePendingOutput</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">;</span><span class="w"></span>
 
-        <span class="nl">inflateLoop</span><span class="p">:</span>
-        <span class="k">while</span> <span class="p">(</span><span class="n">inflater</span><span class="p">.</span><span class="na">getAvailIn</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">mightHavePendingOutput</span><span class="p">)</span> <span class="p">{</span>
-          <span class="c1">// Prepare for new output</span>
-          <span class="n">inflater</span><span class="p">.</span><span class="na">setNextOutIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
-          <span class="n">inflater</span><span class="p">.</span><span class="na">setAvailOut</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="na">capacity</span><span class="p">());</span>
+<span class="w">        </span><span class="nl">inflateLoop</span><span class="p">:</span><span class="w"></span>
+<span class="w">        </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">inflater</span><span class="p">.</span><span class="na">getAvailIn</span><span class="p">()</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">mightHavePendingOutput</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">          </span><span class="c1">// Prepare for new output</span><span class="w"></span>
+<span class="w">          </span><span class="n">inflater</span><span class="p">.</span><span class="na">setNextOutIndex</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span><span class="w"></span>
+<span class="w">          </span><span class="n">inflater</span><span class="p">.</span><span class="na">setAvailOut</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="na">capacity</span><span class="p">());</span><span class="w"></span>
 
-          <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="n">inflater</span><span class="p">.</span><span class="na">inflate</span><span class="p">(</span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">Z_SYNC_FLUSH</span><span class="p">);</span>
-          <span class="kt">int</span> <span class="n">outputCount</span> <span class="o">=</span> <span class="n">inflater</span><span class="p">.</span><span class="na">getNextOutIndex</span><span class="p">();</span>
-          <span class="n">sink</span><span class="p">.</span><span class="na">pushBytes</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="na">position</span><span class="p">(</span><span class="mi">0</span><span class="p">).</span><span class="na">limit</span><span class="p">(</span><span class="n">outputCount</span><span class="p">));</span>
+<span class="w">          </span><span class="kt">int</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">inflater</span><span class="p">.</span><span class="na">inflate</span><span class="p">(</span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">Z_SYNC_FLUSH</span><span class="p">);</span><span class="w"></span>
+<span class="w">          </span><span class="kt">int</span><span class="w"> </span><span class="n">outputCount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">inflater</span><span class="p">.</span><span class="na">getNextOutIndex</span><span class="p">();</span><span class="w"></span>
+<span class="w">          </span><span class="n">sink</span><span class="p">.</span><span class="na">pushBytes</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="na">position</span><span class="p">(</span><span class="mi">0</span><span class="p">).</span><span class="na">limit</span><span class="p">(</span><span class="n">outputCount</span><span class="p">));</span><span class="w"></span>
 
-          <span class="k">switch</span> <span class="p">(</span><span class="n">status</span><span class="p">)</span> <span class="p">{</span>
-            <span class="k">case</span> <span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">Z_OK</span><span class="p">:</span>
-              <span class="n">mightHavePendingOutput</span> <span class="o">=</span> <span class="n">inflater</span><span class="p">.</span><span class="na">getAvailOut</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">;</span>
-              <span class="k">break</span><span class="p">;</span>
+<span class="w">          </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">status</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">Z_OK</span><span class="p">:</span><span class="w"></span>
+<span class="w">              </span><span class="n">mightHavePendingOutput</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">inflater</span><span class="p">.</span><span class="na">getAvailOut</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"></span>
+<span class="w">              </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
 
-            <span class="k">case</span> <span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">Z_STREAM_END</span><span class="p">:</span>
-              <span class="c1">// The compressed stream has ended</span>
-              <span class="k">break</span> <span class="n">inflateLoop</span><span class="p">;</span>
+<span class="w">            </span><span class="k">case</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">Z_STREAM_END</span><span class="p">:</span><span class="w"></span>
+<span class="w">              </span><span class="c1">// The compressed stream has ended</span><span class="w"></span>
+<span class="w">              </span><span class="k">break</span><span class="w"> </span><span class="n">inflateLoop</span><span class="p">;</span><span class="w"></span>
 
-            <span class="k">default</span><span class="p">:</span>
-              <span class="k">throw</span> <span class="k">new</span> <span class="n">IOException</span><span class="p">(</span><span class="s">&quot;problem with zlib: &quot;</span> <span class="o">+</span> <span class="n">Integer</span><span class="p">.</span><span class="na">toHexString</span><span class="p">(</span><span class="n">status</span><span class="p">));</span>
-          <span class="p">}</span>
-        <span class="p">}</span>
-      <span class="p">}</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
+<span class="w">            </span><span class="k">default</span><span class="p">:</span><span class="w"></span>
+<span class="w">              </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IOException</span><span class="p">(</span><span class="s">&quot;problem with zlib: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Integer</span><span class="p">.</span><span class="na">toHexString</span><span class="p">(</span><span class="n">status</span><span class="p">));</span><span class="w"></span>
+<span class="w">          </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">      </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="kd">private</span> <span class="kt">void</span> <span class="nf">refillInput</span><span class="p">(</span><span class="n">ByteSource</span> <span class="n">source</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">input</span><span class="p">.</span><span class="na">clear</span><span class="p">();</span>
-    <span class="n">source</span><span class="p">.</span><span class="na">pullBytes</span><span class="p">(</span><span class="n">input</span><span class="p">);</span>
-    <span class="n">input</span><span class="p">.</span><span class="na">flip</span><span class="p">();</span>
-  <span class="p">}</span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">refillInput</span><span class="p">(</span><span class="n">ByteSource</span><span class="w"> </span><span class="n">source</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">input</span><span class="p">.</span><span class="na">clear</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="n">source</span><span class="p">.</span><span class="na">pullBytes</span><span class="p">(</span><span class="n">input</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">input</span><span class="p">.</span><span class="na">flip</span><span class="p">();</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="nd">@Override</span>
-  <span class="kd">public</span> <span class="kd">synchronized</span> <span class="kt">void</span> <span class="nf">close</span><span class="p">()</span> <span class="p">{</span>
-    <span class="kd">synchronized</span> <span class="p">(</span><span class="n">inflater</span><span class="p">)</span> <span class="p">{</span>
-      <span class="n">inflater</span><span class="p">.</span><span class="na">end</span><span class="p">();</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-<span class="p">}</span>
+<span class="w">  </span><span class="nd">@Override</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">synchronized</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">close</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">synchronized</span><span class="w"> </span><span class="p">(</span><span class="n">inflater</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">inflater</span><span class="p">.</span><span class="na">end</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 <h2 id="registering-a-factory">Registering a Factory<a class="headerlink" href="#registering-a-factory" title="Permanent link">&para;</a></h2>
 <p>Here's a <code>BodyDecoder.Factory</code> for <code>gzip</code> using our jzlib decoder.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span> <span class="kd">static</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">MyDecoderFactory</span> <span class="kd">implements</span> <span class="n">BodyDecoder</span><span class="p">.</span><span class="na">Factory</span> <span class="p">{</span>
-  <span class="nd">@Override</span>
-  <span class="kd">public</span> <span class="n">String</span> <span class="nf">encoding</span><span class="p">()</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="s">&quot;gzip&quot;</span><span class="p">;</span>
-  <span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kd">class</span> <span class="nc">MyDecoderFactory</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">BodyDecoder</span><span class="p">.</span><span class="na">Factory</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="nd">@Override</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">encoding</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;gzip&quot;</span><span class="p">;</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="nd">@Override</span>
-  <span class="kd">public</span> <span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">BodyDecoder</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">create</span><span class="p">(</span><span class="n">BodySubscriber</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">downstream</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="k">new</span> <span class="n">AsyncBodyDecoder</span><span class="o">&lt;&gt;</span><span class="p">(</span>
-        <span class="k">new</span> <span class="n">JZlibDecoder</span><span class="p">(</span><span class="s">&quot;gzip&quot;</span><span class="p">,</span> <span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">WrapperType</span><span class="p">.</span><span class="na">GZIP</span><span class="p">),</span> <span class="n">downstream</span><span class="p">);</span>
-  <span class="p">}</span>
+<span class="w">  </span><span class="nd">@Override</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">BodyDecoder</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">BodySubscriber</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">downstream</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">AsyncBodyDecoder</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="k">new</span><span class="w"> </span><span class="n">JZlibDecoder</span><span class="p">(</span><span class="s">&quot;gzip&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">WrapperType</span><span class="p">.</span><span class="na">GZIP</span><span class="p">),</span><span class="w"> </span><span class="n">downstream</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="nd">@Override</span>
-  <span class="kd">public</span> <span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">BodyDecoder</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">create</span><span class="p">(</span><span class="n">BodySubscriber</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">downstream</span><span class="p">,</span> <span class="n">Executor</span> <span class="n">executor</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="k">new</span> <span class="n">AsyncBodyDecoder</span><span class="o">&lt;&gt;</span><span class="p">(</span>
-        <span class="k">new</span> <span class="n">JZlibDecoder</span><span class="p">(</span><span class="s">&quot;gzip&quot;</span><span class="p">,</span> <span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">WrapperType</span><span class="p">.</span><span class="na">GZIP</span><span class="p">),</span> <span class="n">downstream</span><span class="p">);</span>
-  <span class="p">}</span>
-<span class="p">}</span>
+<span class="w">  </span><span class="nd">@Override</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">BodyDecoder</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">create</span><span class="p">(</span><span class="n">BodySubscriber</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">downstream</span><span class="p">,</span><span class="w"> </span><span class="n">Executor</span><span class="w"> </span><span class="n">executor</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">AsyncBodyDecoder</span><span class="o">&lt;&gt;</span><span class="p">(</span><span class="w"></span>
+<span class="w">        </span><span class="k">new</span><span class="w"> </span><span class="n">JZlibDecoder</span><span class="p">(</span><span class="s">&quot;gzip&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">com</span><span class="p">.</span><span class="na">jcraft</span><span class="p">.</span><span class="na">jzlib</span><span class="p">.</span><span class="na">JZlib</span><span class="p">.</span><span class="na">WrapperType</span><span class="p">.</span><span class="na">GZIP</span><span class="p">),</span><span class="w"> </span><span class="n">downstream</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 <p>The next step is to declare your factory as a service-provider. For instance, here's an appropriate
 <code>provides...with</code> declaration to put in <code>module-info.java</code> if your application uses Java modules.</p>
-<div class="highlight"><pre><span></span><code><span class="n">module</span> <span class="n">my</span><span class="p">.</span><span class="na">module</span> <span class="p">{</span>
-  <span class="p">...</span>
+<div class="highlight"><pre><span></span><code><span class="n">module</span><span class="w"> </span><span class="n">my</span><span class="p">.</span><span class="na">module</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="p">...</span><span class="w"></span>
 
-  <span class="n">provides</span> <span class="n">BodyDecoder</span><span class="p">.</span><span class="na">Factory</span> <span class="n">with</span> <span class="n">MyDecoderFactory</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">  </span><span class="n">provides</span><span class="w"> </span><span class="n">BodyDecoder</span><span class="p">.</span><span class="na">Factory</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">MyDecoderFactory</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
               
@@ -1034,7 +1034,7 @@ decompression.</p>
     <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.748e2769.min.js"></script>
+      <script src="../assets/javascripts/bundle.ed9748b7.min.js"></script>
       
     
   </body>

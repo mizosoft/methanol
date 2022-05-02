@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/interceptors/">
       
       <link rel="icon" href="../images/flask.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.11">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
     
     
       
@@ -23,10 +23,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.8c5ef100.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.e411adfe.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.9647289d.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
         
       
     
@@ -793,49 +793,49 @@ and to responses in their way back.</p>
 <p>Interceptors sit between a <code>Methanol</code> client and its underlying <code>HttpClient</code>, referred to as its
 backend. When registered, an interceptor is invoked each <code>send</code> or <code>sendAsync</code>
 call. Here's an interceptor that logs requests and their responses.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">LoggingInterceptor</span> <span class="kd">implements</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">Interceptor</span> <span class="p">{</span>
-  <span class="kd">private</span> <span class="kd">static</span> <span class="kd">final</span> <span class="n">Logger</span> <span class="n">logger</span> <span class="o">=</span> <span class="n">Logger</span><span class="p">.</span><span class="na">getLogger</span><span class="p">(</span><span class="n">LoggingInterceptor</span><span class="p">.</span><span class="na">class</span><span class="p">.</span><span class="na">getName</span><span class="p">());</span>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kd">class</span> <span class="nc">LoggingInterceptor</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">Interceptor</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Logger</span><span class="w"> </span><span class="n">logger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Logger</span><span class="p">.</span><span class="na">getLogger</span><span class="p">(</span><span class="n">LoggingInterceptor</span><span class="p">.</span><span class="na">class</span><span class="p">.</span><span class="na">getName</span><span class="p">());</span><span class="w"></span>
 
-  <span class="nd">@Override</span>
-  <span class="kd">public</span> <span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">HttpResponse</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">intercept</span><span class="p">(</span><span class="n">HttpRequest</span> <span class="n">request</span><span class="p">,</span> <span class="n">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">chain</span><span class="p">)</span>
-      <span class="kd">throws</span> <span class="n">IOException</span><span class="p">,</span> <span class="n">InterruptedException</span> <span class="p">{</span>
-    <span class="n">logRequest</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
-    <span class="k">return</span> <span class="n">toLoggingChain</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">chain</span><span class="p">).</span><span class="na">forward</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
-  <span class="p">}</span>
+<span class="w">  </span><span class="nd">@Override</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">HttpResponse</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">intercept</span><span class="p">(</span><span class="n">HttpRequest</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">chain</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="p">,</span><span class="w"> </span><span class="n">InterruptedException</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">logRequest</span><span class="p">(</span><span class="n">request</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">toLoggingChain</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">chain</span><span class="p">).</span><span class="na">forward</span><span class="p">(</span><span class="n">request</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="nd">@Override</span>
-  <span class="kd">public</span> <span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">HttpResponse</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span> <span class="nf">interceptAsync</span><span class="p">(</span>
-      <span class="n">HttpRequest</span> <span class="n">request</span><span class="p">,</span> <span class="n">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">chain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">logRequest</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
-    <span class="k">return</span> <span class="n">toLoggingChain</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">chain</span><span class="p">).</span><span class="na">forwardAsync</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
-  <span class="p">}</span>
+<span class="w">  </span><span class="nd">@Override</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">CompletableFuture</span><span class="o">&lt;</span><span class="n">HttpResponse</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="nf">interceptAsync</span><span class="p">(</span><span class="w"></span>
+<span class="w">      </span><span class="n">HttpRequest</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">chain</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">logRequest</span><span class="p">(</span><span class="n">request</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">toLoggingChain</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">chain</span><span class="p">).</span><span class="na">forwardAsync</span><span class="p">(</span><span class="n">request</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="kd">private</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">logRequest</span><span class="p">(</span><span class="n">HttpRequest</span> <span class="n">request</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">logger</span><span class="p">.</span><span class="na">info</span><span class="p">(()</span> <span class="o">-&gt;</span> <span class="n">String</span><span class="p">.</span><span class="na">format</span><span class="p">(</span><span class="s">&quot;Sending %s%n%s&quot;</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">headersToString</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="na">headers</span><span class="p">())));</span>
-  <span class="p">}</span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">logRequest</span><span class="p">(</span><span class="n">HttpRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">logger</span><span class="p">.</span><span class="na">info</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">String</span><span class="p">.</span><span class="na">format</span><span class="p">(</span><span class="s">&quot;Sending %s%n%s&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">headersToString</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="na">headers</span><span class="p">())));</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="kd">private</span> <span class="kd">static</span> <span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="nf">toLoggingChain</span><span class="p">(</span><span class="n">HttpRequest</span> <span class="n">request</span><span class="p">,</span> <span class="n">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">chain</span><span class="p">)</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="n">sentAt</span> <span class="o">=</span> <span class="n">Instant</span><span class="p">.</span><span class="na">now</span><span class="p">();</span>
-    <span class="k">return</span> <span class="n">chain</span><span class="p">.</span><span class="na">withBodyHandler</span><span class="p">(</span><span class="n">responseInfo</span> <span class="o">-&gt;</span> <span class="p">{</span>
-        <span class="n">logger</span><span class="p">.</span><span class="na">info</span><span class="p">(()</span> <span class="o">-&gt;</span> <span class="n">String</span><span class="p">.</span><span class="na">format</span><span class="p">(</span>
-            <span class="s">&quot;Completed %s %s with %d in %sms%n%s&quot;</span><span class="p">,</span>
-            <span class="n">request</span><span class="p">.</span><span class="na">method</span><span class="p">(),</span>
-            <span class="n">request</span><span class="p">.</span><span class="na">uri</span><span class="p">(),</span>
-            <span class="n">responseInfo</span><span class="p">.</span><span class="na">statusCode</span><span class="p">(),</span>
-            <span class="n">Duration</span><span class="p">.</span><span class="na">between</span><span class="p">(</span><span class="n">sentAt</span><span class="p">,</span> <span class="n">Instant</span><span class="p">.</span><span class="na">now</span><span class="p">()).</span><span class="na">toMillis</span><span class="p">(),</span>
-            <span class="n">headersToString</span><span class="p">(</span><span class="n">responseInfo</span><span class="p">.</span><span class="na">headers</span><span class="p">())));</span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">toLoggingChain</span><span class="p">(</span><span class="n">HttpRequest</span><span class="w"> </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">chain</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="n">sentAt</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Instant</span><span class="p">.</span><span class="na">now</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">chain</span><span class="p">.</span><span class="na">withBodyHandler</span><span class="p">(</span><span class="n">responseInfo</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">logger</span><span class="p">.</span><span class="na">info</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">String</span><span class="p">.</span><span class="na">format</span><span class="p">(</span><span class="w"></span>
+<span class="w">            </span><span class="s">&quot;Completed %s %s with %d in %sms%n%s&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="n">request</span><span class="p">.</span><span class="na">method</span><span class="p">(),</span><span class="w"></span>
+<span class="w">            </span><span class="n">request</span><span class="p">.</span><span class="na">uri</span><span class="p">(),</span><span class="w"></span>
+<span class="w">            </span><span class="n">responseInfo</span><span class="p">.</span><span class="na">statusCode</span><span class="p">(),</span><span class="w"></span>
+<span class="w">            </span><span class="n">Duration</span><span class="p">.</span><span class="na">between</span><span class="p">(</span><span class="n">sentAt</span><span class="p">,</span><span class="w"> </span><span class="n">Instant</span><span class="p">.</span><span class="na">now</span><span class="p">()).</span><span class="na">toMillis</span><span class="p">(),</span><span class="w"></span>
+<span class="w">            </span><span class="n">headersToString</span><span class="p">(</span><span class="n">responseInfo</span><span class="p">.</span><span class="na">headers</span><span class="p">())));</span><span class="w"></span>
 
-        <span class="c1">// Apply the original BodyHandler</span>
-        <span class="k">return</span> <span class="n">chain</span><span class="p">.</span><span class="na">bodyHandler</span><span class="p">().</span><span class="na">apply</span><span class="p">(</span><span class="n">responseInfo</span><span class="p">);</span>
-    <span class="p">});</span>
-  <span class="p">}</span>
+<span class="w">        </span><span class="c1">// Apply the original BodyHandler</span><span class="w"></span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">chain</span><span class="p">.</span><span class="na">bodyHandler</span><span class="p">().</span><span class="na">apply</span><span class="p">(</span><span class="n">responseInfo</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">});</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-  <span class="kd">private</span> <span class="kd">static</span> <span class="n">String</span> <span class="nf">headersToString</span><span class="p">(</span><span class="n">HttpHeaders</span> <span class="n">headers</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="n">headers</span><span class="p">.</span><span class="na">map</span><span class="p">().</span><span class="na">entrySet</span><span class="p">().</span><span class="na">stream</span><span class="p">()</span>
-        <span class="p">.</span><span class="na">map</span><span class="p">(</span><span class="n">entry</span> <span class="o">-&gt;</span> <span class="n">entry</span><span class="p">.</span><span class="na">getKey</span><span class="p">()</span> <span class="o">+</span> <span class="s">&quot;: &quot;</span> <span class="o">+</span> <span class="n">String</span><span class="p">.</span><span class="na">join</span><span class="p">(</span><span class="s">&quot;, &quot;</span><span class="p">,</span> <span class="n">entry</span><span class="p">.</span><span class="na">getValue</span><span class="p">()))</span>
-        <span class="p">.</span><span class="na">collect</span><span class="p">(</span><span class="n">Collectors</span><span class="p">.</span><span class="na">joining</span><span class="p">(</span><span class="n">System</span><span class="p">.</span><span class="na">lineSeparator</span><span class="p">()));</span>
-  <span class="p">}</span>
-<span class="p">}</span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">headersToString</span><span class="p">(</span><span class="n">HttpHeaders</span><span class="w"> </span><span class="n">headers</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">headers</span><span class="p">.</span><span class="na">map</span><span class="p">().</span><span class="na">entrySet</span><span class="p">().</span><span class="na">stream</span><span class="p">()</span><span class="w"></span>
+<span class="w">        </span><span class="p">.</span><span class="na">map</span><span class="p">(</span><span class="n">entry</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">entry</span><span class="p">.</span><span class="na">getKey</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">String</span><span class="p">.</span><span class="na">join</span><span class="p">(</span><span class="s">&quot;, &quot;</span><span class="p">,</span><span class="w"> </span><span class="n">entry</span><span class="p">.</span><span class="na">getValue</span><span class="p">()))</span><span class="w"></span>
+<span class="w">        </span><span class="p">.</span><span class="na">collect</span><span class="p">(</span><span class="n">Collectors</span><span class="p">.</span><span class="na">joining</span><span class="p">(</span><span class="n">System</span><span class="p">.</span><span class="na">lineSeparator</span><span class="p">()));</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 <p><code>HttpClient</code> has blocking and asynchronous APIs, so interceptors must implement two methods
 matching each. An interceptor is given a <code>Chain&lt;T&gt;</code> so it can forward requests to 
@@ -843,11 +843,11 @@ its next sibling, or to the backend in case there's no more interceptors in the 
 where requests finally get sent. Typically, an interceptor calls its chain's <code>forward</code> or <code>forwardAsync</code>
 after it has done its job.</p>
 <p>If your interceptor only modifies requests, prefer passing a lambda to <code>Interceptor::create</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// Enable &#39;Expect: Continue&#39; for all POSTs to a particular host</span>
-<span class="kd">var</span> <span class="n">expectContinueInterceptor</span> <span class="o">=</span> <span class="n">Interceptor</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="n">request</span> <span class="o">-&gt;</span>
-    <span class="n">request</span><span class="p">.</span><span class="na">method</span><span class="p">().</span><span class="na">equalsIgnoreCase</span><span class="p">(</span><span class="s">&quot;POST&quot;</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="n">request</span><span class="p">.</span><span class="na">uri</span><span class="p">().</span><span class="na">getHost</span><span class="p">().</span><span class="na">equals</span><span class="p">(</span><span class="s">&quot;api.imgur.com&quot;</span><span class="p">)</span>
-        <span class="o">?</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">copyOf</span><span class="p">(</span><span class="n">request</span><span class="p">).</span><span class="na">expectContinue</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
-        <span class="p">:</span> <span class="n">request</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Enable &#39;Expect: Continue&#39; for all POSTs to a particular host</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">expectContinueInterceptor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Interceptor</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="n">request</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"></span>
+<span class="w">    </span><span class="n">request</span><span class="p">.</span><span class="na">method</span><span class="p">().</span><span class="na">equalsIgnoreCase</span><span class="p">(</span><span class="s">&quot;POST&quot;</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">request</span><span class="p">.</span><span class="na">uri</span><span class="p">().</span><span class="na">getHost</span><span class="p">().</span><span class="na">equals</span><span class="p">(</span><span class="s">&quot;api.imgur.com&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="o">?</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">copyOf</span><span class="p">(</span><span class="n">request</span><span class="p">).</span><span class="na">expectContinue</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span><span class="w"></span>
+<span class="w">        </span><span class="p">:</span><span class="w"> </span><span class="n">request</span><span class="p">);</span><span class="w"></span>
 </code></pre></div>
 <h2 id="intercepting-bodies">Intercepting Bodies<a class="headerlink" href="#intercepting-bodies" title="Permanent link">&para;</a></h2>
 <p>A powerful property of interceptors is their control over how responses are received by their
@@ -892,15 +892,15 @@ consequence, backend interceptors may get invoked more than once in the presence
 <p>You can register client and backend interceptors with <code>interceptor(...)</code> and <code>backendInterceptor(...)</code>
 respectively. Interceptors in each group get invoked in registration order.</p>
 <div class="tabbed-set" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><label for="__tabbed_1_1">Client Interceptors</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">interceptor</span><span class="p">(</span><span class="k">new</span> <span class="n">LoggingInterceptor</span><span class="p">())</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">LoggingInterceptor</span><span class="p">())</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 </div>
 <input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><label for="__tabbed_1_2">Backend Interceptors</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">backendInterceptor</span><span class="p">(</span><span class="k">new</span> <span class="n">LoggingInterceptor</span><span class="p">())</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">backendInterceptor</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">LoggingInterceptor</span><span class="p">())</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 </div>
 </div>
@@ -1002,7 +1002,7 @@ because <code>HttpClient</code> exports no API to do so.</p>
     <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.748e2769.min.js"></script>
+      <script src="../assets/javascripts/bundle.ed9748b7.min.js"></script>
       
     
   </body>

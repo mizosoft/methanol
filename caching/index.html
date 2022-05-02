@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/caching/">
       
       <link rel="icon" href="../images/flask.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.11">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
     
     
       
@@ -23,10 +23,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.8c5ef100.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.e411adfe.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.9647289d.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
         
       
     
@@ -902,37 +902,37 @@ backends.</p>
 <p>An <code>HttpCache</code> is utilized by injecting it into a <code>Methanol</code> client. First, it needs to know where
 it stores entries and how much space it can occupy.</p>
 <div class="tabbed-set" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><label for="__tabbed_1_1">Disk</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="c1">// Select a size limit thats suitable for your application</span>
-<span class="kt">long</span> <span class="n">maxSizeInBytes</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span> <span class="c1">// 100 MBs</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Select a size limit thats suitable for your application</span><span class="w"></span>
+<span class="kt">long</span><span class="w"> </span><span class="n">maxSizeInBytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">;</span><span class="w"> </span><span class="c1">// 100 MBs</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="n">maxSizeInBytes</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">maxSizeInBytes</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="c1">// The cache intercepts requests you send through this client</span>
-<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<span class="c1">// The cache intercepts requests you send through this client</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="c1">// It&#39;s important that you close the disk cache after you&#39;re done</span>
-<span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span>
+<span class="c1">// It&#39;s important that you close the disk cache after you&#39;re done</span><span class="w"></span>
+<span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 </div>
 <input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><label for="__tabbed_1_2">Memory</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="c1">// Select a size limit thats suitable for your application</span>
-<span class="kt">long</span> <span class="n">maxSizeInBytes</span> <span class="o">=</span> <span class="mi">50</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">;</span> <span class="c1">// 50 MBs</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Select a size limit thats suitable for your application</span><span class="w"></span>
+<span class="kt">long</span><span class="w"> </span><span class="n">maxSizeInBytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">50</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">;</span><span class="w"> </span><span class="c1">// 50 MBs</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cacheOnMemory</span><span class="p">(</span><span class="n">maxSizeInBytes</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cacheOnMemory</span><span class="p">(</span><span class="n">maxSizeInBytes</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="c1">// The cache intercepts requests you send through this client</span>
-<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<span class="c1">// The cache intercepts requests you send through this client</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="c1">// No need to close, but doing so avoids surprises if you later switch to disk</span>
-<span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span>
+<span class="c1">// No need to close, but doing so avoids surprises if you later switch to disk</span><span class="w"></span>
+<span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 </div>
 </div>
@@ -957,21 +957,21 @@ without further setup.</p>
 <h2 id="cachecontrol">CacheControl<a class="headerlink" href="#cachecontrol" title="Permanent link">&para;</a></h2>
 <p>Requests override default cache behaviour using <code>CacheControl</code>.</p>
 <div class="tabbed-set" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><label for="__tabbed_2_1">CacheControl</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="c1">// Specify your cache directives</span>
-<span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">maxAge</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofMinutes</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
-    <span class="p">.</span><span class="na">staleIfError</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">60</span><span class="p">))</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Specify your cache directives</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">cacheControl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">maxAge</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofMinutes</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">staleIfError</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">60</span><span class="p">))</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="c1">// Apply the directives to your request</span>
-<span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">cacheControl</span><span class="p">(</span><span class="n">cacheControl</span><span class="p">);</span>
+<span class="c1">// Apply the directives to your request</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cacheControl</span><span class="p">(</span><span class="n">cacheControl</span><span class="p">);</span><span class="w"></span>
 </code></pre></div>
 </div>
 <input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><label for="__tabbed_2_2">Cache-Control header</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="c1">// Cache-Control headers work as well</span>
-<span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Cache-Control&quot;</span><span class="p">,</span> <span class="s">&quot;max-age=1800, stale-if-error=60&quot;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Cache-Control headers work as well</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;...&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Cache-Control&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;max-age=1800, stale-if-error=60&quot;</span><span class="p">);</span><span class="w"></span>
 </code></pre></div>
 </div>
 </div>
@@ -986,14 +986,14 @@ specifies how long a stored response stays fresh. This is known as the response'
 The <em>freshness value</em> of a response is its age subtracted from its freshness lifetime. A response is
 fresh if its freshness value is <code>&gt;= 0</code>.</p>
 <p><code>CacheControl</code> lets you override a response's freshness lifetime by setting the <code>max-age</code> directive.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
-    <span class="p">.</span><span class="na">maxAge</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="c1">// Override the lifetime set by the server, if any</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cacheControl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"> </span>
+<span class="w">    </span><span class="p">.</span><span class="na">maxAge</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span><span class="w"> </span><span class="c1">// Override the lifetime set by the server, if any</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <p>You can specify how fresh you'd like the response to be by putting a lower bound on its freshness value.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
-    <span class="p">.</span><span class="na">minFresh</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofMinutes</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span> <span class="c1">// Accept a response that stays fresh for at least the next 10 minutes</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cacheControl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"> </span>
+<span class="w">    </span><span class="p">.</span><span class="na">minFresh</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofMinutes</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span><span class="w"> </span><span class="c1">// Accept a response that stays fresh for at least the next 10 minutes</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <div class="admonition info">
 <p class="admonition-title">Info</p>
@@ -1010,30 +1010,30 @@ If the server doesn't mind, the cache serves said response without re-downloadin
 Otherwise, the response is re-fetched.</p>
 <p>You can let the cache tolerate some stalness so it doesn't trigger revalidation.</p>
 <div class="tabbed-set" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><label for="__tabbed_3_1">Bounded Staleness</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
-    <span class="p">.</span><span class="na">maxStale</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span> <span class="c1">// Allow at most 30 seconds of staleness</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cacheControl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"> </span>
+<span class="w">    </span><span class="p">.</span><span class="na">maxStale</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span><span class="w"> </span><span class="c1">// Allow at most 30 seconds of staleness</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 </div>
 <input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><label for="__tabbed_3_2">Arbitrary Staleness</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
-    <span class="p">.</span><span class="na">anyMaxStale</span><span class="p">()</span> <span class="c1">// Allow any staleness</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cacheControl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"> </span>
+<span class="w">    </span><span class="p">.</span><span class="na">anyMaxStale</span><span class="p">()</span><span class="w"> </span><span class="c1">// Allow any staleness</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 </div>
 </div>
 <p><code>stale-if-error</code> makes the cache recover from network or server failures if there's a stored response.
 In such occasions, the cache falls back to the stored response if it satisfies the specified staleness.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
-    <span class="p">.</span><span class="na">staleIfError</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cacheControl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"> </span>
+<span class="w">    </span><span class="p">.</span><span class="na">staleIfError</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <h3 id="no-cache">No Cache<a class="headerlink" href="#no-cache" title="Permanent link">&para;</a></h3>
 <p>You might want the cache to forward your request to origin even if there's a fresh stored response
 (e.g. refreshing a page). That's what <code>no-cache</code> is meant for.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
-    <span class="p">.</span><span class="na">noCache</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cacheControl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"> </span>
+<span class="w">    </span><span class="p">.</span><span class="na">noCache</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <p>The cache will use network efficiently. If there's a stored response, its presence is communicated
 to the server, so it can decide to let the cache serve said response if nothing has changed.</p>
@@ -1041,17 +1041,17 @@ to the server, so it can decide to let the cache serve said response if nothing 
 <p>Use <code>only-if-cached</code> to avoid network in all cases. As usual, a stored response is served if it's
 suitable. Otherwise, however, the cache immediately serves a locally generated <code>504 Gateway Timeout</code>
 response.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
-    <span class="p">.</span><span class="na">onlyIfCached</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cacheControl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"> </span>
+<span class="w">    </span><span class="p">.</span><span class="na">onlyIfCached</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <p>A perfect use-case is when network is down or the app is offline. You'd want to get a cached
 response if it's there or otherwise nothing.</p>
 <h3 id="prohibiting-storage">Prohibiting Storage<a class="headerlink" href="#prohibiting-storage" title="Permanent link">&para;</a></h3>
 <p>Use <code>no-store</code> if you don't want the cache to store anything about the response.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cacheControl</span> <span class="o">=</span>  <span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span> 
-    <span class="p">.</span><span class="na">noStore</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cacheControl</span><span class="w"> </span><span class="o">=</span><span class="w">  </span><span class="n">CacheControl</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"> </span>
+<span class="w">    </span><span class="p">.</span><span class="na">noStore</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <p>Note that this, however, doesn't prohibit the cache from serving an already stored response.</p>
 <h3 id="asynchronous-revalidation">Asynchronous Revalidation<a class="headerlink" href="#asynchronous-revalidation" title="Permanent link">&para;</a></h3>
@@ -1063,34 +1063,34 @@ allowed staleness. What's interesting is that an  asynchronous revalidation is t
 is updated in background, keeping things fresh.</p>
 <h2 id="invalidation">Invalidation<a class="headerlink" href="#invalidation" title="Permanent link">&para;</a></h2>
 <p><code>HttpCache</code> has APIs that give you more control over what's stored.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="c1">// Remove the entry mapped to a particular URI</span>
-<span class="n">cache</span><span class="p">.</span><span class="na">remove</span><span class="p">(</span><span class="n">URI</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">));</span>
+<span class="c1">// Remove the entry mapped to a particular URI</span><span class="w"></span>
+<span class="n">cache</span><span class="p">.</span><span class="na">remove</span><span class="p">(</span><span class="n">URI</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">));</span><span class="w"></span>
 
-<span class="c1">// Remove the response variant matching a particular request</span>
-<span class="n">cache</span><span class="p">.</span><span class="na">remove</span><span class="p">(</span>
-    <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">URI</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">))</span>
-        <span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Accept-Encoding&quot;</span><span class="p">,</span> <span class="s">&quot;gzip&quot;</span><span class="p">));</span>
+<span class="c1">// Remove the response variant matching a particular request</span><span class="w"></span>
+<span class="n">cache</span><span class="p">.</span><span class="na">remove</span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">URI</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">))</span><span class="w"></span>
+<span class="w">        </span><span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Accept-Encoding&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;gzip&quot;</span><span class="p">));</span><span class="w"></span>
 
-<span class="c1">// Remove specific entries by examining their URIs</span>
-<span class="kd">var</span> <span class="n">iterator</span> <span class="o">=</span> <span class="n">cache</span><span class="p">.</span><span class="na">uris</span><span class="p">();</span>
-<span class="k">while</span> <span class="p">(</span><span class="n">iterator</span><span class="p">.</span><span class="na">hasNext</span><span class="p">())</span> <span class="p">{</span>
-  <span class="kd">var</span> <span class="n">uri</span> <span class="o">=</span> <span class="n">iterator</span><span class="p">.</span><span class="na">next</span><span class="p">();</span>  
-  <span class="k">if</span> <span class="p">(</span><span class="n">uri</span><span class="p">.</span><span class="na">getHost</span><span class="p">().</span><span class="na">equals</span><span class="p">(</span><span class="s">&quot;i.imgur.com&quot;</span><span class="p">))</span> <span class="p">{</span>
-    <span class="n">iterator</span><span class="p">.</span><span class="na">remove</span><span class="p">();</span>  
-  <span class="p">}</span>
-<span class="p">}</span>
+<span class="c1">// Remove specific entries by examining their URIs</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">iterator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cache</span><span class="p">.</span><span class="na">uris</span><span class="p">();</span><span class="w"></span>
+<span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="n">iterator</span><span class="p">.</span><span class="na">hasNext</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">var</span><span class="w"> </span><span class="n">uri</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">iterator</span><span class="p">.</span><span class="na">next</span><span class="p">();</span><span class="w">  </span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">uri</span><span class="p">.</span><span class="na">getHost</span><span class="p">().</span><span class="na">equals</span><span class="p">(</span><span class="s">&quot;i.imgur.com&quot;</span><span class="p">))</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">iterator</span><span class="p">.</span><span class="na">remove</span><span class="p">();</span><span class="w">  </span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="c1">// Remove all entries</span>
-<span class="n">cache</span><span class="p">.</span><span class="na">clear</span><span class="p">();</span>
+<span class="c1">// Remove all entries</span><span class="w"></span>
+<span class="n">cache</span><span class="p">.</span><span class="na">clear</span><span class="p">();</span><span class="w"></span>
 
-<span class="c1">// Dispose of the cache by deleting its entries then closing it in an atomic fashion.</span>
-<span class="c1">// The cache is rendered unusable after this call. This is meant for applications that</span>
-<span class="c1">// use a temporary directory for caching in case persistence isn&#39;t needed.</span>
-<span class="n">cache</span><span class="p">.</span><span class="na">dispose</span><span class="p">();</span>
+<span class="c1">// Dispose of the cache by deleting its entries then closing it in an atomic fashion.</span><span class="w"></span>
+<span class="c1">// The cache is rendered unusable after this call. This is meant for applications that</span><span class="w"></span>
+<span class="c1">// use a temporary directory for caching in case persistence isn&#39;t needed.</span><span class="w"></span>
+<span class="n">cache</span><span class="p">.</span><span class="na">dispose</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <h2 id="cache-operation-statistics">Cache Operation &amp; Statistics<a class="headerlink" href="#cache-operation-statistics" title="Permanent link">&para;</a></h2>
 <p>Cache operation typically involves 3 scenarios.</p>
@@ -1108,71 +1108,71 @@ is updated in background, keeping things fresh.</p>
 <p><code>CacheAwareResponse</code> complements <code>HttpResponse</code> to better reflect cache interference. If a cache is
 installed, any <code>HttpResponse&lt;T&gt;</code> returned by <code>Methanol</code> is also a <code>CacheAwareResponse&lt;T&gt;</code>, which you
 can use to know which of the previous scenarios was the case.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
-<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="n">response</span> <span class="o">=</span> <span class="p">(</span><span class="n">CacheAwareResponse</span><span class="o">&lt;</span><span class="n">Path</span><span class="o">&gt;</span><span class="p">)</span> <span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span>
-    <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">),</span> <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;banana_cat.mp4&quot;</span><span class="p">)));</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CacheAwareResponse</span><span class="o">&lt;</span><span class="n">Path</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;banana_cat.mp4&quot;</span><span class="p">)));</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="n">timeElapsed</span>  <span class="o">=</span> <span class="n">Duration</span><span class="p">.</span><span class="na">between</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">timeRequestSent</span><span class="p">(),</span> <span class="n">response</span><span class="p">.</span><span class="na">timeResponseReceived</span><span class="p">());</span>
-<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Time elapsed: &quot;</span> <span class="o">+</span> <span class="n">timeElapsed</span><span class="p">);</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">timeElapsed</span><span class="w">  </span><span class="o">=</span><span class="w"> </span><span class="n">Duration</span><span class="p">.</span><span class="na">between</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">timeRequestSent</span><span class="p">(),</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">timeResponseReceived</span><span class="p">());</span><span class="w"></span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="s">&quot;Time elapsed: &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">timeElapsed</span><span class="p">);</span><span class="w"></span>
 
-<span class="c1">// networkResponse &amp; cacheResponse are optional HttpResponses that you can further investigate</span>
-<span class="kd">var</span> <span class="n">networkResponse</span> <span class="o">=</span> <span class="n">response</span><span class="p">.</span><span class="na">networkResponse</span><span class="p">();</span>
-<span class="kd">var</span> <span class="n">cacheResponse</span> <span class="o">=</span> <span class="n">response</span><span class="p">.</span><span class="na">cacheResponse</span><span class="p">();</span>
-<span class="k">switch</span> <span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">cacheStatus</span><span class="p">())</span> <span class="p">{</span>
-  <span class="k">case</span> <span class="n">HIT</span><span class="p">:</span>
-    <span class="k">assert</span> <span class="n">networkResponse</span><span class="p">.</span><span class="na">isEmpty</span><span class="p">();</span>
-    <span class="k">assert</span> <span class="n">cacheResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span>
-    <span class="k">break</span><span class="p">;</span>
+<span class="c1">// networkResponse &amp; cacheResponse are optional HttpResponses that you can further investigate</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">networkResponse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">networkResponse</span><span class="p">();</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">cacheResponse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">cacheResponse</span><span class="p">();</span><span class="w"></span>
+<span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">cacheStatus</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="n">HIT</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="k">assert</span><span class="w"> </span><span class="n">networkResponse</span><span class="p">.</span><span class="na">isEmpty</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="k">assert</span><span class="w"> </span><span class="n">cacheResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
 
-  <span class="k">case</span> <span class="n">CONDITIONAL_HIT</span><span class="p">:</span>
-    <span class="k">assert</span> <span class="n">networkResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span>
-    <span class="k">assert</span> <span class="n">cacheResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span>
-    <span class="k">break</span><span class="p">;</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="n">CONDITIONAL_HIT</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="k">assert</span><span class="w"> </span><span class="n">networkResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="k">assert</span><span class="w"> </span><span class="n">cacheResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
 
-  <span class="k">case</span> <span class="n">MISS</span><span class="p">:</span>
-    <span class="k">assert</span> <span class="n">networkResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span>
-    <span class="c1">// cacheResponse can be absent or present</span>
-    <span class="k">break</span><span class="p">;</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="n">MISS</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="k">assert</span><span class="w"> </span><span class="n">networkResponse</span><span class="p">.</span><span class="na">isPresent</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// cacheResponse can be absent or present</span><span class="w"></span>
+<span class="w">    </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
 
-  <span class="k">case</span> <span class="n">UNSATISFIABLE</span><span class="p">:</span>
-    <span class="c1">// Network was forbidden by only-if-cached but there was no valid cache response</span>
-    <span class="k">assert</span> <span class="n">response</span><span class="p">.</span><span class="na">statusCode</span><span class="p">()</span> <span class="o">==</span> <span class="n">HttpURLConnection</span><span class="p">.</span><span class="na">HTTP_GATEWAY_TIMEOUT</span><span class="p">;</span>
-    <span class="k">assert</span> <span class="n">networkResponse</span><span class="p">.</span><span class="na">isEmpty</span><span class="p">();</span>
-    <span class="c1">// cacheResponse can be absent or present</span>
-    <span class="k">break</span><span class="p">;</span>
-<span class="p">}</span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="n">UNSATISFIABLE</span><span class="p">:</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// Network was forbidden by only-if-cached but there was no valid cache response</span><span class="w"></span>
+<span class="w">    </span><span class="k">assert</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">statusCode</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">HttpURLConnection</span><span class="p">.</span><span class="na">HTTP_GATEWAY_TIMEOUT</span><span class="p">;</span><span class="w"></span>
+<span class="w">    </span><span class="k">assert</span><span class="w"> </span><span class="n">networkResponse</span><span class="p">.</span><span class="na">isEmpty</span><span class="p">();</span><span class="w"></span>
+<span class="w">    </span><span class="c1">// cacheResponse can be absent or present</span><span class="w"></span>
+<span class="w">    </span><span class="k">break</span><span class="p">;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 
-<span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span>
+<span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <h3 id="httpcachestats">HttpCache.Stats<a class="headerlink" href="#httpcachestats" title="Permanent link">&para;</a></h3>
 <p>You can examine cache statistics to measure its effectiveness. Statistics are either global or
 correspond to a specific <code>URI</code>.</p>
 <div class="tabbed-set" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><label for="__tabbed_4_1">Global Stats</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">cache</span><span class="p">.</span><span class="na">stats</span><span class="p">();</span>
-<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">hitRate</span><span class="p">());</span>
-<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">missRate</span><span class="p">());</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cache</span><span class="p">.</span><span class="na">stats</span><span class="p">();</span><span class="w"></span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">hitRate</span><span class="p">());</span><span class="w"></span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">missRate</span><span class="p">());</span><span class="w"></span>
 </code></pre></div>
 </div>
 <input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><label for="__tabbed_4_2">URI-specific Stats</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="c1">// Per URI statistics aren&#39;t recorder by default</span>
-<span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">statsRecorder</span><span class="p">(</span><span class="n">StatsRecorder</span><span class="p">.</span><span class="na">createConcurrentPerUriRecorder</span><span class="p">())</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Per URI statistics aren&#39;t recorder by default</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;my-cache-dir&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">statsRecorder</span><span class="p">(</span><span class="n">StatsRecorder</span><span class="p">.</span><span class="na">createConcurrentPerUriRecorder</span><span class="p">())</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="n">stats</span> <span class="o">=</span> <span class="n">cache</span><span class="p">.</span><span class="na">stats</span><span class="p">(</span><span class="n">URI</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">));</span>
-<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">hitRate</span><span class="p">());</span>
-<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">missRate</span><span class="p">());</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">stats</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cache</span><span class="p">.</span><span class="na">stats</span><span class="p">(</span><span class="n">URI</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">));</span><span class="w"></span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">hitRate</span><span class="p">());</span><span class="w"></span>
+<span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">println</span><span class="p">(</span><span class="n">stats</span><span class="p">.</span><span class="na">missRate</span><span class="p">());</span><span class="w"></span>
 </code></pre></div>
 </div>
 </div>
@@ -1273,7 +1273,7 @@ correspond to a specific <code>URI</code>.</p>
     <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.748e2769.min.js"></script>
+      <script src="../assets/javascripts/bundle.ed9748b7.min.js"></script>
       
     
   </body>

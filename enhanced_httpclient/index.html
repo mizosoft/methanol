@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/enhanced_httpclient/">
       
       <link rel="icon" href="../images/flask.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.11">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
     
     
       
@@ -23,10 +23,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.8c5ef100.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.e411adfe.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.9647289d.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
         
       
     
@@ -749,31 +749,31 @@ Unsurprisingly, the client is named <code>Methanol</code>.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <p>In addition to <a href="../interceptors/">interceptors</a> and <a href="../caching/">caching</a>, <code>Methanol</code> can apply default properties to your requests.
 Think resolving with a base URI, adding default request headers, default timeouts, etc.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">builder</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">cache</span><span class="p">(...)</span>
-    <span class="p">.</span><span class="na">interceptor</span><span class="p">(...)</span>
-    <span class="p">.</span><span class="na">userAgent</span><span class="p">(</span><span class="s">&quot;Will Smith&quot;</span><span class="p">)</span>                     <span class="c1">// Custom User-Agent</span>
-    <span class="p">.</span><span class="na">baseUri</span><span class="p">(</span><span class="s">&quot;https://api.github.com&quot;</span><span class="p">)</span>           <span class="c1">// Base URI to resolve requests&#39; URI against</span>
-    <span class="p">.</span><span class="na">defaultHeader</span><span class="p">(</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span> <span class="s">&quot;application/json&quot;</span><span class="p">)</span> <span class="c1">// Default request headers</span>
-    <span class="p">.</span><span class="na">requestTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">20</span><span class="p">))</span>      <span class="c1">// Default request timeout</span>
-    <span class="p">.</span><span class="na">readTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>          <span class="c1">// Timeout for single reads</span>
-    <span class="p">.</span><span class="na">autoAcceptEncoding</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span>                   <span class="c1">// Transparent response compression, this is true by default</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">cache</span><span class="p">(...)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(...)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">userAgent</span><span class="p">(</span><span class="s">&quot;Will Smith&quot;</span><span class="p">)</span><span class="w">                     </span><span class="c1">// Custom User-Agent</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">baseUri</span><span class="p">(</span><span class="s">&quot;https://api.github.com&quot;</span><span class="p">)</span><span class="w">           </span><span class="c1">// Base URI to resolve requests&#39; URI against</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">defaultHeader</span><span class="p">(</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// Default request headers</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">requestTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">20</span><span class="p">))</span><span class="w">      </span><span class="c1">// Default request timeout</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">readTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span><span class="w">          </span><span class="c1">// Timeout for single reads</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">autoAcceptEncoding</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span><span class="w">                   </span><span class="c1">// Transparent response compression, this is true by default</span><span class="w"></span>
 
-<span class="c1">// Continue using as a standard HttpClient.Builder!</span>
-<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">builder</span><span class="p">.</span><span class="na">executor</span><span class="p">(...)</span>
-    <span class="p">.</span><span class="na">executor</span><span class="p">(</span><span class="n">Executors</span><span class="p">.</span><span class="na">newFixedThreadPool</span><span class="p">(</span><span class="mi">16</span><span class="p">))</span>
-    <span class="p">.</span><span class="na">connectTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
-    <span class="p">...</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<span class="c1">// Continue using as a standard HttpClient.Builder!</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="na">executor</span><span class="p">(...)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">executor</span><span class="p">(</span><span class="n">Executors</span><span class="p">.</span><span class="na">newFixedThreadPool</span><span class="p">(</span><span class="mi">16</span><span class="p">))</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">connectTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <p>You can also build from an existing <code>HttpClient</code> instance. However, you can't install an <code>HttpCache</code>
 in such case.</p>
-<div class="highlight"><pre><span></span><code><span class="n">HttpClient</span> <span class="n">prebuiltClient</span> <span class="o">=</span> <span class="p">...</span>
-<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">(</span><span class="n">prebuiltClient</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">interceptor</span><span class="p">(...)</span>
-    <span class="p">.</span><span class="na">userAgent</span><span class="p">(</span><span class="s">&quot;Will Smith&quot;</span><span class="p">)</span>
-     <span class="p">...</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="n">HttpClient</span><span class="w"> </span><span class="n">prebuiltClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">(</span><span class="n">prebuiltClient</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(...)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">userAgent</span><span class="p">(</span><span class="s">&quot;Will Smith&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">     </span><span class="p">...</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
@@ -794,16 +794,16 @@ For instance, if <a href="https://github.com/mizosoft/methanol/tree/master/metha
 If you want specific encodings to be applied, add <code>Accept-Encoding</code> as a default header or explicitly
 set one in your request.</p>
 <div class="tabbed-set" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><label for="__tabbed_1_1">Default Header</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="c1">// Advertise brotli decompression</span>
-<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">defaultHeader</span><span class="p">(</span><span class="s">&quot;Accept-Encoding&quot;</span><span class="p">,</span> <span class="s">&quot;br&quot;</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Advertise brotli decompression</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">defaultHeader</span><span class="p">(</span><span class="s">&quot;Accept-Encoding&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;br&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 </div>
 <input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><label for="__tabbed_1_2">Request Header</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="c1">// Advertise brotli decompression</span>
-<span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Accept-Encoding&quot;</span><span class="p">,</span> <span class="s">&quot;br&quot;</span><span class="p">);</span>
+<div class="highlight"><pre><span></span><code><span class="c1">// Advertise brotli decompression</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Accept-Encoding&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;br&quot;</span><span class="p">);</span><span class="w"></span>
 </code></pre></div>
 </div>
 </div>
@@ -815,35 +815,35 @@ better than a containing request mistakenly setting a different one.</p>
 <p>If you like reactive streams, use <code>Methanol::exchange</code>, which is like <code>sendAsync</code> but returns
 <code>Publisher&lt;HttpResponse&lt;T&gt;&gt;</code> sources instead.</p>
 <div class="tabbed-set" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><label for="__tabbed_2_1">Without HTTP/2 Push</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://http2-push.appspot.com/?nopush&quot;</span><span class="p">);</span>
-<span class="kd">var</span> <span class="n">publisher</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="na">exchange</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;page.html&quot;</span><span class="p">)));</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://http2-push.appspot.com/?nopush&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">publisher</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">exchange</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;page.html&quot;</span><span class="p">)));</span><span class="w"></span>
 
-<span class="n">JdkFlowAdapter</span><span class="p">.</span><span class="na">flowPublisherToFlux</span><span class="p">(</span><span class="n">publisher</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">doOnNext</span><span class="p">(</span><span class="n">response</span> <span class="o">-&gt;</span> <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span><span class="s">&quot;%s: %s&quot;</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()))</span>
-    <span class="p">.</span><span class="na">blockLast</span><span class="p">();</span>
+<span class="n">JdkFlowAdapter</span><span class="p">.</span><span class="na">flowPublisherToFlux</span><span class="p">(</span><span class="n">publisher</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">doOnNext</span><span class="p">(</span><span class="n">response</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span><span class="s">&quot;%s: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()))</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">blockLast</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 </div>
 <input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><label for="__tabbed_2_2">With HTTP/2 Push</label><div class="tabbed-content">
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://http2-push.appspot.com&quot;</span><span class="p">);</span>
-<span class="kd">var</span> <span class="n">publisher</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="na">exchange</span><span class="p">(</span>
-    <span class="n">request</span><span class="p">,</span> 
-    <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;page.html&quot;</span><span class="p">)),</span> 
-    <span class="n">pushPromise</span> <span class="o">-&gt;</span> <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">pushPromise</span><span class="p">.</span><span class="na">uri</span><span class="p">().</span><span class="na">getPath</span><span class="p">()).</span><span class="na">getFileName</span><span class="p">()));</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://http2-push.appspot.com&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">publisher</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">exchange</span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">request</span><span class="p">,</span><span class="w"> </span>
+<span class="w">    </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;page.html&quot;</span><span class="p">)),</span><span class="w"> </span>
+<span class="w">    </span><span class="n">pushPromise</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">pushPromise</span><span class="p">.</span><span class="na">uri</span><span class="p">().</span><span class="na">getPath</span><span class="p">()).</span><span class="na">getFileName</span><span class="p">()));</span><span class="w"></span>
 
-<span class="n">JdkFlowAdapter</span><span class="p">.</span><span class="na">flowPublisherToFlux</span><span class="p">(</span><span class="n">publisher</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">doOnNext</span><span class="p">(</span><span class="n">response</span> <span class="o">-&gt;</span> <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span><span class="s">&quot;%s: %s%n&quot;</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()))</span>
-    <span class="p">.</span><span class="na">blockLast</span><span class="p">();</span>
+<span class="n">JdkFlowAdapter</span><span class="p">.</span><span class="na">flowPublisherToFlux</span><span class="p">(</span><span class="n">publisher</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">doOnNext</span><span class="p">(</span><span class="n">response</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span><span class="s">&quot;%s: %s%n&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()))</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">blockLast</span><span class="p">();</span><span class="w"></span>
 </code></pre></div>
 </div>
 </div>
 <h2 id="mutablerequest">MutableRequest<a class="headerlink" href="#mutablerequest" title="Permanent link">&para;</a></h2>
 <p><code>MutableRequest</code> is an <code>HttpRequest</code> that implements <code>HttpRequest.Builder</code> for settings request's
 properties. This drops immutability in favor of some convenience when the request is sent immediately.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">MutableReqeust</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">uri</span><span class="p">),</span> <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofString</span><span class="p">());</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">MutableReqeust</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">uri</span><span class="p">),</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofString</span><span class="p">());</span><span class="w"></span>
 </code></pre></div>
 <p>Additionally, <code>MutableRequest</code> accepts relative URIs (standard <code>HttpRequest.Builder</code> doesn't). This
 is a complementing feature to <code>Methanol</code>'s base URIs, against which relative ones are resolved.</p>
@@ -938,7 +938,7 @@ is a complementing feature to <code>Methanol</code>'s base URIs, against which r
     <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.748e2769.min.js"></script>
+      <script src="../assets/javascripts/bundle.ed9748b7.min.js"></script>
       
     
   </body>

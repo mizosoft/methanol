@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/CHANGELOG/">
       
       <link rel="icon" href="../images/flask.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.11">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
     
     
       
@@ -23,10 +23,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.8c5ef100.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.e411adfe.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.9647289d.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
         
       
     
@@ -778,19 +778,19 @@
 <li>Added <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Listener.html"><code>HttpCache.Listener</code></a>.</li>
 <li>
 <p>Added <code>TaggableRequest</code>. This facilitates carrying application-specific data throughout interceptors &amp; listeners.
-  <div class="highlight"><pre><span></span><code><span class="kd">var</span> <span class="n">interceptor</span> <span class="o">=</span> <span class="n">Interceptor</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="n">request</span> <span class="o">-&gt;</span> <span class="p">{</span>
-    <span class="kd">var</span> <span class="n">taggableRequest</span> <span class="o">=</span> <span class="n">TaggableRequest</span><span class="p">.</span><span class="na">from</span><span class="p">(</span><span class="n">request</span><span class="p">);</span>
-    <span class="kd">var</span> <span class="n">myContext</span> <span class="o">=</span> <span class="n">taggableRequest</span><span class="p">.</span><span class="na">tag</span><span class="p">(</span><span class="n">MyContext</span><span class="p">.</span><span class="na">class</span><span class="p">).</span><span class="na">orElseGet</span><span class="p">(</span><span class="n">MyContext</span><span class="p">::</span><span class="n">empty</span><span class="p">);</span>
-    <span class="p">...</span>
-<span class="p">});</span>
-<span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-    <span class="p">.</span><span class="na">interceptor</span><span class="p">(</span><span class="n">interceptor</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+  <div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">interceptor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Interceptor</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="n">request</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="n">taggableRequest</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TaggableRequest</span><span class="p">.</span><span class="na">from</span><span class="p">(</span><span class="n">request</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="n">myContext</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">taggableRequest</span><span class="p">.</span><span class="na">tag</span><span class="p">(</span><span class="n">MyContext</span><span class="p">.</span><span class="na">class</span><span class="p">).</span><span class="na">orElseGet</span><span class="p">(</span><span class="n">MyContext</span><span class="p">::</span><span class="n">empty</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">...</span><span class="w"></span>
+<span class="p">});</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(</span><span class="n">interceptor</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-<span class="kd">var</span> <span class="n">myContext</span> <span class="o">=</span> <span class="p">...</span>
-<span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://example.com&quot;</span><span class="p">)</span>
-    <span class="p">.</span><span class="na">tag</span><span class="p">(</span><span class="n">MyContext</span><span class="p">.</span><span class="na">class</span><span class="p">,</span> <span class="n">myContext</span><span class="p">);</span>
-<span class="kd">var</span> <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofString</span><span class="p">());</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">myContext</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://example.com&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="w">    </span><span class="p">.</span><span class="na">tag</span><span class="p">(</span><span class="n">MyContext</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="n">myContext</span><span class="p">);</span><span class="w"></span>
+<span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofString</span><span class="p">());</span><span class="w"></span>
 </code></pre></div></p>
 </li>
 <li>
@@ -816,26 +816,26 @@
 <li>
 <p>Methanol now has an <a href="https://datatracker.ietf.org/doc/html/rfc7234">RFC-compliant</a> HTTP cache! It can store entries on disk or
   in memory. Give it a try!
-  <div class="highlight"><pre><span></span><code><span class="kt">void</span> <span class="nf">cache</span><span class="p">()</span> <span class="kd">throws</span> <span class="n">InterruptedException</span><span class="p">,</span> <span class="n">IOException</span> <span class="p">{</span>
-  <span class="kd">var</span> <span class="n">cache</span> <span class="o">=</span> <span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-      <span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;cache-dir&quot;</span><span class="p">),</span> <span class="mi">100</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span><span class="p">)</span>
-      <span class="p">.</span><span class="na">build</span><span class="p">();</span>
-  <span class="kd">var</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-      <span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span>
-      <span class="p">.</span><span class="na">build</span><span class="p">();</span>
+  <div class="highlight"><pre><span></span><code><span class="kt">void</span><span class="w"> </span><span class="nf">cache</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">InterruptedException</span><span class="p">,</span><span class="w"> </span><span class="n">IOException</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">var</span><span class="w"> </span><span class="n">cache</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpCache</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="na">cacheOnDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;cache-dir&quot;</span><span class="p">),</span><span class="w"> </span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
+<span class="w">  </span><span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="na">cache</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span><span class="w"></span>
+<span class="w">      </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 
-  <span class="kd">var</span> <span class="n">request</span> <span class="o">=</span> <span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">);</span>
-  <span class="kd">var</span> <span class="n">response</span> <span class="o">=</span> <span class="p">(</span><span class="n">CacheAwareResponse</span><span class="o">&lt;</span><span class="n">Path</span><span class="o">&gt;</span><span class="p">)</span> <span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span>
-      <span class="n">request</span><span class="p">,</span> <span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;banana_cat.mp4&quot;</span><span class="p">)));</span>
+<span class="w">  </span><span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/NYvl8Sy.mp4&quot;</span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">CacheAwareResponse</span><span class="o">&lt;</span><span class="n">Path</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="w"></span>
+<span class="w">      </span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;banana_cat.mp4&quot;</span><span class="p">)));</span><span class="w"></span>
 
-  <span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span>
-      <span class="s">&quot;%s (CacheStatus: %s, elapsed: %s)%n&quot;</span><span class="p">,</span>
-      <span class="n">response</span><span class="p">,</span>
-      <span class="n">response</span><span class="p">.</span><span class="na">cacheStatus</span><span class="p">(),</span>
-      <span class="n">Duration</span><span class="p">.</span><span class="na">between</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">timeRequestSent</span><span class="p">(),</span> <span class="n">response</span><span class="p">.</span><span class="na">timeResponseReceived</span><span class="p">()));</span>
+<span class="w">  </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span><span class="w"></span>
+<span class="w">      </span><span class="s">&quot;%s (CacheStatus: %s, elapsed: %s)%n&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="n">response</span><span class="p">,</span><span class="w"></span>
+<span class="w">      </span><span class="n">response</span><span class="p">.</span><span class="na">cacheStatus</span><span class="p">(),</span><span class="w"></span>
+<span class="w">      </span><span class="n">Duration</span><span class="p">.</span><span class="na">between</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">timeRequestSent</span><span class="p">(),</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">timeResponseReceived</span><span class="p">()));</span><span class="w"></span>
 
-  <span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span>
-<span class="p">}</span>
+<span class="w">  </span><span class="n">cache</span><span class="p">.</span><span class="na">close</span><span class="p">();</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div></p>
 </li>
 <li>
@@ -967,7 +967,7 @@
     <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.748e2769.min.js"></script>
+      <script src="../assets/javascripts/bundle.ed9748b7.min.js"></script>
       
     
   </body>
