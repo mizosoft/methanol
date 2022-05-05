@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -99,7 +99,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
-  private static final Logger logger = System.getLogger(HeadersTimeoutInterceptor.class.getName());
+  private static final Logger logger = System.getLogger(Methanol.class.getName());
 
   private final HttpClient backend;
   private final Redirect redirectPolicy;
