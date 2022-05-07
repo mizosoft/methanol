@@ -11,9 +11,12 @@ include 'methanol-brotli'
 include 'methanol-blackbox'
 include 'methanol-benchmarks'
 include 'methanol-samples'
-include 'methanol-samples:progress'
 include 'methanol-samples:crawler'
+include 'methanol-samples:progress'
+include 'methanol-samples:progress:download'
+include 'methanol-samples:progress:upload'
 include 'spring-boot-test'
+
 // Only include native brotli-jni project if explicitly requested
 if (settings.hasProperty('includeBrotliJni')
     || settings.gradle.startParameter.taskNames.contains('installBrotli')) {

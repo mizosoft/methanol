@@ -51,11 +51,6 @@ dependencies {
   testImplementation project(':methanol-testutils')
 }
 
-[compileTestJava, test].each { task ->
-  addReads(task, 'methanol.testutils')
-  addReads(task, 'dec') // org.brotli.dec
-}
-
 task installBrotli(type: Copy) {
   description = 'Builds and copies brotli jni natives to the resources directory'
   getJniConfigs(configurations).each { config ->

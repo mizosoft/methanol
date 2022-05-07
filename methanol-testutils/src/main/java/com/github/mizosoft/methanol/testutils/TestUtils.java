@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.testutils;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.ByteArrayInputStream;
@@ -90,7 +89,7 @@ public class TestUtils {
   }
 
   public static void shutdown(Executor... executors) {
-    for (Executor e : executors) {
+    for (var e : executors) {
       if (e instanceof ExecutorService) {
         ((ExecutorService) e).shutdown();
       }
@@ -122,10 +121,6 @@ public class TestUtils {
 
   public static byte[] inflate(byte[] data) {
     return inflate0(data, new Inflater());
-  }
-
-  public static byte[] inflateNowrap(byte[] data) {
-    return inflate0(data, new Inflater(true));
   }
 
   private static byte[] inflate0(byte[] data, Inflater inflater) {
@@ -175,8 +170,8 @@ public class TestUtils {
     }
   }
 
-  public static String loadAscii(Class<?> caller, String location) {
-    return US_ASCII.decode(ByteBuffer.wrap(load(caller, location))).toString();
+  public static String loadUtf8(Class<?> caller, String location) {
+    return UTF_8.decode(ByteBuffer.wrap(load(caller, location))).toString();
   }
 
   public static List<String> lines(String s) {

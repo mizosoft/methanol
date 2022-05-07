@@ -1,35 +1,39 @@
 plugins {
   id 'com.google.protobuf' version '0.8.16'
+  id 'de.jjohannes.extra-java-module-info' version "0.12"
 }
 
 dependencies {
-  implementation project(':methanol')
-  implementation project(':methanol-jackson')
-  implementation project(':methanol-jackson-flux')
-  implementation project(':methanol-protobuf')
-  implementation project(':methanol-jaxb')
-  implementation project(':methanol-brotli')
-  implementation project(':methanol-testutils')
-  implementation libs.reactor.core
-
+  testImplementation project(':methanol')
+  testImplementation project(':methanol-jackson')
+  testImplementation project(':methanol-jackson-flux')
+  testImplementation project(':methanol-protobuf')
+  testImplementation project(':methanol-jaxb')
+  testImplementation project(':methanol-brotli')
+  testImplementation project(':methanol-testutils')
+  testImplementation libs.reactor.core
   testImplementation libs.mockwebserver
   testImplementation libs.brotli.dec
   testImplementation libs.reactivestreams
   testImplementation libs.reactivestreams.examples
   testImplementation libs.moxy
+
+  // https://github.com/gradle/gradle/issues/18627
+  testRuntimeOnly libs.junit.platform.launcher
 }
 
-[compileTestJava, test].each { task ->
-  addReads(task, 'mockwebserver3')
-  addReads(task, 'org.reactivestreams')
+test {
+  // Add test resources to the module path. This is not done automatically for some reason.
+  jvmArgs '--patch-module', "methanol.blackbox=${sourceSets.test.output.resourcesDir}"
+}
+
+extraJavaModuleInfo {
+  failOnMissingModuleInfo.set false
+  automaticModule(libs.moxy.get().module as String, 'org.eclipse.persistence.moxy')
 }
 
 protobuf {
   protoc {
     artifact = libs.protobuf.compiler.get()
   }
-}
-
-tasks.withType(Checkstyle) {
-  enabled = false
 }

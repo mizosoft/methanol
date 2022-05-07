@@ -9,10 +9,6 @@ dependencies {
   testImplementation project(':methanol-testutils')
 }
 
-[compileTestJava, test].each { task ->
-  addReads(task, 'methanol.testutils')
-}
-
 protobuf {
   protoc {
     artifact = libs.protobuf.compiler.get()

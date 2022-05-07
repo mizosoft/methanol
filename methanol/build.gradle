@@ -4,10 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 dependencies {
-  testImplementation(libs.testng) {
-    exclude group: 'junit'
-    exclude group: 'org.checkerframework', module: 'checker-compat-qual'
-  }
+  testImplementation(libs.testng)
   testImplementation libs.junit.params
   testImplementation libs.reactivestreams.tck.flow
   testImplementation libs.mockwebserver
@@ -16,17 +13,14 @@ dependencies {
 }
 
 compileJava {
-  // Suppress exporting to modules unresolvable on compilation
+  // Suppress warnings when exporting to modules unresolvable on compilation
   options.compilerArgs += '-Xlint:-module'
 }
 
 test {
   exclude '**/tck/**'
-  // Run from classpath to use META-INF/services which doesn't work from module path
-  moduleOptions {
-    runOnClasspath = true
-  }
 
+  // Don't timeout tests when debugging
   systemProperty 'junit.jupiter.execution.timeout.mode', 'disabled_on_debug'
 }
 
@@ -40,7 +34,9 @@ task tckTest(type: Test) {
   shouldRunAfter test
   scanForTestClasses false
   testLogging {
-    events = ['failed']
+    events 'failed'
+    exceptionFormat = 'full'
+    showCauses true
   }
 
   if (System.getenv().GITHUB_ACTIONS) {
@@ -48,7 +44,7 @@ task tckTest(type: Test) {
     systemProperties.TCK_NO_SIGNAL_TIMEOUT_MILLIS = 100
   }
 
-  timeout = Duration.ofMinutes(15)
+  timeout = Duration.ofMinutes(10)
 
   def runningTckTest = new AtomicReference<String>()
 
@@ -68,7 +64,6 @@ task tckTest(type: Test) {
     }
 
     logger.println("Running ${descriptor.displayName}")
-    logger.flush()
   }
 
   afterTest { TestDescriptor descriptor, TestResult result ->
@@ -99,11 +94,3 @@ task closeTckLoggers {
 tckTest.finalizedBy closeTckLoggers
 
 check.dependsOn tckTest
-
-addReads(compileTestJava, 'methanol.testutils')
-addReads(compileTestJava, 'org.junit.jupiter.params')
-addReads(compileTestJava, 'org.assertj.core')
-
-// This avoids a mysterious compilation error caused by some kotlin class not being accessible
-// to javac. Kotlin is brought transitively by okhttp's MockWebServer.
-addReads(compileTestJava, 'kotlin.stdlib')

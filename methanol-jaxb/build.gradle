@@ -5,11 +5,3 @@ dependencies {
   testImplementation project(':methanol-testutils')
   testImplementation libs.moxy
 }
-
-test {
-  moduleOptions {
-    runOnClasspath = true
-  }
-}
-
-addReads(compileTestJava, 'methanol.testutils')

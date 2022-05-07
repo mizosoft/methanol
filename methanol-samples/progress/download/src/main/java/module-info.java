@@ -20,14 +20,7 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.samples.crawler.JsoupDecoderProvider;
-
-module methanol.samples.crawler {
+open module methanol.samples.progress.download {
   requires methanol;
-  requires org.jsoup;
-  requires static org.checkerframework.checker.qual;
-
-  provides BodyAdapter.Decoder with
-      JsoupDecoderProvider;
+  requires javafx.controls;
 }

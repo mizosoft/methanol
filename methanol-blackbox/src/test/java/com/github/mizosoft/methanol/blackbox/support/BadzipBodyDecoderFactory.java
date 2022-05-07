@@ -20,34 +20,47 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.blackbox;
-
-import static com.github.mizosoft.methanol.BodyDecoder.Factory.installedBindings;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+package com.github.mizosoft.methanol.blackbox.support;
 
 import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.blackbox.support.FailingBodyDecoderFactory;
-import com.github.mizosoft.methanol.blackbox.support.MyBodyDecoderFactory.MyDeflateBodyDecoderFactory;
-import com.github.mizosoft.methanol.blackbox.support.MyBodyDecoderFactory.MyGzipBodyDecoderFactory;
-import com.github.mizosoft.methanol.testutils.Logging;
-import org.junit.jupiter.api.Test;
+import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
+import com.github.mizosoft.methanol.decoder.AsyncDecoder;
+import java.io.IOException;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.util.concurrent.Executor;
 
-class BodyDecoderFactoryTest {
-  static {
-    // Do not log service loader failures
-    Logging.disable("com.github.mizosoft.methanol.internal.spi.ServiceCache");
+public class BadzipBodyDecoderFactory implements BodyDecoder.Factory {
+  public BadzipBodyDecoderFactory() {}
+
+  @Override
+  public String encoding() {
+    return "badzip";
   }
 
-  @Test
-  void failingDecoderIsIgnored() {
-    BodyDecoder.Factory.installedFactories(); // trigger service lookup if not yet done
-    assertEquals(1, FailingBodyDecoderFactory.constructorCalls.get());
+  @Override
+  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream) {
+    return new AsyncBodyDecoder<>(Badzip.INSTANCE, downstream);
   }
 
-  @Test
-  void userFactoryOverridesDefault() {
-    var bindings = installedBindings();
-    assertEquals(MyDeflateBodyDecoderFactory.class, bindings.get("deflate").getClass());
-    assertEquals(MyGzipBodyDecoderFactory.class, bindings.get("gzip").getClass());
+  @Override
+  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream, Executor executor) {
+    return new AsyncBodyDecoder<>(Badzip.INSTANCE, downstream, executor);
+  }
+
+  private enum Badzip implements AsyncDecoder {
+    INSTANCE;
+
+    @Override
+    public String encoding() {
+      return "badzip";
+    }
+
+    @Override
+    public void decode(ByteSource source, ByteSink sink) throws IOException {
+      throw new IOException("Ops! I forgot my encoding :(");
+    }
+
+    @Override
+    public void close() {}
   }
 }

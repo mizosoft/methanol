@@ -20,14 +20,15 @@
  * SOFTWARE.
  */
 
+package com.github.mizosoft.methanol.blackbox.support;
+
 import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.samples.crawler.JsoupDecoderProvider;
+import com.github.mizosoft.methanol.testutils.StringDecoder;
 
-module methanol.samples.crawler {
-  requires methanol;
-  requires org.jsoup;
-  requires static org.checkerframework.checker.qual;
+public class StringDecoderProvider {
+  private StringDecoderProvider() {}
 
-  provides BodyAdapter.Decoder with
-      JsoupDecoderProvider;
+  public static BodyAdapter.Decoder provider() {
+    return new StringDecoder();
+  }
 }

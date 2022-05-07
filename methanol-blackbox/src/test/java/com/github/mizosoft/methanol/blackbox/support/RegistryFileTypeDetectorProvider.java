@@ -20,14 +20,15 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.samples.crawler.JsoupDecoderProvider;
+package com.github.mizosoft.methanol.blackbox.support;
 
-module methanol.samples.crawler {
-  requires methanol;
-  requires org.jsoup;
-  requires static org.checkerframework.checker.qual;
+import com.github.mizosoft.methanol.testutils.RegistryFileTypeDetector;
+import java.nio.file.spi.FileTypeDetector;
 
-  provides BodyAdapter.Decoder with
-      JsoupDecoderProvider;
+public class RegistryFileTypeDetectorProvider {
+  private RegistryFileTypeDetectorProvider() {}
+
+  public static FileTypeDetector provider() {
+    return new RegistryFileTypeDetector();
+  }
 }

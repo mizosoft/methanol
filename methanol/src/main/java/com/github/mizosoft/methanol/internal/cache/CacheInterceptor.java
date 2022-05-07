@@ -504,7 +504,7 @@ public final class CacheInterceptor implements Interceptor {
                 .buildTracked());
       }
 
-      // Serve the cache response on successful revalidated
+      // Serve the cache response on successful revalidation
       if (cacheResponse != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
         return cacheResponse.with(
             builder ->

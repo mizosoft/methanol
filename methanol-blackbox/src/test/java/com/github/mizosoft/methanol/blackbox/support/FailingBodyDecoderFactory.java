@@ -20,34 +20,35 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.blackbox;
-
-import static com.github.mizosoft.methanol.BodyDecoder.Factory.installedBindings;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+package com.github.mizosoft.methanol.blackbox.support;
 
 import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.blackbox.support.FailingBodyDecoderFactory;
-import com.github.mizosoft.methanol.blackbox.support.MyBodyDecoderFactory.MyDeflateBodyDecoderFactory;
-import com.github.mizosoft.methanol.blackbox.support.MyBodyDecoderFactory.MyGzipBodyDecoderFactory;
-import com.github.mizosoft.methanol.testutils.Logging;
-import org.junit.jupiter.api.Test;
+import com.github.mizosoft.methanol.testutils.TestException;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 
-class BodyDecoderFactoryTest {
-  static {
-    // Do not log service loader failures
-    Logging.disable("com.github.mizosoft.methanol.internal.spi.ServiceCache");
+/** For asserting that BodyDecoder.Factory providers failing on creation are ignored. */
+public class FailingBodyDecoderFactory implements BodyDecoder.Factory {
+  public static final AtomicInteger constructorCalls = new AtomicInteger();
+
+  public FailingBodyDecoderFactory() {
+    constructorCalls.getAndIncrement();
+    throw new TestException();
   }
 
-  @Test
-  void failingDecoderIsIgnored() {
-    BodyDecoder.Factory.installedFactories(); // trigger service lookup if not yet done
-    assertEquals(1, FailingBodyDecoderFactory.constructorCalls.get());
+  @Override
+  public String encoding() {
+    throw new AssertionError();
   }
 
-  @Test
-  void userFactoryOverridesDefault() {
-    var bindings = installedBindings();
-    assertEquals(MyDeflateBodyDecoderFactory.class, bindings.get("deflate").getClass());
-    assertEquals(MyGzipBodyDecoderFactory.class, bindings.get("gzip").getClass());
+  @Override
+  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream) {
+    throw new AssertionError();
+  }
+
+  @Override
+  public <T> BodyDecoder<T> create(BodySubscriber<T> downstream, Executor executor) {
+    throw new AssertionError();
   }
 }

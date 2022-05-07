@@ -1,18 +1,13 @@
 plugins {
-  id 'org.openjfx.javafxplugin' version '0.0.12'
+  id 'org.openjfx.javafxplugin' version '0.0.12' apply false
 }
 
-javafx {
-  version = "14"
-  modules 'javafx.controls'
-}
+subprojects {
+  apply plugin: 'application'
+  apply plugin: 'org.openjfx.javafxplugin'
 
-task runDownloadProgress(type: org.javamodularity.moduleplugin.tasks.ModularJavaExec) {
-  classpath = sourceSets.main.runtimeClasspath
-  main = "$moduleName/com.github.mizosoft.methanol.samples.DownloadProgress"
-}
-
-task runMultipartUploadProgress(type: org.javamodularity.moduleplugin.tasks.ModularJavaExec) {
-  classpath = sourceSets.main.runtimeClasspath
-  main = "$moduleName/com.github.mizosoft.methanol.samples.MultipartUploadProgress"
+  javafx {
+    version = "14"
+    modules 'javafx.controls'
+  }
 }

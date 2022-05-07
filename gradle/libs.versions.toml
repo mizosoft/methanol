@@ -27,7 +27,7 @@ jacoco = '0.8.8'
 [libraries]
 junit-bom = { module = 'org.junit:junit-bom', version.ref = 'junit-bom' }
 junit-jupiter = { module = 'org.junit.jupiter:junit-jupiter' }
-junit-platform-commons = { module = 'org.junit.platform:junit-platform-commons' }
+junit-platform-launcher = { module = 'org.junit.platform:junit-platform-launcher' }
 reactivestreams-tck-flow = { module = 'org.reactivestreams:reactive-streams-tck-flow', version.ref = 'reactivestreams' }
 reactivestreams = { module = 'org.reactivestreams:reactive-streams', version.ref = 'reactivestreams' }
 reactivestreams-examples = { module = 'org.reactivestreams:reactive-streams-examples', version.ref = 'reactivestreams' }

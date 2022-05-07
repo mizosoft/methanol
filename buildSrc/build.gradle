@@ -1,0 +1,11 @@
+plugins {
+  id 'groovy-gradle-plugin'
+}
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  implementation 'com.github.javaparser:javaparser-symbol-solver-core:3.24.2'
+}

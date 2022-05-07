@@ -4,9 +4,3 @@ dependencies {
 
   testImplementation project(':methanol-testutils')
 }
-
-[compileTestJava, test].each { task ->
-  addReads(task, 'methanol.testutils')
-}
-
-addOpens(test, 'com.github.mizosoft.methanol.adapter.gson', 'com.google.gson')

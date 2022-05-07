@@ -2,8 +2,11 @@ plugins {
   id 'application'
 }
 
-mainClassName = "$moduleName/com.github.mizosoft.methanol.samples.crawler.Crawler"
-
 dependencies {
   implementation libs.jsoup
+}
+
+application {
+  mainModule.set 'methanol.samples.crawler'
+  mainClass.set 'com.github.mizosoft.methanol.samples.crawler.Crawler'
 }

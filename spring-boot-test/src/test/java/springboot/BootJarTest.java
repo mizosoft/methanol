@@ -98,6 +98,7 @@ class BootJarTest {
     // No need to close reader as the underlying InputStream will be closed when the process is
     // destroyed. Additionally, closing may cause (have cause :')) deadlocks if an assertion fails
     // while readLine is blocked indefinitely (BufferedReader's close & readLine access same lock).
+    @SuppressWarnings("resource")
     var in = bootJarProcess.inputReader(UTF_8);
     while (true) {
       String line;

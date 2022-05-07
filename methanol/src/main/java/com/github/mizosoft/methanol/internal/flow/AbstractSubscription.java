@@ -229,7 +229,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
             // This is a problem because we cannot call any of onXXXX methods here
             // as that would ruin the execution context guarantee. SubmissionPublisher's
             // behaviour here is followed (cancel & rethrow).
-            logger.log(Level.ERROR, "subscription couldn't execute its signaller task", e);
+            logger.log(Level.ERROR, "couldn't execute subscription's signaller task", e);
             cancel();
             throw e;
           }
