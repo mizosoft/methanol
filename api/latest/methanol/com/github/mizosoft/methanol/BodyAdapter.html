@@ -89,7 +89,7 @@ loadScripts(document, 'script');</script>
 <div class="type-signature"><span class="modifiers">public interface </span><span class="element-name type-name-label">BodyAdapter</span></div>
 <div class="block">An object that uses a defined format for converting high level objects to or from request or
  response <code>ByteBuffer</code> streams. The two specializations are <a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> and <a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a>, implementations of which are normally registered as service-providers by means
- described in the <a href="https://docs.oracle.com/en/java/javase/16/docs/api/java.base/java/util/ServiceLoader.html" title="class or interface in java.util" class="external-link"><code>ServiceLoader</code></a> class.
+ described in the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/ServiceLoader.html" title="class or interface in java.util" class="external-link"><code>ServiceLoader</code></a> class.
 
  <p>A <code>BodyAdapter</code> communicates the format it uses and the set of types it supports through
  <a href="#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>isCompatibleWith(MediaType)</code></a> and <a href="#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supportsType(TypeRef)</code></a> respectively. For
