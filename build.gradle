@@ -207,9 +207,6 @@ subprojects { subproject ->
   }
 
   signing {
-    // Workaround for https://github.com/gradle/gradle/issues/11387
-    required { false }
-
     def signingKeyId = project.findProperty("signingKeyId")
     def signingKey = project.findProperty("signingKey")
     def signingPassword = project.findProperty("signingPassword")
