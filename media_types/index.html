@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/media_types/">
       
       <link rel="icon" href="../images/flask.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.13">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.14">
     
     
       
@@ -23,7 +23,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.e411adfe.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.3de6f41f.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
@@ -46,6 +46,16 @@
     <script>__md_scope=new URL("..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
+  
+
+
+  
+  
+
+
+  <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","G-314284012"),document.addEventListener("DOMContentLoaded",function(){document.forms.search&&document.forms.search.query.addEventListener("blur",function(){this.value&&gtag("event","search",{search_term:this.value})}),"undefined"!=typeof location$&&location$.subscribe(function(e){gtag("config","G-314284012",{page_path:e.pathname})})})</script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-314284012"></script>
+
 
     
     
@@ -713,6 +723,10 @@
             <article class="md-content__inner md-typeset">
               
                 
+  <a href="https://github.com/mizosoft/methanol/edit/master/docs/media_types.md" title="Edit this page" class="md-content__button md-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
 
 
 <h1 id="mime">Mime<a class="headerlink" href="#mime" title="Permanent link">&para;</a></h1>
@@ -721,7 +735,9 @@ requests and responses as <code>Content-Type</code> directives. Methanol's <code
 representation and manipulation of media types.</p>
 <h2 id="mediatype">MediaType<a class="headerlink" href="#mediatype" title="Permanent link">&para;</a></h2>
 <p>You can create a <code>MediaType</code> from its individual components or parse one from a <code>Content-Type</code> string.</p>
-<div class="tabbed-set" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><label for="__tabbed_1_1">MediaType::of</label><div class="tabbed-content">
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">MediaType::of</label><label for="__tabbed_1_2">MediaType::parse</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">applicationJsonUtf8</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;application&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;json&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">Map</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;charset&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;UTF-8&quot;</span><span class="p">));</span><span class="w"> </span>
 
 <span class="n">assertEquals</span><span class="p">(</span><span class="s">&quot;application&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">applicationJsonUtf8</span><span class="p">.</span><span class="na">type</span><span class="p">());</span><span class="w"></span>
@@ -730,7 +746,7 @@ representation and manipulation of media types.</p>
 <span class="n">assertEquals</span><span class="p">(</span><span class="n">Optional</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">StandardCharsets</span><span class="p">.</span><span class="na">UTF_8</span><span class="p">),</span><span class="w"> </span><span class="n">applicationJsonUtf8</span><span class="p">.</span><span class="na">charset</span><span class="p">());</span><span class="w"></span>
 </code></pre></div>
 </div>
-<input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><label for="__tabbed_1_2">MediaType::parse</label><div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">applicationJsonUtf8</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">parse</span><span class="p">(</span><span class="s">&quot;application/json; charset=UTF-8&quot;</span><span class="p">);</span><span class="w"></span>
 
 <span class="n">assertEquals</span><span class="p">(</span><span class="s">&quot;application&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">applicationJsonUtf8</span><span class="p">.</span><span class="na">type</span><span class="p">());</span><span class="w"></span>
@@ -738,6 +754,7 @@ representation and manipulation of media types.</p>
 <span class="n">assertEquals</span><span class="p">(</span><span class="s">&quot;utf-8&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">applicationJsonUtf8</span><span class="p">.</span><span class="na">parameters</span><span class="p">().</span><span class="na">get</span><span class="p">(</span><span class="s">&quot;charset&quot;</span><span class="p">));</span><span class="w"></span>
 <span class="n">assertEquals</span><span class="p">(</span><span class="n">Optional</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">StandardCharsets</span><span class="p">.</span><span class="na">UTF_8</span><span class="p">),</span><span class="w"> </span><span class="n">applicationJsonUtf8</span><span class="p">.</span><span class="na">charset</span><span class="p">());</span><span class="w"></span>
 </code></pre></div>
+</div>
 </div>
 </div>
 <h3 id="media-ranges">Media Ranges<a class="headerlink" href="#media-ranges" title="Permanent link">&para;</a></h3>
@@ -880,7 +897,7 @@ back to <code>application/octet-stream</code> if that doesn't work. </p>
     <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.ed9748b7.min.js"></script>
+      <script src="../assets/javascripts/bundle.c2e1ee47.min.js"></script>
       
     
   </body>
