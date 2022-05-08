@@ -112,7 +112,7 @@ subprojects { subproject ->
       javaModuleVersion = provider { project.version }
 
       errorprone {
-        enabled = subproject.hasProperty('enableErrorprone')
+        enabled = project.hasProperty('enableErrorprone')
 
         nullaway {
           annotatedPackages.add('com.github.mizosoft.methanol')
@@ -177,7 +177,7 @@ subprojects { subproject ->
         pom {
           name = project.name
           description = 'Lightweight HTTP extensions for Java'
-          url = 'https://github.com/mizosoft/methanol'
+          url = 'https://mizosoft.github.io/methanol/'
           inceptionYear = '2019'
 
           scm {
@@ -207,8 +207,10 @@ subprojects { subproject ->
   }
 
   signing {
+    required { !project.version.endsWith("SNAPSHOT") }
+
     def signingKeyId = project.findProperty("signingKeyId")
-    def signingKey = project.findProperty("signingKey")
+    def signingKey = new String(project.findProperty("signingKey").decodeBase64(), StandardCharsets.UTF_8)
     def signingPassword = project.findProperty("signingPassword")
     useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
     sign publishing.publications.maven
