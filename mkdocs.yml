@@ -4,7 +4,6 @@ repo_url: https://github.com/mizosoft/methanol/
 site_url: https://mizosoft.github.io/methanol/
 site_description: 'Lightweight HTTP extensions for Java'
 site_author: Moataz Abdelnasser
-edit_uri: ""
 copyright: Copyright &copy; 2021 Moataz Abdelnasser
 
 extra_css:
@@ -13,7 +12,8 @@ extra_css:
 markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences
-  - pymdownx.tabbed
+  - pymdownx.tabbed:
+      alternate_style: true
   - admonition
   - pymdownx.details
   - toc:
@@ -24,10 +24,9 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/mizosoft
       name: mizosoft on GitHub
-
-google_analytics:
-  - UA-195982536-1
-  - auto
+  analytics:
+    provider: google
+    property: G-314284012
 
 theme:
   name: material

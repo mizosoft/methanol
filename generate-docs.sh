@@ -21,6 +21,8 @@ cp -f CHANGELOG.md docs/CHANGELOG.md
 cp -f CONTRIBUTING.md docs/CONTRIBUTING.md
 
 # Ensure MkDocs & used theme are installed
+python -m venv venv
+chmod +x ./venv/bin/activate && ./venv/bin/activate
 python -m pip install mkdocs-material
 
 # Generate docs

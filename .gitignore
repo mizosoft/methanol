@@ -1,6 +1,7 @@
 .idea/
 .gradle/
 build/
+venv/
 site/
 **/.vscode/
 
