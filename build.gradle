@@ -210,7 +210,9 @@ subprojects { subproject ->
     required { !project.version.endsWith("SNAPSHOT") }
 
     def signingKeyId = project.findProperty("signingKeyId")
-    def signingKey = new String(project.findProperty("signingKey").decodeBase64(), StandardCharsets.UTF_8)
+    def signingKey = project.findProperty("signingKey")?.with {
+      new String(it.decodeBase64(), StandardCharsets.UTF_8)
+    }
     def signingPassword = project.findProperty("signingPassword")
     useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
     sign publishing.publications.maven
