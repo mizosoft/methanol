@@ -87,7 +87,7 @@ public @interface StoreConfig {
     ASYNC {
       @Override
       Executor newExecutor() {
-        return Executors.newFixedThreadPool(8);
+        return Executors.newCachedThreadPool();
       }
     };
 
