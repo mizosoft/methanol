@@ -8,6 +8,7 @@ import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listener;
+import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.testing.ResolvedStoreConfig;
 import com.github.mizosoft.methanol.testing.StoreConfig.StoreType;
@@ -25,6 +26,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
@@ -35,6 +37,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
 
 public class CacheWritingPublisherTck extends FlowPublisherVerification<List<ByteBuffer>> {
+  private static final AtomicInteger entryId = new AtomicInteger();
+
   static {
     Logging.disable(CacheWritingPublisher.class);
   }
@@ -43,6 +47,7 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
 
   private Executor executor;
   private StoreContext storeContext;
+  private Store store;
 
   @Factory(dataProvider = "provider")
   public CacheWritingPublisherTck(StoreType storeType) {
@@ -51,8 +56,10 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
   }
 
   @BeforeMethod
-  public void setUpExecutor() {
+  public void setUpExecutor() throws IOException {
     executor = TckUtils.fixedThreadPool();
+    storeContext = storeConfig.createContext();
+    store = storeContext.newStore();
   }
 
   @AfterMethod
@@ -65,21 +72,15 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
 
   @Override
   public Publisher<List<ByteBuffer>> createFlowPublisher(long elements) {
-    Editor editor;
     try {
-      storeContext = storeConfig.createContext();
-
-      var store = storeContext.newStore();
-      editor = requireNonNull(store.edit("e1"));
+      return new CacheWritingPublisher(
+          toFlowPublisher(new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
+          requireNonNull(store.edit("test-entry-" + entryId.getAndIncrement())),
+          Listener.disabled(),
+          true);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
-
-    return new CacheWritingPublisher(
-        toFlowPublisher(new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
-        editor,
-        Listener.disabled(),
-        true);
   }
 
   @Override

@@ -207,7 +207,7 @@ public final class StoreContext implements AutoCloseable {
       var service = (ExecutorService) executor;
       service.shutdown();
       try {
-        if (!service.awaitTermination(5, TimeUnit.MINUTES)) {
+        if (!service.awaitTermination(2, TimeUnit.MINUTES)) {
           throw new TimeoutException("timed out while waiting for pool's termination: " + service);
         }
       } catch (Exception e) {

@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.tck;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher;
+import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.ResolvedStoreConfig;
@@ -41,6 +42,7 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -54,13 +56,14 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   private static final int BUFFER_SIZE = 8 * 1024;
   private static final int MAX_BATCH_SIZE = 4;
 
-  private static final String TEST_ENTRY_KEY = "test-entry";
+  private static final AtomicLong entryId = new AtomicLong();
 
   private final ExecutorType executorType;
   private final ResolvedStoreConfig storeConfig;
 
   private Executor executor;
   private StoreContext storeContext;
+  private Store store;
 
   /**
    * The list of viewers opened during a test method execution. CacheReadingPublisher closes the
@@ -78,8 +81,10 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   }
 
   @BeforeMethod
-  public void setUpExecutor() {
+  public void setUpExecutor() throws IOException {
     executor = executorType.createExecutor();
+    storeContext = storeConfig.createContext();
+    store = storeContext.newStore();
   }
 
   @AfterMethod
@@ -111,10 +116,8 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
 
   private Viewer populateThenViewEntry(long elements) {
     try {
-      storeContext = storeConfig.createContext();
-
-      var store = storeContext.newStore();
-      try (var editor = requireNonNull(store.edit(TEST_ENTRY_KEY))) {
+      var entryName = "test-entry-" + entryId.getAndIncrement();
+      try (var editor = requireNonNull(store.edit(entryName))) {
         // Set metadata to not discard the entry if `elements` is 0
         editor.metadata(ByteBuffer.allocate(1));
 
@@ -124,7 +127,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
         }
         editor.commitOnClose();
       }
-      return requireNonNull(store.view(TEST_ENTRY_KEY));
+      return requireNonNull(store.view(entryName));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
