@@ -58,7 +58,7 @@ ext {
 allprojects {
   group = 'com.github.mizosoft.methanol'
   ext.artifactId = getArtifactId(project)
-  version = '1.7.0-SNAPSHOT'
+  version = '1.7.0'
 
   repositories {
     mavenCentral()

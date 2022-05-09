@@ -25,7 +25,7 @@ With the exception of `Mono`, any subtype of `org.reactivestreams.Publisher` or
 ### Gradle
 
 ```gradle
-implementation 'com.github.mizosoft.methanol:methanol-jackson-flux:1.6.0'
+implementation 'com.github.mizosoft.methanol:methanol-jackson-flux:1.7.0'
 ```
 
 ### Maven
@@ -33,8 +33,8 @@ implementation 'com.github.mizosoft.methanol:methanol-jackson-flux:1.6.0'
 ```xml
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
-  <artifactId>methanol-jackson-flux</artifactId>
-  <version>1.6.0</version>
+   <artifactId>methanol-jackson-flux</artifactId>
+   <version>1.7.0</version>
 </dependency>
 ```
 

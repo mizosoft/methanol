@@ -7,7 +7,7 @@ Adapters for JSON using [Gson][gson].
 ### Gradle
 
 ```gradle
-implementation 'com.github.mizosoft.methanol:methanol-gson:1.6.0'
+implementation 'com.github.mizosoft.methanol:methanol-gson:1.7.0'
 ```
 
 ### Maven
@@ -15,8 +15,8 @@ implementation 'com.github.mizosoft.methanol:methanol-gson:1.6.0'
 ```xml
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
-  <artifactId>methanol-gson</artifactId>
-  <version>1.6.0</version>
+   <artifactId>methanol-gson</artifactId>
+   <version>1.7.0</version>
 </dependency>
 ```
 

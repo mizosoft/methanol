@@ -7,7 +7,7 @@ Provides [brotli][brotli] decompression.
 ### Gradle
 
 ```gradle
-implementation 'com.github.mizosoft.methanol:methanol-brotli:1.4.1'
+implementation 'com.github.mizosoft.methanol:methanol-brotli:1.7.0'
 ```
 
 ### Maven
@@ -16,7 +16,7 @@ implementation 'com.github.mizosoft.methanol:methanol-brotli:1.4.1'
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
   <artifactId>methanol-brotli</artifactId>
-  <version>1.4.1</version>
+  <version>1.7.0</version>
 </dependency>
 ```
 

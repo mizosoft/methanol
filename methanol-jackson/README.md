@@ -1,13 +1,13 @@
 # methanol-jackson
 
-Adapters for JSON using [Jackson][jackson].
+Adapters for [Jackson][jackson].
 
 ## Installation
 
 ### Gradle
 
 ```gradle
-implementation 'com.github.mizosoft.methanol:methanol-jackson:1.6.0'
+implementation 'com.github.mizosoft.methanol:methanol-jackson:1.7.0'
 ```
 
 ### Maven
@@ -15,8 +15,8 @@ implementation 'com.github.mizosoft.methanol:methanol-jackson:1.6.0'
 ```xml
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
-  <artifactId>methanol-jackson</artifactId>
-  <version>1.6.0</version>
+   <artifactId>methanol-jackson</artifactId>
+   <version>1.7.0</version>
 </dependency>
 ```
 

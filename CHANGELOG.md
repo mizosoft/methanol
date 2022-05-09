@@ -1,24 +1,105 @@
 # Change Log
 
+## Version 1.7.0
+
+*8-5-2022*
+
+A full year has passed since the last Methanol release! Time truly flies. It's been difficult to
+find the time to cut this release due to my senior college year & other life circumstances, but here
+we are!
+
+* The Jackson adapter has been reworked to support the multitude of formats supported by Jackson,
+  not only JSON ([#45](https://github.com/mizosoft/methanol/issues/45)). That means you can now pass
+  arbitrary `ObjectMapper` instances along with one or more `MediaTypes` describing their formats.
+  For instance, here's a provider for a Jackson-based XML decoder.
+
+  ```java
+  public static class JsonDecoderProvider {
+    private JsonDecoderProvider() {}
+  
+    public static BodyAdapter.Decoder provider() {
+      return JacksonAdapterFactory.createEncoder(new XmlMapper(), MediaType.TEXT_XML);
+    }
+  }
+  ```
+
+  Binary formats (e.g. protocol buffers) usually require a schema for each type. `ObjectReaderFacotry` &
+  `ObjectWritierFactory` have been added for this purpose. For instance, here's a provider for a
+  protocol-buffers decoder. You'll need to know which types to expect beforehand.
+
+  ```java
+  public static class ProtobufDecoderProvider {
+    private ProtobufDecoderProvider() {}
+  
+    record Point(int x, int y) {}
+  
+    public static BodyAdapter.Decoder provider() {
+      var schemas = Map.of(
+          Point.class,
+          ProtobufSchemaLoader.std.parse(
+              """
+              message Point {
+                required int32 x = 1;
+                required int32 y = 2;
+              }
+              """), ...);
+      
+      // Apply the corresponding schema for each created ObjectReader
+      ObjectReaderFactory readerFactory = 
+          (mapper, type) -> mapper.readerFor(type).with(schemes.get(type.rawType()));
+      return JacksonAdapterFactory.createEncoder(
+          new ProtobufMapper(), readerFactory, MediaType.TEXT_XML);
+    }
+  }
+  ```
+
+* To avoid ambiguity, `JacksonAdapterFactory::createDecoder` & `JacksonAdapterFactory::createEncoder`
+  have been deprecated and replaced with `JacksonAdapterFactory::createJsonDecoder` & `JacksonAdapterFactory::createJsonEncoder`
+  respectively.
+
+* Added timeouts for receiving all response headers ([#49](https://github.com/mizosoft/methanol/issues/49)).
+  You can use these along with read timeouts to set more granular timing constraints for your requests
+  when request timeouts are too strict.
+  ```java
+  var client = Methanol.newBuilder()
+      .headersTimeout(Duration.ofSeconds(30))
+      .readTimeout(Duration.ofSeconds(30))
+      ...
+      .build()
+  ```
+
+* Fix ([#40](https://github.com/mizosoft/methanol/issues/40)): Methanol had a long-lived issue that
+  made it difficult for service providers to work with custom JAR formats, particularly the one used
+  by [Spring Boot executables](https://docs.spring.io/spring-boot/docs/current/reference/html/executable-jar.html).
+  Instead of the system classloader, Methanol now relies on the classloader that loaded the library
+  itself for locating providers. This is not necessarily the system classloader as in the case with
+  Spring Boot.
+* Fix ([#46](https://github.com/mizosoft/methanol/issues/46)): `ProgressTracker` now returns `MimeBodyPublisher` 
+  if the body being tracked is itself a `MimeBodyPublisher`. This prevents "swallowing" the `MediaType` of such bodies.
+* Upgraded Jackson to `2.13.2`.
+* Upgraded Gson to `2.9.0`.
+* Upgraded Reactor to `3.4.17`.
+
 ## Version 1.6.0
 
-*30-5-2021* 
+*30-5-2021*
 
-* Added [`HttpCache.Listener`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Listener.html).
+*Added [`HttpCache.Listener`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Listener.html).
 * Added `TaggableRequest`. This facilitates carrying application-specific data throughout interceptors & listeners.
+
   ```java
   var interceptor = Interceptor.create(request -> {
       var taggableRequest = TaggableRequest.from(request);
-      var myContext = taggableRequest.tag(MyContext.class).orElseGet(MyContext::empty);
+      var context = taggableRequest.tag(MyContext.class).orElseGet(MyContext::empty);
       ...
   });
   var client = Methanol.newBuilder()
       .interceptor(interceptor)
       .build();
   
-  var myContext = ...
+  var context = ...
   var request = MutableRequest.GET("https://example.com")
-      .tag(MyContext.class, myContext);
+      .tag(MyContext.class, context);
   var response = client.send(request, BodyHandlers.ofString());
   ```
   
