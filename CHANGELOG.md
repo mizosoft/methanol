@@ -2,7 +2,7 @@
 
 ## Version 1.7.0
 
-*8-5-2022*
+*9-5-2022*
 
 A full year has passed since the last Methanol release! Time truly flies. It's been difficult to
 find the time to cut this release due to my senior college year & other life circumstances, but here
