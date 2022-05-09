@@ -348,28 +348,6 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void withReadTimeout_handlesOverflowGracefully() {
-    var requestCount = 5L;
-    var baseSubscriber = new TestSubscriber<List<ByteBuffer>>();
-    var timeoutSubscriber = withReadTimeout(
-        fromSubscriber(baseSubscriber), Duration.ofMillis(Long.MAX_VALUE));
-    var subscription = new ToBeCancelledSubscription();
-    baseSubscriber.request = 0L; // Request items manually
-    timeoutSubscriber.onSubscribe(subscription);
-    baseSubscriber.awaitSubscribe();
-    baseSubscriber.subscription.request(requestCount);
-    for (int i = 0; i < requestCount + 2; i++) {
-      timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
-    }
-    timeoutSubscriber.onComplete();
-
-    baseSubscriber.awaitError();
-    subscription.assertCancelled();
-    assertThat(baseSubscriber.nexts).isEqualTo(requestCount);
-    assertThat(baseSubscriber.lastError).isInstanceOf(IllegalStateException.class);
-  }
-
-  @Test
   void withReadTimeout_rethrowsRejectionFromSubscriptionRequest() {
     var superBusyScheduler = new ScheduledThreadPoolExecutor(0) {
       @Override
