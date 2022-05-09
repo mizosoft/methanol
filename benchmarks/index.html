@@ -628,13 +628,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#jackson-utf-8-coercion" class="md-nav__link">
-    Jackson UTF-8 coercion
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -711,13 +704,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#jackson-utf-8-coercion" class="md-nav__link">
-    Jackson UTF-8 coercion
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -745,7 +731,7 @@
 <p><a href="https://openjdk.java.net/projects/code-tools/jmh/">JMH</a> tests for Methanol's performance.</p>
 <h2 id="running-benchmarks">Running Benchmarks<a class="headerlink" href="#running-benchmarks" title="Permanent link">&para;</a></h2>
 <p>Benchmarks are available as a runnable Jar in <a href="https://mvnrepository.com/artifact/com.github.mizosoft.methanol/benchmarks/">Maven</a>. You run them as following:</p>
-<div class="highlight"><pre><span></span><code>java -jar benchmarks-1.6.0-all.jar
+<div class="highlight"><pre><span></span><code>java -jar benchmarks-1.7.0-all.jar
 </code></pre></div>
 <h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h2>
 <h3 id="bodydecoder-vs-inputstream">BodyDecoder vs InputStream<a class="headerlink" href="#bodydecoder-vs-inputstream" title="Permanent link">&para;</a></h3>
@@ -814,42 +800,6 @@
 </table>
 <p>Results show that <code>BodyDecoder</code> implementations are on par with available <code>InputStream</code> based
 decoders. Note that the brotli benchmark is biased as it also compares native C vs pure Java implementations.</p>
-<h3 id="jackson-utf-8-coercion">Jackson UTF-8 coercion<a class="headerlink" href="#jackson-utf-8-coercion" title="Permanent link">&para;</a></h3>
-<p><a href="https://github.com/mizosoft/methanol/tree/master/methanol-jackson">methanol-jackson</a> uses Jackson's non-blocking JSON parser for better memory
-efficiency. The parser however only supports UTF-8 and ASCII. Instead of falling back to the
-byte array parser for other response charsets, an efficient operator is used to decode the response
-from source charset then encode it back to UTF-8. This might seem awkward at first but measurement
-shows that performance is not that different from the byte array parser (tested with UTF-16):</p>
-<table>
-<thead>
-<tr>
-<th>Parser</th>
-<th>Mode</th>
-<th>Cnt</th>
-<th>Score</th>
-<th>Error</th>
-<th>Units</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>ASYNC_PARSER</td>
-<td>thrpt</td>
-<td>5</td>
-<td>10557.752</td>
-<td>133.519</td>
-<td>ops/s</td>
-</tr>
-<tr>
-<td>BYTE_ARRAY_PARSER</td>
-<td>thrpt</td>
-<td>5</td>
-<td>11167.702</td>
-<td>128.353</td>
-<td>ops/s</td>
-</tr>
-</tbody>
-</table>
 
               
             </article>
