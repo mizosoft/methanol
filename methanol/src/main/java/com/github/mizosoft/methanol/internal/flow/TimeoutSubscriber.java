@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -52,14 +52,14 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
 
   private static final VarHandle INDEX;
   private static final VarHandle DEMAND;
-  private static final VarHandle TIMEOUT_TASK;
+  private static final VarHandle TIMEOUT_FUTURE;
 
   static {
     var lookup = MethodHandles.lookup();
     try {
       INDEX = lookup.findVarHandle(TimeoutSubscriber.class, "index", long.class);
       DEMAND = lookup.findVarHandle(TimeoutSubscriber.class, "demand", long.class);
-      TIMEOUT_TASK = lookup.findVarHandle(TimeoutSubscriber.class, "timeoutTask", Future.class);
+      TIMEOUT_FUTURE = lookup.findVarHandle(TimeoutSubscriber.class, "timeoutFuture", Future.class);
     } catch (IllegalAccessException | NoSuchFieldException e) {
       throw new IllegalArgumentException(e);
     }
@@ -82,8 +82,8 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
    */
   private volatile long index;
 
-  /** Timeout scheduled for the currently awaited item. */
-  private volatile @Nullable Future<Void> timeoutTask;
+  /** Represents the timeout scheduled for the currently awaited item. */
+  private volatile @Nullable Future<Void> timeoutFuture;
 
   public TimeoutSubscriber(Duration timeout, Delayer delayer) {
     this.timeout = timeout;
@@ -102,50 +102,29 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   public void onNext(T item) {
     requireNonNull(item);
 
-    long currentDemand = subtractAndGetDemand(this, DEMAND, 1);
-    if (currentDemand < 0) { // Demand was 0. This means upstream is trying to overflow us.
+    var currentTimeoutFuture = timeoutFuture;
+    if (currentTimeoutFuture == null // A timeout must've been scheduled for this onNext
+        || currentTimeoutFuture == DISABLED_TIMEOUT
+        || !TIMEOUT_FUTURE.compareAndSet(this, currentTimeoutFuture, null)) {
       upstream.cancel();
-      super.onError(
-          new IllegalStateException("missing backpressure: receiving more items than requested"));
       return;
     }
 
-    // Note that this retries on CAS failures. Such failures would be either due to termination, on
-    // such case we return immediately, or due to a concurrent onNext(...) trying to add to `index`.
-    // We tolerate the latter case as everything is eventually serialized by our superclass.
-    long currentIndex;
-    do {
-      currentIndex = index;
-      if (currentIndex == TOMBSTONE) { // The stream is terminated
-        return;
-      }
-    } while (!INDEX.compareAndSet(this, currentIndex, ++currentIndex));
-
-    // Discard the current timeout task. We consider cases when there is contention over
-    // timeoutTask with either of cancel(), onNext(), onError() or onComplete(). The latter 3 can
-    // only be caused by a misbehaving upstream. Our superclass takes care of such misbehaviour.
-    while (true) {
-      var currentTimeoutTask = timeoutTask;
-      if (currentTimeoutTask == DISABLED_TIMEOUT) { // The stream is terminated
-        return;
-      }
-
-      if (currentTimeoutTask == null
-          || TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, null)) {
-        if (currentTimeoutTask != null) {
-          currentTimeoutTask.cancel(true);
-        }
-        break;
-      }
-    }
+    currentTimeoutFuture.cancel(false);
 
     super.onNext(item);
 
-    if (currentDemand > 0) {
+    var currentIndex = index;
+    if (currentIndex == TOMBSTONE || !INDEX.compareAndSet(this, currentIndex, currentIndex + 1)) {
+      upstream.cancel();
+      return;
+    }
+
+    if (subtractAndGetDemand(this, DEMAND, 1) > 0) {
       // We still have requests, so start a new timeout for the next item
       try {
-        scheduleTimeout(currentIndex);
-      } catch (RuntimeException | Error e) { // delay() can throw
+        scheduleTimeout(currentIndex + 1);
+      } catch (RuntimeException | Error e) {
         upstream.cancel();
         super.onError(e);
       }
@@ -155,7 +134,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
-    if ((long) INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) { // Could reach before timeout?
+    if ((long) INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) {
       disableTimeouts();
       super.onError(throwable);
     }
@@ -163,9 +142,16 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
 
   @Override
   public void onComplete() {
-    if ((long) INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) { // Could reach before timeout?
+    if ((long) INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) {
       disableTimeouts();
       super.onComplete();
+    }
+  }
+
+  private void disableTimeouts() {
+    var currentTimeoutFuture = (Future<?>) TIMEOUT_FUTURE.getAndSet(this, DISABLED_TIMEOUT);
+    if (currentTimeoutFuture != null) {
+      currentTimeoutFuture.cancel(false);
     }
   }
 
@@ -174,33 +160,25 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
    * when incremented demand was previously 0 (no ongoing onNext), and from onNext() only when
    * demand is still larger than 0 when decremented.
    */
-  private void scheduleTimeout(long index) {
-    var currentTimeoutTask = timeoutTask;
-    if (currentTimeoutTask != DISABLED_TIMEOUT) {
-      var newTimeoutTask =
+  private void scheduleTimeout(long nextTimeoutIndex) {
+    var currentTimeoutFuture = timeoutFuture;
+    if (currentTimeoutFuture != DISABLED_TIMEOUT) {
+      var nextTimeoutFuture =
           delayer.delay(() -> onTimeout(index), timeout, FlowSupport.SYNC_EXECUTOR);
-      if (!TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, newTimeoutTask)) {
-        // Discard timeout on failed CAS. Possible contention is with onError(), onComplete() or
+      if (!TIMEOUT_FUTURE.compareAndSet(this, currentTimeoutFuture, nextTimeoutFuture)) {
+        // Discard timeout on failed CAS. Expected contention is with onError(), onComplete() or
         // cancel(), all marking stream termination.
-        newTimeoutTask.cancel(true);
+        nextTimeoutFuture.cancel(true);
       }
     }
   }
 
   protected abstract Throwable timeoutError(long index, Duration timeout);
 
-  private void onTimeout(long index) {
-    if (INDEX.compareAndSet(this, index, TOMBSTONE)) {
+  private void onTimeout(long timeoutIndex) {
+    if (INDEX.compareAndSet(this, timeoutIndex, TOMBSTONE)) {
       upstream.cancel();
-      super.onError(timeoutError(index, timeout));
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private void disableTimeouts() {
-    var currentTimeout = (Future<Void>) TIMEOUT_TASK.getAndSet(this, DISABLED_TIMEOUT);
-    if (currentTimeout != null) {
-      currentTimeout.cancel(true);
+      super.onError(timeoutError(timeoutIndex, timeout));
     }
   }
 
@@ -209,18 +187,20 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
 
     @Override
     public void request(long n) {
-      long currentIndex = index;
-      if (currentIndex != TOMBSTONE) {
-        if (n > 0 && getAndAddDemand(TimeoutSubscriber.this, DEMAND, n) == 0) {
-          try {
-            scheduleTimeout(currentIndex);
-          } catch (RuntimeException | Error e) { // delay() can throw
-            cancel();
-            throw e;
-          }
-        }
-        unwrappedUpstream.request(n);
+      var currentIndex = index;
+      if (currentIndex == TOMBSTONE) {
+        return;
       }
+
+      if (n > 0 && getAndAddDemand(TimeoutSubscriber.this, DEMAND, n) == 0) {
+        try {
+          scheduleTimeout(currentIndex);
+        } catch (RuntimeException | Error e) { // delay() can throw
+          cancel();
+          throw e;
+        }
+      }
+      unwrappedUpstream.request(n);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,29 +22,21 @@
 
 package com.github.mizosoft.methanol.internal.extensions;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.TimeoutSubscriber;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testutils.MockClock;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -96,7 +88,7 @@ class TimeoutSubscriberTest {
     assertThat(downstream.nexts).isOne(); // Item after timeout isn't received
     assertThat(downstream.errors).isOne();
     assertThat(downstream.completes).isZero();
-    assertThat(downstream.lastError).isInstanceOf(TimeoutException.class);
+    assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
 
     // Timeout occurs at second item (index starts at 0)
@@ -120,7 +112,7 @@ class TimeoutSubscriberTest {
     // Trigger timeout
     clock.advanceSeconds(1);
     assertThat(downstream.nexts).isZero();
-    assertThat(downstream.lastError).isInstanceOf(TimeoutException.class);
+    assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
     assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(0);
 
@@ -154,7 +146,7 @@ class TimeoutSubscriberTest {
 
     // Trigger timeout
     clock.advanceSeconds(2);
-    assertThat(downstream.lastError).isInstanceOf(TimeoutException.class);
+    assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
     assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(2);
 
     // Further signals are ignored
@@ -185,7 +177,7 @@ class TimeoutSubscriberTest {
     // Trigger timeout
     clock.advanceSeconds(2);
     assertThat(downstream.errors).isOne();
-    assertThat(downstream.lastError).isInstanceOf(TimeoutException.class);
+    assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
     assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(2);
 
     // Further signals are ignored
@@ -323,52 +315,7 @@ class TimeoutSubscriberTest {
     assertThat(upstreamSubscription.cancelled).isTrue();
   }
 
-  @Test
-  void overflowRequestByUpstream() {
-    var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream;
-    downstream.request = 0;
-
-    var upstreamSubscription = new RecordingSubscription();
-    timeoutSubscriber.onSubscribe(upstreamSubscription);
-    downstream.subscription.request(2);
-    timeoutSubscriber.onNext(1);
-    timeoutSubscriber.onNext(2);
-    assertThat(downstream.items).containsExactly(1, 2);
-
-    // Unrequested item is rejected & causes the subscriber to complete exceptionally
-    timeoutSubscriber.onNext(3);
-    assertThat(downstream.items).containsExactly(1, 2);
-    assertThat(downstream.lastError).isInstanceOf(IllegalStateException.class);
-    assertThat(upstreamSubscription.cancelled).isTrue();
-  }
-
-  @ExecutorParameterizedTest
-  @ExecutorConfig(CACHED_POOL)
-  void concurrentOnNext(Executor executor) {
-    var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream;
-    downstream.request = 0;
-
-    timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-
-    int itemCount = 100;
-    downstream.subscription.request(itemCount + 1);
-    CompletableFuture.allOf(
-            IntStream.rangeClosed(1, itemCount)
-                .mapToObj(
-                    i -> CompletableFuture.runAsync(() -> timeoutSubscriber.onNext(i), executor))
-                .toArray(CompletableFuture<?>[]::new))
-        .join();
-
-    assertThat(downstream.items)
-        .containsExactlyInAnyOrderElementsOf(
-            IntStream.rangeClosed(1, itemCount).boxed().collect(Collectors.toList()));
-
-    // Trigger timeout on last requested item
-    clock.advanceSeconds(1);
-    assertThat(downstream.lastError).isInstanceOf(TimeoutException.class);
-  }
+  private static class ItemTimeoutException extends Exception {}
 
   private static final class RecordingSubscription implements Subscription {
     volatile long request;
@@ -402,7 +349,7 @@ class TimeoutSubscriberTest {
     @Override
     protected Throwable timeoutError(long index, Duration timeout) {
       timeoutIndex = index;
-      return new TimeoutException();
+      return new ItemTimeoutException();
     }
   }
 }
