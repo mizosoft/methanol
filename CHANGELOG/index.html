@@ -867,7 +867,7 @@ the time to cut this release due to my senior college year &amp; other life circ
 <li>Fix (<a href="https://github.com/mizosoft/methanol/issues/40">#40</a>): Methanol had a long-lived issue that made it
   difficult for service providers to work with custom JAR formats, particularly the one used by Spring Boot's
   <a href="https://docs.spring.io/spring-boot/docs/current/reference/html/executable-jar.html">executable JARs</a>.
-  Instead of the system classloader, Methanol now relies on the classloader that loaded the library itself<br />
+  Instead of the system classloader, Methanol now relies on the classloader that loaded the library itself
   for locating providers. This is not necessarily the system classloader as in the case with Spring Boot.</li>
 <li>Fix (<a href="https://github.com/mizosoft/methanol/issues/46">46</a>): <code>ProgressTracker</code> now returns <code>MimeBodyPublisher</code>
   if the body being tracked is itself a <code>MimeBodyPublisher</code>. This prevents "swallowing" the <code>MediaType</code> of such bodies.</li>
