@@ -4,28 +4,27 @@
 
 *9-5-2022*
 
-A full year has passed since the last Methanol release! Time truly flies. It's been difficult to
-find the time to cut this release due to my senior college year & other life circumstances, but here
-we are!
+A full year has passed since the last Methanol release! Time truly flies. It's been difficult to find
+the time to cut this release due to my senior college year & other life circumstances, but here we are!
 
-* The Jackson adapter has been reworked to support the multitude of formats supported by Jackson,
-  not only JSON ([#45](https://github.com/mizosoft/methanol/issues/45)). That means you can now pass
-  arbitrary `ObjectMapper` instances along with one or more `MediaTypes` describing their formats.
-  For instance, here's a provider for a Jackson-based XML decoder.
+* The Jackson adapter has been reworked to support the multitude of formats supported by Jackson, not 
+  only JSON ([#45](https://github.com/mizosoft/methanol/issues/45)). That means you can now pass arbitrary
+  `ObjectMapper` instances along with one or more `MediaTypes` describing their formats. For instance,
+  here's a provider for a Jackson-based XML decoder.
 
   ```java
   public static class JsonDecoderProvider {
     private JsonDecoderProvider() {}
   
     public static BodyAdapter.Decoder provider() {
-      return JacksonAdapterFactory.createEncoder(new XmlMapper(), MediaType.TEXT_XML);
+      return JacksonAdapterFactory.createDecoder(new XmlMapper(), MediaType.TEXT_XML);
     }
   }
   ```
 
-  Binary formats (e.g. protocol buffers) usually require a schema for each type. `ObjectReaderFacotry` &
-  `ObjectWritierFactory` have been added for this purpose. For instance, here's a provider for a
-  protocol-buffers decoder. You'll need to know which types to expect beforehand.
+  Binary formats (e.g. protocol buffers) usually require applying a schema for each type. `ObjectReaderFacotry` 
+  & `ObjectWriterFactory` have been added for this purpose. For instance, here's a provider for a protocol-buffers
+  decoder. You'll need to know which types to expect beforehand.
 
   ```java
   public static class ProtobufDecoderProvider {
@@ -46,20 +45,21 @@ we are!
       
       // Apply the corresponding schema for each created ObjectReader
       ObjectReaderFactory readerFactory = 
-          (mapper, type) -> mapper.readerFor(type).with(schemes.get(type.rawType()));
-      return JacksonAdapterFactory.createEncoder(
-          new ProtobufMapper(), readerFactory, MediaType.TEXT_XML);
+          (mapper, type) -> mapper.readerFor(type.type()).with(schemes.get(type.rawType()));
+      return JacksonAdapterFactory.createDecoder(
+          new ProtobufMapper(), readerFactory, MediaType.APPLICATION_X_PROTOBUF);
     }
   }
   ```
 
 * To avoid ambiguity, `JacksonAdapterFactory::createDecoder` & `JacksonAdapterFactory::createEncoder`
-  have been deprecated and replaced with `JacksonAdapterFactory::createJsonDecoder` & `JacksonAdapterFactory::createJsonEncoder`
-  respectively.
+  that don't take an explicit `MediaType` have been deprecated and replaced with `JacksonAdapterFactory::createJsonDecoder`
+  & `JacksonAdapterFactory::createJsonEncoder` respectively.
 
 * Added timeouts for receiving all response headers ([#49](https://github.com/mizosoft/methanol/issues/49)).
   You can use these along with read timeouts to set more granular timing constraints for your requests
   when request timeouts are too strict.
+ 
   ```java
   var client = Methanol.newBuilder()
       .headersTimeout(Duration.ofSeconds(30))
@@ -68,13 +68,12 @@ we are!
       .build()
   ```
 
-* Fix ([#40](https://github.com/mizosoft/methanol/issues/40)): Methanol had a long-lived issue that
-  made it difficult for service providers to work with custom JAR formats, particularly the one used
-  by [Spring Boot executables](https://docs.spring.io/spring-boot/docs/current/reference/html/executable-jar.html).
-  Instead of the system classloader, Methanol now relies on the classloader that loaded the library
-  itself for locating providers. This is not necessarily the system classloader as in the case with
-  Spring Boot.
-* Fix ([#46](https://github.com/mizosoft/methanol/issues/46)): `ProgressTracker` now returns `MimeBodyPublisher` 
+* Fix ([#40](https://github.com/mizosoft/methanol/issues/40)): Methanol had a long-lived issue that made it
+  difficult for service providers to work with custom JAR formats, particularly the one used by Spring Boot's
+  [executable JARs](https://docs.spring.io/spring-boot/docs/current/reference/html/executable-jar.html).
+  Instead of the system classloader, Methanol now relies on the classloader that loaded the library itself
+  for locating providers. This is not necessarily the system classloader as in the case with Spring Boot.
+* Fix ([46](https://github.com/mizosoft/methanol/issues/46)): `ProgressTracker` now returns `MimeBodyPublisher`
   if the body being tracked is itself a `MimeBodyPublisher`. This prevents "swallowing" the `MediaType` of such bodies.
 * Upgraded Jackson to `2.13.2`.
 * Upgraded Gson to `2.9.0`.
@@ -84,7 +83,7 @@ we are!
 
 *30-5-2021*
 
-*Added [`HttpCache.Listener`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Listener.html).
+* Added [`HttpCache.Listener`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/HttpCache.Listener.html).
 * Added `TaggableRequest`. This facilitates carrying application-specific data throughout interceptors & listeners.
 
   ```java
