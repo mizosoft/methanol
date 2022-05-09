@@ -24,10 +24,10 @@ import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
 
 /**
  * Provides {@link com.github.mizosoft.methanol.BodyAdapter.Encoder} and {@link
- * com.github.mizosoft.methanol.BodyAdapter.Decoder} implementations for JSON using the Jackson
- * library. Note that, for the sake of configurability, the adapters are not service-provided by
- * default. You will need to explicitly declare service-providers that delegate to the instances
- * created by {@link JacksonAdapterFactory}.
+ * com.github.mizosoft.methanol.BodyAdapter.Decoder} implementations for the Jackson library. Note
+ * that, for the sake of configurability, the adapters are not service-provided by default. You will
+ * need to explicitly declare service-providers that delegate to the instances created by {@link
+ * JacksonAdapterFactory}.
  */
 module methanol.adapter.jackson {
   requires transitive methanol;
@@ -35,6 +35,6 @@ module methanol.adapter.jackson {
   requires static org.checkerframework.checker.qual;
 
   exports com.github.mizosoft.methanol.adapter.jackson;
-  exports com.github.mizosoft.methanol.adapter.jackson.internal
-      to methanol.adapter.jackson.flux;
+  exports com.github.mizosoft.methanol.adapter.jackson.internal to
+      methanol.adapter.jackson.flux;
 }

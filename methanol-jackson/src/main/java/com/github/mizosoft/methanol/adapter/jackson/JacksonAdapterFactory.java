@@ -105,7 +105,7 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns an {@code Decoder} that uses a default {@code ObjectMapper} for JSON and is only
+   * Returns a {@code Decoder} that uses a default {@code ObjectMapper} for JSON and is only
    * compatible with {@code application/json}.
    *
    * @deprecated Use {@link #createJsonDecoder()}.
@@ -116,7 +116,7 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns an {@code Decoder} that uses the given {@code ObjectMapper} and is only compatible with
+   * Returns a {@code Decoder} that uses the given {@code ObjectMapper} and is only compatible with
    * {@code application/json}.
    *
    * @deprecated Use {@link #createJsonDecoder(ObjectMapper)}.
@@ -127,7 +127,7 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns an {@code Decoder} that uses a default {@code ObjectMapper} for JSON and is only
+   * Returns a {@code Decoder} that uses a default {@code ObjectMapper} for JSON and is only
    * compatible with {@code application/json}.
    */
   public static Decoder createJsonDecoder() {
@@ -135,7 +135,7 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns an {@code Decoder} that uses the given {@code ObjectMapper} and is only compatible with
+   * Returns a {@code Decoder} that uses the given {@code ObjectMapper} and is only compatible with
    * {@code application/json}.
    */
   public static Decoder createJsonDecoder(ObjectMapper mapper) {
@@ -180,7 +180,6 @@ public class JacksonAdapterFactory {
   private static boolean isBinaryFormat(ObjectMapper mapper) {
     var factory = mapper.getFactory();
     try {
-      // Attempt to create a generator from a Writer
       factory.createGenerator(Writer.nullWriter());
     } catch (UnsupportedOperationException e) {
       return true;
