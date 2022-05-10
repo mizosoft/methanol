@@ -30,18 +30,18 @@ Follow these steps if your project uses the Java module system.
 1. Add this class to your module:
 
     ```java
-    public class JacksonProviders {
+    public class JacksonJsonProviders {
       private static final ObjectMapper mapper = new ObjectMapper();
    
       public static class EncoderProvider {
         public static BodyAdapter.Encoder provider() {
-          return JacksonAdapterFactory.createEncoder(mapper);
+          return JacksonAdapterFactory.createJsonEncoder(mapper);
         }
       }
    
       public static class DecoderProvider {
         public static BodyAdapter.Decoder provider() {
-          return JacksonAdapterFactory.createDecoder(mapper);
+          return JacksonAdapterFactory.createJsonDecoder(mapper);
         }
       }
     }
@@ -52,8 +52,8 @@ Follow these steps if your project uses the Java module system.
     ```java
     requires methanol.adapter.jackson;
    
-    provides BodyAdapter.Encoder with JacksonProviders.EncoderProvider;
-    provides BodyAdapter.Decoder with JacksonProviders.DecoderProvider;
+    provides BodyAdapter.Encoder with JacksonJsonProviders.EncoderProvider;
+    provides BodyAdapter.Decoder with JacksonJsonProviders.DecoderProvider;
     ```
 
 ### Classpath
@@ -107,20 +107,20 @@ Configure the annotation processor with the compiler plugin.
 Next, add this class to your project:
 
 ```java
-public class JacksonAdapters {
+public class JacksonJsonAdapters {
   private static final ObjectMapper mapper = new ObjectMapper();
   
   @AutoService(BodyAdapter.Encoder.class)
   public static class JacksonEncoder extends ForwardingEncoder {
     public JacksonEncoder() {
-      super(JacksonAdapterFactory.createEncoder(mapper));
+      super(JacksonAdapterFactory.createJsonEncoder(mapper));
     }
   }
   
   @AutoService(BodyAdapter.Decoder.class)
   public static class JacksonDecoder extends ForwardingDecoder {
     public JacksonDecoder() {
-      super(JacksonAdapterFactory.createDecoder(mapper));
+      super(JacksonAdapterFactory.createJsonDecoder(mapper));
     }
   }
 }
@@ -131,18 +131,18 @@ public class JacksonAdapters {
 You can also write the configuration files manually. First, add this class to your project:
 
 ```java
-public class JacksonAdapters {
+public class JacksonJsonAdapters {
   private static final ObjectMapper mapper = new ObjectMapper();
   
   public static class JacksonEncoder extends ForwardingEncoder {
     public JacksonEncoder() {
-      super(JacksonAdapterFactory.createEncoder(mapper));
+      super(JacksonAdapterFactory.createJsonEncoder(mapper));
     }
   }
   
   public static class JacksonDecoder extends ForwardingDecoder {
     public JacksonDecoder() {
-      super(JacksonAdapterFactory.createDecoder(mapper));
+      super(JacksonAdapterFactory.createJsonDecoder(mapper));
     }
   }
 }
@@ -162,7 +162,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 and contains the following line:
 
 ```
-com.example.JacksonAdapters$JacksonEncoder
+com.example.JacksonJsonAdapters$JacksonEncoder
 ```
 
 Similarly, the decoder's file is named:
@@ -174,7 +174,83 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
 and contains:
 
 ```
-com.example.JacksonAdapters$JacksonDecoder
+com.example.JacksonJsonAdapters$JacksonDecoder
+```
+
+## Adapters for other formats
+
+The Jackson adapter doesn't only support JSON. You can pair whatever `ObjectMapper` implementation 
+with one or more `MediaTypes` to create adapters for any of the formats supported by Jackson. For
+instance, here's a provider for a XML adapter. You'll need to pull in [`jackson-dataformat-xml`](https://github.com/FasterXML/jackson-dataformat-xml). You can install it as mentioned above. 
+
+```java
+public class JacksonXmlProviders {
+  private static final ObjectMapper mapper = new XmlMapper();
+
+  public static class EncoderProvider {
+    public static BodyAdapter.Encoder provider() {
+      return JacksonAdapterFactory.createEncoder(mapper, MediaType.TEXT_XML);
+    }
+  }
+
+  public static class DecoderProvider {
+    public static BodyAdapter.Decoder provider() {
+      return JacksonAdapterFactory.createDecoder(mapper, MediaType.TEXT_XML);
+    }
+  }
+}
+```
+
+For binary formats, you usually can't just plug in an `ObjectMapper` as a schema must be applied for each type.
+For this reason you can use a custom `ObjectReaderFactory` and/or `ObjectWriterFactory`. For instance, here's a provider for a
+[Protocol Buffers](https://github.com/FasterXML/jackson-dataformats-binary/tree/2.14/protobuf) adapter.
+You'll need to know what types are expected beforehand.
+
+```java
+record Point(int x, int y) {}
+
+public class JacksonProtobufProviders {
+  private static final ObjectMapper mapper = new ProtobufMapper();
+
+  /**
+   * We'll store our schemas in a map. You can implement this in other ways, like loading the
+   * protobuf files lazily when needed.
+   */
+  private static final Map<TypeRef<?>, ProtobufSchema> schemas;
+
+  static {
+    try {
+      schemas = Map.of(
+          TypeRef.from(Point.class),
+          ProtobufSchemaLoader.std.parse(
+              """
+              message Point {
+                required int32 x = 1;
+                required int32 y = 2;
+              }
+              """));
+    } catch (IOException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
+  public static class EncoderProvider {
+    public static BodyAdapter.Encoder provider() {
+      ObjectWriterFactory writerFactory = (mapper, type) -> mapper.writer(schemas.get(type));
+      return JacksonAdapterFactory.createEncoder(
+          mapper, writerFactory, MediaType.APPLICATION_X_PROTOBUF);
+    }
+  }
+
+  public static class DecoderProvider {
+    public static BodyAdapter.Decoder provider() {
+      ObjectReaderFactory readerFactory =
+          (mapper, type) -> mapper.readerFor(type.rawType()).with(schemas.get(type));
+      return JacksonAdapterFactory.createDecoder(
+          mapper, readerFactory, MediaType.APPLICATION_X_PROTOBUF);
+    }
+  }
+}
 ```
 
 [jackson]: https://github.com/FasterXML/jackson
