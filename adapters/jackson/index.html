@@ -610,6 +610,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#adapters-for-other-formats" class="md-nav__link">
+    Adapters for other formats
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -819,6 +826,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#adapters-for-other-formats" class="md-nav__link">
+    Adapters for other formats
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -857,18 +871,18 @@ The way this is done depends on your project setup.</p>
 <ol>
 <li>
 <p>Add this class to your module:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonProviders</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonJsonProviders</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="w"> </span><span class="n">mapper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="p">();</span><span class="w"></span>
 
 <span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">EncoderProvider</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Encoder</span><span class="w"> </span><span class="nf">provider</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">);</span><span class="w"></span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">);</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 
 <span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">DecoderProvider</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="w"> </span><span class="nf">provider</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">);</span><span class="w"></span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">);</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
@@ -878,8 +892,8 @@ The way this is done depends on your project setup.</p>
 <p>Add the corresponding provider declarations in your <code>module-info.java</code> file.</p>
 <div class="highlight"><pre><span></span><code><span class="n">requires</span><span class="w"> </span><span class="n">methanol</span><span class="p">.</span><span class="na">adapter</span><span class="p">.</span><span class="na">jackson</span><span class="p">;</span><span class="w"></span>
 
-<span class="n">provides</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Encoder</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">JacksonProviders</span><span class="p">.</span><span class="na">EncoderProvider</span><span class="p">;</span><span class="w"></span>
-<span class="n">provides</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">JacksonProviders</span><span class="p">.</span><span class="na">DecoderProvider</span><span class="p">;</span><span class="w"></span>
+<span class="n">provides</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Encoder</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">JacksonJsonProviders</span><span class="p">.</span><span class="na">EncoderProvider</span><span class="p">;</span><span class="w"></span>
+<span class="n">provides</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">JacksonJsonProviders</span><span class="p">.</span><span class="na">DecoderProvider</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 </li>
 </ol>
@@ -918,38 +932,38 @@ annotationProcessor &quot;com.google.auto.service:auto-service:$autoServiceVersi
 <span class="nt">&lt;/plugin&gt;</span>
 </code></pre></div>
 <p>Next, add this class to your project:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonAdapters</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonJsonAdapters</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="w"> </span><span class="n">mapper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="p">();</span><span class="w"></span>
 
 <span class="w">  </span><span class="nd">@AutoService</span><span class="p">(</span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Encoder</span><span class="p">.</span><span class="na">class</span><span class="p">)</span><span class="w"></span>
 <span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonEncoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingEncoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">JacksonEncoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span><span class="w"></span>
+<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 
 <span class="w">  </span><span class="nd">@AutoService</span><span class="p">(</span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="p">.</span><span class="na">class</span><span class="p">)</span><span class="w"></span>
 <span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonDecoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingDecoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">JacksonDecoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span><span class="w"></span>
+<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
 </code></pre></div>
 <h4 id="manual-configuration">Manual Configuration<a class="headerlink" href="#manual-configuration" title="Permanent link">&para;</a></h4>
 <p>You can also write the configuration files manually. First, add this class to your project:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonAdapters</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonJsonAdapters</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="w"> </span><span class="n">mapper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="p">();</span><span class="w"></span>
 
 <span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonEncoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingEncoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">JacksonEncoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span><span class="w"></span>
+<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 
 <span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonDecoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingDecoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">JacksonDecoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span><span class="w"></span>
+<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
@@ -962,13 +976,82 @@ encoder named:</p>
 <div class="highlight"><pre><span></span><code>META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 </code></pre></div>
 <p>and contains the following line:</p>
-<div class="highlight"><pre><span></span><code>com.example.JacksonAdapters$JacksonEncoder
+<div class="highlight"><pre><span></span><code>com.example.JacksonJsonAdapters$JacksonEncoder
 </code></pre></div>
 <p>Similarly, the decoder's file is named:</p>
 <div class="highlight"><pre><span></span><code>META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
 </code></pre></div>
 <p>and contains:</p>
-<div class="highlight"><pre><span></span><code>com.example.JacksonAdapters$JacksonDecoder
+<div class="highlight"><pre><span></span><code>com.example.JacksonJsonAdapters$JacksonDecoder
+</code></pre></div>
+<h2 id="adapters-for-other-formats">Adapters for other formats<a class="headerlink" href="#adapters-for-other-formats" title="Permanent link">&para;</a></h2>
+<p>The Jackson adapter doesn't only support JSON. You can pair whatever <code>ObjectMapper</code> implementation 
+with one or more <code>MediaTypes</code> to create adapters for any of the formats supported by Jackson. For
+instance, here's a provider for a XML adapter. You'll need to pull in <a href="https://github.com/FasterXML/jackson-dataformat-xml"><code>jackson-dataformat-xml</code></a>. You can install it as mentioned above. </p>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonXmlProviders</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="w"> </span><span class="n">mapper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">XmlMapper</span><span class="p">();</span><span class="w"></span>
+
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">EncoderProvider</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Encoder</span><span class="w"> </span><span class="nf">provider</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">TEXT_XML</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">DecoderProvider</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="w"> </span><span class="nf">provider</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">TEXT_XML</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</code></pre></div>
+<p>For binary formats, you usually can't just plug in an <code>ObjectMapper</code> as a schema must be applied for each type.
+For this reason you can use a custom <code>ObjectReaderFactory</code> and/or <code>ObjectWriterFactory</code>. For instance, here's a provider for a
+<a href="https://github.com/FasterXML/jackson-dataformats-binary/tree/2.14/protobuf">Protocol Buffers</a> adapter.
+You'll need to know what types are expected beforehand.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">record</span> <span class="nc">Point</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">y</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span><span class="w"></span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonProtobufProviders</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="w"> </span><span class="n">mapper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ProtobufMapper</span><span class="p">();</span><span class="w"></span>
+
+<span class="w">  </span><span class="cm">/**</span>
+<span class="cm">   * We&#39;ll store our schemas in a map. You can implement this in other ways, like loading the</span>
+<span class="cm">   * protobuf files lazily when needed.</span>
+<span class="cm">   */</span><span class="w"></span>
+<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Map</span><span class="o">&lt;</span><span class="n">TypeRef</span><span class="o">&lt;?&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">ProtobufSchema</span><span class="o">&gt;</span><span class="w"> </span><span class="n">schemas</span><span class="p">;</span><span class="w"></span>
+
+<span class="w">  </span><span class="kd">static</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">schemas</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Map</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="w"></span>
+<span class="w">          </span><span class="n">TypeRef</span><span class="p">.</span><span class="na">from</span><span class="p">(</span><span class="n">Point</span><span class="p">.</span><span class="na">class</span><span class="p">),</span><span class="w"></span>
+<span class="w">          </span><span class="n">ProtobufSchemaLoader</span><span class="p">.</span><span class="na">std</span><span class="p">.</span><span class="na">parse</span><span class="p">(</span><span class="w"></span>
+<span class="w">              </span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">              message Point {</span>
+<span class="s">                required int32 x = 1;</span>
+<span class="s">                required int32 y = 2;</span>
+<span class="s">              }</span>
+<span class="s">              &quot;&quot;&quot;</span><span class="p">));</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">IOException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ExceptionInInitializerError</span><span class="p">(</span><span class="n">e</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">EncoderProvider</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Encoder</span><span class="w"> </span><span class="nf">provider</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">ObjectWriterFactory</span><span class="w"> </span><span class="n">writerFactory</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">mapper</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">mapper</span><span class="p">.</span><span class="na">writer</span><span class="p">(</span><span class="n">schemas</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">type</span><span class="p">));</span><span class="w"></span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createEncoder</span><span class="p">(</span><span class="w"></span>
+<span class="w">          </span><span class="n">mapper</span><span class="p">,</span><span class="w"> </span><span class="n">writerFactory</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_X_PROTOBUF</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">DecoderProvider</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="w"> </span><span class="nf">provider</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">      </span><span class="n">ObjectReaderFactory</span><span class="w"> </span><span class="n">readerFactory</span><span class="w"> </span><span class="o">=</span><span class="w"></span>
+<span class="w">          </span><span class="p">(</span><span class="n">mapper</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">mapper</span><span class="p">.</span><span class="na">readerFor</span><span class="p">(</span><span class="n">type</span><span class="p">.</span><span class="na">rawType</span><span class="p">()).</span><span class="na">with</span><span class="p">(</span><span class="n">schemas</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="n">type</span><span class="p">));</span><span class="w"></span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createDecoder</span><span class="p">(</span><span class="w"></span>
+<span class="w">          </span><span class="n">mapper</span><span class="p">,</span><span class="w"> </span><span class="n">readerFactory</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_X_PROTOBUF</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 
               
