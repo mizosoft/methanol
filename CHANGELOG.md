@@ -34,7 +34,7 @@ the time to cut this release due to my senior college year & other life circumst
   
     public static BodyAdapter.Decoder provider() throws IOException {
       var schemas = Map.of(
-          Point.class,
+          TypeRef.from(Point.class),
           ProtobufSchemaLoader.std.parse(
               """
               message Point {
@@ -45,7 +45,7 @@ the time to cut this release due to my senior college year & other life circumst
       
       // Apply the corresponding schema for each created ObjectReader
       ObjectReaderFactory readerFactory = 
-          (mapper, type) -> mapper.readerFor(type.rawType()).with(schemas.get(type.rawType()));
+          (mapper, type) -> mapper.readerFor(type.rawType()).with(schemas.get(type));
       return JacksonAdapterFactory.createDecoder(
           new ProtobufMapper(), readerFactory, MediaType.APPLICATION_X_PROTOBUF);
     }
