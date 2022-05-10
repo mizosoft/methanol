@@ -13,8 +13,8 @@ the time to cut this release due to my senior college year & other life circumst
   here's a provider for a Jackson-based XML decoder.
 
   ```java
-  public static class JsonDecoderProvider {
-    private JsonDecoderProvider() {}
+  public class JacksonXmlDecoderProvider {
+    private JacksonXmlDecoderProvider() {}
   
     public static BodyAdapter.Decoder provider() {
       return JacksonAdapterFactory.createDecoder(new XmlMapper(), MediaType.TEXT_XML);
@@ -27,12 +27,12 @@ the time to cut this release due to my senior college year & other life circumst
   decoder. You'll need to know which types to expect beforehand.
 
   ```java
-  public static class ProtobufDecoderProvider {
-    private ProtobufDecoderProvider() {}
+  public class JacksonProtobufDecoderProvider {
+    private JacksonProtobufDecoderProvider() {}
   
-    record Point(int x, int y) {}
+    public record Point(int x, int y) {}
   
-    public static BodyAdapter.Decoder provider() {
+    public static BodyAdapter.Decoder provider() throws IOException {
       var schemas = Map.of(
           Point.class,
           ProtobufSchemaLoader.std.parse(
@@ -45,7 +45,7 @@ the time to cut this release due to my senior college year & other life circumst
       
       // Apply the corresponding schema for each created ObjectReader
       ObjectReaderFactory readerFactory = 
-          (mapper, type) -> mapper.readerFor(type.type()).with(schemes.get(type.rawType()));
+          (mapper, type) -> mapper.readerFor(type.rawType()).with(schemas.get(type.rawType()));
       return JacksonAdapterFactory.createDecoder(
           new ProtobufMapper(), readerFactory, MediaType.APPLICATION_X_PROTOBUF);
     }
