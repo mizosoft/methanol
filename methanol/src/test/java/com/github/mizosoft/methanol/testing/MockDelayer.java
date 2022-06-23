@@ -35,12 +35,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** A Delayer that delays tasks based on a MockClock's time. */
 public final class MockDelayer implements Delayer {
   private final MockClock clock;
   private final Queue<TimestampedTask> taskQueue =
-      new PriorityQueue<>(Comparator.comparing(task -> task.stamp));
+      new PriorityQueue<>(
+          Comparator.comparing((TimestampedTask task) -> task.stamp)
+              .thenComparingLong(task -> task.sequenceNumber));
 
   public MockDelayer(MockClock clock) {
     this.clock = clock;
@@ -102,10 +105,14 @@ public final class MockDelayer implements Delayer {
   }
 
   private static final class TimestampedTask {
+    /** Sequence number generator to break ties on comparison. */
+    private static final AtomicLong sequencer = new AtomicLong();
+
     final Executor executor;
     final Runnable task;
     final Instant stamp;
     final CompletableFuture<Void> future = new CompletableFuture<>();
+    final long sequenceNumber = sequencer.getAndIncrement();
 
     TimestampedTask(Executor executor, Runnable task, Instant stamp) {
       this.task = task;
