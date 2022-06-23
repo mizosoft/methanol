@@ -103,10 +103,15 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
     requireNonNull(item);
 
     var currentTimeoutFuture = timeoutFuture;
-    if (currentTimeoutFuture == null // A timeout must've been scheduled for this onNext
+    if (currentTimeoutFuture == null
         || currentTimeoutFuture == DISABLED_TIMEOUT
         || !TIMEOUT_FUTURE.compareAndSet(this, currentTimeoutFuture, null)) {
       upstream.cancel();
+      if (currentTimeoutFuture == null) {
+        super.onError(
+            new IllegalStateException(
+                "missing backpressure support or illegal (concurrent) usage"));
+      }
       return;
     }
 
@@ -117,6 +122,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
     var currentIndex = index;
     if (currentIndex == TOMBSTONE || !INDEX.compareAndSet(this, currentIndex, currentIndex + 1)) {
       upstream.cancel();
+      super.onError(new IllegalStateException("illegal (concurrent) usage"));
       return;
     }
 
@@ -168,7 +174,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
       if (!TIMEOUT_FUTURE.compareAndSet(this, currentTimeoutFuture, nextTimeoutFuture)) {
         // Discard timeout on failed CAS. Expected contention is with onError(), onComplete() or
         // cancel(), all marking stream termination.
-        nextTimeoutFuture.cancel(true);
+        nextTimeoutFuture.cancel(false);
       }
     }
   }

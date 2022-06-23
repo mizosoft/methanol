@@ -315,6 +315,27 @@ class TimeoutSubscriberTest {
     assertThat(upstreamSubscription.cancelled).isTrue();
   }
 
+  @Test
+  void moreOnNextThanRequested() {
+    var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
+    var downstream = timeoutSubscriber.downstream;
+    downstream.request = 0;
+
+    var upstreamSubscription = new RecordingSubscription();
+    timeoutSubscriber.onSubscribe(upstreamSubscription);
+
+    downstream.subscription.request(2);
+
+    timeoutSubscriber.onNext(1);
+    timeoutSubscriber.onNext(2);
+    assertThat(downstream.items).containsExactly(1, 2);
+
+    timeoutSubscriber.onNext(3);
+    assertThat(downstream.lastError).isInstanceOf(IllegalStateException.class);
+    assertThat(upstreamSubscription.cancelled).isTrue();
+    assertThat(delayer.peekLatestTaskFuture()).isCancelled();
+  }
+
   private static class ItemTimeoutException extends Exception {}
 
   private static final class RecordingSubscription implements Subscription {
