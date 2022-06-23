@@ -391,7 +391,7 @@ public final class Methanol extends HttpClient {
     <T> CompletableFuture<HttpResponse<T>> interceptAsync(HttpRequest request, Chain<T> chain);
 
     /** Returns an interceptor that forwards the request after applying the given operator. */
-    static Interceptor create(UnaryOperator<HttpRequest> operator) {
+    static Interceptor create(Function<HttpRequest, HttpRequest> operator) {
       requireNonNull(operator);
       return new Interceptor() {
         @Override
@@ -432,6 +432,23 @@ public final class Methanol extends HttpClient {
       default <U> Chain<U> with(
           BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler) {
         throw new UnsupportedOperationException();
+      }
+
+      /** Returns a new chain after applying the given function to this chain's body handler. */
+      default Chain<T> with(UnaryOperator<BodyHandler<T>> bodyHandlerTransformer) {
+        return withBodyHandler(bodyHandlerTransformer.apply(bodyHandler()));
+      }
+
+      /**
+       * Returns a new chain after applying the given functions to this chain's body and push
+       * promise handlers.
+       */
+      default Chain<T> with(
+          UnaryOperator<BodyHandler<T>> bodyHandlerTransformer,
+          UnaryOperator<PushPromiseHandler<T>> pushPromiseHandlerTransformer) {
+        return with(
+            bodyHandlerTransformer.apply(bodyHandler()),
+            pushPromiseHandler().map(pushPromiseHandlerTransformer).orElse(null));
       }
 
       /**
@@ -829,9 +846,7 @@ public final class Methanol extends HttpClient {
       }
 
       var interceptor = interceptors.get(currentInterceptorIndex);
-      return requireNonNull(
-          interceptor.intercept(request, nextInterceptorChain()),
-          () -> interceptor + "::intercept returned a null response");
+      return interceptor.intercept(request, nextInterceptorChain());
     }
 
     @Override
@@ -843,12 +858,7 @@ public final class Methanol extends HttpClient {
       }
 
       var interceptor = interceptors.get(currentInterceptorIndex);
-      return interceptor
-          .interceptAsync(request, nextInterceptorChain())
-          .thenApply(
-              res ->
-                  requireNonNull(
-                      res, () -> interceptor + "::interceptAsync completed with a null response"));
+      return interceptor.interceptAsync(request, nextInterceptorChain());
     }
 
     private InterceptorChain<T> nextInterceptorChain() {
@@ -952,16 +962,12 @@ public final class Methanol extends HttpClient {
       }
 
       return chain.with(
-          MoreBodyHandlers.decoding(chain.bodyHandler()),
-          chain
-              .pushPromiseHandler()
-              .map(
-                  handler ->
-                      transformPushPromises(
-                          handler,
-                          MoreBodyHandlers::decoding,
-                          AutoDecompressingInterceptor::stripContentEncoding))
-              .orElse(null));
+          MoreBodyHandlers::decoding,
+          pushPromiseHandler ->
+              transformPushPromises(
+                  pushPromiseHandler,
+                  MoreBodyHandlers::decoding,
+                  AutoDecompressingInterceptor::stripContentEncoding));
     }
 
     private static <T> HttpResponse<T> stripContentEncoding(HttpResponse<T> response) {
@@ -1017,11 +1023,12 @@ public final class Methanol extends HttpClient {
 
     private <T> Chain<T> withHeadersTimeout(Chain<T> chain, TimeoutTask timeoutTask) {
       // TODO handle push promises
-      return chain.withBodyHandler(
-          responseInfo ->
-              timeoutTask.cancel()
-                  ? chain.bodyHandler().apply(responseInfo)
-                  : new TimedOutSubscriber<>());
+      return chain.with(
+          bodyHandler ->
+              responseInfo ->
+                  timeoutTask.cancel()
+                      ? bodyHandler.apply(responseInfo)
+                      : new TimedOutSubscriber<>());
     }
 
     private static final class TimeoutTask {
@@ -1109,14 +1116,10 @@ public final class Methanol extends HttpClient {
 
     private <T> Chain<T> withReadTimeout(Chain<T> chain) {
       return chain.with(
-          withReadTimeout(chain.bodyHandler()),
-          chain
-              .pushPromiseHandler()
-              .map(
-                  handler ->
-                      transformPushPromises(
-                          handler, this::withReadTimeout, UnaryOperator.identity()))
-              .orElse(null));
+          this::withReadTimeout,
+          pushPromiseHandler ->
+              transformPushPromises(
+                  pushPromiseHandler, this::withReadTimeout, UnaryOperator.identity()));
     }
 
     private <T> BodyHandler<T> withReadTimeout(BodyHandler<T> bodyHandler) {
