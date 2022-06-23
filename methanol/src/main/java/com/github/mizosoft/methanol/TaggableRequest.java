@@ -38,11 +38,12 @@ import java.util.Optional;
 public abstract class TaggableRequest extends HttpRequest {
   TaggableRequest() {}
 
+  /** Returns the tag associated with the given type if present. */
   public <T> Optional<T> tag(Class<T> type) {
     return tag(TypeRef.from(type));
   }
 
-  /** Returns the tag having the given type if present. */
+  /** Returns the tag associated with the given type if present. */
   public abstract <T> Optional<T> tag(TypeRef<T> type);
 
   abstract Map<TypeRef<?>, Object> tags();
