@@ -51,7 +51,8 @@ HttpResponse<String> uploadPng(String title, InputStream pngImageInputStream)
       BodyPublishers.ofInputStream(() -> pngImageInputStream), MediaType.IMAGE_PNG);
   var multipartBody = MultipartBodyPublisher.newBuilder()
      .textPart("title", title)
-     .formPart("image", title + ".png", imagePart)
+     .formPart(
+         "image", title + ".png", MoreBodyPublishers.ofMediaType(imagePart, MediaType.IMAGE_PNG))
      .build();
   var request = MutableRequest.POST("https://api.imgur.com/3/image", multipartBody)
       .header("Authorization", "Client-ID " + CLIENT_ID); 
@@ -63,6 +64,10 @@ HttpResponse<String> uploadPng(String title, InputStream pngImageInputStream)
 !!! tip
     You can use `formPart` to add a file part from something that's not a `Path` (e.g. `InputStream`) or
     to override the part's `filename` property, which is not possible with `filePart`.
+
+!!! tip
+    Use `MoreBodyPublishers::ofMediaType` to pair an arbitrary `BodyPublisher` with its proper `MediaType`
+    if you want a `Content-Type` header to be specified by the part.
 
 ## Form Bodies
 

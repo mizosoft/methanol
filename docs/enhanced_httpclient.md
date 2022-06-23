@@ -16,6 +16,7 @@ var builder = Methanol.newBuilder()
     .baseUri("https://api.github.com")           // Base URI to resolve requests' URI against
     .defaultHeader("Accept", "application/json") // Default request headers
     .requestTimeout(Duration.ofSeconds(20))      // Default request timeout
+    .headersTimeout(Duration.ofSeconds(5))       // Timeout for receiving response headers
     .readTimeout(Duration.ofSeconds(5))          // Timeout for single reads
     .autoAcceptEncoding(true);                   // Transparent response compression, this is true by default
 

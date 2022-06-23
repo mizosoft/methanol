@@ -111,15 +111,15 @@ public class GsonAdapters {
   private static final Gson gson = new Gson();
   
   @AutoService(BodyAdapter.Encoder.class)
-  public static class GsonEncoder extends ForwardingEncoder {
-    public GsonEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(GsonAdapterFactory.createEncoder(gson));
     }
   }
 
   @AutoService(BodyAdapter.Decoder.class)
-  public static class GsonDecoder extends ForwardingDecoder {
-    public GsonDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(GsonAdapterFactory.createDecoder(gson));
     }
   }
@@ -134,14 +134,14 @@ You can also write the configuration files manually. First, add this class to yo
 public class GsonAdapters {
   private static final Gson gson = new Gson();
   
-  public static class GsonEncoder extends ForwardingEncoder {
-    public GsonEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(GsonAdapterFactory.createEncoder(gson));
     }
   }
   
-  public static class GsonDecoder extends ForwardingDecoder {
-    public GsonDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(GsonAdapterFactory.createDecoder(gson));
     }
   }
@@ -162,7 +162,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 and contains the following line:
 
 ```
-com.example.GsonAdapters$GsonEncoder
+com.example.GsonAdapters$Encoder
 ```
 
 Similarly, the decoder's file is named:
@@ -174,7 +174,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
 and contains:
 
 ```
-com.example.GsonAdapters$GsonDecoder
+com.example.GsonAdapters$Decoder
 ```
 
 [gson]: https://github.com/google/gson

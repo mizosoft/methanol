@@ -11,7 +11,7 @@ Before sending and receiving objects over HTTP, Methanol needs to adapt to your 
 Adapters for the most popular serialization libraries are provided in separate modules.
 
   * [`methanol-gson`](adapters/gson.md): JSON with Gson
-  * [`methanol-jackson`](adapters/jackson.md): JSON with Jackson
+  * [`methanol-jackson`](adapters/jackson.md): JSON with Jackson (but also XML, protocol buffers and other formats support by Jackson)
   * [`methanol-jackson-flux`](adapters/jackson_flux.md): Reactive JSON with Jackson and Reactor
   * [`methanol-jaxb`](adapters/jaxb.md): XML with JAXB
   * [`methanol-protobuf`](adapters/protobuf.md): Google's Protocol Buffers
@@ -129,7 +129,7 @@ vise versa. When you're writing adapters, extend from `AbstractBodyAdapter` to g
 matching & other helpful functions.
 
 ```java
-public abstract class JsoupAdapter extends AbstractBodyAdapter implements BodyAdapter {
+public abstract class JsoupAdapter extends AbstractBodyAdapter {
   JsoupAdapter() {
     super(MediaType.TEXT_HTML);
   }
@@ -247,7 +247,7 @@ or a `Reader`.
 The `Decoder` interface has a naive default implementation for `toDeferredObject` that doesn't read
 from a streaming source. Here's how it'd be properly implemented for our HTML adapter's decoder.
 
-```java hl_lines="9"
+```java hl_lines="10"
 @Override
 public <T> BodySubscriber<Supplier<T>> toDeferredObject(
     TypeRef<T> type, @Nullable MediaType mediaType) {

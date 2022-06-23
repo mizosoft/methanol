@@ -111,15 +111,15 @@ public class JacksonJsonAdapters {
   private static final ObjectMapper mapper = new ObjectMapper();
   
   @AutoService(BodyAdapter.Encoder.class)
-  public static class JacksonEncoder extends ForwardingEncoder {
-    public JacksonEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(JacksonAdapterFactory.createJsonEncoder(mapper));
     }
   }
   
   @AutoService(BodyAdapter.Decoder.class)
-  public static class JacksonDecoder extends ForwardingDecoder {
-    public JacksonDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(JacksonAdapterFactory.createJsonDecoder(mapper));
     }
   }
@@ -134,14 +134,14 @@ You can also write the configuration files manually. First, add this class to yo
 public class JacksonJsonAdapters {
   private static final ObjectMapper mapper = new ObjectMapper();
   
-  public static class JacksonEncoder extends ForwardingEncoder {
-    public JacksonEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(JacksonAdapterFactory.createJsonEncoder(mapper));
     }
   }
   
-  public static class JacksonDecoder extends ForwardingDecoder {
-    public JacksonDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(JacksonAdapterFactory.createJsonDecoder(mapper));
     }
   }
@@ -162,7 +162,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 and contains the following line:
 
 ```
-com.example.JacksonJsonAdapters$JacksonEncoder
+com.example.JacksonJsonAdapters$Encoder
 ```
 
 Similarly, the decoder's file is named:
@@ -174,7 +174,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
 and contains:
 
 ```
-com.example.JacksonJsonAdapters$JacksonDecoder
+com.example.JacksonJsonAdapters$Decoder
 ```
 
 ## Adapters for other formats

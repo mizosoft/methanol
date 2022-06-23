@@ -129,15 +129,15 @@ public class JacksonFluxAdapters {
   private static final ObjectMapper mapper = new ObjectMapper();
 
   @AutoService(BodyAdapter.Encoder.class)
-  public static class JacksonFluxEncoder extends ForwardingEncoder {
-    public JacksonFluxEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(JacksonFluxAdapterFactory.createEncoder(mapper));
     }
   }
   
   @AutoService(BodyAdapter.Decoder.class)
-  public static class JacksonFluxDecoder extends ForwardingDecoder {
-    public JacksonFluxDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(JacksonFluxAdapterFactory.createDecoder(mapper));
     }
   }
@@ -152,14 +152,14 @@ You can also write the configuration files manually. First, add this class to yo
 public class JacksonFluxAdapters {
   private static final ObjectMapper mapper = new ObjectMapper();
 
-  public static class JacksonFluxEncoder extends ForwardingEncoder {
-    public JacksonFluxEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(JacksonFluxAdapterFactory.createEncoder(mapper));
     }
   }
   
-  public static class JacksonFluxDecoder extends ForwardingDecoder {
-    public JacksonFluxDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(JacksonFluxAdapterFactory.createDecoder(mapper));
     }
   }
@@ -180,7 +180,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 and contains the following line:
 
 ```
-com.example.JacksonFluxAdapters$JacksonFluxEncoder
+com.example.JacksonFluxAdapters$Encoder
 ```
 
 Similarly, the decoder's file is named:
@@ -192,7 +192,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
 and contains:
 
 ```
-com.example.JacksonFluxAdapters$JacksonFluxDecoder
+com.example.JacksonFluxAdapters$Decoder
 ```
 
 [jackson]: https://github.com/FasterXML/jackson

@@ -107,15 +107,15 @@ Next, add this class to your project:
 ```java
 public class JaxbAdapters {
   @AutoService(BodyAdapter.Encoder.class)
-  public static class JaxbEncoder extends ForwardingEncoder {
-    public JaxbEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(JaxbAdapterFactory.createEncoder());
     }
   }
   
   @AutoService(BodyAdapter.Decoder.class)
-  public static class JaxbDecoder extends ForwardingDecoder {
-    public JaxbDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(JaxbAdapterFactory.createDecoder());
     }
   }
@@ -128,14 +128,14 @@ You can also write the configuration files manually. First, add this class to yo
 
 ```java
 public class JaxbAdapters {
-  public static class JaxbEncoder extends ForwardingEncoder {
-    public JaxbEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(JaxbAdapterFactory.createEncoder());
     }
   }
   
-  public static class JaxbDecoder extends ForwardingDecoder {
-    public JaxbDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(JaxbAdapterFactory.createDecoder());
     }
   }
@@ -156,7 +156,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 and contains the following line:
 
 ```
-com.example.JaxbAdapters$JaxbEncoder
+com.example.JaxbAdapters$Encoder
 ```
 
 Similarly, the decoder's file is named:
@@ -168,7 +168,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
 and contains:
 
 ```
-com.example.JaxbAdapters$JaxbDecoder
+com.example.JaxbAdapters$Decoder
 ```
 
 [jaxb]: https://javaee.github.io/jaxb-v2/

@@ -112,15 +112,15 @@ Next, add this class to your project:
 ```java
 public class ProtobufAdapters {  
   @AutoService(BodyAdapter.Encoder.class)
-  public static class ProtobufEncoder extends ForwardingEncoder {
-    public ProtobufEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(ProtobufAdapterFactory.createEncoder());
     }
   }
 
   @AutoService(BodyAdapter.Decoder.class)
-  public static class ProtobufDecoder extends ForwardingDecoder {
-    public ProtobufDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(ProtobufAdapterFactory.createDecoder());
     }
   }
@@ -133,14 +133,14 @@ You can also write the configuration files manually. First, add this class to yo
 
 ```java
 public class ProtobufAdapters {
-  public static class ProtobufDecoder extends ForwardingDecoder {
-    public ProtobufDecoder() {
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
       super(ProtobufAdapterFactory.createDecoder());
     }
   }
 
-  public static class ProtobufEncoder extends ForwardingEncoder {
-    public ProtobufEncoder() {
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
       super(ProtobufAdapterFactory.createEncoder());
     }
   }
@@ -161,7 +161,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 and contains the following line:
 
 ```
-com.example.ProtobufAdapters$ProtobufEncoder
+com.example.ProtobufAdapters$Encoder
 ```
 
 Similarly, the decoder's file is named:
@@ -173,7 +173,7 @@ META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
 and contains:
 
 ```
-com.example.ProtobufAdapters$ProtobufDecoder
+com.example.ProtobufAdapters$Decoder
 ```
 
 [protocol_buffers]: https://developers.google.com/protocol-buffers
