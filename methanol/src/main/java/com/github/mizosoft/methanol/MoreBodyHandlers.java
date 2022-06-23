@@ -86,7 +86,7 @@ public class MoreBodyHandlers {
       BodyHandler<T> baseHandler, Duration timeout, ScheduledExecutorService scheduler) {
     requireNonNull(baseHandler, "baseHandler");
     requireNonNull(timeout, "timeout");
-    requireNonNull(timeout, "scheduler");
+    requireNonNull(scheduler, "scheduler");
     return info -> MoreBodySubscribers.withReadTimeout(baseHandler.apply(info), timeout, scheduler);
   }
 
