@@ -68,27 +68,22 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class MutableRequest extends TaggableRequest implements TaggableRequest.Builder {
   private static final URI EMPTY_URI = URI.create("");
 
-  private final Map<TypeRef<?>, Object> tags;
-  private final HeadersBuilder headersBuilder;
-  private String method;
-  private URI uri;
+  private final Map<TypeRef<?>, Object> tags = new HashMap<>();
+
+  private final HeadersBuilder headersBuilder = new HeadersBuilder();
+  private String method = "GET";
+  private URI uri = EMPTY_URI;
   private @Nullable HttpHeaders cachedHeaders;
   private @Nullable BodyPublisher bodyPublisher;
   private @MonotonicNonNull Duration timeout;
   private @MonotonicNonNull Version version;
   private boolean expectContinue;
 
-  private MutableRequest() {
-    tags = new HashMap<>();
-    headersBuilder = new HeadersBuilder();
-    method = "GET";
-    uri = EMPTY_URI;
-  }
+  private MutableRequest() {}
 
-  // for copy()
   private MutableRequest(MutableRequest other) {
-    tags = new HashMap<>(other.tags);
-    headersBuilder = other.headersBuilder.deepCopy();
+    tags.putAll(other.tags);
+    headersBuilder.addAll(other.headersBuilder);
     method = other.method;
     uri = other.uri;
     cachedHeaders = other.cachedHeaders;
@@ -115,7 +110,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   /** Removes all headers added so far. */
   public MutableRequest removeHeaders() {
-    cachedHeaders = null; // invalidated
+    cachedHeaders = null;
     headersBuilder.clear();
     return this;
   }
@@ -124,7 +119,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   public MutableRequest removeHeader(String name) {
     requireNonNull(name);
     if (headersBuilder.remove(name)) {
-      cachedHeaders = null; // invalidated
+      cachedHeaders = null;
     }
     return this;
   }
@@ -133,7 +128,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   public MutableRequest removeHeadersIf(BiPredicate<String, String> filter) {
     requireNonNull(filter);
     if (headersBuilder.removeIf(filter)) {
-      cachedHeaders = null; // Invalidated
+      cachedHeaders = null;
     }
     return this;
   }
@@ -141,11 +136,11 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   /** Adds each of the given {@code HttpHeaders}. */
   public MutableRequest headers(HttpHeaders headers) {
     requireNonNull(headers);
-    cachedHeaders = null; // invalidated
+    cachedHeaders = null;
     for (var entry : headers.map().entrySet()) {
-      String name = entry.getKey();
+      var name = entry.getKey();
       validateHeaderName(name);
-      for (String value : entry.getValue()) {
+      for (var value : entry.getValue()) {
         validateHeaderValue(value);
         headersBuilder.add(name, value);
       }
@@ -248,7 +243,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public HttpHeaders headers() {
-    HttpHeaders headers = cachedHeaders;
+    var headers = cachedHeaders;
     if (headers == null) {
       headers = headersBuilder.build();
       cachedHeaders = headers;
@@ -280,20 +275,20 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     requireNonNull(name);
     requireNonNull(value);
     validateHeader(name, value);
-    cachedHeaders = null; // invalidated
+    cachedHeaders = null;
     headersBuilder.add(name, value);
     return this;
   }
 
   @Override
   public MutableRequest headers(String... headers) {
-    requireNonNull(headers, "headers");
+    requireNonNull(headers);
     int len = headers.length;
     requireArgument(len > 0 && len % 2 == 0, "illegal number of headers: %d", len);
-    cachedHeaders = null; // invalidated
+    cachedHeaders = null;
     for (int i = 0; i < len; i += 2) {
-      String name = headers[i];
-      String value = headers[i + 1];
+      var name = headers[i];
+      var value = headers[i + 1];
       requireNonNull(name);
       requireNonNull(value);
       validateHeader(name, value);
@@ -312,8 +307,10 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest setHeader(String name, String value) {
+    requireNonNull(name);
+    requireNonNull(value);
     validateHeader(name, value);
-    cachedHeaders = null; // invalidated
+    cachedHeaders = null;
     headersBuilder.set(name, value);
     return this;
   }
@@ -342,8 +339,8 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest method(String method, BodyPublisher bodyPublisher) {
-    requireNonNull(method, "method");
-    requireNonNull(bodyPublisher, "bodyPublisher");
+    requireNonNull(method);
+    requireNonNull(bodyPublisher);
     requireArgument(isValidToken(method), "illegal method name: '%s'", method);
     return setMethod(method, bodyPublisher);
   }
@@ -359,7 +356,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     return new ImmutableRequest(this);
   }
 
-  /** Returns a copy of this request that is independent from this instance. */
+  /** Returns a copy of this request that is independent of this instance. */
   @Override
   public MutableRequest copy() {
     return new MutableRequest(this);
@@ -451,7 +448,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
       timeout = Optional.ofNullable(other.timeout);
       version = Optional.ofNullable(other.version);
       expectContinue = other.expectContinue;
-      tags = Map.copyOf(other.tags); // Make a immutable/defensive copy
+      tags = Map.copyOf(other.tags); // Make an immutable/defensive copy
     }
 
     @SuppressWarnings("unchecked")

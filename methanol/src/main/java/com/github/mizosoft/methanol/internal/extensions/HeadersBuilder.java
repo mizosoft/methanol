@@ -8,28 +8,32 @@ import java.util.TreeMap;
 import java.util.function.BiPredicate;
 
 public final class HeadersBuilder {
-  private final Map<String, List<String>> headersMap;
+  private final Map<String, List<String>> headers;
 
   public HeadersBuilder() {
-    headersMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
   }
 
   public void add(String name, String value) {
-    headersMap.computeIfAbsent(name, __ -> new ArrayList<>()).add(value);
+    headers.computeIfAbsent(name, __ -> new ArrayList<>()).add(value);
   }
 
   public void add(String name, List<String> values) {
     if (!values.isEmpty()) {
-      headersMap.computeIfAbsent(name, __ -> new ArrayList<>()).addAll(values);
+      headers.computeIfAbsent(name, __ -> new ArrayList<>()).addAll(values);
     }
   }
 
-  public void addAll(Map<String, List<String>> headers){
+  public void addAll(Map<String, List<String>> headers) {
     headers.forEach(this::add);
   }
 
   public void addAll(HttpHeaders headers) {
     addAll(headers.map());
+  }
+
+  public void addAll(HeadersBuilder builder) {
+    addAll(builder.headers);
   }
 
   public void set(String name, String value) {
@@ -38,7 +42,7 @@ public final class HeadersBuilder {
 
   public void set(String name, List<String> values) {
     if (!values.isEmpty()) {
-      headersMap.put(name, new ArrayList<>(values));
+      headers.put(name, new ArrayList<>(values));
     }
   }
 
@@ -47,12 +51,12 @@ public final class HeadersBuilder {
   }
 
   public boolean remove(String name) {
-    return headersMap.remove(name) != null;
+    return headers.remove(name) != null;
   }
 
   public boolean removeIf(BiPredicate<String, String> filter) {
     boolean mutated = false;
-    for (var iter = headersMap.entrySet().iterator(); iter.hasNext(); ) {
+    for (var iter = headers.entrySet().iterator(); iter.hasNext(); ) {
       var entry = iter.next();
       var name = entry.getKey();
       var values = entry.getValue();
@@ -65,16 +69,10 @@ public final class HeadersBuilder {
   }
 
   public void clear() {
-    headersMap.clear();
-  }
-
-  public HeadersBuilder deepCopy() {
-    var copy = new HeadersBuilder();
-    copy.addAll(headersMap);
-    return copy;
+    headers.clear();
   }
 
   public HttpHeaders build() {
-    return HttpHeaders.of(headersMap, (n, v) -> true);
+    return HttpHeaders.of(headers, (n, v) -> true);
   }
 }
