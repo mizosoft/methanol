@@ -86,15 +86,17 @@ class MethanolClientTest {
 
   @Test
   void syncGet() throws Exception {
-    server.enqueue(new MockResponse()
-        .setBody(new okio.Buffer().write(gzip("unzip me!")))
-        .setHeader("Content-Encoding", "gzip"));
+    server.enqueue(
+        new MockResponse()
+            .setBody(new okio.Buffer().write(gzip("unzip me!")))
+            .setHeader("Content-Encoding", "gzip"));
 
-    var client = clientBuilder
-        .userAgent("Will Smith")
-        .baseUri(serverUri.resolve("root/"))
-        .defaultHeader("Accept", "text/plain")
-        .build();
+    var client =
+        clientBuilder
+            .userAgent("Will Smith")
+            .baseUri(serverUri.resolve("root/"))
+            .defaultHeader("Accept", "text/plain")
+            .build();
 
     verifyThat(client.send(GET("relative?q=value"), BodyHandlers.ofString()))
         .hasCode(200)
@@ -114,15 +116,17 @@ class MethanolClientTest {
 
   @Test
   void asyncGet() throws Exception {
-    server.enqueue(new MockResponse()
-        .setBody(new okio.Buffer().write(gzip("unzip me!")))
-        .setHeader("Content-Encoding", "gzip"));
+    server.enqueue(
+        new MockResponse()
+            .setBody(new okio.Buffer().write(gzip("unzip me!")))
+            .setHeader("Content-Encoding", "gzip"));
 
-    var client = clientBuilder
-        .userAgent("Will Smith")
-        .baseUri(serverUri.resolve("root/"))
-        .defaultHeader("Accept", "text/plain")
-        .build();
+    var client =
+        clientBuilder
+            .userAgent("Will Smith")
+            .baseUri(serverUri.resolve("root/"))
+            .defaultHeader("Accept", "text/plain")
+            .build();
 
     verifyThat(client.sendAsync(GET("relative?q=value"), BodyHandlers.ofString()).join())
         .hasCode(200)
@@ -144,16 +148,18 @@ class MethanolClientTest {
   @UseHttps
   void asyncGetWithCompressedPush() {
     int pushCount = 3;
-    var mockResponse = new MockResponse()
-        .setBody(new okio.Buffer().write(deflate("Pikachu")))
-        .setHeader("Content-Encoding", "deflate");
+    var mockResponse =
+        new MockResponse()
+            .setBody(new okio.Buffer().write(deflate("Pikachu")))
+            .setHeader("Content-Encoding", "deflate");
     var decompressedPaths = new HashSet<String>();
     for (int i = 0; i < pushCount; i++) {
       MockResponse pushResponse;
       if (i % 2 == 0) {
-        pushResponse = new MockResponse()
-            .setBody(new okio.Buffer().write(gzip("pika pika!")))
-            .setHeader("Content-Encoding", "gzip");
+        pushResponse =
+            new MockResponse()
+                .setBody(new okio.Buffer().write(gzip("pika pika!")))
+                .setHeader("Content-Encoding", "gzip");
         decompressedPaths.add("/push" + i);
       } else {
         pushResponse = new MockResponse().setBody("pika pika!");
@@ -166,10 +172,11 @@ class MethanolClientTest {
 
     var client = clientBuilder.version(Version.HTTP_2).build();
     var pushes = new ConcurrentHashMap<HttpRequest, CompletableFuture<HttpResponse<String>>>();
-    var responseFuture = client.sendAsync(
-        GET(serverUri),
-        BodyHandlers.ofString(),
-        PushPromiseHandler.of(__ -> BodyHandlers.ofString(), pushes));
+    var responseFuture =
+        client.sendAsync(
+            GET(serverUri),
+            BodyHandlers.ofString(),
+            PushPromiseHandler.of(__ -> BodyHandlers.ofString(), pushes));
     verifyThat(responseFuture.join())
         .hasCode(200)
         .hasBody("Pikachu")
@@ -198,9 +205,10 @@ class MethanolClientTest {
   @Test
   void getWithoutAutoAcceptEncoding() throws Exception {
     var gzippedBytes = gzip("Pikachu");
-    server.enqueue(new MockResponse()
-        .setBody(new okio.Buffer().write(gzippedBytes))
-        .setHeader("Content-Encoding", "gzip"));
+    server.enqueue(
+        new MockResponse()
+            .setBody(new okio.Buffer().write(gzippedBytes))
+            .setHeader("Content-Encoding", "gzip"));
 
     var client = clientBuilder.autoAcceptEncoding(false).build();
     var response = client.send(GET(serverUri), BodyHandlers.ofByteArray());
@@ -241,15 +249,13 @@ class MethanolClientTest {
   void readTimeout() {
     var client = clientBuilder.readTimeout(Duration.ofMillis(50)).build();
 
-    server.enqueue(new MockResponse()
-        .setBody("Pikachu")
-        .throttleBody(1, 500, TimeUnit.MILLISECONDS));
+    server.enqueue(
+        new MockResponse().setBody("Pikachu").throttleBody(1, 500, TimeUnit.MILLISECONDS));
     assertThatExceptionOfType(HttpTimeoutException.class)
         .isThrownBy(() -> client.send(GET(serverUri), BodyHandlers.ofString()));
 
-    server.enqueue(new MockResponse()
-        .setBody("Pikachu")
-        .throttleBody(1, 500, TimeUnit.MILLISECONDS));
+    server.enqueue(
+        new MockResponse().setBody("Pikachu").throttleBody(1, 500, TimeUnit.MILLISECONDS));
     assertThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()))
         .failsWithin(Duration.ofSeconds(20))
         .withThrowableOfType(ExecutionException.class)
@@ -261,15 +267,13 @@ class MethanolClientTest {
   void readTimeoutWithCustomScheduler(ScheduledExecutorService scheduler) {
     var client = clientBuilder.readTimeout(Duration.ofMillis(50), scheduler).build();
 
-    server.enqueue(new MockResponse()
-        .setBody("Pikachu")
-        .throttleBody(1, 500, TimeUnit.MILLISECONDS));
+    server.enqueue(
+        new MockResponse().setBody("Pikachu").throttleBody(1, 500, TimeUnit.MILLISECONDS));
     assertThatExceptionOfType(HttpTimeoutException.class)
         .isThrownBy(() -> client.send(GET(serverUri), BodyHandlers.ofString()));
 
-    server.enqueue(new MockResponse()
-        .setBody("Pikachu")
-        .throttleBody(1, 500, TimeUnit.MILLISECONDS));
+    server.enqueue(
+        new MockResponse().setBody("Pikachu").throttleBody(1, 500, TimeUnit.MILLISECONDS));
     assertThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()))
         .failsWithin(Duration.ofSeconds(20))
         .withThrowableOfType(ExecutionException.class)
@@ -278,9 +282,10 @@ class MethanolClientTest {
 
   @Test
   void exchange() {
-    server.enqueue(new MockResponse()
-        .setBody(new okio.Buffer().write(gzip("Pikachu")))
-        .setHeader("Content-Encoding", "gzip"));
+    server.enqueue(
+        new MockResponse()
+            .setBody(new okio.Buffer().write(gzip("Pikachu")))
+            .setHeader("Content-Encoding", "gzip"));
 
     var client = clientBuilder.build();
     var publisher = client.exchange(GET(serverUri), BodyHandlers.ofString());
@@ -302,16 +307,18 @@ class MethanolClientTest {
   @UseHttps
   void exchangeWithPush() {
     var pushCount = 3;
-    var mockResponse = new MockResponse()
-        .setBody(new okio.Buffer().write(deflate("Pikachu")))
-        .setHeader("Content-Encoding", "deflate");
+    var mockResponse =
+        new MockResponse()
+            .setBody(new okio.Buffer().write(deflate("Pikachu")))
+            .setHeader("Content-Encoding", "deflate");
     var decompressedPaths = new HashSet<String>();
     for (int i = 0; i < pushCount; i++) {
       MockResponse pushResponse;
       if (i % 2 == 0) {
-        pushResponse = new MockResponse()
-            .setBody(new okio.Buffer().write(gzip("pika pika!")))
-            .setHeader("Content-Encoding", "gzip");
+        pushResponse =
+            new MockResponse()
+                .setBody(new okio.Buffer().write(gzip("pika pika!")))
+                .setHeader("Content-Encoding", "gzip");
         decompressedPaths.add("/push" + i);
       } else {
         pushResponse = new MockResponse().setBody("pika pika!");
@@ -325,10 +332,11 @@ class MethanolClientTest {
     var client = clientBuilder.version(Version.HTTP_2).build();
     var rejectFirstPush = new AtomicBoolean();
     // Accept all push promises but the first
-    var publisher = client.exchange(
-        GET(serverUri),
-        BodyHandlers.ofString(),
-        req -> rejectFirstPush.compareAndSet(false, true) ? null : BodyHandlers.ofString());
+    var publisher =
+        client.exchange(
+            GET(serverUri),
+            BodyHandlers.ofString(),
+            req -> rejectFirstPush.compareAndSet(false, true) ? null : BodyHandlers.ofString());
     var subscriber = new TestSubscriber<HttpResponse<String>>();
     publisher.subscribe(subscriber);
     subscriber.awaitComplete();
@@ -396,13 +404,15 @@ class MethanolClientTest {
   @Test
   void headOfCompressedResponse() throws Exception {
     var gzippedBody = gzip("Pikachu");
-    server.enqueue(new MockResponse()
-        .setHeader("Content-Encoding", "gzip")
-        .setHeader("Content-Length", gzippedBody.length));
-    server.enqueue(new MockResponse()
-        .setHeader("Content-Encoding", "gzip")
-        .setHeader("Content-Length", gzippedBody.length)
-        .setBody(new okio.Buffer().write(gzippedBody)));
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Content-Encoding", "gzip")
+            .setHeader("Content-Length", gzippedBody.length));
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Content-Encoding", "gzip")
+            .setHeader("Content-Length", gzippedBody.length)
+            .setBody(new okio.Buffer().write(gzippedBody)));
 
     var client = clientBuilder.build();
 
@@ -449,8 +459,8 @@ class MethanolClientTest {
       var responseCf = chain.forwardAsync(request);
       for (int i = 0; i < maxRetryCount; i++) {
         final int _i = i;
-        responseCf = responseCf.thenCompose(
-            res -> handleRetry(res, () -> chain.forwardAsync(request), _i));
+        responseCf =
+            responseCf.thenCompose(res -> handleRetry(res, () -> chain.forwardAsync(request), _i));
       }
       return responseCf;
     }
