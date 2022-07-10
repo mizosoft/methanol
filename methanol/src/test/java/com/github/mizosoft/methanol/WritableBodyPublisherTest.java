@@ -45,33 +45,33 @@ class WritableBodyPublisherTest {
 
   @Test
   void writeWithByteChannel() throws IOException {
-    var body = WritableBodyPublisher.create();
-    try (var channel = body.byteChannel()) {
+    var publisher = WritableBodyPublisher.create();
+    try (var channel = publisher.byteChannel()) {
       channel.write(UTF_8.encode("I don't like sand"));
     }
-    verifyThat(body).succeedsWith("I don't like sand");
+    verifyThat(publisher).succeedsWith("I don't like sand");
   }
 
   @Test
   void writeWithOutputStream() throws IOException {
-    var body = WritableBodyPublisher.create();
-    try (var out = body.outputStream()) {
+    var publisher = WritableBodyPublisher.create();
+    try (var out = publisher.outputStream()) {
       out.write("I don't like sand".getBytes(UTF_8));
     }
-    verifyThat(body).succeedsWith("I don't like sand");
+    verifyThat(publisher).succeedsWith("I don't like sand");
   }
 
   @Test
   void flushAfterWritingWithOutputStream() throws IOException {
-    var body = WritableBodyPublisher.create();
+    var publisher = WritableBodyPublisher.create();
     var subscriber = new TestSubscriber<ByteBuffer>();
     subscriber.request = 0;
-    body.subscribe(subscriber);
+    publisher.subscribe(subscriber);
     subscriber.awaitSubscribe();
     subscriber.subscription.request(1);
 
-    body.outputStream().write('a');
-    body.flush();
+    publisher.outputStream().write('a');
+    publisher.flush();
     assertThat(subscriber.items)
         .singleElement()
         .returns(1, from(ByteBuffer::remaining))
@@ -80,15 +80,15 @@ class WritableBodyPublisherTest {
 
   @Test
   void flushAfterWritingWithByteChannel() throws IOException {
-    var body = WritableBodyPublisher.create();
+    var publisher = WritableBodyPublisher.create();
     var subscriber = new TestSubscriber<ByteBuffer>();
     subscriber.request = 0;
-    body.subscribe(subscriber);
+    publisher.subscribe(subscriber);
     subscriber.awaitSubscribe();
     subscriber.subscription.request(1);
 
-    body.byteChannel().write(ByteBuffer.wrap(new byte[] {'a'}));
-    body.flush();
+    publisher.byteChannel().write(ByteBuffer.wrap(new byte[] {'a'}));
+    publisher.flush();
     assertThat(subscriber.items)
         .singleElement()
         .returns(1, from(ByteBuffer::remaining))
@@ -97,84 +97,101 @@ class WritableBodyPublisherTest {
 
   @Test
   void completeByClosingByteChannel() throws IOException {
-    var body = WritableBodyPublisher.create();
+    var publisher = WritableBodyPublisher.create();
     var subscriber = new TestSubscriber<ByteBuffer>();
-    body.subscribe(subscriber);
-    body.byteChannel().close();
+    publisher.subscribe(subscriber);
+    publisher.byteChannel().close();
     assertThat(subscriber.completes).isEqualTo(1);
-    assertThat(body.byteChannel().isOpen()).isFalse();
+    assertThat(publisher.byteChannel().isOpen()).isFalse();
   }
 
   @Test
   void completeByClosingOutputStream() throws IOException {
-    var body = WritableBodyPublisher.create();
+    var publisher = WritableBodyPublisher.create();
     var subscriber = new TestSubscriber<ByteBuffer>();
-    body.subscribe(subscriber);
-    body.outputStream().close();
+    publisher.subscribe(subscriber);
+    publisher.outputStream().close();
     assertThat(subscriber.completes).isEqualTo(1);
 
     // The WritableByteChannel view is also closed
-    assertThat(body.byteChannel().isOpen()).isFalse();
+    assertThat(publisher.byteChannel().isOpen()).isFalse();
   }
 
   @Test
   void closeExceptionallyBeforeSubscribing() throws IOException {
-    var body = WritableBodyPublisher.create();
-    try (var out = body.outputStream())  {
+    var publisher = WritableBodyPublisher.create();
+    try (var out = publisher.outputStream()) {
       out.write(new byte[] {'a', 'b', 'c'}); // Shouldn't be signalled
       out.flush();
-      body.closeExceptionally(new TestException());
+      publisher.closeExceptionally(new TestException());
     }
 
     var subscriber = new TestSubscriber<ByteBuffer>();
-    body.subscribe(subscriber);
+    publisher.subscribe(subscriber);
     assertThat(subscriber.items).isEmpty();
     assertThat(subscriber.lastError).isInstanceOf(TestException.class);
   }
 
   @Test
   void subscribeTwice() {
-    var body = WritableBodyPublisher.create();
-    body.subscribe(new TestSubscriber<>());
+    var publisher = WritableBodyPublisher.create();
+    publisher.subscribe(new TestSubscriber<>());
 
     var secondSubscriber = new TestSubscriber<ByteBuffer>();
-    body.subscribe(secondSubscriber);
+    publisher.subscribe(secondSubscriber);
     assertThat(secondSubscriber.lastError).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
   void writeAfterClosingFromByteChannel() {
-    var body = WritableBodyPublisher.create();
-    body.close();
+    var publisher = WritableBodyPublisher.create();
+    publisher.close();
     assertThatExceptionOfType(ClosedChannelException.class)
-        .isThrownBy(() -> body.byteChannel().write(ByteBuffer.allocate(1)));
+        .isThrownBy(() -> publisher.byteChannel().write(ByteBuffer.allocate(1)));
   }
 
   @Test
   void writeAfterClosingFromOutputStream() {
-    var body = WritableBodyPublisher.create();
-    body.close();
+    var publisher = WritableBodyPublisher.create();
+    publisher.close();
     assertThatExceptionOfType(ClosedChannelException.class)
-        .isThrownBy(() -> body.outputStream().write('a'));
+        .isThrownBy(() -> publisher.outputStream().write('a'));
   }
 
   @Test
   void flushAfterClosing() throws IOException {
-    var body = WritableBodyPublisher.create();
-    body.outputStream().write(new byte[] {'1', '2', '3'});
-    body.close();
-    assertThatIllegalStateException().isThrownBy(body::flush);
-    assertThatIOException().isThrownBy(body.outputStream()::flush);
+    var publisher = WritableBodyPublisher.create();
+    publisher.outputStream().write(new byte[] {'1', '2', '3'});
+    publisher.close();
+    assertThatIllegalStateException().isThrownBy(publisher::flush);
+    assertThatIOException().isThrownBy(publisher.outputStream()::flush);
   }
 
   @Test
   void writeAfterFlush() throws IOException {
-    var body = WritableBodyPublisher.create();
-    try (var out = body.outputStream()) {
+    var publisher = WritableBodyPublisher.create();
+    try (var out = publisher.outputStream()) {
       out.write("abc".getBytes(UTF_8));
       out.flush();
       out.write("ABC".getBytes(UTF_8));
     }
-    verifyThat(body).succeedsWith("abcABC");
+    verifyThat(publisher).succeedsWith("abcABC");
+  }
+
+  @Test
+  void writingInFrames() throws IOException {
+    var publisher = WritableBodyPublisher.create(10);
+    var subscriber = new TestSubscriber<ByteBuffer>();
+    publisher.subscribe(subscriber);
+    try (var out = publisher.outputStream()) {
+      out.write(new byte[10]);
+      assertThat(subscriber.awaitNextItem()).returns(10, from(ByteBuffer::remaining));
+
+      out.write(new byte[9]);
+      assertThat(subscriber.nexts).isOne(); // No new signals are received
+
+      out.write('a');
+      assertThat(subscriber.awaitNextItem()).returns(10, from(ByteBuffer::remaining));
+    }
   }
 }

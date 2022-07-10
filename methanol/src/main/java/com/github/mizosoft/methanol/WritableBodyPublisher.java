@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
@@ -42,6 +43,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import org.checkerframework.checker.lock.qual.GuardedBy;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -54,38 +58,41 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * while writing.
  *
  * <p>Note that ({@link #contentLength()} always returns {@code -1}). If the content length is known
- * prior to writing, {@link BodyPublishers#fromPublisher(Publisher, long)} can be used to attach
- * the the known length to this publisher.
+ * prior to writing, {@link BodyPublishers#fromPublisher(Publisher, long)} can be used to attach the
+ * known length to this publisher.
  */
 public final class WritableBodyPublisher implements BodyPublisher, Flushable, AutoCloseable {
+  private static final int DEFAULT_BUFFER_SIZE = 8 * 1024; // 8Kb
 
-  private static final int DEFAULT_SINK_BUFFER_SIZE = 8 * 1024; // 8Kb
-  private static final String SINK_BUFFER_SIZE_PROP =
-      "com.github.mizosoft.methanol.WritableBodyPublisher.sinkBufferSize";
-  private static final int SINK_BUFFER_SIZE = getSinkBufferSize();
+  private static final ByteBuffer CLOSED_SENTINEL = ByteBuffer.allocate(0);
 
-  private static final ByteBuffer CLOSED = ByteBuffer.allocate(0);
+  private final Lock lock = new ReentrantLock();
+  private final Lock writeLock = new ReentrantLock();
+  private final ConcurrentLinkedQueue<ByteBuffer> pipe = new ConcurrentLinkedQueue<>();
+  private final AtomicBoolean subscribed = new AtomicBoolean();
+  private final int bufferSize;
 
-  private final AtomicBoolean subscribed;
-  private final ConcurrentLinkedQueue<ByteBuffer> pipe;
   private volatile @Nullable SubscriptionImpl downstreamSubscription;
-  private volatile @MonotonicNonNull Throwable closeError; // cache error in case not yet subscribed
+
+  @GuardedBy("lock")
+  private @MonotonicNonNull Throwable pendingCloseError;
+
   private volatile boolean closed;
 
-  private final Object writeLock;
-  private @MonotonicNonNull WritableByteChannel sinkChannel;
-  private @MonotonicNonNull OutputStream sinkOutputStream;
+  @GuardedBy("writeLock")
   private @Nullable ByteBuffer sinkBuffer;
 
-  private WritableBodyPublisher() {
-    subscribed = new AtomicBoolean();
-    pipe = new ConcurrentLinkedQueue<>();
-    writeLock = new Object();
+  private @MonotonicNonNull WritableByteChannel sinkChannel;
+  private @MonotonicNonNull OutputStream sinkOutputStream;
+
+  private WritableBodyPublisher(int bufferSize) {
+    requireArgument(bufferSize > 0, "non-positive buffer size");
+    this.bufferSize = bufferSize;
   }
 
   /** Returns a {@code WritableByteChannel} for writing this body's content. */
   public WritableByteChannel byteChannel() {
-    WritableByteChannel channel = sinkChannel;
+    var channel = sinkChannel;
     if (channel == null) {
       channel = new SinkChannel();
       sinkChannel = channel;
@@ -95,12 +102,12 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
   /** Returns a {@code OutputStream} for writing this body's content. */
   public OutputStream outputStream() {
-    OutputStream out = sinkOutputStream;
-    if (out == null) {
-      out = new SinkChannelAdapter(byteChannel());
-      sinkOutputStream = out;
+    var outputStream = sinkOutputStream;
+    if (outputStream == null) {
+      outputStream = new SinkOutputStream(byteChannel());
+      sinkOutputStream = outputStream;
     }
-    return out;
+    return outputStream;
   }
 
   /**
@@ -109,14 +116,24 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
    */
   public void closeExceptionally(Throwable error) {
     requireNonNull(error);
-    if (!closed) {
-      closed = true;
-      closeError = error;
-      SubscriptionImpl subscription = downstreamSubscription;
-      if (subscription != null) {
-        subscription.signalError(error);
+    SubscriptionImpl subscription;
+    lock.lock();
+    try {
+      if (closed) {
+        FlowSupport.onDroppedError(error);
+        return;
       }
+      closed = true;
+      subscription = downstreamSubscription;
+      if (subscription == null) {
+        pendingCloseError = error;
+        return;
+      }
+    } finally {
+      lock.unlock();
     }
+
+    subscription.signalError(error);
   }
 
   /**
@@ -125,12 +142,27 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
    */
   @Override
   public void close() {
-    if (!closed) {
+    lock.lock();
+    try {
+      if (closed) {
+        return;
+      }
       closed = true;
       flushInternal();
-      pipe.offer(CLOSED);
-      signalDownstream(true);
+      pipe.offer(CLOSED_SENTINEL);
+    } finally {
+      lock.unlock();
     }
+
+    signalDownstream(true);
+  }
+
+  /**
+   * Returns {@code true} if this publisher is closed by either {@link #close} or {@link
+   * #closeExceptionally}.
+   */
+  public boolean isClosed() {
+    return closed;
   }
 
   /**
@@ -141,8 +173,8 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   @Override
   public void flush() {
     requireState(!closed, "closed");
-    if (flushInternal()) {
-      signalDownstream(false); // notify downstream if flushing produced any signals
+    if (flushInternal()) { // Notify downstream if flushing produced any signals
+      signalDownstream(false);
     }
   }
 
@@ -154,31 +186,31 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   @Override
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
     requireNonNull(subscriber);
-    SubscriptionImpl subscription = new SubscriptionImpl(subscriber);
+    var subscription = new SubscriptionImpl(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      downstreamSubscription = subscription;
-      // check if was closed due to error before subscribing
-      Throwable e = closeError;
-      if (e != null) {
-        subscription.signalError(e);
+      Throwable error;
+      lock.lock();
+      try {
+        downstreamSubscription = subscription;
+        error = this.pendingCloseError;
+      } finally {
+        lock.unlock();
+      }
+
+      if (error != null) {
+        subscription.signalError(error);
       } else {
-        subscription.signal(true); // apply onSubscribe
+        subscription.signal(true);
       }
     } else {
-      Throwable error =
-          new IllegalStateException("already subscribed, multiple subscribers not supported");
-      try {
-        subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-      } catch (Throwable t) {
-        error.addSuppressed(t);
-      } finally {
-        subscriber.onError(error);
-      }
+      FlowSupport.refuse(
+          subscriber,
+          new IllegalStateException("already subscribed, multiple subscribers not supported"));
     }
   }
 
   private void signalDownstream(boolean force) {
-    SubscriptionImpl subscription = downstreamSubscription;
+    var subscription = downstreamSubscription;
     if (subscription != null) {
       subscription.signal(force);
     }
@@ -186,35 +218,31 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
   private boolean flushInternal() {
     boolean signalsAvailable = false;
-    synchronized (writeLock) {
-      ByteBuffer sink = sinkBuffer;
-      if (sink != null && sink.position() > 0) {
-        sinkBuffer =
-            sink.hasRemaining()
-                ? sink.slice() // retain remaining free space for further writes
-                : null;
-        pipe.offer(sink.flip().asReadOnlyBuffer());
+    writeLock.lock();
+    try {
+      var buffer = sinkBuffer;
+      if (buffer != null && buffer.position() > 0) {
+        sinkBuffer = null;
+        pipe.offer(buffer.flip().asReadOnlyBuffer());
         signalsAvailable = true;
       }
+    } finally {
+      writeLock.unlock();
     }
     return signalsAvailable;
   }
 
-  private static int getSinkBufferSize() {
-    int size = Integer.getInteger(SINK_BUFFER_SIZE_PROP, DEFAULT_SINK_BUFFER_SIZE);
-    if (size <= 0) {
-      return DEFAULT_SINK_BUFFER_SIZE;
-    }
-    return size;
-  }
-
   /** Returns a new {@code WritableBodyPublisher}. */
   public static WritableBodyPublisher create() {
-    return new WritableBodyPublisher();
+    return new WritableBodyPublisher(DEFAULT_BUFFER_SIZE);
+  }
+
+  /* Returns a new {@code WritableBodyPublisher} with the given buffer size. */
+  public static WritableBodyPublisher create(int bufferSize) {
+    return new WritableBodyPublisher(bufferSize);
   }
 
   private final class SinkChannel implements WritableByteChannel {
-
     SinkChannel() {}
 
     @Override
@@ -229,28 +257,31 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
       int written = 0;
       boolean signalsAvailable = false;
-      synchronized (writeLock) {
-        ByteBuffer sink = sinkBuffer;
+      writeLock.lock();
+      try {
+        var buffer = sinkBuffer;
         do {
-          if (sink == null) {
-            sink = ByteBuffer.allocate(SINK_BUFFER_SIZE);
+          if (buffer == null) {
+            buffer = ByteBuffer.allocate(bufferSize);
           }
-          written += Utils.copyRemaining(src, sink);
-          if (!sink.hasRemaining()) {
-            pipe.offer(sink.flip().asReadOnlyBuffer());
+          written += Utils.copyRemaining(src, buffer);
+          if (!buffer.hasRemaining()) {
+            pipe.offer(buffer.flip().asReadOnlyBuffer());
             signalsAvailable = true;
-            sink = null;
+            buffer = null;
           }
         } while (src.hasRemaining() && isOpen());
 
-        if (closed) { // asynchronously closed
+        if (closed) { // Check if asynchronously closed
           sinkBuffer = null;
-          if (written <= 0) { // only report if no bytes were written
+          if (written <= 0) { // Only report if no bytes were written
             throw new AsynchronousCloseException();
           }
         } else {
-          sinkBuffer = sink;
+          sinkBuffer = buffer;
         }
+      } finally {
+        writeLock.unlock();
       }
 
       if (signalsAvailable) {
@@ -270,13 +301,14 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
-  // Adapts a channel to OutputStream. Most work is done by Channels#newOutputStream but overridden
-  // to forward flush() and close() to this publisher.
-  private final class SinkChannelAdapter extends OutputStream {
-
+  /**
+   * WritableByteChannel adapter for an OutputStream. Most work is done by Channels::newOutputStream
+   * but overridden to forward flush() and close() to this publisher.
+   */
+  private final class SinkOutputStream extends OutputStream {
     private final OutputStream out;
 
-    SinkChannelAdapter(WritableByteChannel channel) {
+    SinkOutputStream(WritableByteChannel channel) {
       this.out = Channels.newOutputStream(channel);
     }
 
@@ -295,19 +327,19 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       try {
         WritableBodyPublisher.this.flush();
       } catch (IllegalStateException e) {
-        throw new IOException("closed"); // throw a more appropriate exception for an OutputStream
+        // Throw a more appropriate exception for an OutputStream
+        throw new IOException("closed", e);
       }
     }
 
     @Override
-    public void close() {
-      WritableBodyPublisher.this.close();
+    public void close() throws IOException {
+      out.close();
     }
   }
 
   private final class SubscriptionImpl extends AbstractSubscription<ByteBuffer> {
-
-    private @Nullable ByteBuffer currentBatch;
+    private @Nullable ByteBuffer latestBuffer;
 
     SubscriptionImpl(Subscriber<? super ByteBuffer> downstream) {
       super(downstream, FlowSupport.SYNC_EXECUTOR);
@@ -316,23 +348,23 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     @Override
     @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel
     protected long emit(Subscriber<? super ByteBuffer> downstream, long emit) {
-      // List is polled prematurely to detect completion regardless of demand
-      ByteBuffer batch = currentBatch;
-      currentBatch = null;
-      if (batch == null) {
-        batch = pipe.poll();
+      // The buffer is polled prematurely to detect completion regardless of demand
+      ByteBuffer buffer = latestBuffer;
+      latestBuffer = null;
+      if (buffer == null) {
+        buffer = pipe.poll();
       }
       long submitted = 0L;
       while (true) {
-        if (batch == CLOSED) {
+        if (buffer == CLOSED_SENTINEL) {
           cancelOnComplete(downstream);
           return 0;
-        } else if (submitted >= emit || batch == null) { // exhausted either demand or batches
-          currentBatch = batch; // might be non-null
+        } else if (submitted >= emit || buffer == null) { // Exhausted either demand or batches
+          latestBuffer = buffer; // Save the last polled batch for latter rounds
           return submitted;
-        } else if (submitOnNext(downstream, batch)) {
+        } else if (submitOnNext(downstream, buffer)) {
           submitted++;
-          batch = pipe.poll(); // get next batch and continue
+          buffer = pipe.poll();
         } else {
           return 0;
         }
@@ -341,8 +373,17 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
     @Override
     protected void abort(boolean flowInterrupted) {
-      WritableBodyPublisher.this.downstreamSubscription = null; // loose reference "this"
       pipe.clear();
+      if (flowInterrupted) {
+        // If this publisher is cancelled "abnormally" (amid writing), possibly ongoing writers
+        // should know (by setting closed to true) so they can abort.
+        lock.lock();
+        try {
+          closed = true;
+        } finally {
+          lock.unlock();
+        }
+      }
     }
   }
 }

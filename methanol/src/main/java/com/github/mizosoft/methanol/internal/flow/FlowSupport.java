@@ -24,6 +24,8 @@ package com.github.mizosoft.methanol.internal.flow;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.invoke.VarHandle;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow;
@@ -32,6 +34,7 @@ import java.util.concurrent.Flow.Subscriber;
 
 /** Helpers for implementing reactive streams subscriptions and the like. */
 public class FlowSupport {
+  private static final Logger logger = System.getLogger(FlowSupport.class.getName());
 
   private static final String PREFETCH_PROP = "com.github.mizosoft.methanol.flow.prefetch";
   private static final String PREFETCH_FACTOR_PROP =
@@ -47,7 +50,7 @@ public class FlowSupport {
   private static final int PREFETCH = loadPrefetch();
   private static final int PREFETCH_THRESHOLD = (int) (PREFETCH * (loadPrefetchFactor() / 100f));
 
-  // A subscription that does nothing
+  /** A subscription that does nothing */
   public static final Flow.Subscription NOOP_SUBSCRIPTION =
       new Flow.Subscription() {
         @Override
@@ -70,25 +73,21 @@ public class FlowSupport {
             subscriber.onComplete();
           };
 
-  // An executor that executes the runnable in the calling thread.
+  /** An executor that executes the runnable in the calling thread. */
   public static final Executor SYNC_EXECUTOR = Runnable::run;
 
   private FlowSupport() {} // non-instantiable
 
   static int loadPrefetch() {
     int prefetch = Integer.getInteger(PREFETCH_PROP, DEFAULT_PREFETCH);
-    if (prefetch <= 0) {
-      return DEFAULT_PREFETCH;
-    }
-    return prefetch;
+    return prefetch > 0 ? prefetch : DEFAULT_PREFETCH;
   }
 
   static int loadPrefetchFactor() {
     int prefetchFactor = Integer.getInteger(PREFETCH_FACTOR_PROP, DEFAULT_PREFETCH_FACTOR);
-    if (prefetchFactor < 0 || prefetchFactor > 100) {
-      prefetchFactor = DEFAULT_PREFETCH_FACTOR;
-    }
-    return prefetchFactor;
+    return (prefetchFactor >= 0 && prefetchFactor <= 100)
+        ? prefetchFactor
+        : DEFAULT_PREFETCH_FACTOR;
   }
 
   /**
@@ -106,21 +105,21 @@ public class FlowSupport {
 
   /**
    * Returns the prefetch threshold according to the prefetch factor property or a default of
-   * {@value DEFAULT_PREFETCH_FACTOR}{@code / 2}.
+   * {@value DEFAULT_PREFETCH}{@code / 2}.
    */
   public static int prefetchThreshold() {
     return PREFETCH_THRESHOLD;
   }
 
-  /** Adds given count to demand not exceeding {@code Long.MAX_VALUE}. */
+  /** Adds the given count to demand making sure it doesn't exceed {@code Long.MAX_VALUE}. */
   public static long getAndAddDemand(Object owner, VarHandle demand, long n) {
     while (true) {
       long currentDemand = (long) demand.getVolatile(owner);
-      long addedDemand = currentDemand + n;
-      if (addedDemand < 0) { // overflow
-        addedDemand = Long.MAX_VALUE;
+      long updatedDemand = currentDemand + n;
+      if (updatedDemand < 0) { // overflow
+        updatedDemand = Long.MAX_VALUE;
       }
-      if (demand.compareAndSet(owner, currentDemand, addedDemand)) {
+      if (demand.compareAndSet(owner, currentDemand, updatedDemand)) {
         return currentDemand;
       }
     }
@@ -148,5 +147,10 @@ public class FlowSupport {
     } finally {
       subscriber.onError(error);
     }
+  }
+
+  public static void onDroppedError(Throwable error) {
+    // TODO allow the user to install a hook instead of always logging
+    logger.log(Level.WARNING, "the following error was dropped", error);
   }
 }

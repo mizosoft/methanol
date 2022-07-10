@@ -33,25 +33,16 @@ import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.BeforeClass;
 
 public class WritableBodyPublisherTck extends FlowPublisherVerification<ByteBuffer> {
-
   private static final int BUFFER_SIZE = 64;
-  private static final ByteBuffer DUMMY_ELEMENT = US_ASCII.encode("5".repeat(BUFFER_SIZE)); // whatever
+  private static final ByteBuffer DUMMY_ELEMENT = US_ASCII.encode("5".repeat(BUFFER_SIZE));
 
   public WritableBodyPublisherTck() {
     super(TckUtils.testEnvironment());
   }
 
-  @BeforeClass
-  public static void setUpBufferSize() {
-    // ensure written elements match submitted elements
-    System.setProperty(
-        "com.github.mizosoft.methanol.WritableBodyPublisher.sinkBufferSize",
-        Integer.toString(BUFFER_SIZE));
-  }
-
   @Override
   public Publisher<ByteBuffer> createFlowPublisher(long elements) {
-    var publisher = WritableBodyPublisher.create();
+    var publisher = WritableBodyPublisher.create(BUFFER_SIZE);
     try (var channel = publisher.byteChannel()) {
       for (int i = 0; i < elements; i++) {
         int w = channel.write(DUMMY_ELEMENT.duplicate());
