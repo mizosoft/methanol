@@ -36,6 +36,7 @@ module methanol {
   exports com.github.mizosoft.methanol;
   exports com.github.mizosoft.methanol.decoder;
   exports com.github.mizosoft.methanol.adapter;
+  exports com.github.mizosoft.methanol.function;
   exports com.github.mizosoft.methanol.internal.flow to
       methanol.adapter.jackson,
       methanol.adapter.jackson.flux;

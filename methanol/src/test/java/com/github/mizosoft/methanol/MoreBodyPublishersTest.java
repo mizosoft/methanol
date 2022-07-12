@@ -22,13 +22,27 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.CharBuffer;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Flow.Subscription;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(ExecutorExtension.class)
 class MoreBodyPublishersTest {
   @Test
   void ofMediaType() {
@@ -53,5 +67,76 @@ class MoreBodyPublishersTest {
     assertThatExceptionOfType(UnsupportedOperationException.class)
         .isThrownBy(
             () -> MoreBodyPublishers.ofObject("something", MediaType.parse("application/*")));
+  }
+
+  @Test
+  @ExecutorConfig(FIXED_POOL)
+  void ofOutputStream_basicWriting(Executor executor) {
+    verifyThat(
+            MoreBodyPublishers.ofOutputStream(
+                out -> out.write("Pikachu".getBytes(UTF_8)), executor))
+        .succeedsWith("Pikachu");
+  }
+
+  @Test
+  @ExecutorConfig(FIXED_POOL)
+  void ofOutputStream_exceptionalCompletion(Executor executor) {
+    verifyThat(
+            MoreBodyPublishers.ofOutputStream(
+                out -> {
+                  throw new TestException();
+                },
+                executor))
+        .failsWith(TestException.class);
+  }
+
+  @Test
+  @ExecutorConfig(FIXED_POOL)
+  void ofWritableByteChannel_basicWriting(Executor executor) {
+    verifyThat(
+            MoreBodyPublishers.ofWritableByteChannel(
+                out -> out.write(UTF_8.encode("Pikachu")), executor))
+        .succeedsWith("Pikachu");
+  }
+
+  @Test
+  @ExecutorConfig(FIXED_POOL)
+  void ofWritableByteChannel_exceptionalCompletion(Executor executor) {
+    verifyThat(
+            MoreBodyPublishers.ofWritableByteChannel(
+                out -> {
+                  throw new TestException();
+                },
+                executor))
+        .failsWith(TestException.class);
+  }
+
+  @Test
+  @ExecutorConfig(FIXED_POOL)
+  void ofOutputStream_onlySubmitsOnSubscribe(ExecutorService service) throws Exception {
+    var inWriter = new AtomicBoolean();
+    MoreBodyPublishers.ofOutputStream(out -> inWriter.set(true), service);
+    service.shutdown();
+    assertThat(service.awaitTermination(0, TimeUnit.SECONDS)).isTrue();
+    assertThat(inWriter).isFalse();
+  }
+
+  @Test
+  @ExecutorConfig(FIXED_POOL)
+  void ofOutputStream_onlySubmitsIfNotCancelledOnSubscribe(ExecutorService service) throws Exception {
+    var inWriter = new AtomicBoolean();
+    var publisher = MoreBodyPublishers.ofOutputStream(out -> inWriter.set(true), service);
+    publisher.subscribe(
+        new TestSubscriber<>() {
+          @Override
+          public synchronized void onSubscribe(Subscription subscription) {
+            super.onSubscribe(subscription);
+            subscription.cancel();
+          }
+        });
+
+    service.shutdown();
+    assertThat(service.awaitTermination(0, TimeUnit.SECONDS)).isTrue();
+    assertThat(inWriter).isFalse();
   }
 }
