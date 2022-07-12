@@ -25,7 +25,6 @@ package com.github.mizosoft.methanol;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.MethanolTest.RecordingClient;
@@ -38,7 +37,6 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -64,7 +62,7 @@ class InterceptorTest {
   }
 
   @Test
-  void interceptorAsync() {
+  void asyncInterceptor() {
     var response = new HttpResponseStub<Void>();
     var interceptor = new RecordingInterceptor(response);
     var backend = new RecordingClient();
@@ -86,21 +84,23 @@ class InterceptorTest {
     var response = new HttpResponseStub<Void>();
     var interceptor = new RecordingInterceptor(response);
     var backend = new RecordingClient();
-    var client = Methanol.newBuilder(backend)
-        .userAgent("Will Smith")
-        .baseUri("https://example.com/")
-        .defaultHeaders(
-            "Accept", "application/json",
-            "X-My-Header", "abc")
-        .requestTimeout(Duration.ofSeconds(1))
-        .backendInterceptor(interceptor)
-        .build();
-    var request = GET("relative")
-        .header("Accept", "text/html")
-        .timeout(Duration.ofSeconds(2))
-        .version(Version.HTTP_1_1);
+    var client =
+        Methanol.newBuilder(backend)
+            .userAgent("Will Smith")
+            .baseUri("https://example.com/")
+            .defaultHeaders(
+                "Accept", "application/json",
+                "X-My-Header", "abc")
+            .requestTimeout(Duration.ofSeconds(1))
+            .backendInterceptor(interceptor)
+            .build();
+    var request =
+        GET("relative")
+            .header("Accept", "text/html")
+            .timeout(Duration.ofSeconds(2))
+            .version(Version.HTTP_1_1);
 
-    client.send(request,  BodyHandlers.discarding());
+    client.send(request, BodyHandlers.discarding());
     assertThat(interceptor.calls).isOne();
     verifyThat(interceptor.request)
         .hasUri("https://example.com/relative")
@@ -119,23 +119,25 @@ class InterceptorTest {
   }
 
   @Test
-  void backendInterceptorAsync() {
+  void asyncBackendInterceptor() {
     var response = new HttpResponseStub<Void>();
     var interceptor = new RecordingInterceptor(response);
     var backend = new RecordingClient();
-    var client = Methanol.newBuilder(backend)
-        .userAgent("Will Smith")
-        .baseUri("https://example.com/")
-        .defaultHeaders(
-            "Accept", "application/json",
-            "X-My-Header", "abc")
-        .requestTimeout(Duration.ofSeconds(1))
-        .backendInterceptor(interceptor)
-        .build();
-    var request = GET("relative")
-        .header("Accept", "text/html")
-        .timeout(Duration.ofSeconds(2))
-        .version(Version.HTTP_1_1);
+    var client =
+        Methanol.newBuilder(backend)
+            .userAgent("Will Smith")
+            .baseUri("https://example.com/")
+            .defaultHeaders(
+                "Accept", "application/json",
+                "X-My-Header", "abc")
+            .requestTimeout(Duration.ofSeconds(1))
+            .backendInterceptor(interceptor)
+            .build();
+    var request =
+        GET("relative")
+            .header("Accept", "text/html")
+            .timeout(Duration.ofSeconds(2))
+            .version(Version.HTTP_1_1);
     var handler = BodyHandlers.discarding();
 
     client.sendAsync(request, handler);
@@ -158,17 +160,20 @@ class InterceptorTest {
 
   @Test
   void requestMutatingInterceptor() throws Exception {
-    var mutatingInterceptor = Interceptor.create(
-        req -> MutableRequest.copyOf(req)
-            .uri(req.uri().resolve("?q=val"))
-            .removeHeader("X-My-Header")
-            .header("Accept", "text/html")
-            .timeout(Duration.ofSeconds(1)));
+    var mutatingInterceptor =
+        Interceptor.create(
+            req ->
+                MutableRequest.copyOf(req)
+                    .uri(req.uri().resolve("?q=val"))
+                    .removeHeader("X-My-Header")
+                    .header("Accept", "text/html")
+                    .timeout(Duration.ofSeconds(1)));
     var recordingInterceptor = new RecordingInterceptor(new HttpResponseStub<>());
-    var client = Methanol.newBuilder()
-        .interceptor(mutatingInterceptor)
-        .interceptor(recordingInterceptor)
-        .build();
+    var client =
+        Methanol.newBuilder()
+            .interceptor(mutatingInterceptor)
+            .interceptor(recordingInterceptor)
+            .build();
     var request = GET("https:/example.com/").headers("X-My-Header", "abc");
 
     client.send(request, BodyHandlers.discarding());
@@ -186,59 +191,29 @@ class InterceptorTest {
 
   @Test
   void requestMutatingBackendInterceptor() throws Exception {
-    var mutatingInterceptor = Interceptor.create(
-        req -> MutableRequest.copyOf(req)
-            .uri(req.uri().resolve("?q=val"))
-            .removeHeader("X-My-Header")
-            .header("Accept", "text/html")
-            .timeout(Duration.ofSeconds(1)));
+    var mutatingInterceptor =
+        Interceptor.create(
+            req ->
+                MutableRequest.copyOf(req)
+                    .uri(req.uri().resolve("?q=val"))
+                    .removeHeader("X-My-Header")
+                    .header("Accept", "text/html")
+                    .timeout(Duration.ofSeconds(1)));
     var backend = new RecordingClient();
-    var client = Methanol.newBuilder(backend)
-        .backendInterceptor(mutatingInterceptor)
-        .build();
+    var client = Methanol.newBuilder(backend).backendInterceptor(mutatingInterceptor).build();
     var request = GET("https://example.com/").headers("X-My-Header", "abc");
 
     client.send(request, BodyHandlers.discarding());
     verifyThat(backend.request)
         .hasUri("https://example.com/?q=val")
-        .hasHeadersExactly(
-            "Accept", "text/html",
-            "Accept-Encoding", acceptEncodingValue())
+        .hasHeadersExactly("Accept", "text/html", "Accept-Encoding", acceptEncodingValue())
         .hasTimeout(Duration.ofSeconds(1));
 
     client.sendAsync(request, BodyHandlers.discarding());
     verifyThat(backend.request)
         .hasUri("https://example.com/?q=val")
-        .hasHeadersExactly(
-            "Accept", "text/html",
-            "Accept-Encoding", acceptEncodingValue())
+        .hasHeadersExactly("Accept", "text/html", "Accept-Encoding", acceptEncodingValue())
         .hasTimeout(Duration.ofSeconds(1));
-  }
-
-  @Test
-  void completeWithNullResponse() {
-    var interceptor = new Interceptor() {
-      @Override
-      public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain) {
-        return null;
-      }
-
-      @Override
-      public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-          HttpRequest request, Chain<T> chain) {
-        return CompletableFuture.completedFuture(null);
-      }
-    };
-    var client = Methanol.newBuilder(new RecordingClient()).interceptor(interceptor).build();
-    var request = GET("https://localhost");
-
-    assertThatExceptionOfType(NullPointerException.class)
-        .isThrownBy(() -> client.send(request, BodyHandlers.discarding()));
-    assertThat(client.sendAsync(request, BodyHandlers.discarding()))
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
-        .withThrowableOfType(ExecutionException.class)
-        .withCauseInstanceOf(NullPointerException.class);
   }
 
   private static final class TaggedInterceptor extends RecordingInterceptor {
@@ -286,12 +261,13 @@ class InterceptorTest {
     var secondInterceptor = new TaggedInterceptor(null, tagger, asyncTagger);
     var thirdInterceptor = new TaggedInterceptor(null, tagger, asyncTagger);
     var fourthInterceptor = new TaggedInterceptor(new HttpResponseStub<>(), tagger, asyncTagger);
-    var client = Methanol.newBuilder()
-        .interceptor(firstInterceptor)
-        .interceptor(secondInterceptor)
-        .backendInterceptor(thirdInterceptor)
-        .backendInterceptor(fourthInterceptor)
-        .build();
+    var client =
+        Methanol.newBuilder()
+            .interceptor(firstInterceptor)
+            .interceptor(secondInterceptor)
+            .backendInterceptor(thirdInterceptor)
+            .backendInterceptor(fourthInterceptor)
+            .build();
 
     client.send(GET("https://example.com"), BodyHandlers.discarding());
     firstInterceptor.assertTag(1);
@@ -310,24 +286,23 @@ class InterceptorTest {
   @SuppressWarnings("unchecked")
   void withBodyHandler() throws Exception {
     var bodyHandler = BodyHandlers.discarding();
-    var interceptor = new Interceptor() {
-      @Override
-      public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
-          throws IOException, InterruptedException {
-        return chain.withBodyHandler((BodyHandler<T>) bodyHandler).forward(request);
-      }
+    var interceptor =
+        new Interceptor() {
+          @Override
+          public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+              throws IOException, InterruptedException {
+            return chain.withBodyHandler((BodyHandler<T>) bodyHandler).forward(request);
+          }
 
-      @Override
-      public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-          HttpRequest request, Chain<T> chain) {
-        return chain.withBodyHandler((BodyHandler<T>) bodyHandler).forwardAsync(request);
-      }
-    };
+          @Override
+          public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+              HttpRequest request, Chain<T> chain) {
+            return chain.withBodyHandler((BodyHandler<T>) bodyHandler).forwardAsync(request);
+          }
+        };
     var recordingInterceptor = new RecordingInterceptor(new HttpResponseStub<>());
-    var client = Methanol.newBuilder()
-        .interceptor(interceptor)
-        .interceptor(recordingInterceptor)
-        .build();
+    var client =
+        Methanol.newBuilder().interceptor(interceptor).interceptor(recordingInterceptor).build();
 
     client.send(GET(""), BodyHandlers.discarding());
     assertThat(recordingInterceptor.bodyHandler).isSameAs(bodyHandler);
@@ -340,28 +315,27 @@ class InterceptorTest {
   @SuppressWarnings("unchecked")
   void withPushPromiseHandler() throws Exception {
     PushPromiseHandler<Void> pushPromiseHandler = (__, ___, ____) -> {};
-    var interceptor = new Interceptor() {
-      @Override
-      public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
-          throws IOException, InterruptedException {
-        return chain
-            .withPushPromiseHandler((PushPromiseHandler<T>) pushPromiseHandler)
-            .forward(request);
-      }
+    var interceptor =
+        new Interceptor() {
+          @Override
+          public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+              throws IOException, InterruptedException {
+            return chain
+                .withPushPromiseHandler((PushPromiseHandler<T>) pushPromiseHandler)
+                .forward(request);
+          }
 
-      @Override
-      public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-          HttpRequest request, Chain<T> chain) {
-        return chain
-            .withPushPromiseHandler((PushPromiseHandler<T>) pushPromiseHandler)
-            .forwardAsync(request);
-      }
-    };
+          @Override
+          public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+              HttpRequest request, Chain<T> chain) {
+            return chain
+                .withPushPromiseHandler((PushPromiseHandler<T>) pushPromiseHandler)
+                .forwardAsync(request);
+          }
+        };
     var recordingInterceptor = new RecordingInterceptor(new HttpResponseStub<>());
-    var client = Methanol.newBuilder()
-        .interceptor(interceptor)
-        .interceptor(recordingInterceptor)
-        .build();
+    var client =
+        Methanol.newBuilder().interceptor(interceptor).interceptor(recordingInterceptor).build();
 
     client.send(GET(""), BodyHandlers.discarding());
     assertThat(recordingInterceptor.pushPromiseHandler).isSameAs(pushPromiseHandler);
@@ -375,23 +349,27 @@ class InterceptorTest {
     var backend = new RecordingClient();
     var clientInterceptorRequest = new AtomicReference<HttpRequest>();
     var backendInterceptorRequest = new AtomicReference<HttpRequest>();
-    var clientInterceptor = Interceptor.create(request -> {
-      clientInterceptorRequest.set(request);
-      return MutableRequest.copyOf(request).tag(Integer.class, 1);
-    });
-    var backendInterceptor = Interceptor.create(request -> {
-      backendInterceptorRequest.set(request);
-      return MutableRequest.copyOf(request).tag(String.class, "a");
-    });
-    var client = Methanol.newBuilder(backend)
-        .interceptor(clientInterceptor)
-        .backendInterceptor(backendInterceptor)
-        .build();
+    var clientInterceptor =
+        Interceptor.create(
+            request -> {
+              clientInterceptorRequest.set(request);
+              return MutableRequest.copyOf(request).tag(Integer.class, 1);
+            });
+    var backendInterceptor =
+        Interceptor.create(
+            request -> {
+              backendInterceptorRequest.set(request);
+              return MutableRequest.copyOf(request).tag(String.class, "a");
+            });
+    var client =
+        Methanol.newBuilder(backend)
+            .interceptor(clientInterceptor)
+            .backendInterceptor(backendInterceptor)
+            .build();
     var request = GET("https://example.com").tag(Double.class, 1.0);
 
     client.send(request, BodyHandlers.discarding());
-    verifyThat(clientInterceptorRequest.get())
-        .containsTag(Double.class, 1.0);
+    verifyThat(clientInterceptorRequest.get()).containsTag(Double.class, 1.0);
     verifyThat(backendInterceptorRequest.get())
         .containsTag(Double.class, 1.0)
         .containsTag(Integer.class, 1);
@@ -401,8 +379,7 @@ class InterceptorTest {
         .containsTag(String.class, "a");
 
     client.sendAsync(request, BodyHandlers.discarding()).join();
-    verifyThat(clientInterceptorRequest.get())
-        .containsTag(Double.class, 1.0);
+    verifyThat(clientInterceptorRequest.get()).containsTag(Double.class, 1.0);
     verifyThat(backendInterceptorRequest.get())
         .containsTag(Double.class, 1.0)
         .containsTag(Integer.class, 1);
