@@ -95,10 +95,14 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code>static final <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></code></div>
 <div class="col-second even-row-color"><code><a href="#NOOP_SUBSCRIPTION" class="member-name-link">NOOP_SUBSCRIPTION</a></code></div>
-<div class="col-last even-row-color">&nbsp;</div>
+<div class="col-last even-row-color">
+<div class="block">A subscription that does nothing</div>
+</div>
 <div class="col-first odd-row-color"><code>static final <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a></code></div>
 <div class="col-second odd-row-color"><code><a href="#SYNC_EXECUTOR" class="member-name-link">SYNC_EXECUTOR</a></code></div>
-<div class="col-last odd-row-color">&nbsp;</div>
+<div class="col-last odd-row-color">
+<div class="block">An executor that executes the runnable in the calling thread.</div>
+</div>
 </div>
 </section>
 </li>
@@ -121,7 +125,7 @@ loadScripts(document, 'script');</script>
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/invoke/VarHandle.html" title="class or interface in java.lang.invoke" class="external-link">VarHandle</a>&nbsp;demand,
  long&nbsp;n)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Adds given count to demand not exceeding <code>Long.MAX_VALUE</code>.</div>
+<div class="block">Adds the given count to demand making sure it doesn't exceed <code>Long.MAX_VALUE</code>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#illegalRequest()" class="member-name-link">illegalRequest</a>()</code></div>
@@ -132,26 +136,29 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalStateException.html" title="class or interface in java.lang" class="external-link">IllegalStateException</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#multipleSubscribersToUnicast()" class="member-name-link">multipleSubscribersToUnicast</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static int</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#prefetch()" class="member-name-link">prefetch</a>()</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static void</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#onDroppedError(java.lang.Throwable)" class="member-name-link">onDroppedError</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;error)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static int</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#prefetch()" class="member-name-link">prefetch</a>()</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns the prefetch property or a default of 16.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static int</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#prefetchThreshold()" class="member-name-link">prefetchThreshold</a>()</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static int</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#prefetchThreshold()" class="member-name-link">prefetchThreshold</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns the prefetch threshold according to the prefetch factor property or a default of
- 50<code>/ 2</code>.</div>
+ 16<code>/ 2</code>.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static void</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#refuse(java.util.concurrent.Flow.Subscriber,java.lang.Throwable)" class="member-name-link">refuse</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;?&gt;&nbsp;subscriber,
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static void</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#refuse(java.util.concurrent.Flow.Subscriber,java.lang.Throwable)" class="member-name-link">refuse</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;?&gt;&nbsp;subscriber,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;error)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static long</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#subtractAndGetDemand(java.lang.Object,java.lang.invoke.VarHandle,long)" class="member-name-link">subtractAndGetDemand</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;owner,
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static long</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#subtractAndGetDemand(java.lang.Object,java.lang.invoke.VarHandle,long)" class="member-name-link">subtractAndGetDemand</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;owner,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/invoke/VarHandle.html" title="class or interface in java.lang.invoke" class="external-link">VarHandle</a>&nbsp;demand,
  long&nbsp;n)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Subtracts given count from demand.</div>
 </div>
 </div>
@@ -175,12 +182,14 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="NOOP_SUBSCRIPTION">
 <h3>NOOP_SUBSCRIPTION</h3>
 <div class="member-signature"><span class="modifiers">public static final</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></span>&nbsp;<span class="element-name">NOOP_SUBSCRIPTION</span></div>
+<div class="block">A subscription that does nothing</div>
 </section>
 </li>
 <li>
 <section class="detail" id="SYNC_EXECUTOR">
 <h3>SYNC_EXECUTOR</h3>
 <div class="member-signature"><span class="modifiers">public static final</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a></span>&nbsp;<span class="element-name">SYNC_EXECUTOR</span></div>
+<div class="block">An executor that executes the runnable in the calling thread.</div>
 </section>
 </li>
 </ul>
@@ -211,7 +220,7 @@ loadScripts(document, 'script');</script>
 <h3>prefetchThreshold</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type">int</span>&nbsp;<span class="element-name">prefetchThreshold</span>()</div>
 <div class="block">Returns the prefetch threshold according to the prefetch factor property or a default of
- 50<code>/ 2</code>.</div>
+ 16<code>/ 2</code>.</div>
 </section>
 </li>
 <li>
@@ -220,7 +229,7 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type">long</span>&nbsp;<span class="element-name">getAndAddDemand</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;owner,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/invoke/VarHandle.html" title="class or interface in java.lang.invoke" class="external-link">VarHandle</a>&nbsp;demand,
  long&nbsp;n)</span></div>
-<div class="block">Adds given count to demand not exceeding <code>Long.MAX_VALUE</code>.</div>
+<div class="block">Adds the given count to demand making sure it doesn't exceed <code>Long.MAX_VALUE</code>.</div>
 </section>
 </li>
 <li>
@@ -249,6 +258,12 @@ loadScripts(document, 'script');</script>
 <h3>refuse</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">refuse</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;?&gt;&nbsp;subscriber,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;error)</span></div>
+</section>
+</li>
+<li>
+<section class="detail" id="onDroppedError(java.lang.Throwable)">
+<h3>onDroppedError</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">onDroppedError</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;error)</span></div>
 </section>
 </li>
 </ul>

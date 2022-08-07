@@ -85,15 +85,19 @@ loadScripts(document, 'script');</script>
 <div class="type-signature"><span class="modifiers">public final class </span><span class="element-name type-name-label">WritableBodyPublisher</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>
 implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Flushable.html" title="class or interface in java.io" class="external-link">Flushable</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></span></div>
-<div class="block">A <code>BodyPublisher</code> that exposes a sink for writing the body's content. Sink can be acquired
- either as a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/channels/WritableByteChannel.html" title="class or interface in java.nio.channels" class="external-link"><code>WritableByteChannel</code></a> or an <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html" title="class or interface in java.io" class="external-link"><code>OutputStream</code></a>. After writing is finished,
- the publisher must be closed to complete the request (either by calling <a href="#close()"><code>close()</code></a> or
- closing one of the returned sinks, or using a try-with-resources construct). Additionally, <a href="#closeExceptionally(java.lang.Throwable)"><code>closeExceptionally(Throwable)</code></a> can be used to fail the request in case an error is encountered
- while writing.
+<div class="block">A <code>BodyPublisher</code> that exposes a sink for writing the body's content. It is recommended to
+ use <a href="MoreBodyPublishers.html#ofOutputStream(com.github.mizosoft.methanol.function.ThrowingConsumer,java.util.concurrent.Executor)"><code>MoreBodyPublishers.ofOutputStream(com.github.mizosoft.methanol.function.ThrowingConsumer&lt;? super java.io.OutputStream&gt;, java.util.concurrent.Executor)</code></a> or <a href="MoreBodyPublishers.html#ofWritableByteChannel(com.github.mizosoft.methanol.function.ThrowingConsumer,java.util.concurrent.Executor)"><code>MoreBodyPublishers.ofWritableByteChannel(com.github.mizosoft.methanol.function.ThrowingConsumer&lt;? super java.nio.channels.WritableByteChannel&gt;, java.util.concurrent.Executor)</code></a>
+ instead of directly using on this class.
+
+ <p>The sink can be acquired either as a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/channels/WritableByteChannel.html" title="class or interface in java.nio.channels" class="external-link"><code>WritableByteChannel</code></a> or an <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html" title="class or interface in java.io" class="external-link"><code>OutputStream</code></a>.
+ After writing is finished, the publisher must be closed to complete the request (either by
+ calling <a href="#close()"><code>close()</code></a> or closing one of the returned sinks, or using a try-with-resources
+ construct). Additionally, <a href="#closeExceptionally(java.lang.Throwable)"><code>closeExceptionally(Throwable)</code></a> can be used to fail the request
+ in case an error is encountered while writing.
 
  <p>Note that (<a href="#contentLength()"><code>contentLength()</code></a> always returns <code>-1</code>). If the content length is known
- prior to writing, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublishers.html#fromPublisher(java.util.concurrent.Flow.Publisher,long)" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublishers.fromPublisher(Publisher, long)</code></a> can be used to attach
- the the known length to this publisher.</div>
+ prior to writing, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublishers.html#fromPublisher(java.util.concurrent.Flow.Publisher,long)" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublishers.fromPublisher(Publisher, long)</code></a> can be used to attach the
+ known length to this publisher.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -133,10 +137,18 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns a new <code>WritableBodyPublisher</code>.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#flush()" class="member-name-link">flush</a>()</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#create(int)" class="member-name-link">create</a><wbr>(int&nbsp;bufferSize)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#flush()" class="member-name-link">flush</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Makes any buffered content available for consumption by the downstream.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#isClosed()" class="member-name-link">isClosed</a>()</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns <code>true</code> if this publisher is closed by either <a href="#close()"><code>close()</code></a> or <a href="#closeExceptionally(java.lang.Throwable)"><code>closeExceptionally(java.lang.Throwable)</code></a>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html" title="class or interface in java.io" class="external-link">OutputStream</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#outputStream()" class="member-name-link">outputStream</a>()</code></div>
@@ -198,6 +210,13 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.
 </section>
 </li>
 <li>
+<section class="detail" id="isClosed()">
+<h3>isClosed</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">isClosed</span>()</div>
+<div class="block">Returns <code>true</code> if this publisher is closed by either <a href="#close()"><code>close()</code></a> or <a href="#closeExceptionally(java.lang.Throwable)"><code>closeExceptionally(java.lang.Throwable)</code></a>.</div>
+</section>
+</li>
+<li>
 <section class="detail" id="flush()">
 <h3>flush</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">flush</span>()</div>
@@ -235,6 +254,12 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.
 <h3>create</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></span>&nbsp;<span class="element-name">create</span>()</div>
 <div class="block">Returns a new <code>WritableBodyPublisher</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="create(int)">
+<h3>create</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></span>&nbsp;<span class="element-name">create</span><wbr><span class="parameters">(int&nbsp;bufferSize)</span></div>
 </section>
 </li>
 </ul>

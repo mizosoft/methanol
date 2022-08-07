@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/adapters/protobuf/">
       
       <link rel="icon" href="../../images/flask.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.14">
+      <meta name="generator" content="mkdocs-1.3.1, mkdocs-material-8.3.9">
     
     
       
@@ -23,11 +23,12 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.3de6f41f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.1d29e8d0.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -935,15 +936,15 @@ annotationProcessor &quot;com.google.auto.service:auto-service:$autoServiceVersi
 <p>Next, add this class to your project:</p>
 <div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ProtobufAdapters</span><span class="w"> </span><span class="p">{</span><span class="w">  </span>
 <span class="w">  </span><span class="nd">@AutoService</span><span class="p">(</span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Encoder</span><span class="p">.</span><span class="na">class</span><span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ProtobufEncoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingEncoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">ProtobufEncoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Encoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingEncoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">Encoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">ProtobufAdapterFactory</span><span class="p">.</span><span class="na">createEncoder</span><span class="p">());</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 
 <span class="w">  </span><span class="nd">@AutoService</span><span class="p">(</span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="p">.</span><span class="na">class</span><span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ProtobufDecoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingDecoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">ProtobufDecoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Decoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingDecoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">Decoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">ProtobufAdapterFactory</span><span class="p">.</span><span class="na">createDecoder</span><span class="p">());</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
@@ -952,14 +953,14 @@ annotationProcessor &quot;com.google.auto.service:auto-service:$autoServiceVersi
 <h4 id="manual-configuration">Manual Configuration<a class="headerlink" href="#manual-configuration" title="Permanent link">&para;</a></h4>
 <p>You can also write the configuration files manually. First, add this class to your project:</p>
 <div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ProtobufAdapters</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ProtobufDecoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingDecoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">ProtobufDecoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Decoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingDecoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">Decoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">ProtobufAdapterFactory</span><span class="p">.</span><span class="na">createDecoder</span><span class="p">());</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 
-<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ProtobufEncoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingEncoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">ProtobufEncoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Encoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingEncoder</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">Encoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
 <span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">ProtobufAdapterFactory</span><span class="p">.</span><span class="na">createEncoder</span><span class="p">());</span><span class="w"></span>
 <span class="w">    </span><span class="p">}</span><span class="w"></span>
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
@@ -973,21 +974,22 @@ encoder named:</p>
 <div class="highlight"><pre><span></span><code>META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Encoder
 </code></pre></div>
 <p>and contains the following line:</p>
-<div class="highlight"><pre><span></span><code>com.example.ProtobufAdapters$ProtobufEncoder
+<div class="highlight"><pre><span></span><code>com.example.ProtobufAdapters$Encoder
 </code></pre></div>
 <p>Similarly, the decoder's file is named:</p>
 <div class="highlight"><pre><span></span><code>META-INF/services/com.github.mizosoft.methanol.BodyAdapter$Decoder
 </code></pre></div>
 <p>and contains:</p>
-<div class="highlight"><pre><span></span><code>com.example.ProtobufAdapters$ProtobufDecoder
+<div class="highlight"><pre><span></span><code>com.example.ProtobufAdapters$Decoder
 </code></pre></div>
 
               
             </article>
+            
           </div>
         </div>
         
-          <a href="#" class="md-top md-icon" data-md-component="top" data-md-state="hidden">
+          <a href="#" class="md-top md-icon" data-md-component="top" hidden>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
             Back to top
           </a>
@@ -996,7 +998,8 @@ encoder named:</p>
       
         <footer class="md-footer">
   
-    <nav class="md-footer__inner md-grid" aria-label="Footer">
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
         <a href="../jaxb/" class="md-footer__link md-footer__link--prev" aria-label="Previous: methanol-jaxb" rel="prev">
@@ -1065,10 +1068,10 @@ encoder named:</p>
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.top", "navigation.sections"], "search": "../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.top", "navigation.sections"], "search": "../../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.c2e1ee47.min.js"></script>
+      <script src="../../assets/javascripts/bundle.6c7ad80a.min.js"></script>
       
     
   </body>

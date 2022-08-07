@@ -109,6 +109,20 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a <code>BodyPublisher</code> as specified by <a href="BodyAdapter.Encoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.Encoder.toBody(Object, MediaType)</code></a> using
  an installed encoder.</div>
 </div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#ofOutputStream(com.github.mizosoft.methanol.function.ThrowingConsumer,java.util.concurrent.Executor)" class="member-name-link">ofOutputStream</a><wbr>(<a href="function/ThrowingConsumer.html" title="interface in com.github.mizosoft.methanol.function">ThrowingConsumer</a>&lt;? super <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html" title="class or interface in java.io" class="external-link">OutputStream</a>&gt;&nbsp;writerTask,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns a <code>BodyPublisher</code> that reads what's written to the <code>OutputStream</code> received
+ by the given task.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#ofWritableByteChannel(com.github.mizosoft.methanol.function.ThrowingConsumer,java.util.concurrent.Executor)" class="member-name-link">ofWritableByteChannel</a><wbr>(<a href="function/ThrowingConsumer.html" title="interface in com.github.mizosoft.methanol.function">ThrowingConsumer</a>&lt;? super <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/channels/WritableByteChannel.html" title="class or interface in java.nio.channels" class="external-link">WritableByteChannel</a>&gt;&nbsp;writerTask,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns a <code>BodyPublisher</code> that reads what's written to the <code>WritableByteChannel</code>
+ received by the given task.</div>
+</div>
 </div>
 </div>
 </div>
@@ -126,6 +140,28 @@ loadScripts(document, 'script');</script>
 <section class="method-details" id="method-detail">
 <h2>Method Details</h2>
 <ul class="member-list">
+<li>
+<section class="detail" id="ofOutputStream(com.github.mizosoft.methanol.function.ThrowingConsumer,java.util.concurrent.Executor)">
+<h3>ofOutputStream</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">ofOutputStream</span><wbr><span class="parameters">(<a href="function/ThrowingConsumer.html" title="interface in com.github.mizosoft.methanol.function">ThrowingConsumer</a>&lt;? super <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html" title="class or interface in java.io" class="external-link">OutputStream</a>&gt;&nbsp;writerTask,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
+<div class="block">Returns a <code>BodyPublisher</code> that reads what's written to the <code>OutputStream</code> received
+ by the given task. When the returned publisher receives a subscriber (i.e. when the HTTP client
+ starts sending the request body), the given task is executed by the given executor to write the
+ body's content. The latter is asynchronously channeled to the HTTP client.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="ofWritableByteChannel(com.github.mizosoft.methanol.function.ThrowingConsumer,java.util.concurrent.Executor)">
+<h3>ofWritableByteChannel</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">ofWritableByteChannel</span><wbr><span class="parameters">(<a href="function/ThrowingConsumer.html" title="interface in com.github.mizosoft.methanol.function">ThrowingConsumer</a>&lt;? super <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/channels/WritableByteChannel.html" title="class or interface in java.nio.channels" class="external-link">WritableByteChannel</a>&gt;&nbsp;writerTask,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
+<div class="block">Returns a <code>BodyPublisher</code> that reads what's written to the <code>WritableByteChannel</code>
+ received by the given task. When the returned publisher receives a subscriber (i.e. when the
+ HTTP client starts sending the request body), the given task is executed by the given executor
+ to write the body's content. The latter is asynchronously channeled to the HTTP client.</div>
+</section>
+</li>
 <li>
 <section class="detail" id="ofMediaType(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)">
 <h3>ofMediaType</h3>

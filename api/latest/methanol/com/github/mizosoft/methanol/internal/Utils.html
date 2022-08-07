@@ -101,8 +101,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;T</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#blockOnIO(java.util.concurrent.Future)" class="member-name-link">blockOnIO</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Future.html" title="class or interface in java.util.concurrent" class="external-link">Future</a>&lt;T&gt;&nbsp;future)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Same as <a href="#block(java.util.concurrent.Future)"><code>block(Future)</code></a> but throws <code>InterruptedIOException</code> instead of <code>
- InterruptedException</code>.</div>
+<div class="block">Same as <a href="#block(java.util.concurrent.Future)"><code>block(Future)</code></a> but throws an <code>IOException</code> when interrupted.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static void</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#closeQuietly(java.io.Closeable)" class="member-name-link">closeQuietly</a><wbr>(@Nullable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Closeable.html" title="class or interface in java.io" class="external-link">Closeable</a>&nbsp;closeable)</code></div>
@@ -250,8 +249,7 @@ loadScripts(document, 'script');</script>
 <h3>blockOnIO</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type">T</span>&nbsp;<span class="element-name">blockOnIO</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Future.html" title="class or interface in java.util.concurrent" class="external-link">Future</a>&lt;T&gt;&nbsp;future)</span>
                        throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></span></div>
-<div class="block">Same as <a href="#block(java.util.concurrent.Future)"><code>block(Future)</code></a> but throws <code>InterruptedIOException</code> instead of <code>
- InterruptedException</code>.</div>
+<div class="block">Same as <a href="#block(java.util.concurrent.Future)"><code>block(Future)</code></a> but throws an <code>IOException</code> when interrupted.</div>
 <dl class="notes">
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></code></dd>

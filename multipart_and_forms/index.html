@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/multipart_and_forms/">
       
       <link rel="icon" href="../images/flask.png">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.14">
+      <meta name="generator" content="mkdocs-1.3.1, mkdocs-material-8.3.9">
     
     
       
@@ -23,11 +23,12 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.3de6f41f.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.1d29e8d0.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.cc9b2e1e.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.cbb835fc.min.css">
         
+      
       
     
     
@@ -773,7 +774,8 @@ name and an optional file name.</p>
 <span class="w">      </span><span class="n">BodyPublishers</span><span class="p">.</span><span class="na">ofInputStream</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">pngImageInputStream</span><span class="p">),</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">IMAGE_PNG</span><span class="p">);</span><span class="w"></span>
 <span class="w">  </span><span class="kd">var</span><span class="w"> </span><span class="n">multipartBody</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MultipartBodyPublisher</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span><span class="w"></span>
 <span class="w">     </span><span class="p">.</span><span class="na">textPart</span><span class="p">(</span><span class="s">&quot;title&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">)</span><span class="w"></span>
-<span class="w">     </span><span class="p">.</span><span class="na">formPart</span><span class="p">(</span><span class="s">&quot;image&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;.png&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">imagePart</span><span class="p">)</span><span class="w"></span>
+<span class="w">     </span><span class="p">.</span><span class="na">formPart</span><span class="p">(</span><span class="w"></span>
+<span class="w">         </span><span class="s">&quot;image&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">&quot;.png&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">MoreBodyPublishers</span><span class="p">.</span><span class="na">ofMediaType</span><span class="p">(</span><span class="n">imagePart</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">IMAGE_PNG</span><span class="p">))</span><span class="w"></span>
 <span class="w">     </span><span class="p">.</span><span class="na">build</span><span class="p">();</span><span class="w"></span>
 <span class="w">  </span><span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">POST</span><span class="p">(</span><span class="s">&quot;https://api.imgur.com/3/image&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">multipartBody</span><span class="p">)</span><span class="w"></span>
 <span class="w">      </span><span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Authorization&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Client-ID &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">CLIENT_ID</span><span class="p">);</span><span class="w"> </span>
@@ -785,6 +787,11 @@ name and an optional file name.</p>
 <p class="admonition-title">Tip</p>
 <p>You can use <code>formPart</code> to add a file part from something that's not a <code>Path</code> (e.g. <code>InputStream</code>) or
 to override the part's <code>filename</code> property, which is not possible with <code>filePart</code>.</p>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Use <code>MoreBodyPublishers::ofMediaType</code> to pair an arbitrary <code>BodyPublisher</code> with its proper <code>MediaType</code>
+if you want a <code>Content-Type</code> header to be specified by the part.</p>
 </div>
 <h2 id="form-bodies">Form Bodies<a class="headerlink" href="#form-bodies" title="Permanent link">&para;</a></h2>
 <p>Use <code>FormBodyPublisher</code> to send form data as a set of URL-encoded queries. Data is added as string
@@ -810,10 +817,11 @@ added automatically if sent on a <code>Methanol</code> client.</p>
 
               
             </article>
+            
           </div>
         </div>
         
-          <a href="#" class="md-top md-icon" data-md-component="top" data-md-state="hidden">
+          <a href="#" class="md-top md-icon" data-md-component="top" hidden>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
             Back to top
           </a>
@@ -822,7 +830,8 @@ added automatically if sent on a <code>Methanol</code> client.</p>
       
         <footer class="md-footer">
   
-    <nav class="md-footer__inner md-grid" aria-label="Footer">
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
         <a href="../media_types/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Media Types" rel="prev">
@@ -891,10 +900,10 @@ added automatically if sent on a <code>Methanol</code> client.</p>
     <div class="md-dialog" data-md-component="dialog">
       <div class="md-dialog__inner md-typeset"></div>
     </div>
-    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "search": "../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "search": "../assets/javascripts/workers/search.b97dbffb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.c2e1ee47.min.js"></script>
+      <script src="../assets/javascripts/bundle.6c7ad80a.min.js"></script>
       
     
   </body>

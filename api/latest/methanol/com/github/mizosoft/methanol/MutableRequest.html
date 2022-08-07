@@ -154,7 +154,7 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#copy()" class="member-name-link">copy</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns a copy of this request that is independent from this instance.</div>
+<div class="block">Returns a copy of this request that is independent of this instance.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#copyOf(java.net.http.HttpRequest)" class="member-name-link">copyOf</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;other)</code></div>
@@ -268,7 +268,7 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;T&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#tag(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">tag</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the tag having the given type if present.</div>
+<div class="block">Returns the tag associated with the given type if present.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#tag(com.github.mizosoft.methanol.TypeRef,T)" class="member-name-link">tag</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type,
@@ -401,7 +401,7 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <h3>tag</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;T&gt;</span>&nbsp;<span class="element-name">tag</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type)</span></div>
 <div class="block"><span class="descfrm-type-label">Description copied from class:&nbsp;<code><a href="TaggableRequest.html#tag(com.github.mizosoft.methanol.TypeRef)">TaggableRequest</a></code></span></div>
-<div class="block">Returns the tag having the given type if present.</div>
+<div class="block">Returns the tag associated with the given type if present.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="TaggableRequest.html#tag(com.github.mizosoft.methanol.TypeRef)">tag</a></code>&nbsp;in class&nbsp;<code><a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></code></dd>
@@ -716,7 +716,7 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <section class="detail" id="copy()">
 <h3>copy</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">copy</span>()</div>
-<div class="block">Returns a copy of this request that is independent from this instance.</div>
+<div class="block">Returns a copy of this request that is independent of this instance.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html#copy()" title="class or interface in java.net.http" class="external-link">copy</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link">HttpRequest.Builder</a></code></dd>
