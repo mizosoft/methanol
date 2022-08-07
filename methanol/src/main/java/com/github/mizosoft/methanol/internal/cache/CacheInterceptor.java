@@ -36,7 +36,7 @@ import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
-import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
@@ -501,7 +501,7 @@ public final class CacheInterceptor implements Interceptor {
                 .timeRequestSent(requestTime)
                 .timeResponseReceived(clock.instant())
                 .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
-                .buildTracked());
+                .buildTrackedResponse());
       }
 
       // Serve the cache response on successful revalidation
@@ -540,7 +540,7 @@ public final class CacheInterceptor implements Interceptor {
                       ResponseBuilder.newBuilder(response)
                           .timeRequestSent(requestTime)
                           .timeResponseReceived(clock.instant())
-                          .buildTracked()))
+                          .buildTrackedResponse()))
           .thenApply(this::withNetworkResponse);
     }
 

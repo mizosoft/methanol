@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,7 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
-import java.net.URI;
+import com.github.mizosoft.methanol.ResponseBuilder;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -53,7 +52,7 @@ public final class NetworkResponse extends PublisherResponse {
   public NetworkResponse with(Consumer<ResponseBuilder<?>> mutator) {
     var builder = ResponseBuilder.newBuilder(response);
     mutator.accept(builder);
-    return new NetworkResponse(builder.buildTracked(), publisher);
+    return new NetworkResponse(builder.buildTrackedResponse(), publisher);
   }
 
   public static NetworkResponse from(TrackedResponse<Publisher<List<ByteBuffer>>> response) {

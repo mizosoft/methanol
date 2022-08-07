@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -219,7 +219,7 @@ class MediaTypeTest {
         .extracting(MediaType::parameters, MAP)
         .containsKeys("a", "charset")
         .containsExactly(
-            entry("a", "PIKACHU" /* non-charset param value is untouched */),
+            entry("a", "PIKACHU"), // non-charset param value is untouched
             entry("charset", "utf-8"));
   }
 
@@ -231,7 +231,7 @@ class MediaTypeTest {
         .extracting(MediaType::parameters, MAP)
         .containsKeys("a", "charset")
         .containsExactly(
-            entry("a", "PIKACHU" /* non-charset param value is untouched */),
+            entry("a", "PIKACHU"), // non-charset param value is untouched
             entry("charset", "utf-8"));
   }
 
@@ -279,7 +279,7 @@ class MediaTypeTest {
                 linkedHashMap(
                     "a", "bar\\", // bar\ should be escaped to bar\\
                     "b", "\"foo\\\"", // "foo\" should be escaped to \"foo\\\"
-                    "c", "" // <empty-str> should be escaped to quoted
+                    "c", "" // <empty-str> should be escaped to ""
                     )))
         .hasToString("text/plain; a=\"bar\\\\\"; b=\"\\\"foo\\\\\\\"\"; c=\"\"")
         .extracting(MediaType::parameters, MAP)

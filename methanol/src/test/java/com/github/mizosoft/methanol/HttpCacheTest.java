@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -2035,7 +2035,7 @@ class HttpCacheTest {
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Darkseid"));
 
     // Requests with push promises aren't served by the cache as it can't know what might be pushed
-    // by the server. The main response contributes to updated the cache as usual.
+    // by the server. The main response contributes to updating the cache as usual.
     verifyThat(getWithPushHandler(serverUri)).isCacheMiss().hasBody("Darkseid");
     verifyThat(get(serverUri)).isCacheHit().hasBody("Darkseid");
   }

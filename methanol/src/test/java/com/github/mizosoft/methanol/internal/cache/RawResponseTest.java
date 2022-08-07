@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2022 Moataz Abdelnasser
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
@@ -8,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.mizosoft.methanol.TrackedResponse;
-import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testutils.BuffListIterator;
@@ -42,14 +64,14 @@ class RawResponseTest {
           .version(Version.HTTP_1_1)
           .timeRequestSent(Instant.ofEpochMilli(0))
           .timeResponseReceived(Instant.ofEpochMilli(1))
-          .buildTracked();
+          .buildTrackedResponse();
 
   @Test
   @ExecutorConfig(FIXED_POOL)
   void handleAsync(Executor threadPool) {
     var response = ResponseBuilder.newBuilder(responseTemplate)
         .body(strPublisher("Indiana Jones", UTF_8, threadPool))
-        .buildTracked();
+        .buildTrackedResponse();
     var rawResponse = NetworkResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
@@ -73,7 +95,7 @@ class RawResponseTest {
     var response = ResponseBuilder.newBuilder(responseTemplate)
         .header("Content-Type", "text/plain; charset=UTF-16")
         .body(strPublisher("Hans Solo", UTF_16, threadPool))
-        .buildTracked();
+        .buildTrackedResponse();
     var rawResponse = NetworkResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
@@ -86,14 +108,14 @@ class RawResponseTest {
   void with() {
     var response = ResponseBuilder.newBuilder(responseTemplate)
         .body((Publisher<List<ByteBuffer>>) EmptyPublisher.<List<ByteBuffer>>instance())
-        .buildTracked();
+        .buildTrackedResponse();
     var rawResponse = NetworkResponse.from(response);
     var mutated =
         rawResponse.with(builder -> builder.statusCode(369).header("X-My-Header", "Hello!"));
     var expected = ResponseBuilder.newBuilder(response)
         .statusCode(369)
         .header("X-My-Header", "Hello!")
-        .buildTracked();
+        .buildTrackedResponse();
     assertEqualResponses(expected, mutated.get());
   }
 
@@ -131,7 +153,7 @@ class RawResponseTest {
     return NetworkResponse.from(
         ResponseBuilder.newBuilder(responseTemplate)
             .body((Publisher<List<ByteBuffer>>) new FailingPublisher<List<ByteBuffer>>(supplier))
-            .buildTracked());
+            .buildTrackedResponse());
   }
 
   private static Publisher<List<ByteBuffer>> strPublisher(

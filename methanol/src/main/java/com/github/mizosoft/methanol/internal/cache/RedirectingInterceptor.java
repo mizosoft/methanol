@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
-import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;

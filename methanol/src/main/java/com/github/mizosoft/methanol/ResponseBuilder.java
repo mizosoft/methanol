@@ -1,11 +1,34 @@
-package com.github.mizosoft.methanol.internal.extensions;
+/*
+ * Copyright (c) 2022 Moataz Abdelnasser
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
+import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.CacheAwareResponse;
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
-import com.github.mizosoft.methanol.TrackedResponse;
+import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
@@ -13,14 +36,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.Optional;
-import java.util.function.Consumer;
 import javax.net.ssl.SSLSession;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class ResponseBuilder<T> {
+  private static final int UNSET_STATUS_CODE = -1;
+
   private final HeadersBuilder headersBuilder = new HeadersBuilder();
-  private int statusCode = -1;
+  private int statusCode = UNSET_STATUS_CODE;
   private @MonotonicNonNull URI uri;
   private @MonotonicNonNull Version version;
   private @MonotonicNonNull HttpRequest request;
@@ -36,17 +60,18 @@ public final class ResponseBuilder<T> {
   public ResponseBuilder() {}
 
   public ResponseBuilder<T> statusCode(int statusCode) {
+    requireArgument(statusCode >= 0, "negative status code");
     this.statusCode = statusCode;
     return this;
   }
 
   public ResponseBuilder<T> uri(URI uri) {
-    this.uri = uri;
+    this.uri = requireNonNull(uri);
     return this;
   }
 
   public ResponseBuilder<T> version(Version version) {
-    this.version = version;
+    this.version = requireNonNull(version);
     return this;
   }
 
@@ -65,6 +90,11 @@ public final class ResponseBuilder<T> {
     return this;
   }
 
+  public ResponseBuilder<T> setHeaders(HttpHeaders headers) {
+    headersBuilder.setAll(headers);
+    return this;
+  }
+
   public ResponseBuilder<T> clearHeaders() {
     headersBuilder.clear();
     return this;
@@ -76,17 +106,17 @@ public final class ResponseBuilder<T> {
   }
 
   public ResponseBuilder<T> request(HttpRequest request) {
-    this.request = request;
+    this.request = requireNonNull(request);
     return this;
   }
 
   public ResponseBuilder<T> timeRequestSent(Instant timeRequestSent) {
-    this.timeRequestSent = timeRequestSent;
+    this.timeRequestSent = requireNonNull(timeRequestSent);
     return this;
   }
 
   public ResponseBuilder<T> timeResponseReceived(Instant timeResponseReceived) {
-    this.timeResponseReceived = timeResponseReceived;
+    this.timeResponseReceived = requireNonNull(timeResponseReceived);
     return this;
   }
 
@@ -121,23 +151,18 @@ public final class ResponseBuilder<T> {
   }
 
   public ResponseBuilder<T> cacheStatus(CacheStatus cacheStatus) {
-    this.cacheStatus = cacheStatus;
-    return this;
-  }
-
-  public ResponseBuilder<T> apply(Consumer<ResponseBuilder<?>> consumer) {
-    consumer.accept(this);
+    this.cacheStatus = requireNonNull(cacheStatus);
     return this;
   }
 
   @SuppressWarnings("unchecked")
   public HttpResponse<T> build() {
-    requireState(statusCode > 0, "statusCode is required");
+    requireState(statusCode >= 0, "statusCode is required");
     if (cacheStatus != null) {
-      return buildCacheAware();
+      return buildCacheAwareResponse();
     }
     if (timeRequestSent != null && timeResponseReceived != null) {
-      return buildTracked();
+      return buildTrackedResponse();
     }
     return new HttpResponseImpl<>(
         statusCode,
@@ -151,9 +176,10 @@ public final class ResponseBuilder<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public TrackedResponse<T> buildTracked() {
+  public TrackedResponse<T> buildTrackedResponse() {
+    requireState(statusCode >= 0, "statusCode is required");
     if (cacheStatus != null) {
-      return buildCacheAware();
+      return buildCacheAwareResponse();
     }
     return new TrackedResponseImpl<>(
         statusCode,
@@ -169,8 +195,8 @@ public final class ResponseBuilder<T> {
   }
 
   @SuppressWarnings("unchecked")
-  private CacheAwareResponse<T> buildCacheAware() {
-    requireState(statusCode > 0, "statusCode is required");
+  private CacheAwareResponse<T> buildCacheAwareResponse() {
+    requireState(statusCode >= 0, "statusCode is required");
     return new CacheAwareResponseImpl<>(
         statusCode,
         ensureSet(uri, "uri"),
@@ -214,7 +240,7 @@ public final class ResponseBuilder<T> {
     return builder;
   }
 
-  private static <T> T ensureSet(T property, String name) {
+  private static <T> T ensureSet(@Nullable T property, String name) {
     requireState(property != null, "%s is required", name);
     return castNonNull(property);
   }

@@ -37,7 +37,6 @@ import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
-import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;

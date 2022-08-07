@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2022 Moataz Abdelnasser
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
@@ -11,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.MutableRequest;
-import com.github.mizosoft.methanol.internal.extensions.ResponseBuilder;
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.io.EOFException;
@@ -46,12 +68,12 @@ class CacheResponseMetadataTest {
             "Accept", "text/html",
             "Accept-Language", "fr-CH",
             "Cookie", "foo=bar");
-    var metadata = metadata(builder.request(request()).buildTracked());
-    var metadataGzip = metadata(builder.request(request(gzip)).buildTracked());
-    var metadataGzipHtml = metadata(builder.request(request(gzipHtml)).buildTracked());
-    var metadataGzipHtmlFrench = metadata(builder.request(request(gzipHtmlFrench)).buildTracked());
+    var metadata = metadata(builder.request(request()).buildTrackedResponse());
+    var metadataGzip = metadata(builder.request(request(gzip)).buildTrackedResponse());
+    var metadataGzipHtml = metadata(builder.request(request(gzipHtml)).buildTrackedResponse());
+    var metadataGzipHtmlFrench = metadata(builder.request(request(gzipHtmlFrench)).buildTrackedResponse());
     var metadataGzipHtmlFrenchWithCookie =
-        metadata(builder.request(request(gzipHtmlFrenchWithCookie)).buildTracked());
+        metadata(builder.request(request(gzipHtmlFrenchWithCookie)).buildTrackedResponse());
     assertEquals(headers(), metadata.varyHeadersForTesting());
     assertEquals(gzip, metadataGzip.varyHeadersForTesting());
     assertEquals(gzipHtml, metadataGzipHtml.varyHeadersForTesting());
@@ -74,19 +96,19 @@ class CacheResponseMetadataTest {
   @Test
   void requestMatching() {
     var builder = response("Vary", "Accept-Encoding, Accept-Language");
-    var metadata = metadata(builder.request(request()).buildTracked());
-    var metadataGzip = metadata(builder.request(request("Accept-Encoding", "gzip")).buildTracked());
+    var metadata = metadata(builder.request(request()).buildTrackedResponse());
+    var metadataGzip = metadata(builder.request(request("Accept-Encoding", "gzip")).buildTrackedResponse());
     var metadataGzipFrench =
         metadata(
             builder
                 .request(request("Accept-Encoding", "gzip", "Accept-Language", "fr-CH"))
-                .buildTracked());
+                .buildTrackedResponse());
     var metadataWithCookies =
         metadata(
             builder
                 .setHeader("Vary", "Cookie")
                 .request(request("Cookie", "foo=bar", "Cookie", "abc=123"))
-                .buildTracked());
+                .buildTrackedResponse());
 
     assertTrue(metadata.matches(request()));
     assertTrue(metadata.matches(request("X-My-Header", ":)")));
@@ -110,7 +132,7 @@ class CacheResponseMetadataTest {
 
   @Test
   void endOfInput() throws IOException {
-    var response = response("Cache-Control", "max-age=4200").request(request()).buildTracked();
+    var response = response("Cache-Control", "max-age=4200").request(request()).buildTrackedResponse();
     var buffer = metadata(response).encode();
     buffer.limit(buffer.limit() - 10);
     assertThrows(EOFException.class, () -> metadata(buffer));
@@ -121,7 +143,7 @@ class CacheResponseMetadataTest {
     var response =
         response(":status", "200", "X-My-Empty-Header", "")
             .request(request())
-            .buildTracked();
+            .buildTrackedResponse();
     assertMetadataPersisted(response);
   }
 
@@ -138,14 +160,14 @@ class CacheResponseMetadataTest {
         response("Vary", "Accept-Encoding", "Cache-Control", "private; max-age=6969")
             .request(request("Accept-Encoding", "gzip", "Accept", "text/html"))
             .sslSession(session)
-            .buildTracked();
+            .buildTrackedResponse();
     assertMetadataPersisted(response);
   }
 
   private static void assertMetadataPersisted(TrackedResponse<?> response) throws IOException {
     var metadata = metadata(response);
     var buffer = metadata.encode();
-    var recovered = metadata(buffer).toResponseBuilder().buildTracked();
+    var recovered = metadata(buffer).toResponseBuilder().buildTrackedResponse();
     assertEqualResponses(response, recovered);
     assertEquals(response.request().uri(), recovered.request().uri());
     assertEquals(response.request().method(), recovered.request().method());
