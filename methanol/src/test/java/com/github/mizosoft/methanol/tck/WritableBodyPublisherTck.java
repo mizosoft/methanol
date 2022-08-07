@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Flow.Publisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
-import org.testng.annotations.BeforeClass;
+import org.testng.SkipException;
 
 public class WritableBodyPublisherTck extends FlowPublisherVerification<ByteBuffer> {
   private static final int BUFFER_SIZE = 64;
@@ -64,5 +64,15 @@ public class WritableBodyPublisherTck extends FlowPublisherVerification<ByteBuff
   @Override
   public long maxElementsFromPublisher() {
     return TckUtils.MAX_PRECOMPUTED_ELEMENTS;
+  }
+
+  /**
+   * A {@code WritableBodyPublisher} is married to only one subscriber, so it's harmless to keep its
+   * reference around.
+   */
+  @Override
+  public void
+      required_spec313_cancelMustMakeThePublisherEventuallyDropAllReferencesToTheSubscriber() {
+    throw new SkipException("skipped");
   }
 }
