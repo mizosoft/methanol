@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,7 @@ public class Utils {
 
   private static final Clock SYSTEM_MILLIS_UTC = Clock.tickMillis(ZoneOffset.UTC);
 
-  private Utils() {} // non-instantiable
+  private Utils() {}
 
   public static boolean isValidToken(String token) {
     return !token.isEmpty() && TOKEN_MATCHER.allMatch(token);
@@ -99,8 +99,13 @@ public class Utils {
    * {@code IOException} with {@code throwable} as its cause if cloning is not possible. Return type
    * is only declared for this method to be conveniently used in a {@code throw} statement.
    */
-  private static RuntimeException rethrowAsyncThrowable(Throwable throwable)
+  private static RuntimeException rethrowAsyncThrowable(
+      Throwable throwable, boolean rethrowInterruptedException)
       throws IOException, InterruptedException {
+    if (throwable instanceof InterruptedException && !rethrowInterruptedException) {
+      throw new IOException(throwable);
+    }
+
     var clonedThrowable = tryCloneThrowable(throwable);
     if (clonedThrowable instanceof RuntimeException) {
       throw (RuntimeException) clonedThrowable;
@@ -111,18 +116,16 @@ public class Utils {
     } else if (clonedThrowable instanceof InterruptedException) {
       throw (InterruptedException) clonedThrowable;
     } else {
-      // Just wrap the original throwable in a generic IOException
       throw new IOException(throwable);
     }
   }
 
   @SuppressWarnings("unchecked")
   private static @Nullable Throwable tryCloneThrowable(Throwable t) {
-    // Clone the main cause in a CompletionException|ExecutionException chain
+    // Clone the main cause in a CompletionException|ExecutionException chain.
     var throwableToClone = getDeepCompletionCause(t);
 
-    // Don't try cloning if we can't rethrow the cloned exception and we'll end up wrapping it in an
-    // IOException anyway
+    // Don't try cloning if we can't rethrow the cloned exception.
     if (!(throwableToClone instanceof RuntimeException
         || throwableToClone instanceof Error
         || throwableToClone instanceof IOException
@@ -147,7 +150,7 @@ public class Utils {
         }
       }
     } catch (ReflectiveOperationException ignored) {
-      // Fallback to null
+      // Fallback to throwing an IOException.
     }
     return null;
   }
@@ -168,22 +171,19 @@ public class Utils {
     try {
       return future.get();
     } catch (ExecutionException e) {
-      throw rethrowAsyncThrowable(e.getCause());
+      throw rethrowAsyncThrowable(e.getCause(), true);
     }
   }
 
-  /**
-   * Same as {@link #block(Future)} but throws {@code InterruptedIOException} instead of {@code
-   * InterruptedException}.
-   */
+  /** Same as {@link #block(Future)} but throws an {@code IOException} when interrupted. */
   public static <T> T blockOnIO(Future<T> future) throws IOException {
     try {
       return future.get();
     } catch (ExecutionException e) {
       try {
-        throw rethrowAsyncThrowable(e.getCause());
+        throw rethrowAsyncThrowable(e.getCause(), false);
       } catch (InterruptedException t) {
-        throw new IOException("interrupted while waiting for I/O", t);
+        throw new AssertionError(t);
       }
     } catch (InterruptedException e) {
       throw new IOException("interrupted while waiting for I/O", e);
@@ -207,8 +207,8 @@ public class Utils {
    * quote DQUOTE and backslash octets occurring within that string."
    */
   public static String escapeAndQuoteValueIfNeeded(String value) {
-    // If value is already a token then it doesn't need quoting
-    // special case: if the value is empty then it is not a token
+    // If value is already a token then it doesn't need quoting.
+    // Special case: if the value is empty then it is not a token.
     return isValidToken(value) ? value : escapeAndQuote(value);
   }
 

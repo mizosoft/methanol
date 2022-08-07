@@ -75,10 +75,10 @@ public class TestUtils {
     }
   }
 
-  public static void awaitUninterruptibly(CyclicBarrier barier) {
+  public static void awaitUninterruptibly(CyclicBarrier barrier) {
     while (true) {
       try {
-        barier.await();
+        barrier.await();
         return;
       } catch (InterruptedException ignored) {
         // continue;
