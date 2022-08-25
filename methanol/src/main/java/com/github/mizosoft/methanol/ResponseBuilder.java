@@ -38,9 +38,24 @@ import java.time.Instant;
 import java.util.Optional;
 import javax.net.ssl.SSLSession;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+/** A builder of {@link HttpResponse} instances. */
 public final class ResponseBuilder<T> {
+  private static final @Nullable Class<?> jdkHttpResponseClass;
+
+  static {
+    Class<?> clazz;
+    try {
+      //noinspection Java9ReflectionClassVisibility
+      clazz = Class.forName("jdk.internal.net.http.HttpResponseImpl");
+    } catch (ClassNotFoundException e) {
+      clazz = null;
+    }
+    jdkHttpResponseClass = clazz;
+  }
+
   private static final int UNSET_STATUS_CODE = -1;
 
   private final HeadersBuilder headersBuilder = new HeadersBuilder();
@@ -87,6 +102,11 @@ public final class ResponseBuilder<T> {
 
   public ResponseBuilder<T> headers(HttpHeaders headers) {
     headersBuilder.addAll(headers);
+    return this;
+  }
+
+  public ResponseBuilder<T> headersLenient(HttpHeaders headers) {
+    headersBuilder.addAllLenient(headers);
     return this;
   }
 
@@ -157,11 +177,11 @@ public final class ResponseBuilder<T> {
 
   @SuppressWarnings("unchecked")
   public HttpResponse<T> build() {
-    requireState(statusCode >= 0, "statusCode is required");
+    requireState(statusCode != UNSET_STATUS_CODE, "statusCode is required");
     if (cacheStatus != null) {
       return buildCacheAwareResponse();
     }
-    if (timeRequestSent != null && timeResponseReceived != null) {
+    if (timeRequestSent != null || timeResponseReceived != null) {
       return buildTrackedResponse();
     }
     return new HttpResponseImpl<>(
@@ -177,7 +197,7 @@ public final class ResponseBuilder<T> {
 
   @SuppressWarnings("unchecked")
   public TrackedResponse<T> buildTrackedResponse() {
-    requireState(statusCode >= 0, "statusCode is required");
+    requireState(statusCode != UNSET_STATUS_CODE, "statusCode is required");
     if (cacheStatus != null) {
       return buildCacheAwareResponse();
     }
@@ -195,8 +215,8 @@ public final class ResponseBuilder<T> {
   }
 
   @SuppressWarnings("unchecked")
-  private CacheAwareResponse<T> buildCacheAwareResponse() {
-    requireState(statusCode >= 0, "statusCode is required");
+  public CacheAwareResponse<T> buildCacheAwareResponse() {
+    requireState(statusCode != UNSET_STATUS_CODE, "statusCode is required");
     return new CacheAwareResponseImpl<>(
         statusCode,
         ensureSet(uri, "uri"),
@@ -213,13 +233,22 @@ public final class ResponseBuilder<T> {
         ensureSet(cacheStatus, "cacheStatus"));
   }
 
+  private ResponseBuilder<T> headers(HttpHeaders headers, boolean bypassHeaderValidation) {
+    if (bypassHeaderValidation) {
+      headersBuilder.addAllLenient(headers);
+    } else {
+      headersBuilder.addAll(headers);
+    }
+    return this;
+  }
+
   public static <T> ResponseBuilder<T> newBuilder(HttpResponse<T> response) {
     var builder =
         new ResponseBuilder<T>()
             .statusCode(response.statusCode())
             .uri(response.uri())
             .version(response.version())
-            .headers(response.headers())
+            .headers(response.headers(), isTrusted(response))
             .request(response.request())
             .body(response.body());
     response.previousResponse().ifPresent(builder::previousResponse);
@@ -240,7 +269,12 @@ public final class ResponseBuilder<T> {
     return builder;
   }
 
-  private static <T> T ensureSet(@Nullable T property, String name) {
+  private static boolean isTrusted(HttpResponse<?> response) {
+    return response instanceof HttpResponseImpl
+        || (jdkHttpResponseClass != null && jdkHttpResponseClass.isInstance(response));
+  }
+
+  private static <T> @NonNull T ensureSet(@Nullable T property, String name) {
     requireState(property != null, "%s is required", name);
     return castNonNull(property);
   }

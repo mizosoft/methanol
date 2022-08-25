@@ -24,8 +24,8 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.alphaNum;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
+import static com.github.mizosoft.methanol.internal.text.CharMatcher.lettersOrDigits;
+import static com.github.mizosoft.methanol.internal.text.CharMatcher.anyOf;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.BOUNDARY_MATCHER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -158,8 +158,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
   /** Represents a part in a multipart request body. */
   public static final class Part {
-
-    private static final CharMatcher TOKEN_MATCHER = chars("!#$%&'*+-.^_`|~").or(alphaNum());
+    private static final CharMatcher TOKEN_MATCHER = anyOf("!#$%&'*+-.^_`|~").or(lettersOrDigits());
 
     private final HttpHeaders headers;
     private final BodyPublisher bodyPublisher;

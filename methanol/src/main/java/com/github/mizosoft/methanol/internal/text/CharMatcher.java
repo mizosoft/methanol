@@ -28,7 +28,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 public interface CharMatcher {
   boolean matches(char c);
 
-  default boolean allMatch(String s) {
+  default boolean allMatch(CharSequence s) {
     return s.chars().allMatch(i -> matches((char) i));
   }
 
@@ -36,27 +36,27 @@ public interface CharMatcher {
     return c -> matches(c) || other.matches(c);
   }
 
-  static CharMatcher alpha() {
+  static CharMatcher letters() {
     return c -> {
       char lower = Character.toLowerCase(c);
       return lower >= 'a' && lower <= 'z';
     };
   }
 
-  static CharMatcher num() {
+  static CharMatcher digits() {
     return c -> c >= '0' && c <= '9';
   }
 
-  static CharMatcher alphaNum() {
-    return alpha().or(num());
+  static CharMatcher lettersOrDigits() {
+    return letters().or(digits());
   }
 
-  static CharMatcher chars(String chars) {
+  static CharMatcher anyOf(String chars) {
     return c -> chars.indexOf(c) >= 0;
   }
 
   static CharMatcher closedRange(int c1, int c2) {
-    requireArgument((c1 | c2 | (c2 - c1)) >= 0, "illegal range[%d, %d]", c1, c2);
+    requireArgument((c1 | c2 | (c2 - c1)) >= 0, "illegal range [%d, %d]", c1, c2);
     return c -> c >= c1 && c <= c2;
   }
 }

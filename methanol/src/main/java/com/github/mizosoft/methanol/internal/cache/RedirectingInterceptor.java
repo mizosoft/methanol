@@ -30,9 +30,9 @@ import static java.util.Objects.requireNonNullElseGet;
 import com.github.mizosoft.methanol.HttpStatus;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.MutableRequest;
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
-import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
@@ -75,7 +75,6 @@ public final class RedirectingInterceptor implements Interceptor {
 
   public RedirectingInterceptor(Redirect policy, @Nullable Executor handlerExecutor) {
     this.policy = policy;
-    // Use a cached thread-pool of daemon threads if we can't access HttpClient's executor
     this.handlerExecutor =
         requireNonNullElseGet(
             handlerExecutor,
@@ -91,19 +90,17 @@ public final class RedirectingInterceptor implements Interceptor {
   @Override
   public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
       throws IOException, InterruptedException {
-    if (policy == Redirect.NEVER) {
-      return chain.forward(request);
-    }
-    return Utils.block(doIntercept(request, chain, false));
+    return policy == Redirect.NEVER
+        ? chain.forward(request)
+        : Utils.block(doIntercept(request, chain, false));
   }
 
   @Override
   public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
       HttpRequest request, Chain<T> chain) {
-    if (policy == Redirect.NEVER) {
-      return chain.forwardAsync(request);
-    }
-    return doIntercept(request, chain, true);
+    return policy == Redirect.NEVER
+        ? chain.forwardAsync(request)
+        : doIntercept(request, chain, true);
   }
 
   private <T> CompletableFuture<HttpResponse<T>> doIntercept(

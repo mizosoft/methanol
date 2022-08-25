@@ -66,11 +66,11 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
       BodyHandler<T> bodyHandler,
       @Nullable Function<HttpRequest, @Nullable BodyHandler<T>> pushPromiseAcceptor,
       Executor executor) {
-    this.client = client;
-    this.request = request;
-    this.bodyHandler = bodyHandler;
+    this.client = requireNonNull(client);
+    this.request = requireNonNull(request);
+    this.bodyHandler = requireNonNull(bodyHandler);
     this.pushPromiseAcceptor = pushPromiseAcceptor;
-    this.executor = executor;
+    this.executor = requireNonNull(executor);
   }
 
   @Override

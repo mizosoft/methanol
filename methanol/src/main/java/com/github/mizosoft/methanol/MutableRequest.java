@@ -24,9 +24,6 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.isValidToken;
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
-import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
-import static com.github.mizosoft.methanol.internal.Utils.validateHeaderName;
-import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -89,7 +86,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     cachedHeaders = other.cachedHeaders;
     bodyPublisher = other.bodyPublisher;
     expectContinue = other.expectContinue;
-    // unnecessary checks to respect MonotonicNonNull's contract
+    // Unnecessary checks to respect MonotonicNonNull's contract
     if (other.timeout != null) {
       timeout = other.timeout;
     }
@@ -104,20 +101,18 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
    * @throws IllegalArgumentException if the uri's syntax is invalid
    */
   public MutableRequest uri(String uri) {
-    requireNonNull(uri);
     return uri(URI.create(uri));
   }
 
   /** Removes all headers added so far. */
   public MutableRequest removeHeaders() {
-    cachedHeaders = null;
     headersBuilder.clear();
+    cachedHeaders = null;
     return this;
   }
 
   /** Removes any header associated with the given name. */
   public MutableRequest removeHeader(String name) {
-    requireNonNull(name);
     if (headersBuilder.remove(name)) {
       cachedHeaders = null;
     }
@@ -126,7 +121,6 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   /** Removes all headers matched by the given predicate. */
   public MutableRequest removeHeadersIf(BiPredicate<String, String> filter) {
-    requireNonNull(filter);
     if (headersBuilder.removeIf(filter)) {
       cachedHeaders = null;
     }
@@ -135,28 +129,18 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   /** Adds each of the given {@code HttpHeaders}. */
   public MutableRequest headers(HttpHeaders headers) {
-    requireNonNull(headers);
+    headersBuilder.addAll(headers);
     cachedHeaders = null;
-    for (var entry : headers.map().entrySet()) {
-      var name = entry.getKey();
-      validateHeaderName(name);
-      for (var value : entry.getValue()) {
-        validateHeaderValue(value);
-        headersBuilder.add(name, value);
-      }
-    }
     return this;
   }
 
   /** Sets the {@code Cache-Control} header. */
   public MutableRequest cacheControl(CacheControl cacheControl) {
-    requireNonNull(cacheControl);
     return header("Cache-Control", cacheControl.toString());
   }
 
   /** Calls the given consumer against this request. */
   public MutableRequest apply(Consumer<? super MutableRequest> consumer) {
-    requireNonNull(consumer);
     consumer.accept(this);
     return this;
   }
@@ -164,8 +148,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   @SuppressWarnings("unchecked")
   @Override
   public <T> Optional<T> tag(TypeRef<T> type) {
-    requireNonNull(type);
-    return Optional.ofNullable((T) tags.get(type));
+    return Optional.ofNullable((T) tags.get(requireNonNull(type)));
   }
 
   @Override
@@ -176,7 +159,6 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   @SuppressWarnings("unchecked")
   @Override
   public MutableRequest tag(Object value) {
-    requireNonNull(value);
     return tag((Class<Object>) value.getClass(), value);
   }
 
@@ -187,9 +169,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public <T> MutableRequest tag(TypeRef<T> type, T value) {
-    requireNonNull(type);
-    requireNonNull(value);
-    tags.put(type, value);
+    tags.put(requireNonNull(type), requireNonNull(value));
     return this;
   }
 
@@ -200,8 +180,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest removeTag(TypeRef<?> type) {
-    requireNonNull(type);
-    tags.remove(type);
+    tags.remove(requireNonNull(type));
     return this;
   }
 
@@ -272,34 +251,26 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest header(String name, String value) {
-    requireNonNull(name);
-    requireNonNull(value);
-    validateHeader(name, value);
-    cachedHeaders = null;
     headersBuilder.add(name, value);
+    cachedHeaders = null;
     return this;
   }
 
   @Override
   public MutableRequest headers(String... headers) {
-    requireNonNull(headers);
-    int len = headers.length;
-    requireArgument(len > 0 && len % 2 == 0, "illegal number of headers: %d", len);
-    cachedHeaders = null;
-    for (int i = 0; i < len; i += 2) {
-      var name = headers[i];
-      var value = headers[i + 1];
-      requireNonNull(name);
-      requireNonNull(value);
-      validateHeader(name, value);
-      headersBuilder.add(name, value);
+    requireArgument(
+        headers.length > 0 && headers.length % 2 == 0,
+        "illegal number of headers: %d",
+        headers.length);
+    for (int i = 0; i < headers.length; i += 2) {
+      headersBuilder.add(headers[i], headers[i + 1]);
     }
+    cachedHeaders = null;
     return this;
   }
 
   @Override
   public MutableRequest timeout(Duration timeout) {
-    requireNonNull(timeout);
     requirePositiveDuration(timeout);
     this.timeout = timeout;
     return this;
@@ -307,11 +278,8 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest setHeader(String name, String value) {
-    requireNonNull(name);
-    requireNonNull(value);
-    validateHeader(name, value);
-    cachedHeaders = null;
     headersBuilder.set(name, value);
+    cachedHeaders = null;
     return this;
   }
 
@@ -322,14 +290,12 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest POST(BodyPublisher bodyPublisher) {
-    requireNonNull(bodyPublisher);
-    return setMethod("POST", bodyPublisher);
+    return setMethod("POST", requireNonNull(bodyPublisher));
   }
 
   @Override
   public MutableRequest PUT(BodyPublisher bodyPublisher) {
-    requireNonNull(bodyPublisher);
-    return setMethod("PUT", bodyPublisher);
+    return setMethod("PUT", requireNonNull(bodyPublisher));
   }
 
   @Override
@@ -339,10 +305,8 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest method(String method, BodyPublisher bodyPublisher) {
-    requireNonNull(method);
-    requireNonNull(bodyPublisher);
     requireArgument(isValidToken(method), "illegal method name: '%s'", method);
-    return setMethod(method, bodyPublisher);
+    return setMethod(method, requireNonNull(bodyPublisher));
   }
 
   /** Prefer {@link #toImmutableRequest()}. */
@@ -390,7 +354,6 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   }
 
   public static MutableRequest copyOf(HttpRequest other) {
-    requireNonNull(other);
     return other instanceof MutableRequest ? ((MutableRequest) other).copy() : createCopy(other);
   }
 
@@ -454,8 +417,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     @SuppressWarnings("unchecked")
     @Override
     public <T> Optional<T> tag(TypeRef<T> type) {
-      requireNonNull(type);
-      return Optional.ofNullable((T) tags.get(type));
+      return Optional.ofNullable((T) tags.get(requireNonNull(type)));
     }
 
     @Override

@@ -228,7 +228,7 @@ public final class CacheResponseMetadata {
   private static HttpHeaders varyHeaders(HttpHeaders requestHeaders, HttpHeaders responseHeaders) {
     var builder = new HeadersBuilder();
     for (var name : varyFields(responseHeaders)) {
-      builder.set(name, requestHeaders.allValues(name));
+      requestHeaders.allValues(name).forEach(value -> builder.addLenient(name, value));
     }
     return builder.build();
   }

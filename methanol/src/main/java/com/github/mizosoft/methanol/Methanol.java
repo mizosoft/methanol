@@ -23,8 +23,6 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
-import static com.github.mizosoft.methanol.internal.Utils.validateHeader;
-import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.flow.FlowSupport.SYNC_EXECUTOR;
 import static java.util.Objects.requireNonNull;
@@ -56,7 +54,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -119,7 +116,7 @@ public final class Methanol extends HttpClient {
   private Methanol(BaseBuilder<?> builder) {
     backend = builder.buildBackend();
     redirectPolicy = requireNonNullElse(builder.redirectPolicy, backend.followRedirects());
-    defaultHeaders = builder.headersBuilder.build();
+    defaultHeaders = builder.defaultHeadersBuilder.build();
     cache = Optional.ofNullable(builder.cache);
     userAgent = Optional.ofNullable(builder.userAgent);
     baseUri = Optional.ofNullable(builder.baseUri);
@@ -130,30 +127,29 @@ public final class Methanol extends HttpClient {
     interceptors = List.copyOf(builder.interceptors);
     backendInterceptors = List.copyOf(builder.backendInterceptors);
 
-    var chainInterceptors = new ArrayList<>(interceptors);
-    chainInterceptors.add(
+    var mergedInterceptors = new ArrayList<>(interceptors);
+    mergedInterceptors.add(
         new RequestRewritingInterceptor(
             baseUri, defaultHeaders, requestTimeout, autoAcceptEncoding));
     if (autoAcceptEncoding) {
-      chainInterceptors.add(AutoDecompressingInterceptor.INSTANCE);
+      mergedInterceptors.add(AutoDecompressingInterceptor.INSTANCE);
     }
     headersTimeout.ifPresent(
         timeout ->
-            chainInterceptors.add(
+            mergedInterceptors.add(
                 new HeadersTimeoutInterceptor(timeout, builder.headersTimeoutDelayer)));
     readTimeout.ifPresent(
         timeout ->
-            chainInterceptors.add(
+            mergedInterceptors.add(
                 new ReadTimeoutInterceptor(timeout, builder.readTimeoutScheduler)));
     cache.ifPresent(
         cache -> {
           var executor = backend.executor().orElse(null);
-          // We handle redirection ourselves if a cache is installed
-          chainInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
-          chainInterceptors.add(cache.interceptor(executor));
+          mergedInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
+          mergedInterceptors.add(cache.interceptor(executor));
         });
-    chainInterceptors.addAll(backendInterceptors);
-    this.chainInterceptors = Collections.unmodifiableList(chainInterceptors);
+    mergedInterceptors.addAll(backendInterceptors);
+    this.chainInterceptors = Collections.unmodifiableList(mergedInterceptors);
   }
 
   /**
@@ -161,8 +157,6 @@ public final class Methanol extends HttpClient {
    * sending the given request.
    */
   public <T> Publisher<HttpResponse<T>> exchange(HttpRequest request, BodyHandler<T> bodyHandler) {
-    requireNonNull(request, "request");
-    requireNonNull(bodyHandler, "bodyHandler");
     return new HttpResponsePublisher<>(
         this, request, bodyHandler, null, executor().orElse(SYNC_EXECUTOR));
   }
@@ -181,9 +175,6 @@ public final class Methanol extends HttpClient {
       HttpRequest request,
       BodyHandler<T> bodyHandler,
       Function<HttpRequest, @Nullable BodyHandler<T>> pushPromiseAcceptor) {
-    requireNonNull(request, "request");
-    requireNonNull(bodyHandler, "bodyHandler");
-    requireNonNull(pushPromiseAcceptor, "pushPromiseAcceptor");
     return new HttpResponsePublisher<>(
         this, request, bodyHandler, pushPromiseAcceptor, executor().orElse(SYNC_EXECUTOR));
   }
@@ -310,16 +301,12 @@ public final class Methanol extends HttpClient {
   @Override
   public <T> HttpResponse<T> send(HttpRequest request, BodyHandler<T> bodyHandler)
       throws IOException, InterruptedException {
-    requireNonNull(request, "request");
-    requireNonNull(bodyHandler, "bodyHandler");
     return new InterceptorChain<>(backend, bodyHandler, null, chainInterceptors).forward(request);
   }
 
   @Override
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(
       HttpRequest request, BodyHandler<T> bodyHandler) {
-    requireNonNull(request, "request");
-    requireNonNull(bodyHandler, "bodyHandler");
     return new InterceptorChain<>(backend, bodyHandler, null, chainInterceptors)
         .forwardAsync(request);
   }
@@ -329,8 +316,6 @@ public final class Methanol extends HttpClient {
       HttpRequest request,
       BodyHandler<T> bodyHandler,
       @Nullable PushPromiseHandler<T> pushPromiseHandler) {
-    requireNonNull(request, "request");
-    requireNonNull(bodyHandler, "bodyHandler");
     return new InterceptorChain<>(backend, bodyHandler, pushPromiseHandler, chainInterceptors)
         .forwardAsync(request);
   }
@@ -338,9 +323,10 @@ public final class Methanol extends HttpClient {
   private static URI validateUri(URI uri) {
     var scheme = uri.getScheme();
     requireArgument(scheme != null, "uri has no scheme: %s", uri);
-    scheme = scheme.toLowerCase(Locale.ENGLISH);
     requireArgument(
-        "http".equals(scheme) || "https".equals(scheme), "unsupported scheme: %s", scheme);
+        "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme),
+        "unsupported scheme: %s",
+        scheme);
     requireArgument(uri.getHost() != null, "uri has no host: %s", uri);
     return uri;
   }
@@ -466,7 +452,8 @@ public final class Methanol extends HttpClient {
 
   /** A base {@code Methanol} builder allowing to set the non-standard properties. */
   public abstract static class BaseBuilder<B extends BaseBuilder<B>> {
-    final HeadersBuilder headersBuilder;
+    final HeadersBuilder defaultHeadersBuilder = new HeadersBuilder();
+
     @MonotonicNonNull String userAgent;
     @MonotonicNonNull URI baseUri;
     @MonotonicNonNull Duration requestTimeout;
@@ -474,7 +461,7 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull Delayer headersTimeoutDelayer;
     @MonotonicNonNull Duration readTimeout;
     @MonotonicNonNull ScheduledExecutorService readTimeoutScheduler;
-    boolean autoAcceptEncoding;
+    boolean autoAcceptEncoding = true;
 
     // These fields are put here for convenience, they're only writable by Builder
     @MonotonicNonNull HttpCache cache;
@@ -482,11 +469,6 @@ public final class Methanol extends HttpClient {
 
     final List<Interceptor> interceptors = new ArrayList<>();
     final List<Interceptor> backendInterceptors = new ArrayList<>();
-
-    BaseBuilder() {
-      headersBuilder = new HeadersBuilder();
-      autoAcceptEncoding = true;
-    }
 
     /** Calls the given consumer against this builder. */
     public final B apply(Consumer<? super B> consumer) {
@@ -500,10 +482,8 @@ public final class Methanol extends HttpClient {
      * @throws IllegalArgumentException if {@code userAgent} is an invalid header value
      */
     public B userAgent(String userAgent) {
-      requireNonNull(userAgent);
-      validateHeaderValue(userAgent);
+      defaultHeadersBuilder.set("User-Agent", userAgent);
       this.userAgent = userAgent;
-      headersBuilder.set("User-Agent", userAgent); // overwrite previous if any
       return self();
     }
 
@@ -520,29 +500,26 @@ public final class Methanol extends HttpClient {
      * URI#resolve(URI) resolved}.
      */
     public B baseUri(URI uri) {
-      requireNonNull(uri);
       this.baseUri = validateUri(uri);
       return self();
     }
 
     /** Adds the given header as default. */
     public B defaultHeader(String name, String value) {
-      requireNonNull(name);
-      requireNonNull(value);
-      validateHeader(name, value);
+      defaultHeadersBuilder.add(name, value);
       if ("User-Agent".equalsIgnoreCase(name)) {
         userAgent = value;
       }
-      headersBuilder.add(name, value);
       return self();
     }
 
     /** Adds each of the given headers as default. */
     public B defaultHeaders(String... headers) {
-      requireNonNull(headers, "headers");
-      int len = headers.length;
-      requireArgument(len > 0 && len % 2 == 0, "illegal number of headers: %d", len);
-      for (int i = 0; i < len; i += 2) {
+      requireArgument(
+          headers.length > 0 && headers.length % 2 == 0,
+          "illegal number of headers: %d",
+          headers.length);
+      for (int i = 0; i < headers.length; i += 2) {
         defaultHeader(headers[i], headers[i + 1]);
       }
       return self();
@@ -550,7 +527,6 @@ public final class Methanol extends HttpClient {
 
     /** Sets a default request timeout to use when not explicitly by an {@code HttpRequest}. */
     public B requestTimeout(Duration requestTimeout) {
-      requireNonNull(requestTimeout);
       requirePositiveDuration(requestTimeout);
       this.requestTimeout = requestTimeout;
       return self();
@@ -573,11 +549,9 @@ public final class Methanol extends HttpClient {
     }
 
     B headersTimeout(Duration headersTimeout, Delayer delayer) {
-      requireNonNull(headersTimeout);
-      requireNonNull(delayer);
       requirePositiveDuration(headersTimeout);
       this.headersTimeout = headersTimeout;
-      this.headersTimeoutDelayer = delayer;
+      this.headersTimeoutDelayer = requireNonNull(delayer);
       return self();
     }
 
@@ -586,7 +560,6 @@ public final class Methanol extends HttpClient {
      * timeout}. Timeout events are scheduled using a system-wide {@code ScheduledExecutorService}.
      */
     public B readTimeout(Duration readTimeout) {
-      requireNonNull(readTimeout);
       requirePositiveDuration(readTimeout);
       this.readTimeout = readTimeout;
       return self();
@@ -598,11 +571,9 @@ public final class Methanol extends HttpClient {
      * scheduling timeout events.
      */
     public B readTimeout(Duration readTimeout, ScheduledExecutorService scheduler) {
-      requireNonNull(readTimeout);
-      requireNonNull(scheduler);
       requirePositiveDuration(readTimeout);
       this.readTimeout = readTimeout;
-      this.readTimeoutScheduler = scheduler;
+      this.readTimeoutScheduler = requireNonNull(scheduler);
       return self();
     }
 
@@ -612,7 +583,7 @@ public final class Methanol extends HttpClient {
      * each received response will be transparently decompressed by wrapping its {@code BodyHandler}
      * with {@link MoreBodyHandlers#decoding(BodyHandler)}.
      *
-     * <p>The default value of this setting is {@code true}.
+     * <p>This value is {@code true} by default.
      */
     public B autoAcceptEncoding(boolean autoAcceptEncoding) {
       this.autoAcceptEncoding = autoAcceptEncoding;
@@ -625,8 +596,7 @@ public final class Methanol extends HttpClient {
      * base {@code URI}, default headers added, etc...) or handled by an {@link HttpCache}.
      */
     public B interceptor(Interceptor interceptor) {
-      requireNonNull(interceptor);
-      interceptors.add(interceptor);
+      interceptors.add(requireNonNull(interceptor));
       return self();
     }
 
@@ -635,20 +605,16 @@ public final class Methanol extends HttpClient {
      * backend. The interceptor receives the request after it is handled by all {@link
      * #interceptor(Interceptor) client interceptors}, is decorated (its {@code URI} resolved with
      * the base {@code URI}, default headers added, etc...) and finally handled by an {@link
-     * HttpCache}. This means that backend interceptors aren't called if network isn't used,
-     * normally due to the presence of an {@code HttpCache} that is capable of serving a stored
-     * response.
+     * HttpCache}. This implies that backend interceptors aren't normally called if network isn't
+     * used, normally due to the presence of an {@code HttpCache} that is capable of serving a
+     * stored response.
      */
     public B backendInterceptor(Interceptor interceptor) {
-      requireNonNull(interceptor);
-      backendInterceptors.add(interceptor);
+      backendInterceptors.add(requireNonNull(interceptor));
       return self();
     }
 
     /**
-     * Adds an interceptor that is invoked after request decoration (i.e. after default properties
-     * or {@code BodyHandler} transformations are applied).
-     *
      * @deprecated Use {@link #backendInterceptor(Interceptor)}
      */
     @Deprecated(since = "1.5.0")
@@ -656,7 +622,7 @@ public final class Methanol extends HttpClient {
       return backendInterceptor(interceptor);
     }
 
-    /** Returns a new {@code Methanol} with a snapshot of the current builder's state. */
+    /** Creates a new {@code Methanol} instance. */
     public Methanol build() {
       return new Methanol(this);
     }
@@ -666,7 +632,7 @@ public final class Methanol extends HttpClient {
     abstract HttpClient buildBackend();
   }
 
-  /** A builder for {@code Methanol} instances with a predefined backend {@code HttpClient}. */
+  /** A builder for {@code Methanol} instances with a pre-specified backend {@code HttpClient}. */
   public static final class WithClientBuilder extends BaseBuilder<WithClientBuilder> {
     private final HttpClient backend;
 
@@ -768,8 +734,8 @@ public final class Methanol extends HttpClient {
 
     @Override
     HttpClient buildBackend() {
-      // Apply redirectPolicy if a cache is not set.
-      // In such case we let the backend handle redirects.
+      // Apply redirectPolicy if a cache is not set. In such case we let the backend handle
+      // redirects.
       if (cache == null && redirectPolicy != null) {
         backendBuilder.followRedirects(redirectPolicy);
       }
@@ -798,10 +764,10 @@ public final class Methanol extends HttpClient {
         @Nullable PushPromiseHandler<T> pushPromiseHandler,
         List<Interceptor> interceptors,
         int currentInterceptorIndex) {
-      this.backend = backend;
-      this.bodyHandler = bodyHandler;
+      this.backend = requireNonNull(backend);
+      this.bodyHandler = requireNonNull(bodyHandler);
       this.pushPromiseHandler = pushPromiseHandler;
-      this.interceptors = interceptors;
+      this.interceptors = requireNonNull(interceptors);
       this.currentInterceptorIndex = currentInterceptorIndex;
     }
 
@@ -817,7 +783,6 @@ public final class Methanol extends HttpClient {
 
     @Override
     public Interceptor.Chain<T> withBodyHandler(BodyHandler<T> bodyHandler) {
-      requireNonNull(bodyHandler);
       return new InterceptorChain<>(
           backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
     }
@@ -832,7 +797,6 @@ public final class Methanol extends HttpClient {
     @Override
     public <U> Chain<U> with(
         BodyHandler<U> bodyHandler, @Nullable PushPromiseHandler<U> pushPromiseHandler) {
-      requireNonNull(bodyHandler);
       return new InterceptorChain<>(
           backend, bodyHandler, pushPromiseHandler, interceptors, currentInterceptorIndex);
     }
@@ -955,7 +919,7 @@ public final class Methanol extends HttpClient {
     }
 
     private static <T> Chain<T> decoding(HttpRequest request, Chain<T> chain) {
-      // Skip auto decompression if this is a HEAD
+      // HEADs don't have bodies, so no decompression is needed.
       if ("HEAD".equalsIgnoreCase(request.method())) {
         return chain;
       }
@@ -970,7 +934,7 @@ public final class Methanol extends HttpClient {
     }
 
     private static <T> HttpResponse<T> stripContentEncoding(HttpResponse<T> response) {
-      // Don't strip if the response wasn't decompressed
+      // Don't strip if the response wasn't decompressed.
       if ("HEAD".equalsIgnoreCase(response.request().method())
           || !response.headers().map().containsKey("Content-Encoding")) {
         return response;
@@ -1068,7 +1032,6 @@ public final class Methanol extends HttpClient {
 
       @Override
       public void onSubscribe(Subscription subscription) {
-        requireNonNull(subscription);
         subscription.cancel();
       }
 

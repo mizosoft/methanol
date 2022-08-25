@@ -22,6 +22,11 @@
 
 package com.github.mizosoft.methanol.internal.extensions;
 
+import static com.github.mizosoft.methanol.internal.Utils.requireValidHeader;
+import static com.github.mizosoft.methanol.internal.Utils.requireValidHeaderName;
+import static com.github.mizosoft.methanol.internal.Utils.requireValidHeaderValue;
+import static java.util.Objects.requireNonNull;
+
 import java.net.http.HttpHeaders;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,46 +40,84 @@ public final class HeadersBuilder {
   public HeadersBuilder() {}
 
   public void add(String name, String value) {
+    requireValidHeader(name, value);
     headers.computeIfAbsent(name, __ -> new ArrayList<>()).add(value);
   }
 
   public void add(String name, List<String> values) {
-    if (!values.isEmpty()) {
-      headers.computeIfAbsent(name, __ -> new ArrayList<>()).addAll(values);
-    }
-  }
-
-  public void addAll(Map<String, List<String>> headers) {
-    headers.forEach(this::add);
+    requireValidHeaderName(name);
+    var myValues = headers.computeIfAbsent(name, __ -> new ArrayList<>());
+    values.forEach(
+        value -> {
+          requireValidHeaderValue(value);
+          myValues.add(value);
+        });
   }
 
   public void addAll(HttpHeaders headers) {
-    addAll(headers.map());
+    headers.map().forEach(this::add);
   }
 
   public void addAll(HeadersBuilder builder) {
-    addAll(builder.headers);
+    addAllLenient(builder.headers);
+  }
+
+  public void addLenient(String name, String value) {
+    headers
+        .computeIfAbsent(requireNonNull(name), __ -> new ArrayList<>())
+        .add(requireNonNull(value));
+  }
+
+  public void addAllLenient(HttpHeaders headers) {
+    addAllLenient(headers.map());
+  }
+
+  private void addAllLenient(Map<String, List<String>> headers) {
+    // Assumes keys & values can't be null.
+    headers.forEach(
+        (name, values) ->
+            this.headers.computeIfAbsent(name, __ -> new ArrayList<>()).addAll(values));
   }
 
   public void set(String name, String value) {
-    set(name, List.of(value));
-  }
-
-  public void set(String name, List<String> values) {
-    if (!values.isEmpty()) {
-      headers.put(name, new ArrayList<>(values));
-    }
+    requireValidHeader(name, value);
+    var myValues = headers.computeIfAbsent(name, __ -> new ArrayList<>());
+    myValues.clear();
+    myValues.add(value);
   }
 
   public void setAll(HttpHeaders headers) {
     headers.map().forEach(this::set);
   }
 
+  private void set(String name, List<String> values) {
+    requireValidHeaderName(name);
+    var myValues = headers.computeIfAbsent(name, __ -> new ArrayList<>());
+    myValues.clear();
+    values.forEach(
+        value -> {
+          requireValidHeaderValue(value);
+          myValues.add(value);
+        });
+  }
+
+  public void setAllLenient(HttpHeaders headers) {
+    headers
+        .map()
+        .forEach(
+            (name, values) -> {
+              var myValues = this.headers.computeIfAbsent(name, __ -> new ArrayList<>());
+              myValues.clear();
+              myValues.addAll(values);
+            });
+  }
+
   public boolean remove(String name) {
-    return headers.remove(name) != null;
+    return headers.remove(requireNonNull(name)) != null;
   }
 
   public boolean removeIf(BiPredicate<String, String> filter) {
+    requireNonNull(filter);
     boolean mutated = false;
     for (var iter = headers.entrySet().iterator(); iter.hasNext(); ) {
       var entry = iter.next();

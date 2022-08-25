@@ -22,9 +22,9 @@
 
 package com.github.mizosoft.methanol.internal.text;
 
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.alphaNum;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.chars;
+import static com.github.mizosoft.methanol.internal.text.CharMatcher.anyOf;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.closedRange;
+import static com.github.mizosoft.methanol.internal.text.CharMatcher.lettersOrDigits;
 
 /** Common {@code CharMatchers} for HTTP headers and the like. */
 public class HttpCharMatchers {
@@ -40,7 +40,7 @@ public class HttpCharMatchers {
   //                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
   //                    / DIGIT / ALPHA
   //                    ; any VCHAR, except delimiters
-  public static final CharMatcher TOKEN_MATCHER = chars("!#$%&'*+-.^_`|~").or(alphaNum());
+  public static final CharMatcher TOKEN_MATCHER = anyOf("!#$%&'*+-.^_`|~").or(lettersOrDigits());
 
   // field-content  = field-vchar [ 1*( SP / HTAB ) field-vchar ]
   // field-vchar    = VCHAR / obs-text
@@ -51,28 +51,28 @@ public class HttpCharMatchers {
   // (obs-fold & obs-test will be forbidden)
   public static final CharMatcher FIELD_VALUE_MATCHER =
       closedRange(0x21, 0x7E) // VCHAR
-          .or(chars(" \t")); // ( SP / HTAB )
+          .or(anyOf(" \t")); // ( SP / HTAB )
 
   // quoted-string  = DQUOTE *( qdtext / quoted-pair ) DQUOTE
   // qdtext         = HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text
   // obs-text       = %x80-FF
   public static final CharMatcher QUOTED_TEXT_MATCHER =
-      chars("\t \u0021") // HTAB + SP + 0x21
+      anyOf("\t \u0021") // HTAB + SP + 0x21
           .or(closedRange(0x23, 0x5B))
           .or(closedRange(0x5D, 0x7E));
 
   // quoted-pair    = "\" ( HTAB / SP / VCHAR / obs-text )
   public static final CharMatcher QUOTED_PAIR_MATCHER =
-      chars("\t ") // HTAB + SP
+      anyOf("\t ") // HTAB + SP
           .or(closedRange(0x21, 0x7E)); // VCHAR
 
   //  OWS = *( SP / HTAB )
-  public static final CharMatcher OWS_MATCHER = chars("\t ");
+  public static final CharMatcher OWS_MATCHER = anyOf("\t ");
 
   // boundary     := 0*69<bchars> bcharnospace
   // bchars       := bcharnospace / " "
   // bcharnospace := DIGIT / ALPHA / "'" / "(" / ")" /
   //                 "+" / "_" / "," / "-" / "." ?
   //                 "/" / ":" / "=" / "?"
-  public static final CharMatcher BOUNDARY_MATCHER = chars("'()+_,-./:=? ").or(alphaNum());
+  public static final CharMatcher BOUNDARY_MATCHER = anyOf("'()+_,-./:=? ").or(lettersOrDigits());
 }

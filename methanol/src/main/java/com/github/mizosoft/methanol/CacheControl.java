@@ -24,12 +24,11 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.escapeAndQuoteValueIfNeeded;
 import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDuration;
-import static com.github.mizosoft.methanol.internal.Utils.validateHeaderValue;
-import static com.github.mizosoft.methanol.internal.Utils.validateToken;
+import static com.github.mizosoft.methanol.internal.Utils.requireValidHeaderValue;
+import static com.github.mizosoft.methanol.internal.Utils.requireValidToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.cache.DateUtils.toDeltaSeconds;
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import java.net.http.HttpHeaders;
@@ -335,7 +334,6 @@ public final class CacheControl {
    * @throws IllegalArgumentException if any of the given values has invalid cache directives
    */
   public static CacheControl parse(List<String> values) {
-    requireNonNull(values);
     if (values.isEmpty()) {
       return empty();
     }
@@ -449,10 +447,8 @@ public final class CacheControl {
      *     invalid
      */
     public Builder directive(String directive, String argument) {
-      requireNonNull(directive);
-      requireNonNull(argument);
-      validateToken(directive);
-      validateHeaderValue(argument);
+      requireValidToken(directive);
+      requireValidHeaderValue(argument);
       setNormalizedDirective(directive.toLowerCase(Locale.ROOT), argument);
       return this;
     }
@@ -471,7 +467,6 @@ public final class CacheControl {
      *     seconds
      */
     public Builder maxAge(Duration maxAge) {
-      requireNonNull(maxAge);
       this.maxAge = checkAndTruncateDeltaSeconds(maxAge);
       return this;
     }
@@ -483,7 +478,6 @@ public final class CacheControl {
      *     seconds
      */
     public Builder minFresh(Duration minFresh) {
-      requireNonNull(minFresh);
       this.minFresh = checkAndTruncateDeltaSeconds(minFresh);
       return this;
     }
@@ -495,7 +489,6 @@ public final class CacheControl {
      *     seconds
      */
     public Builder maxStale(Duration maxStale) {
-      requireNonNull(maxStale);
       this.maxStale = checkAndTruncateDeltaSeconds(maxStale);
       anyMaxStale = false; // Invalidate any max-stale (if previously set)
       return this;
@@ -515,7 +508,6 @@ public final class CacheControl {
      *     seconds
      */
     public Builder staleIfError(Duration staleIfError) {
-      requireNonNull(staleIfError);
       this.staleIfError = checkAndTruncateDeltaSeconds(staleIfError);
       return this;
     }

@@ -32,11 +32,11 @@ import com.github.mizosoft.methanol.CacheControl;
 import com.github.mizosoft.methanol.HttpCache.Listener;
 import com.github.mizosoft.methanol.HttpStatus;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
-import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
@@ -287,7 +287,7 @@ public final class CacheInterceptor implements Interceptor {
 
   private static HttpHeaders mergeHeaders(HttpHeaders storedHeaders, HttpHeaders networkHeaders) {
     var builder = new HeadersBuilder();
-    builder.addAll(storedHeaders);
+    builder.addAllLenient(storedHeaders);
 
     // Remove Warning values with 1xx warn codes
     builder.removeIf((name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
@@ -296,7 +296,7 @@ public final class CacheInterceptor implements Interceptor {
     // stored response. The Content-Length of the stored response however is
     // restored to avoid replacing it with the Content-Length: 0 some servers
     // incorrectly send with their 304 responses.
-    builder.setAll(networkHeaders);
+    builder.setAllLenient(networkHeaders);
     storedHeaders
         .firstValue("Content-Length")
         .ifPresent(value -> builder.set("Content-Length", value));

@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.ZoneOffset;
@@ -47,25 +48,32 @@ public class Utils {
 
   private Utils() {}
 
-  public static boolean isValidToken(String token) {
-    return !token.isEmpty() && TOKEN_MATCHER.allMatch(token);
+  public static boolean isValidToken(CharSequence token) {
+    return token.length() != 0 && TOKEN_MATCHER.allMatch(token);
   }
 
-  public static void validateToken(String token) {
+  public static void requireValidToken(CharSequence token) {
     requireArgument(isValidToken(token), "illegal token: '%s'", token);
   }
 
-  public static void validateHeaderName(String name) {
-    requireArgument(isValidToken(name), "illegal header name: '%s'", name);
+  public static boolean isValidHeaderName(String name) {
+    // Allow HTTP2 pseudo-header fields (e.g. ':status').
+    return name.startsWith(":")
+        ? isValidToken(CharBuffer.wrap(name, 1, name.length()))
+        : isValidToken(name);
   }
 
-  public static void validateHeaderValue(String value) {
+  public static void requireValidHeaderName(String name) {
+    requireArgument(isValidHeaderName(name), "illegal header name: '%s'", name);
+  }
+
+  public static void requireValidHeaderValue(String value) {
     requireArgument(FIELD_VALUE_MATCHER.allMatch(value), "illegal header value: '%s'", value);
   }
 
-  public static void validateHeader(String name, String value) {
-    validateHeaderName(name);
-    validateHeaderValue(value);
+  public static void requireValidHeader(String name, String value) {
+    requireValidHeaderName(name);
+    requireValidHeaderValue(value);
   }
 
   public static void requirePositiveDuration(Duration duration) {

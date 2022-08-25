@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.escapeAndQuoteValueIfNeeded;
-import static com.github.mizosoft.methanol.internal.Utils.validateToken;
+import static com.github.mizosoft.methanol.internal.Utils.requireValidToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.QUOTED_PAIR_MATCHER;
 import static java.lang.String.format;
@@ -376,7 +376,7 @@ public final class MediaType {
   }
 
   private static String validateAndNormalizeToken(String token) {
-    validateToken(token);
+    requireValidToken(token);
     return token.toLowerCase(Locale.ROOT);
   }
 
