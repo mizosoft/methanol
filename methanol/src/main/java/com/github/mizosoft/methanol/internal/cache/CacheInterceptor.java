@@ -287,19 +287,29 @@ public final class CacheInterceptor implements Interceptor {
 
   private static HttpHeaders mergeHeaders(HttpHeaders storedHeaders, HttpHeaders networkHeaders) {
     var builder = new HeadersBuilder();
-    builder.addAllLenient(storedHeaders);
+    storedHeaders
+        .map()
+        .forEach(
+            (name, values) -> {
+              if ("Content-Length".equalsIgnoreCase(name)
+                  || !networkHeaders.map().containsKey(name)) {
+                values.forEach(value -> builder.addLenient(name, value));
+              }
+            });
 
-    // Remove Warning values with 1xx warn codes
+    // Remove Warning values with 1xx warn codes.
     builder.removeIf((name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
 
-    // Use the 304 response fields to replace those with the same names in the
-    // stored response. The Content-Length of the stored response however is
-    // restored to avoid replacing it with the Content-Length: 0 some servers
-    // incorrectly send with their 304 responses.
-    builder.setAllLenient(networkHeaders);
-    storedHeaders
-        .firstValue("Content-Length")
-        .ifPresent(value -> builder.set("Content-Length", value));
+    networkHeaders
+        .map()
+        .forEach(
+            (name, values) -> {
+              // 304 responses shouldn't contain Content-Length but some servers incorrectly send a
+              // Content-Length: 0.
+              if (!"Content-Length".equalsIgnoreCase(name)) {
+                values.forEach(value -> builder.addLenient(name, value));
+              }
+            });
 
     return builder.build();
   }

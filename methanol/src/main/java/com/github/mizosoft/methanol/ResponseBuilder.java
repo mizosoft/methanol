@@ -105,11 +105,6 @@ public final class ResponseBuilder<T> {
     return this;
   }
 
-  public ResponseBuilder<T> headersLenient(HttpHeaders headers) {
-    headersBuilder.addAllLenient(headers);
-    return this;
-  }
-
   public ResponseBuilder<T> setHeaders(HttpHeaders headers) {
     headersBuilder.setAll(headers);
     return this;

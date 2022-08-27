@@ -41,21 +41,22 @@ public final class HeadersBuilder {
 
   public void add(String name, String value) {
     requireValidHeader(name, value);
-    headers.computeIfAbsent(name, __ -> new ArrayList<>()).add(value);
-  }
-
-  public void add(String name, List<String> values) {
-    requireValidHeaderName(name);
-    var myValues = headers.computeIfAbsent(name, __ -> new ArrayList<>());
-    values.forEach(
-        value -> {
-          requireValidHeaderValue(value);
-          myValues.add(value);
-        });
+    addLenient(name, value);
   }
 
   public void addAll(HttpHeaders headers) {
-    headers.map().forEach(this::add);
+    headers
+        .map()
+        .forEach(
+            (name, values) -> {
+              requireValidHeaderName(name);
+              var myValues = this.headers.computeIfAbsent(name, __ -> new ArrayList<>());
+              values.forEach(
+                  value -> {
+                    requireValidHeaderValue(value);
+                    myValues.add(value);
+                  });
+            });
   }
 
   public void addAll(HeadersBuilder builder) {
@@ -72,8 +73,8 @@ public final class HeadersBuilder {
     addAllLenient(headers.map());
   }
 
+  /** Adds all given headers. Assumes keys & values can't be null. */
   private void addAllLenient(Map<String, List<String>> headers) {
-    // Assumes keys & values can't be null.
     headers.forEach(
         (name, values) ->
             this.headers.computeIfAbsent(name, __ -> new ArrayList<>()).addAll(values));
@@ -87,29 +88,8 @@ public final class HeadersBuilder {
   }
 
   public void setAll(HttpHeaders headers) {
-    headers.map().forEach(this::set);
-  }
-
-  private void set(String name, List<String> values) {
-    requireValidHeaderName(name);
-    var myValues = headers.computeIfAbsent(name, __ -> new ArrayList<>());
-    myValues.clear();
-    values.forEach(
-        value -> {
-          requireValidHeaderValue(value);
-          myValues.add(value);
-        });
-  }
-
-  public void setAllLenient(HttpHeaders headers) {
-    headers
-        .map()
-        .forEach(
-            (name, values) -> {
-              var myValues = this.headers.computeIfAbsent(name, __ -> new ArrayList<>());
-              myValues.clear();
-              myValues.addAll(values);
-            });
+    clear();
+    addAll(headers);
   }
 
   public boolean remove(String name) {
