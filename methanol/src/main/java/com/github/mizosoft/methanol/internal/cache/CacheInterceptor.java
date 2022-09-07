@@ -107,7 +107,7 @@ public final class CacheInterceptor implements Interceptor {
             "X-Frame-Options",
             "X-XSS-Protection"));
 
-    RETAINED_HEADER_PREFIXES = Set.of("X-Content-*", "X-Webkit-*");
+    RETAINED_HEADER_PREFIXES = Set.of("X-Content-", "X-Webkit-");
   }
 
   private final InternalCache cache;
