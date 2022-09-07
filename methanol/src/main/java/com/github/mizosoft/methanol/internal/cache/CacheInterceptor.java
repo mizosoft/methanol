@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.Utils.startsWithIgnoreCase;
 import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_PARTIAL;
@@ -58,6 +59,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
@@ -72,6 +75,40 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public final class CacheInterceptor implements Interceptor {
   private static final Logger logger = System.getLogger(CacheInterceptor.class.getName());
+
+  private static final Set<String> RETAINED_HEADERS;
+  private static final Set<String> RETAINED_HEADER_PREFIXES;
+
+  static {
+    // Replacing stored headers with these names (or prefixes) from a 304 response is prohibited.
+    // These lists are based on Chromium's http_response_headers.cc (see lists kNonUpdatedHeaders &
+    // kNonUpdatedHeaderPrefixes).
+
+    RETAINED_HEADERS = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    RETAINED_HEADERS.addAll(
+        Set.of(
+            "Connection",
+            "Proxy-Connection",
+            "Keep-Alive",
+            "WWW-Authenticate",
+            "Proxy-Authenticate",
+            "Proxy-Authorization",
+            "TE",
+            "Trailer",
+            "Transfer-Encoding",
+            "Upgrade",
+            "Content-Location",
+            "Content-MD5",
+            "ETag",
+            "Content-Encoding",
+            "Content-Range",
+            "Content-Type",
+            "Content-Length",
+            "X-Frame-Options",
+            "X-XSS-Protection"));
+
+    RETAINED_HEADER_PREFIXES = Set.of("X-Content-*", "X-Webkit-*");
+  }
 
   private final InternalCache cache;
   private final Listener listener;
@@ -285,33 +322,28 @@ public final class CacheInterceptor implements Interceptor {
                 .timeResponseReceived(networkResponse.get().timeResponseReceived()));
   }
 
-  private static HttpHeaders mergeHeaders(HttpHeaders storedHeaders, HttpHeaders networkHeaders) {
+  private static HttpHeaders mergeHeaders(HttpHeaders cacheHeaders, HttpHeaders networkHeaders) {
     var builder = new HeadersBuilder();
-    storedHeaders
+    builder.addAllLenient(cacheHeaders);
+    networkHeaders
         .map()
         .forEach(
             (name, values) -> {
-              if ("Content-Length".equalsIgnoreCase(name)
-                  || !networkHeaders.map().containsKey(name)) {
-                values.forEach(value -> builder.addLenient(name, value));
+              if (canReplaceCacheHeader(name)) {
+                builder.setLenient(name, values);
               }
             });
 
     // Remove Warning values with 1xx warn codes.
     builder.removeIf((name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
 
-    networkHeaders
-        .map()
-        .forEach(
-            (name, values) -> {
-              // 304 responses shouldn't contain Content-Length but some servers incorrectly send a
-              // Content-Length: 0.
-              if (!"Content-Length".equalsIgnoreCase(name)) {
-                values.forEach(value -> builder.addLenient(name, value));
-              }
-            });
-
     return builder.build();
+  }
+
+  private static boolean canReplaceCacheHeader(String name) {
+    return !(RETAINED_HEADERS.contains(name)
+        || RETAINED_HEADER_PREFIXES.stream()
+            .anyMatch(prefix -> startsWithIgnoreCase(name, prefix)));
   }
 
   /** Returns the URIs invalidated by the given exchange as specified by rfc7234 section 4.4. */
@@ -328,7 +360,7 @@ public final class CacheInterceptor implements Interceptor {
           .ifPresent(invalidatedUris::add);
       return Collections.unmodifiableList(invalidatedUris);
     } else {
-      return List.of(); // Nothing is invalidated
+      return List.of();
     }
   }
 
@@ -352,10 +384,10 @@ public final class CacheInterceptor implements Interceptor {
   }
 
   /**
-   * A dirty hack that masks synchronous operations as {@code CompletableFuture} calls that are
-   * executed on the caller thread and hence are always completed when returned. This is important
-   * in order to share major logic between {@code intercept} and {@code interceptAsync}, which
-   * facilitates implementation & maintenance.
+   * A hack that masks synchronous operations as {@code CompletableFuture} calls that are executed
+   * on the caller thread and hence are always completed when returned. This is important in order
+   * to share major logic between {@code intercept} and {@code interceptAsync}, which facilitates
+   * implementation & maintenance.
    */
   private static final class AsyncAdapter {
     private final boolean async;

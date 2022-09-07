@@ -236,7 +236,7 @@ public final class ResponseVerifier<T> {
     var networkResponse = networkResponse().getTracked();
     hasUri(networkResponse.uri());
 
-    // Timestamps are updated to these of the network response
+    // Timestamps are updated to these of the network response.
     requestWasSentAt(networkResponse.timeRequestSent())
         .responseWasReceivedAt(networkResponse.timeResponseReceived());
 
@@ -246,29 +246,37 @@ public final class ResponseVerifier<T> {
         .hasSslSession(cacheResponse.sslSession());
 
     // Make sure headers are merged correctly as specified in
-    // https://httpwg.org/specs/rfc7234.html#freshening.responses
+    // https://httpwg.org/specs/rfc7234.html#freshening.responses.
     var networkHeaders = new HashMap<>(networkResponse.headers().map());
-    var cachedHeaders = new HashMap<>(cacheResponse.headers().map());
+    var cacheHeaders = new HashMap<>(cacheResponse.headers().map());
     response
         .headers()
         .map()
         .forEach(
             (name, values) -> {
-              var networkValues = networkHeaders.get(name);
-              var cacheValues = cachedHeaders.get(name);
+              var networkValues = networkHeaders.getOrDefault(name, List.of());
+              var cacheValues = cacheHeaders.getOrDefault(name, List.of());
 
-              // Header values must come from either network or cache
-              assertThat(networkValues != null || cacheValues != null).isTrue();
+              // Header values must come from either network or cache.
+              assertThat(List.of(networkValues, cacheValues)).anyMatch(list -> !list.isEmpty());
 
-              // Network values override stored ones unless the header is Content-Length.
-              // This is because some servers misbehave by sending a Content-Length: 0 with
-              // their 304 responses.
-              if ("Content-Length".equalsIgnoreCase(name)) {
-                assertThat(values).as(name).isEqualTo(cacheValues);
-              } else if (networkValues != null) {
-                assertThat(values).as(name).isEqualTo(networkValues);
-              } else if ("Warning".equalsIgnoreCase(name)) {
-                // Warn codes 1xx must be deleted from the stored response
+              // An unchecked cast is used in the inner assertThat as the assertion stores List<T>
+              // as List<? extends T>. An inner assertion would store an
+              // as List<? extends capture of ? extends T>, which isn't assignable from a List<T>
+              // from the generic system's point of view.
+              //noinspection unchecked
+              assertThat(values)
+                  .as(name)
+                  .satisfiesAnyOf(
+                      lambdaValues ->
+                          assertThat((List<String>) lambdaValues)
+                              .containsExactlyInAnyOrderElementsOf(cacheValues),
+                      lambdaValues ->
+                          assertThat((List<String>) lambdaValues)
+                              .containsExactlyInAnyOrderElementsOf(networkValues));
+
+              // 1xx warn codes must be deleted from the stored response.
+              if ("Warning".equalsIgnoreCase(name)) {
                 assertThat(values)
                     .as(name)
                     .noneMatch(value -> value.startsWith("1"))
@@ -276,8 +284,6 @@ public final class ResponseVerifier<T> {
                         cacheValues.stream()
                             .filter(value -> !value.startsWith("1"))
                             .collect(Collectors.toUnmodifiableList()));
-              } else {
-                assertThat(values).as(name).isEqualTo(cacheValues);
               }
             });
 

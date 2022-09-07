@@ -92,6 +92,12 @@ public final class HeadersBuilder {
     addAll(headers);
   }
 
+  public void setLenient(String name, List<String> values) {
+    var myValues = headers.computeIfAbsent(name, __ -> new ArrayList<>());
+    myValues.clear();
+    myValues.addAll(values);
+  }
+
   public boolean remove(String name) {
     return headers.remove(requireNonNull(name)) != null;
   }

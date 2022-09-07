@@ -413,6 +413,65 @@ class HttpCacheTest {
         .hasBody("");
   }
 
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "Connection",
+        "Proxy-Connection",
+        "Keep-Alive",
+        "WWW-Authenticate",
+        "Proxy-Authenticate",
+        "Proxy-Authorization",
+        "TE",
+        "Trailer",
+        "Transfer-Encoding",
+        "Upgrade",
+        "Content-Location",
+        "Content-MD5",
+        "ETag",
+        "Content-Encoding",
+        "Content-Range",
+        "Content-Type",
+        "Content-Length",
+        "X-Frame-Options",
+        "X-XSS-Protection",
+        "X-Content-*",
+        "X-Webkit-*"
+      })
+  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  void retainedStoredHeadersOnRevalidation(String headerName, Store store) throws Exception {
+    clientBuilder.autoAcceptEncoding(false);
+    setUpCache(store);
+
+    // Replace '*' in header prefixes.
+    headerName = headerName.replace("*", "Something");
+
+    // Validity of the value's format isn't relevant for this test. The HTTP client however
+    // complains if Content-Length isn't correct.
+    var cacheHeaderValue =
+        "Content-Length".equalsIgnoreCase(headerName) ? "Pikachu".length() : "v1";
+    var networkHeaderValue = "Content-Length".equalsIgnoreCase(headerName) ? 0 : "v2";
+
+    server.enqueue(
+        new MockResponse()
+            .setHeader(headerName, cacheHeaderValue)
+            .setHeader("Cache-Control", "max-age=1")
+            .setBody("Pikachu"));
+    verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
+
+    // Make response stale.
+    clock.advanceSeconds(2);
+
+    server.enqueue(
+        new MockResponse()
+            .setResponseCode(HTTP_NOT_MODIFIED)
+            .setHeader(headerName, networkHeaderValue));
+    verifyThat(get(serverUri))
+        .isConditionalHit()
+        .containsHeader(headerName, cacheHeaderValue.toString()) // The stored header is retained.
+        .hasBody("Pikachu");
+  }
+
   private enum ValidatorConfig {
     ETAG(true, false),
     LAST_MODIFIED(false, true),

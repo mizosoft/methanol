@@ -233,4 +233,8 @@ public class Utils {
     escaped.append('"');
     return escaped.toString();
   }
+
+  public static boolean startsWithIgnoreCase(String source, String prefix) {
+    return source.regionMatches(true, 0, prefix, 0, prefix.length());
+  }
 }
