@@ -216,7 +216,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       private boolean findNextUri() {
         while (nextUri == null && viewerIterator.hasNext()) {
           try (var viewer = viewerIterator.next()) {
-            var metadata = tryRecoverMetadata(viewer);
+            var metadata = tryDecodeMetadata(viewer);
             if (metadata != null) {
               nextUri = metadata.uri();
               return true;
@@ -252,7 +252,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     requireNonNull(request);
     try (var viewer = store.view(key(request))) {
       if (viewer != null) {
-        var metadata = tryRecoverMetadata(viewer);
+        var metadata = tryDecodeMetadata(viewer);
         if (metadata != null && metadata.matches(request)) {
           return viewer.removeEntry();
         } else if (metadata == null) {
@@ -307,7 +307,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return uri.toString();
   }
 
-  private static @Nullable CacheResponseMetadata tryRecoverMetadata(Viewer viewer) {
+  private static @Nullable CacheResponseMetadata tryDecodeMetadata(Viewer viewer) {
     try {
       return CacheResponseMetadata.decode(viewer.metadata());
     } catch (IOException e) {
@@ -338,7 +338,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
         return null;
       }
 
-      var metadata = tryRecoverMetadata(viewer);
+      var metadata = tryDecodeMetadata(viewer);
       if (metadata != null && metadata.matches(request)) {
         return new CacheResponse(
             metadata, viewer, executor, listener.readListener(request), request, clock.instant());

@@ -27,7 +27,7 @@ import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDura
 import static com.github.mizosoft.methanol.internal.Utils.requireValidHeaderValue;
 import static com.github.mizosoft.methanol.internal.Utils.requireValidToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static com.github.mizosoft.methanol.internal.cache.DateUtils.toDeltaSeconds;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.toDeltaSeconds;
 import static java.lang.String.format;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;

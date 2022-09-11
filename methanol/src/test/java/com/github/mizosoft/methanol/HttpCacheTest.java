@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.HIT;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.internal.cache.DateUtils.formatHttpDate;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
@@ -266,7 +266,7 @@ class HttpCacheTest {
     setUpCache(store);
 
     var now = toUtcDateTime(clock.instant());
-    assertCachedGet(Duration.ofHours(12), "Expires", formatHttpDate(now.plusDays(1)));
+    assertCachedGet(Duration.ofHours(12), "Expires", toHttpDateString(now.plusDays(1)));
   }
 
   @StoreParameterizedTest
@@ -277,9 +277,9 @@ class HttpCacheTest {
     assertCachedGet(
         Duration.ofDays(1), // Advance clock so freshness is == 0 (response is still servable)
         "Date",
-        formatHttpDate(date),
+        toHttpDateString(date),
         "Expires",
-        formatHttpDate(date.plusDays(1)));
+        toHttpDateString(date.plusDays(1)));
   }
 
   @StoreParameterizedTest
@@ -714,8 +714,8 @@ class HttpCacheTest {
     var date = toUtcDateTime(clock.instant());
     server.enqueue(
         new MockResponse()
-            .setHeader("Date", formatHttpDate(date))
-            .setHeader("Expires", formatHttpDate(date.minusSeconds(10)))
+            .setHeader("Date", toHttpDateString(date))
+            .setHeader("Expires", toHttpDateString(date.minusSeconds(10)))
             .setBody("Pikachu"));
     verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
 
@@ -735,8 +735,8 @@ class HttpCacheTest {
     // Don't include explicit freshness to trigger heuristics, which relies on Last-Modified
     server.enqueue(
         new MockResponse()
-            .setHeader("Date", formatHttpDate(date))
-            .setHeader("Last-Modified", formatHttpDate(lastModified))
+            .setHeader("Date", toHttpDateString(date))
+            .setHeader("Last-Modified", toHttpDateString(lastModified))
             .setBody("Pikachu"));
     verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
 
@@ -746,7 +746,7 @@ class HttpCacheTest {
         .isConditionalMiss()
         .hasBody("Psyduck")
         .networkResponse()
-        .containsRequestHeader("If-Modified-Since", formatHttpDate(lastModified));
+        .containsRequestHeader("If-Modified-Since", toHttpDateString(lastModified));
 
     verifyThat(get(serverUri)).isCacheHit().hasBody("Psyduck");
   }
@@ -3032,7 +3032,7 @@ class HttpCacheTest {
   }
 
   private static String formatInstant(Instant instant) {
-    return formatHttpDate(toUtcDateTime(instant));
+    return toHttpDateString(toUtcDateTime(instant));
   }
 
   private static class ForwardingStore implements Store {

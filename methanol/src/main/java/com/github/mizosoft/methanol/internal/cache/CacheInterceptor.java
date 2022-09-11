@@ -280,7 +280,7 @@ public final class CacheInterceptor implements Interceptor {
         || responseCacheControl.isPublic()
         || responseCacheControl.isPrivate()
         || isCacheableByDefault(response.statusCode())
-        || response.headers().firstValue("Expires").filter(DateUtils::isHttpDate).isPresent();
+        || response.headers().firstValue("Expires").filter(HttpDates::isHttpDate).isPresent();
   }
 
   /**

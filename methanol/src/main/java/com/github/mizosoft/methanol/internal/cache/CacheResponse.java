@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.DateUtils.formatHttpDate;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
 
 import com.github.mizosoft.methanol.CacheControl;
 import com.github.mizosoft.methanol.MutableRequest;
@@ -171,7 +171,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
 
     HttpRequest toValidationRequest(HttpRequest request) {
       return MutableRequest.copyOf(request)
-          .setHeader("If-Modified-Since", formatHttpDate(effectiveLastModified))
+          .setHeader("If-Modified-Since", toHttpDateString(effectiveLastModified))
           .apply(self -> etag.ifPresent(etag -> self.setHeader("If-None-Match", etag)));
     }
 

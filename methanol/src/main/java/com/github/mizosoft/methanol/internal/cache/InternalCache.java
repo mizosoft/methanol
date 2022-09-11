@@ -27,7 +27,7 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** An {@code HttpCache} view used internally. */
+/** An {@code HttpCache} that's used internally. */
 public interface InternalCache {
   @Nullable
   CacheResponse get(HttpRequest request) throws IOException;

@@ -1,7 +1,7 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.DateUtils.max;
-import static com.github.mizosoft.methanol.internal.cache.DateUtils.toUtcDateTime;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.max;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.toUtcDateTime;
 import static java.time.ZoneOffset.UTC;
 
 import com.github.mizosoft.methanol.TrackedResponse;
@@ -42,17 +42,18 @@ final class FreshnessPolicy {
     this.timeResponseReceived = response.timeResponseReceived();
     this.maxAge = maxAge;
 
-    var dateServed = response.headers().firstValue("Date").map(DateUtils::toHttpDate);
+    var dateServed = response.headers().firstValue("Date").map(HttpDates::toHttpDate);
     date = dateServed.orElseGet(() -> toUtcDateTime(timeResponseReceived));
-    expires = response.headers().firstValue("Expires").map(DateUtils::toHttpDate);
+    expires = response.headers().firstValue("Expires").map(HttpDates::toHttpDate);
     effectiveLastModified =
-        response.headers().firstValue("Last-Modified").map(DateUtils::toHttpDate).orElse(date);
+        response.headers().firstValue("Last-Modified").map(HttpDates::toHttpDate).orElse(date);
+
     // Assume age is zero if there's no Age header or such header can't be parsed
     age =
         response
             .headers()
             .firstValue("Age")
-            .map(DateUtils::toDeltaSecondsOrNull)
+            .map(HttpDates::toDeltaSecondsOrNull)
             .orElse(Duration.ZERO);
   }
 

@@ -27,7 +27,7 @@ import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDura
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static com.github.mizosoft.methanol.internal.cache.DateUtils.max;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.max;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
