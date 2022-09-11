@@ -1013,12 +1013,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the size in bytes of the data stream.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.cache">DateUtils</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
-<dd>
-<div class="block">Static functions for handling HTTP dates.</div>
-</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html#%3Cinit%3E()" class="member-name-link">DateUtils()</a> - Constructor for class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html" title="class in com.github.mizosoft.methanol.internal.cache">DateUtils</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html#debugIndexOperations(boolean)" class="member-name-link">debugIndexOperations(boolean)</a> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></dt>
 <dd>
 <div class="block">If set, the store complains when the index is accessed or modified either concurrently or not
@@ -1464,8 +1458,6 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/io/file/ForwardingFileChannel.html#force(boolean)" class="member-name-link">force(boolean)</a> - Method in class com.github.mizosoft.methanol.testutils.io.file.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/io/file/ForwardingFileChannel.html" title="class in com.github.mizosoft.methanol.testutils.io.file">ForwardingFileChannel</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html#formatHttpDate(java.time.LocalDateTime)" class="member-name-link">formatHttpDate(LocalDateTime)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html" title="class in com.github.mizosoft.methanol.internal.cache">DateUtils</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html" class="type-name-link" title="class in com.github.mizosoft.methanol">FormBodyPublisher</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">A <code>BodyPublisher</code> for form submission using the <code>application/x-www-form-urlencoded</code>
@@ -1889,6 +1881,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Common <code>CharMatchers</code> for HTTP headers and the like.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
+<dd>
+<div class="block">Helpers for parsing/printing HTTP dates.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpHeadersTimeoutException.html" class="type-name-link" title="class in com.github.mizosoft.methanol">HttpHeadersTimeoutException</a> - Exception in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">Thrown when all response headers aren't received within a timeout.</div>
@@ -2045,7 +2041,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/InternalCache.html" class="type-name-link" title="interface in com.github.mizosoft.methanol.internal.cache">InternalCache</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
 <dd>
-<div class="block">An <code>HttpCache</code> view used internally.</div>
+<div class="block">An <code>HttpCache</code> that's used internally.</div>
 </dd>
 <dt><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/ResponseVerifier.html#isCachedWithSsl()" class="member-name-link">isCachedWithSsl()</a> - Method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testutils">ResponseVerifier</a></dt>
 <dd>&nbsp;</dd>
@@ -2101,7 +2097,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testutils/com/github/mizosoft/methanol/testutils/RequestVerifier.html#isGET()" class="member-name-link">isGET()</a> - Method in class com.github.mizosoft.methanol.testutils.<a href="methanol.testutils/com/github/mizosoft/methanol/testutils/RequestVerifier.html" title="class in com.github.mizosoft.methanol.testutils">RequestVerifier</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html#isHttpDate(java.lang.String)" class="member-name-link">isHttpDate(String)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html" title="class in com.github.mizosoft.methanol.internal.cache">DateUtils</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html#isHttpDate(java.lang.String)" class="member-name-link">isHttpDate(String)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpStatus.html#isInformational(int)" class="member-name-link">isInformational(int)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpStatus.html" title="class in com.github.mizosoft.methanol">HttpStatus</a></dt>
 <dd>
@@ -3661,9 +3657,11 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a completed <code>BodySubscriber</code> that lazily decodes the response body into an
  object of the given type using the format specified by the given media type.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html#toDeltaSeconds(java.lang.String)" class="member-name-link">toDeltaSeconds(String)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DateUtils.html" title="class in com.github.mizosoft.methanol.internal.cache">DateUtils</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html#toDeltaSeconds(java.lang.String)" class="member-name-link">toDeltaSeconds(String)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Validate.html#TODO()" class="member-name-link">TODO()</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Validate.html" title="class in com.github.mizosoft.methanol.internal">Validate</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html#toHttpDateString(java.time.LocalDateTime)" class="member-name-link">toHttpDateString(LocalDateTime)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#toImmutableRequest()" class="member-name-link">toImmutableRequest()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
