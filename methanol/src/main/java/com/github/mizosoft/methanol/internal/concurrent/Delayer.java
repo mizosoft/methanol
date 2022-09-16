@@ -22,8 +22,6 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
-import static java.util.Objects.requireNonNull;
-
 import java.time.Duration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -40,8 +38,7 @@ public interface Delayer {
     return SystemDelayer.INSTANCE;
   }
 
-  static Delayer of(ScheduledExecutorService service) {
-    requireNonNull(service);
-    return new ScheduledExecutorServiceDelayer(service);
+  static Delayer of(ScheduledExecutorService scheduler) {
+    return new ScheduledExecutorServiceDelayer(scheduler);
   }
 }

@@ -22,27 +22,50 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.time.Duration;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
 class ScheduledExecutorServiceDelayer implements Delayer {
-  private final ScheduledExecutorService service;
+  private final ScheduledExecutorService scheduler;
 
-  ScheduledExecutorServiceDelayer(ScheduledExecutorService service) {
-    this.service = service;
+  ScheduledExecutorServiceDelayer(ScheduledExecutorService scheduler) {
+    this.scheduler = requireNonNull(scheduler);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public Future<Void> delay(Runnable task, Duration delay, Executor executor) {
-    return delay.isZero()
-        ? CompletableFuture.runAsync(task, executor)
-        : (Future<Void>)
-            service.schedule(() -> executor.execute(task), NANOSECONDS.convert(delay), NANOSECONDS);
+    if (delay.isZero()) {
+      return CompletableFuture.runAsync(task, executor);
+    }
+
+    var taskCompletionFuture = new CompletableFuture<Void>();
+    var taskSubmissionFuture =
+        scheduler.schedule(
+            () -> {
+              taskCompletionFuture.completeAsync(
+                  () -> {
+                    task.run();
+                    return null;
+                  },
+                  executor);
+            },
+            NANOSECONDS.convert(delay),
+            NANOSECONDS);
+
+    taskCompletionFuture.whenComplete(
+        (__, e) -> {
+          if (e instanceof CancellationException) {
+            taskSubmissionFuture.cancel(false);
+          }
+        });
+
+    return taskCompletionFuture;
   }
 }
