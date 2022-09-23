@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.flow.FlowSupport.SYNC_EXECUTOR;
 import static java.util.Objects.requireNonNull;
@@ -111,7 +112,7 @@ public final class Methanol extends HttpClient {
   private final List<Interceptor> backendInterceptors;
 
   /** The complete list of interceptors invoked throughout the chain. */
-  private final List<Interceptor> chainInterceptors;
+  private final List<Interceptor> mergedInterceptors;
 
   private Methanol(BaseBuilder<?> builder) {
     backend = builder.buildBackend();
@@ -137,11 +138,12 @@ public final class Methanol extends HttpClient {
     headersTimeout.ifPresent(
         timeout ->
             mergedInterceptors.add(
-                new HeadersTimeoutInterceptor(timeout, builder.headersTimeoutDelayer)));
+                new HeadersTimeoutInterceptor(
+                    timeout, castNonNull(builder.headersTimeoutDelayer))));
     readTimeout.ifPresent(
         timeout ->
             mergedInterceptors.add(
-                new ReadTimeoutInterceptor(timeout, builder.readTimeoutScheduler)));
+                new ReadTimeoutInterceptor(timeout, castNonNull(builder.readTimeoutDelayer))));
     cache.ifPresent(
         cache -> {
           var executor = backend.executor().orElse(null);
@@ -149,7 +151,7 @@ public final class Methanol extends HttpClient {
           mergedInterceptors.add(cache.interceptor(executor));
         });
     mergedInterceptors.addAll(backendInterceptors);
-    this.chainInterceptors = Collections.unmodifiableList(mergedInterceptors);
+    this.mergedInterceptors = Collections.unmodifiableList(mergedInterceptors);
   }
 
   /**
@@ -199,7 +201,7 @@ public final class Methanol extends HttpClient {
     return requestTimeout;
   }
 
-  /** Returns the headers' timeout. */
+  /** Returns the headers timeout. */
   public Optional<Duration> headersTimeout() {
     return headersTimeout;
   }
@@ -301,13 +303,13 @@ public final class Methanol extends HttpClient {
   @Override
   public <T> HttpResponse<T> send(HttpRequest request, BodyHandler<T> bodyHandler)
       throws IOException, InterruptedException {
-    return new InterceptorChain<>(backend, bodyHandler, null, chainInterceptors).forward(request);
+    return new InterceptorChain<>(backend, bodyHandler, null, mergedInterceptors).forward(request);
   }
 
   @Override
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(
       HttpRequest request, BodyHandler<T> bodyHandler) {
-    return new InterceptorChain<>(backend, bodyHandler, null, chainInterceptors)
+    return new InterceptorChain<>(backend, bodyHandler, null, mergedInterceptors)
         .forwardAsync(request);
   }
 
@@ -316,7 +318,7 @@ public final class Methanol extends HttpClient {
       HttpRequest request,
       BodyHandler<T> bodyHandler,
       @Nullable PushPromiseHandler<T> pushPromiseHandler) {
-    return new InterceptorChain<>(backend, bodyHandler, pushPromiseHandler, chainInterceptors)
+    return new InterceptorChain<>(backend, bodyHandler, pushPromiseHandler, mergedInterceptors)
         .forwardAsync(request);
   }
 
@@ -331,7 +333,7 @@ public final class Methanol extends HttpClient {
     return uri;
   }
 
-  private static <T> PushPromiseHandler<T> transformPushPromises(
+  private static <T> PushPromiseHandler<T> transformPushPromiseHandler(
       PushPromiseHandler<T> pushPromiseHandler,
       UnaryOperator<BodyHandler<T>> bodyHandlerTransformer,
       UnaryOperator<HttpResponse<T>> responseTransformer) {
@@ -430,7 +432,7 @@ public final class Methanol extends HttpClient {
        */
       default Chain<T> with(
           UnaryOperator<BodyHandler<T>> bodyHandlerTransformer,
-          UnaryOperator<PushPromiseHandler<T>> pushPromiseHandlerTransformer) {
+          UnaryOperator<@Nullable PushPromiseHandler<T>> pushPromiseHandlerTransformer) {
         return with(
             bodyHandlerTransformer.apply(bodyHandler()),
             pushPromiseHandler().map(pushPromiseHandlerTransformer).orElse(null));
@@ -460,7 +462,7 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull Duration headersTimeout;
     @MonotonicNonNull Delayer headersTimeoutDelayer;
     @MonotonicNonNull Duration readTimeout;
-    @MonotonicNonNull ScheduledExecutorService readTimeoutScheduler;
+    @MonotonicNonNull Delayer readTimeoutDelayer;
     boolean autoAcceptEncoding = true;
 
     // These fields are put here for convenience, they're only writable by Builder
@@ -504,7 +506,7 @@ public final class Methanol extends HttpClient {
       return self();
     }
 
-    /** Adds the given header as default. */
+    /** Adds the given default header. */
     public B defaultHeader(String name, String value) {
       defaultHeadersBuilder.add(name, value);
       if ("User-Agent".equalsIgnoreCase(name)) {
@@ -513,7 +515,7 @@ public final class Methanol extends HttpClient {
       return self();
     }
 
-    /** Adds each of the given headers as default. */
+    /** Adds each of the given default headers. */
     public B defaultHeaders(String... headers) {
       requireArgument(
           headers.length > 0 && headers.length % 2 == 0,
@@ -527,14 +529,14 @@ public final class Methanol extends HttpClient {
 
     /** Sets a default request timeout to use when not explicitly by an {@code HttpRequest}. */
     public B requestTimeout(Duration requestTimeout) {
-      requirePositiveDuration(requestTimeout);
-      this.requestTimeout = requestTimeout;
+      this.requestTimeout = requirePositiveDuration(requestTimeout);
       return self();
     }
 
     /**
      * Sets a timeout that will raise an {@link HttpHeadersTimeoutException} if all response headers
-     * aren't received within the timeout.
+     * aren't received within the timeout. Timeout events are scheduled using a system-wide {@code
+     * ScheduledExecutorService}.
      */
     public B headersTimeout(Duration headersTimeout) {
       return headersTimeout(headersTimeout, Delayer.systemDelayer());
@@ -549,8 +551,7 @@ public final class Methanol extends HttpClient {
     }
 
     B headersTimeout(Duration headersTimeout, Delayer delayer) {
-      requirePositiveDuration(headersTimeout);
-      this.headersTimeout = headersTimeout;
+      this.headersTimeout = requirePositiveDuration(headersTimeout);
       this.headersTimeoutDelayer = requireNonNull(delayer);
       return self();
     }
@@ -560,9 +561,7 @@ public final class Methanol extends HttpClient {
      * timeout}. Timeout events are scheduled using a system-wide {@code ScheduledExecutorService}.
      */
     public B readTimeout(Duration readTimeout) {
-      requirePositiveDuration(readTimeout);
-      this.readTimeout = readTimeout;
-      return self();
+      return readTimeout(readTimeout, Delayer.systemDelayer());
     }
 
     /**
@@ -571,9 +570,12 @@ public final class Methanol extends HttpClient {
      * scheduling timeout events.
      */
     public B readTimeout(Duration readTimeout, ScheduledExecutorService scheduler) {
-      requirePositiveDuration(readTimeout);
-      this.readTimeout = readTimeout;
-      this.readTimeoutScheduler = requireNonNull(scheduler);
+      return readTimeout(readTimeout, Delayer.of(scheduler));
+    }
+
+    private B readTimeout(Duration readTimeout, Delayer delayer) {
+      this.readTimeout = requirePositiveDuration(readTimeout);
+      this.readTimeoutDelayer = requireNonNull(delayer);
       return self();
     }
 
@@ -605,9 +607,9 @@ public final class Methanol extends HttpClient {
      * backend. The interceptor receives the request after it is handled by all {@link
      * #interceptor(Interceptor) client interceptors}, is decorated (its {@code URI} resolved with
      * the base {@code URI}, default headers added, etc...) and finally handled by an {@link
-     * HttpCache}. This implies that backend interceptors aren't normally called if network isn't
-     * used, normally due to the presence of an {@code HttpCache} that is capable of serving a
-     * stored response.
+     * HttpCache}. This implies that backend interceptors aren't called if network isn't used,
+     * normally due to the presence of an {@code HttpCache} that is capable of serving a stored
+     * response.
      */
     public B backendInterceptor(Interceptor interceptor) {
       backendInterceptors.add(requireNonNull(interceptor));
@@ -885,7 +887,7 @@ public final class Methanol extends HttpClient {
         }
       }
 
-      // Overwrite Content-Type if request body is a MimeBodyPublisher
+      // Overwrite Content-Type if request body is a MimeBodyPublisher.
       request
           .bodyPublisher()
           .filter(MimeBodyPublisher.class::isInstance)
@@ -927,7 +929,7 @@ public final class Methanol extends HttpClient {
       return chain.with(
           MoreBodyHandlers::decoding,
           pushPromiseHandler ->
-              transformPushPromises(
+              transformPushPromiseHandler(
                   pushPromiseHandler,
                   MoreBodyHandlers::decoding,
                   AutoDecompressingInterceptor::stripContentEncoding));
@@ -965,17 +967,18 @@ public final class Methanol extends HttpClient {
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      var timeoutTask = new TimeoutTask();
-      var timeoutFuture = delayer.delay(timeoutTask::onTimeout, headersTimeout, SYNC_EXECUTOR);
-      timeoutTask.whenCancelled(() -> timeoutFuture.cancel(false));
+      var timeoutTrigger = new TimeoutTrigger();
+      var triggerFuture = delayer.delay(timeoutTrigger::trigger, headersTimeout, SYNC_EXECUTOR);
 
-      var responseFuture = withHeadersTimeout(chain, timeoutTask).forwardAsync(request);
+      timeoutTrigger.onCancellation(() -> triggerFuture.cancel(false));
+
+      var responseFuture = withHeadersTimeout(chain, timeoutTrigger).forwardAsync(request);
 
       // Make a dependent copy of the original response future, so we can cancel the original and
       // complete the copy exceptionally on timeout. Cancelling the original future may lead
       // to cancelling the actual request on JDK 16 or higher.
       var responseFutureCopy = responseFuture.copy();
-      timeoutTask.whenTimedOut(
+      timeoutTrigger.onTimeout(
           () -> {
             responseFutureCopy.completeExceptionally(
                 new HttpHeadersTimeoutException("couldn't receive headers on time"));
@@ -984,30 +987,30 @@ public final class Methanol extends HttpClient {
       return responseFutureCopy;
     }
 
-    private <T> Chain<T> withHeadersTimeout(Chain<T> chain, TimeoutTask timeoutTask) {
+    private <T> Chain<T> withHeadersTimeout(Chain<T> chain, TimeoutTrigger timeoutTrigger) {
       // TODO handle push promises
       return chain.with(
           bodyHandler ->
               responseInfo ->
-                  timeoutTask.cancel()
+                  timeoutTrigger.cancel()
                       ? bodyHandler.apply(responseInfo)
                       : new TimedOutSubscriber<>());
     }
 
-    private static final class TimeoutTask {
+    private static final class TimeoutTrigger {
       private final CompletableFuture<Void> onTimeout = new CompletableFuture<>();
 
-      TimeoutTask() {}
+      TimeoutTrigger() {}
 
-      void onTimeout() {
+      void trigger() {
         onTimeout.complete(null);
       }
 
-      void whenTimedOut(Runnable action) {
+      void onTimeout(Runnable action) {
         onTimeout.thenRun(action);
       }
 
-      void whenCancelled(Runnable action) {
+      void onCancellation(Runnable action) {
         onTimeout.whenComplete(
             (__, e) -> {
               if (e instanceof CancellationException) {
@@ -1056,12 +1059,11 @@ public final class Methanol extends HttpClient {
    */
   private static final class ReadTimeoutInterceptor implements Interceptor {
     private final Duration readTimeout;
-    private final @Nullable ScheduledExecutorService readTimeoutScheduler;
+    private final Delayer delayer;
 
-    ReadTimeoutInterceptor(
-        Duration readTimeout, @Nullable ScheduledExecutorService readTimeoutScheduler) {
+    ReadTimeoutInterceptor(Duration readTimeout, Delayer delayer) {
       this.readTimeout = readTimeout;
-      this.readTimeoutScheduler = readTimeoutScheduler;
+      this.delayer = delayer;
     }
 
     @Override
@@ -1078,16 +1080,13 @@ public final class Methanol extends HttpClient {
 
     private <T> Chain<T> withReadTimeout(Chain<T> chain) {
       return chain.with(
-          this::withReadTimeout,
+          bodyHandler -> MoreBodyHandlers.withReadTimeout(bodyHandler, readTimeout, delayer),
           pushPromiseHandler ->
-              transformPushPromises(
-                  pushPromiseHandler, this::withReadTimeout, UnaryOperator.identity()));
-    }
-
-    private <T> BodyHandler<T> withReadTimeout(BodyHandler<T> bodyHandler) {
-      return readTimeoutScheduler != null
-          ? MoreBodyHandlers.withReadTimeout(bodyHandler, readTimeout, readTimeoutScheduler)
-          : MoreBodyHandlers.withReadTimeout(bodyHandler, readTimeout);
+              transformPushPromiseHandler(
+                  pushPromiseHandler,
+                  bodyHandler ->
+                      MoreBodyHandlers.withReadTimeout(bodyHandler, readTimeout, delayer),
+                  UnaryOperator.identity()));
     }
   }
 }

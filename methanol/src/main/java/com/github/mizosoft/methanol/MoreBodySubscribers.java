@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
@@ -78,10 +77,7 @@ public class MoreBodySubscribers {
    */
   public static <T> BodySubscriber<T> withReadTimeout(
       BodySubscriber<T> downstream, Duration timeout) {
-    requireNonNull(downstream);
-    requireNonNull(timeout);
-    requirePositiveDuration(timeout);
-    return new TimeoutBodySubscriber<>(timeout, Delayer.systemDelayer(), downstream);
+    return withReadTimeout(downstream, timeout, Delayer.systemDelayer());
   }
 
   /**
@@ -93,11 +89,12 @@ public class MoreBodySubscribers {
    */
   public static <T> BodySubscriber<T> withReadTimeout(
       BodySubscriber<T> downstream, Duration timeout, ScheduledExecutorService scheduler) {
-    requireNonNull(downstream);
-    requireNonNull(timeout);
-    requireNonNull(scheduler);
-    requirePositiveDuration(timeout);
-    return new TimeoutBodySubscriber<>(timeout, Delayer.of(scheduler), downstream);
+    return withReadTimeout(downstream, timeout, Delayer.of(scheduler));
+  }
+
+  static <T> BodySubscriber<T> withReadTimeout(
+      BodySubscriber<T> downstream, Duration timeout, Delayer delayer) {
+    return new TimeoutBodySubscriber<>(timeout, delayer, downstream);
   }
 
   /**

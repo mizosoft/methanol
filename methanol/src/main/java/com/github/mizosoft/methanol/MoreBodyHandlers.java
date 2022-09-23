@@ -22,9 +22,11 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
+import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.ImmutableResponseInfo;
 import java.io.Reader;
 import java.net.http.HttpHeaders;
@@ -72,10 +74,8 @@ public class MoreBodyHandlers {
    * Returns a {@code BodyHandler} that handles the response with the subscriber returned by {@link
    * MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration)}.
    */
-  public static <T> BodyHandler<T> withReadTimeout(BodyHandler<T> baseHandler, Duration timeout) {
-    requireNonNull(baseHandler, "baseHandler");
-    requireNonNull(timeout, "timeout");
-    return info -> MoreBodySubscribers.withReadTimeout(baseHandler.apply(info), timeout);
+  public static <T> BodyHandler<T> withReadTimeout(BodyHandler<T> delegate, Duration timeout) {
+    return withReadTimeout(delegate, timeout, Delayer.systemDelayer());
   }
 
   /**
@@ -83,11 +83,17 @@ public class MoreBodyHandlers {
    * MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration, ScheduledExecutorService)}.
    */
   public static <T> BodyHandler<T> withReadTimeout(
-      BodyHandler<T> baseHandler, Duration timeout, ScheduledExecutorService scheduler) {
-    requireNonNull(baseHandler, "baseHandler");
-    requireNonNull(timeout, "timeout");
-    requireNonNull(scheduler, "scheduler");
-    return info -> MoreBodySubscribers.withReadTimeout(baseHandler.apply(info), timeout, scheduler);
+      BodyHandler<T> delegate, Duration timeout, ScheduledExecutorService scheduler) {
+    return withReadTimeout(delegate, timeout, Delayer.of(scheduler));
+  }
+
+  static <T> BodyHandler<T> withReadTimeout(
+      BodyHandler<T> delegate, Duration timeout, Delayer delayer) {
+    requireNonNull(delegate);
+    requirePositiveDuration(timeout);
+    requireNonNull(delayer);
+    return responseInfo ->
+        MoreBodySubscribers.withReadTimeout(delegate.apply(responseInfo), timeout, delayer);
   }
 
   /**

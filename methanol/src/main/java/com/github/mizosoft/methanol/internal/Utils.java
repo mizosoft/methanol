@@ -76,9 +76,10 @@ public class Utils {
     requireValidHeaderValue(value);
   }
 
-  public static void requirePositiveDuration(Duration duration) {
+  public static Duration requirePositiveDuration(Duration duration) {
     requireArgument(
         !(duration.isNegative() || duration.isZero()), "non-positive duration: %s", duration);
+    return duration;
   }
 
   public static void requireNonNegativeDuration(Duration duration) {
