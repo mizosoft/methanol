@@ -801,7 +801,7 @@ public final class DiskStore implements Store {
     }
 
     Set<EntryDescriptor> recoverEntrySet() throws IOException {
-      var indexEntrySet = readOrCreateIndexIfAbsent();
+      var indexEntrySet = readOrCreateIndex();
       var entriesFoundOnDisk = scanDirectoryForEntries();
       var processedEntrySet = new HashSet<EntryDescriptor>(indexEntrySet.size());
       var toDelete = new HashSet<Path>();
@@ -841,7 +841,7 @@ public final class DiskStore implements Store {
       return Collections.unmodifiableSet(processedEntrySet);
     }
 
-    private Set<EntryDescriptor> readOrCreateIndexIfAbsent() throws IOException {
+    private Set<EntryDescriptor> readOrCreateIndex() throws IOException {
       // Delete any left over temp index file
       Files.deleteIfExists(tempIndexFile);
       try {
@@ -875,6 +875,7 @@ public final class DiskStore implements Store {
         if (entryCount == 0) {
           return Set.of();
         }
+
         int intEntryCount = (int) entryCount;
         int entryTableSize = intEntryCount * ENTRY_DESCRIPTOR_SIZE;
         var entryTable = StoreIO.readNBytes(channel, entryTableSize);
@@ -2131,9 +2132,7 @@ public final class DiskStore implements Store {
     }
 
     public Builder indexUpdateDelay(Duration duration) {
-      requireNonNull(duration);
-      requireNonNegativeDuration(duration);
-      this.indexUpdateDelay = duration;
+      this.indexUpdateDelay = requireNonNegativeDuration(duration);
       return this;
     }
 

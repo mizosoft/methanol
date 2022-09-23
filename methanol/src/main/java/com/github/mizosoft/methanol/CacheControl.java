@@ -447,9 +447,8 @@ public final class CacheControl {
      *     invalid
      */
     public Builder directive(String directive, String argument) {
-      requireValidToken(directive);
-      requireValidHeaderValue(argument);
-      setNormalizedDirective(directive.toLowerCase(Locale.ROOT), argument);
+      setNormalizedDirective(
+          requireValidToken(directive).toLowerCase(Locale.ROOT), requireValidHeaderValue(argument));
       return this;
     }
 

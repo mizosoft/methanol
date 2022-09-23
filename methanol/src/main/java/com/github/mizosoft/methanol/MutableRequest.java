@@ -271,8 +271,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public MutableRequest timeout(Duration timeout) {
-    requirePositiveDuration(timeout);
-    this.timeout = timeout;
+    this.timeout = requirePositiveDuration(timeout);
     return this;
   }
 

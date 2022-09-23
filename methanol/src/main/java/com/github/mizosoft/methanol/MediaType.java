@@ -376,8 +376,7 @@ public final class MediaType {
   }
 
   private static String validateAndNormalizeToken(String token) {
-    requireValidToken(token);
-    return token.toLowerCase(Locale.ROOT);
+    return requireValidToken(token).toLowerCase(Locale.ROOT);
   }
 
   /**

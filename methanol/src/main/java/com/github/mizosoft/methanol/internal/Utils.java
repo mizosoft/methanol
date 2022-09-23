@@ -52,10 +52,6 @@ public class Utils {
     return token.length() != 0 && TOKEN_MATCHER.allMatch(token);
   }
 
-  public static void requireValidToken(CharSequence token) {
-    requireArgument(isValidToken(token), "illegal token: '%s'", token);
-  }
-
   public static boolean isValidHeaderName(String name) {
     // Allow HTTP2 pseudo-header fields (e.g. ':status').
     return name.startsWith(":")
@@ -63,12 +59,19 @@ public class Utils {
         : isValidToken(name);
   }
 
-  public static void requireValidHeaderName(String name) {
-    requireArgument(isValidHeaderName(name), "illegal header name: '%s'", name);
+  public static <S extends CharSequence> S requireValidToken(S token) {
+    requireArgument(isValidToken(token), "illegal token: '%s'", token);
+    return token;
   }
 
-  public static void requireValidHeaderValue(String value) {
+  public static String requireValidHeaderName(String name) {
+    requireArgument(isValidHeaderName(name), "illegal header name: '%s'", name);
+    return name;
+  }
+
+  public static String requireValidHeaderValue(String value) {
     requireArgument(FIELD_VALUE_MATCHER.allMatch(value), "illegal header value: '%s'", value);
+    return value;
   }
 
   public static void requireValidHeader(String name, String value) {
@@ -82,8 +85,9 @@ public class Utils {
     return duration;
   }
 
-  public static void requireNonNegativeDuration(Duration duration) {
+  public static Duration requireNonNegativeDuration(Duration duration) {
     requireArgument(!duration.isNegative(), "negative duration: %s", duration);
+    return duration;
   }
 
   public static int copyRemaining(ByteBuffer src, ByteBuffer dst) {

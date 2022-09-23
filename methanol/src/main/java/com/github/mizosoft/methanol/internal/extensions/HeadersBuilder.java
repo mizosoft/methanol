@@ -49,13 +49,10 @@ public final class HeadersBuilder {
         .map()
         .forEach(
             (name, values) -> {
-              requireValidHeaderName(name);
-              var myValues = this.headers.computeIfAbsent(name, __ -> new ArrayList<>());
-              values.forEach(
-                  value -> {
-                    requireValidHeaderValue(value);
-                    myValues.add(value);
-                  });
+              var myValues =
+                  this.headers.computeIfAbsent(
+                      requireValidHeaderName(name), __ -> new ArrayList<>());
+              values.forEach(value -> myValues.add(requireValidHeaderValue(value)));
             });
   }
 
