@@ -33,7 +33,6 @@ import com.github.mizosoft.methanol.testutils.MockClock;
 import com.github.mizosoft.methanol.testutils.TestException;
 import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.time.Duration;
-import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,7 +52,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutOnSecondItem() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     var upstreamSubscription = new RecordingSubscription();
@@ -98,7 +97,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutOnFirstItem() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     var upstreamSubscription = new RecordingSubscription();
@@ -126,7 +125,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutBeforeOnComplete() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
@@ -157,7 +156,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutBeforeOnError() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
@@ -188,7 +187,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutAfterOnError() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
@@ -214,7 +213,7 @@ class TimeoutSubscriberTest {
   @Test
   void schedulingTimeouts() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
@@ -245,7 +244,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutAfterCancellation() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
@@ -272,7 +271,7 @@ class TimeoutSubscriberTest {
           throw new RejectedExecutionException();
         };
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), rejectingDelayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     var upstreamSubscription = new RecordingSubscription();
@@ -297,7 +296,7 @@ class TimeoutSubscriberTest {
           return this.delayer.delay(task, timeout, executor);
         };
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), rejectingDelayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     var upstreamSubscription = new RecordingSubscription();
@@ -318,7 +317,7 @@ class TimeoutSubscriberTest {
   @Test
   void moreOnNextThanRequested() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream;
+    var downstream = timeoutSubscriber.downstream();
     downstream.request = 0;
 
     var upstreamSubscription = new RecordingSubscription();
@@ -353,18 +352,17 @@ class TimeoutSubscriberTest {
     }
   }
 
-  private static final class TestTimeoutSubscriber extends TimeoutSubscriber<Integer> {
-    final TestSubscriber<Integer> downstream = new TestSubscriber<>();
-
+  private static final class TestTimeoutSubscriber
+      extends TimeoutSubscriber<Integer, TestSubscriber<Integer>> {
     volatile long timeoutIndex;
 
     TestTimeoutSubscriber(Duration timeout, Delayer delayer) {
-      super(timeout, delayer);
+      super(new TestSubscriber<>(), timeout, delayer);
     }
 
     @Override
-    protected Subscriber<? super Integer> downstream() {
-      return downstream;
+    protected TestSubscriber<Integer> downstream() {
+      return super.downstream();
     }
 
     @Override

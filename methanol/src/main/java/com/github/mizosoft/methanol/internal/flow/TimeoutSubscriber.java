@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
+import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
 import static com.github.mizosoft.methanol.internal.flow.FlowSupport.getAndAddDemand;
 import static com.github.mizosoft.methanol.internal.flow.FlowSupport.subtractAndGetDemand;
 import static java.util.Objects.requireNonNull;
@@ -31,6 +32,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.Future;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -40,7 +42,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * requested item isn't received within a timeout.
  */
 @SuppressWarnings({"UnusedVariable", "unused"}) // VarHandle indirection
-public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
+public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
+    extends SerializedSubscriber<T> {
   /** Indicates that no further timeouts are to be scheduled as the stream has been terminated. */
   private static final Future<Void> DISABLED_TIMEOUT = CompletableFuture.completedFuture(null);
 
@@ -65,6 +68,7 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
     }
   }
 
+  private final S downstream;
   private final Duration timeout;
   private final Delayer delayer;
 
@@ -85,9 +89,15 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
   /** Represents the timeout scheduled for the currently awaited item. */
   private volatile @Nullable Future<Void> timeoutFuture;
 
-  public TimeoutSubscriber(Duration timeout, Delayer delayer) {
-    this.timeout = timeout;
-    this.delayer = delayer;
+  public TimeoutSubscriber(S downstream, Duration timeout, Delayer delayer) {
+    this.downstream = requireNonNull(downstream);
+    this.timeout = requirePositiveDuration(timeout);
+    this.delayer = requireNonNull(delayer);
+  }
+
+  @Override
+  protected S downstream() {
+    return downstream;
   }
 
   @Override
@@ -122,7 +132,8 @@ public abstract class TimeoutSubscriber<T> extends SerializedSubscriber<T> {
     var currentIndex = index;
     if (currentIndex == TOMBSTONE || !INDEX.compareAndSet(this, currentIndex, currentIndex + 1)) {
       upstream.cancel();
-      super.onError(new IllegalStateException("illegal (concurrent) usage"));
+      super.onError(
+          new IllegalStateException("missing backpressure support or illegal (concurrent) usage"));
       return;
     }
 

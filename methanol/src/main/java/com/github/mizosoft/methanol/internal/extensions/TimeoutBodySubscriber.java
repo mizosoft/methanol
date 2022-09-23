@@ -30,20 +30,11 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Flow.Subscriber;
 
-public class TimeoutBodySubscriber<T> extends TimeoutSubscriber<List<ByteBuffer>>
-    implements BodySubscriber<T> {
-  private final BodySubscriber<T> downstream;
-
-  public TimeoutBodySubscriber(Duration timeout, Delayer delayer, BodySubscriber<T> downstream) {
-    super(timeout, delayer);
-    this.downstream = downstream;
-  }
-
-  @Override
-  protected Subscriber<? super List<ByteBuffer>> downstream() {
-    return downstream;
+public final class TimeoutBodySubscriber<T>
+    extends TimeoutSubscriber<List<ByteBuffer>, BodySubscriber<T>> implements BodySubscriber<T> {
+  public TimeoutBodySubscriber(BodySubscriber<T> downstream, Duration timeout, Delayer delayer) {
+    super(downstream, timeout, delayer);
   }
 
   @Override
@@ -54,6 +45,6 @@ public class TimeoutBodySubscriber<T> extends TimeoutSubscriber<List<ByteBuffer>
 
   @Override
   public CompletionStage<T> getBody() {
-    return downstream.getBody();
+    return downstream().getBody();
   }
 }

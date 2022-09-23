@@ -94,7 +94,7 @@ public class MoreBodySubscribers {
 
   static <T> BodySubscriber<T> withReadTimeout(
       BodySubscriber<T> downstream, Duration timeout, Delayer delayer) {
-    return new TimeoutBodySubscriber<>(timeout, delayer, downstream);
+    return new TimeoutBodySubscriber<>(downstream, timeout, delayer);
   }
 
   /**
