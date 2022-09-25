@@ -23,10 +23,10 @@
 package com.github.mizosoft.methanol.adapter.jaxb;
 
 import static com.github.mizosoft.methanol.adapter.jaxb.JaxbAdapterFactory.createDecoder;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 
-import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testing.TestException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 

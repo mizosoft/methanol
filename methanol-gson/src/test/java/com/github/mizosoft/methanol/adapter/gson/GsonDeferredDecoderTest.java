@@ -23,11 +23,11 @@
 package com.github.mizosoft.methanol.adapter.gson;
 
 import static com.github.mizosoft.methanol.adapter.gson.GsonAdapterFactory.createDecoder;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 
 import com.github.mizosoft.methanol.TypeRef;
-import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testing.TestException;
 import com.google.gson.GsonBuilder;
 import com.google.gson.stream.MalformedJsonException;
 import java.io.UncheckedIOException;

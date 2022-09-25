@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.blackbox.support;
 
 import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.testutils.StringDecoder;
+import com.github.mizosoft.methanol.testing.StringDecoder;
 
 public class StringDecoderProvider {
   private StringDecoderProvider() {}

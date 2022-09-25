@@ -23,15 +23,15 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.CharBuffer;
 import java.util.concurrent.Executor;

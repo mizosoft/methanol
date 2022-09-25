@@ -23,13 +23,8 @@
 package com.github.mizosoft.methanol.internal.flow;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
 import java.util.List;
-import java.util.concurrent.Flow.Publisher;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 

@@ -26,8 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.util.List;
 import java.util.concurrent.Flow.Subscription;
 import org.junit.jupiter.api.Test;
@@ -42,7 +42,7 @@ class ForwardingSubscriberTest {
     var seq = List.of(1, 2, 3);
     seq.forEach(subscriber::onNext);
     subscriber.onComplete();
-    assertEquals(1, subscriber.downstream.completes);
+    assertEquals(1, subscriber.downstream.completionCount);
     assertEquals(seq, List.copyOf(subscriber.downstream.items));
   }
 
@@ -56,7 +56,7 @@ class ForwardingSubscriberTest {
     assertTrue(
         subscriber.downstream.lastError instanceof TestException,
         String.valueOf(subscriber.downstream.lastError));
-    assertEquals(2, subscriber.downstream.nexts);
+    assertEquals(2, subscriber.downstream.nextCount);
   }
 
   @Test

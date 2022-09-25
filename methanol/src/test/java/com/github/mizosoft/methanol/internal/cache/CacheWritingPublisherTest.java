@@ -1,7 +1,7 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
-import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -9,15 +9,15 @@ import static org.junit.jupiter.api.Assertions.fail;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listener;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.testing.BodyCollector;
+import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittablePublisher;
-import com.github.mizosoft.methanol.testutils.BodyCollector;
-import com.github.mizosoft.methanol.testutils.BuffListIterator;
-import com.github.mizosoft.methanol.testutils.Logging;
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,7 +46,7 @@ class CacheWritingPublisherTest {
     var subscriber = new StringSubscriber();
 
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
 
     try (upstream) {
       upstream.submitAll(toResponseBody("Cache me if you can!"));
@@ -69,7 +69,7 @@ class CacheWritingPublisherTest {
     publisher.subscribe(secondSubscriber);
 
     secondSubscriber.awaitComplete();
-    assertThat(secondSubscriber.errors).isOne();
+    assertThat(secondSubscriber.errorCount).isOne();
     assertThat(secondSubscriber.lastError).isInstanceOf(IllegalStateException.class);
   }
 
@@ -85,7 +85,7 @@ class CacheWritingPublisherTest {
     var subscriber = new StringSubscriber();
 
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.subscription.cancel();
 
     try (upstream) {
@@ -120,7 +120,7 @@ class CacheWritingPublisherTest {
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
 
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
 
     upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
 
@@ -155,7 +155,7 @@ class CacheWritingPublisherTest {
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
 
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
 
     upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
 
@@ -179,7 +179,7 @@ class CacheWritingPublisherTest {
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
 
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
 
     try (upstream) {
       upstream.firstSubscription().signalError(new TestException());
@@ -206,7 +206,7 @@ class CacheWritingPublisherTest {
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
 
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
 
     try (upstream) {
       upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write
@@ -230,7 +230,7 @@ class CacheWritingPublisherTest {
     var subscriber = new StringSubscriber();
 
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
 
     try (upstream) {
       upstream.submitAll(toResponseBody("Cache me if you can!"));
@@ -266,7 +266,7 @@ class CacheWritingPublisherTest {
     var subscriber = new StringSubscriber();
 
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
 
     threadPool.execute(
         () -> {
@@ -294,7 +294,7 @@ class CacheWritingPublisherTest {
     subscriber.request = 0;
 
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
 
     subscriber.subscription.request(2);
     assertThat(upstream.firstSubscription().currentDemand()).isEqualTo(2);
@@ -311,7 +311,7 @@ class CacheWritingPublisherTest {
   }
 
   private static Iterable<List<ByteBuffer>> toResponseBody(String str) {
-    return () -> new BuffListIterator(UTF_8.encode(str), 2, 2);
+    return () -> new ByteBufferListIterator(UTF_8.encode(str), 2, 2);
   }
 
   private static class TestEditor implements Editor {

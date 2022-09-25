@@ -22,14 +22,14 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import static com.github.mizosoft.methanol.testutils.TestUtils.load;
+import static com.github.mizosoft.methanol.testing.TestUtils.load;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
-import com.github.mizosoft.methanol.testutils.BufferTokenizer;
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.BufferTokenizer;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.time.Duration;

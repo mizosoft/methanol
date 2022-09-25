@@ -24,14 +24,14 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.MutableRequest.POST;
-import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.TestUtils.headers;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.Authenticator;
 import java.net.CookieManager;
 import java.net.InetSocketAddress;
@@ -105,21 +105,25 @@ class MethanolTest {
     var cookieHandler = new CookieManager();
     var connectTimeout = Duration.ofSeconds(1);
     var sslContext = TestUtils.localhostSslContext();
-    Executor executor = r -> { throw new RejectedExecutionException(); };
+    Executor executor =
+        r -> {
+          throw new RejectedExecutionException();
+        };
     var redirect = Redirect.ALWAYS;
     var version = Version.HTTP_1_1;
     var proxy = ProxySelector.of(InetSocketAddress.createUnresolved("localhost", 80));
     var authenticator = new Authenticator() {};
-    var client = Methanol.newBuilder()
-        .cookieHandler(cookieHandler)
-        .connectTimeout(connectTimeout)
-        .sslContext(sslContext)
-        .executor(executor)
-        .followRedirects(redirect)
-        .version(version)
-        .proxy(proxy)
-        .authenticator(authenticator)
-        .build();
+    var client =
+        Methanol.newBuilder()
+            .cookieHandler(cookieHandler)
+            .connectTimeout(connectTimeout)
+            .sslContext(sslContext)
+            .executor(executor)
+            .followRedirects(redirect)
+            .version(version)
+            .proxy(proxy)
+            .authenticator(authenticator)
+            .build();
     assertThat(client.cookieHandler()).hasValue(cookieHandler);
     assertThat(client.connectTimeout()).hasValue(connectTimeout);
     assertThat(client.sslContext()).isSameAs(sslContext);
@@ -132,16 +136,20 @@ class MethanolTest {
 
   @Test
   void buildWithPrebuiltBackend() {
-    var backend = HttpClient.newBuilder()
-        .cookieHandler(new CookieManager())
-        .connectTimeout(Duration.ofSeconds(1))
-        .sslContext(TestUtils.localhostSslContext())
-        .executor(r -> { throw new RejectedExecutionException(); })
-        .followRedirects(Redirect.ALWAYS)
-        .version(Version.HTTP_1_1)
-        .proxy(ProxySelector.of(InetSocketAddress.createUnresolved("localhost", 80)))
-        .authenticator(new Authenticator() {})
-        .build();
+    var backend =
+        HttpClient.newBuilder()
+            .cookieHandler(new CookieManager())
+            .connectTimeout(Duration.ofSeconds(1))
+            .sslContext(TestUtils.localhostSslContext())
+            .executor(
+                r -> {
+                  throw new RejectedExecutionException();
+                })
+            .followRedirects(Redirect.ALWAYS)
+            .version(Version.HTTP_1_1)
+            .proxy(ProxySelector.of(InetSocketAddress.createUnresolved("localhost", 80)))
+            .authenticator(new Authenticator() {})
+            .build();
     var client = Methanol.newBuilder(backend).build();
     assertThat(client.underlyingClient()).isSameAs(backend);
     assertThat(client)
@@ -157,32 +165,29 @@ class MethanolTest {
 
   @Test
   void applyConsumer() {
-    var client = Methanol.newBuilder()
-        .apply(b -> b.defaultHeader("Accept", "text/html"))
-        .build();
+    var client = Methanol.newBuilder().apply(b -> b.defaultHeader("Accept", "text/html")).build();
     assertThat(client.defaultHeaders()).isEqualTo(headers("Accept", "text/html"));
   }
 
   @Test
   void addUserAgentAsDefaultHeader() {
-    var client = Methanol.newBuilder()
-        .defaultHeader("User-Agent", "Will Smith")
-        .build();
+    var client = Methanol.newBuilder().defaultHeader("User-Agent", "Will Smith").build();
     assertThat(client.userAgent()).hasValue("Will Smith");
   }
 
   @Test
   void defaultHeadersAreAppliedToRequests() throws Exception {
     var backend = new RecordingClient();
-    var client = Methanol.newBuilder(backend)
-        .autoAcceptEncoding(false)
-        .defaultHeaders(
-            "Accept", "text/html",
-            "Cookie", "password=123")
-        .build();
+    var client =
+        Methanol.newBuilder(backend)
+            .autoAcceptEncoding(false)
+            .defaultHeaders(
+                "Accept", "text/html",
+                "Cookie", "password=123")
+            .build();
     client.send(GET("https://example.com").header("X-Foo", "bar"), BodyHandlers.discarding());
     verifyThat(backend.request)
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "Accept", "text/html",
             "Cookie", "password=123",
             "X-Foo", "bar");
@@ -191,12 +196,10 @@ class MethanolTest {
   @Test
   void userAgentIsAppliedToRequests() throws Exception {
     var backend = new RecordingClient();
-    var client = Methanol.newBuilder(backend)
-        .autoAcceptEncoding(false)
-        .userAgent("Will Smith")
-        .build();
+    var client =
+        Methanol.newBuilder(backend).autoAcceptEncoding(false).userAgent("Will Smith").build();
     client.send(GET("https://example.com"), BodyHandlers.discarding());
-    verifyThat(backend.request).hasHeadersExactly("User-Agent", "Will Smith");
+    verifyThat(backend.request).containsHeadersExactly("User-Agent", "Will Smith");
   }
 
   @Test
@@ -222,15 +225,16 @@ class MethanolTest {
     var backend = new RecordingClient();
     var client = Methanol.newBuilder(backend).build();
     client.send(GET("https://example.com"), BodyHandlers.discarding());
-    verifyThat(backend.request).hasHeadersExactly("Accept-Encoding", acceptEncodingValue());
+    verifyThat(backend.request).containsHeadersExactly("Accept-Encoding", acceptEncodingValue());
   }
 
   @Test
   void requestWithMimeBodyPublisher() throws Exception {
     var backend = new RecordingClient();
     var client = Methanol.newBuilder(backend).build();
-    var mimeBody = MoreBodyPublishers.ofMediaType(
-        BodyPublishers.ofString("something"), MediaType.of("text", "plain"));
+    var mimeBody =
+        MoreBodyPublishers.ofMediaType(
+            BodyPublishers.ofString("something"), MediaType.of("text", "plain"));
     client.send(POST("https://example.com", mimeBody), BodyHandlers.discarding());
     verifyThat(backend.request).containsHeader("Content-Type", "text/plain");
   }
@@ -247,21 +251,23 @@ class MethanolTest {
   @Test
   void requestPropertiesAreNotOverwrittenByDefaultOnes() throws Exception {
     var backend = new RecordingClient();
-    var client = Methanol.newBuilder(backend)
-        .userAgent("Will Smith")
-        .defaultHeaders("Accept", "text/html")
-        .requestTimeout(Duration.ofSeconds(1))
-        .build();
-    var request = GET("https://localhost")
-        .headers(
-            "Accept", "application/json",
-            "User-Agent", "Dave Bautista",
-            "Accept-Encoding", "gzip")
-        .timeout(Duration.ofSeconds(2))
-        .build();
+    var client =
+        Methanol.newBuilder(backend)
+            .userAgent("Will Smith")
+            .defaultHeaders("Accept", "text/html")
+            .requestTimeout(Duration.ofSeconds(1))
+            .build();
+    var request =
+        GET("https://localhost")
+            .headers(
+                "Accept", "application/json",
+                "User-Agent", "Dave Bautista",
+                "Accept-Encoding", "gzip")
+            .timeout(Duration.ofSeconds(2))
+            .build();
     client.send(request, BodyHandlers.discarding());
     verifyThat(request)
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "Accept", "application/json",
             "User-Agent", "Dave Bautista",
             "Accept-Encoding", "gzip")
@@ -271,16 +277,18 @@ class MethanolTest {
   @Test
   void sendMutableRequest() throws Exception {
     var backend = new RecordingClient();
-    var client = Methanol.newBuilder(backend)
-        .userAgent("Will Smith")
-        .baseUri("https://example.com")
-        .defaultHeader("Accept", "text/html")
-        .build();
-    var mutableRequest = POST("/a", BodyPublishers.ofString("something"))
-        .header("Content-Type", "text/plain")
-        .timeout(Duration.ofSeconds(1))
-        .version(Version.HTTP_1_1)
-        .expectContinue(true);
+    var client =
+        Methanol.newBuilder(backend)
+            .userAgent("Will Smith")
+            .baseUri("https://example.com")
+            .defaultHeader("Accept", "text/html")
+            .build();
+    var mutableRequest =
+        POST("/a", BodyPublishers.ofString("something"))
+            .header("Content-Type", "text/plain")
+            .timeout(Duration.ofSeconds(1))
+            .version(Version.HTTP_1_1)
+            .expectContinue(true);
     var snapshot = mutableRequest.toImmutableRequest();
     client.send(mutableRequest, BodyHandlers.discarding());
 
@@ -299,17 +307,19 @@ class MethanolTest {
   @Test
   void sendImmutableRequest() throws Exception {
     var backend = new RecordingClient();
-    var client = Methanol.newBuilder(backend)
-        .userAgent("Will Smith")
-        .baseUri("https://example.com")
-        .defaultHeader("Accept", "text/html")
-        .build();
-    var immutableRequest = POST("/a", BodyPublishers.ofString("something"))
-        .header("Content-Type", "text/plain")
-        .timeout(Duration.ofSeconds(1))
-        .version(Version.HTTP_1_1)
-        .expectContinue(true)
-        .toImmutableRequest();
+    var client =
+        Methanol.newBuilder(backend)
+            .userAgent("Will Smith")
+            .baseUri("https://example.com")
+            .defaultHeader("Accept", "text/html")
+            .build();
+    var immutableRequest =
+        POST("/a", BodyPublishers.ofString("something"))
+            .header("Content-Type", "text/plain")
+            .timeout(Duration.ofSeconds(1))
+            .version(Version.HTTP_1_1)
+            .expectContinue(true)
+            .toImmutableRequest();
     client.send(immutableRequest, BodyHandlers.discarding());
 
     // Verify that original request properties are copied
@@ -391,8 +401,10 @@ class MethanolTest {
     }
 
     @Override
-    public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request,
-        BodyHandler<T> responseBodyHandler, PushPromiseHandler<T> pushPromiseHandler) {
+    public <T> CompletableFuture<HttpResponse<T>> sendAsync(
+        HttpRequest request,
+        BodyHandler<T> responseBodyHandler,
+        PushPromiseHandler<T> pushPromiseHandler) {
       this.request = request;
       this.handler = responseBodyHandler;
       this.pushHandler = pushPromiseHandler;
@@ -400,8 +412,8 @@ class MethanolTest {
     }
 
     @Override
-    public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request,
-        BodyHandler<T> responseBodyHandler) {
+    public <T> CompletableFuture<HttpResponse<T>> sendAsync(
+        HttpRequest request, BodyHandler<T> responseBodyHandler) {
       return sendAsync(request, responseBodyHandler, null);
     }
 

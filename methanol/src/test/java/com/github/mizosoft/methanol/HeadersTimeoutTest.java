@@ -1,13 +1,13 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.mizosoft.methanol.testing.ImmutableResponseInfo;
+import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockDelayer;
-import com.github.mizosoft.methanol.testutils.FakeResponseInfo;
-import com.github.mizosoft.methanol.testutils.MockClock;
-import com.github.mizosoft.methanol.testutils.RecordingHttpClient;
+import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
@@ -35,7 +35,7 @@ class HeadersTimeoutTest {
     assertThat(delayer.taskCount()).isOne();
 
     // Make headers arrive before timeout
-    var subscriber = recordingClient.latestCall().bodyHandler().apply(new FakeResponseInfo());
+    var subscriber = recordingClient.latestCall().bodyHandler().apply(new ImmutableResponseInfo());
     assertThat(delayer.peekEarliestTaskFuture()).isCancelled();
     assertThat(subscriber.getBody()).isNotCompletedExceptionally();
 
@@ -64,7 +64,7 @@ class HeadersTimeoutTest {
         .withCauseInstanceOf(HttpHeadersTimeoutException.class);
     assertThat(recordingClient.latestCall().future()).isCancelled();
 
-    var subscriber = recordingClient.latestCall().bodyHandler().apply(new FakeResponseInfo());
+    var subscriber = recordingClient.latestCall().bodyHandler().apply(new ImmutableResponseInfo());
     verifyThat(subscriber).failsWith(HttpHeadersTimeoutException.class);
   }
 }

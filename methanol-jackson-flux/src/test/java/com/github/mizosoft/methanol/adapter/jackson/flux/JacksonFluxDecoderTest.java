@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.adapter.jackson.flux;
 
 import static com.github.mizosoft.methanol.adapter.jackson.flux.JacksonFluxAdapterFactory.createDecoder;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static org.assertj.core.api.Assertions.from;
 import static reactor.adapter.JdkFlowAdapter.flowPublisherToFlux;

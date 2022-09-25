@@ -29,7 +29,7 @@ import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.blackbox.support.FailingBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.support.MyBodyDecoderFactory.MyDeflateBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.support.MyBodyDecoderFactory.MyGzipBodyDecoderFactory;
-import com.github.mizosoft.methanol.testutils.Logging;
+import com.github.mizosoft.methanol.testing.Logging;
 import org.junit.jupiter.api.Test;
 
 class BodyDecoderFactoryTest {

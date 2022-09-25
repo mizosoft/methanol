@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.brotli.internal;
 
 import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.BASE_LIB_NAME;
 import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.ENTRY_DIR_PREFIX;
-import static com.github.mizosoft.methanol.testutils.TestUtils.listFiles;
+import static com.github.mizosoft.methanol.testing.TestUtils.listFiles;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,12 +43,15 @@ class BrotliLoaderTest {
   @Test
   void entryCreation(@TempDir Path tempDir) throws IOException {
     new BrotliLoader(tempDir).extractLibrary();
+
     var libName = System.mapLibraryName(BASE_LIB_NAME);
     var createdEntries = listFiles(tempDir);
     assertEquals(1, createdEntries.size(), createdEntries.toString());
+
     var entry = createdEntries.get(0);
     var createdFiles = listFiles(entry);
     assertEquals(2, createdFiles.size(), createdFiles.toString());
+
     var expected = Set.of(entry.resolve(libName), entry.resolve(libName + ".lock"));
     assertEquals(expected, Set.copyOf(createdFiles));
   }
@@ -57,12 +60,16 @@ class BrotliLoaderTest {
   void cleanupRoutine(@TempDir Path tempDir) throws IOException {
     var libName = System.mapLibraryName(BASE_LIB_NAME);
     var staleEntry = Files.createDirectory(tempDir.resolve(ENTRY_DIR_PREFIX + "stale"));
-    Files.createFile(staleEntry.resolve(libName)); // stale entry has only the lib file
     var activeEntry = Files.createDirectories(tempDir.resolve(ENTRY_DIR_PREFIX + "active"));
-    Files.createFile(activeEntry.resolve(libName)); // active entry has both lib and lock files
+    Files.createFile(staleEntry.resolve(libName)); // Stale entry has only the lib file.
+    Files.createFile(activeEntry.resolve(libName)); // Active entry has both lib and lock files.
     Files.createFile(activeEntry.resolve(libName + ".lock"));
-    var entryUnderCreation = Files.createDirectory(tempDir.resolve(ENTRY_DIR_PREFIX + "underCreation"));
+
+    var entryUnderCreation =
+        Files.createDirectory(tempDir.resolve(ENTRY_DIR_PREFIX + "underCreation"));
+
     new BrotliLoader(tempDir).extractLibrary();
+
     var entries = listFiles(tempDir);
     assertEquals(3, entries.size(), entries.toString()); // (active, under creation, new)
     assertFalse(entries.contains(staleEntry), entries.toString());
@@ -80,8 +87,9 @@ class BrotliLoaderTest {
   void wrongDictionarySize(@TempDir Path tempDir) {
     var loader = new BrotliLoader(tempDir, "/data/truncated_dictionary.bin");
     assertThrows(EOFException.class, loader::loadBrotliDictionary);
-    loader = new BrotliLoader(tempDir, "/data/elongated_dictionary.bin");
-    var ioe = assertThrows(IOException.class, loader::loadBrotliDictionary);
+
+    var loader2 = new BrotliLoader(tempDir, "/data/elongated_dictionary.bin");
+    var ioe = assertThrows(IOException.class, loader2::loadBrotliDictionary);
     assertEquals(ioe.getMessage(), "too large dictionary");
   }
 }

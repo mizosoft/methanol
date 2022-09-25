@@ -10,7 +10,7 @@ dependencies {
   testImplementation project(':methanol-protobuf')
   testImplementation project(':methanol-jaxb')
   testImplementation project(':methanol-brotli')
-  testImplementation project(':methanol-testutils')
+  testImplementation project(':methanol-testing')
   testImplementation libs.reactor.core
   testImplementation libs.mockwebserver
   testImplementation libs.brotli.dec

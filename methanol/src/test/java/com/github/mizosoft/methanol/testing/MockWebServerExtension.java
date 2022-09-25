@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static com.github.mizosoft.methanol.testutils.TestUtils.localhostSslContext;
+import static com.github.mizosoft.methanol.testing.TestUtils.localhostSslContext;
 
 import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.Methanol.Builder;

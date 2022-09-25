@@ -29,14 +29,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.ResponseBuilder;
+import com.github.mizosoft.methanol.TrackedResponse;
+import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
+import com.github.mizosoft.methanol.testing.EmptyPublisher;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testutils.BuffListIterator;
-import com.github.mizosoft.methanol.testutils.EmptyPublisher;
-import com.github.mizosoft.methanol.testutils.FailingPublisher;
-import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testing.FailingPublisher;
+import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
@@ -160,7 +160,7 @@ class RawResponseTest {
       String str, Charset charset, Executor executor) {
     return FlowAdapters.toFlowPublisher(
         new AsyncIterablePublisher<>(
-            () -> new BuffListIterator(charset.encode(str), 10, 1), executor));
+            () -> new ByteBufferListIterator(charset.encode(str), 10, 1), executor));
   }
 
   private static void assertEqualResponses(TrackedResponse<?> expected, TrackedResponse<?> actual) {

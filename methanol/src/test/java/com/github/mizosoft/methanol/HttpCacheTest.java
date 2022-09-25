@@ -28,9 +28,9 @@ import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateSt
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
-import static com.github.mizosoft.methanol.testutils.TestUtils.deflate;
-import static com.github.mizosoft.methanol.testutils.TestUtils.gzip;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
+import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
@@ -65,16 +65,16 @@ import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.Logging;
+import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
+import com.github.mizosoft.methanol.testing.ResponseVerifier;
 import com.github.mizosoft.methanol.testing.StoreConfig;
 import com.github.mizosoft.methanol.testing.StoreContext;
 import com.github.mizosoft.methanol.testing.StoreExtension;
 import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
-import com.github.mizosoft.methanol.testutils.Logging;
-import com.github.mizosoft.methanol.testutils.MockClock;
-import com.github.mizosoft.methanol.testutils.ResponseVerifier;
-import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.ConnectException;
@@ -842,7 +842,7 @@ class HttpCacheTest {
                   .apply(verifyThat(getUnchecked(request)))
                   .hasBody("stale on a scale");
           // Must put a warning only if not revalidated
-          if (response.getCacheAware().cacheStatus() == HIT) {
+          if (response.getCacheAwareResponse().cacheStatus() == HIT) {
             response.containsHeader("Warning", "110 - \"Response is Stale\"");
           } else {
             response.doesNotContainHeader("Warning");
@@ -938,7 +938,7 @@ class HttpCacheTest {
         .isCacheHit()
         .hasBody("alpha")
         .cacheResponse()
-        .hasRequestHeadersExactly("X-My-Header", "a");
+        .containsRequestHeadersExactly("X-My-Header", "a");
 
     server.enqueue(
         new MockResponse()
@@ -952,7 +952,7 @@ class HttpCacheTest {
         .isCacheHit()
         .hasBody("beta")
         .cacheResponse()
-        .hasRequestHeadersExactly("X-My-Header", "b");
+        .containsRequestHeadersExactly("X-My-Header", "b");
 
     server.enqueue(
         new MockResponse()
@@ -1049,7 +1049,7 @@ class HttpCacheTest {
         .containsHeader("Content-Language", "fr-FR")
         .hasBody("magnifique")
         .cacheResponse()
-        .hasRequestHeadersExactly(
+        .containsRequestHeadersExactly(
             "Accept-Language", "fr-FR",
             "Accept-Encoding", "identity");
     verifyThat(get(jeNeParlePasAnglais.header("My-Header", "a")))
@@ -1074,7 +1074,7 @@ class HttpCacheTest {
         .containsHeader("Content-Language", "es-ES")
         .hasBody("magnífico")
         .cacheResponse()
-        .hasRequestHeadersExactly(
+        .containsRequestHeadersExactly(
             "Accept-Language", "es-ES",
             "Accept-Encoding", "identity",
             "Accept", "text/html");

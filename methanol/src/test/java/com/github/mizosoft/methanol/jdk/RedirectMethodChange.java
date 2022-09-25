@@ -32,7 +32,7 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Redirect;

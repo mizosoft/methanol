@@ -7,7 +7,7 @@ dependencies {
   implementation project(':methanol')
   implementation project(':methanol-jackson')
   implementation project(':methanol-brotli')
-  implementation project(':methanol-testutils')
+  implementation project(':methanol-testing')
   implementation libs.mockwebserver
   implementation libs.jmh.core
   implementation libs.brotli.dec

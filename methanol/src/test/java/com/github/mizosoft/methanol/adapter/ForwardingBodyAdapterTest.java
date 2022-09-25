@@ -22,10 +22,10 @@
 
 package com.github.mizosoft.methanol.adapter;
 
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 
-import com.github.mizosoft.methanol.testutils.CharSequenceEncoder;
-import com.github.mizosoft.methanol.testutils.StringDecoder;
+import com.github.mizosoft.methanol.testing.CharSequenceEncoder;
+import com.github.mizosoft.methanol.testing.StringDecoder;
 import org.junit.jupiter.api.Test;
 
 class ForwardingBodyAdapterTest {

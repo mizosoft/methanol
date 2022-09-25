@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.internal.decoder;
 
-import static com.github.mizosoft.methanol.testutils.TestUtils.gunzip;
+import static com.github.mizosoft.methanol.testing.TestUtils.gunzip;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -30,10 +30,10 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.InstanceOfAssertFactories.THROWABLE;
 
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
-import com.github.mizosoft.methanol.testutils.MockGzipMember;
-import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
-import com.github.mizosoft.methanol.testutils.dec.Decode;
-import com.github.mizosoft.methanol.testutils.dec.Decode.BufferSizeOption;
+import com.github.mizosoft.methanol.testing.MockGzipMember;
+import com.github.mizosoft.methanol.testing.MockGzipMember.CorruptionMode;
+import com.github.mizosoft.methanol.testing.decoder.Decode;
+import com.github.mizosoft.methanol.testing.decoder.Decode.BufferSizeOption;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;

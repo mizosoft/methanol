@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
-import static com.github.mizosoft.methanol.testutils.TestUtils.toByteArray;
+import static com.github.mizosoft.methanol.testing.TestUtils.toByteArray;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
@@ -32,8 +32,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testutils.io.file.ForwardingAsynchronousFileChannel;
-import com.github.mizosoft.methanol.testutils.io.file.ForwardingFileChannel;
+import com.github.mizosoft.methanol.testing.file.ForwardingAsynchronousFileChannel;
+import com.github.mizosoft.methanol.testing.file.ForwardingFileChannel;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import java.io.EOFException;

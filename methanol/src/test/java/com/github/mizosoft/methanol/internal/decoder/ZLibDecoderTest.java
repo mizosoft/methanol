@@ -26,8 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
-import com.github.mizosoft.methanol.testutils.dec.Decode;
-import com.github.mizosoft.methanol.testutils.dec.Decode.BufferSizeOption;
+import com.github.mizosoft.methanol.testing.decoder.Decode;
+import com.github.mizosoft.methanol.testing.decoder.Decode.BufferSizeOption;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;

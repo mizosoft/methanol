@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
@@ -104,7 +104,7 @@ class InterceptorTest {
     assertThat(interceptor.calls).isOne();
     verifyThat(interceptor.request)
         .hasUri("https://example.com/relative")
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "User-Agent", "Will Smith",
             "Accept", "text/html", // Request's Accept header is not replaced
             "X-My-Header", "abc",
@@ -144,7 +144,7 @@ class InterceptorTest {
     assertThat(interceptor.calls).isOne();
     verifyThat(interceptor.request)
         .hasUri("https://example.com/relative")
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "User-Agent", "Will Smith",
             "Accept", "text/html", // Request's Accept header is not replaced
             "X-My-Header", "abc",
@@ -179,13 +179,13 @@ class InterceptorTest {
     client.send(request, BodyHandlers.discarding());
     verifyThat(recordingInterceptor.request)
         .hasUri("https:/example.com/?q=val")
-        .hasHeadersExactly("Accept", "text/html")
+        .containsHeadersExactly("Accept", "text/html")
         .hasTimeout(Duration.ofSeconds(1));
 
     client.sendAsync(request, BodyHandlers.discarding());
     verifyThat(recordingInterceptor.request)
         .hasUri("https:/example.com/?q=val")
-        .hasHeadersExactly("Accept", "text/html")
+        .containsHeadersExactly("Accept", "text/html")
         .hasTimeout(Duration.ofSeconds(1));
   }
 
@@ -206,13 +206,13 @@ class InterceptorTest {
     client.send(request, BodyHandlers.discarding());
     verifyThat(backend.request)
         .hasUri("https://example.com/?q=val")
-        .hasHeadersExactly("Accept", "text/html", "Accept-Encoding", acceptEncodingValue())
+        .containsHeadersExactly("Accept", "text/html", "Accept-Encoding", acceptEncodingValue())
         .hasTimeout(Duration.ofSeconds(1));
 
     client.sendAsync(request, BodyHandlers.discarding());
     verifyThat(backend.request)
         .hasUri("https://example.com/?q=val")
-        .hasHeadersExactly("Accept", "text/html", "Accept-Encoding", acceptEncodingValue())
+        .containsHeadersExactly("Accept", "text/html", "Accept-Encoding", acceptEncodingValue())
         .hasTimeout(Duration.ofSeconds(1));
   }
 

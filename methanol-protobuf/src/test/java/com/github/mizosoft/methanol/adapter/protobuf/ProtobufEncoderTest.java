@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.adapter.protobuf;
 
 import static com.github.mizosoft.methanol.adapter.protobuf.ProtobufAdapterFactory.createEncoder;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 
 import com.github.mizosoft.methanol.adapter.protobuf.PointOuterClass.Point;
 import org.junit.jupiter.api.Test;

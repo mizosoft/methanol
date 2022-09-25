@@ -19,7 +19,7 @@ open module methanol.blackbox {
   requires methanol.adapter.protobuf;
   requires methanol.adapter.jaxb;
   requires methanol.brotli;
-  requires methanol.testutils;
+  requires methanol.testing;
   requires com.google.protobuf;
   requires org.junit.jupiter.api;
   requires mockwebserver3;

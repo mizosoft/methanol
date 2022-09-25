@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.tck;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import org.testng.annotations.AfterClass;

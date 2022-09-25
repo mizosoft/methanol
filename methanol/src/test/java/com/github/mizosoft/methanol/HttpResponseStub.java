@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;

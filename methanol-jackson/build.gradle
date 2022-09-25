@@ -2,7 +2,7 @@ dependencies {
   api project(':methanol')
   api libs.jackson.databind
 
-  testImplementation project(':methanol-testutils')
+  testImplementation project(':methanol-testing')
   testImplementation libs.jackson.xml
   testImplementation libs.jackson.protobuf
   testImplementation libs.jackson.avro

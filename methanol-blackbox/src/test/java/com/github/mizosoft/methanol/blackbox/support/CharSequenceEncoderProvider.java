@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.blackbox.support;
 
 import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.testutils.CharSequenceEncoder;
+import com.github.mizosoft.methanol.testing.CharSequenceEncoder;
 
 public class CharSequenceEncoderProvider {
   private CharSequenceEncoderProvider() {}

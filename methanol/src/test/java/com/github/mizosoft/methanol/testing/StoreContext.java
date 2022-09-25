@@ -29,8 +29,6 @@ import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.testing.StoreConfig.Execution;
-import com.github.mizosoft.methanol.testutils.MockClock;
-import com.github.mizosoft.methanol.testutils.MockExecutor;
 import java.io.IOException;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.FileSystem;
@@ -222,6 +220,10 @@ public final class StoreContext implements AutoCloseable {
     // Then delete the temp directory if we have one
     if (directory != null) {
       try {
+        //        System.out.println(directory.getClass() + ", " +
+        // directory.getFileSystem().getClass());
+        //        System.out.println(ForwardingObject.delegate(directory).getClass() + ", " +
+        // ForwardingObject.delegate(directory.getFileSystem()).getClass());
         Files.walkFileTree(
             directory,
             new SimpleFileVisitor<>() {

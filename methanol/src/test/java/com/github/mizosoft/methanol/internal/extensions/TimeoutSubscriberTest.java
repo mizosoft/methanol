@@ -28,10 +28,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.TimeoutSubscriber;
+import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockDelayer;
-import com.github.mizosoft.methanol.testutils.MockClock;
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.time.Duration;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.RejectedExecutionException;
@@ -76,7 +76,7 @@ class TimeoutSubscriberTest {
     // Trigger first timeout, which was cancelled & so is discarded
     clock.advanceSeconds(1);
     assertThat(delayer.taskCount()).isOne();
-    assertThat(downstream.errors)
+    assertThat(downstream.errorCount)
         .withFailMessage(() -> String.valueOf(downstream.lastError))
         .isZero();
 
@@ -84,9 +84,9 @@ class TimeoutSubscriberTest {
     clock.advanceSeconds(1);
     timeoutSubscriber.onNext(1);
     timeoutSubscriber.onComplete();
-    assertThat(downstream.nexts).isOne(); // Item after timeout isn't received
-    assertThat(downstream.errors).isOne();
-    assertThat(downstream.completes).isZero();
+    assertThat(downstream.nextCount).isOne(); // Item after timeout isn't received
+    assertThat(downstream.errorCount).isOne();
+    assertThat(downstream.completionCount).isZero();
     assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
 
@@ -110,7 +110,7 @@ class TimeoutSubscriberTest {
 
     // Trigger timeout
     clock.advanceSeconds(1);
-    assertThat(downstream.nexts).isZero();
+    assertThat(downstream.nextCount).isZero();
     assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
     assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(0);
@@ -118,8 +118,8 @@ class TimeoutSubscriberTest {
     // Further signals are ignored
     timeoutSubscriber.onNext(1);
     timeoutSubscriber.onComplete();
-    assertThat(downstream.nexts).isZero();
-    assertThat(downstream.completes).isZero();
+    assertThat(downstream.nextCount).isZero();
+    assertThat(downstream.completionCount).isZero();
   }
 
   @Test
@@ -150,7 +150,7 @@ class TimeoutSubscriberTest {
 
     // Further signals are ignored
     timeoutSubscriber.onComplete();
-    assertThat(downstream.completes).isZero();
+    assertThat(downstream.completionCount).isZero();
   }
 
   @Test
@@ -175,13 +175,13 @@ class TimeoutSubscriberTest {
 
     // Trigger timeout
     clock.advanceSeconds(2);
-    assertThat(downstream.errors).isOne();
+    assertThat(downstream.errorCount).isOne();
     assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
     assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(2);
 
     // Further signals are ignored
     timeoutSubscriber.onError(new TestException());
-    assertThat(downstream.errors).isOne();
+    assertThat(downstream.errorCount).isOne();
   }
 
   @Test
@@ -207,7 +207,7 @@ class TimeoutSubscriberTest {
     // Trigger timeout, which is ignored
     clock.advanceSeconds(2);
     assertThat(delayer.taskCount()).isZero();
-    assertThat(downstream.errors).isOne();
+    assertThat(downstream.errorCount).isOne();
   }
 
   @Test
@@ -259,9 +259,9 @@ class TimeoutSubscriberTest {
     // Trigger timeout for first item
     clock.advanceSeconds(2);
     assertThat(delayer.taskCount()).isZero();
-    assertThat(downstream.nexts).isZero();
-    assertThat(downstream.completes).isZero();
-    assertThat(downstream.errors).isZero();
+    assertThat(downstream.nextCount).isZero();
+    assertThat(downstream.completionCount).isZero();
+    assertThat(downstream.errorCount).isZero();
   }
 
   @Test

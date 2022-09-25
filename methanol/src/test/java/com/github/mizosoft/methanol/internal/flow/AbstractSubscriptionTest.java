@@ -37,17 +37,17 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
-import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittableSubscription;
-import com.github.mizosoft.methanol.testutils.Logging;
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -72,12 +72,12 @@ class AbstractSubscriptionTest {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = subscription(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     assertNotNull(subscriber.subscription);
     assertThat(subscriber.subscription).isNotNull();
-    assertThat(subscriber.nexts).isZero();
-    assertThat(subscriber.errors).isZero();
-    assertThat(subscriber.completes).isZero();
+    assertThat(subscriber.nextCount).isZero();
+    assertThat(subscriber.errorCount).isZero();
+    assertThat(subscriber.completionCount).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -87,9 +87,9 @@ class AbstractSubscriptionTest {
     subscription.signal(true);
     subscription.complete();
     subscriber.awaitComplete();
-    assertThat(subscriber.nexts).isZero();
-    assertThat(subscriber.errors).isZero();
-    assertThat(subscriber.completes).isOne();
+    assertThat(subscriber.nextCount).isZero();
+    assertThat(subscriber.errorCount).isZero();
+    assertThat(subscriber.completionCount).isOne();
   }
 
   @ExecutorParameterizedTest
@@ -98,9 +98,9 @@ class AbstractSubscriptionTest {
     var subscription = subscription(subscriber, executor);
     subscription.signalError(new TestException());
     subscriber.awaitError();
-    assertThat(subscriber.nexts).isZero();
-    assertThat(subscriber.completes).isZero();
-    assertThat(subscriber.errors).isOne();
+    assertThat(subscriber.nextCount).isZero();
+    assertThat(subscriber.completionCount).isZero();
+    assertThat(subscriber.errorCount).isOne();
   }
 
   @ExecutorParameterizedTest
@@ -110,9 +110,9 @@ class AbstractSubscriptionTest {
     var subscription = subscription(subscriber, executor);
     subscription.signal(true);
     subscriber.awaitError();
-    assertThat(subscriber.nexts).isZero();
-    assertThat(subscriber.errors).isOne();
-    assertThat(subscriber.completes).isZero();
+    assertThat(subscriber.nextCount).isZero();
+    assertThat(subscriber.errorCount).isOne();
+    assertThat(subscriber.completionCount).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -123,9 +123,9 @@ class AbstractSubscriptionTest {
     subscription.submit(1);
     subscription.complete();
     subscriber.awaitComplete();
-    assertThat(subscriber.nexts).isOne();
-    assertThat(subscriber.completes).isOne();
-    assertThat(subscriber.errors).isZero();
+    assertThat(subscriber.nextCount).isOne();
+    assertThat(subscriber.completionCount).isOne();
+    assertThat(subscriber.errorCount).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -135,11 +135,11 @@ class AbstractSubscriptionTest {
     subscription.signal(true);
     subscription.submit(1);
     subscription.signalError(new TestException());
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.awaitError();
-    assertThat(subscriber.nexts).isLessThanOrEqualTo(1);
-    assertThat(subscriber.errors).isOne();
-    assertThat(subscriber.completes).isZero();
+    assertThat(subscriber.nextCount).isLessThanOrEqualTo(1);
+    assertThat(subscriber.errorCount).isOne();
+    assertThat(subscriber.completionCount).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -147,15 +147,15 @@ class AbstractSubscriptionTest {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = subscription(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscription.submit(1);
     subscriber.subscription.cancel();
     for (int i = 2; i <= 20; ++i) {
       subscription.submit(i);
     }
     subscription.complete();
-    assertThat(subscriber.nexts).isLessThan(20);
-    assertThat(subscriber.completes).isZero();
+    assertThat(subscriber.nextCount).isLessThan(20);
+    assertThat(subscriber.completionCount).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -163,14 +163,14 @@ class AbstractSubscriptionTest {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = subscription(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscription.submit(1);
     subscriber.throwOnCall = true;
     subscription.submit(2);
     subscription.complete();
     subscriber.awaitComplete();
-    assertThat(subscriber.errors).isOne();
-    assertThat(subscriber.completes).isZero();
+    assertThat(subscriber.errorCount).isOne();
+    assertThat(subscriber.completionCount).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -183,9 +183,9 @@ class AbstractSubscriptionTest {
     }
     subscription.complete();
     subscriber.awaitComplete();
-    assertThat(subscriber.nexts).isEqualTo(20);
+    assertThat(subscriber.nextCount).isEqualTo(20);
     assertThat(subscriber.items.peekLast()).isEqualTo(20);
-    assertThat(subscriber.completes).isOne();
+    assertThat(subscriber.completionCount).isOne();
   }
 
   @ExecutorParameterizedTest
@@ -194,16 +194,16 @@ class AbstractSubscriptionTest {
     subscriber.request = 0L;
     var subscription = subscription(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscription.submit(1);
     subscription.submit(2);
-    assertThat(subscriber.nexts).isEqualTo(0);
+    assertThat(subscriber.nextCount).isEqualTo(0);
     subscriber.subscription.request(3);
     subscription.submit(3);
     subscription.complete();
     subscriber.awaitComplete();
-    assertThat(subscriber.nexts).isEqualTo(3);
-    assertThat(subscriber.completes).isOne();
+    assertThat(subscriber.nextCount).isEqualTo(3);
+    assertThat(subscriber.completionCount).isOne();
   }
 
   @ExecutorParameterizedTest
@@ -211,13 +211,13 @@ class AbstractSubscriptionTest {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = subscription(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitSubscribe(); // Requests 1 item
+    subscriber.awaitOnSubscribe(); // Requests 1 item
     subscriber.request = 0L;
     subscription.submit(1);
     subscription.submit(2);
     subscription.complete();
-    subscriber.awaitNext(1);
-    assertThat(subscriber.nexts).isOne();
+    subscriber.awaitOnNext(1);
+    assertThat(subscriber.nextCount).isOne();
   }
 
   @ExecutorParameterizedTest
@@ -225,13 +225,13 @@ class AbstractSubscriptionTest {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = subscription(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.subscription.request(0);
     subscription.submit(1);
     subscription.submit(2);
     subscription.complete();
     subscriber.awaitError();
-    assertThat(subscriber.errors).isOne();
+    assertThat(subscriber.errorCount).isOne();
     assertThat(subscriber.lastError).isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -240,13 +240,13 @@ class AbstractSubscriptionTest {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = subscription(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.subscription.request(-1L);
     subscription.submit(1);
     subscription.submit(2);
     subscription.complete();
     subscriber.awaitError();
-    assertThat(subscriber.errors).isOne();
+    assertThat(subscriber.errorCount).isOne();
     assertThat(subscriber.lastError).isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -327,7 +327,7 @@ class AbstractSubscriptionTest {
     subscription.signal(true);
     subscriber.awaitError();
     subscription.awaitAbort();
-    assertThat(subscriber.errors).isOne();
+    assertThat(subscriber.errorCount).isOne();
     assertThat(subscription.aborts).isOne();
     assertThat(subscription.flowInterrupted).isTrue();
   }
@@ -337,13 +337,13 @@ class AbstractSubscriptionTest {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = subscription(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.throwOnCall = true;
     subscription.submit(1);
     subscription.complete();
     subscriber.awaitError();
     subscription.awaitAbort();
-    assertThat(subscriber.errors).isOne();
+    assertThat(subscriber.errorCount).isOne();
     assertThat(subscription.aborts).isOne();
     assertThat(subscription.flowInterrupted).isTrue();
   }
@@ -366,7 +366,7 @@ class AbstractSubscriptionTest {
     var error = new TestException();
     subscription.signalError(error);
     subscriber.awaitError();
-    assertThat(subscriber.errors).isOne();
+    assertThat(subscriber.errorCount).isOne();
     assertThat(subscriber.lastError).hasSuppressedException(error);
   }
 
@@ -392,7 +392,7 @@ class AbstractSubscriptionTest {
     subscription.items.offer(1);
 
     // Request 2 items (request asynchronously to not block in case the executor is synchronous)
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     CompletableFuture.runAsync(() -> subscriber.subscription.request(2L));
 
     // Wait till first onNext comes
@@ -406,7 +406,7 @@ class AbstractSubscriptionTest {
     subscriber.awaitError();
 
     // Second onNext shouldn't be called!
-    assertThat(subscriber.nexts).isOne();
+    assertThat(subscriber.nextCount).isOne();
   }
 
   private SubmittableSubscription<Integer> subscription(

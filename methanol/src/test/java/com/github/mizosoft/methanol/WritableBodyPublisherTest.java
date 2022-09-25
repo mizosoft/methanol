@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.from;
 
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -67,7 +67,7 @@ class WritableBodyPublisherTest {
     var subscriber = new TestSubscriber<ByteBuffer>();
     subscriber.request = 0;
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.subscription.request(1);
 
     publisher.outputStream().write('a');
@@ -84,7 +84,7 @@ class WritableBodyPublisherTest {
     var subscriber = new TestSubscriber<ByteBuffer>();
     subscriber.request = 0;
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.subscription.request(1);
 
     publisher.byteChannel().write(ByteBuffer.wrap(new byte[] {'a'}));
@@ -101,7 +101,7 @@ class WritableBodyPublisherTest {
     var subscriber = new TestSubscriber<ByteBuffer>();
     publisher.subscribe(subscriber);
     publisher.byteChannel().close();
-    assertThat(subscriber.completes).isEqualTo(1);
+    assertThat(subscriber.completionCount).isEqualTo(1);
     assertThat(publisher.byteChannel().isOpen()).isFalse();
   }
 
@@ -111,7 +111,7 @@ class WritableBodyPublisherTest {
     var subscriber = new TestSubscriber<ByteBuffer>();
     publisher.subscribe(subscriber);
     publisher.outputStream().close();
-    assertThat(subscriber.completes).isEqualTo(1);
+    assertThat(subscriber.completionCount).isEqualTo(1);
 
     // The WritableByteChannel view is also closed
     assertThat(publisher.byteChannel().isOpen()).isFalse();
@@ -188,7 +188,7 @@ class WritableBodyPublisherTest {
       assertThat(subscriber.awaitNextItem()).returns(10, from(ByteBuffer::remaining));
 
       out.write(new byte[9]);
-      assertThat(subscriber.nexts).isOne(); // No new signals are received
+      assertThat(subscriber.nextCount).isOne(); // No new signals are received
 
       out.write('a');
       assertThat(subscriber.awaitNextItem()).returns(10, from(ByteBuffer::remaining));

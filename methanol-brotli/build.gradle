@@ -48,7 +48,7 @@ dependencies {
   }
 
   testImplementation libs.brotli.dec
-  testImplementation project(':methanol-testutils')
+  testImplementation project(':methanol-testing')
 }
 
 task installBrotli(type: Copy) {

@@ -6,7 +6,7 @@ dependencies {
   api project(':methanol')
   api libs.protobuf.java
 
-  testImplementation project(':methanol-testutils')
+  testImplementation project(':methanol-testing')
 }
 
 protobuf {

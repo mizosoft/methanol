@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.adapter.jackson;
 
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createJsonDecoder;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 
 import com.fasterxml.jackson.core.JsonParser.Feature;
@@ -32,7 +32,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.mizosoft.methanol.TypeRef;
-import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testing.TestException;
 import java.io.UncheckedIOException;
 import java.util.List;
 import org.junit.jupiter.api.Test;

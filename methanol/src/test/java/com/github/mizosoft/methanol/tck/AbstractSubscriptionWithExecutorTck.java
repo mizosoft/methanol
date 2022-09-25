@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import org.testng.annotations.AfterClass;

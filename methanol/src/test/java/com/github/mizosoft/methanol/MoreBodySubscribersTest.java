@@ -30,8 +30,8 @@ import static com.github.mizosoft.methanol.MoreBodySubscribers.ofReader;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.withReadTimeout;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
-import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
-import static com.github.mizosoft.methanol.testutils.TestUtils.toByteArray;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.toByteArray;
 import static java.net.http.HttpResponse.BodySubscribers.discarding;
 import static java.net.http.HttpResponse.BodySubscribers.fromSubscriber;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
@@ -43,11 +43,11 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testutils.BuffListIterator;
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -361,7 +361,7 @@ class MoreBodySubscribersTest {
     var subscription = new ToBeCancelledSubscription();
     baseSubscriber.request = 0L; // Request manually
     timeoutSubscriber.onSubscribe(subscription);
-    baseSubscriber.awaitSubscribe();
+    baseSubscriber.awaitOnSubscribe();
     assertThatExceptionOfType(RejectedExecutionException.class)
         .isThrownBy(() -> baseSubscriber.subscription.request(1));
     subscription.assertCancelled();
@@ -392,14 +392,14 @@ class MoreBodySubscribersTest {
     timeoutSubscriber.onSubscribe(subscription);
 
     // Request 2 items to trigger a second timeout task from onNext when it receives the first item
-    baseSubscriber.awaitSubscribe();
+    baseSubscriber.awaitOnSubscribe();
     baseSubscriber.subscription.request(2L);
 
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1))); // Second timeout is rejected
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     timeoutSubscriber.onComplete();
     baseSubscriber.awaitError();
-    assertThat(baseSubscriber.nexts).isEqualTo(1); // First item is received
+    assertThat(baseSubscriber.nextCount).isEqualTo(1); // First item is received
     assertThat(baseSubscriber.lastError).isInstanceOf(RejectedExecutionException.class);
     subscription.assertCancelled();
     assertThat(scheduledFuture)
@@ -492,7 +492,7 @@ class MoreBodySubscribersTest {
 
   private static Iterable<List<ByteBuffer>> iterableOf(
       ByteBuffer buffer, int buffSize, int buffsPerList) {
-    return () -> new BuffListIterator(buffer, buffSize, buffsPerList);
+    return () -> new ByteBufferListIterator(buffer, buffSize, buffsPerList);
   }
 
   /** A subscription that is expected to be cancelled. */

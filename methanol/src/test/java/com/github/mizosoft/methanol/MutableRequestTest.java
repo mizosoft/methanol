@@ -22,8 +22,8 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.TestUtils.headers;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
@@ -49,7 +49,7 @@ class MutableRequestTest {
         .hasUri("https://example.com")
         .isPUT()
         .hasBodyPublisher(publisher)
-        .hasHeadersExactly("Content-Type", "text/plain")
+        .containsHeadersExactly("Content-Type", "text/plain")
         .hasTimeout(Duration.ofSeconds(20))
         .hasVersion(Version.HTTP_2)
         .hasExpectContinue(true);
@@ -70,7 +70,7 @@ class MutableRequestTest {
         .hasUri("https://example.com")
         .isPUT()
         .hasBodyPublisher(publisher)
-        .hasHeadersExactly("Content-Type", "text/plain")
+        .containsHeadersExactly("Content-Type", "text/plain")
         .hasTimeout(Duration.ofSeconds(20))
         .hasVersion(Version.HTTP_2)
         .hasExpectContinue(true);
@@ -91,19 +91,19 @@ class MutableRequestTest {
         .header("Content-Length", "1")
         .header("Accept-Encoding", "gzip");
     verifyThat(request)
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "Content-Length", "1",
             "Accept-Encoding", "gzip");
 
     request.removeHeader("Content-Length");
-    verifyThat(request).hasHeadersExactly("Accept-Encoding", "gzip");
+    verifyThat(request).containsHeadersExactly("Accept-Encoding", "gzip");
 
     request.setHeader("Accept-Encoding", "deflate");
-    verifyThat(request).hasHeadersExactly("Accept-Encoding", "deflate");
+    verifyThat(request).containsHeadersExactly("Accept-Encoding", "deflate");
 
     request.setHeader("Content-Length", "2");
     verifyThat(request)
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "Accept-Encoding", "deflate",
             "Content-Length", "2");
 
@@ -111,14 +111,14 @@ class MutableRequestTest {
         "Content-Type", "text/plain",
         "Accept-Language", "fr-FR");
     verifyThat(request)
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "Accept-Encoding", "deflate",
             "Content-Length", "2",
             "Content-Type", "text/plain",
             "Accept-Language", "fr-FR");
 
     request.removeHeaders();
-    verifyThat(request).hasNoHeaders();
+    verifyThat(request).hasEmptyHeaders();
   }
 
   @Test
@@ -128,11 +128,11 @@ class MutableRequestTest {
         "Cookie", "sessionid=123",
         "Cookie", "password=321");
     var request = MutableRequest.create().headers(headers);
-    verifyThat(request).hasHeadersExactly(headers);
+    verifyThat(request).containsHeadersExactly(headers);
 
     request.header("Accept-Encoding", "gzip");
     verifyThat(request)
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "Accept", "text/html",
             "Cookie", "sessionid=123",
             "Cookie", "password=321",
@@ -161,9 +161,9 @@ class MutableRequestTest {
   void changeHeadersAfterCopy() {
     var request = MutableRequest.create().header("Content-Length", "1");
     var requestCopy = request.copy().header("Accept-Encoding", "gzip");
-    verifyThat(request).hasHeadersExactly("Content-Length", "1");
+    verifyThat(request).containsHeadersExactly("Content-Length", "1");
     verifyThat(requestCopy)
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "Content-Length", "1",
             "Accept-Encoding", "gzip");
   }
@@ -173,7 +173,7 @@ class MutableRequestTest {
     verifyThat(MutableRequest.create())
         .isGET()
         .hasUri("")
-        .hasNoHeaders()
+        .hasEmptyHeaders()
         .hasNoBody()
         .hasNoTimeout()
         .hasNoVersion()
@@ -244,16 +244,16 @@ class MutableRequestTest {
 
     request.removeHeadersIf((name, __) -> "X-My-First-Header".equals(name));
     verifyThat(request)
-        .hasHeadersExactly(
+        .containsHeadersExactly(
             "X-My-Second-Header", "val1",
             "X-My-Second-Header", "val2");
 
     request.removeHeadersIf(
         (name, value) -> "X-My-Second-Header".equals(name) && "val1".equals(value));
-    verifyThat(request).hasHeadersExactly("X-My-Second-Header", "val2");
+    verifyThat(request).containsHeadersExactly("X-My-Second-Header", "val2");
 
     request.removeHeadersIf((__, ___) -> true);
-    verifyThat(request).hasNoHeaders();
+    verifyThat(request).hasEmptyHeaders();
   }
 
   @Test

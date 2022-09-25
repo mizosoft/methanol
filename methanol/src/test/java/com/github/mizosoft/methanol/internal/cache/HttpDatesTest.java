@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatObject;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.InstanceOfAssertFactories.LOCAL_DATE_TIME;
 
-import com.github.mizosoft.methanol.testutils.Logging;
+import com.github.mizosoft.methanol.testing.Logging;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;

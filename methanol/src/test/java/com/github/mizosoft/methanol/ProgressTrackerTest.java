@@ -36,10 +36,10 @@ import com.github.mizosoft.methanol.ProgressTracker.ProgressSnapshot;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.SubmittablePublisher;
-import com.github.mizosoft.methanol.testutils.MockClock;
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -98,7 +98,7 @@ class ProgressTrackerTest {
     upstream.subscribe(subscriber);
 
     // Receive enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     verifyThat(listener.awaitProgress())
         .hasBytesTransferred(0)
         .hasTotalBytesTransferred(0)
@@ -166,7 +166,7 @@ class ProgressTrackerTest {
     upstream.subscribe(subscriber);
 
     // Receive enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     verifyThat(listener.awaitProgress())
         .hasBytesTransferred(0)
         .hasTotalBytesTransferred(0)
@@ -246,7 +246,7 @@ class ProgressTrackerTest {
     upstream.subscribe(subscriber);
 
     // No enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     listener.assertNoProgress();
 
     upstream.submit(buffers(2));
@@ -312,7 +312,7 @@ class ProgressTrackerTest {
     upstream.subscribe(subscriber);
 
     // Receive enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     verifyThat(listener.awaitProgress())
         .hasBytesTransferred(0)
         .hasTotalBytesTransferred(0)
@@ -399,7 +399,7 @@ class ProgressTrackerTest {
     upstream.subscribe(subscriber);
 
     // No enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     listener.assertNoProgress();
 
     // Pending progress: 1 byte (< threshold)
@@ -476,7 +476,7 @@ class ProgressTrackerTest {
     upstream.subscribe(subscriber);
 
     // Receive enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     verifyThat(listener.awaitProgress())
         .hasBytesTransferred(0)
         .hasTotalBytesTransferred(0)
@@ -567,7 +567,7 @@ class ProgressTrackerTest {
     upstream.subscribe(subscriber);
 
     // No enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     listener.assertNoProgress();
 
     // Pending progress: 1 second (< threshold)
@@ -640,7 +640,7 @@ class ProgressTrackerTest {
     var downstream = new TestSubscriber<>();
     var subscriber = tracker.tracking(BodySubscribers.fromSubscriber(downstream), listener, -1);
     upstream.subscribe(subscriber);
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     upstream.firstSubscription().signalError(new TestException());
 
     listener.awaitError();
@@ -659,7 +659,7 @@ class ProgressTrackerTest {
     publisher.subscribe(new TestSubscriber<>());
 
     // Receive enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     verifyThat(listener.awaitProgress())
         .hasBytesTransferred(0)
         .hasTotalBytesTransferred(0)
@@ -727,7 +727,7 @@ class ProgressTrackerTest {
     publisher.subscribe(new TestSubscriber<>());
 
     // Receive enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     verifyThat(listener.awaitProgress())
         .hasBytesTransferred(0)
         .hasTotalBytesTransferred(0)
@@ -807,7 +807,7 @@ class ProgressTrackerTest {
     publisher.subscribe(new TestSubscriber<>());
 
     // No enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     listener.assertNoProgress();
 
     upstream.submit(buffer(2));
@@ -873,7 +873,7 @@ class ProgressTrackerTest {
     publisher.subscribe(new TestSubscriber<>());
 
     // Receive enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     verifyThat(listener.awaitProgress())
         .hasBytesTransferred(0)
         .hasTotalBytesTransferred(0)
@@ -960,7 +960,7 @@ class ProgressTrackerTest {
     publisher.subscribe(new TestSubscriber<>());
 
     // No enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     listener.assertNoProgress();
 
     // Pending progress: 1 byte (< threshold)
@@ -1037,7 +1037,7 @@ class ProgressTrackerTest {
     publisher.subscribe(new TestSubscriber<>());
 
     // Receive enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     verifyThat(listener.awaitProgress())
         .hasBytesTransferred(0)
         .hasTotalBytesTransferred(0)
@@ -1128,7 +1128,7 @@ class ProgressTrackerTest {
     publisher.subscribe(new TestSubscriber<>());
 
     // No enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     listener.assertNoProgress();
 
     // Pending progress: 1 second (< threshold)
@@ -1210,10 +1210,10 @@ class ProgressTrackerTest {
     var subscriber = new TestSubscriber<ByteBuffer>();
     subscriber.request = 0;
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
 
     // Receive enclosing 0% progress
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     verifyThat(listener.awaitProgress())
         .partChanged(true)
         .hasPartWithName("part1")
@@ -1396,7 +1396,7 @@ class ProgressTrackerTest {
     var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream), listener);
     var subscriber = new TestSubscriber<>();
     publisher.subscribe(subscriber);
-    listener.awaitSubscribe();
+    listener.awaitOnSubscribe();
     upstream.firstSubscription().signalError(new TestException());
 
     listener.awaitError();

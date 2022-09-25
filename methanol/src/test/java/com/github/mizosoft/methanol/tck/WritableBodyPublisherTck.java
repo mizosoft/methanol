@@ -25,7 +25,7 @@ package com.github.mizosoft.methanol.tck;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 import com.github.mizosoft.methanol.WritableBodyPublisher;
-import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Flow.Publisher;

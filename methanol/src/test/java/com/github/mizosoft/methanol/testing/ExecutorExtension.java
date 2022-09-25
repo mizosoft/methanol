@@ -25,7 +25,6 @@ package com.github.mizosoft.methanol.testing;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.testutils.TestUtils;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

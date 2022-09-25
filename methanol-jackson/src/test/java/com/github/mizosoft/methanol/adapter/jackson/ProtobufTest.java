@@ -1,6 +1,6 @@
 package com.github.mizosoft.methanol.adapter.jackson;
 
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.dataformat.protobuf.ProtobufMapper;

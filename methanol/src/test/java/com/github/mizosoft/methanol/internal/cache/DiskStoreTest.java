@@ -34,7 +34,7 @@ import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.SAME_TH
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.WINDOWS;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
-import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -49,11 +49,11 @@ import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexCorruption
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.StoreConfig;
 import com.github.mizosoft.methanol.testing.StoreContext;
 import com.github.mizosoft.methanol.testing.StoreExtension;
 import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
-import com.github.mizosoft.methanol.testutils.Logging;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -285,6 +285,7 @@ class DiskStoreTest {
 
     // The corrupt index is overwritten with an empty index
     mockStore.assertEmptyIndex();
+
     // Make sure the lock file is not deleted with the store content
     assertThat(mockStore.lockFile()).exists();
   }

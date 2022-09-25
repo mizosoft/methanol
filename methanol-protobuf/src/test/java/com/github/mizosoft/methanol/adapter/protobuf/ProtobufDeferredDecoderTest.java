@@ -23,11 +23,11 @@
 package com.github.mizosoft.methanol.adapter.protobuf;
 
 import static com.github.mizosoft.methanol.adapter.protobuf.ProtobufAdapterFactory.createDecoder;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.adapter.protobuf.PointOuterClass.Point;
-import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testing.TestException;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.UncheckedIOException;

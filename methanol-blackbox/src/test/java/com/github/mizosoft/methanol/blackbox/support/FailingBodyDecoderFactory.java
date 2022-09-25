@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.blackbox.support;
 
 import com.github.mizosoft.methanol.BodyDecoder;
-import com.github.mizosoft.methanol.testutils.TestException;
+import com.github.mizosoft.methanol.testing.TestException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;

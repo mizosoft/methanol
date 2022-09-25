@@ -27,7 +27,7 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntr
 import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
-import static com.github.mizosoft.methanol.testutils.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,8 +37,8 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testing.StoreConfig;
 import com.github.mizosoft.methanol.testing.StoreExtension;
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -100,8 +100,8 @@ class CacheReadingPublisherTest {
     publisher.subscribe(subscriber);
 
     subscriber.awaitComplete();
-    assertThat(subscriber.errors).isOne();
-    assertThat(subscriber.errors).isOne();
+    assertThat(subscriber.errorCount).isOne();
+    assertThat(subscriber.errorCount).isOne();
     assertThat(subscriber.lastError).isInstanceOf(TestException.class);
   }
 
@@ -125,7 +125,7 @@ class CacheReadingPublisherTest {
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
     publisher.subscribe(subscriber);
     awaitUninterruptibly(firstReadLatch);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.subscription.cancel();
 
     // Trigger CacheReadingPublisher's read completion callback
@@ -135,9 +135,9 @@ class CacheReadingPublisherTest {
     assertThat(viewer.readAsyncCalls.get()).isEqualTo(1);
 
     // The subscriber receives no signals
-    assertThat(subscriber.nexts).isZero();
-    assertThat(subscriber.completes).isZero();
-    assertThat(subscriber.errors).isZero();
+    assertThat(subscriber.nextCount).isZero();
+    assertThat(subscriber.completionCount).isZero();
+    assertThat(subscriber.errorCount).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -154,7 +154,7 @@ class CacheReadingPublisherTest {
     subscriber.request = 0L; // Request nothing
     publisher.subscribe(subscriber);
     subscriber.awaitComplete();
-    assertThat(subscriber.nexts).isEqualTo(0);
+    assertThat(subscriber.nextCount).isEqualTo(0);
   }
 
   @Test

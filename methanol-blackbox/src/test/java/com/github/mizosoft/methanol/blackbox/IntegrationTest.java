@@ -30,12 +30,12 @@ import static com.github.mizosoft.methanol.MoreBodyHandlers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.ofReader;
 import static com.github.mizosoft.methanol.MoreBodyHandlers.withReadTimeout;
 import static com.github.mizosoft.methanol.MoreBodyPublishers.ofMediaType;
-import static com.github.mizosoft.methanol.testutils.TestUtils.gunzip;
-import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
-import static com.github.mizosoft.methanol.testutils.TestUtils.lines;
-import static com.github.mizosoft.methanol.testutils.TestUtils.load;
-import static com.github.mizosoft.methanol.testutils.TestUtils.loadUtf8;
-import static com.github.mizosoft.methanol.testutils.TestUtils.zlibUnwrap;
+import static com.github.mizosoft.methanol.testing.TestUtils.gunzip;
+import static com.github.mizosoft.methanol.testing.TestUtils.headers;
+import static com.github.mizosoft.methanol.testing.TestUtils.lines;
+import static com.github.mizosoft.methanol.testing.TestUtils.load;
+import static com.github.mizosoft.methanol.testing.TestUtils.loadUtf8;
+import static com.github.mizosoft.methanol.testing.TestUtils.zlibUnwrap;
 import static java.net.http.HttpRequest.BodyPublishers.fromPublisher;
 import static java.net.http.HttpResponse.BodyHandlers.discarding;
 import static java.net.http.HttpResponse.BodyHandlers.ofString;
@@ -64,12 +64,12 @@ import com.github.mizosoft.methanol.WritableBodyPublisher;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
 import com.github.mizosoft.methanol.blackbox.support.JacksonMapper;
-import com.github.mizosoft.methanol.testutils.BuffIterator;
-import com.github.mizosoft.methanol.testutils.Logging;
-import com.github.mizosoft.methanol.testutils.MockGzipMember;
-import com.github.mizosoft.methanol.testutils.MockGzipMember.CorruptionMode;
-import com.github.mizosoft.methanol.testutils.RegistryFileTypeDetector;
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.ByteBufferIterator;
+import com.github.mizosoft.methanol.testing.Logging;
+import com.github.mizosoft.methanol.testing.MockGzipMember;
+import com.github.mizosoft.methanol.testing.MockGzipMember.CorruptionMode;
+import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -675,7 +675,7 @@ class IntegrationTest {
     var attachmentPublisher =
         FlowAdapters.toFlowPublisher(
             new AsyncIterablePublisher<>(
-                () -> new BuffIterator(ByteBuffer.wrap(attachment), 1024), executor));
+                () -> new ByteBufferIterator(ByteBuffer.wrap(attachment), 1024), executor));
     var multipartMixed =
         MultipartBodyPublisher.newBuilder()
             .mediaType(MediaType.of("multipart", "mixed"))

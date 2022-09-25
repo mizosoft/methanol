@@ -9,7 +9,7 @@ dependencies {
   testImplementation libs.reactivestreams.tck.flow
   testImplementation libs.mockwebserver
   testImplementation libs.jimfs
-  testImplementation project(':methanol-testutils')
+  testImplementation project(':methanol-testing')
 }
 
 compileJava {

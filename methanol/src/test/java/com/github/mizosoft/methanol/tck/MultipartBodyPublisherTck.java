@@ -22,14 +22,14 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
+import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
-import com.github.mizosoft.methanol.testutils.EmptyPublisher;
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.EmptyPublisher;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.ByteBuffer;

@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.blackbox.support;
 
-import com.github.mizosoft.methanol.testutils.RegistryFileTypeDetector;
+import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
 import java.nio.file.spi.FileTypeDetector;
 
 public class RegistryFileTypeDetectorProvider {

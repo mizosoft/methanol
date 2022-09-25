@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
+import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static java.net.http.HttpRequest.BodyPublishers.noBody;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.URI;

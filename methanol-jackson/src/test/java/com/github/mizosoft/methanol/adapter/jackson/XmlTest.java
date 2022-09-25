@@ -1,7 +1,7 @@
 package com.github.mizosoft.methanol.adapter.jackson;
 
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createEncoder;
-import static com.github.mizosoft.methanol.testutils.Verification.verifyThat;
+import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;

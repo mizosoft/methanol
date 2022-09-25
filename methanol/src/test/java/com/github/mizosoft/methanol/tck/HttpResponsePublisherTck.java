@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.tck;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testutils.TestUtils.localhostSslContext;
+import static com.github.mizosoft.methanol.testing.TestUtils.localhostSslContext;
 
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;

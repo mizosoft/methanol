@@ -5,5 +5,5 @@ dependencies {
   implementation libs.reactivestreams
   implementation project(':methanol-jackson')
 
-  testImplementation project(':methanol-testutils')
+  testImplementation project(':methanol-testing')
 }

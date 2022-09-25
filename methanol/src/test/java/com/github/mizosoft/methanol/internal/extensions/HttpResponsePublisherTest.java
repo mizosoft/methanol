@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.internal.extensions;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testutils.TestUtils.headers;
+import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static java.net.http.HttpResponse.BodyHandlers.replacing;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -35,8 +35,8 @@ import com.github.mizosoft.methanol.HttpResponseStub;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
-import com.github.mizosoft.methanol.testutils.TestException;
-import com.github.mizosoft.methanol.testutils.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
@@ -70,7 +70,7 @@ class HttpResponsePublisherTest {
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     subscriber.request = 0L;
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     // HTTP request shouldn't be sent till requested by subscriber
     // (not a very pragmatic method to check but it'd suffice :p)
     Thread.sleep(800);
@@ -85,9 +85,9 @@ class HttpResponsePublisherTest {
     client.responseCf.complete(response);
     subscriber.awaitComplete();
     assertEquals(1, client.calls.get());
-    assertEquals(1, subscriber.nexts);
-    assertEquals(0, subscriber.errors);
-    assertEquals(1, subscriber.completes);
+    assertEquals(1, subscriber.nextCount);
+    assertEquals(0, subscriber.errorCount);
+    assertEquals(1, subscriber.completionCount);
     assertEquals(response, subscriber.items.poll());
   }
 
@@ -100,8 +100,8 @@ class HttpResponsePublisherTest {
     publisher.subscribe(subscriber);
     delayer.execute(() -> client.responseCf.completeExceptionally(new TestException()));
     subscriber.awaitError();
-    assertEquals(0, subscriber.nexts);
-    assertEquals(1, subscriber.errors);
+    assertEquals(0, subscriber.nextCount);
+    assertEquals(1, subscriber.errorCount);
     assertEquals(CompletionException.class, subscriber.lastError.getClass());
     assertEquals(TestException.class, subscriber.lastError.getCause().getClass());
   }
@@ -135,21 +135,21 @@ class HttpResponsePublisherTest {
 
     pusCompleter.acceptedCfs.forEach(cf -> cf.complete(new HttpResponseStub<>()));
     // 2 completed pushes, main response not yet completed
-    subscriber.awaitNext(2);
-    assertEquals(0, subscriber.completes);
+    subscriber.awaitOnNext(2);
+    assertEquals(0, subscriber.completionCount);
 
     client.responseCf.complete(new HttpResponseStub<>());
     // main response completed, but not the body! so must be expecting more push promises
-    subscriber.awaitNext(1);
-    assertEquals(0, subscriber.completes);
+    subscriber.awaitOnNext(1);
+    assertEquals(0, subscriber.completionCount);
 
     // another push promise after initial response completion...
     pusCompleter.acceptedCfs.clear();
     ppHandler.applyPushPromise(request, accept, pusCompleter);
     assertEquals(1, pusCompleter.acceptedCfs.size());
     pusCompleter.acceptedCfs.get(0).complete(new HttpResponseStub<>());
-    subscriber.awaitNext(1);
-    assertEquals(0, subscriber.completes);
+    subscriber.awaitOnNext(1);
+    assertEquals(0, subscriber.completionCount);
 
     // and finally complete main response body
     var mainResponseSubscriber = client.handler.apply(
@@ -157,8 +157,8 @@ class HttpResponsePublisherTest {
     mainResponseSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     mainResponseSubscriber.onComplete();
     subscriber.awaitComplete();
-    assertEquals(1, subscriber.completes);
-    assertEquals(0, subscriber.errors);
+    assertEquals(1, subscriber.completionCount);
+    assertEquals(0, subscriber.errorCount);
     assertEquals(1, client.calls.get());
   }
 
@@ -201,9 +201,9 @@ class HttpResponsePublisherTest {
 
     // should be completed exceptionally without receiving any responses
     subscriber.awaitError();
-    assertEquals(0, subscriber.nexts);
-    assertEquals(0, subscriber.completes);
-    assertEquals(1, subscriber.errors);
+    assertEquals(0, subscriber.nextCount);
+    assertEquals(0, subscriber.completionCount);
+    assertEquals(1, subscriber.errorCount);
     assertSame(TestException.class, subscriber.lastError.getClass());
   }
 
@@ -221,7 +221,7 @@ class HttpResponsePublisherTest {
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     publisher.subscribe(subscriber);
     subscriber.awaitError();
-    assertEquals(1, subscriber.errors);
+    assertEquals(1, subscriber.errorCount);
     assertSame(TestException.class, subscriber.lastError.getClass());
   }
 
@@ -259,9 +259,9 @@ class HttpResponsePublisherTest {
 
     // subscriber should be completed exceptionally with no responses
     subscriber.awaitComplete();
-    assertEquals(0, subscriber.nexts);
-    assertEquals(0, subscriber.completes);
-    assertEquals(1, subscriber.errors);
+    assertEquals(0, subscriber.nextCount);
+    assertEquals(0, subscriber.completionCount);
+    assertEquals(1, subscriber.errorCount);
     assertSame(IllegalStateException.class, subscriber.lastError.getClass());
   }
 
@@ -295,8 +295,8 @@ class HttpResponsePublisherTest {
     client.responseCf.complete(new HttpResponseStub<>());
 
     subscriber.awaitComplete();
-    assertEquals(1, subscriber.errors);
-    assertEquals(0, subscriber.completes);
+    assertEquals(1, subscriber.errorCount);
+    assertEquals(0, subscriber.completionCount);
     assertSame(TestException.class, subscriber.lastError.getClass());
   }
 
@@ -308,7 +308,7 @@ class HttpResponsePublisherTest {
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     subscriber.request = 0L;
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.subscription.request(1L);
 
     // fulfill demand
@@ -316,9 +316,9 @@ class HttpResponsePublisherTest {
 
     // should be completed even after 0 demand
     subscriber.awaitComplete();
-    assertEquals(1, subscriber.nexts);
-    assertEquals(1, subscriber.completes);
-    assertEquals(0, subscriber.errors);
+    assertEquals(1, subscriber.nextCount);
+    assertEquals(1, subscriber.completionCount);
+    assertEquals(0, subscriber.errorCount);
   }
 
   @ExecutorParameterizedTest
@@ -330,7 +330,7 @@ class HttpResponsePublisherTest {
     var subscriber = new TestSubscriber<HttpResponse<?>>();
     subscriber.request = 0L;
     publisher.subscribe(subscriber);
-    subscriber.awaitSubscribe();
+    subscriber.awaitOnSubscribe();
     subscriber.subscription.request(3L);
 
     client.awaitSend.join();
@@ -358,9 +358,9 @@ class HttpResponsePublisherTest {
 
     // should be completed even after 0 demand
     subscriber.awaitComplete();
-    assertEquals(3, subscriber.nexts);
-    assertEquals(1, subscriber.completes);
-    assertEquals(0, subscriber.errors);
+    assertEquals(3, subscriber.nextCount);
+    assertEquals(1, subscriber.completionCount);
+    assertEquals(0, subscriber.errorCount);
   }
 
   private <T> HttpResponsePublisher<T> createPublisher(

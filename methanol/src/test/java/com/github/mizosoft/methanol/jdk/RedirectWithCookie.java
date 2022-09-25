@@ -47,7 +47,7 @@ import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
-import com.github.mizosoft.methanol.testutils.TestUtils;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.CookieManager;
 import java.net.URI;
 import java.net.http.HttpClient;
