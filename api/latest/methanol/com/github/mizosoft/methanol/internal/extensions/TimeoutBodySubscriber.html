@@ -76,7 +76,7 @@ loadScripts(document, 'script');</script>
 <div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
 <div class="inheritance"><a href="../flow/ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber</a>&lt;T&gt;
 <div class="inheritance"><a href="../flow/SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.SerializedSubscriber</a>&lt;T&gt;
-<div class="inheritance"><a href="../flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.TimeoutSubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;
+<div class="inheritance"><a href="../flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.TimeoutSubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&gt;
 <div class="inheritance">com.github.mizosoft.methanol.internal.extensions.TimeoutBodySubscriber&lt;T&gt;</div>
 </div>
 </div>
@@ -88,8 +88,8 @@ loadScripts(document, 'script');</script>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</code>, <code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;</code></dd>
 </dl>
 <hr>
-<div class="type-signature"><span class="modifiers">public class </span><span class="element-name type-name-label">TimeoutBodySubscriber&lt;T&gt;</span>
-<span class="extends-implements">extends <a href="../flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;
+<div class="type-signature"><span class="modifiers">public final class </span><span class="element-name type-name-label">TimeoutBodySubscriber&lt;T&gt;</span>
+<span class="extends-implements">extends <a href="../flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&gt;
 implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span></div>
 </section>
 <section class="summary">
@@ -111,9 +111,9 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(java.time.Duration,com.github.mizosoft.methanol.internal.concurrent.Delayer,java.net.http.HttpResponse.BodySubscriber)" class="member-name-link">TimeoutBodySubscriber</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout,
- <a href="../concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a>&nbsp;delayer,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="TimeoutBodySubscriber.html" title="type parameter in TimeoutBodySubscriber">T</a>&gt;&nbsp;downstream)</code></div>
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,com.github.mizosoft.methanol.internal.concurrent.Delayer)" class="member-name-link">TimeoutBodySubscriber</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="TimeoutBodySubscriber.html" title="type parameter in TimeoutBodySubscriber">T</a>&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout,
+ <a href="../concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a>&nbsp;delayer)</code></div>
 <div class="col-last even-row-color">&nbsp;</div>
 </div>
 </section>
@@ -129,24 +129,19 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#downstream()" class="member-name-link">downstream</a>()</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the downstream to which signals are forwarded.</div>
-</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletionStage.html" title="class or interface in java.util.concurrent" class="external-link">CompletionStage</a>&lt;<a href="TimeoutBodySubscriber.html" title="type parameter in TimeoutBodySubscriber">T</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getBody()" class="member-name-link">getBody</a>()</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#timeoutError(long,java.time.Duration)" class="member-name-link">timeoutError</a><wbr>(long&nbsp;index,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout)</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletionStage.html" title="class or interface in java.util.concurrent" class="external-link">CompletionStage</a>&lt;<a href="TimeoutBodySubscriber.html" title="type parameter in TimeoutBodySubscriber">T</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#getBody()" class="member-name-link">getBody</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#timeoutError(long,java.time.Duration)" class="member-name-link">timeoutError</a><wbr>(long&nbsp;index,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 </div>
 </div>
 </div>
 <div class="inherited-list">
 <h3 id="methods-inherited-from-class-com.github.mizosoft.methanol.internal.flow.TimeoutSubscriber">Methods inherited from class&nbsp;com.github.mizosoft.methanol.internal.flow.<a href="../flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a></h3>
-<code><a href="../flow/TimeoutSubscriber.html#onComplete()">onComplete</a>, <a href="../flow/TimeoutSubscriber.html#onError(java.lang.Throwable)">onError</a>, <a href="../flow/TimeoutSubscriber.html#onNext(T)">onNext</a>, <a href="../flow/TimeoutSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe</a></code></div>
+<code><a href="../flow/TimeoutSubscriber.html#downstream()">downstream</a>, <a href="../flow/TimeoutSubscriber.html#onComplete()">onComplete</a>, <a href="../flow/TimeoutSubscriber.html#onError(java.lang.Throwable)">onError</a>, <a href="../flow/TimeoutSubscriber.html#onNext(T)">onNext</a>, <a href="../flow/TimeoutSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe</a></code></div>
 <div class="inherited-list">
 <h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
 <code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" title="class or interface in java.lang" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#hashCode()" title="class or interface in java.lang" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
@@ -165,11 +160,11 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.
 <h2>Constructor Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="&lt;init&gt;(java.time.Duration,com.github.mizosoft.methanol.internal.concurrent.Delayer,java.net.http.HttpResponse.BodySubscriber)">
+<section class="detail" id="&lt;init&gt;(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,com.github.mizosoft.methanol.internal.concurrent.Delayer)">
 <h3>TimeoutBodySubscriber</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">TimeoutBodySubscriber</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout,
- <a href="../concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a>&nbsp;delayer,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="TimeoutBodySubscriber.html" title="type parameter in TimeoutBodySubscriber">T</a>&gt;&nbsp;downstream)</span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">TimeoutBodySubscriber</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="TimeoutBodySubscriber.html" title="type parameter in TimeoutBodySubscriber">T</a>&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout,
+ <a href="../concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a>&nbsp;delayer)</span></div>
 </section>
 </li>
 </ul>
@@ -181,25 +176,13 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.
 <h2>Method Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="downstream()">
-<h3>downstream</h3>
-<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;</span>&nbsp;<span class="element-name">downstream</span>()</div>
-<div class="block"><span class="descfrm-type-label">Description copied from class:&nbsp;<code><a href="../flow/ForwardingSubscriber.html#downstream()">ForwardingSubscriber</a></code></span></div>
-<div class="block">Returns the downstream to which signals are forwarded.</div>
-<dl class="notes">
-<dt>Specified by:</dt>
-<dd><code><a href="../flow/ForwardingSubscriber.html#downstream()">downstream</a></code>&nbsp;in class&nbsp;<code><a href="../flow/ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">ForwardingSubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;</code></dd>
-</dl>
-</section>
-</li>
-<li>
 <section class="detail" id="timeoutError(long,java.time.Duration)">
 <h3>timeoutError</h3>
 <div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a></span>&nbsp;<span class="element-name">timeoutError</span><wbr><span class="parameters">(long&nbsp;index,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout)</span></div>
 <dl class="notes">
 <dt>Specified by:</dt>
-<dd><code><a href="../flow/TimeoutSubscriber.html#timeoutError(long,java.time.Duration)">timeoutError</a></code>&nbsp;in class&nbsp;<code><a href="../flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;</code></dd>
+<dd><code><a href="../flow/TimeoutSubscriber.html#timeoutError(long,java.time.Duration)">timeoutError</a></code>&nbsp;in class&nbsp;<code><a href="../flow/TimeoutSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">TimeoutSubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="TimeoutBodySubscriber.html" title="type parameter in TimeoutBodySubscriber">T</a>&gt;&gt;</code></dd>
 </dl>
 </section>
 </li>

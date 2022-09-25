@@ -152,12 +152,12 @@ loadScripts(document, 'script');</script>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#defaultHeader(java.lang.String,java.lang.String)" class="member-name-link">defaultHeader</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Adds the given header as default.</div>
+<div class="block">Adds the given default header.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#defaultHeaders(java.lang.String...)" class="member-name-link">defaultHeaders</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>...&nbsp;headers)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Adds each of the given headers as default.</div>
+<div class="block">Adds each of the given default headers.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#headersTimeout(java.time.Duration)" class="member-name-link">headersTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout)</code></div>
@@ -275,14 +275,14 @@ loadScripts(document, 'script');</script>
 <h3>defaultHeader</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">defaultHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</span></div>
-<div class="block">Adds the given header as default.</div>
+<div class="block">Adds the given default header.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="defaultHeaders(java.lang.String...)">
 <h3>defaultHeaders</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">defaultHeaders</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>...&nbsp;headers)</span></div>
-<div class="block">Adds each of the given headers as default.</div>
+<div class="block">Adds each of the given default headers.</div>
 </section>
 </li>
 <li>
@@ -297,7 +297,8 @@ loadScripts(document, 'script');</script>
 <h3>headersTimeout</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">headersTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout)</span></div>
 <div class="block">Sets a timeout that will raise an <a href="HttpHeadersTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpHeadersTimeoutException</code></a> if all response headers
- aren't received within the timeout.</div>
+ aren't received within the timeout. Timeout events are scheduled using a system-wide <code>
+ ScheduledExecutorService</code>.</div>
 </section>
 </li>
 <li>
@@ -353,9 +354,9 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">backendInterceptor</span><wbr><span class="parameters">(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</span></div>
 <div class="block">Adds an interceptor that is invoked right before the request is forwarded to the client's
  backend. The interceptor receives the request after it is handled by all <a href="#interceptor(com.github.mizosoft.methanol.Methanol.Interceptor)"><code>client interceptors</code></a>, is decorated (its <code>URI</code> resolved with
- the base <code>URI</code>, default headers added, etc...) and finally handled by an <a href="HttpCache.html" title="class in com.github.mizosoft.methanol"><code>HttpCache</code></a>. This implies that backend interceptors aren't normally called if network isn't
- used, normally due to the presence of an <code>HttpCache</code> that is capable of serving a
- stored response.</div>
+ the base <code>URI</code>, default headers added, etc...) and finally handled by an <a href="HttpCache.html" title="class in com.github.mizosoft.methanol"><code>HttpCache</code></a>. This implies that backend interceptors aren't called if network isn't used,
+ normally due to the presence of an <code>HttpCache</code> that is capable of serving a stored
+ response.</div>
 </section>
 </li>
 <li>

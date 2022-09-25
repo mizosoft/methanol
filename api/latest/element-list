@@ -26,8 +26,3 @@ module:methanol.adapter.protobuf
 com.github.mizosoft.methanol.adapter.protobuf
 module:methanol.brotli
 com.github.mizosoft.methanol.brotli.internal
-module:methanol.testutils
-com.github.mizosoft.methanol.testutils
-com.github.mizosoft.methanol.testutils.adapter
-com.github.mizosoft.methanol.testutils.dec
-com.github.mizosoft.methanol.testutils.io.file
