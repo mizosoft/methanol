@@ -16,6 +16,7 @@ include 'methanol-samples:progress'
 include 'methanol-samples:progress:download'
 include 'methanol-samples:progress:upload'
 include 'spring-boot-test'
+include 'methanol-redis-store'
 
 // Only include native brotli-jni project if explicitly requested
 if (settings.hasProperty('includeBrotliJni')

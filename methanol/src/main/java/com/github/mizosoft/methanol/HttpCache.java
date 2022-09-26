@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Validate.TODO;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
@@ -43,6 +44,7 @@ import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.cache.StoreCorruptionException;
+import com.github.mizosoft.methanol.internal.cache.StoreExtension;
 import java.io.Flushable;
 import java.io.IOException;
 import java.lang.System.Logger;
@@ -889,6 +891,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
     @MonotonicNonNull Store store;
 
     Builder() {}
+
+    public Builder accept(HttpCacheExtension extension) {
+      requireArgument(extension instanceof StoreExtension, "unsupported extension: %s", extension);
+      return TODO();
+    }
 
     /** Specifies that HTTP responses are to be cached on memory with the given size bound. */
     public Builder cacheOnMemory(long maxSize) {

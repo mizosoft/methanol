@@ -47,10 +47,12 @@ module methanol {
       methanol.adapter.jackson,
       methanol.testing;
   exports com.github.mizosoft.methanol.internal.cache to
+      methanol.store.redis,
       methanol.testing;
   exports com.github.mizosoft.methanol.internal.function to
       methanol.testing;
   exports com.github.mizosoft.methanol.internal to
+      methanol.store.redis,
       methanol.testing;
 
   uses com.github.mizosoft.methanol.BodyDecoder.Factory;
