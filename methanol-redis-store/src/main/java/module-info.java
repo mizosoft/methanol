@@ -22,5 +22,7 @@
 
 module methanol.store.redis {
   requires methanol;
+  requires redis.clients.jedis;
+  requires lettuce.core;
   requires static org.checkerframework.checker.qual;
 }
