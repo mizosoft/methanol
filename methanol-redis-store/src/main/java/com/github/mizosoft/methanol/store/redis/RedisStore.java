@@ -23,39 +23,63 @@
 package com.github.mizosoft.methanol.store.redis;
 
 import static com.github.mizosoft.methanol.internal.Validate.TODO;
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store;
+import io.lettuce.core.ClientOptions;
+import io.lettuce.core.KeyValue;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.ScriptOutputType;
+import io.lettuce.core.TimeoutOptions;
+import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class RedisStore implements Store {
+final class RedisStore implements Store {
+  private final int blockSize;
+  private final RedisClient client;
+
+  private final StatefulRedisConnection<String, ByteBuffer> connection;
+
+  RedisStore(int blockSize, RedisClient client) {
+    this.blockSize = blockSize;
+    this.client = requireNonNull(client);
+    this.connection =
+        client.connect(RedisCodec.of(new StringCodec(UTF_8), ByteBufferCopyCodec.INSTANCE));
+  }
 
   @Override
   public long maxSize() {
-    return TODO();
+    return Long.MAX_VALUE;
   }
 
   @Override
   public Optional<Executor> executor() {
-    return TODO();
+    return Optional.empty();
   }
 
   @Override
@@ -68,14 +92,49 @@ public final class RedisStore implements Store {
     return TODO();
   }
 
+  private String toRedisKey(String key) {
+    return key;
+  }
+
   @Override
   public @Nullable Viewer view(String key) throws IOException {
-    return TODO();
+    var commands = connection.sync();
+    var redisKey = toRedisKey(key);
+    List<ByteBuffer> reply =
+        commands.eval(
+            "local version = redis.call('get', KEYS[1] .. ':version')\n"
+                + "if not version then return false end\n"
+                + "local key = KEYS[1] .. ':' .. version\n"
+                + "redis.call('hincrby', key, 'openCount', 1)\n"
+                + "local reply = redis.call('hmget', key, 'metadata', 'blockCount', 'blockSize')\n"
+                + "table.insert(reply, key)\n"
+                + "return reply\n",
+            ScriptOutputType.MULTI,
+            redisKey);
+
+    if (reply.size() == 1) {
+      return null;
+    }
+
+    var metadata = reply.get(0);
+    int blockCount = Integer.parseInt(UTF_8.decode(reply.get(1)).toString());
+    int blockSize = Integer.parseInt(UTF_8.decode(reply.get(2)).toString());
+    var entryKey = UTF_8.decode(reply.get(3)).toString();
+
+    return new RedisViewer(key, entryKey, metadata, blockSize, blockCount, connection);
   }
 
   @Override
   public @Nullable Editor edit(String key) throws IOException {
-    return TODO();
+    requireNonNull(key);
+
+    var redisKey = toRedisKey(key);
+    var wipRedisKey = redisKey + ":wip";
+    var commands = connection.sync();
+    if (!commands.hsetnx(wipRedisKey, "lock", encodeInt(1))) {
+      return null;
+    }
+    return new RedisEditor(key, redisKey, wipRedisKey, blockSize, connection);
   }
 
   @Override
@@ -113,30 +172,180 @@ public final class RedisStore implements Store {
     TODO();
   }
 
-  private static final class DiskViewer implements Viewer {
+  private static final class RedisViewer implements Viewer {
+    private final String key;
+    private final String entryKey;
+    private final ByteBuffer metadata;
+    private final int blockSize;
+    private final int blockCount;
+    private final StatefulRedisConnection<String, ByteBuffer> connection;
+
+    private final int prefetch = 4;
+    private final int prefetchThreshold = 0;
+    private final Queue<ByteBuffer> window = new ArrayDeque<>();
+    private final Lock lock = new ReentrantLock();
+
+    private int blockIndex;
+    private boolean pendingRead;
+    private CompletableFuture<?> pendingWindowUpdate;
+    private boolean hasPendingWindowUpdate;
+
+    private RedisViewer(
+        String key,
+        String entryKey,
+        ByteBuffer metadata,
+        int blockSize,
+        int blockCount,
+        StatefulRedisConnection<String, ByteBuffer> connection) {
+      this.key = key;
+      this.entryKey = entryKey;
+      this.metadata = metadata.asReadOnlyBuffer();
+      this.blockSize = blockSize;
+      this.blockCount = blockCount;
+      this.connection = connection;
+    }
+
     @Override
     public String key() {
-      return TODO();
+      return key;
     }
 
     @Override
     public ByteBuffer metadata() {
-      return TODO();
+      return metadata.duplicate();
+    }
+
+    private int read(ByteBuffer dst) {
+      int read = 0;
+      while (dst.hasRemaining() && !window.isEmpty()) {
+        var head = window.peek();
+        read += Utils.copyRemaining(head, dst);
+        if (!head.hasRemaining()) {
+          window.poll();
+        }
+      }
+      return read;
+    }
+
+    private void finishWindowUpdate(@Nullable List<ByteBuffer> blocks) {
+      lock.lock();
+      try {
+        pendingWindowUpdate = null;
+        hasPendingWindowUpdate = false;
+        if (blocks != null && blocks.size() > 0) {
+          window.addAll(blocks);
+          blockIndex += blocks.size();
+        }
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    private CompletableFuture<?> tryScheduleWindowUpdate() {
+      var ongoing = pendingWindowUpdate;
+      if (ongoing != null) {
+        return ongoing;
+      }
+
+      int current = window.size();
+      if (current <= prefetchThreshold && blockIndex < blockCount) {
+        int remaining = prefetch - current;
+        hasPendingWindowUpdate = true;
+        var future =
+            readBlocks(remaining)
+                .handle(
+                    (blocks, error) -> {
+                      finishWindowUpdate(blocks);
+                      return error != null
+                          ? CompletableFuture.failedFuture(error)
+                          : CompletableFuture.completedFuture(null);
+                    })
+                .thenCompose(Function.identity());
+        if (hasPendingWindowUpdate) {
+          pendingWindowUpdate = future;
+        }
+        return future;
+      }
+
+      return CompletableFuture.completedFuture(null);
+    }
+
+    private CompletableFuture<List<ByteBuffer>> readBlocks(int count) {
+      var commands = connection.async();
+      return commands
+          .hmget(
+              entryKey,
+              IntStream.range(blockIndex, Math.min(blockIndex + count, blockCount))
+                  .mapToObj(i -> "b" + i)
+                  .toArray(String[]::new))
+          .thenApply(
+              result ->
+                  result.stream().map(KeyValue::getValue).collect(Collectors.toUnmodifiableList()))
+          .toCompletableFuture();
     }
 
     @Override
     public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
-      return TODO();
+      // TODO ignore position for now.
+
+      requireNonNull(dst);
+      if (!dst.hasRemaining()) {
+        return CompletableFuture.completedFuture(0);
+      }
+
+      lock.lock();
+      try {
+        requireState(!pendingRead, "pending read");
+
+        int read = read(dst);
+        if (read > 0) {
+          tryScheduleWindowUpdate();
+          return CompletableFuture.completedFuture(read);
+        }
+
+        if (blockIndex >= blockCount) {
+          return CompletableFuture.completedFuture(-1);
+        }
+
+        pendingRead = true;
+        return tryScheduleWindowUpdate()
+            .handle(
+                (__, error) -> {
+                  int localRead = finishPendingRead(error != null ? null : dst);
+                  return error != null
+                      ? CompletableFuture.<Integer>failedFuture(error)
+                      : CompletableFuture.completedFuture(localRead);
+                })
+            .thenCompose(Function.identity());
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    private int finishPendingRead(@Nullable ByteBuffer dst) {
+      lock.lock();
+      try {
+        pendingRead = false;
+        if (dst == null) {
+          return 0;
+        }
+
+        int read = read(dst);
+        tryScheduleWindowUpdate();
+        return read;
+      } finally {
+        lock.unlock();
+      }
     }
 
     @Override
     public long dataSize() {
-      return TODO();
+      return (long) blockSize * blockCount;
     }
 
     @Override
     public long entrySize() {
-      return TODO();
+      return dataSize() + metadata.remaining();
     }
 
     @Override
@@ -146,20 +355,26 @@ public final class RedisStore implements Store {
 
     @Override
     public boolean removeEntry() throws IOException {
-      return TODO();
+      return false;
     }
 
     @Override
-    public void close() {
-      TODO();
-    }
+    public void close() {}
+  }
+
+  private static ByteBuffer encodeLong(long value) {
+    return UTF_8.encode(Long.toString(value));
+  }
+
+  private static ByteBuffer encodeInt(int value) {
+    return UTF_8.encode(Integer.toString(value));
   }
 
   private static final class RedisEditor implements Editor {
     private final String key;
     private final String redisKey;
     private final String wipRedisKey;
-    private final RedisAsyncCommands<String, ByteBuffer> commands;
+    private final StatefulRedisConnection<String, ByteBuffer> connection;
 
     private @MonotonicNonNull ByteBuffer metadata;
 
@@ -167,14 +382,16 @@ public final class RedisStore implements Store {
 
     private final Lock lock = new ReentrantLock();
 
-    private int blockCount;
+    private int blockIndex;
 
     private boolean commitOnClose;
     private boolean closed;
 
     private final int blockSize;
 
-    private final int blockCountForFlush = 1;
+    private final int blockCountForFlush = 8;
+
+    private boolean pendingWrite;
 
     private void write(ByteBuffer src) {
       var tail = buffers.isEmpty() ? null : buffers.get(buffers.size() - 1);
@@ -192,12 +409,12 @@ public final class RedisStore implements Store {
         String redisKey,
         String wipRedisKey,
         int blockSize,
-        RedisAsyncCommands<String, ByteBuffer> commands) {
+        StatefulRedisConnection<String, ByteBuffer> connection) {
       this.key = key;
       this.redisKey = redisKey;
       this.wipRedisKey = wipRedisKey;
       this.blockSize = blockSize;
-      this.commands = commands;
+      this.connection = connection;
     }
 
     @Override
@@ -233,30 +450,62 @@ public final class RedisStore implements Store {
 
     @Override
     public CompletableFuture<Integer> writeAsync(long position, java.nio.ByteBuffer src) {
-      // Ignore position for now.
-
-      int toWrite = src.remaining();
-
-      write(src);
-
-      var slice = slice(false);
-      if (slice.size() >= blockCountForFlush) {
-        var snapshot = List.copyOf(slice);
-        slice.clear(); // Remove from the original list.
-
-        int blockIndex = blockCount;
-        blockCount += snapshot.size();
-
-        var blocks = new HashMap<String, ByteBuffer>();
-        for (var buffer : snapshot) {
-          blocks.put("b" + blockIndex, buffer.flip());
-          blockIndex++;
-        }
-
-        return commands.hset(wipRedisKey, blocks).thenApply(__ -> toWrite).toCompletableFuture();
+      // TODO ignore position for now.
+      requireNonNull(src);
+      if (!src.hasRemaining()) {
+        return CompletableFuture.completedFuture(0);
       }
 
-      return CompletableFuture.completedFuture(toWrite);
+      lock.lock();
+      try {
+        requireState(!pendingWrite, "pending write");
+
+        int toWrite = src.remaining();
+
+        write(src);
+
+        var slice = slice(false);
+        if (slice.size() < blockCountForFlush) {
+          return CompletableFuture.completedFuture(toWrite);
+        }
+
+        int localBlockIndex = this.blockIndex;
+
+        var blocks = new HashMap<String, ByteBuffer>();
+        for (var buffer : slice) {
+          blocks.put("b" + localBlockIndex, buffer.flip());
+          localBlockIndex++;
+        }
+
+        pendingWrite = true;
+        return connection
+            .async()
+            .hset(wipRedisKey, blocks)
+            .handle(
+                (__, error) -> {
+                  finishPendingWrite(error != null ? null : slice);
+                  return error != null
+                      ? CompletableFuture.<Integer>failedFuture(error)
+                      : CompletableFuture.completedFuture(toWrite);
+                })
+            .thenCompose(Function.identity())
+            .toCompletableFuture();
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    private void finishPendingWrite(@Nullable List<ByteBuffer> slice) {
+      lock.lock();
+      try {
+        pendingWrite = false;
+        if (slice != null) {
+          blockIndex += slice.size();
+          slice.clear();
+        }
+      } finally {
+        lock.unlock();
+      }
     }
 
     @Override
@@ -271,32 +520,66 @@ public final class RedisStore implements Store {
 
     @Override
     public void close() throws IOException {
-      if (closed) {
-        return;
+      ByteBuffer[] fields;
+
+      lock.lock();
+      try {
+        if (closed) {
+          return;
+        }
+        closed = true;
+
+        if (!commitOnClose) {
+          connection.sync().del(wipRedisKey);
+          return;
+        }
+
+        var slice = slice(true);
+        fields =
+            Stream.concat(
+                    Stream.of(
+                        metadata,
+                        encodeInt(blockIndex),
+                        encodeInt(blockSize),
+                        encodeInt(slice.size())),
+                    slice.stream().map(ByteBuffer::flip))
+                .toArray(ByteBuffer[]::new);
+      } finally {
+        lock.unlock();
       }
-      closed = true;
 
-      if (!commitOnClose) {
-        commands.del(wipRedisKey);
-        return;
-      }
+      System.out.println("here: " + Thread.currentThread().getName());
+      long reply =
+          connection
+              .sync()
+              .eval(
+                  "local metadata = ARGV[1]\n"
+                      + "redis.log(redis.LOG_WARNING, 'here!')\n"
+                      + "local blockCount = ARGV[2]\n"
+                      + "local blockSize = ARGV[3]\n"
+                      + "local remainingBlockCount = ARGV[4]\n"
+                      + "\n"
+                      + "local fields = { 'metadata', metadata, 'blockCount', blockCount + remainingBlockCount, 'blockSize', blockSize }\n"
+                      + "\n"
+                      + "for index = 1, remainingBlockCount do\n"
+                      + "    table.insert(fields, 'b' .. (blockCount + index - 1))\n"
+                      + "    table.insert(fields, ARGV[index + 4])\n"
+                      + "end\n"
+                      + "\n"
+                      + "redis.log(redis.LOG_WARNING, KEYS[2], unpack(fields))\n"
+                      + "redis.call('hset', KEYS[2], unpack(fields))\n"
+                      + "\n"
+                      + "local version = 1 + (redis.call('get', KEYS[1] .. ':version') or -1)\n"
+                      + "redis.log(redis.LOG_WARNING, 'here!')\n"
+                      + "redis.call('rename', KEYS[2], KEYS[1] .. ':' .. version)\n"
+                      + "redis.call('set', KEYS[1] .. ':version', version)\n"
+                      + "redis.call('hdel', KEYS[1] .. ':' .. version, 'lock')\n"
+                      + "return version\n",
+                  ScriptOutputType.INTEGER,
+                  new String[] {redisKey, wipRedisKey},
+                  fields);
 
-      var fields = new HashMap<String, ByteBuffer>();
-      if (metadata != null) {
-        fields.put("metadata", metadata);
-      }
-
-      int blockIndex = blockCount;
-      for (var buffer : slice(true)) {
-        fields.put("b" + blockIndex, buffer.flip());
-        blockIndex++;
-      }
-
-      fields.put("blockCount", UTF_8.encode(Long.toString(blockIndex)));
-      fields.put("blockSize", UTF_8.encode(Long.toString(blockSize)));
-
-      commands.hset(wipRedisKey, fields);
-      Utils.blockOnIO(commands.rename(wipRedisKey, redisKey));
+      System.out.println("Version after committing: " + reply);
     }
   }
 
@@ -332,18 +615,55 @@ public final class RedisStore implements Store {
   }
 
   public static void main(String[] args) throws Exception {
-    try (var client = RedisClient.create(RedisURI.create("redis://localhost"));
-        var connection =
-            client.connect(RedisCodec.of(new StringCodec(UTF_8), ByteBufferCopyCodec.INSTANCE))) {
-      var editor = new RedisEditor("e1", "e1", "e1:wip", 1, connection.async());
-      editor.metadata(UTF_8.encode("123"));
-      editor.writeAsync(0, UTF_8.encode("Optimus Prime"));
-      editor.commitOnClose();
+    try (var client = RedisClient.create(RedisURI.create("redis://localhost"))) {
+      client.setOptions(
+          ClientOptions.builder()
+              .timeoutOptions(TimeoutOptions.builder().fixedTimeout(Duration.ofDays(1)).build())
+              .build());
 
-      System.in.read();
+      var store = new RedisStore(1, client);
+      try (var editor = requireNonNull(store.edit("e1"))) {
+        requireState(store.edit("e1") == null, "multiple editors");
+        editor.metadata(UTF_8.encode("Steve Rogers"));
+        editor.writeAsync(0, UTF_8.encode("Avengers, Assemble!"));
+        editor.commitOnClose();
+      }
 
-      editor.close();
-      System.out.println("Closed");
+      System.out.println("Committed entry");
+
+      try (var viewer = requireNonNull(store.view("e1"))) {
+        var metadata = UTF_8.decode(viewer.metadata()).toString();
+        if (!metadata.equals("Steve Rogers")) {
+          throw new RuntimeException("what? " + metadata);
+        }
+
+        var buffers = new ArrayList<ByteBuffer>();
+
+        var buffer = ByteBuffer.allocate(1);
+        while (viewer.readAsync(0, buffer).join() != -1) {
+          if (!buffer.hasRemaining()) {
+            buffers.add(buffer.flip());
+            buffer = ByteBuffer.allocate(1);
+          }
+        }
+        if (buffer.position() > 0) {
+          buffers.add(buffer.flip());
+        }
+
+        var all =
+            buffers.stream()
+                .reduce(
+                    (b1, b2) ->
+                        ByteBuffer.allocate(b1.remaining() + b2.remaining()).put(b1).put(b2).flip())
+                .orElseThrow();
+
+        var data = UTF_8.decode(all).toString();
+        if (!data.equals("Avengers, Assemble!")) {
+          throw new RuntimeException("what? " + data);
+        }
+      }
     }
+
+    System.out.println("Great success!");
   }
 }

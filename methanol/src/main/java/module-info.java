@@ -40,11 +40,13 @@ module methanol {
   exports com.github.mizosoft.methanol.internal.flow to
       methanol.adapter.jackson,
       methanol.adapter.jackson.flux,
+      methanol.store.redis,
       methanol.testing;
   exports com.github.mizosoft.methanol.internal.extensions to
       methanol.adapter.jackson;
   exports com.github.mizosoft.methanol.internal.concurrent to
       methanol.adapter.jackson,
+      methanol.store.redis,
       methanol.testing;
   exports com.github.mizosoft.methanol.internal.cache to
       methanol.store.redis,
