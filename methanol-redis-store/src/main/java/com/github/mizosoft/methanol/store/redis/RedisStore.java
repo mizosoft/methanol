@@ -60,16 +60,22 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 final class RedisStore implements Store {
-  private final int blockSize;
+  private static final int STORE_VERSION = 1;
+
   private final RedisClient client;
+  private final int blockSize;
+  private final int appVersion;
 
   private final StatefulRedisConnection<String, ByteBuffer> connection;
+  private final ScriptRunner<String, ByteBuffer> scriptRunner;
 
-  RedisStore(int blockSize, RedisClient client) {
+  RedisStore(RedisClient client, int blockSize, int appVersion) {
     this.blockSize = blockSize;
     this.client = requireNonNull(client);
-    this.connection =
+    this.appVersion = appVersion;
+    connection =
         client.connect(RedisCodec.of(new StringCodec(UTF_8), ByteBufferCopyCodec.INSTANCE));
+    scriptRunner = new ScriptRunner<>(connection);
   }
 
   @Override
@@ -92,49 +98,33 @@ final class RedisStore implements Store {
     return TODO();
   }
 
-  private String toRedisKey(String key) {
-    return key;
-  }
-
   @Override
   public @Nullable Viewer view(String key) throws IOException {
-    var commands = connection.sync();
-    var redisKey = toRedisKey(key);
-    List<ByteBuffer> reply =
-        commands.eval(
-            "local version = redis.call('get', KEYS[1] .. ':version')\n"
-                + "if not version then return false end\n"
-                + "local key = KEYS[1] .. ':' .. version\n"
-                + "redis.call('hincrby', key, 'openCount', 1)\n"
-                + "local reply = redis.call('hmget', key, 'metadata', 'blockCount', 'blockSize')\n"
-                + "table.insert(reply, key)\n"
-                + "return reply\n",
-            ScriptOutputType.MULTI,
-            redisKey);
+    var entryKeyPrefix = toEntryKeyPrefix(key);
+    var reply =
+        scriptRunner.<List<ByteBuffer>>run(
+            Script.VIEW, ScriptOutputType.MULTI, new String[] {entryKeyPrefix});
 
-    if (reply.size() == 1) {
+    if (reply.isEmpty()) {
       return null;
     }
 
     var metadata = reply.get(0);
-    int blockCount = Integer.parseInt(UTF_8.decode(reply.get(1)).toString());
-    int blockSize = Integer.parseInt(UTF_8.decode(reply.get(2)).toString());
-    var entryKey = UTF_8.decode(reply.get(3)).toString();
-
-    return new RedisViewer(key, entryKey, metadata, blockSize, blockCount, connection);
+    int blockCount = decodeInt(reply.get(1));
+    int blockSize = decodeInt(reply.get(2));
+    int entryVersion = decodeInt(reply.get(3));
+    return new RedisViewer(
+        key, entryKeyPrefix, metadata, blockSize, blockCount, entryVersion, connection);
   }
 
   @Override
   public @Nullable Editor edit(String key) throws IOException {
-    requireNonNull(key);
-
-    var redisKey = toRedisKey(key);
-    var wipRedisKey = redisKey + ":wip";
+    var entryKeyPrefix = toEntryKeyPrefix(key);
+    var wipEntryKey = entryKeyPrefix + ":wip";
     var commands = connection.sync();
-    if (!commands.hsetnx(wipRedisKey, "lock", encodeInt(1))) {
-      return null;
-    }
-    return new RedisEditor(key, redisKey, wipRedisKey, blockSize, connection);
+    return commands.hsetnx(wipEntryKey, "lock", encodeInt(1))
+        ? new RedisEditor(key, entryKeyPrefix, wipEntryKey, blockSize, connection, scriptRunner)
+        : null;
   }
 
   @Override
@@ -172,6 +162,10 @@ final class RedisStore implements Store {
     TODO();
   }
 
+  private String toEntryKeyPrefix(String key) {
+    return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, requireNonNull(key));
+  }
+
   private static final class RedisViewer implements Viewer {
     private final String key;
     private final String entryKey;
@@ -192,13 +186,14 @@ final class RedisStore implements Store {
 
     private RedisViewer(
         String key,
-        String entryKey,
+        String entryKeyPrefix,
         ByteBuffer metadata,
         int blockSize,
         int blockCount,
+        int entryVersion,
         StatefulRedisConnection<String, ByteBuffer> connection) {
       this.key = key;
-      this.entryKey = entryKey;
+      this.entryKey = entryKeyPrefix + ":" + entryVersion;
       this.metadata = metadata.asReadOnlyBuffer();
       this.blockSize = blockSize;
       this.blockCount = blockCount;
@@ -276,7 +271,7 @@ final class RedisStore implements Store {
           .hmget(
               entryKey,
               IntStream.range(blockIndex, Math.min(blockIndex + count, blockCount))
-                  .mapToObj(i -> "b" + i)
+                  .mapToObj(Integer::toString)
                   .toArray(String[]::new))
           .thenApply(
               result ->
@@ -370,10 +365,14 @@ final class RedisStore implements Store {
     return UTF_8.encode(Integer.toString(value));
   }
 
+  private static int decodeInt(ByteBuffer value) {
+    return Integer.parseInt(UTF_8.decode(value).toString());
+  }
+
   private static final class RedisEditor implements Editor {
     private final String key;
-    private final String redisKey;
-    private final String wipRedisKey;
+    private final String entryKeyPrefix;
+    private final String wipEntryKey;
     private final StatefulRedisConnection<String, ByteBuffer> connection;
 
     private @MonotonicNonNull ByteBuffer metadata;
@@ -392,6 +391,7 @@ final class RedisStore implements Store {
     private final int blockCountForFlush = 8;
 
     private boolean pendingWrite;
+    private final ScriptRunner<String, ByteBuffer> scriptRunner;
 
     private void write(ByteBuffer src) {
       var tail = buffers.isEmpty() ? null : buffers.get(buffers.size() - 1);
@@ -406,15 +406,17 @@ final class RedisStore implements Store {
 
     private RedisEditor(
         String key,
-        String redisKey,
-        String wipRedisKey,
+        String entryKeyPrefix,
+        String wipEntryKey,
         int blockSize,
-        StatefulRedisConnection<String, ByteBuffer> connection) {
+        StatefulRedisConnection<String, ByteBuffer> connection,
+        ScriptRunner<String, ByteBuffer> scriptRunner) {
       this.key = key;
-      this.redisKey = redisKey;
-      this.wipRedisKey = wipRedisKey;
+      this.entryKeyPrefix = entryKeyPrefix;
+      this.wipEntryKey = wipEntryKey;
       this.blockSize = blockSize;
       this.connection = connection;
+      this.scriptRunner = scriptRunner;
     }
 
     @Override
@@ -473,14 +475,14 @@ final class RedisStore implements Store {
 
         var blocks = new HashMap<String, ByteBuffer>();
         for (var buffer : slice) {
-          blocks.put("b" + localBlockIndex, buffer.flip());
+          blocks.put(Integer.toString(localBlockIndex), buffer.flip());
           localBlockIndex++;
         }
 
         pendingWrite = true;
         return connection
             .async()
-            .hset(wipRedisKey, blocks)
+            .hset(wipEntryKey, blocks)
             .handle(
                 (__, error) -> {
                   finishPendingWrite(error != null ? null : slice);
@@ -530,54 +532,32 @@ final class RedisStore implements Store {
         closed = true;
 
         if (!commitOnClose) {
-          connection.sync().del(wipRedisKey);
+          connection.sync().del(wipEntryKey);
           return;
         }
 
         var slice = slice(true);
+        int blockCountSoFar = blockIndex;
+        int remainingBlockCount = slice.size();
         fields =
             Stream.concat(
                     Stream.of(
                         metadata,
-                        encodeInt(blockIndex),
+                        encodeInt(blockCountSoFar),
                         encodeInt(blockSize),
-                        encodeInt(slice.size())),
+                        encodeInt(remainingBlockCount)),
                     slice.stream().map(ByteBuffer::flip))
                 .toArray(ByteBuffer[]::new);
       } finally {
         lock.unlock();
       }
 
-      System.out.println("here: " + Thread.currentThread().getName());
       long reply =
-          connection
-              .sync()
-              .eval(
-                  "local metadata = ARGV[1]\n"
-                      + "redis.log(redis.LOG_WARNING, 'here!')\n"
-                      + "local blockCount = ARGV[2]\n"
-                      + "local blockSize = ARGV[3]\n"
-                      + "local remainingBlockCount = ARGV[4]\n"
-                      + "\n"
-                      + "local fields = { 'metadata', metadata, 'blockCount', blockCount + remainingBlockCount, 'blockSize', blockSize }\n"
-                      + "\n"
-                      + "for index = 1, remainingBlockCount do\n"
-                      + "    table.insert(fields, 'b' .. (blockCount + index - 1))\n"
-                      + "    table.insert(fields, ARGV[index + 4])\n"
-                      + "end\n"
-                      + "\n"
-                      + "redis.log(redis.LOG_WARNING, KEYS[2], unpack(fields))\n"
-                      + "redis.call('hset', KEYS[2], unpack(fields))\n"
-                      + "\n"
-                      + "local version = 1 + (redis.call('get', KEYS[1] .. ':version') or -1)\n"
-                      + "redis.log(redis.LOG_WARNING, 'here!')\n"
-                      + "redis.call('rename', KEYS[2], KEYS[1] .. ':' .. version)\n"
-                      + "redis.call('set', KEYS[1] .. ':version', version)\n"
-                      + "redis.call('hdel', KEYS[1] .. ':' .. version, 'lock')\n"
-                      + "return version\n",
-                  ScriptOutputType.INTEGER,
-                  new String[] {redisKey, wipRedisKey},
-                  fields);
+          scriptRunner.run(
+              Script.COMMIT,
+              ScriptOutputType.INTEGER,
+              new String[] {entryKeyPrefix, wipEntryKey},
+              fields);
 
       System.out.println("Version after committing: " + reply);
     }
@@ -607,9 +587,9 @@ final class RedisStore implements Store {
     }
 
     private static ByteBuffer copy(ByteBuffer source) {
-      ByteBuffer copy = ByteBuffer.allocate(source.remaining());
-      copy.put(source);
-      copy.flip();
+      source.mark();
+      var copy = Utils.copy(source);
+      source.reset();
       return copy;
     }
   }
@@ -621,7 +601,7 @@ final class RedisStore implements Store {
               .timeoutOptions(TimeoutOptions.builder().fixedTimeout(Duration.ofDays(1)).build())
               .build());
 
-      var store = new RedisStore(1, client);
+      var store = new RedisStore(client, 1, 1);
       try (var editor = requireNonNull(store.edit("e1"))) {
         requireState(store.edit("e1") == null, "multiple editors");
         editor.metadata(UTF_8.encode("Steve Rogers"));
