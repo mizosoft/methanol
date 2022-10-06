@@ -9,3 +9,4 @@ local reply = redis.call('hmget', KEYS[1] .. ':' .. version, 'metadata', 'blockC
 
 table.insert(reply, version)
 return reply
+
