@@ -32,8 +32,8 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 enum Script {
   COMMIT("commit.lua"),
   VIEW("view.lua"),
-  COMMIT2("commit2.lua"),
-  VIEW2("view2.lua");
+  EDIT_VERSION("edit_version.lua"),
+  REMOVE("remove.lua");
 
   private static final String SCRIPTS_PATH = "/scripts/";
 

@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.store.redis;
 
 import static com.github.mizosoft.methanol.internal.Validate.TODO;
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -33,6 +34,8 @@ import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
+import io.lettuce.core.ScanArgs;
+import io.lettuce.core.ScanCursor;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.codec.RedisCodec;
@@ -42,9 +45,13 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -55,14 +62,12 @@ final class RedisStore implements Store {
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
   private final RedisClient client;
-  private final int blockSize;
   private final int appVersion;
 
   private final StatefulRedisConnection<String, ByteBuffer> connection;
   private final ScriptRunner<String, ByteBuffer> scriptRunner;
 
-  RedisStore(RedisClient client, int blockSize, int appVersion) {
-    this.blockSize = blockSize;
+  RedisStore(RedisClient client, int appVersion) {
     this.client = requireNonNull(client);
     this.appVersion = appVersion;
     connection =
@@ -92,10 +97,11 @@ final class RedisStore implements Store {
 
   @Override
   public @Nullable Viewer view(String key) throws IOException {
-    var redisKeyPrefix = toEntryKeyPrefix(key);
-    var reply =
-        scriptRunner.<List<ByteBuffer>>run(
-            Script.VIEW2, ScriptOutputType.MULTI, new String[] {redisKeyPrefix});
+    return openViewer(toRedisKey(key));
+  }
+
+  private @Nullable Viewer openViewer(String redisKey) throws IOException {
+    var reply = scriptRunner.<List<ByteBuffer>>run(Script.VIEW, ScriptOutputType.MULTI, redisKey);
 
     if (reply.isEmpty()) {
       return null;
@@ -105,26 +111,30 @@ final class RedisStore implements Store {
     long dataSize = decodeLong(reply.get(1));
     long version = decodeLong(reply.get(2));
     var dataKey = UTF_8.decode(reply.get(3)).toString();
-    return new RedisViewer2(key, metadata, dataSize, dataKey, version, connection);
+    return new RedisViewer(
+        "", redisKey, metadata, dataSize, version, dataKey, connection, scriptRunner);
   }
 
   @Override
   public @Nullable Editor edit(String key) throws IOException {
-    var redisKeyPrefix = toEntryKeyPrefix(key);
-    var wipDataKey = redisKeyPrefix + ":data:wip";
+    var redisKey = toRedisKey(key);
+    var wipDataKey = redisKey + ":data:wip";
     return connection.sync().setnx(wipDataKey, EMPTY_BUFFER)
-        ? new RedisEditor2(key, redisKeyPrefix, wipDataKey, connection, scriptRunner)
+        ? new RedisEditor(key, redisKey, wipDataKey, connection, scriptRunner)
         : null;
   }
 
   @Override
   public Iterator<Viewer> iterator() throws IOException {
-    return TODO();
+    var iterator = new ScanningViewerIterator(connection, toRedisKey("*"));
+    iterator.fireScan(ScanCursor.INITIAL);
+    return iterator;
   }
 
   @Override
   public boolean remove(String key) throws IOException {
-    return TODO();
+    return scriptRunner.run(
+        Script.REMOVE, ScriptOutputType.BOOLEAN, new String[] {toRedisKey(key)}, encodeLong(-1));
   }
 
   @Override
@@ -152,31 +162,166 @@ final class RedisStore implements Store {
     TODO();
   }
 
-  private String toEntryKeyPrefix(String key) {
+  private String toRedisKey(String key) {
     return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, requireNonNull(key));
   }
 
-  private static final class RedisViewer2 implements Viewer {
+  private final class ScanningViewerIterator implements Iterator<Viewer> {
+    private final StatefulRedisConnection<String, ByteBuffer> connection;
+    private final ScanArgs args;
+    private final BlockingQueue<ScanSignal> queue = new LinkedBlockingQueue<>();
+
+    private @Nullable Viewer nextViewer;
+    private @Nullable Viewer currentViewer;
+
+    private boolean finished;
+    private @MonotonicNonNull Throwable error;
+
+    ScanningViewerIterator(StatefulRedisConnection<String, ByteBuffer> connection, String pattern) {
+      this.connection = connection;
+      this.args = ScanArgs.Builder.limit(512).match(pattern, UTF_8);
+    }
+
+    @Override
+    public boolean hasNext() {
+      return nextViewer != null || findNext();
+    }
+
+    @Override
+    public Viewer next() {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
+      }
+      var viewer = castNonNull(nextViewer);
+      nextViewer = null;
+      currentViewer = viewer;
+      return viewer;
+    }
+
+    @Override
+    public void remove() {
+      var viewer = currentViewer;
+      requireState(viewer != null, "next() must be called before remove()");
+      currentViewer = null;
+      try {
+        viewer.removeEntry();
+      } catch (IOException e) {
+        // logger.log(Level.WARNING, "entry removal failure", e);
+      } catch (IllegalStateException ignored) {
+        // Fail silently if the store is closed.
+      }
+    }
+
+    private boolean findNext() {
+      while (true) {
+        if (finished) {
+          return false;
+        }
+
+        if (error != null) {
+          if (error instanceof RuntimeException) {
+            throw (RuntimeException) error;
+          } else if (error instanceof Error) {
+            throw (Error) error;
+          } else {
+            throw new CompletionException(error);
+          }
+        }
+
+        try {
+          var signal = queue.take();
+          if (signal instanceof ScanKey) {
+            var viewer = openViewer(((ScanKey) signal).key);
+            if (viewer != null) {
+              nextViewer = viewer;
+              return true;
+            }
+          } else if (signal instanceof ScanCompletion) {
+            var cursor = ((ScanCompletion) signal).cursor;
+            if (cursor.isFinished()) {
+              finished = true;
+            } else {
+              fireScan(cursor);
+            }
+          } else {
+            error = ((ScanError) signal).error;
+          }
+        } catch (InterruptedException e) {
+          finished = true;
+        } catch (IOException ignored) {
+          // TODO log.
+        }
+      }
+    }
+
+    void fireScan(ScanCursor cursor) {
+      connection
+          .async()
+          .scan(key -> queue.add(new ScanKey(key)), cursor, args)
+          .whenComplete(
+              (nextCursor, error) -> {
+                if (nextCursor != null) {
+                  queue.add(new ScanCompletion(nextCursor));
+                } else {
+                  queue.add(new ScanError(error));
+                }
+              });
+    }
+  }
+
+  private interface ScanSignal {}
+
+  private static final class ScanKey implements ScanSignal {
+    final String key;
+
+    ScanKey(String key) {
+      this.key = key;
+    }
+  }
+
+  private static final class ScanCompletion implements ScanSignal {
+    final ScanCursor cursor;
+
+    ScanCompletion(ScanCursor cursor) {
+      this.cursor = cursor;
+    }
+  }
+
+  private static final class ScanError implements ScanSignal {
+    final Throwable error;
+
+    ScanError(Throwable error) {
+      this.error = error;
+    }
+  }
+
+  private static final class RedisViewer implements Viewer {
     private final String key;
+    private final String redisKey;
     private final ByteBuffer metadata;
     private final long dataSize;
-    private final String dataKey;
     private final long version;
+    private final String dataKey;
     private final StatefulRedisConnection<String, ByteBuffer> connection;
+    private final ScriptRunner<String, ByteBuffer> scriptRunner;
 
-    private RedisViewer2(
+    RedisViewer(
         String key,
+        String redisKey,
         ByteBuffer metadata,
         long dataSize,
-        String dataKey,
         long version,
-        StatefulRedisConnection<String, ByteBuffer> connection) {
+        String dataKey,
+        StatefulRedisConnection<String, ByteBuffer> connection,
+        ScriptRunner<String, ByteBuffer> scriptRunner) {
       this.key = key;
+      this.redisKey = redisKey;
       this.metadata = metadata.asReadOnlyBuffer();
       this.dataSize = dataSize;
-      this.dataKey = dataKey;
       this.version = version;
+      this.dataKey = dataKey;
       this.connection = connection;
+      this.scriptRunner = scriptRunner;
     }
 
     @Override
@@ -196,6 +341,10 @@ final class RedisStore implements Store {
 
       if (position >= dataSize) {
         return CompletableFuture.completedFuture(-1);
+      }
+
+      if (!dst.hasRemaining()) {
+        return CompletableFuture.completedFuture(0);
       }
 
       // TODO handle failed getrange for stale entries.
@@ -218,12 +367,17 @@ final class RedisStore implements Store {
 
     @Override
     public @Nullable Editor edit() throws IOException {
-      return TODO();
+      return scriptRunner.run(
+          Script.EDIT_VERSION,
+          ScriptOutputType.BOOLEAN,
+          new String[] {redisKey},
+          encodeLong(version));
     }
 
     @Override
     public boolean removeEntry() throws IOException {
-      return TODO();
+      return scriptRunner.run(
+          Script.REMOVE, ScriptOutputType.BOOLEAN, new String[] {redisKey}, encodeLong(version));
     }
 
     @Override
@@ -232,7 +386,7 @@ final class RedisStore implements Store {
     }
   }
 
-  private static final class RedisEditor2 implements Editor {
+  private static final class RedisEditor implements Editor {
     private final String key;
     private final String redisKeyPrefix;
     private final String dataKey;
@@ -245,7 +399,7 @@ final class RedisStore implements Store {
     private boolean closed;
     private boolean commitData;
 
-    private RedisEditor2(
+    RedisEditor(
         String key,
         String redisKeyPrefix,
         String dataKey,
@@ -340,7 +494,7 @@ final class RedisStore implements Store {
 
       var reply =
           scriptRunner.run(
-              Script.COMMIT2,
+              Script.COMMIT,
               ScriptOutputType.STATUS,
               new String[] {redisKeyPrefix},
               metadata,
@@ -390,17 +544,14 @@ final class RedisStore implements Store {
     }
 
     private static ByteBuffer copy(ByteBuffer source) {
-      source.mark();
-      var copy = Utils.copy(source);
-      source.reset();
-      return copy;
+      return Utils.copy(source.duplicate());
     }
   }
 
   public static void main(String[] args) throws Exception {
     try (var client = RedisClient.create(RedisURI.create("redis://localhost"))) {
 
-      var store = new RedisStore(client, 1, 1);
+      var store = new RedisStore(client, 1);
       try (var editor = requireNonNull(store.edit("e1"))) {
         requireState(store.edit("e1") == null, "multiple editors");
         editor.metadata(UTF_8.encode("Steve Rogers"));
@@ -444,6 +595,13 @@ final class RedisStore implements Store {
           throw new RuntimeException("what? " + data);
         }
       }
+
+      var iter = store.iterator();
+      System.out.println("Has next? " + iter.hasNext());
+      System.out.println("Next metadata: " + UTF_8.decode(iter.next().metadata()));
+
+      store.remove("e1");
+      System.out.println("After removal: " + store.view("e1"));
     }
 
     System.out.println("Great success!");

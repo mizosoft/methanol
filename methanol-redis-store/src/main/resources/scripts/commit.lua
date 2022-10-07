@@ -1,24 +1,52 @@
 local metadata = ARGV[1]
-local blockCountSoFar = ARGV[2]
-local blockSize = ARGV[3]
-local remainingBlockCount = ARGV[4]
-local fields = { 'metadata', metadata, 'blockCount', blockCountSoFar + remainingBlockCount, 'blockSize', blockSize }
+local commitMetadata = ARGV[2] == '1'
+local commitData = ARGV[3] == '1'
 
--- Add the remaining blocks as key-val pairs.
-for i = 1, remainingBlockCount do
-    table.insert(fields, blockCountSoFar + i - 1)
-    table.insert(fields, ARGV[i + 4])
+-- Must commit at least either of metadata or data.
+if not commitMetadata and not commitData then
+    return redis.error_reply('neither metadata nor data is to be committed')
 end
 
-local wipEntryKey = KEYS[2]
-local entryKeyPrefix = KEYS[1]
-local updatedVersion = 1 + (redis.call('get', entryKeyPrefix .. ':version') or -1)
+local version, dataVersion, dataSize, openCount = unpack(
+        redis.call('hmget', KEYS[1], 'version', 'dataVersion', 'dataSize', 'openCount'))
+local newVersion = 1 + (version or 0)
 
-redis.call('hset', wipEntryKey, unpack(fields))
-redis.call('rename', wipEntryKey, entryKeyPrefix .. ':' .. updatedVersion)
-redis.call('set', entryKeyPrefix .. ':version', updatedVersion)
+local newDataSize, newDataVersion
+if commitData then
+    newDataSize = redis.call('strlen', KEYS[1] .. ':data:wip')
+    newDataVersion = 1 + (dataVersion or 0)
 
--- Delete the lock field carried over from the wip entry.
-redis.call('hdel', entryKeyPrefix .. ':' .. updatedVersion, 'lock')
+    redis.call('rename', KEYS[1] .. ':data:wip', KEYS[1] .. ':data:' .. newDataVersion)
 
-return updatedVersion
+    if version then
+        if openCount == 0 then
+            redis.call('unlink', KEYS[1] .. ':data:' .. dataVersion)
+        else
+            -- TODO handle expiry of stale entries.
+            redis.call('rename', KEYS[1] .. ':data:' .. dataVersion, KEYS[1] .. ':data:' .. dataVersion .. ':stale')
+        end
+    end
+else
+    redis.call('unlink', KEYS[1] .. ':data:wip')
+
+    if not version then
+        -- This is a new entry with no data stream.
+        newDataSize = 0
+        newDataVersion = 0
+        redis.call('set', KEYS[1] .. ':data:0', '')
+    else
+        -- Keep the data stream of the older entry.
+        newDataSize = dataSize
+        newDataVersion = dataVersion
+    end
+end
+
+local updatedFields = { 'version', newVersion, 'dataVersion', newDataVersion, 'dataSize', newDataSize, 'openCount', 0 }
+if commitMetadata then
+    table.insert(updatedFields, 'metadata')
+    table.insert(updatedFields, metadata)
+end
+
+redis.call('hset', KEYS[1], unpack(updatedFields))
+
+return redis.status_reply("commit entry: " .. newVersion .. ', ' .. newDataVersion)

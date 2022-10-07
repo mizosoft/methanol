@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.store.redis;
 
+import static com.github.mizosoft.methanol.internal.Validate.TODO;
+
 import io.lettuce.core.RedisNoScriptException;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -29,13 +31,25 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 class ScriptRunner<K, V> {
+  private static final Object[] EMPTY_OBJECT_ARRAY = new Object[0];
+
   private final StatefulRedisConnection<K, V> connection;
+
+  CompletableFuture<Void> loadScriptsAsync(Script... scripts) {
+    return TODO();
+  }
 
   ScriptRunner(StatefulRedisConnection<K, V> connection) {
     this.connection = connection;
   }
 
-  <T> T run(Script script, ScriptOutputType outputType, K[] keys, V... values) {
+  @SuppressWarnings("unchecked")
+  final <T> T run(Script script, ScriptOutputType outputType, K... keys) {
+    return run(script, outputType, keys, (V[]) EMPTY_OBJECT_ARRAY);
+  }
+
+  @SafeVarargs
+  final <T> T run(Script script, ScriptOutputType outputType, K[] keys, V... values) {
     var commands = connection.sync();
     try {
       return commands.evalsha(script.sha1(), outputType, keys, values);
@@ -44,7 +58,8 @@ class ScriptRunner<K, V> {
     }
   }
 
-  <T> CompletableFuture<T> runAsync(
+  @SafeVarargs
+  final <T> CompletableFuture<T> runAsync(
       Script script, ScriptOutputType outputType, K[] keys, V... values) {
     var commands = connection.async();
     return commands
