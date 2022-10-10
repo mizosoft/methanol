@@ -2,9 +2,13 @@ local metadata = ARGV[1]
 local commitMetadata = ARGV[2] == '1'
 local commitData = ARGV[3] == '1'
 
--- Must commit at least either of metadata or data.
 if not commitMetadata and not commitData then
-    return redis.error_reply('neither metadata nor data is to be committed')
+    redis.call('unlink', KEYS[1] .. ':data:wip')
+    return redis.status_reply('edit discarded')
+end
+
+if not redis.exists(KEYS[1] .. ':data:wip') then
+    return redis.status_reply('edit discarded')
 end
 
 local version, dataVersion, dataSize, openCount = unpack(
@@ -32,8 +36,8 @@ else
     if not version then
         -- This is a new entry with no data stream.
         newDataSize = 0
-        newDataVersion = 0
-        redis.call('set', KEYS[1] .. ':data:0', '')
+        newDataVersion = 1
+        redis.call('set', KEYS[1] .. ':data:1', '')
     else
         -- Keep the data stream of the older entry.
         newDataSize = dataSize

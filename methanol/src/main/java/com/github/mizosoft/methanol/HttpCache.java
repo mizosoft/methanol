@@ -159,6 +159,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return statsRecorder.snapshot(uri);
   }
 
+  // TODO deferring initialization complicates store implementations where most methods depend on
+  //      the resources being initialized. Consider the alternative of always initializing in
+  //      Builder::build and have a Builder::buildAsync for async initialization.
+
   /**
    * Initializes this cache. A cache that operates on disk needs to initialize its in-memory data
    * structures before usage to restore indexing data from previous sessions. Initialization entails

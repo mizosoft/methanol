@@ -22,17 +22,23 @@
 
 package com.github.mizosoft.methanol.store.redis;
 
-import static com.github.mizosoft.methanol.internal.Validate.TODO;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
+import static com.github.mizosoft.methanol.store.redis.Script.COMMIT;
+import static com.github.mizosoft.methanol.store.redis.Script.EDIT;
+import static com.github.mizosoft.methanol.store.redis.Script.REMOVE;
+import static com.github.mizosoft.methanol.store.redis.Script.VIEW;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
+import static java.util.Objects.requireNonNullElseGet;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisException;
+import io.lettuce.core.RedisNoScriptException;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
@@ -41,19 +47,23 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -61,18 +71,17 @@ final class RedisStore implements Store {
   private static final int STORE_VERSION = 1;
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
-  private final RedisClient client;
   private final int appVersion;
-
   private final StatefulRedisConnection<String, ByteBuffer> connection;
-  private final ScriptRunner<String, ByteBuffer> scriptRunner;
+  private final AtomicInteger connectionRefCount = new AtomicInteger(1);
+  private final Set<RedisEditor> openEditors = ConcurrentHashMap.newKeySet();
+  private final ReadWriteLock closeLock = new ReentrantReadWriteLock();
+  private boolean closed;
 
-  RedisStore(RedisClient client, int appVersion) {
-    this.client = requireNonNull(client);
-    this.appVersion = appVersion;
+  RedisStore(RedisClient client, RedisURI redisUri, int appVersion) {
     connection =
-        client.connect(RedisCodec.of(new StringCodec(UTF_8), ByteBufferCopyCodec.INSTANCE));
-    scriptRunner = new ScriptRunner<>(connection);
+        client.connect(RedisCodec.of(new StringCodec(UTF_8), ByteBufferCodec.INSTANCE), redisUri);
+    this.appVersion = appVersion;
   }
 
   @Override
@@ -86,90 +95,230 @@ final class RedisStore implements Store {
   }
 
   @Override
-  public void initialize() throws IOException {
-    TODO();
-  }
+  public void initialize() {}
 
   @Override
   public CompletableFuture<Void> initializeAsync() {
-    return TODO();
+    return CompletableFuture.completedFuture(null);
   }
 
   @Override
-  public @Nullable Viewer view(String key) throws IOException {
-    return openViewer(toRedisKey(key));
+  public @Nullable Viewer view(String key) {
+    return openViewer(key, toEntryKey(key));
   }
 
-  private @Nullable Viewer openViewer(String redisKey) throws IOException {
-    var reply = scriptRunner.<List<ByteBuffer>>run(Script.VIEW, ScriptOutputType.MULTI, redisKey);
+  @Override
+  public @Nullable Editor edit(String key) {
+    return openEditor(key, toEntryKey(key), -1);
+  }
 
-    if (reply.isEmpty()) {
-      return null;
+  @Override
+  public Iterator<Viewer> iterator() {
+    return iterator(true);
+  }
+
+  @Override
+  public boolean remove(String key) {
+    return removeEntry(toEntryKey(key), -1);
+  }
+
+  @Override
+  public void clear() {
+    closeLock.readLock().lock();
+    try {
+      requireNotClosed();
+      unguardedClear();
+    } finally {
+      closeLock.readLock().unlock();
     }
-
-    var metadata = reply.get(0);
-    long dataSize = decodeLong(reply.get(1));
-    long version = decodeLong(reply.get(2));
-    var dataKey = UTF_8.decode(reply.get(3)).toString();
-    return new RedisViewer(
-        "", redisKey, metadata, dataSize, version, dataKey, connection, scriptRunner);
   }
 
   @Override
-  public @Nullable Editor edit(String key) throws IOException {
-    var redisKey = toRedisKey(key);
-    var wipDataKey = redisKey + ":data:wip";
-    return connection.sync().setnx(wipDataKey, EMPTY_BUFFER)
-        ? new RedisEditor(key, redisKey, wipDataKey, connection, scriptRunner)
-        : null;
+  public long size() {
+    closeLock.readLock().lock();
+    try {
+      requireNotClosed();
+      long size = 0;
+      var iter = iterator(false);
+      while (iter.hasNext()) {
+        try (var viewer = iter.next()) {
+          size += viewer.entrySize();
+        }
+      }
+      return size;
+    } finally {
+      closeLock.readLock().unlock();
+    }
   }
 
   @Override
-  public Iterator<Viewer> iterator() throws IOException {
-    var iterator = new ScanningViewerIterator(connection, toRedisKey("*"));
+  public void dispose() {
+    doClose(true);
+  }
+
+  @Override
+  public void close() {
+    doClose(false);
+  }
+
+  private @Nullable Viewer openViewer(@Nullable String key, String entryKey) {
+    closeLock.readLock().lock();
+    try {
+      requireNotClosed();
+      List<ByteBuffer> viewResult = runScript(VIEW, ScriptOutputType.MULTI, List.of(entryKey));
+      var viewer =
+          viewResult.isEmpty()
+              ? null
+              : new RedisViewer(
+                  key,
+                  entryKey,
+                  viewResult.get(0), // metadata
+                  decodeLong(viewResult.get(1)), // dataSize
+                  decodeLong(viewResult.get(2)), // version
+                  UTF_8.decode(viewResult.get(3)).toString()); // dataKey
+      if (viewer != null) {
+        referenceConnection();
+      }
+      return viewer;
+    } finally {
+      closeLock.readLock().unlock();
+    }
+  }
+
+  private @Nullable Editor openEditor(@Nullable String key, String entryKey, long version) {
+    closeLock.readLock().lock();
+    try {
+      requireNotClosed();
+      var wipDataKey = entryKey + ":data:wip";
+      var editor =
+          runScript(EDIT, ScriptOutputType.BOOLEAN, List.of(entryKey), encodeLong(version))
+              ? new RedisEditor(key, entryKey, wipDataKey)
+              : null;
+      if (editor != null) {
+        openEditors.add(editor);
+        referenceConnection();
+      }
+      return editor;
+    } finally {
+      closeLock.readLock().unlock();
+    }
+  }
+
+  private boolean removeEntry(String entryKey, long version) {
+    closeLock.readLock().lock();
+    try {
+      requireNotClosed();
+      return runScript(REMOVE, ScriptOutputType.BOOLEAN, List.of(entryKey), encodeLong(version));
+    } finally {
+      closeLock.readLock().unlock();
+    }
+  }
+
+  private Iterator<Viewer> iterator(boolean concurrentlyCloseable) {
+    var pattern = toEntryKey("*"); // Match all keys.
+    var iterator =
+        concurrentlyCloseable
+            ? new ClosureAwareScanningViewerIterator(pattern)
+            : new ScanningViewerIterator(toEntryKey("*"));
     iterator.fireScan(ScanCursor.INITIAL);
     return iterator;
   }
 
-  @Override
-  public boolean remove(String key) throws IOException {
-    return scriptRunner.run(
-        Script.REMOVE, ScriptOutputType.BOOLEAN, new String[] {toRedisKey(key)}, encodeLong(-1));
+  private void unguardedClear() {
+    var iter = iterator(false);
+    while (iter.hasNext()) {
+      try (var viewer = iter.next()) {
+        viewer.removeEntry();
+      } catch (IOException e) {
+        // RedisViewer doesn't throw IOExceptions.
+        throw new AssertionError(e);
+      }
+    }
+  }
+
+  private void doClose(boolean dispose) {
+    closeLock.writeLock().lock();
+    try {
+      if (closed) {
+        return;
+      }
+      closed = true;
+    } finally {
+      closeLock.writeLock().unlock();
+    }
+
+    try {
+      // Prevent active editors from committing successfully. We know no editors can be added
+      // concurrently since we've set closed to `true`, and editors are added within
+      // closeLock.readLock() scope only if yet closed.
+      openEditors.forEach(RedisEditor::discard);
+      openEditors.clear();
+      if (dispose) {
+        unguardedClear();
+      }
+    } finally {
+      dereferenceConnection();
+    }
   }
 
   @Override
-  public void clear() throws IOException {
-    TODO();
+  public void flush() {}
+
+  private <T> T runScript(
+      Script script, ScriptOutputType outputType, List<String> keys, ByteBuffer... values) {
+    var commands = connection.sync();
+    try {
+      return commands.evalsha(script.sha1(), outputType, keys.toArray(String[]::new), values);
+    } catch (RedisNoScriptException e) {
+      return commands.eval(script.encodedBytes(), outputType, keys.toArray(String[]::new), values);
+    }
   }
 
-  @Override
-  public long size() throws IOException {
-    return TODO();
-  }
-
-  @Override
-  public void dispose() throws IOException {
-    TODO();
-  }
-
-  @Override
-  public void close() throws IOException {
-    TODO();
-  }
-
-  @Override
-  public void flush() throws IOException {
-    TODO();
-  }
-
-  private String toRedisKey(String key) {
+  private String toEntryKey(String key) {
     return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, requireNonNull(key));
   }
 
-  private final class ScanningViewerIterator implements Iterator<Viewer> {
-    private final StatefulRedisConnection<String, ByteBuffer> connection;
+  private void requireNotClosed() {
+    requireState(!closed, "closed");
+  }
+
+  private void referenceConnection() {
+    connectionRefCount.incrementAndGet();
+  }
+
+  private void dereferenceConnection() {
+    if (connectionRefCount.decrementAndGet() == 0) {
+      connection.close();
+    }
+  }
+
+  private static String extractHashTag(String entryKey) {
+    int firstBrace = entryKey.indexOf('{');
+    int lastBrace = entryKey.indexOf('}');
+    requireArgument(
+        firstBrace >= 0 && lastBrace >= 0 && firstBrace + 1 < lastBrace, "improper hash tag");
+    return entryKey.substring(firstBrace + 1, lastBrace);
+  }
+
+  private static ByteBuffer encodeLong(long value) {
+    return UTF_8.encode(Long.toString(value));
+  }
+
+  private static ByteBuffer encodeInt(int value) {
+    return UTF_8.encode(Integer.toString(value));
+  }
+
+  private static int decodeInt(ByteBuffer value) {
+    return Integer.parseInt(UTF_8.decode(value).toString());
+  }
+
+  private static long decodeLong(ByteBuffer value) {
+    return Long.parseLong(UTF_8.decode(value).toString());
+  }
+
+  private class ScanningViewerIterator implements Iterator<Viewer> {
     private final ScanArgs args;
-    private final BlockingQueue<ScanSignal> queue = new LinkedBlockingQueue<>();
+    final BlockingQueue<ScanSignal> queue = new LinkedBlockingQueue<>();
 
     private @Nullable Viewer nextViewer;
     private @Nullable Viewer currentViewer;
@@ -177,9 +326,8 @@ final class RedisStore implements Store {
     private boolean finished;
     private @MonotonicNonNull Throwable error;
 
-    ScanningViewerIterator(StatefulRedisConnection<String, ByteBuffer> connection, String pattern) {
-      this.connection = connection;
-      this.args = ScanArgs.Builder.limit(512).match(pattern, UTF_8);
+    ScanningViewerIterator(String pattern) {
+      this.args = ScanArgs.Builder.limit(256).match(pattern, UTF_8);
     }
 
     @Override
@@ -206,9 +354,12 @@ final class RedisStore implements Store {
       try {
         viewer.removeEntry();
       } catch (IOException e) {
-        // logger.log(Level.WARNING, "entry removal failure", e);
+        // RedisViewer doesn't throw IOExceptions.
+        throw new AssertionError(e);
+      } catch (RedisException e) {
+        // TODO log.
       } catch (IllegalStateException ignored) {
-        // Fail silently if the store is closed.
+        // Fail silently if closed.
       }
     }
 
@@ -224,14 +375,14 @@ final class RedisStore implements Store {
           } else if (error instanceof Error) {
             throw (Error) error;
           } else {
-            throw new CompletionException(error);
+            throw new UncheckedIOException(new IOException(error));
           }
         }
 
         try {
           var signal = queue.take();
           if (signal instanceof ScanKey) {
-            var viewer = openViewer(((ScanKey) signal).key);
+            var viewer = openViewer(null, ((ScanKey) signal).key);
             if (viewer != null) {
               nextViewer = viewer;
               return true;
@@ -247,25 +398,56 @@ final class RedisStore implements Store {
             error = ((ScanError) signal).error;
           }
         } catch (InterruptedException e) {
+          // To handle interruption gracefully, we just end the iteration process.
           finished = true;
-        } catch (IOException ignored) {
-          // TODO log.
         }
       }
     }
 
     void fireScan(ScanCursor cursor) {
+      referenceConnection();
       connection
           .async()
           .scan(key -> queue.add(new ScanKey(key)), cursor, args)
-          .whenComplete(
-              (nextCursor, error) -> {
-                if (nextCursor != null) {
-                  queue.add(new ScanCompletion(nextCursor));
-                } else {
-                  queue.add(new ScanError(error));
-                }
-              });
+          .whenComplete(this::onScanCompletion);
+    }
+
+    private void onScanCompletion(ScanCursor cursor, Throwable error) {
+      try {
+        if (error != null) {
+          queue.add(new ScanError(error));
+        } else {
+          queue.add(new ScanCompletion(cursor));
+        }
+      } finally {
+        dereferenceConnection();
+      }
+    }
+  }
+
+  /**
+   * A {@code ScanningViewerIterator} that finishes iteration if the store is closed while
+   * iterating.
+   */
+  private final class ClosureAwareScanningViewerIterator extends ScanningViewerIterator {
+    ClosureAwareScanningViewerIterator(String pattern) {
+      super(pattern);
+    }
+
+    @Override
+    void fireScan(ScanCursor cursor) {
+      closeLock.readLock().lock();
+      try {
+        // If the store is closed concurrently, finish iteration gracefully.
+        if (closed) {
+          queue.add(new ScanCompletion(ScanCursor.FINISHED));
+          return;
+        }
+
+        super.fireScan(cursor);
+      } finally {
+        closeLock.readLock().unlock();
+      }
     }
   }
 
@@ -295,38 +477,32 @@ final class RedisStore implements Store {
     }
   }
 
-  private static final class RedisViewer implements Viewer {
-    private final String key;
-    private final String redisKey;
+  private final class RedisViewer implements Viewer {
+    private final @Nullable String key;
+    private final String entryKey;
     private final ByteBuffer metadata;
     private final long dataSize;
     private final long version;
     private final String dataKey;
-    private final StatefulRedisConnection<String, ByteBuffer> connection;
-    private final ScriptRunner<String, ByteBuffer> scriptRunner;
 
     RedisViewer(
-        String key,
-        String redisKey,
+        @Nullable String key,
+        String entryKey,
         ByteBuffer metadata,
         long dataSize,
         long version,
-        String dataKey,
-        StatefulRedisConnection<String, ByteBuffer> connection,
-        ScriptRunner<String, ByteBuffer> scriptRunner) {
+        String dataKey) {
       this.key = key;
-      this.redisKey = redisKey;
+      this.entryKey = entryKey;
       this.metadata = metadata.asReadOnlyBuffer();
       this.dataSize = dataSize;
       this.version = version;
       this.dataKey = dataKey;
-      this.connection = connection;
-      this.scriptRunner = scriptRunner;
     }
 
     @Override
     public String key() {
-      return key;
+      return requireNonNullElseGet(key, () -> extractHashTag(entryKey));
     }
 
     @Override
@@ -338,11 +514,9 @@ final class RedisStore implements Store {
     public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
       requireArgument(position >= 0, "negative position");
       requireNonNull(dst);
-
       if (position >= dataSize) {
         return CompletableFuture.completedFuture(-1);
       }
-
       if (!dst.hasRemaining()) {
         return CompletableFuture.completedFuture(0);
       }
@@ -366,55 +540,44 @@ final class RedisStore implements Store {
     }
 
     @Override
-    public @Nullable Editor edit() throws IOException {
-      return scriptRunner.run(
-          Script.EDIT_VERSION,
-          ScriptOutputType.BOOLEAN,
-          new String[] {redisKey},
-          encodeLong(version));
+    public @Nullable Editor edit() {
+      return openEditor(null, entryKey, version);
     }
 
     @Override
-    public boolean removeEntry() throws IOException {
-      return scriptRunner.run(
-          Script.REMOVE, ScriptOutputType.BOOLEAN, new String[] {redisKey}, encodeLong(version));
+    public boolean removeEntry() {
+      return RedisStore.this.removeEntry(entryKey, version);
     }
 
     @Override
     public void close() {
-      // TODO delete data if openCount is zero and the entry is stale.
+      try {
+        // TODO delete data if openCount is zero and the entry is stale.
+      } finally {
+        dereferenceConnection();
+      }
     }
   }
 
-  private static final class RedisEditor implements Editor {
+  private final class RedisEditor implements Editor {
     private final String key;
-    private final String redisKeyPrefix;
-    private final String dataKey;
-    private final StatefulRedisConnection<String, ByteBuffer> connection;
-
-    private final ScriptRunner<String, ByteBuffer> scriptRunner;
+    private final String entryKey;
+    private final String wipDataKey;
     private final Lock lock = new ReentrantLock();
     private @MonotonicNonNull ByteBuffer metadata;
     private boolean commitOnClose;
-    private boolean closed;
     private boolean commitData;
+    private boolean closed;
 
-    RedisEditor(
-        String key,
-        String redisKeyPrefix,
-        String dataKey,
-        StatefulRedisConnection<String, ByteBuffer> connection,
-        ScriptRunner<String, ByteBuffer> scriptRunner) {
+    RedisEditor(String key, String entryKey, String wipDataKey) {
       this.key = key;
-      this.redisKeyPrefix = redisKeyPrefix;
-      this.dataKey = dataKey;
-      this.connection = connection;
-      this.scriptRunner = scriptRunner;
+      this.entryKey = entryKey;
+      this.wipDataKey = wipDataKey;
     }
 
     @Override
     public String key() {
-      return key;
+      return requireNonNullElseGet(key, () -> extractHashTag(entryKey));
     }
 
     @Override
@@ -435,9 +598,7 @@ final class RedisStore implements Store {
 
       lock.lock();
       try {
-        if (closed) {
-          throw new IllegalStateException("closed");
-        }
+        requireState(!closed, "closed");
         commitData = true;
       } finally {
         lock.unlock();
@@ -450,7 +611,7 @@ final class RedisStore implements Store {
       int remaining = src.remaining();
       return connection
           .async()
-          .append(dataKey, src)
+          .append(wipDataKey, src)
           .thenApply(__ -> remaining)
           .toCompletableFuture();
     }
@@ -466,7 +627,7 @@ final class RedisStore implements Store {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
       ByteBuffer metadata;
       boolean commitMetadata;
       boolean commitData;
@@ -477,50 +638,52 @@ final class RedisStore implements Store {
         }
         closed = true;
 
-        if (!commitOnClose) {
-          return;
-        }
-
-        metadata = requireNonNullElse(this.metadata, EMPTY_BUFFER);
-        commitMetadata = this.metadata != null;
-        commitData = this.commitData;
-
-        if (!commitMetadata && !commitData) {
-          throw new IllegalStateException("nothing to commit");
+        if (commitOnClose) {
+          metadata = requireNonNullElse(this.metadata, EMPTY_BUFFER);
+          commitMetadata = this.metadata != null;
+          commitData = this.commitData;
+        } else {
+          metadata = EMPTY_BUFFER;
+          commitMetadata = false;
+          commitData = false;
         }
       } finally {
         lock.unlock();
       }
 
-      var reply =
-          scriptRunner.run(
-              Script.COMMIT,
-              ScriptOutputType.STATUS,
-              new String[] {redisKeyPrefix},
-              metadata,
-              encodeInt(commitMetadata ? 1 : 0),
-              encodeInt(commitData ? 1 : 0));
-      System.out.println("Commit reply: " + reply);
+      try {
+        runScript(
+            COMMIT,
+            ScriptOutputType.STATUS,
+            List.of(entryKey),
+            metadata,
+            encodeInt(commitMetadata ? 1 : 0),
+            encodeInt(commitData ? 1 : 0));
+      } finally {
+        dereferenceConnection();
+      }
+    }
+
+    void discard() {
+      lock.lock();
+      try {
+        if (closed) {
+          return;
+        }
+        closed = true;
+
+        try {
+          connection.sync().unlink(wipDataKey);
+        } finally {
+          dereferenceConnection();
+        }
+      } finally {
+        lock.unlock();
+      }
     }
   }
 
-  private static ByteBuffer encodeLong(long value) {
-    return UTF_8.encode(Long.toString(value));
-  }
-
-  private static ByteBuffer encodeInt(int value) {
-    return UTF_8.encode(Integer.toString(value));
-  }
-
-  private static int decodeInt(ByteBuffer value) {
-    return Integer.parseInt(UTF_8.decode(value).toString());
-  }
-
-  private static long decodeLong(ByteBuffer value) {
-    return Long.parseLong(UTF_8.decode(value).toString());
-  }
-
-  enum ByteBufferCopyCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
+  private enum ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
     INSTANCE;
 
     @Override
@@ -546,64 +709,5 @@ final class RedisStore implements Store {
     private static ByteBuffer copy(ByteBuffer source) {
       return Utils.copy(source.duplicate());
     }
-  }
-
-  public static void main(String[] args) throws Exception {
-    try (var client = RedisClient.create(RedisURI.create("redis://localhost"))) {
-
-      var store = new RedisStore(client, 1);
-      try (var editor = requireNonNull(store.edit("e1"))) {
-        requireState(store.edit("e1") == null, "multiple editors");
-        editor.metadata(UTF_8.encode("Steve Rogers"));
-        editor.writeAsync(0, UTF_8.encode("Avengers, Assemble!"));
-        editor.commitOnClose();
-      }
-
-      System.out.println("Committed entry");
-
-      try (var viewer = requireNonNull(store.view("e1"))) {
-        var metadata = UTF_8.decode(viewer.metadata()).toString();
-        if (!metadata.equals("Steve Rogers")) {
-          throw new RuntimeException("what? " + metadata);
-        }
-
-        var buffers = new ArrayList<ByteBuffer>();
-
-        var buffer = ByteBuffer.allocate(1);
-        long position = 0;
-        int read;
-        while ((read = viewer.readAsync(position, buffer).join()) != -1) {
-          position += read;
-          if (!buffer.hasRemaining()) {
-            buffers.add(buffer.flip());
-            buffer = ByteBuffer.allocate(1);
-          }
-        }
-        if (buffer.position() > 0) {
-          buffers.add(buffer.flip());
-        }
-
-        var all =
-            buffers.stream()
-                .reduce(
-                    (b1, b2) ->
-                        ByteBuffer.allocate(b1.remaining() + b2.remaining()).put(b1).put(b2).flip())
-                .orElseThrow();
-
-        var data = UTF_8.decode(all).toString();
-        if (!data.equals("Avengers, Assemble!")) {
-          throw new RuntimeException("what? " + data);
-        }
-      }
-
-      var iter = store.iterator();
-      System.out.println("Has next? " + iter.hasNext());
-      System.out.println("Next metadata: " + UTF_8.decode(iter.next().metadata()));
-
-      store.remove("e1");
-      System.out.println("After removal: " + store.view("e1"));
-    }
-
-    System.out.println("Great success!");
   }
 }
