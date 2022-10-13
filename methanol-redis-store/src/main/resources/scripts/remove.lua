@@ -1,19 +1,16 @@
-local version, dataVersion, openCount = unpack(
-        redis.call('hmget', KEYS[1], 'version', 'dataVersion', 'openCount'))
+local entryKey = KEYS[1]
+local targetEntryVersion = ARGV[1]
+local staleEntryExpiryMillis = ARGV[2]
 
-if ARGV[1] ~= '-1' and ARGV[1] ~= version then
+local entryVersion, dataVersion = unpack(redis.call('hmget', entryKey, 'entryVersion', 'dataVersion'))
+if targetEntryVersion ~= '-1' and targetEntryVersion ~= entryVersion then
     return false
 end
 
-local keysToDelete = { KEYS[1] }
-
-if dataVersion then
-    if openCount == 0 then
-        table.insert(keysToDelete, KEYS[1] .. ':data:' .. dataVersion)
-    else
-        -- TODO handle expiry.
-        redis.call('rename', KEYS[1] .. ':data:' .. dataVersion, KEYS[1] .. ':data:' .. dataVersion .. ':stale')
-    end
+local removed = redis.call('unlink', entryKey) > 0
+if removed then
+    local dataKey = entryKey .. ':data:' .. dataVersion
+    redis.call('rename', dataKey, dataKey .. ':stale')
+    redis.call('pexpire', dataKey .. ':stale', staleEntryExpiryMillis)
 end
-
-return redis.call('unlink', unpack(keysToDelete)) >= 1
+return removed
