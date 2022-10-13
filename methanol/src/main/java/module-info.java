@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c)  Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,11 +39,19 @@ module methanol {
   exports com.github.mizosoft.methanol.function;
   exports com.github.mizosoft.methanol.internal.flow to
       methanol.adapter.jackson,
-      methanol.adapter.jackson.flux;
+      methanol.adapter.jackson.flux,
+      methanol.testing;
   exports com.github.mizosoft.methanol.internal.extensions to
       methanol.adapter.jackson;
   exports com.github.mizosoft.methanol.internal.concurrent to
-      methanol.adapter.jackson;
+      methanol.adapter.jackson,
+      methanol.testing;
+  exports com.github.mizosoft.methanol.internal.cache to
+      methanol.testing;
+  exports com.github.mizosoft.methanol.internal.function to
+      methanol.testing;
+  exports com.github.mizosoft.methanol.internal to
+      methanol.testing;
 
   uses com.github.mizosoft.methanol.BodyDecoder.Factory;
   uses com.github.mizosoft.methanol.BodyAdapter.Encoder;

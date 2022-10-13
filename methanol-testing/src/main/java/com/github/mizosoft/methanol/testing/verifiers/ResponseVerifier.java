@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.verifiers;
 
 import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.CONDITIONAL_HIT;
 import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.HIT;

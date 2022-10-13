@@ -4,12 +4,12 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 dependencies {
-  testImplementation(libs.testng)
+  testImplementation project(':methanol-testing')
+  testImplementation libs.testng
   testImplementation libs.junit.params
   testImplementation libs.reactivestreams.tck.flow
   testImplementation libs.mockwebserver
   testImplementation libs.jimfs
-  testImplementation project(':methanol-testing')
 }
 
 compileJava {

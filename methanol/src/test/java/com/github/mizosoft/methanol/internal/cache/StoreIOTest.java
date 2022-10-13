@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,22 +22,23 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testing.TestUtils.toByteArray;
+import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.file.ForwardingAsynchronousFileChannel;
 import com.github.mizosoft.methanol.testing.file.ForwardingFileChannel;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
@@ -45,7 +46,9 @@ import java.nio.channels.FileChannel;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.spi.FileSystemProvider;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -448,5 +451,14 @@ class StoreIOTest {
     assertThat(channel.calls).hasValue(1);
     assertThat(written).isEqualTo(0);
     assertThat(file).usingCharset(UTF_8).hasContent("1234");
+  }
+
+  public static void main(String[] args) throws Exception {
+    var provider =
+        FileSystemProvider.installedProviders().stream()
+            .filter(prov -> prov.getScheme().equalsIgnoreCase("jimfs"))
+            .findFirst()
+            .orElseThrow();
+    System.out.println(provider.newFileSystem(URI.create("jimfs://path"), Map.of()));
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,22 +20,29 @@
  * SOFTWARE.
  */
 
-/** Miscellaneous test utilities used internally. */
-module methanol.testing {
-  requires transitive methanol;
-  requires okhttp3.tls;
-  requires java.logging;
-  requires org.assertj.core;
-  requires org.junit.jupiter.api;
-  requires org.junit.jupiter.params;
-  requires mockwebserver3;
-  requires static org.checkerframework.checker.qual;
+package com.github.mizosoft.methanol.testing.junit;
 
-  exports com.github.mizosoft.methanol.testing;
-  exports com.github.mizosoft.methanol.testing.decoder;
-  exports com.github.mizosoft.methanol.testing.file;
-  exports com.github.mizosoft.methanol.testing.verifiers;
-  exports com.github.mizosoft.methanol.testing.junit;
+import com.github.mizosoft.methanol.internal.cache.DiskStore;
+import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-  uses com.github.mizosoft.methanol.testing.MemoryFileSystemProvider;
+/** {@code DiskStore.Hasher} allowing to explicitly set fake hash codes for some keys. */
+public final class MockHasher implements DiskStore.Hasher {
+  private final Map<String, Hash> mockHashCodes = new ConcurrentHashMap<>();
+
+  MockHasher() {}
+
+  @Override
+  public Hash hash(String key) {
+    // Fallback to default hasher if a fake hash is not set.
+    var mockHash = mockHashCodes.get(key);
+    return mockHash != null ? mockHash : TRUNCATED_SHA_256.hash(key);
+  }
+
+  public void setHash(String key, long upperHashBits) {
+    mockHashCodes.put(
+        key, new Hash(ByteBuffer.allocate(80).putLong(upperHashBits).putShort((short) 0).flip()));
+  }
 }

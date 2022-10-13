@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,21 +24,21 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntry;
-import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
-import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType.SYSTEM;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.MEMORY;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
-import com.github.mizosoft.methanol.testing.StoreConfig;
-import com.github.mizosoft.methanol.testing.StoreExtension;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig;
+import com.github.mizosoft.methanol.testing.junit.StoreExtension;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;

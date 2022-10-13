@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,15 +20,19 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.junit;
 
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution.QUEUED;
+import static java.nio.file.FileVisitResult.CONTINUE;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
-import com.github.mizosoft.methanol.testing.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.MockClock;
+import com.github.mizosoft.methanol.testing.MockDelayer;
+import com.github.mizosoft.methanol.testing.MockExecutor;
 import java.io.IOException;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.FileSystem;
@@ -38,7 +42,6 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -47,7 +50,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Context for the store's configuration. */
+/** A store's configuration for a test case. */
 public final class StoreContext implements AutoCloseable {
   private final ResolvedStoreConfig config;
   private final @Nullable Path directory;
@@ -88,14 +91,14 @@ public final class StoreContext implements AutoCloseable {
 
   public MockHasher hasher() {
     if (hasher == null) {
-      throw new UnsupportedOperationException("unavailable mockHasher");
+      throw new UnsupportedOperationException("unavailable hasher");
     }
     return hasher;
   }
 
   public MockClock clock() {
     if (clock == null) {
-      throw new UnsupportedOperationException("unavailable MockClock");
+      throw new UnsupportedOperationException("unavailable clock");
     }
     return clock;
   }
@@ -121,7 +124,7 @@ public final class StoreContext implements AutoCloseable {
   /** If execution is mocked, makes sure all tasks queued so far are executed. */
   public void drainQueuedTasks() {
     if (delayer != null) {
-      delayer.dispatchExpiredTasks(Instant.MAX, false);
+      delayer.drainQueuedTasks(false);
     }
     if (executor instanceof MockExecutor) {
       ((MockExecutor) executor).runAll();
@@ -150,32 +153,33 @@ public final class StoreContext implements AutoCloseable {
                 .clock(clock)
                 .delayer(delayer)
                 .appVersion(config.appVersion());
-        return config.indexUpdateDelay() != null
-            ? builder.indexUpdateDelay(config.indexUpdateDelay()).build()
-            : builder.build();
+        if (config.indexUpdateDelay() != null) {
+          builder.indexUpdateDelay(config.indexUpdateDelay());
+        }
+        return builder.build();
       default:
         return fail("unexpected StoreType: " + config.storeType());
     }
   }
 
-  void initializeAll() throws IOException {
-    executeOnSameThreadIfExecutionIsQueued();
+  public void initializeAll() throws IOException {
+    executeOnSameThreadIfExecutionIsQueued(true);
     for (var store : createdStores) {
       if (config().autoInit()) {
         store.initialize();
       }
     }
-    unsetExecuteOnSameThreadIfExecutionIsQueued();
+    executeOnSameThreadIfExecutionIsQueued(false);
   }
 
   @Override
   public void close() throws Exception {
-    Exception caughtException = null;
+    var exceptions = new ArrayList<Exception>();
 
-    // First make sure no more tasks are queued
+    // Make sure no more tasks are queued.
     if (delayer != null) {
-      // Ignore rejected tasks as the test might have caused an executor to shutdown
-      delayer.dispatchExpiredTasks(Instant.MAX, /* ignoreRejected */ true);
+      // Ignore rejected tasks as the test might have caused an executor to be shutdown.
+      delayer.drainQueuedTasks(true);
     }
     if (executor instanceof MockExecutor) {
       try {
@@ -183,24 +187,19 @@ public final class StoreContext implements AutoCloseable {
         mockExecutor.executeOnSameThread(true);
         mockExecutor.runAll();
       } catch (Exception e) {
-        caughtException = e;
+        exceptions.add(e);
       }
     }
 
-    // Then close created stores
     for (var store : createdStores) {
       try {
         store.close();
       } catch (Exception e) {
-        if (caughtException != null) {
-          caughtException.addSuppressed(e);
-        } else {
-          caughtException = e;
-        }
+        exceptions.add(e);
       }
     }
 
-    // Then await ExecutorService termination if we have one
+    // Await ExecutorService termination if we have one.
     if (executor instanceof ExecutorService) {
       var service = (ExecutorService) executor;
       service.shutdown();
@@ -209,21 +208,13 @@ public final class StoreContext implements AutoCloseable {
           throw new TimeoutException("timed out while waiting for pool's termination: " + service);
         }
       } catch (Exception e) {
-        if (caughtException != null) {
-          caughtException.addSuppressed(e);
-        } else {
-          caughtException = e;
-        }
+        exceptions.add(e);
       }
     }
 
-    // Then delete the temp directory if we have one
+    // Delete the temp directory if we have one.
     if (directory != null) {
       try {
-        //        System.out.println(directory.getClass() + ", " +
-        // directory.getFileSystem().getClass());
-        //        System.out.println(ForwardingObject.delegate(directory).getClass() + ", " +
-        // ForwardingObject.delegate(directory.getFileSystem()).getClass());
         Files.walkFileTree(
             directory,
             new SimpleFileVisitor<>() {
@@ -231,7 +222,7 @@ public final class StoreContext implements AutoCloseable {
               public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
                   throws IOException {
                 Files.deleteIfExists(file);
-                return FileVisitResult.CONTINUE;
+                return CONTINUE;
               }
 
               @Override
@@ -241,50 +232,42 @@ public final class StoreContext implements AutoCloseable {
                   throw exc;
                 }
                 Files.deleteIfExists(dir);
-                return FileVisitResult.CONTINUE;
+                return CONTINUE;
               }
             });
       } catch (NoSuchFileException | ClosedFileSystemException ignored) {
         // OK
       } catch (Exception e) {
-        if (caughtException != null) {
-          caughtException.addSuppressed(e);
-        } else {
-          caughtException = e;
-        }
+        exceptions.add(e);
       }
     }
 
-    // Finally close the FileSystem if we have one
+    // Close the FileSystem if we have one.
     if (fileSystem != null) {
       try {
         fileSystem.close();
       } catch (Exception e) {
-        if (caughtException != null) {
-          caughtException.addSuppressed(e);
-        } else {
-          throw e;
-        }
+        exceptions.add(e);
       }
     }
 
-    if (caughtException != null) {
-      throw caughtException;
+    if (exceptions.size() == 1) {
+      throw exceptions.get(0);
+    } else if (exceptions.size() > 1) {
+      var compositeException =
+          new IOException("encountered one or more exceptions while closing stores");
+      exceptions.forEach(compositeException::addSuppressed);
+      throw compositeException;
     }
   }
 
   /**
-   * If execution is queued, configures it to run tasks on the same thread instead of queueing them.
+   * If execution is queued, configures whether to run tasks on the same thread instead of queueing
+   * them.
    */
-  private void executeOnSameThreadIfExecutionIsQueued() {
-    if (config.execution() == Execution.QUEUED) {
-      castNonNull((MockExecutor) executor).executeOnSameThread(true);
-    }
-  }
-
-  private void unsetExecuteOnSameThreadIfExecutionIsQueued() {
-    if (config.execution() == Execution.QUEUED) {
-      castNonNull((MockExecutor) executor).executeOnSameThread(false);
+  private void executeOnSameThreadIfExecutionIsQueued(boolean policy) {
+    if (config.execution() == QUEUED) {
+      castNonNull((MockExecutor) executor).executeOnSameThread(policy);
     }
   }
 }

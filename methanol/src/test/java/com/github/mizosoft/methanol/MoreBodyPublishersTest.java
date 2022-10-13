@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,16 +22,16 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
-import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
+import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.FIXED_POOL;
+import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.CharBuffer;
 import java.util.concurrent.Executor;

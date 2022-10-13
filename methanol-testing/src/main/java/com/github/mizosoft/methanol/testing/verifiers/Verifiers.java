@@ -20,10 +20,10 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.verifiers;
 
 import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.testing.DecoderVerifier.BodySubscriberVerifier;
+import com.github.mizosoft.methanol.testing.verifiers.DecoderVerifier.BodySubscriberVerifier;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse;

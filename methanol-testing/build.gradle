@@ -2,4 +2,8 @@ dependencies {
   api project(':methanol')
   implementation libs.okhttp.tls
   implementation libs.assertj
+  implementation platform(libs.junit.bom)
+  implementation libs.junit.jupiter
+  implementation libs.junit.params
+  implementation libs.mockwebserver
 }

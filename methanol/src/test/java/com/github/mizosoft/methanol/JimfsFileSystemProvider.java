@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,22 +20,18 @@
  * SOFTWARE.
  */
 
-/** Miscellaneous test utilities used internally. */
-module methanol.testing {
-  requires transitive methanol;
-  requires okhttp3.tls;
-  requires java.logging;
-  requires org.assertj.core;
-  requires org.junit.jupiter.api;
-  requires org.junit.jupiter.params;
-  requires mockwebserver3;
-  requires static org.checkerframework.checker.qual;
+package com.github.mizosoft.methanol;
 
-  exports com.github.mizosoft.methanol.testing;
-  exports com.github.mizosoft.methanol.testing.decoder;
-  exports com.github.mizosoft.methanol.testing.file;
-  exports com.github.mizosoft.methanol.testing.verifiers;
-  exports com.github.mizosoft.methanol.testing.junit;
+import com.github.mizosoft.methanol.testing.MemoryFileSystemProvider;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import java.nio.file.FileSystem;
 
-  uses com.github.mizosoft.methanol.testing.MemoryFileSystemProvider;
+public final class JimfsFileSystemProvider implements MemoryFileSystemProvider {
+  public JimfsFileSystemProvider() {}
+
+  @Override
+  public FileSystem newMemoryFileSystem() {
+    return Jimfs.newFileSystem(Configuration.unix());
+  }
 }

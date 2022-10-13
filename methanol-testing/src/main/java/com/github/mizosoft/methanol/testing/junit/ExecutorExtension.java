@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,12 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.junit;
 
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -60,6 +61,21 @@ public final class ExecutorExtension
     implements AfterEachCallback, AfterAllCallback, ArgumentsProvider, ParameterResolver {
   private static final Namespace EXTENSION_NAMESPACE = Namespace.create(ExecutorExtension.class);
 
+  private static final ExecutorConfig DEFAULT_EXECUTOR_CONFIG;
+
+  static {
+    try {
+      DEFAULT_EXECUTOR_CONFIG =
+          ExecutorExtension.class
+              .getDeclaredMethod("defaultStoreConfigHolder")
+              .getAnnotation(ExecutorConfig.class);
+
+      requireNonNull(DEFAULT_EXECUTOR_CONFIG);
+    } catch (NoSuchMethodException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
   private static final int FIXED_POOL_SIZE = 8;
 
   public ExecutorExtension() {}
@@ -76,7 +92,7 @@ public final class ExecutorExtension
 
   @Override
   public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-    var config = findStoreConfig(context.getRequiredTestMethod());
+    var config = findExecutorConfig(context.getRequiredTestMethod());
     var executors = ManagedExecutors.get(context);
     return Stream.of(config.value())
         .map(executorType -> Arguments.of(executors.newExecutor(executorType)));
@@ -88,13 +104,13 @@ public final class ExecutorExtension
       throws ParameterResolutionException {
     var element = parameterContext.getDeclaringExecutable();
 
-    // Do not compete with our ArgumentsProvider side
+    // Do not compete with our ArgumentsProvider side.
     var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
     if (argSource.isPresent() && argSource.get().value() == ExecutorExtension.class) {
       return false;
     }
 
-    return Stream.of(findStoreConfig(parameterContext.getDeclaringExecutable()).value())
+    return Stream.of(findExecutorConfig(parameterContext.getDeclaringExecutable()).value())
         .anyMatch(executorType -> executorType.matches(parameterContext.getParameter().getType()));
   }
 
@@ -103,7 +119,7 @@ public final class ExecutorExtension
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
     var executable = parameterContext.getDeclaringExecutable();
-    var config = findStoreConfig(executable);
+    var config = findExecutorConfig(executable);
     var executors = ManagedExecutors.get(extensionContext);
     return Stream.of(config.value())
         .filter(executorType -> executorType.matches(parameterContext.getParameter().getType()))
@@ -112,24 +128,9 @@ public final class ExecutorExtension
         .orElseThrow(UnsupportedOperationException::new);
   }
 
-  private static ExecutorConfig findStoreConfig(AnnotatedElement element) {
+  private static ExecutorConfig findExecutorConfig(AnnotatedElement element) {
     return AnnotationSupport.findAnnotation(element, ExecutorConfig.class)
         .orElse(DEFAULT_EXECUTOR_CONFIG);
-  }
-
-  private static final ExecutorConfig DEFAULT_EXECUTOR_CONFIG;
-
-  static {
-    try {
-      DEFAULT_EXECUTOR_CONFIG =
-          ExecutorExtension.class
-              .getDeclaredMethod("defaultStoreConfigHolder")
-              .getAnnotation(ExecutorConfig.class);
-
-      requireNonNull(DEFAULT_EXECUTOR_CONFIG);
-    } catch (NoSuchMethodException e) {
-      throw new ExceptionInInitializerError(e);
-    }
   }
 
   @ExecutorConfig
@@ -200,29 +201,35 @@ public final class ExecutorExtension
   }
 
   private static final class ManagedExecutors implements CloseableResource {
-    private final List<Executor> createdExecutors = new ArrayList<>();
+    private final List<Executor> executors = new ArrayList<>();
 
     ManagedExecutors() {}
 
     Executor newExecutor(ExecutorType type) {
       var executor = type.createExecutor();
-      createdExecutors.add(executor);
+      executors.add(executor);
       return executor;
     }
 
     void shutdownAndTerminate() throws Exception {
-      for (var executor : createdExecutors) {
+      for (var executor : executors) {
         TestUtils.shutdown(executor);
-        // Clear interruption flag to not throw from awaitTermination
-        // if this thread is interrupted by some test.
-        Thread.interrupted();
-        if (executor instanceof ExecutorService
-            && !((ExecutorService) executor).awaitTermination(5, TimeUnit.MINUTES)) {
-          throw new TimeoutException("timed out while waiting for pool termination: " + executor);
+        // Clear interruption flag to not throw from awaitTermination if this thread is interrupted
+        // by some test.
+        boolean interrupted = Thread.interrupted();
+        try {
+          if (executor instanceof ExecutorService
+              && !((ExecutorService) executor).awaitTermination(5, TimeUnit.MINUTES)) {
+            throw new TimeoutException("timed out while waiting for pool termination: " + executor);
+          }
+        } finally {
+          if (interrupted) {
+            Thread.currentThread().interrupt();
+          }
         }
       }
 
-      createdExecutors.clear();
+      executors.clear();
     }
 
     @Override

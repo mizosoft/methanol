@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,9 +20,11 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.junit;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.testing.MockClock;
+import com.github.mizosoft.methanol.testing.MockExecutor;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -31,7 +33,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /** Specifies one or more {@code Store} configurations for a test case. */
-@Target(ElementType.METHOD)
+@Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface StoreConfig {
 
@@ -42,7 +44,7 @@ public @interface StoreConfig {
   StoreType[] store() default {StoreType.MEMORY, StoreType.DISK};
 
   FileSystemType[] fileSystem() default {
-    FileSystemType.JIMFS, FileSystemType.SYSTEM, FileSystemType.WINDOWS
+    FileSystemType.IN_MEMORY, FileSystemType.SYSTEM, FileSystemType.EMULATED_WINDOWS
   };
 
   Execution execution() default Execution.ASYNC;
@@ -64,27 +66,27 @@ public @interface StoreConfig {
   }
 
   enum FileSystemType {
-    JIMFS,
+    IN_MEMORY,
     SYSTEM,
-    WINDOWS // See WindowsEmulatingFileSystem
+    EMULATED_WINDOWS // See WindowsEmulatingFileSystem.
   }
 
   enum Execution {
     QUEUED {
       @Override
-      Executor newExecutor() {
+      public Executor newExecutor() {
         return new MockExecutor();
       }
     },
     SAME_THREAD {
       @Override
-      Executor newExecutor() {
+      public Executor newExecutor() {
         return FlowSupport.SYNC_EXECUTOR;
       }
     },
     ASYNC {
       @Override
-      Executor newExecutor() {
+      public Executor newExecutor() {
         return Executors.newCachedThreadPool();
       }
     };

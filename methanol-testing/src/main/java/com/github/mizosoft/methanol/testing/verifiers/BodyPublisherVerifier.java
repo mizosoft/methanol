@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.verifiers;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MimeBodyPublisher;
+import com.github.mizosoft.methanol.testing.BodyCollector;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -70,7 +71,7 @@ public final class BodyPublisherVerifier {
   }
 
   public AbstractStringAssert<?> succeedsWith(String expected, Charset charset) {
-    return assertThat(BodyCollector.collectStringAsync(publisher, charset))
+    return Assertions.assertThat(BodyCollector.collectStringAsync(publisher, charset))
         .succeedsWithin(Duration.ofSeconds(20))
         .extracting(Function.identity(), Assertions.STRING)
         .isEqualTo(expected);

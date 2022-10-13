@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.adapter.jackson.flux;
 
 import static com.github.mizosoft.methanol.adapter.jackson.flux.JacksonFluxAdapterFactory.createDecoder;
-import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
+import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static org.assertj.core.api.Assertions.from;
 import static reactor.adapter.JdkFlowAdapter.flowPublisherToFlux;

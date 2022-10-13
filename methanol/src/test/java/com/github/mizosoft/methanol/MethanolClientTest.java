@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,20 +24,20 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.MutableRequest.POST;
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
 import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
-import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
+import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.SCHEDULER;
+import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testing.MockWebServerExtension;
-import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension;
+import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension.UseHttps;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient.Version;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,22 +20,22 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.junit;
 
-import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.JIMFS;
-import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
-import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.MEMORY;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType.IN_MEMORY;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType.SYSTEM;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.MEMORY;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.testing.StoreConfig.Execution;
-import com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType;
-import com.github.mizosoft.methanol.testing.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.MemoryFileSystemProvider;
+import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.file.LeakDetectingFileSystem;
 import com.github.mizosoft.methanol.testing.file.WindowsEmulatingFileSystem;
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -54,7 +54,7 @@ public final class ResolvedStoreConfig {
   private final long maxSize;
   private final StoreType storeType;
 
-  // DiskStore-only config
+  // DiskStore-only config.
 
   private final FileSystemType fileSystemType;
   private final Execution execution;
@@ -116,9 +116,9 @@ public final class ResolvedStoreConfig {
 
   boolean isCompatible() {
     // Memory store doesn't use a FileSystem, so ensure it's only generated
-    // once by only pairing it with FileSystemType.JIMFS (can't use empty
+    // once by only pairing it with FileSystemType.IN_MEMORY (can't use empty
     // FileSystemType array as the cartesian product itself will be empty).
-    return storeType != MEMORY || fileSystemType == JIMFS;
+    return storeType != MEMORY || fileSystemType == IN_MEMORY;
   }
 
   public StoreContext createContext() throws IOException {
@@ -141,8 +141,10 @@ public final class ResolvedStoreConfig {
     FileSystem fileSystem;
     Path rootTempDir;
     switch (fileSystemType) {
-      case JIMFS:
-        fileSystem = LeakDetectingFileSystem.wrap(Jimfs.newFileSystem(Configuration.unix()));
+      case IN_MEMORY:
+        fileSystem =
+            LeakDetectingFileSystem.wrap(
+                MemoryFileSystemProvider.installed().newMemoryFileSystem());
         rootTempDir =
             Files.createDirectories(
                 fileSystem.getRootDirectories().iterator().next().resolve("temp"));
@@ -153,10 +155,11 @@ public final class ResolvedStoreConfig {
         rootTempDir = fileSystem.getPath(SYSTEM_TEMP_DIR);
         break;
 
-      case WINDOWS:
+      case EMULATED_WINDOWS:
         fileSystem =
             LeakDetectingFileSystem.wrap(
-                WindowsEmulatingFileSystem.wrap(Jimfs.newFileSystem(Configuration.windows())));
+                WindowsEmulatingFileSystem.wrap(
+                    MemoryFileSystemProvider.installed().newMemoryFileSystem()));
         rootTempDir =
             Files.createDirectories(
                 fileSystem.getRootDirectories().iterator().next().resolve("temp"));
@@ -169,7 +172,7 @@ public final class ResolvedStoreConfig {
     return Files.createTempDirectory(rootTempDir, TEMP_DIR_PREFIX);
   }
 
-  static ResolvedStoreConfig create(List<?> tuple) {
+  static ResolvedStoreConfig of(List<?> tuple) {
     int i = 0;
     long maxSize = (long) tuple.get(i++);
     var storeType = (StoreType) tuple.get(i++);
@@ -195,7 +198,7 @@ public final class ResolvedStoreConfig {
   }
 
   public static ResolvedStoreConfig createDefault(StoreType storeType) {
-    var fileSystemType = storeType == DISK ? SYSTEM : JIMFS;
+    var fileSystemType = storeType == DISK ? SYSTEM : IN_MEMORY;
     return new ResolvedStoreConfig(
         Long.MAX_VALUE, storeType, fileSystemType, Execution.ASYNC, 1, null, true, true);
   }

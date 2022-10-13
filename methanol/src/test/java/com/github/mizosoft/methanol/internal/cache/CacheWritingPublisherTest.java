@@ -1,7 +1,29 @@
+/*
+ * Copyright (c) 2022 Moataz Abdelnasser
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -11,13 +33,13 @@ import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.BodyCollector;
 import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittablePublisher;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorParameterizedTest;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -95,7 +117,7 @@ class CacheWritingPublisherTest {
     // Writing completes successfully and cancellation is not propagated
     editor.awaitClose();
     assertThat(editor.discarded).isFalse();
-    assertThat(upstream.firstSubscription().flowInterrupted).isFalse();
+    assertThat(upstream.firstSubscription().flowInterrupted()).isFalse();
     assertThat(editor.writtenToString()).isEqualTo("Cancel me if you can!");
 
     // Subscriber's cancellation request is satisfied & body flow stops
@@ -132,7 +154,7 @@ class CacheWritingPublisherTest {
 
     var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
-    assertThat(subscription.flowInterrupted).isTrue();
+    assertThat(subscription.flowInterrupted()).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -162,13 +184,13 @@ class CacheWritingPublisherTest {
     subscriber.subscription.cancel();
 
     // Cancellation isn't propagated until the editor fails
-    assertThat(upstream.firstSubscription().flowInterrupted).isFalse();
+    assertThat(upstream.firstSubscription().flowInterrupted()).isFalse();
 
     cancelledSubscriptionLatch.countDown();
 
     var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
-    assertThat(subscription.flowInterrupted).isTrue();
+    assertThat(subscription.flowInterrupted()).isTrue();
   }
 
   @ExecutorParameterizedTest

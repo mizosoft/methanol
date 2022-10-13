@@ -1,13 +1,16 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -28,13 +31,13 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeData;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntry;
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
-import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.QUEUED;
-import static com.github.mizosoft.methanol.testing.StoreConfig.Execution.SAME_THREAD;
-import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.StoreConfig.FileSystemType.WINDOWS;
-import static com.github.mizosoft.methanol.testing.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.CACHED_POOL;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution.QUEUED;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution.SAME_THREAD;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType.EMULATED_WINDOWS;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType.SYSTEM;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -47,13 +50,13 @@ import com.github.mizosoft.methanol.internal.cache.MockDiskStore.EntryCorruption
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.Index;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexCorruptionMode;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.Logging;
-import com.github.mizosoft.methanol.testing.StoreConfig;
-import com.github.mizosoft.methanol.testing.StoreContext;
-import com.github.mizosoft.methanol.testing.StoreExtension;
-import com.github.mizosoft.methanol.testing.StoreExtension.StoreParameterizedTest;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig;
+import com.github.mizosoft.methanol.testing.junit.StoreContext;
+import com.github.mizosoft.methanol.testing.junit.StoreExtension;
+import com.github.mizosoft.methanol.testing.junit.StoreExtension.StoreParameterizedTest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -1057,7 +1060,11 @@ class DiskStoreTest {
   }
 
   @RepeatedTest(10)
-  @StoreConfig(store = DISK, fileSystem = WINDOWS, execution = QUEUED, indexUpdateDelaySeconds = 0)
+  @StoreConfig(
+      store = DISK,
+      fileSystem = EMULATED_WINDOWS,
+      execution = QUEUED,
+      indexUpdateDelaySeconds = 0)
   @ExecutorConfig(CACHED_POOL)
   void disposeDuringIndexWrite_windowsEmulatingFilesystem(
       Store store, StoreContext context, Executor threadPool) throws IOException {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.junit;
 
 import static java.util.Objects.requireNonNull;
 
@@ -67,6 +67,21 @@ public final class StoreExtension
         ParameterResolver {
   private static final Namespace EXTENSION_NAMESPACE = Namespace.create(StoreExtension.class);
 
+  private static final StoreConfig DEFAULT_STORE_CONFIG;
+
+  static {
+    try {
+      DEFAULT_STORE_CONFIG =
+          StoreExtension.class
+              .getDeclaredMethod("defaultStoreConfigHolder")
+              .getAnnotation(StoreConfig.class);
+
+      requireNonNull(DEFAULT_STORE_CONFIG);
+    } catch (NoSuchMethodException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
   public StoreExtension() {}
 
   @Override
@@ -109,7 +124,7 @@ public final class StoreExtension
       throws ParameterResolutionException {
     var element = parameterContext.getDeclaringExecutable();
 
-    // Do not compete with our ArgumentsProvider side
+    // Do not compete with our ArgumentsProvider side.
     var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
     if (argSource.isPresent() && argSource.get().value() == StoreExtension.class) {
       return false;
@@ -146,7 +161,7 @@ public final class StoreExtension
 
   private static Arguments resolveArguments(Set<Class<?>> params, StoreContext context)
       throws IOException {
-    // Provide the StoreContext or a new Store or both
+    // Provide the StoreContext or a new Store or both.
     if (params.containsAll(Set.of(Store.class, StoreContext.class))) {
       return Arguments.of(context.newStore(), context);
     } else if (params.contains(StoreContext.class)) {
@@ -154,7 +169,7 @@ public final class StoreExtension
     } else if (params.contains(Store.class)) {
       return Arguments.of(context.newStore());
     } else {
-      return Arguments.of(); // Let JUnit handle that
+      return Arguments.of(); // Let JUnit handle that.
     }
   }
 
@@ -169,12 +184,12 @@ public final class StoreExtension
             Set.of(config.autoInit()),
             Set.of(config.autoAdvanceClock()))
         .stream()
-        .map(ResolvedStoreConfig::create)
+        .map(ResolvedStoreConfig::of)
         .filter(ResolvedStoreConfig::isCompatible);
   }
 
   private static Set<List<?>> cartesianProduct(Set<?>... sets) {
-    // Cover empty sets case
+    // Cover empty sets case.
     if (sets.length == 0) {
       return Set.of(List.of());
     }
@@ -182,7 +197,7 @@ public final class StoreExtension
   }
 
   private static Set<List<?>> cartesianProduct(List<Set<?>> sets) {
-    // Cover base cases
+    // Cover base cases.
     if (sets.isEmpty()) {
       return Set.of();
     } else if (sets.size() == 1) {
@@ -191,11 +206,11 @@ public final class StoreExtension
           .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    // Generate a new product from a subproduct that is obtained recursively
-    var subproduct = cartesianProduct(sets.subList(1, sets.size()));
+    // Generate a new product from a sub-product that is obtained recursively.
+    var subProduct = cartesianProduct(sets.subList(1, sets.size()));
     var product = new LinkedHashSet<List<Object>>();
     for (var element : sets.get(0)) {
-      for (var subset : subproduct) {
+      for (var subset : subProduct) {
         var newSubset = new ArrayList<>();
         newSubset.add(element);
         newSubset.addAll(subset);
@@ -203,21 +218,6 @@ public final class StoreExtension
       }
     }
     return Collections.unmodifiableSet(product);
-  }
-
-  private static final StoreConfig DEFAULT_STORE_CONFIG;
-
-  static {
-    try {
-      DEFAULT_STORE_CONFIG =
-          StoreExtension.class
-              .getDeclaredMethod("defaultStoreConfigHolder")
-              .getAnnotation(StoreConfig.class);
-
-      requireNonNull(DEFAULT_STORE_CONFIG);
-    } catch (NoSuchMethodException e) {
-      throw new ExceptionInInitializerError(e);
-    }
   }
 
   @StoreConfig
@@ -235,13 +235,13 @@ public final class StoreExtension
   public @interface StoreParameterizedTest {}
 
   private static final class ManagedStores implements CloseableResource {
-    private final Map<Object, List<StoreContext>> contextMap = new HashMap<>();
+    private final Map<Object, List<StoreContext>> contexsts = new HashMap<>();
 
     ManagedStores() {}
 
     StoreContext newContext(Object key, ResolvedStoreConfig config) throws IOException {
       var context = config.createContext();
-      contextMap.computeIfAbsent(key, __ -> new ArrayList<>()).add(context);
+      contexsts.computeIfAbsent(key, __ -> new ArrayList<>()).add(context);
       return context;
     }
 
@@ -250,7 +250,7 @@ public final class StoreExtension
      * resolveParameters to associated provided params with the same context.
      */
     StoreContext getFirstContext(Object key, ResolvedStoreConfig config) throws IOException {
-      var contexts = contextMap.computeIfAbsent(key, __ -> new ArrayList<>());
+      var contexts = contexsts.computeIfAbsent(key, __ -> new ArrayList<>());
       if (contexts.isEmpty()) {
         contexts.add(config.createContext());
       }
@@ -258,7 +258,7 @@ public final class StoreExtension
     }
 
     void initializeAll() throws IOException {
-      for (var contexts : contextMap.values()) {
+      for (var contexts : contexsts.values()) {
         for (var context : contexts) {
           context.initializeAll();
         }
@@ -267,22 +267,25 @@ public final class StoreExtension
 
     @Override
     public void close() throws Exception {
-      var closeFailures = new ArrayList<Exception>();
-      for (var contexts : contextMap.values()) {
+      var exceptions = new ArrayList<Exception>();
+      for (var contexts : contexsts.values()) {
         for (var context : contexts) {
           try {
             context.close();
-          } catch (Exception t) {
-            closeFailures.add(t);
+          } catch (Exception e) {
+            exceptions.add(e);
           }
         }
       }
-      contextMap.clear();
+      contexsts.clear();
 
-      if (!closeFailures.isEmpty()) {
-        var toThrow = new IOException("encountered one or more exceptions while closing stores");
-        closeFailures.forEach(toThrow::addSuppressed);
-        throw toThrow;
+      if (exceptions.size() == 1) {
+        throw exceptions.get(0);
+      } else if (exceptions.size() > 1) {
+        var compositeException =
+            new IOException("encountered one or more exceptions while closing stores");
+        exceptions.forEach(compositeException::addSuppressed);
+        throw compositeException;
       }
     }
 

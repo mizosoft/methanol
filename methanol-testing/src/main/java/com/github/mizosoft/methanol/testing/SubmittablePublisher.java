@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -31,22 +32,23 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 
 /**
- * Similar to {@link java.util.concurrent.SubmissionPublisher} but doesn't require the executor to
- * operate concurrently and has an unbounded buffer.
+ * A {@code Flow.Publisher<T>} that emits submitted items. The publisher is similar to {@link
+ * java.util.concurrent.SubmissionPublisher} but doesn't require the executor to operate
+ * concurrently and has an unbounded buffer.
  */
 public final class SubmittablePublisher<T> implements Publisher<T>, AutoCloseable {
   private final List<SubmittableSubscription<T>> subscriptions = new CopyOnWriteArrayList<>();
   private final Executor executor;
 
   public SubmittablePublisher(Executor executor) {
-    this.executor = executor;
+    this.executor = requireNonNull(executor);
   }
 
   @Override
   public void subscribe(Subscriber<? super T> subscriber) {
     var subscription = new SubmittableSubscription<T>(subscriber, executor);
     subscriptions.add(subscription);
-    subscription.signal(true); // Apply onSubscribe
+    subscription.signal(true); // Apply onSubscribe.
   }
 
   public SubmittableSubscription<T> firstSubscription() {

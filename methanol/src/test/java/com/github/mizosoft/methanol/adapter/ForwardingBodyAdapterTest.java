@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.adapter;
 
-import static com.github.mizosoft.methanol.testing.Verifiers.verifyThat;
+import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 
 import com.github.mizosoft.methanol.testing.CharSequenceEncoder;
 import com.github.mizosoft.methanol.testing.StringDecoder;

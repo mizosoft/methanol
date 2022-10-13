@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +46,7 @@ public final class MockDelayer implements Delayer {
 
   public MockDelayer(MockClock clock) {
     this.clock = clock;
-    clock.onTick((instant, ticks) -> dispatchExpiredTasks(instant.plus(ticks), false));
+    clock.onTick((instant, ticks) -> dispatchReadyTasks(instant.plus(ticks), false));
   }
 
   @Override
@@ -57,7 +57,7 @@ public final class MockDelayer implements Delayer {
       taskQueue.add(timestampedTask);
     }
 
-    dispatchExpiredTasks(now, false);
+    dispatchReadyTasks(now, false);
     return timestampedTask.future;
   }
 
@@ -87,7 +87,7 @@ public final class MockDelayer implements Delayer {
     }
   }
 
-  void dispatchExpiredTasks(Instant now, boolean ignoreRejected) {
+  void dispatchReadyTasks(Instant now, boolean ignoreRejected) {
     synchronized (taskQueue) {
       TimestampedTask task;
       while ((task = taskQueue.peek()) != null && now.compareTo(task.stamp) >= 0) {
@@ -101,6 +101,10 @@ public final class MockDelayer implements Delayer {
         }
       }
     }
+  }
+
+  public void drainQueuedTasks(boolean ignoreRejected) {
+    dispatchReadyTasks(Instant.MAX, ignoreRejected);
   }
 
   private static final class TimestampedTask {

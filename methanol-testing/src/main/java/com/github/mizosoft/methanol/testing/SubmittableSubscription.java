@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,16 +25,17 @@ package com.github.mizosoft.methanol.testing;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 
 /** Minimal AbstractSubscription implementation that publishes submitted items. */
-public class SubmittableSubscription<T> extends AbstractSubscription<T> {
-  public final ConcurrentLinkedQueue<T> items;
-  public volatile boolean complete;
-  public volatile int aborts;
-  public volatile boolean flowInterrupted;
+public final class SubmittableSubscription<T> extends AbstractSubscription<T> {
+  private final ConcurrentLinkedQueue<T> items;
+  private volatile boolean complete;
+  private volatile int abortCount;
+  private volatile boolean flowInterrupted;
 
   public SubmittableSubscription(Subscriber<? super T> downstream, Executor executor) {
     super(downstream, executor);
@@ -44,11 +45,11 @@ public class SubmittableSubscription<T> extends AbstractSubscription<T> {
   @Override
   protected long emit(Subscriber<? super T> downstream, long emit) {
     long submitted = 0L;
-    while(true) {
-      if (items.isEmpty() && complete) { // End of source
+    while (true) {
+      if (items.isEmpty() && complete) { // End of source.
         cancelOnComplete(downstream);
         return 0;
-      } else if (items.isEmpty() || submitted >= emit) { // Exhausted source or demand
+      } else if (items.isEmpty() || submitted >= emit) { // Exhausted source or demand.
         return submitted;
       } else if (!submitOnNext(downstream, items.poll())) {
         return 0;
@@ -60,14 +61,14 @@ public class SubmittableSubscription<T> extends AbstractSubscription<T> {
 
   @Override
   protected synchronized void abort(boolean flowInterrupted) {
-    if (aborts++ == 0) {
+    if (abortCount++ == 0) {
       this.flowInterrupted = flowInterrupted;
     }
     notifyAll();
   }
 
   public synchronized void awaitAbort() {
-    while (aborts == 0) {
+    while (abortCount == 0) {
       try {
         wait();
       } catch (InterruptedException e) {
@@ -88,5 +89,17 @@ public class SubmittableSubscription<T> extends AbstractSubscription<T> {
 
   public long currentDemand() {
     return super.currentDemand();
+  }
+
+  public int abortCount() {
+    return abortCount;
+  }
+
+  public boolean flowInterrupted() {
+    return flowInterrupted;
+  }
+
+  public Queue<T> items() {
+    return items;
   }
 }

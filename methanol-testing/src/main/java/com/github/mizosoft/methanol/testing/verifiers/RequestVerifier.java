@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.verifiers;
 
 import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static org.assertj.core.api.Assertions.assertThat;

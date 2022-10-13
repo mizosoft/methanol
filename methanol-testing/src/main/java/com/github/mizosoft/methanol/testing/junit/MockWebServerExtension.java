@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing;
+package com.github.mizosoft.methanol.testing.junit;
 
 import static com.github.mizosoft.methanol.testing.TestUtils.localhostSslContext;
 
@@ -109,7 +109,7 @@ public final class MockWebServerExtension
    * SSLContext}.
    */
   private static final class ManagedServers implements CloseableResource {
-    private final Map<Object, Context> contextMap = new HashMap<>();
+    private final Map<Object, Context> contexsts = new HashMap<>();
 
     ManagedServers() {}
 
@@ -122,15 +122,14 @@ public final class MockWebServerExtension
     }
 
     private Context getContext(Object key) {
-      return contextMap.computeIfAbsent(key, __ -> new Context());
+      return contexsts.computeIfAbsent(key, __ -> new Context());
     }
 
     void shutdownAll() throws IOException {
-      for (var context : contextMap.values()) {
+      for (var context : contexsts.values()) {
         context.shutdownServers();
       }
-
-      contextMap.clear();
+      contexsts.clear();
     }
 
     @Override
@@ -171,7 +170,6 @@ public final class MockWebServerExtension
         for (var server : servers) {
           server.shutdown();
         }
-
         servers.clear();
       }
     }

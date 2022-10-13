@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,12 +42,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittableSubscription;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorParameterizedTest;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -290,8 +290,8 @@ class AbstractSubscriptionTest {
     subscription.cancel();
     subscription.cancel();
     subscription.awaitAbort();
-    assertThat(subscription.aborts).isOne();
-    assertThat(subscription.flowInterrupted).isTrue();
+    assertThat(subscription.abortCount()).isOne();
+    assertThat(subscription.flowInterrupted()).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -303,8 +303,8 @@ class AbstractSubscriptionTest {
     subscriber.awaitComplete();
     subscriber.subscription.cancel();
     subscription.awaitAbort();
-    assertThat(subscription.aborts).isOne();
-    assertThat(subscription.flowInterrupted).isFalse();
+    assertThat(subscription.abortCount()).isOne();
+    assertThat(subscription.flowInterrupted()).isFalse();
   }
 
   @ExecutorParameterizedTest
@@ -315,8 +315,8 @@ class AbstractSubscriptionTest {
     subscription.signalError(new TestException());
     subscriber.awaitError();
     subscription.awaitAbort();
-    assertThat(subscription.aborts).isOne();
-    assertThat(subscription.flowInterrupted).isFalse();
+    assertThat(subscription.abortCount()).isOne();
+    assertThat(subscription.flowInterrupted()).isFalse();
   }
 
   @ExecutorParameterizedTest
@@ -328,8 +328,8 @@ class AbstractSubscriptionTest {
     subscriber.awaitError();
     subscription.awaitAbort();
     assertThat(subscriber.errorCount).isOne();
-    assertThat(subscription.aborts).isOne();
-    assertThat(subscription.flowInterrupted).isTrue();
+    assertThat(subscription.abortCount()).isOne();
+    assertThat(subscription.flowInterrupted()).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -344,8 +344,8 @@ class AbstractSubscriptionTest {
     subscriber.awaitError();
     subscription.awaitAbort();
     assertThat(subscriber.errorCount).isOne();
-    assertThat(subscription.aborts).isOne();
-    assertThat(subscription.flowInterrupted).isTrue();
+    assertThat(subscription.abortCount()).isOne();
+    assertThat(subscription.flowInterrupted()).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -354,8 +354,8 @@ class AbstractSubscriptionTest {
     var subscription = new SubmittableSubscription<>(new TestSubscriber<Integer>(), busyExecutor);
     assertThatExceptionOfType(RejectedExecutionException.class)
         .isThrownBy(() -> subscription.signal(true));
-    assertThat(subscription.aborts).isOne();
-    assertThat(subscription.flowInterrupted).isTrue();
+    assertThat(subscription.abortCount()).isOne();
+    assertThat(subscription.flowInterrupted()).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -388,8 +388,8 @@ class AbstractSubscriptionTest {
     subscription.signal(true);
 
     // Make 2 items available
-    subscription.items.offer(1);
-    subscription.items.offer(1);
+    subscription.items().offer(1);
+    subscription.items().offer(1);
 
     // Request 2 items (request asynchronously to not block in case the executor is synchronous)
     subscriber.awaitOnSubscribe();
