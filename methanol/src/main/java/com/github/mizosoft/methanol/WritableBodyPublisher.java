@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -90,8 +90,8 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   @GuardedBy("writeLock")
   private @Nullable ByteBuffer sinkBuffer;
 
-  private @MonotonicNonNull WritableByteChannel sinkChannel;
-  private @MonotonicNonNull OutputStream sinkOutputStream;
+  private @MonotonicNonNull WritableByteChannel lazyChannel;
+  private @MonotonicNonNull OutputStream lazyOutputStream;
 
   private WritableBodyPublisher(int bufferSize) {
     requireArgument(bufferSize > 0, "non-positive buffer size");
@@ -100,20 +100,20 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
   /** Returns a {@code WritableByteChannel} for writing this body's content. */
   public WritableByteChannel byteChannel() {
-    var channel = sinkChannel;
+    var channel = lazyChannel;
     if (channel == null) {
       channel = new SinkChannel();
-      sinkChannel = channel;
+      lazyChannel = channel;
     }
     return channel;
   }
 
   /** Returns a {@code OutputStream} for writing this body's content. */
   public OutputStream outputStream() {
-    var outputStream = sinkOutputStream;
+    var outputStream = lazyOutputStream;
     if (outputStream == null) {
       outputStream = new SinkOutputStream(byteChannel());
-      sinkOutputStream = outputStream;
+      lazyOutputStream = outputStream;
     }
     return outputStream;
   }

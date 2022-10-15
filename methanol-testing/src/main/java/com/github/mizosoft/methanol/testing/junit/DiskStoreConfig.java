@@ -27,41 +27,53 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec.Execution;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
+import java.time.Duration;
+import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-public abstract class StoreConfig {
-  private final StoreType storeType;
-  private final boolean autoInit;
-  private final long maxSize;
+public final class DiskStoreConfig extends StoreConfig {
+  private final FileSystemType fileSystemType;
+  private final Execution execution;
 
-  StoreConfig(StoreType storeType, boolean autoInit, long maxSize) {
-    this.storeType = requireNonNull(storeType);
-    this.autoInit = autoInit;
-    this.maxSize = maxSize;
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  private final Optional<Duration> indexUpdateDelay;
+
+  private final boolean autoAdvanceClock;
+  private final int appVersion;
+
+  public DiskStoreConfig(
+      boolean autoInit,
+      long maxSize,
+      FileSystemType fileSystemType,
+      Execution execution,
+      @Nullable Duration indexUpdateDelay,
+      boolean autoAdvanceClock,
+      int appVersion) {
+    super(StoreType.DISK, autoInit, maxSize);
+    this.fileSystemType = requireNonNull(fileSystemType);
+    this.execution = requireNonNull(execution);
+    this.indexUpdateDelay = Optional.ofNullable(indexUpdateDelay);
+    this.autoAdvanceClock = autoAdvanceClock;
+    this.appVersion = appVersion;
   }
 
-  public StoreType storeType() {
-    return storeType;
+  public FileSystemType fileSystemType() {
+    return fileSystemType;
   }
 
-  public long maxSize() {
-    return maxSize;
+  public Execution execution() {
+    return execution;
   }
 
-  public boolean autoInit() {
-    return autoInit;
+  public Optional<Duration> indexUpdateDelay() {
+    return indexUpdateDelay;
   }
 
-  public static StoreConfig createDefault(StoreType storeType) {
-    switch (storeType) {
-      case MEMORY:
-        return new MemoryStoreConfig(true, Long.MAX_VALUE);
-      case DISK:
-        return new DiskStoreConfig(
-            true, Long.MAX_VALUE, FileSystemType.SYSTEM, Execution.ASYNC, null, true, 1);
-      case REDIS:
-        return new RedisStoreConfig(true, 15000, 10000, 1);
-      default:
-        throw new AssertionError();
-    }
+  public boolean autoAdvanceClock() {
+    return autoAdvanceClock;
+  }
+
+  public int appVersion() {
+    return appVersion;
   }
 }

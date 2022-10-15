@@ -22,46 +22,40 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
-import static java.util.Objects.requireNonNull;
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.Execution;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
+class Directories {
+  private Directories() {}
 
-public abstract class StoreConfig {
-  private final StoreType storeType;
-  private final boolean autoInit;
-  private final long maxSize;
+  static void deleteRecursively(Path directory) throws IOException {
+    try {
+      Files.walkFileTree(
+          directory,
+          new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                throws IOException {
+              Files.deleteIfExists(file);
+              return FileVisitResult.CONTINUE;
+            }
 
-  StoreConfig(StoreType storeType, boolean autoInit, long maxSize) {
-    this.storeType = requireNonNull(storeType);
-    this.autoInit = autoInit;
-    this.maxSize = maxSize;
-  }
-
-  public StoreType storeType() {
-    return storeType;
-  }
-
-  public long maxSize() {
-    return maxSize;
-  }
-
-  public boolean autoInit() {
-    return autoInit;
-  }
-
-  public static StoreConfig createDefault(StoreType storeType) {
-    switch (storeType) {
-      case MEMORY:
-        return new MemoryStoreConfig(true, Long.MAX_VALUE);
-      case DISK:
-        return new DiskStoreConfig(
-            true, Long.MAX_VALUE, FileSystemType.SYSTEM, Execution.ASYNC, null, true, 1);
-      case REDIS:
-        return new RedisStoreConfig(true, 15000, 10000, 1);
-      default:
-        throw new AssertionError();
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+                throws IOException {
+              if (exc != null) {
+                throw exc;
+              }
+              Files.deleteIfExists(dir);
+              return FileVisitResult.CONTINUE;
+            }
+          });
+    } catch (NoSuchFileException ignored) {
     }
   }
 }

@@ -1,7 +1,4 @@
 dependencies {
-  implementation project(':methanol')
-  implementation 'redis.clients:jedis:4.2.3'
-
-  // Let's consider that Lettuce brings in some Rx bloat.
-  implementation 'io.lettuce:lettuce-core:6.2.0.RELEASE'
+  api project(':methanol')
+  api 'io.lettuce:lettuce-core:6.2.0.RELEASE'
 }

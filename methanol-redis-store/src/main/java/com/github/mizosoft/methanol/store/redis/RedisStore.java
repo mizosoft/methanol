@@ -25,15 +25,6 @@ package com.github.mizosoft.methanol.store.redis;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static com.github.mizosoft.methanol.store.redis.Script.APPEND_EXPIRY_UPDATE;
-import static com.github.mizosoft.methanol.store.redis.Script.COMMIT;
-import static com.github.mizosoft.methanol.store.redis.Script.EDIT;
-import static com.github.mizosoft.methanol.store.redis.Script.GETRANGE_EXPIRY_UPDATE;
-import static com.github.mizosoft.methanol.store.redis.Script.REMOVE;
-import static io.lettuce.core.ScriptOutputType.BOOLEAN;
-import static io.lettuce.core.ScriptOutputType.INTEGER;
-import static io.lettuce.core.ScriptOutputType.STATUS;
-import static io.lettuce.core.ScriptOutputType.VALUE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
@@ -48,7 +39,6 @@ import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.codec.RedisCodec;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.System.Logger;
@@ -79,7 +69,7 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-final class RedisStore implements Store {
+public final class RedisStore implements Store {
   private static final Logger logger = System.getLogger(RedisStore.class.getName());
 
   private static final int STORE_VERSION = 1;
@@ -88,23 +78,23 @@ final class RedisStore implements Store {
 
   private final int appVersion;
   private final StatefulRedisConnection<String, ByteBuffer> connection;
-  private final long editorLockExpiryMillis;
-  private final long staleEntryExpiryMillis; // 15 secs.
+  private final long editorLockTimeToLiveMillis;
+  private final long staleEntryTimeToLiveMillis;
   private final Clock clock;
   private final AtomicInteger connectionRefCount = new AtomicInteger(1);
   private final Set<RedisEditor> openEditors = ConcurrentHashMap.newKeySet();
   private final ReadWriteLock closeLock = new ReentrantReadWriteLock();
   private boolean closed;
 
-  RedisStore(
+  public RedisStore(
       StatefulRedisConnection<String, ByteBuffer> connection,
-      long editorLockExpiryMillis,
-      long staleEntryExpiryMillis,
+      long editorLockTimeToLiveMillis,
+      long staleEntryTimeToLiveMillis,
       Clock clock,
       int appVersion) {
     this.connection = connection;
-    this.editorLockExpiryMillis = editorLockExpiryMillis;
-    this.staleEntryExpiryMillis = staleEntryExpiryMillis;
+    this.editorLockTimeToLiveMillis = editorLockTimeToLiveMillis;
+    this.staleEntryTimeToLiveMillis = staleEntryTimeToLiveMillis;
     this.clock = clock;
     this.appVersion = appVersion;
   }
@@ -219,13 +209,13 @@ final class RedisStore implements Store {
       var wipDataKey = entryKey + ":wip_data:" + editorId;
       boolean acquiredLock =
           eval(
-              EDIT,
+              Script.EDIT,
               List.of(entryKey, editorLockKey, wipDataKey),
               List.of(
                   encodeLong(targetEntryVersion),
                   UTF_8.encode(editorId),
-                  encodeLong(editorLockExpiryMillis)),
-              BOOLEAN);
+                  encodeLong(editorLockTimeToLiveMillis)),
+              ScriptOutputType.BOOLEAN);
       var editor =
           acquiredLock ? new RedisEditor(key, entryKey, editorLockKey, wipDataKey, editorId) : null;
       if (editor != null) {
@@ -243,10 +233,10 @@ final class RedisStore implements Store {
     try {
       requireNotClosed();
       return eval(
-          REMOVE,
+          Script.REMOVE,
           List.of(entryKey),
-          List.of(encodeLong(targetEntryVersion), encodeLong(staleEntryExpiryMillis)),
-          BOOLEAN);
+          List.of(encodeLong(targetEntryVersion), encodeLong(staleEntryTimeToLiveMillis)),
+          ScriptOutputType.BOOLEAN);
     } finally {
       closeLock.readLock().unlock();
     }
@@ -307,9 +297,9 @@ final class RedisStore implements Store {
     var keysArray = keys.toArray(String[]::new);
     var valuesArray = values.toArray(ByteBuffer[]::new);
     try {
-      return connection.sync().evalsha(script.sha1(), outputType, keysArray, valuesArray);
+      return connection.sync().evalsha(script.shaHex(), outputType, keysArray, valuesArray);
     } catch (RedisNoScriptException e) {
-      return connection.sync().eval(script.encodedBytes(), outputType, keysArray, valuesArray);
+      return connection.sync().eval(script.content(), outputType, keysArray, valuesArray);
     }
   }
 
@@ -320,13 +310,13 @@ final class RedisStore implements Store {
     var valuesArray = values.toArray(ByteBuffer[]::new);
     return connection
         .async()
-        .<T>evalsha(script.sha1(), outputType, keysArray, valuesArray)
+        .<T>evalsha(script.shaHex(), outputType, keysArray, valuesArray)
         .handle(
             (reply, error) -> {
               if (error instanceof RedisNoScriptException) {
                 return connection
                     .async()
-                    .<T>eval(script.encodedBytes(), outputType, keysArray, valuesArray);
+                    .<T>eval(script.content(), outputType, keysArray, valuesArray);
               }
               return error != null
                   ? CompletableFuture.<T>failedFuture(error)
@@ -464,7 +454,7 @@ final class RedisStore implements Store {
             error = ((ScanError) signal).error;
           }
         } catch (InterruptedException e) {
-          // To handle interruption gracefully, we just end the iteration process.
+          // To handle interruption gracefully, we just end iteration.
           finished = true;
         }
       }
@@ -504,7 +494,6 @@ final class RedisStore implements Store {
     void fireScan(ScanCursor cursor) {
       closeLock.readLock().lock();
       try {
-        // If the store is closed concurrently, finish iteration gracefully.
         if (closed) {
           queue.add(new ScanCompletion(ScanCursor.FINISHED));
           return;
@@ -610,17 +599,18 @@ final class RedisStore implements Store {
       long startMillis = clock.millis();
 
       // Fast path: if there's enough time till expiry we don't need to update it.
-      if (startMillis - lastExpiryUpdateMillis < staleEntryExpiryMillis * 0.7) {
+      if (startMillis - lastExpiryUpdateMillis < staleEntryTimeToLiveMillis * 0.7) {
         return connection.async().getrange(dataKey + ":stale", position, limit);
       }
 
       // Perform a GETRANGE with expiry update so the key doesn't expire while we still need it.
       return RedisStore.this
           .<ByteBuffer>evalAsync(
-              GETRANGE_EXPIRY_UPDATE,
+              Script.GETRANGE_EXPIRY_UPDATE,
               List.of(dataKey + ":stale"),
-              List.of(encodeLong(position), encodeLong(limit), encodeLong(staleEntryExpiryMillis)),
-              VALUE)
+              List.of(
+                  encodeLong(position), encodeLong(limit), encodeLong(staleEntryTimeToLiveMillis)),
+              ScriptOutputType.VALUE)
           .thenApply(
               result -> {
                 long rtt = clock.millis() - startMillis;
@@ -643,7 +633,7 @@ final class RedisStore implements Store {
                 if (!lambdaResult.hasRemaining()) {
                   return CompletableFuture.failedFuture(new EntryEvictedException("entry removed"));
                 }
-                readingFreshEntry = true;
+                readingFreshEntry = false;
                 return CompletableFuture.completedFuture(lambdaResult);
               });
     }
@@ -750,17 +740,17 @@ final class RedisStore implements Store {
       long startMillis = clock.millis();
 
       // Fast path: if there's enough time till expiry we don't need to update it.
-      if (startMillis - lastExpiryUpdateMillis < editorLockExpiryMillis * 0.7) {
+      if (startMillis - lastExpiryUpdateMillis < editorLockTimeToLiveMillis * 0.7) {
         return connection.async().append(wipDataKey, src);
       }
 
       // Perform a APPEND with expiry update so the key doesn't expire while we still need it.
       return RedisStore.this
           .<Long>evalAsync(
-              APPEND_EXPIRY_UPDATE,
+              Script.APPEND_EXPIRY_UPDATE,
               List.of(wipDataKey),
-              List.of(src, encodeLong(staleEntryExpiryMillis)),
-              INTEGER)
+              List.of(src, encodeLong(staleEntryTimeToLiveMillis)),
+              ScriptOutputType.INTEGER)
           .thenApply(
               result -> {
                 long rtt = clock.millis() - startMillis;
@@ -819,7 +809,7 @@ final class RedisStore implements Store {
 
       try {
         eval(
-            COMMIT,
+            Script.COMMIT,
             List.of(entryKey, editorLockKey, wipDataKey),
             List.of(
                 UTF_8.encode(editorId),
@@ -827,8 +817,8 @@ final class RedisStore implements Store {
                 metadata,
                 encodeInt(commitMetadata ? 1 : 0),
                 encodeInt(commitData ? 1 : 0),
-                encodeLong(staleEntryExpiryMillis)),
-            STATUS);
+                encodeLong(staleEntryTimeToLiveMillis)),
+            ScriptOutputType.STATUS);
       } finally {
         dereferenceConnection();
       }
@@ -846,7 +836,7 @@ final class RedisStore implements Store {
       }
 
       evalAsync(
-              COMMIT,
+              Script.COMMIT,
               List.of(entryKey, editorLockKey, wipDataKey),
               List.of(
                   UTF_8.encode(editorId),
@@ -854,37 +844,9 @@ final class RedisStore implements Store {
                   EMPTY_BUFFER,
                   encodeInt(0),
                   encodeInt(0),
-                  encodeLong(staleEntryExpiryMillis)),
-              STATUS)
+                  encodeLong(staleEntryTimeToLiveMillis)),
+              ScriptOutputType.STATUS)
           .whenComplete((__, ___) -> dereferenceConnection());
-    }
-  }
-
-  private enum ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
-    INSTANCE;
-
-    @Override
-    public ByteBuffer decodeKey(ByteBuffer bytes) {
-      return copy(bytes);
-    }
-
-    @Override
-    public ByteBuffer decodeValue(ByteBuffer bytes) {
-      return copy(bytes);
-    }
-
-    @Override
-    public ByteBuffer encodeKey(ByteBuffer key) {
-      return copy(key);
-    }
-
-    @Override
-    public ByteBuffer encodeValue(ByteBuffer value) {
-      return copy(value);
-    }
-
-    private static ByteBuffer copy(ByteBuffer source) {
-      return Utils.copy(source.duplicate());
     }
   }
 }

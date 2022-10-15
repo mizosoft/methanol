@@ -22,14 +22,15 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
+import com.github.mizosoft.methanol.testing.junit.DiskStoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
+import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.stream.Stream;
@@ -49,8 +50,8 @@ class StoreTesting {
     // Make sure the store knows nothing about the entries
     for (var key : keys) {
       assertUnreadable(store, key);
-      if (context.config().storeType() == DISK) {
-        var mockStore = new MockDiskStore(context);
+      if (context.config().storeType() == StoreType.DISK) {
+        var mockStore = new MockDiskStore((DiskStoreContext) context);
         assertThat(mockStore.entryFile(key))
             .withFailMessage("unexpected entry file for: %s", key)
             .doesNotExist();

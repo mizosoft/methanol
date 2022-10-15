@@ -22,59 +22,53 @@
 
 package com.github.mizosoft.methanol.store.redis;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.nio.file.NoSuchFileException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 enum Script {
   COMMIT("commit.lua"),
-  VIEW("view.lua"),
+  //  VIEW("view.lua"),
   EDIT("edit.lua"),
   REMOVE("remove.lua"),
   GETRANGE_EXPIRY_UPDATE("getrange_expiry_update.lua"),
   APPEND_EXPIRY_UPDATE("append_expiry_update.lua"),
-  CLOSE_VIEWER("close_viewer.lua");
+//  CLOSE_VIEWER("close_viewer.lua")
+;
 
   private static final String SCRIPTS_PATH = "/scripts/";
 
-  private final String filename;
-  private byte @MonotonicNonNull [] lazyBytes;
-  private @MonotonicNonNull String lazySha1;
+  private final String content;
+  private final String shaHex;
 
   Script(String filename) {
-    this.filename = filename;
+    var contentBytes = load(SCRIPTS_PATH + filename);
+    content = UTF_8.decode(ByteBuffer.wrap(contentBytes)).toString();
+    shaHex = toHexString(newSha1Digest().digest(contentBytes));
   }
 
-  byte[] encodedBytes() {
-    var bytes = lazyBytes;
-    if (bytes == null) {
-      bytes = loadScript();
-      lazyBytes = bytes;
-    }
-    return bytes;
+  String content() {
+    return content;
   }
 
-  private byte[] loadScript() {
-    try (var in = getClass().getResourceAsStream(SCRIPTS_PATH + filename)) {
+  String shaHex() {
+    return shaHex;
+  }
+
+  private static byte[] load(String path) {
+    try (var in = Script.class.getResourceAsStream(path)) {
       if (in == null) {
-        throw new NoSuchFileException(filename);
+        throw new NoSuchFileException(path, null, "can't find resource");
       }
       return in.readAllBytes();
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
-  }
-
-  String sha1() {
-    var sha1 = lazySha1;
-    if (sha1 == null) {
-      sha1 = toHexString(newSha1Digest().digest(encodedBytes()));
-      lazySha1 = sha1;
-    }
-    return sha1;
   }
 
   private static MessageDigest newSha1Digest() {

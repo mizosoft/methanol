@@ -22,8 +22,8 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.MEMORY;
+import static com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType.MEMORY;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.reactivestreams.FlowAdapters.toFlowPublisher;
@@ -36,9 +36,9 @@ import com.github.mizosoft.methanol.testing.FailingPublisher;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import com.github.mizosoft.methanol.testing.junit.ResolvedStoreConfig;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
+import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -59,13 +59,13 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
 
 public class CacheWritingPublisherTck extends FlowPublisherVerification<List<ByteBuffer>> {
-  private static final AtomicInteger entryId = new AtomicInteger();
-
   static {
     Logging.disable(CacheWritingPublisher.class);
   }
 
-  private final ResolvedStoreConfig storeConfig;
+  private static final AtomicInteger entryId = new AtomicInteger();
+
+  private final StoreConfig storeConfig;
 
   private Executor executor;
   private StoreContext storeContext;
@@ -74,14 +74,14 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
   @Factory(dataProvider = "provider")
   public CacheWritingPublisherTck(StoreType storeType) {
     super(TckUtils.testEnvironment());
-    storeConfig = ResolvedStoreConfig.createDefault(storeType);
+    storeConfig = StoreConfig.createDefault(storeType);
   }
 
   @BeforeMethod
   public void setUpExecutor() throws IOException {
     executor = TckUtils.fixedThreadPool();
-    storeContext = storeConfig.createContext();
-    store = storeContext.newStore();
+    storeContext = StoreContext.from(storeConfig);
+    store = storeContext.createAndRegisterStore();
   }
 
   @AfterMethod

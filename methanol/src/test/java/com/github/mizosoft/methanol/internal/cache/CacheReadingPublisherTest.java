@@ -25,9 +25,9 @@ package com.github.mizosoft.methanol.internal.cache;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntry;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.MEMORY;
+import static com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType.SYSTEM;
+import static com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType.MEMORY;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,8 +37,8 @@ import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorParameterizedTest;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension;
+import com.github.mizosoft.methanol.testing.junit.StoreSpec;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -61,13 +61,13 @@ class CacheReadingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @StoreConfig(store = MEMORY)
+  @StoreSpec(store = MEMORY)
   void cacheStringInMemory(Executor executor, Store store) throws IOException {
     testCachingAString(executor, store);
   }
 
   @ExecutorParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   void cacheStringInDisk(Executor executor, Store store) throws IOException {
     testCachingAString(executor, store);
   }

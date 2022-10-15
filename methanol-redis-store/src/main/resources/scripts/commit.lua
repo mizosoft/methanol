@@ -6,7 +6,7 @@ local clientDataSize = ARGV[2]
 local metadata = ARGV[3]
 local commitMetadata = ARGV[4] == '1'
 local commitData = ARGV[5] == '1'
-local staleEntryExpiryMillis = ARGV[6]
+local staleEntryTimeToLiveMillis = ARGV[6]
 
 if redis.call('get', editorLockKey) ~= editorId then
     redis.call('unlink', wipDataKey)
@@ -25,7 +25,7 @@ if redis.call('strlen', wipDataKey) ~= tonumber(clientDataSize) then
 end
 
 local entryVersion, dataVersion, dataSize = unpack(
-        redis.call('hmget', entryKey, 'version', 'dataVersion', 'dataSize'))
+        redis.call('hmget', entryKey, 'entryVersion', 'dataVersion', 'dataSize'))
 local newEntryVersion = 1 + (entryVersion or 0)
 
 local newDataSize, newDataVersion
@@ -41,8 +41,8 @@ if commitData then
     -- the entry as a concurrent reader might be in progress.
     if dataVersion then
         local dataKey = entryKey .. ':data:' .. dataVersion
+        redis.call('pexpire', dataKey, staleEntryTimeToLiveMillis)
         redis.call('rename', dataKey, dataKey .. ':stale')
-        redis.call('pexpire', dataKey .. ':stale', staleEntryExpiryMillis)
     end
 else
     redis.call('unlink', wipDataKey)
@@ -62,6 +62,9 @@ local updatedFields = { 'entryVersion', newEntryVersion, 'dataVersion', newDataV
 if commitMetadata then
     table.insert(updatedFields, 'metadata')
     table.insert(updatedFields, metadata)
+elseif not entryVersion then
+    table.insert(updatedFields, 'metadata')
+    table.insert(updatedFields, '')
 end
 redis.call('hset', entryKey, unpack(updatedFields))
-return redis.status_reply("commit entry: " .. newEntryVersion .. ', ' .. newDataVersion)
+return redis.status_reply('commit entry: ' .. newEntryVersion .. ', ' .. newDataVersion)

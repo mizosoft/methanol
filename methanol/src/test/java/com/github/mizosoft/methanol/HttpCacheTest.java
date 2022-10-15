@@ -28,8 +28,8 @@ import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateSt
 import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
 import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.FIXED_POOL;
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType.SYSTEM;
+import static com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType.DISK;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
@@ -70,10 +70,10 @@ import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension.UseHttps;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension.StoreParameterizedTest;
+import com.github.mizosoft.methanol.testing.junit.StoreSpec;
 import com.github.mizosoft.methanol.testing.verifiers.ResponseVerifier;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -438,7 +438,7 @@ class HttpCacheTest {
         "X-Content-*",
         "X-Webkit-*"
       })
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   void retainedStoredHeadersOnRevalidation(String headerName, Store store) throws Exception {
     clientBuilder.autoAcceptEncoding(false);
     setUpCache(store);
@@ -542,11 +542,11 @@ class HttpCacheTest {
       StoreContext storeContext, ThrowingConsumer<ValidatorConfig> tester) throws Throwable {
     for (var config : ValidatorConfig.values()) {
       try {
-        setUpCache(storeContext.newStore());
+        setUpCache(storeContext.createAndRegisterStore());
         tester.accept(config);
 
         // Clean workspace for next config
-        storeContext.drainQueuedTasks();
+        storeContext.drainQueuedTasksIfNeeded();
         cache.dispose();
       } catch (AssertionError failed) {
         fail(config.toString(), failed);
@@ -976,7 +976,7 @@ class HttpCacheTest {
    */
   @ParameterizedTest
   @ValueSource(strings = {"Cookie", "Cookie2", "Authorization", "Proxy-Authorization"})
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   void responsesVaryingOnImplicitHeadersAreNotStored(String implicitField, Store store)
       throws Exception {
     setUpCache(store);
@@ -1248,7 +1248,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   @ValueSource(ints = {301, 302, 303, 307, 308})
   void cacheableRedirectWithUncacheableTarget(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1287,7 +1287,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   @ValueSource(ints = {301, 302, 303, 307, 308})
   void uncacheableRedirectWithCacheableTarget(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1326,7 +1326,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   @ValueSource(ints = {301, 302, 303, 307, 308})
   void uncacheableRedirectWithUncacheableTarget(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1369,7 +1369,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   @ValueSource(ints = {301, 302, 303, 307, 308})
   void cacheableRedirectWithCacheableTarget(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1525,7 +1525,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   @ValueSource(ints = {500, 502, 503, 504})
   void staleIfErrorWithServerErrorCodes(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1562,7 +1562,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   @ValueSource(ints = {500, 502, 503, 504})
   void unsatisfiedStaleIfErrorWithServerErrorCodes(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1625,7 +1625,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   @ValueSource(classes = {ConnectException.class, UnknownHostException.class})
   void staleIfErrorWithConnectionFailure(Class<? extends Throwable> failureType, Store store)
       throws Exception {
@@ -1660,7 +1660,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   @ValueSource(classes = {ConnectException.class, UnknownHostException.class})
   void unsatisfiedStaleIfErrorWithConnectionFailure(
       Class<? extends Throwable> failureType, Store store) throws Exception {
@@ -1809,7 +1809,7 @@ class HttpCacheTest {
    */
   @ParameterizedTest
   @CsvFileSource(resources = "/default_cacheability.csv", numLinesToSkip = 1)
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   void defaultCacheability(int code, boolean cacheableByDefault, Store store) throws Exception {
     setUpCache(store);
     client =
@@ -1974,7 +1974,7 @@ class HttpCacheTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   void unsafeMethodsInvalidateCache(String method, StoreContext storeContext) throws Exception {
     assertUnsafeMethodInvalidatesCache(storeContext, method, 200, true);
     assertUnsafeMethodInvalidatesCache(storeContext, method, 302, true);
@@ -1982,7 +1982,7 @@ class HttpCacheTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   void unsafeMethodsDoNotInvalidateCacheWithErrorResponse(String method, StoreContext storeContext)
       throws Exception {
     assertUnsafeMethodInvalidatesCache(storeContext, method, 104, false);
@@ -1995,10 +1995,10 @@ class HttpCacheTest {
       throws Exception {
     // Perform cleanup for previous call
     if (cache != null) {
-      storeContext.drainQueuedTasks();
+      storeContext.drainQueuedTasksIfNeeded();
       cache.dispose();
     }
-    setUpCache(storeContext.newStore());
+    setUpCache(storeContext.createAndRegisterStore());
 
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
@@ -2023,7 +2023,7 @@ class HttpCacheTest {
   // TODO find a way to test referenced URIs aren't invalidated if they have different hosts
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   void unsafeMethodsInvalidateReferencedUris(String method, Store store) throws Exception {
     setUpCache(store);
     client = clientBuilder.followRedirects(Redirect.NEVER).build();
@@ -2056,7 +2056,7 @@ class HttpCacheTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   void unsafeMethodsAreNotCached(String method, Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=2").setBody("Pikachu"));
@@ -2213,7 +2213,7 @@ class HttpCacheTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"private", "public"})
-  @StoreConfig(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = DISK, fileSystem = SYSTEM)
   void responseWithCacheControlPublicOrPrivateIsCacheableByDefault(String directive, Store store)
       throws Exception {
     setUpCache(store);
@@ -2249,9 +2249,9 @@ class HttpCacheTest {
 
   @UseHttps // Test SSLSession persistence
   @StoreParameterizedTest
-  @StoreConfig(store = DISK)
+  @StoreSpec(store = DISK)
   void cachePersistence(StoreContext storeContext) throws Exception {
-    setUpCache(storeContext.newStore());
+    setUpCache(storeContext.createAndRegisterStore());
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Eevee"));
     verifyThat(get(serverUri)).isCacheMiss().hasBody("Eevee");
 
@@ -2260,7 +2260,7 @@ class HttpCacheTest {
     // Retain freshness between sessions
     clock.advanceSeconds(1);
 
-    setUpCache(storeContext.newStore());
+    setUpCache(storeContext.createAndRegisterStore());
     verifyThat(get(serverUri)).isCacheHit().hasBody("Eevee").isCachedWithSsl();
 
     cache.close();
@@ -2268,7 +2268,7 @@ class HttpCacheTest {
     // Make response stale by 1 second between sessions
     clock.advanceSeconds(1);
 
-    setUpCache(storeContext.newStore());
+    setUpCache(storeContext.createAndRegisterStore());
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
     verifyThat(get(serverUri)).isConditionalHit().hasBody("Eevee").isCachedWithSsl();
   }

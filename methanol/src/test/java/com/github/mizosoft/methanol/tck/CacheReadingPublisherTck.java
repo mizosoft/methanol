@@ -29,9 +29,9 @@ import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.junit.ResolvedStoreConfig;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
+import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -59,7 +59,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   private static final AtomicLong entryId = new AtomicLong();
 
   private final ExecutorType executorType;
-  private final ResolvedStoreConfig storeConfig;
+  private final StoreConfig storeConfig;
 
   private Executor executor;
   private StoreContext storeContext;
@@ -77,26 +77,23 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   public CacheReadingPublisherTck(ExecutorType executorType, StoreType storeType) {
     super(TckUtils.testEnvironment());
     this.executorType = executorType;
-    storeConfig = ResolvedStoreConfig.createDefault(storeType);
+    storeConfig = StoreConfig.createDefault(storeType);
   }
 
   @BeforeMethod
   public void setUpExecutor() throws IOException {
     executor = executorType.createExecutor();
-    storeContext = storeConfig.createContext();
-    store = storeContext.newStore();
+    storeContext = StoreContext.from(storeConfig);
+    store = storeContext.createAndRegisterStore();
   }
 
   @AfterMethod
   public void tearDown() throws Exception {
     TestUtils.shutdown(executor);
-
-    // Make sure viewer is closed
     for (var viewer : openedViewers) {
       viewer.close();
     }
     openedViewers.clear();
-
     if (storeContext != null) {
       storeContext.close();
     }
@@ -107,7 +104,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
     var viewer = populateThenViewEntry(elements);
     openedViewers.add(viewer);
 
-    // Limit published items to `elements`
+    // Limit published items to `elements`.
     var publisher = new CacheReadingPublisher(viewer, executor);
     return subscriber ->
         publisher.subscribe(
@@ -118,7 +115,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
     try {
       var entryName = "test-entry-" + entryId.getAndIncrement();
       try (var editor = requireNonNull(store.edit(entryName))) {
-        // Set metadata to not discard the entry if `elements` is 0
+        // Set metadata to not discard the entry if `elements` is 0.
         editor.metadata(ByteBuffer.allocate(1));
 
         int position = 0;
@@ -134,21 +131,21 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   }
 
   private List<ByteBuffer> generateData(long elements) {
-    var dataBuffer = ByteBuffer.allocate(BUFFER_SIZE);
+    var buffer = ByteBuffer.allocate(BUFFER_SIZE);
     ThreadLocalRandom.current()
-        .ints(BUFFER_SIZE, 0x20, 0x7f) // ASCII VCHARS
-        .forEach(i -> dataBuffer.put((byte) i));
-    dataBuffer.flip();
+        .ints(BUFFER_SIZE, 0x20, 0x7f) // ASCII VCHARS.
+        .forEach(i -> buffer.put((byte) i));
+    buffer.flip();
     return elements > 0
-        ? Stream.generate(dataBuffer::duplicate)
-            .limit(MAX_BATCH_SIZE * elements) // Produce `elements` items at minimum
+        ? Stream.generate(buffer::duplicate)
+            .limit(MAX_BATCH_SIZE * elements) // Produce `elements` items at minimum.
             .collect(Collectors.toUnmodifiableList())
         : List.of();
   }
 
   @Override
   public Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
-    return null; // Skip as the publisher can only fail if a read is requested
+    return null; // Skip as the publisher can't fail unless a read is requested.
   }
 
   @Override
@@ -158,7 +155,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
 
   @DataProvider
   public static Object[][] provider() {
-    // Handcrafted cartesian product
+    // Handcrafted cartesian product.
     return new Object[][] {
       {ExecutorType.SAME_THREAD, StoreType.MEMORY},
       {ExecutorType.FIXED_POOL, StoreType.MEMORY},

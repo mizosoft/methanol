@@ -44,7 +44,7 @@ import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hasher;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import com.github.mizosoft.methanol.testing.junit.StoreContext;
+import com.github.mizosoft.methanol.testing.junit.DiskStoreContext;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -65,7 +65,7 @@ final class MockDiskStore {
   private final MockClock clock;
   private final Index workIndex;
 
-  MockDiskStore(StoreContext context) {
+  MockDiskStore(DiskStoreContext context) {
     directory = context.directory();
     indexFile = directory.resolve(INDEX_FILENAME);
     tempIndexFile = directory.resolve(TEMP_INDEX_FILENAME);

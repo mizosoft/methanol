@@ -1,5 +1,6 @@
 dependencies {
   api project(':methanol')
+  implementation project(':methanol-redis-store')
   implementation libs.okhttp.tls
   implementation libs.assertj
   implementation platform(libs.junit.bom)
