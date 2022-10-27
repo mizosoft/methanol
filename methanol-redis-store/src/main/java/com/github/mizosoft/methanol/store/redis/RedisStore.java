@@ -129,7 +129,9 @@ public final class RedisStore implements Store {
 
   @Override
   public Iterator<Viewer> iterator() {
-    return iterator(true);
+    var iterator = new ScanningViewerIterator(toEntryKey("*")); // Match all keys.
+    iterator.fireScan(ScanCursor.INITIAL);
+    return iterator;
   }
 
   @Override
@@ -154,7 +156,7 @@ public final class RedisStore implements Store {
     try {
       requireNotClosed();
       long size = 0;
-      var iter = iterator(false);
+      var iter = iterator();
       while (iter.hasNext()) {
         try (var viewer = iter.next()) {
           size += viewer.entrySize();
@@ -242,18 +244,8 @@ public final class RedisStore implements Store {
     }
   }
 
-  private Iterator<Viewer> iterator(boolean concurrentlyCloseable) {
-    var pattern = toEntryKey("*"); // Match all keys.
-    var iterator =
-        concurrentlyCloseable
-            ? new ClosureAwareScanningViewerIterator(pattern)
-            : new ScanningViewerIterator(pattern);
-    iterator.fireScan(ScanCursor.INITIAL);
-    return iterator;
-  }
-
   private void unguardedClear() {
-    var iter = iterator(false);
+    var iter = iterator();
     while (iter.hasNext()) {
       try (var viewer = iter.next()) {
         viewer.removeEntry();
@@ -270,22 +262,21 @@ public final class RedisStore implements Store {
       if (closed) {
         return;
       }
+      try {
+        // Prevent active editors from committing successfully. We know no editors can be openned
+        // concurrently since we've set closed to `true`, and editors are added within
+        // closeLock.readLock() scope only if not closed.
+        openEditors.forEach(RedisEditor::discard);
+        openEditors.clear();
+        if (dispose) {
+          unguardedClear();
+        }
+      } finally {
+        dereferenceConnection();
+      }
       closed = true;
     } finally {
       closeLock.writeLock().unlock();
-    }
-
-    try {
-      // Prevent active editors from committing successfully. We know no editors can be openned
-      // concurrently since we've set closed to `true`, and editors are added within
-      // closeLock.readLock() scope only if not closed.
-      openEditors.forEach(RedisEditor::discard);
-      openEditors.clear();
-      if (dispose) {
-        unguardedClear();
-      }
-    } finally {
-      dereferenceConnection();
     }
   }
 
@@ -345,7 +336,7 @@ public final class RedisStore implements Store {
 
   private void dereferenceConnection() {
     if (connectionRefCount.decrementAndGet() == 0) {
-      connection.close();
+      connection.closeAsync();
     }
   }
 
@@ -461,11 +452,21 @@ public final class RedisStore implements Store {
     }
 
     void fireScan(ScanCursor cursor) {
-      referenceConnection();
-      connection
-          .async()
-          .scan(key -> queue.add(new ScanKey(key)), cursor, args)
-          .whenComplete(this::onScanCompletion);
+      closeLock.readLock().lock();
+      try {
+        if (closed) {
+          queue.add(new ScanCompletion(ScanCursor.FINISHED));
+          return;
+        }
+
+        referenceConnection();
+        connection
+            .async()
+            .scan(key -> queue.add(new ScanKey(key)), cursor, args)
+            .whenComplete(this::onScanCompletion);
+      } finally {
+        closeLock.readLock().unlock();
+      }
     }
 
     private void onScanCompletion(ScanCursor cursor, Throwable error) {
@@ -477,30 +478,6 @@ public final class RedisStore implements Store {
         }
       } finally {
         dereferenceConnection();
-      }
-    }
-  }
-
-  /**
-   * A {@code ScanningViewerIterator} that finishes iteration if the store is closed while
-   * iterating.
-   */
-  private final class ClosureAwareScanningViewerIterator extends ScanningViewerIterator {
-    ClosureAwareScanningViewerIterator(String pattern) {
-      super(pattern);
-    }
-
-    @Override
-    void fireScan(ScanCursor cursor) {
-      closeLock.readLock().lock();
-      try {
-        if (closed) {
-          queue.add(new ScanCompletion(ScanCursor.FINISHED));
-          return;
-        }
-        super.fireScan(cursor);
-      } finally {
-        closeLock.readLock().unlock();
       }
     }
   }

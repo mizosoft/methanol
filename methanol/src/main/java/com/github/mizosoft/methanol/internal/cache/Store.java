@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,13 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.Validate.TODO;
+
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -70,6 +73,10 @@ public interface Store extends AutoCloseable, Flushable {
    */
   @Nullable Viewer view(String key) throws IOException;
 
+  default @Nullable CompletableFuture<Viewer> viewAsync(String key) {
+    return TODO();
+  }
+
   /**
    * Returns an {@code Editor} for the entry associated with the given key (atomically creating a
    * new one if necessary), or {@code null} if such entry is currently being edited.
@@ -77,6 +84,10 @@ public interface Store extends AutoCloseable, Flushable {
    * @throws IllegalStateException if the store is closed
    */
   @Nullable Editor edit(String key) throws IOException;
+
+  default CompletableFuture<@Nullable Editor> editAsync(String key) {
+    return TODO();
+  }
 
   /**
    * Returns a iterator of {@code Viewers} over the entries in this store. The iterator doesn't
@@ -138,6 +149,10 @@ public interface Store extends AutoCloseable, Flushable {
      */
     CompletableFuture<Integer> readAsync(long position, ByteBuffer dst);
 
+    default AsyncReadableByteChannel dataChannel() {
+      return TODO();
+    }
+
     /** Returns the size in bytes of the data stream. */
     long dataSize();
 
@@ -152,6 +167,10 @@ public interface Store extends AutoCloseable, Flushable {
      * @throws IllegalStateException if the store is closed
      */
     @Nullable Editor edit() throws IOException;
+
+    default CompletableFuture<@Nullable Editor> editAsync() {
+      return TODO();
+    }
 
     /**
      * Removes the entry associated with this viewer only if it hasn't changed since this viewer was
@@ -187,6 +206,10 @@ public interface Store extends AutoCloseable, Flushable {
      */
     CompletableFuture<Integer> writeAsync(long position, ByteBuffer src);
 
+    default AsyncWritableByteChannel dataChannel() throws IOException {
+      return TODO();
+    }
+
     /**
      * Marks the edit as committed so that modifications made so far are applied when the editor is
      * closed.
@@ -195,11 +218,23 @@ public interface Store extends AutoCloseable, Flushable {
      */
     void commitOnClose();
 
+    default CompletableFuture<Boolean> commitAsync() {
+      return TODO();
+    }
+
     /**
      * Closes this editor. If {@link #commitOnClose()} is called, changes made by this editor are
      * applied; otherwise, they're discarded.
      */
     @Override
     void close() throws IOException;
+  }
+
+  interface AsyncReadableByteChannel extends Channel {
+    CompletableFuture<Integer> read(ByteBuffer dst);
+  }
+
+  interface AsyncWritableByteChannel extends Channel {
+    CompletableFuture<Integer> write(ByteBuffer src);
   }
 }

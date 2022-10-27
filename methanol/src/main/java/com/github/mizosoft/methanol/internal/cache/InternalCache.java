@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,21 +22,33 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.Validate.TODO;
+
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
+import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** An {@code HttpCache} that's used internally. */
 public interface InternalCache {
-  @Nullable
-  CacheResponse get(HttpRequest request) throws IOException;
+  @Nullable CacheResponse get(HttpRequest request) throws IOException;
 
+  default CompletableFuture<@Nullable CacheResponse> getAsync(HttpRequest request) {
+    return TODO();
+  }
+
+  @CanIgnoreReturnValue
   void update(CacheResponse cacheResponse);
 
-  @Nullable
-  NetworkResponse put(
+  @Nullable NetworkResponse put(
       HttpRequest request, @Nullable CacheResponse cacheResponse, NetworkResponse networkResponse);
+
+  default CompletableFuture<@Nullable NetworkResponse> putAsync(
+      HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse) {
+    return TODO();
+  }
 
   void remove(URI uri);
 }

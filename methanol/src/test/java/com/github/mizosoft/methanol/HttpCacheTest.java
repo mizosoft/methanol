@@ -3195,10 +3195,10 @@ class HttpCacheTest {
   /**
    * Awaits ongoing edits to be completed. By design, {@link
    * com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher} doesn't make downstream
-   * completion wait for the whole body to be written. So if writes take time (happens with
-   * DiskStore) the response entry is committed a while after the response is completed. This
-   * however agitates tests as they expect things to happen sequentially. This is solved by waiting
-   * for all open editors to close after a client.send(...) is issued.
+   * completion wait for the whole body to be written. So if writes take time, the response entry is
+   * committed a while after the response is completed. This however agitates tests as they expect
+   * things to happen sequentially. This is solved by waiting for all open editors to close after a
+   * client.send(...) is issued.
    */
   private static final class EditAwaiter {
     private final Phaser phaser = new Phaser(1); // Register self

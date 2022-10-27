@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -71,7 +71,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /**
  * An {@link Interceptor} that serves incoming requests from cache, network, both, or none (in case
  * of unsatisfiable requests). The interceptor also updates, populates and invalidates cache entries
- * as appropriate.
+ * as necessary.
  */
 public final class CacheInterceptor implements Interceptor {
   private static final Logger logger = System.getLogger(CacheInterceptor.class.getName());

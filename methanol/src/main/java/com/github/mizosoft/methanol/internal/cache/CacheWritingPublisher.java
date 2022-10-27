@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,6 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
-import static com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.CacheWritingSubscription.WritingState.DISPOSED;
-import static com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.CacheWritingSubscription.WritingState.IDLE;
-import static com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.CacheWritingSubscription.WritingState.WRITING;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
@@ -39,6 +36,8 @@ import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -191,7 +190,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         var lookup = MethodHandles.lookup();
         DOWNSTREAM =
             lookup.findVarHandle(CacheWritingSubscription.class, "downstream", Subscriber.class);
-        STATE = lookup.findVarHandle(CacheWritingSubscription.class, "state", WritingState.class);
+        STATE = lookup.findVarHandle(CacheWritingSubscription.class, "state", State.class);
         POSITION = lookup.findVarHandle(CacheWritingSubscription.class, "position", long.class);
       } catch (NoSuchFieldException | IllegalAccessException e) {
         throw new ExceptionInInitializerError(e);
@@ -208,7 +207,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private final ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
 
     @SuppressWarnings("FieldMayBeFinal") // No it may not IDEA!!
-    private volatile WritingState state = IDLE;
+    private volatile State state = State.IDLE;
 
     @SuppressWarnings("unused") // VarHandle indirection
     private volatile long position;
@@ -219,8 +218,10 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
      */
     private volatile boolean receivedBodyCompletion;
 
-    // Package-Private for static import
-    enum WritingState {
+    // TODO remove this when async methods are added to Store
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+
+    private enum State {
       IDLE,
       WRITING,
       DISPOSED
@@ -253,7 +254,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       // Downstream isn't interested in the body anymore. However, we are! So we'll keep
       // writing the body to cache. This will be done in background since downstream
       // is probably done by now.
-      if (state == DISPOSED || propagateCancellation) {
+      if (state == State.DISPOSED || propagateCancellation) {
         upstream.cancel();
       } else {
         upstream.request(Long.MAX_VALUE); // Drain the whole body
@@ -268,7 +269,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     void onNext(List<ByteBuffer> buffers) {
-      if (state != DISPOSED) {
+      if (state != State.DISPOSED) {
         // Duplicate buffers since they'll be operated upon concurrently
         var duplicateBuffers =
             buffers.stream().map(ByteBuffer::duplicate).collect(Collectors.toUnmodifiableList());
@@ -286,7 +287,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       upstream.clear();
       writeQueue.clear();
       try {
-        discardEdit(null);
+        executor.execute(() -> discardEdit(null));
       } finally {
         var subscriber = getAndClearDownstream();
         if (subscriber != null) {
@@ -294,6 +295,8 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         } else {
           logger.log(Level.WARNING, "upstream error during background cache write", error);
         }
+
+        executor.shutdown();
       }
     }
 
@@ -322,15 +325,16 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private boolean tryScheduleWrite(boolean maintainWritingState) {
       var buffer = writeQueue.peek();
       if (buffer != null
-          && ((maintainWritingState && state == WRITING)
-              || STATE.compareAndSet(this, IDLE, WRITING))) {
+          && ((maintainWritingState && state == State.WRITING)
+              || STATE.compareAndSet(this, State.IDLE, State.WRITING))) {
         writeQueue.poll(); // Consume
         scheduleWrite(buffer);
         return true;
       } else if (buffer == null
-          && (maintainWritingState || state == IDLE) // No write is currently scheduled?
+          && (maintainWritingState || state == State.IDLE) // No write is currently scheduled?
           && receivedBodyCompletion) {
-        commitEdit();
+        executor.execute(this::commitEdit);
+        executor.shutdown();
         return true;
       }
       return false;
@@ -342,12 +346,13 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
             .writeAsync((long) POSITION.getAndAdd(this, buffer.remaining()), buffer)
             .whenComplete((__, error) -> onWriteCompletion(error));
       } catch (RuntimeException t) {
-        discardEdit(t);
+        executor.execute(() -> discardEdit(t));
+        executor.shutdown();
       }
     }
 
     private void commitEdit() {
-      if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
+      if (STATE.getAndSet(this, State.DISPOSED) != State.DISPOSED) {
         IOException commitFailure = null;
         try (editor) {
           editor.commitOnClose();
@@ -365,7 +370,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     private void discardEdit(@Nullable Throwable writeFailure) {
-      if (STATE.getAndSet(this, DISPOSED) != DISPOSED) {
+      if (STATE.getAndSet(this, State.DISPOSED) != State.DISPOSED) {
         if (writeFailure != null) {
           logger.log(
               Level.WARNING,
@@ -387,14 +392,16 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private void onWriteCompletion(@Nullable Throwable error) {
       if (error != null) {
         try {
-          discardEdit(error);
+          executor.execute(() -> discardEdit(error));
         } finally {
           // Cancel upstream if downstream was disposed and we were only writing the body
           if (downstream == null) {
             upstream.cancel();
           }
+
+          executor.shutdown();
         }
-      } else if (!tryScheduleWrite(true) && STATE.compareAndSet(this, WRITING, IDLE)) {
+      } else if (!tryScheduleWrite(true) && STATE.compareAndSet(this, State.WRITING, State.IDLE)) {
         // There might be signals missed just before CASing to IDLE
         tryScheduleWrite(false);
       }
