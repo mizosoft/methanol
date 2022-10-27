@@ -703,6 +703,7 @@ public final class RedisStore implements Store {
       lock.lock();
       try {
         requireState(!closed, "closed");
+        requireState(!commitOnClose, "committed");
         this.metadata = Utils.copy(metadata).asReadOnlyBuffer();
       } finally {
         lock.unlock();
@@ -717,6 +718,7 @@ public final class RedisStore implements Store {
       lock.lock();
       try {
         requireState(!closed, "closed");
+        requireState(!commitOnClose, "committed");
         if (hasPendingWrite) {
           throw new WritePendingException();
         }

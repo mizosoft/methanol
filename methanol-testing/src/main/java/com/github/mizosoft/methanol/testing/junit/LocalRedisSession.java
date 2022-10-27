@@ -71,11 +71,11 @@ public final class LocalRedisSession implements AutoCloseable {
     while (processOutput.ready() && (read = processOutput.read()) != -1) {
       sb.append(read);
     }
-    logger.log(Level.INFO, sb.toString());
+    logger.log(Level.DEBUG, sb.toString());
 
-    process.destroy();
-    client.close();
     Directories.deleteRecursively(directory);
+    client.close();
+    process.destroy();
   }
 
   public static LocalRedisSession start()
@@ -113,7 +113,7 @@ public final class LocalRedisSession implements AutoCloseable {
       var readLineFuture = executor.submit(processOutput::readLine);
       try {
         line = readLineFuture.get(10, TimeUnit.SECONDS);
-        logger.log(Level.INFO, line);
+        logger.log(Level.DEBUG, line);
       } catch (InterruptedException | TimeoutException e) {
         readLineFuture.cancel(true);
         executor.shutdown();
