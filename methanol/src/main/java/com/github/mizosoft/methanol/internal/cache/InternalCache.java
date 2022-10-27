@@ -24,7 +24,6 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.Validate.TODO;
 
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -39,7 +38,6 @@ public interface InternalCache {
     return TODO();
   }
 
-  @CanIgnoreReturnValue
   void update(CacheResponse cacheResponse);
 
   @Nullable NetworkResponse put(
