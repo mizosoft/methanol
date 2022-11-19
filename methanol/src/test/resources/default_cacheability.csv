@@ -10,7 +10,7 @@ code, cacheableByDefault
 203, true
 204, true
 205, false
-# Partial content is not supported
+# Caching partial content is not supported
 206, false
 300, true
 301, true
