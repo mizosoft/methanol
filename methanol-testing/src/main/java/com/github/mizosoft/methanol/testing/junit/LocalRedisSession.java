@@ -29,10 +29,10 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import java.io.EOFException;
 import java.io.IOException;
-import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -45,8 +45,6 @@ public final class LocalRedisSession implements AutoCloseable {
   private static final String LOOPBACK_ADDRESS = "127.0.0.1";
   private static final int DYNAMIC_PORT_START = 49152;
   private static final int DYNAMIC_PORT_END = 65535;
-
-  private static final Logger logger = System.getLogger(LocalRedisSession.class.getName());
 
   private final Process process;
   private final Path directory;
@@ -63,34 +61,44 @@ public final class LocalRedisSession implements AutoCloseable {
   }
 
   @Override
-  public void close() throws Exception {
-    // Spill what's written to redis log while ensuring we won't block.
-    var sb = new StringBuilder();
-    var processOutput = process.inputReader(UTF_8);
-    int read;
-    while (processOutput.ready() && (read = processOutput.read()) != -1) {
-      sb.append(read);
-    }
-    logger.log(Level.DEBUG, sb.toString());
-
+  public void close() throws IOException {
     Directories.deleteRecursively(directory);
     client.close();
     process.destroy();
   }
 
-  public static LocalRedisSession start()
+  void spillRemainingLog(List<String> log) throws IOException {
+    // Spill what's written to redis log while ensuring we won't block.
+    var sb = new StringBuilder();
+    var processOutput = process.inputReader(UTF_8);
+    int read;
+    while (processOutput.ready() && (read = processOutput.read()) != -1) {
+      sb.append((char) read);
+    }
+    sb.toString().lines().forEach(log::add);
+  }
+
+  public static LocalRedisSession start(List<String> log)
       throws IOException, InterruptedException, TimeoutException {
     var directory = Files.createTempDirectory(LocalRedisSession.class.getName());
+    var tempLog = new ArrayList<String>();
     while (true) {
       int port = ThreadLocalRandom.current().nextInt(DYNAMIC_PORT_START, DYNAMIC_PORT_END + 1);
-      var process = tryStart(port, directory);
-      if (process != null) {
-        return new LocalRedisSession(process, directory, port);
+      try {
+        tempLog.clear();
+        var process = tryStart(port, directory, tempLog);
+        if (process != null) {
+          log.addAll(tempLog);
+          return new LocalRedisSession(process, directory, port);
+        }
+      } catch (IOException | TimeoutException | CompletionException e) {
+        log.addAll(tempLog);
+        throw e;
       }
     }
   }
 
-  private static @Nullable Process tryStart(int port, Path directory)
+  private static @Nullable Process tryStart(int port, Path directory, List<String> log)
       throws IOException, TimeoutException, InterruptedException {
     var process =
         new ProcessBuilder(
@@ -107,13 +115,12 @@ public final class LocalRedisSession implements AutoCloseable {
             .start();
     var processOutput = process.inputReader(UTF_8);
     var executor = Executors.newSingleThreadExecutor();
-
     while (true) {
       String line;
       var readLineFuture = executor.submit(processOutput::readLine);
       try {
         line = readLineFuture.get(10, TimeUnit.SECONDS);
-        logger.log(Level.DEBUG, line);
+        log.add(line);
       } catch (InterruptedException | TimeoutException e) {
         readLineFuture.cancel(true);
         executor.shutdown();

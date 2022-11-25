@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.testing.junit;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.MockClock;
+import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.MockExecutor;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -37,12 +38,9 @@ import java.util.concurrent.Executors;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface StoreSpec {
   int DEFAULT_INDEX_UPDATE_DELAY = -1;
-  long DEFAULT_EXPIRY_MILLIS = -1;
+  long DEFAULT_TTL = -1;
 
   StoreType[] store() default {StoreType.MEMORY, StoreType.DISK, StoreType.REDIS};
-
-  /** Whether to automatically initialize a created store. */
-  boolean autoInit() default true;
 
   long maxSize() default Long.MAX_VALUE;
 
@@ -63,9 +61,15 @@ public @interface StoreSpec {
   /** Whether {@link MockClock} should automatically advance itself by 1 second. */
   boolean autoAdvanceClock() default true;
 
-  long editorLockExpiryMillis() default DEFAULT_EXPIRY_MILLIS;
+  /**
+   * Whether {@link MockDelayer} should eagerly dispatch ready tasks (tasks whose delay is
+   * evaluated) whenever a task is submitted.
+   */
+  boolean dispatchEagerly() default true;
 
-  long staleEntryExpiryMillis() default DEFAULT_EXPIRY_MILLIS;
+  long editorLockTtlSeconds() default DEFAULT_TTL;
+
+  long staleEntryLockTtlSeconds() default DEFAULT_TTL;
 
   enum StoreType {
     MEMORY,

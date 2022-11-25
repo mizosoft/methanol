@@ -26,9 +26,8 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_VALUE_MATCHER;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 
-import java.io.Closeable;
 import java.io.IOException;
-import java.lang.System.Logger.Level;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -42,8 +41,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Miscellaneous utilities. */
 public class Utils {
-  private static final System.Logger logger = System.getLogger(Utils.class.getName());
-
   private static final Clock SYSTEM_MILLIS_UTC = Clock.tickMillis(ZoneOffset.UTC);
 
   private Utils() {}
@@ -53,7 +50,7 @@ public class Utils {
   }
 
   public static boolean isValidHeaderName(String name) {
-    // Allow HTTP2 pseudo-header fields (e.g. ':status').
+    // Consider HTTP2 pseudo-header fields (e.g. ':status').
     return name.startsWith(":")
         ? isValidToken(CharBuffer.wrap(name, 1, name.length()))
         : isValidToken(name);
@@ -138,7 +135,7 @@ public class Utils {
     // Clone the main cause in a CompletionException|ExecutionException chain.
     var throwableToClone = getDeepCompletionCause(t);
 
-    // Don't try cloning if we can't rethrow the cloned exception.
+    // Don't bother cloning if we can rethrow the cloned exception.
     if (!(throwableToClone instanceof RuntimeException
         || throwableToClone instanceof Error
         || throwableToClone instanceof IOException
@@ -146,6 +143,7 @@ public class Utils {
       return null;
     }
 
+    // TODO prefer constructors with 3 args.
     try {
       for (var constructor :
           (Constructor<? extends Throwable>[]) throwableToClone.getClass().getConstructors()) {
@@ -203,13 +201,20 @@ public class Utils {
     }
   }
 
-  public static void closeQuietly(@Nullable Closeable closeable) {
-    if (closeable != null) {
+  public static <T> T blockUnchecked(Future<T> future) {
+    try {
+      return future.get();
+    } catch (ExecutionException e) {
       try {
-        closeable.close();
-      } catch (IOException e) {
-        logger.log(Level.WARNING, "exception while closing: " + closeable, e);
+        throw rethrowAsyncThrowable(e.getCause(), false);
+      } catch (IOException ioe) {
+        throw new UncheckedIOException(ioe);
+      } catch (InterruptedException t) {
+        // Won't happen.
+        throw new AssertionError(t);
       }
+    } catch (InterruptedException e) {
+      throw new UncheckedIOException(new IOException("interrupted while waiting for I/O", e));
     }
   }
 
@@ -220,8 +225,8 @@ public class Utils {
    * quote DQUOTE and backslash octets occurring within that string."
    */
   public static String escapeAndQuoteValueIfNeeded(String value) {
-    // If value is already a token then it doesn't need quoting.
-    // Special case: if the value is empty then it is not a token.
+    // If value is already a token then it doesn't need quoting. Special case: if the value is empty
+    // then it is not a token.
     return isValidToken(value) ? value : escapeAndQuote(value);
   }
 
@@ -241,5 +246,11 @@ public class Utils {
 
   public static boolean startsWithIgnoreCase(String source, String prefix) {
     return source.regionMatches(true, 0, prefix, 0, prefix.length());
+  }
+
+  public static CompletionException toCompletionException(Throwable t) {
+    return t instanceof CompletionException
+        ? ((CompletionException) t)
+        : new CompletionException(t);
   }
 }

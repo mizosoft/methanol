@@ -70,7 +70,7 @@ class TimeoutSubscriberTest {
     clock.advanceSeconds(1);
     timeoutSubscriber.onNext(1);
     assertThat(downstream.items).last().isEqualTo(1);
-    assertThat(delayer.peekEarliestTaskFuture()).isCancelled();
+    assertThat(delayer.peekEarliestFuture()).isCancelled();
     assertThat(delayer.taskCount()).isEqualTo(2); // Timeout is scheduled for the second item
 
     // Trigger first timeout, which was cancelled & so is discarded
@@ -202,7 +202,7 @@ class TimeoutSubscriberTest {
 
     timeoutSubscriber.onError(new TestException());
     assertThat(downstream.lastError).isInstanceOf(TestException.class);
-    assertThat(delayer.peekLatestTaskFuture()).isCancelled();
+    assertThat(delayer.peekLatestFuture()).isCancelled();
 
     // Trigger timeout, which is ignored
     clock.advanceSeconds(2);
@@ -254,7 +254,7 @@ class TimeoutSubscriberTest {
     assertThat(delayer.taskCount()).isOne();
 
     downstream.subscription.cancel();
-    assertThat(delayer.peekEarliestTaskFuture()).isCancelled();
+    assertThat(delayer.peekEarliestFuture()).isCancelled();
 
     // Trigger timeout for first item
     clock.advanceSeconds(2);
@@ -332,7 +332,7 @@ class TimeoutSubscriberTest {
     timeoutSubscriber.onNext(3);
     assertThat(downstream.lastError).isInstanceOf(IllegalStateException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
-    assertThat(delayer.peekLatestTaskFuture()).isCancelled();
+    assertThat(delayer.peekLatestFuture()).isCancelled();
   }
 
   private static class ItemTimeoutException extends Exception {}

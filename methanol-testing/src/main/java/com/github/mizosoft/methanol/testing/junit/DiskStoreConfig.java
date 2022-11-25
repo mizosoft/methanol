@@ -39,22 +39,22 @@ public final class DiskStoreConfig extends StoreConfig {
   private final Optional<Duration> indexUpdateDelay;
 
   private final boolean autoAdvanceClock;
-  private final int appVersion;
+  private final boolean dispatchEagerly;
 
   public DiskStoreConfig(
-      boolean autoInit,
       long maxSize,
+      int appVersion,
       FileSystemType fileSystemType,
       Execution execution,
       @Nullable Duration indexUpdateDelay,
       boolean autoAdvanceClock,
-      int appVersion) {
-    super(StoreType.DISK, autoInit, maxSize);
+      boolean dispatchEagerly) {
+    super(StoreType.DISK, maxSize, appVersion);
     this.fileSystemType = requireNonNull(fileSystemType);
     this.execution = requireNonNull(execution);
     this.indexUpdateDelay = Optional.ofNullable(indexUpdateDelay);
     this.autoAdvanceClock = autoAdvanceClock;
-    this.appVersion = appVersion;
+    this.dispatchEagerly = dispatchEagerly;
   }
 
   public FileSystemType fileSystemType() {
@@ -73,7 +73,7 @@ public final class DiskStoreConfig extends StoreConfig {
     return autoAdvanceClock;
   }
 
-  public int appVersion() {
-    return appVersion;
+  public boolean dispatchEagerly() {
+    return dispatchEagerly;
   }
 }

@@ -27,67 +27,71 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
+import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
+import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.junit.DiskStoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.file.NoSuchFileException;
 import java.util.stream.Stream;
 
 class StoreTesting {
   private StoreTesting() {}
 
   static void assertUnreadable(Store store, String key) throws IOException {
-    try (var viewer = store.view(key)) {
-      assertThat(viewer)
-          .withFailMessage("expected entry <%s> to be unreadable", key)
-          .isNull();
+    try (var viewer = store.view(key).orElse(null)) {
+      assertThat(viewer).withFailMessage("expected entry <%s> to be unreadable", key).isNull();
     }
   }
 
   static void assertAbsent(Store store, StoreContext context, String... keys) throws IOException {
-    // Make sure the store knows nothing about the entries
+    // Make sure the store knows nothing about the entries.
     for (var key : keys) {
       assertUnreadable(store, key);
       if (context.config().storeType() == StoreType.DISK) {
         var mockStore = new MockDiskStore((DiskStoreContext) context);
-        assertThat(mockStore.entryFile(key))
-            .withFailMessage("unexpected entry file for: %s", key)
-            .doesNotExist();
+        try {
+          // Check if this is a different logical entry in case of collisions.
+          var entry = mockStore.readEntry(key);
+          assertThat(entry.key)
+              .withFailMessage("unexpected entry file for <%s>", key)
+              .isNotEqualTo(key);
+        } catch (NoSuchFileException ignored) {
+          assertThat(mockStore.entryFile(key))
+              .withFailMessage("unexpected entry file for <%s>", key)
+              .doesNotExist();
+        }
       }
     }
   }
 
   static long sizeOf(String... values) {
-    return Stream.of(values)
-        .map(UTF_8::encode)
-        .mapToLong(ByteBuffer::remaining)
-        .sum();
+    return Stream.of(values).map(UTF_8::encode).mapToLong(ByteBuffer::remaining).sum();
   }
 
   static Viewer view(Store store, String key) throws IOException {
     var viewer = store.view(key);
-    assertThat(viewer)
-        .withFailMessage("expected entry <%s> to be readable", key)
-        .isNotNull();
-    return viewer;
+    assertThat(viewer).withFailMessage("expected entry <%s> to be readable", key).isNotEmpty();
+    return viewer.orElseThrow();
   }
 
   static Editor edit(Store store, String key) throws IOException {
     var editor = store.edit(key);
-    assertThat(editor)
-        .withFailMessage("expected entry <%s> to be editable", key)
-        .isNotNull();
-    return editor;
+    assertThat(editor).withFailMessage("expected entry <%s> to be editable", key).isNotEmpty();
+    return editor.orElseThrow();
   }
 
-  static Editor edit(Viewer viewer) throws IOException {
-    var editor = viewer.edit();
+  static Editor edit(Viewer viewer) {
+    var editor = viewer.editAsync().join();
     assertThat(editor)
-        .withFailMessage("expected entry <%s> to be editable from given viewer", viewer.key())
-        .isNotNull();
-    return editor;
+        .withFailMessage("expected entry <%s> to be editable through given viewer", viewer.key())
+        .isNotEmpty();
+    return editor.orElseThrow();
   }
 
   static void assertEntryEquals(Store store, String key, String metadata, String data)
@@ -99,41 +103,52 @@ class StoreTesting {
 
   static void assertEntryEquals(Viewer viewer, String metadata, String data) throws IOException {
     assertThat(UTF_8.decode(viewer.metadata()).toString()).isEqualTo(metadata);
-    assertThat(readData(viewer)).isEqualTo(data);
+    assertThat(read(viewer)).isEqualTo(data);
     assertThat(viewer.dataSize()).isEqualTo(sizeOf(data));
     assertThat(viewer.entrySize()).isEqualTo(sizeOf(metadata, data));
   }
 
-  static void writeEntry(Store store, String key, String metadata, String data) throws IOException {
+  static void write(Store store, String key, String metadata, String data) throws IOException {
     try (var editor = edit(store, key)) {
-      writeEntry(editor, metadata, data);
-      editor.commitOnClose();
+      write(editor, data);
+      assertThat(commit(editor, metadata)).isTrue();
     }
   }
 
-  static void writeEntry(Editor editor, String metadata, String data) throws IOException {
-    setMetadata(editor, metadata);
-    writeData(editor, data);
-  }
-
-  static void setMetadata(Editor editor, String metadata) {
-    editor.metadata(UTF_8.encode(metadata));
+  static void write(Editor editor, String data) throws IOException {
+    write(editor.writer(), data);
   }
 
   static void setMetadata(Store store, String key, String metadata) throws IOException {
     try (var editor = edit(store, key)) {
-      setMetadata(editor, metadata);
-      editor.commitOnClose();
+      assertThat(commit(editor, metadata)).isTrue();
     }
   }
 
-  static void writeData(Editor editor, String data) throws IOException {
-    Utils.blockOnIO(editor.writeAsync(0, UTF_8.encode(data)));
+  static boolean commit(Editor editor, String metadata, String data) throws IOException {
+    write(editor, data);
+    return commit(editor, metadata);
   }
 
-  static String readData(Viewer viewer) throws IOException {
-    var buffer = ByteBuffer.allocate(Math.toIntExact(viewer.dataSize()));
-    Utils.blockOnIO(viewer.readAsync(0, buffer));
-    return UTF_8.decode(buffer.flip()).toString();
+  static boolean commit(Editor editor, String metadata) {
+    return editor.commitAsync(UTF_8.encode(metadata)).join();
+  }
+
+  static void write(EntryWriter writer, String data) throws IOException {
+    Utils.blockOnIO(writer.write(UTF_8.encode(data)));
+  }
+
+  static String read(Viewer viewer) throws IOException {
+    return read(viewer.newReader());
+  }
+
+  static String read(EntryReader reader) throws IOException {
+    var out = new ByteArrayOutputStream();
+    var outChannel = Channels.newChannel(out);
+    var buffer = ByteBuffer.allocate(1024);
+    while (Utils.blockOnIO(reader.read(buffer.clear())) != -1) {
+      outChannel.write(buffer.flip());
+    }
+    return out.toString(UTF_8);
   }
 }

@@ -38,13 +38,13 @@ import com.github.mizosoft.methanol.internal.cache.CacheResponse;
 import com.github.mizosoft.methanol.internal.cache.CacheResponseMetadata;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
-import com.github.mizosoft.methanol.internal.cache.InternalCache;
+import com.github.mizosoft.methanol.internal.cache.LocalCache;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.internal.cache.StoreCorruptionException;
 import com.github.mizosoft.methanol.internal.cache.StoreExtension;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.Flushable;
 import java.io.IOException;
 import java.lang.System.Logger;
@@ -54,6 +54,7 @@ import java.net.http.HttpRequest;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
@@ -63,6 +64,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -72,8 +74,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * <p>An {@code HttpCache} instance is utilized by configuring it with {@link
  * Methanol.Builder#cache(HttpCache)}. The cache operates by inserting itself as an {@code
- * Interceptor} that can short-circuit requests by serving responses from local storage. Responses
- * can be stored either in memory or on disk, all configurable with {@link Builder}.
+ * Interceptor} that can short-circuit requests by serving responses from a specified storage.
+ * Responses can be stored either in memory or on disk, all configurable with {@link Builder}.
  *
  * @see <a href="https://mizosoft.github.io/methanol/caching/">Caching with Methanol</a>
  */
@@ -86,9 +88,9 @@ public final class HttpCache implements AutoCloseable, Flushable {
   private final Executor executor;
   private final boolean userVisibleExecutor;
   private final StatsRecorder statsRecorder;
-  private final CacheListener listener;
+  private final StatsRecordingListener listener;
   private final Clock clock;
-  private final InternalCache internalCache = new InternalCacheView();
+  private final LocalCache localCache = new LocalCacheView();
 
   private HttpCache(Builder builder) {
     var userExecutor = builder.executor;
@@ -111,14 +113,13 @@ public final class HttpCache implements AutoCloseable, Flushable {
         requireNonNullElseGet(
             builder.store,
             () -> storeFactory.create(builder.cacheDirectory, builder.maxSize, executor));
-
     statsRecorder =
         requireNonNullElseGet(builder.statsRecorder, StatsRecorder::createConcurrentRecorder);
-    listener = new CacheListener(statsRecorder, builder.listener);
+    listener = new StatsRecordingListener(statsRecorder, builder.listener);
     clock = requireNonNullElseGet(builder.clock, Utils::systemMillisUtc);
   }
 
-  Store storeForTesting() {
+  Store store() {
     return store;
   }
 
@@ -183,7 +184,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   /**
-   * Returns an {@code Iterator} for the {@code URIs} of responses known to this cache. The returned
+   * Returns an iterator over the {@code URIs} of responses known to this cache. The returned
    * iterator supports removal.
    */
   public Iterator<URI> uris() throws IOException {
@@ -198,7 +199,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
         // Prevent any later remove() from removing the wrong entry as hasNext (called by
         // findNextUri()) causes the underlying store iterator to advance.
         canRemove = false;
-        return nextUri != null || findNextUri();
+        return nextUri != null || findNext();
       }
 
       @Override
@@ -219,7 +220,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
         viewerIterator.remove();
       }
 
-      private boolean findNextUri() {
+      private boolean findNext() {
         while (nextUri == null && viewerIterator.hasNext()) {
           try (var viewer = viewerIterator.next()) {
             var metadata = tryDecodeMetadata(viewer);
@@ -234,7 +235,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
     };
   }
 
-  /** Removes all entries from this cache. */
+  /**
+   * Removes all entries from this cache.
+   *
+   * @throws IllegalStateException if closed
+   */
   public void clear() throws IOException {
     store.clear();
   }
@@ -246,7 +251,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
    */
   public boolean remove(URI uri) throws IOException {
     requireNonNull(uri);
-    return store.remove(key(uri));
+    return store.remove(toCacheKey(uri));
   }
 
   /**
@@ -256,17 +261,17 @@ public final class HttpCache implements AutoCloseable, Flushable {
    */
   public boolean remove(HttpRequest request) throws IOException {
     requireNonNull(request);
-    try (var viewer = store.view(key(request))) {
+    try (var viewer = store.view(toCacheKey(request)).orElse(null)) {
       if (viewer != null) {
         var metadata = tryDecodeMetadata(viewer);
         if (metadata != null && metadata.matches(request)) {
           return viewer.removeEntry();
         } else if (metadata == null) {
-          // The entry is corrupt, try removing it anyway
+          // The entry is corrupt, try removing it anyway.
           try {
             viewer.removeEntry();
           } catch (IOException e) {
-            logger.log(Level.WARNING, "exception while removing corrupt entry", e);
+            logger.log(Level.WARNING, "exception when removing corrupt entry", e);
           }
         }
       }
@@ -298,28 +303,33 @@ public final class HttpCache implements AutoCloseable, Flushable {
     store.close();
   }
 
-  /** Called by {@code Methanol} when building the interceptor chain. */
+  /**
+   * Returns an interceptor that serves responses from this cache if applicable. Called by {@code
+   * Methanol} when building the interceptor chain.
+   */
   Interceptor interceptor(@Nullable Executor clientExecutor) {
     return new CacheInterceptor(
-        internalCache, listener, executor, requireNonNullElse(clientExecutor, executor), clock);
+        localCache, listener, requireNonNullElse(clientExecutor, executor), clock);
   }
 
-  private static String key(HttpRequest request) {
-    // Since the cache is restricted to GETs, only the URI is needed as a primary key
-    return key(request.uri());
+  private static String toCacheKey(HttpRequest request) {
+    // Since the cache is restricted to GETs, only the URI is needed as a primary key.
+    return toCacheKey(request.uri());
   }
 
-  private static String key(URI uri) {
+  private static String toCacheKey(URI uri) {
     return uri.toString();
   }
 
-  private static @Nullable CacheResponseMetadata tryDecodeMetadata(Viewer viewer) {
-    try {
-      return CacheResponseMetadata.decode(viewer.metadata());
-    } catch (IOException e) {
-      logger.log(Level.WARNING, "unrecoverable cache entry", e);
-      return null;
+  private static @Nullable CacheResponseMetadata tryDecodeMetadata(@Nullable Viewer viewer) {
+    if (viewer != null) {
+      try {
+        return CacheResponseMetadata.decode(viewer.metadata());
+      } catch (IOException e) {
+        logger.log(Level.WARNING, "unrecoverable cache entry", e);
+      }
     }
+    return null;
   }
 
   /** Returns a new {@code HttpCache.Builder}. */
@@ -327,70 +337,81 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return new Builder();
   }
 
-  private final class InternalCacheView implements InternalCache {
-    InternalCacheView() {}
+  private final class LocalCacheView implements LocalCache {
+    LocalCacheView() {}
 
     @Override
-    public @Nullable CacheResponse get(HttpRequest request) throws IOException {
-      Viewer viewer;
-      try {
-        viewer = store.view(key(request));
-      } catch (StoreCorruptionException e) {
-        logger.log(Level.WARNING, "unrecoverable cache entry", e);
-        return null;
-      }
-
-      if (viewer == null) {
-        return null;
-      }
-
-      var metadata = tryDecodeMetadata(viewer);
-      if (metadata != null && metadata.matches(request)) {
-        return new CacheResponse(
-            metadata, viewer, executor, listener.readListener(request), request, clock.instant());
-      }
-
-      viewer.close();
-      return null;
+    public Optional<CacheResponse> get(HttpRequest request) throws IOException {
+      return tryReadCacheResponse(request, store.view(toCacheKey(request)));
     }
 
     @Override
-    public void update(CacheResponse cacheResponse) {
-      var response = cacheResponse.get();
-      try (var editor = cacheResponse.edit()) {
-        if (editor != null) {
-          editor.metadata(CacheResponseMetadata.from(response).encode());
-          editor.commitOnClose();
-        }
-      } catch (IOException e) {
-        logger.log(Level.WARNING, "cache update failure", e);
+    public CompletableFuture<Optional<CacheResponse>> getAsync(HttpRequest request) {
+      return store
+          .viewAsync(toCacheKey(request))
+          .thenApply(viewer -> tryReadCacheResponse(request, viewer));
+    }
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private Optional<CacheResponse> tryReadCacheResponse(
+        HttpRequest request, Optional<Viewer> viewer) {
+      var cacheResponse =
+          viewer
+              .map(HttpCache::tryDecodeMetadata)
+              .filter(metadata -> metadata.matches(request))
+              .map(
+                  metadata ->
+                      new CacheResponse(
+                          metadata,
+                          viewer.orElseThrow(), // We're sure we have a Viewer here.
+                          executor,
+                          listener.readListener(request),
+                          request,
+                          clock.instant()));
+      if (cacheResponse.isEmpty()) {
+        viewer.ifPresent(Viewer::close);
       }
+      return cacheResponse;
     }
 
     @Override
-    public @Nullable NetworkResponse put(
+    public CompletableFuture<Boolean> updateAsync(CacheResponse cacheResponse) {
+      return cacheResponse
+          .editAsync()
+          .thenCompose(
+              Unchecked.func(
+                  optionalEditor -> {
+                    if (optionalEditor.isPresent()) {
+                      try (var editor = optionalEditor.get()) {
+                        return editor.commitAsync(
+                            CacheResponseMetadata.from(cacheResponse.get()).encode());
+                      }
+                    }
+                    return CompletableFuture.completedFuture(false);
+                  }));
+    }
+
+    @Override
+    public CompletableFuture<Optional<NetworkResponse>> putAsync(
         HttpRequest request,
-        @Nullable CacheResponse cacheResponse,
-        NetworkResponse networkResponse) {
-      try {
-        var editor = cacheResponse != null ? cacheResponse.edit() : store.edit(key(request));
-        if (editor != null) {
-          editor.metadata(CacheResponseMetadata.from(networkResponse.get()).encode());
-          return networkResponse.writingWith(editor, listener.writeListener(request));
-        }
-      } catch (IOException e) {
-        logger.log(Level.WARNING, "failed to start cache edit", e);
-      }
-      return null;
+        NetworkResponse networkResponse,
+        @Nullable CacheResponse cacheResponse) {
+      return (cacheResponse != null
+              ? cacheResponse.editAsync()
+              : store.editAsync(toCacheKey(request)))
+          .thenApply(
+              optionalEditor ->
+                  optionalEditor.map(
+                      Unchecked.func(
+                          editor ->
+                              networkResponse.writingWith(
+                                  editor, listener.writeListener(request)))));
     }
 
     @Override
-    public void remove(URI uri) {
-      try {
-        HttpCache.this.remove(uri);
-      } catch (IOException e) {
-        logger.log(Level.WARNING, "entry removal failure", e);
-      }
+    public CompletableFuture<Void> removeAllAsync(List<URI> uris) {
+      return store.removeAllAsync(
+          uris.stream().map(HttpCache::toCacheKey).collect(Collectors.toUnmodifiableList()));
     }
   }
 
@@ -401,8 +422,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     default void onRequest(HttpRequest request) {}
 
     /**
-     * Called when the cache is about to use network due to a cache miss. The given response
-     * represents the inapplicable stored response if one was available.
+     * Called when the cache is about to use the network due to a cache miss. The given response
+     * represents the inapplicable cache response if one was available.
      */
     default void onNetworkUse(HttpRequest request, @Nullable TrackedResponse<?> cacheResponse) {}
 
@@ -413,29 +434,29 @@ public final class HttpCache implements AutoCloseable, Flushable {
      */
     default void onResponse(HttpRequest request, CacheAwareResponse<?> response) {}
 
-    /** Called when the response body is successfully read from cache. */
+    /** Called when the response body has been successfully read from cache. */
     default void onReadSuccess(HttpRequest request) {}
 
-    /** Called when a read failure is encountered while reading the response body from cache. */
-    default void onReadFailure(HttpRequest request, Throwable error) {}
+    /** Called when a failure is encountered while reading the response body from cache. */
+    default void onReadFailure(HttpRequest request, Throwable exception) {}
 
-    /** Called when the response body is successfully written to cache. */
+    /** Called when the response has been successfully written to cache. */
     default void onWriteSuccess(HttpRequest request) {}
 
-    /** Called when a write failure is encountered while writing the response body to cache. */
-    default void onWriteFailure(HttpRequest request, Throwable error) {}
+    /** Called when a failure is encountered while writing the response to cache. */
+    default void onWriteFailure(HttpRequest request, Throwable exception) {}
   }
 
   private enum DisabledListener implements Listener {
     INSTANCE
   }
 
-  private static final class CacheListener implements Listener {
+  private static final class StatsRecordingListener implements Listener {
     private final StatsRecorder statsRecorder;
     private final Listener userListener;
     private final boolean hasUserListener;
 
-    CacheListener(StatsRecorder statsRecorder, @Nullable Listener userListener) {
+    StatsRecordingListener(StatsRecorder statsRecorder, @Nullable Listener userListener) {
       this.statsRecorder = statsRecorder;
       this.userListener = requireNonNullElse(userListener, DisabledListener.INSTANCE);
       hasUserListener = userListener != null;
@@ -445,12 +466,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return new CacheReadingPublisher.Listener() {
         @Override
         public void onReadSuccess() {
-          CacheListener.this.onReadSuccess(request);
+          StatsRecordingListener.this.onReadSuccess(request);
         }
 
         @Override
-        public void onReadFailure(Throwable error) {
-          CacheListener.this.onReadFailure(request, error);
+        public void onReadFailure(Throwable exception) {
+          StatsRecordingListener.this.onReadFailure(request, exception);
         }
       };
     }
@@ -459,12 +480,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return new CacheWritingPublisher.Listener() {
         @Override
         public void onWriteSuccess() {
-          CacheListener.this.onWriteSuccess(request);
+          StatsRecordingListener.this.onWriteSuccess(request);
         }
 
         @Override
-        public void onWriteFailure(Throwable error) {
-          CacheListener.this.onWriteFailure(request, error);
+        public void onWriteFailure(Throwable exception) {
+          StatsRecordingListener.this.onWriteFailure(request, exception);
         }
       };
     }
@@ -492,12 +513,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
         case UNSATISFIABLE:
           statsRecorder.recordMiss(request.uri());
           break;
-
         case HIT:
         case CONDITIONAL_HIT:
           statsRecorder.recordHit(request.uri());
           break;
-
         default:
           throw new AssertionError("unexpected status: " + response.cacheStatus());
       }
@@ -511,8 +530,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public void onReadFailure(HttpRequest request, Throwable error) {
-      userListener.onReadFailure(request, error);
+    public void onReadFailure(HttpRequest request, Throwable exception) {
+      userListener.onReadFailure(request, exception);
     }
 
     @Override
@@ -522,9 +541,9 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public void onWriteFailure(HttpRequest request, Throwable error) {
+    public void onWriteFailure(HttpRequest request, Throwable exception) {
       statsRecorder.recordWriteFailure(request.uri());
-      userListener.onWriteFailure(request, error);
+      userListener.onWriteFailure(request, exception);
     }
   }
 
@@ -552,6 +571,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     /** Returns the number of times a response wasn't written to cache due to a write failure. */
     long writeFailureCount();
 
+    // TODO add read success/failure count & write discard count.
+
     /**
      * Returns a value between {@code 0.0} and {@code 1.0} representing the ratio between the hit
      * and request counts.
@@ -572,7 +593,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return y == 0 || x >= y ? 1.0 : (double) x / y;
     }
 
-    /** Returns empty stats. */
+    /** Returns a {@code Stats} with zero counters. */
     static Stats empty() {
       return StatsSnapshot.EMPTY;
     }
@@ -582,7 +603,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
    * Strategy for recoding {@code HttpCache} statistics. Recording methods are given the {@code URI}
    * of the request being intercepted by the cache.
    *
-   * <p>{@code StatsRecorders} must be thread-safe.
+   * <p>A {@code StatsRecorder} must be thread-safe.
    */
   public interface StatsRecorder {
 
@@ -596,8 +617,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     void recordHit(URI uri);
 
     /**
-     * Called when a request results in a cache miss, either directly or after failed revalidation
-     * with the server.
+     * Called when a request results in a cache miss, either due to a missing cache entry or after
+     * failed revalidation with the server.
      */
     void recordMiss(URI uri);
 
@@ -714,28 +735,24 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public void recordRequest(URI uri) {
-      requireNonNull(uri);
       super.recordRequest(uri);
       perUriRecorders.computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder()).recordRequest(uri);
     }
 
     @Override
     public void recordHit(URI uri) {
-      requireNonNull(uri);
       super.recordHit(uri);
       perUriRecorders.computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder()).recordHit(uri);
     }
 
     @Override
     public void recordMiss(URI uri) {
-      requireNonNull(uri);
       super.recordMiss(uri);
       perUriRecorders.computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder()).recordMiss(uri);
     }
 
     @Override
     public void recordNetworkUse(URI uri) {
-      requireNonNull(uri);
       super.recordNetworkUse(uri);
       perUriRecorders
           .computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder())
@@ -744,7 +761,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public void recordWriteSuccess(URI uri) {
-      requireNonNull(uri);
       super.recordWriteSuccess(uri);
       perUriRecorders
           .computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder())
@@ -753,7 +769,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public void recordWriteFailure(URI uri) {
-      requireNonNull(uri);
       super.recordWriteFailure(uri);
       perUriRecorders
           .computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder())
@@ -921,6 +936,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return this;
     }
 
+    public Builder cacheOn(HttpCacheExtension extension) {
+      return TODO();
+    }
+
     /** Sets the executor to be used by the cache. */
     public Builder executor(Executor executor) {
       this.executor = requireNonNull(executor);
@@ -939,17 +958,17 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return this;
     }
 
-    Builder clockForTesting(Clock clock) {
+    Builder clock(Clock clock) {
       this.clock = requireNonNull(clock);
       return this;
     }
 
-    Builder storeForTesting(Store store) {
+    Builder store(Store store) {
       this.store = requireNonNull(store);
       return this;
     }
 
-    /** Builds a new {@code HttpCache}. */
+    /** Creates a new {@code HttpCache}. */
     public HttpCache build() {
       requireState(storeFactory != null || store != null, "caching backend must be specified");
       return new HttpCache(this);

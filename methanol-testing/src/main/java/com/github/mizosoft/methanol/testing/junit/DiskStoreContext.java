@@ -73,7 +73,7 @@ public final class DiskStoreContext extends StoreContext {
     this.executor = requireNonNull(executor);
     this.hasher = requireNonNull(hasher);
     this.clock = requireNonNull(clock);
-    this.delayer = new MockDelayer(clock);
+    this.delayer = new MockDelayer(clock, config.dispatchEagerly());
   }
 
   @Override
@@ -89,11 +89,11 @@ public final class DiskStoreContext extends StoreContext {
     return hasher;
   }
 
-  public MockClock clock() {
+  public MockClock mockClock() {
     return clock;
   }
 
-  public MockDelayer delayer() {
+  public MockDelayer mockDelayer() {
     return delayer;
   }
 
@@ -118,7 +118,7 @@ public final class DiskStoreContext extends StoreContext {
   Store createStore() {
     var builder =
         DiskStore.newBuilder()
-            .debugIndexOperations(true)
+            .debugIndexOps(true)
             .maxSize(config().maxSize())
             .directory(directory)
             .executor(executor)
@@ -131,13 +131,6 @@ public final class DiskStoreContext extends StoreContext {
   }
 
   @Override
-  void initialize(Store store) throws IOException {
-    toggleQueuedExecution(false);
-    store.initialize();
-    toggleQueuedExecution(true);
-  }
-
-  @Override
   void close(List<Exception> exceptions) {
     // Make sure no more tasks are queued. We do ignore rejected tasks as the test might have caused
     // an executor to be shutdown.
@@ -145,6 +138,8 @@ public final class DiskStoreContext extends StoreContext {
     if (executor instanceof MockExecutor) {
       try {
         var mockExecutor = mockExecutor();
+
+        // Allow queued tasks that submit new tasks to the executor to progress.
         mockExecutor.executeDirectly(true);
         mockExecutor.runAll();
       } catch (Exception e) {
@@ -182,12 +177,6 @@ public final class DiskStoreContext extends StoreContext {
       fileSystem.close();
     } catch (Exception e) {
       exceptions.add(e);
-    }
-  }
-
-  private void toggleQueuedExecution(boolean on) {
-    if (executor instanceof MockExecutor) {
-      ((MockExecutor) executor).executeDirectly(!on);
     }
   }
 

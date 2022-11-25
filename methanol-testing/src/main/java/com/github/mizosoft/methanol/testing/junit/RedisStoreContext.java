@@ -28,14 +28,16 @@ import com.github.mizosoft.methanol.store.redis.RedisStore;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
 import java.io.IOException;
-import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public final class RedisStoreContext extends StoreContext {
   private @MonotonicNonNull LocalRedisSession lazySession;
+  private final List<String> redisLog = new ArrayList<>();
 
   private RedisStoreContext(RedisStoreConfig config) {
     super(config);
@@ -48,20 +50,28 @@ public final class RedisStoreContext extends StoreContext {
 
   @Override
   Store createStore() throws IOException {
+    var config = config();
     return new RedisStore(
-        getOrStartProcess()
+        getOrStartSession()
             .client()
             .connect(RedisCodec.of(StringCodec.UTF8, ByteBufferCodec.INSTANCE)),
-        10000,
-        10000,
-        Clock.systemUTC(),
-        1);
+        config.editorLockTimeToLiveSeconds().orElse(15),
+        config.staleEntryTimeToLiveSeconds().orElse(15),
+        config.appVersion());
+  }
+
+  @Override
+  void attachDebugInfo(Throwable exception) throws IOException {
+    var session = lazySession;
+    if (session != null) {
+      session.spillRemainingLog(redisLog);
+      exception.addSuppressed(new RedisLogAttachment(redisLog));
+    }
   }
 
   @Override
   void close(List<Exception> exceptions) {
     super.close(exceptions);
-
     try {
       var session = lazySession;
       if (session != null) {
@@ -72,13 +82,15 @@ public final class RedisStoreContext extends StoreContext {
     }
   }
 
-  private LocalRedisSession getOrStartProcess() throws IOException {
+  private LocalRedisSession getOrStartSession() throws IOException {
     var session = lazySession;
     if (session == null) {
       try {
-        session = LocalRedisSession.start();
+        session = LocalRedisSession.start(redisLog);
       } catch (TimeoutException | InterruptedException e) {
-        throw new CompletionException(e);
+        var uncheckedEx = new CompletionException(e);
+        uncheckedEx.addSuppressed(new RedisLogAttachment(redisLog));
+        throw uncheckedEx;
       }
       lazySession = session;
     }
@@ -87,5 +99,20 @@ public final class RedisStoreContext extends StoreContext {
 
   public static RedisStoreContext from(RedisStoreConfig config) throws IOException {
     return new RedisStoreContext(config);
+  }
+
+  /**
+   * A {@code Throwable} that is used to attach redis-server's log to a test exception as a
+   * suppressed {@code Throwable}. This {@code Throwable} is hence not associated with any stack
+   * trace.
+   */
+  private static final class RedisLogAttachment extends Throwable {
+    public RedisLogAttachment(List<String> log) {
+      super(
+          "redis log:"
+              + System.lineSeparator()
+              + log.stream().collect(Collectors.joining(System.lineSeparator())));
+      setStackTrace(new StackTraceElement[0]);
+    }
   }
 }

@@ -28,25 +28,24 @@ import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A bounded repository of binary data entries identified by string keys. Each entry has both a
- * metadata block and a data stream. Each data stream can be read from or written to asynchronously.
- * An entry's metadata block and data stream can be accessed by a {@link Viewer} and modified by an
- * {@link Editor}. An entry can have at most one active {@code Editor} but can have multiple
- * concurrent {@code Viewers} after it has been first successfully edited.
+ * A repository of binary data entries identified by string keys. Each entry has a metadata block
+ * and a data stream. Each data stream can be read from or written to asynchronously. An entry's
+ * metadata block and data stream can be accessed by a {@link Viewer} and modified by an {@link
+ * Editor}. An entry can have at most one active {@code Editor} but can have multiple concurrent
+ * {@code Viewers}.
  *
- * <p>{@code Store} bounds the size of data it contains to its {@link #maxSize()} by automatic
- * eviction of entries, possibly in background. A store's {@link #size()} might temporarily exceed
- * its bound in case entries are being actively expanded while eviction is in progress. A store's
- * size doesn't include the overhead of the underlying filesystem or any metadata the store itself
- * uses for indexing purposes. Thus, a store's {@code maxSize()} is not exact and might be slightly
+ * <p>{@code Store} may bound its size by automatic eviction of entries, possibly in background. The
+ * size bound is not strict. A store's {@link #size} might temporarily exceed its bound in case the
+ * store is being actively expanded while eviction is in progress. Additionally, a store's size
+ * doesn't include the overhead of the underlying filesystem or any metadata the store itself uses
+ * for indexing purposes. Thus, a store's {@link #maxSize} is not exact and might be slightly
  * exceeded as necessary.
  *
  * <p>{@code Store} is thread-safe and is suitable for concurrent use.
@@ -56,7 +55,7 @@ public interface Store extends AutoCloseable, Flushable {
   /** Returns this store's max size in bytes. */
   long maxSize();
 
-  /** Returns the optional executor used for background operations. */
+  /** Returns the optional executor used for asynchronous or background operations. */
   Optional<Executor> executor();
 
   /** Initializes this store. */
@@ -66,47 +65,47 @@ public interface Store extends AutoCloseable, Flushable {
   CompletableFuture<Void> initializeAsync();
 
   /**
-   * Returns a {@code Viewer} for the entry associated with the given key, or {@code null} if
-   * there's no such entry.
+   * Returns a {@code Optional<Viewer>} for the entry associated with the given key, or an empty
+   * optional if there's no such entry.
    *
-   * @throws IllegalStateException if the store is closed
+   * @throws IllegalStateException if closed
    */
-  @Nullable Viewer view(String key) throws IOException;
+  Optional<Viewer> view(String key) throws IOException;
 
-  default @Nullable CompletableFuture<Viewer> viewAsync(String key) {
+  default CompletableFuture<Optional<Viewer>> viewAsync(String key) {
     return TODO();
   }
 
   /**
-   * Returns an {@code Editor} for the entry associated with the given key (atomically creating a
-   * new one if necessary), or {@code null} if such entry is currently being edited.
+   * Returns an {@code Optional<Editor>} for the entry associated with the given key (atomically
+   * creating a new one if necessary), or an empty optional if such entry can't be edited.
    *
-   * @throws IllegalStateException if the store is closed
+   * @throws IllegalStateException if closed
    */
-  @Nullable Editor edit(String key) throws IOException;
+  Optional<Editor> edit(String key) throws IOException;
 
-  default CompletableFuture<@Nullable Editor> editAsync(String key) {
-    return TODO();
-  }
+  CompletableFuture<Optional<Editor>> editAsync(String key);
 
   /**
-   * Returns a iterator of {@code Viewers} over the entries in this store. The iterator doesn't
-   * throw {@code ConcurrentModificationException} when the store is changed but might or might not
-   * reflect these changes.
+   * Returns an iterator of {@code Viewers} over the entries in this store. The iterator doesn't
+   * throw {@code ConcurrentModificationException} when the store is modified, but there's no
+   * guarantee these changes are reflected.
    */
   Iterator<Viewer> iterator() throws IOException;
 
   /**
    * Removes the entry associated with the given key.
    *
-   * @throws IllegalStateException if the store is closed
+   * @throws IllegalStateException if closed
    */
   boolean remove(String key) throws IOException;
+
+  CompletableFuture<Void> removeAllAsync(List<String> keys);
 
   /**
    * Removes all entries from this store.
    *
-   * @throws IllegalStateException if the store is closed
+   * @throws IllegalStateException if closed
    */
   void clear() throws IOException;
 
@@ -140,18 +139,7 @@ public interface Store extends AutoCloseable, Flushable {
     /** Returns a readonly buffer containing the entry's metadata. */
     ByteBuffer metadata();
 
-    /**
-     * Asynchronously copies this entry's data from the given position to the given destination
-     * buffer, returning either the number of read bytes or {@code -1} if end-of-file is reached.
-     *
-     * @throws IllegalArgumentException if {@code dst} is read-only
-     * @throws IllegalStateException if the viewer is closed
-     */
-    CompletableFuture<Integer> readAsync(long position, ByteBuffer dst);
-
-    default AsyncReadableByteChannel dataChannel() {
-      return TODO();
-    }
+    EntryReader newReader();
 
     /** Returns the size in bytes of the data stream. */
     long dataSize();
@@ -166,11 +154,7 @@ public interface Store extends AutoCloseable, Flushable {
      *
      * @throws IllegalStateException if the store is closed
      */
-    @Nullable Editor edit() throws IOException;
-
-    default CompletableFuture<@Nullable Editor> editAsync() {
-      return TODO();
-    }
+    CompletableFuture<Optional<Editor>> editAsync();
 
     /**
      * Removes the entry associated with this viewer only if it hasn't changed since this viewer was
@@ -191,50 +175,28 @@ public interface Store extends AutoCloseable, Flushable {
     /** Returns the entry's key. */
     String key();
 
-    /**
-     * Sets the metadata block which is to be applied when the editor is closed.
-     *
-     * @throws IllegalStateException if the edit is committed
-     */
-    void metadata(ByteBuffer metadata);
+    EntryWriter writer();
 
     /**
-     * Asynchronously writes the given source buffer to this entry's data at the given position,
-     * returning the number of written bytes.
-     *
-     * @throws IllegalStateException if the edit is committed
-     */
-    CompletableFuture<Integer> writeAsync(long position, ByteBuffer src);
-
-    default AsyncWritableByteChannel dataChannel() throws IOException {
-      return TODO();
-    }
-
-    /**
-     * Marks the edit as committed so that modifications made so far are applied when the editor is
-     * closed.
+     * Commits the changes made so far.
      *
      * @throws IllegalStateException if the editor is closed
      */
-    void commitOnClose();
-
-    default CompletableFuture<Boolean> commitAsync() {
-      return TODO();
-    }
+    CompletableFuture<Boolean> commitAsync(ByteBuffer metadata);
 
     /**
-     * Closes this editor. If {@link #commitOnClose()} is called, changes made by this editor are
-     * applied; otherwise, they're discarded.
+     * Closes this editor. If {@link #commitAsync(ByteBuffer)} hasn't been called prior to this
+     * method, changes made by this editor are discarded.
      */
     @Override
-    void close() throws IOException;
+    void close();
   }
 
-  interface AsyncReadableByteChannel extends Channel {
+  interface EntryReader {
     CompletableFuture<Integer> read(ByteBuffer dst);
   }
 
-  interface AsyncWritableByteChannel extends Channel {
+  interface EntryWriter {
     CompletableFuture<Integer> write(ByteBuffer src);
   }
 }

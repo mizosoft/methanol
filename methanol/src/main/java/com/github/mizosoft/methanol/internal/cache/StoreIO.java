@@ -9,6 +9,7 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 /** Read/Write utilities that make sure exactly the requested bytes are read/written. */
 public class StoreIO {
@@ -42,6 +43,20 @@ public class StoreIO {
     var future = new CompletableFuture<Integer>();
     channel.read(dst, position, dst, new ReadCompletionHandler(channel, future, position));
     return future;
+  }
+
+  static CompletableFuture<ByteBuffer> readNBytesAsync(
+      AsynchronousFileChannel channel, int byteCount, long position) {
+    var buffer = ByteBuffer.allocate(byteCount);
+    return readBytesAsync(channel, buffer, position)
+        .thenApply(
+            read -> {
+              if (read < byteCount) {
+                throw new CompletionException(
+                    new EOFException(format("expected %d bytes, found %d", byteCount, read)));
+              }
+              return buffer.flip();
+            });
   }
 
   static void writeBytes(FileChannel channel, ByteBuffer src) throws IOException {

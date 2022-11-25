@@ -25,7 +25,7 @@ package com.github.mizosoft.methanol.testing.junit;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 
 public final class MemoryStoreConfig extends StoreConfig {
-  public MemoryStoreConfig(boolean autoInit, long maxSize) {
-    super(StoreType.MEMORY, autoInit, maxSize);
+  public MemoryStoreConfig(long maxSize) {
+    super(StoreType.MEMORY, maxSize, -1);
   }
 }

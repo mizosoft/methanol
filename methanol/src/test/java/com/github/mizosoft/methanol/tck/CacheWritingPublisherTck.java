@@ -22,16 +22,15 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType.DISK;
-import static com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType.MEMORY;
+import static com.github.mizosoft.methanol.testing.TestUtils.EMPTY_BUFFER;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listener;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
+import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.testing.FailingPublisher;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.TestException;
@@ -97,7 +96,8 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
     try {
       return new CacheWritingPublisher(
           toFlowPublisher(new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
-          requireNonNull(store.edit("test-entry-" + entryId.getAndIncrement())),
+          store.edit("test-entry-" + entryId.getAndIncrement()).orElseThrow(),
+          EMPTY_BUFFER,
           Listener.disabled(),
           true);
     } catch (IOException e) {
@@ -108,7 +108,7 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
   @Override
   public Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
     return new CacheWritingPublisher(
-        new FailingPublisher<>(TestException::new), DisabledEditor.INSTANCE);
+        new FailingPublisher<>(TestException::new), DisabledEditor.INSTANCE, EMPTY_BUFFER);
   }
 
   private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {
@@ -143,7 +143,7 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
 
   @DataProvider
   public static Object[][] provider() {
-    return new Object[][] {{DISK}, {MEMORY}};
+    return new Object[][] {{StoreType.DISK}, {StoreType.MEMORY}};
   }
 
   private enum DisabledEditor implements Editor {
@@ -155,17 +155,18 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
     }
 
     @Override
-    public void metadata(ByteBuffer metadata) {}
-
-    @Override
-    public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-      int remaining = src.remaining();
-      src.position(src.position() + remaining);
-      return CompletableFuture.completedFuture(remaining);
+    public EntryWriter writer() {
+      return src -> {
+        int remaining = src.remaining();
+        src.position(src.position() + remaining);
+        return CompletableFuture.completedFuture(remaining);
+      };
     }
 
     @Override
-    public void commitOnClose() {}
+    public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
+      return CompletableFuture.completedFuture(false);
+    }
 
     @Override
     public void close() {}

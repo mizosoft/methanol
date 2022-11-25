@@ -47,21 +47,17 @@ public abstract class StoreContext implements AutoCloseable {
 
   public Store createAndRegisterStore() throws IOException {
     var store = createStore();
-    if (config.autoInit()) {
-      initialize(store);
-    }
     createdStores.add(store);
     return store;
   }
 
   abstract Store createStore() throws IOException;
 
-  void initialize(Store store) throws IOException {
-    store.initialize();
-  }
-
   /** If execution is queued, makes sure all tasks queued so far are executed. */
   public void drainQueuedTasksIfNeeded() {}
+
+  /** Attaches debug information to a test failure. */
+  void attachDebugInfo(Throwable exception) throws IOException {}
 
   @Override
   public void close() throws Exception {

@@ -33,13 +33,10 @@ import java.security.NoSuchAlgorithmException;
 
 enum Script {
   COMMIT("commit.lua"),
-  //  VIEW("view.lua"),
   EDIT("edit.lua"),
   REMOVE("remove.lua"),
-  GETRANGE_EXPIRY_UPDATE("getrange_expiry_update.lua"),
-  APPEND_EXPIRY_UPDATE("append_expiry_update.lua"),
-//  CLOSE_VIEWER("close_viewer.lua")
-;
+  APPEND("append.lua"),
+  GET_STALE_RANGE("get_stale_range.lua");
 
   private static final String SCRIPTS_PATH = "/scripts/";
 

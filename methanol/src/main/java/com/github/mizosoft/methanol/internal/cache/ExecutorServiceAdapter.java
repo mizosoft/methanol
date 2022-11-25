@@ -47,7 +47,7 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
   private final Set<TrackedRunnable> queuedTasks = new HashSet<>();
 
   /**
-   * TrackedRunnables add there executing threads here so that they can be interrupted by
+   * TrackedRunnables add their executing threads here so that they can be interrupted by
    * shutdownNow().
    */
   private final Set<Thread> executingThreads = new HashSet<>();
@@ -57,7 +57,6 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
 
   private boolean shutdown;
 
-  // Visible for testing
   ExecutorServiceAdapter(Executor executor) {
     this.executor = executor;
   }
@@ -78,7 +77,8 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
     try {
       var dumped = List.<Runnable>copyOf(queuedTasks);
       queuedTasks.clear();
-      // Interrupt the threads of all executing TrackedRunnables
+
+      // Interrupt the threads of all executing TrackedRunnables.
       executingThreads.forEach(Thread::interrupt);
       shutdown = true;
       return dumped;
@@ -101,7 +101,7 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
   public boolean isTerminated() {
     lock.lock();
     try {
-      return isTerminatedUnlocked();
+      return isTerminatedUnguarded();
     } finally {
       lock.unlock();
     }
@@ -112,7 +112,7 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
     long remaining = unit.toNanos(timeout);
     lock.lock();
     try {
-      while (!isTerminatedUnlocked()) {
+      while (!isTerminatedUnguarded()) {
         if (remaining <= 0L) {
           return false;
         }
@@ -124,7 +124,7 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
     }
   }
 
-  private boolean isTerminatedUnlocked() {
+  private boolean isTerminatedUnguarded() {
     assert lock.isHeldByCurrentThread();
     return shutdown && queuedTasks.isEmpty() && executingThreads.isEmpty();
   }
@@ -164,7 +164,7 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
 
   private final class TrackedRunnable implements Runnable {
     final Runnable runnable;
-    @Nullable Thread executingThread; // Guarded by parent's lock
+    @Nullable Thread executingThread; // Guarded by parent's lock.
 
     TrackedRunnable(Runnable runnable) {
       this.runnable = runnable;
@@ -175,7 +175,7 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
       lock.lock();
       try {
         if (!queuedTasks.remove(this)) {
-          return; // This means we're removed by shutdownNow()
+          return; // This means we're removed by shutdownNow().
         }
         executingThread = Thread.currentThread();
         executingThreads.add(executingThread);
@@ -190,8 +190,8 @@ final class ExecutorServiceAdapter extends AbstractExecutorService {
         try {
           executingThreads.remove(executingThread);
           executingThread = null;
-          // Notify anyone awaiting termination if this tasks marks it
-          if (isTerminatedUnlocked()) {
+          // Notify anyone awaiting termination if this tasks marks it.
+          if (isTerminatedUnguarded()) {
             termination.signalAll();
           }
         } finally {

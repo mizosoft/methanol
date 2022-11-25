@@ -30,13 +30,13 @@ import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 
 public abstract class StoreConfig {
   private final StoreType storeType;
-  private final boolean autoInit;
   private final long maxSize;
+  private final int appVersion;
 
-  StoreConfig(StoreType storeType, boolean autoInit, long maxSize) {
+  StoreConfig(StoreType storeType, long maxSize, int appVersion) {
     this.storeType = requireNonNull(storeType);
-    this.autoInit = autoInit;
     this.maxSize = maxSize;
+    this.appVersion = appVersion;
   }
 
   public StoreType storeType() {
@@ -47,19 +47,19 @@ public abstract class StoreConfig {
     return maxSize;
   }
 
-  public boolean autoInit() {
-    return autoInit;
+  public int appVersion() {
+    return appVersion;
   }
 
   public static StoreConfig createDefault(StoreType storeType) {
     switch (storeType) {
       case MEMORY:
-        return new MemoryStoreConfig(true, Long.MAX_VALUE);
+        return new MemoryStoreConfig(Long.MAX_VALUE);
       case DISK:
         return new DiskStoreConfig(
-            true, Long.MAX_VALUE, FileSystemType.SYSTEM, Execution.ASYNC, null, true, 1);
+            Long.MAX_VALUE, 1, FileSystemType.SYSTEM, Execution.ASYNC, null, true, true);
       case REDIS:
-        return new RedisStoreConfig(true, 15000, 10000, 1);
+        return new RedisStoreConfig(15000, 10000, 1);
       default:
         throw new AssertionError();
     }

@@ -38,7 +38,8 @@ public final class MockClock extends Clock {
   private final ZoneId zoneId;
   private final Instant inception;
   private final AtomicReference<Instant[]> now;
-  private volatile Duration autoAdvance = Duration.ZERO;
+
+  private volatile @Nullable Duration autoAdvance;
 
   /** Listener invoked with when the clock advances itself. */
   private volatile @Nullable BiConsumer<Instant /* beforeAdvance */, Duration /* ticks */>

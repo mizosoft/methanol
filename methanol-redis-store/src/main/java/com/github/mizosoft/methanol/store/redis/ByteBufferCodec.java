@@ -50,6 +50,7 @@ public enum ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
   }
 
   private static ByteBuffer copy(ByteBuffer source) {
+    // Copy the buffer without consuming it.
     return Utils.copy(source.duplicate());
   }
 }

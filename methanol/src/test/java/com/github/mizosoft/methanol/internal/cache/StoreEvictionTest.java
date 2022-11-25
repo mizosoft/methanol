@@ -27,8 +27,7 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEnt
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.setMetadata;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeData;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.writeEntry;
+import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
 import static com.github.mizosoft.methanol.testing.junit.StoreSpec.Execution.SAME_THREAD;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -50,7 +49,7 @@ class StoreEvictionTest {
       maxSize = 10,
       execution = SAME_THREAD)
   void writeExactlyMaxSizeBytesByOneEntry(Store store) throws IOException {
-    writeEntry(store, "e1", "12345", "abcde"); // Grow size to 10 bytes.
+    write(store, "e1", "12345", "abcde"); // Grow size to 10 bytes.
     assertEntryEquals(store, "e1", "12345", "abcde");
     assertThat(store.size()).isEqualTo(10);
   }
@@ -61,8 +60,8 @@ class StoreEvictionTest {
       maxSize = 10,
       execution = SAME_THREAD)
   void writeExactlyMaxSizeBytesByTwoEntries(Store store) throws IOException {
-    writeEntry(store, "e1", "12", "abc"); // Grow size to 5 bytes.
-    writeEntry(store, "e2", "45", "def"); // Grow size to 10 bytes.
+    write(store, "e1", "12", "abc"); // Grow size to 5 bytes.
+    write(store, "e2", "45", "def"); // Grow size to 10 bytes.
     assertEntryEquals(store, "e1", "12", "abc");
     assertEntryEquals(store, "e2", "45", "def");
     assertThat(store.size()).isEqualTo(10);
@@ -74,15 +73,15 @@ class StoreEvictionTest {
       maxSize = 15,
       execution = SAME_THREAD)
   void writeBeyondMaxSize(Store store, StoreContext context) throws IOException {
-    writeEntry(store, "e1", "12", "abc"); // Grow size to 5 bytes.
-    writeEntry(store, "e2", "34", "def"); // Grow size to 10 bytes.
+    write(store, "e1", "12", "abc"); // Grow size to 5 bytes.
+    write(store, "e2", "34", "def"); // Grow size to 10 bytes.
     assertThat(store.size()).isEqualTo(10);
 
     // LRU queue: e2, e1.
     view(store, "e1").close();
 
     // Grow size to 16 bytes, causing e2 to be evicted.
-    writeEntry(store, "e3", "567", "ghi");
+    write(store, "e3", "567", "ghi");
 
     // LRU queue: e1, e3.
     assertAbsent(store, context, "e2");
@@ -91,7 +90,7 @@ class StoreEvictionTest {
     assertThat(store.size()).isEqualTo(11);
 
     // Grows size to 11 + 14 bytes causing both e1 & e3 to be evicted.
-    writeEntry(store, "e4", "Jynx", "Charmander");
+    write(store, "e4", "Jynx", "Charmander");
     assertAbsent(store, context, "e1");
     assertAbsent(store, context, "e3");
     assertEntryEquals(store, "e4", "Jynx", "Charmander");
@@ -104,12 +103,12 @@ class StoreEvictionTest {
       maxSize = 15,
       execution = SAME_THREAD)
   void discardedWriteBeyondMaxSize(Store store, StoreContext context) throws IOException {
-    writeEntry(store, "e1", "123", "abc"); // Grow size to 6 bytes.
-    writeEntry(store, "e2", "456", "def"); // Grow size to 12 bytes.
+    write(store, "e1", "123", "abc"); // Grow size to 6 bytes.
+    write(store, "e2", "456", "def"); // Grow size to 12 bytes.
     assertThat(store.size()).isEqualTo(12);
 
     try (var editor = edit(store, "e3")) {
-      writeEntry(editor, "alpha", "beta");
+      write(editor, "abcd");
     }
     assertAbsent(store, context, "e3");
     assertEntryEquals(store, "e1", "123", "abc");
@@ -120,40 +119,15 @@ class StoreEvictionTest {
   @StoreParameterizedTest
   @StoreSpec(
       store = {StoreType.MEMORY, StoreType.DISK},
-      maxSize = 15,
+      maxSize = 4,
       execution = SAME_THREAD)
-  void discardedWriteBeyondMaxSizeByRemoval(Store store, StoreContext context) throws IOException {
-    writeEntry(store, "e1", "123", "abc"); // Grow size to 6 bytes.
-    writeEntry(store, "e2", "456", "def"); // Grow size to 12 bytes.
-    assertThat(store.size()).isEqualTo(12);
+  void writeBeyondMaxSizeByMetadataExpansion(Store store, StoreContext context) throws IOException {
+    write(store, "e1", "1", "a"); // Grow size to 2 bytes.
+    write(store, "e2", "2", "b"); // Grow size to 4 bytes.
+    assertThat(store.size()).isEqualTo(4);
 
-    try (var editor = edit(store, "e3")) {
-      writeEntry(editor, "alpha", "beta");
-      editor.commitOnClose();
-
-      assertThat(store.remove("e3")).isTrue();
-    }
-    assertAbsent(store, context, "e3");
-    assertEntryEquals(store, "e1", "123", "abc");
-    assertEntryEquals(store, "e2", "456", "def");
-    assertThat(store.size()).isEqualTo(12);
-  }
-
-  @StoreParameterizedTest
-  @StoreSpec(
-      store = {StoreType.MEMORY, StoreType.DISK},
-      maxSize = 14,
-      execution = SAME_THREAD)
-  void writeBeyondMaxSizeByMetadataUpdate(Store store, StoreContext context) throws IOException {
-    writeEntry(store, "e1", "123", "abc"); // Grow size to 6 bytes.
-    writeEntry(store, "e2", "456", "def"); // Grow size to 12 bytes.
-    assertThat(store.size()).isEqualTo(12);
-
-    try (var editor = edit(store, "e1")) {
-      // Increase metadata by 3 bytes, causing size to grow to 15 bytes & e2 to be evicted.
-      setMetadata(editor, "123456");
-      editor.commitOnClose();
-    }
+    // Increase metadata by 1 byte, causing size to grow to 5 bytes & e2 to be evicted.
+    setMetadata(store, "e1", "12");
     assertAbsent(store, context, "e2");
     assertEntryEquals(store, "e1", "123456", "abc");
     assertThat(store.size()).isEqualTo(9);
@@ -162,20 +136,17 @@ class StoreEvictionTest {
   @StoreParameterizedTest
   @StoreSpec(
       store = {StoreType.MEMORY, StoreType.DISK},
-      maxSize = 14,
+      maxSize = 4,
       execution = SAME_THREAD)
-  void writeBeyondMaxSizeByDataUpdate(Store store, StoreContext context) throws IOException {
-    writeEntry(store, "e1", "123", "abc"); // Grow size to 6 bytes.
-    writeEntry(store, "e2", "456", "def"); // Grow size to 12 bytes.
-    assertThat(store.size()).isEqualTo(12);
+  void writeBeyondMaxSizeByDataExpansion(Store store, StoreContext context) throws IOException {
+    write(store, "e1", "1", "a"); // Grow size to 2 bytes.
+    write(store, "e2", "2", "b"); // Grow size to 4 bytes.
+    assertThat(store.size()).isEqualTo(4);
 
-    try (var editor = edit(store, "e1")) {
-      // Increase data by 3 bytes, causing size to grow to 15 bytes & e2 to be evicted.
-      writeData(editor, "abcdef");
-      editor.commitOnClose();
-    }
+    // Increase data by 1 byte, causing size to grow to 5 bytes & e2 to be evicted.
+    write(store, "e1", "1", "ab");
     assertAbsent(store, context, "e2");
-    assertEntryEquals(store, "e1", "123", "abcdef");
+    assertEntryEquals(store, "e1", "123456", "abc");
     assertThat(store.size()).isEqualTo(9);
   }
 
@@ -187,12 +158,12 @@ class StoreEvictionTest {
   void lruEviction(Store store, StoreContext context) throws IOException {
     // Grow size to 6 bytes.
     // LRU queue: e1.
-    writeEntry(store, "e1", "aaa", "bbb");
+    write(store, "e1", "aaa", "bbb");
     assertThat(store.size()).isEqualTo(6);
 
     // Grow size to 12 bytes.
     // LRU queue: e1, e2.
-    writeEntry(store, "e2", "ccc", "ddd");
+    write(store, "e2", "ccc", "ddd");
     assertThat(store.size()).isEqualTo(12);
 
     // LRU queue: e2, e1.
@@ -200,7 +171,7 @@ class StoreEvictionTest {
 
     // Grow size to 18 bytes.
     // LRU queue: e2, e1, e3.
-    writeEntry(store, "e3", "eee", "fff");
+    write(store, "e3", "eee", "fff");
     assertThat(store.size()).isEqualTo(18);
 
     // LRU queue: e2, e3, e1.
@@ -208,7 +179,7 @@ class StoreEvictionTest {
 
     // Grow size to 24 bytes, causing e2 to be evicted to get down to 18.
     // LRU queue: e3, e1, e4.
-    writeEntry(store, "e4", "ggg", "hhh");
+    write(store, "e4", "ggg", "hhh");
     assertAbsent(store, context, "e2");
     assertThat(store.size()).isEqualTo(18);
 
@@ -217,13 +188,13 @@ class StoreEvictionTest {
 
     // Grow size to 24 bytes, causing e1 to be evicted to get down to 18 bytes.
     // LRU queue: e4, e3, e5
-    writeEntry(store, "e5", "iii", "jjj");
+    write(store, "e5", "iii", "jjj");
     assertAbsent(store, context, "e1");
     assertThat(store.size()).isEqualTo(18);
 
     // Grow size to 18 + 12 bytes, causing e4 & e3 to be evicted to get down to 18 bytes.
     // LRU queue: e5, e6.
-    writeEntry(store, "e6", "kkk", "lmnopqrst");
+    write(store, "e6", "kkk", "lmnopqrst");
     assertAbsent(store, context, "e4", "e3");
     assertThat(store.size()).isEqualTo(18);
 
@@ -232,17 +203,17 @@ class StoreEvictionTest {
 
     // Grow size to 24 bytes, causing e6 to be evicted to get down to 12.
     // LRU queue: e5, e7.
-    writeEntry(store, "e7", "uuu", "vvv");
+    write(store, "e7", "uuu", "vvv");
     assertAbsent(store, context, "e6");
     assertThat(store.size()).isEqualTo(12);
 
     // Grow size to 18 bytes, causing nothing to be evicted since size is within bounds.
     // LRU queue: e5, e7, e8.
-    writeEntry(store, "e8", "xxx", "~!@");
+    write(store, "e8", "xxx", "~!@");
     assertThat(store.size()).isEqualTo(18);
 
     // Write one 18 bytes entry, causing all other entries to be evicted.
-    writeEntry(store, "e9", "Ricardo", "all is mine");
+    write(store, "e9", "Ricardo", "all is mine");
     assertAbsent(store, context, "e5, e7", "e8");
     assertThat(store.size()).isEqualTo(18);
   }

@@ -22,9 +22,10 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.ResponseBuilder;
+import java.io.IOException;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -38,9 +39,12 @@ public final class NetworkResponse extends PublisherResponse {
     super(response, publisher);
   }
 
-  public NetworkResponse writingWith(Editor editor, CacheWritingPublisher.Listener writeListener) {
+  public NetworkResponse writingWith(Editor editor, CacheWritingPublisher.Listener writeListener)
+      throws IOException {
     return new NetworkResponse(
-        response, new CacheWritingPublisher(publisher, editor, writeListener));
+        response,
+        new CacheWritingPublisher(
+            publisher, editor, CacheResponseMetadata.from(response).encode(), writeListener));
   }
 
   /** Discards the response body in background. */

@@ -20,33 +20,15 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.cache;
+package com.github.mizosoft.methanol.internal;
 
-import static com.github.mizosoft.methanol.internal.Validate.TODO;
+public class DebugUtils {
+  private DebugUtils() {}
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.util.concurrent.CompletableFuture;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
-/** An {@code HttpCache} that's used internally. */
-public interface InternalCache {
-  @Nullable CacheResponse get(HttpRequest request) throws IOException;
-
-  default CompletableFuture<@Nullable CacheResponse> getAsync(HttpRequest request) {
-    return TODO();
+  @SuppressWarnings({"AssertWithSideEffects", "ConstantConditions"})
+  public static boolean isAssertionsEnabled() {
+    boolean b = false;
+    assert b = true; // This sets b to true if assertion is enabled.
+    return b;
   }
-
-  void update(CacheResponse cacheResponse);
-
-  @Nullable NetworkResponse put(
-      HttpRequest request, @Nullable CacheResponse cacheResponse, NetworkResponse networkResponse);
-
-  default CompletableFuture<@Nullable NetworkResponse> putAsync(
-      HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse) {
-    return TODO();
-  }
-
-  void remove(URI uri);
 }

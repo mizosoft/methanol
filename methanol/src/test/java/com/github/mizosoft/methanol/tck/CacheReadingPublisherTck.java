@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
@@ -68,8 +68,8 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   /**
    * The list of viewers opened during a test method execution. CacheReadingPublisher closes the
    * viewer when the body is consumed or an error is signalled amid transmission. However, some
-   * tests don't lead to that (e.g. trying to subscribe with a null subscriber). So we double-check
-   * after each test.
+   * tests don't lead to either (e.g. trying to subscribe with a null subscriber). So we make sure
+   * opened viewer are closed after each test.
    */
   private final List<Viewer> openedViewers = new ArrayList<>();
 
@@ -114,17 +114,13 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   private Viewer populateThenViewEntry(long elements) {
     try {
       var entryName = "test-entry-" + entryId.getAndIncrement();
-      try (var editor = requireNonNull(store.edit(entryName))) {
-        // Set metadata to not discard the entry if `elements` is 0.
-        editor.metadata(ByteBuffer.allocate(1));
-
-        int position = 0;
+      try (var editor = store.edit(entryName).orElseThrow()) {
         for (var buffer : generateData(elements)) {
-          position += editor.writeAsync(position, buffer).join();
+          editor.writer().write(buffer).join();
         }
-        editor.commitOnClose();
+        assertThat(editor.commitAsync(ByteBuffer.allocate(1)).join()).isTrue();
       }
-      return requireNonNull(store.view(entryName));
+      return store.view(entryName).orElseThrow();
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -160,7 +156,9 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
       {ExecutorType.SAME_THREAD, StoreType.MEMORY},
       {ExecutorType.FIXED_POOL, StoreType.MEMORY},
       {ExecutorType.SAME_THREAD, StoreType.DISK},
-      {ExecutorType.FIXED_POOL, StoreType.DISK}
+      {ExecutorType.FIXED_POOL, StoreType.DISK},
+      {ExecutorType.SAME_THREAD, StoreType.REDIS},
+      {ExecutorType.FIXED_POOL, StoreType.REDIS}
     };
   }
 
@@ -182,8 +180,8 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
 
     @Override
     public void onSubscribe(Subscription subscription) {
-      this.upstream = subscription;
       downstream.onSubscribe(subscription);
+      this.upstream = subscription;
     }
 
     @Override

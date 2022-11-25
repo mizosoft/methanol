@@ -22,10 +22,29 @@
 
 package com.github.mizosoft.methanol.function;
 
+import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
+import java.util.function.Consumer;
+
 /**
- * A {@link java.util.function.Consumer Consumer<T>} that permits throwing an arbitrary {@code
+ * A {@link java.util.function.Consumer Consumer<T>} that permits throwing a checked {@code
  * Exception}.
  */
 public interface ThrowingConsumer<T> {
   void accept(T t) throws Exception;
+
+  /**
+   * Converts this consumer to a {@link Consumer<T>}. If this consumer throws a checked exception,
+   * the returned consumer wraps the former in a {@link java.util.concurrent.CompletionException}.
+   */
+  default Consumer<T> toUnchecked() {
+    return t -> {
+      try {
+        accept(t);
+      } catch (Exception e) {
+        Unchecked.propagateIfUnchecked(e);
+        throw Utils.toCompletionException(e);
+      }
+    };
+  }
 }

@@ -87,6 +87,15 @@ public final class StoreExtension
 
   @Override
   public void afterEach(ExtensionContext context) throws Exception {
+    context
+        .getExecutionException()
+        .ifPresent(
+            Unchecked.consumer(
+                ex ->
+                    ManagedStores.get(context)
+                        .allContexts(context.getRequiredTestMethod())
+                        .forEach(
+                            Unchecked.consumer(storeContext -> storeContext.attachDebugInfo(ex)))));
     ManagedStores.get(context).close();
   }
 
@@ -161,15 +170,15 @@ public final class StoreExtension
     return cartesianProduct(
             List.of(
                 Set.of(spec.store()),
-                Set.of(spec.autoInit()),
                 Set.of(spec.maxSize()),
+                Set.of(spec.appVersion()),
                 Set.of(spec.fileSystem()),
                 Set.of(spec.execution()),
-                Set.of(spec.appVersion()),
                 Set.of(spec.indexUpdateDelaySeconds()),
                 Set.of(spec.autoAdvanceClock()),
-                Set.of(spec.staleEntryExpiryMillis()),
-                Set.of(spec.editorLockExpiryMillis())))
+                Set.of(spec.dispatchEagerly()),
+                Set.of(spec.editorLockTtlSeconds()),
+                Set.of(spec.staleEntryLockTtlSeconds())))
         .stream()
         .filter(StoreExtension::isCompatibleConfig)
         .map(StoreExtension::createConfig);
@@ -197,48 +206,45 @@ public final class StoreExtension
       case DISK:
         return createDiskStoreConfig(tuple);
       case REDIS:
-        return resolveRedisStoreConfig(tuple);
+        return createRedisStoreConfig(tuple);
       default:
         return fail();
     }
   }
 
   private static MemoryStoreConfig createMemoryStoreConfig(List<?> tuple) {
-    boolean autoInit = (boolean) tuple.get(1);
-    long maxSize = (long) tuple.get(2);
-    return new MemoryStoreConfig(autoInit, maxSize);
+    long maxSize = (long) tuple.get(1);
+    return new MemoryStoreConfig(maxSize);
   }
 
   private static DiskStoreConfig createDiskStoreConfig(List<?> tuple) {
     int i = 1;
-    boolean autoInit = (boolean) tuple.get(i++);
     long maxSize = (long) tuple.get(i++);
+    int appVersion = (int) tuple.get(i++);
     var fileSystemType = (FileSystemType) tuple.get(i++);
     var execution = (Execution) tuple.get(i++);
-    var appVersion = (int) tuple.get(i++);
     long indexUpdateDelaySeconds = (long) tuple.get(i++);
     var indexUpdateDelay =
         indexUpdateDelaySeconds != StoreSpec.DEFAULT_INDEX_UPDATE_DELAY
             ? Duration.ofSeconds(indexUpdateDelaySeconds)
             : null;
-    boolean autoAdvanceClock = (boolean) tuple.get(i);
+    boolean autoAdvanceClock = (boolean) tuple.get(i++);
+    boolean dispatchEagerly = (boolean) tuple.get(i);
     return new DiskStoreConfig(
-        autoInit,
         maxSize,
+        appVersion,
         fileSystemType,
         execution,
         indexUpdateDelay,
         autoAdvanceClock,
-        appVersion);
+        dispatchEagerly);
   }
 
-  private static RedisStoreConfig resolveRedisStoreConfig(List<?> tuple) {
-    boolean autoInit = (boolean) tuple.get(1);
-    long editorLockTimeToLiveMillis = (long) tuple.get(8);
-    long staleEntryTimeTLiveMillis = (long) tuple.get(9);
-    int appVersion = (int) tuple.get(5);
-    return new RedisStoreConfig(
-        autoInit, editorLockTimeToLiveMillis, staleEntryTimeTLiveMillis, appVersion);
+  private static RedisStoreConfig createRedisStoreConfig(List<?> tuple) {
+    int appVersion = (int) tuple.get(2);
+    long editorLockTtlSeconds = (long) tuple.get(8);
+    long staleEntryTtlSeconds = (long) tuple.get(9);
+    return new RedisStoreConfig(appVersion, editorLockTtlSeconds, staleEntryTtlSeconds);
   }
 
   private static Set<List<?>> cartesianProduct(List<Set<?>> sets) {
@@ -288,6 +294,10 @@ public final class StoreExtension
       var context = StoreContext.from(config);
       contexts.computeIfAbsent(key, __ -> new ArrayList<>()).add(context);
       return context;
+    }
+
+    List<StoreContext> allContexts(Object key) {
+      return contexts.getOrDefault(key, List.of());
     }
 
     /**
