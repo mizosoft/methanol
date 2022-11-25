@@ -48,7 +48,7 @@ class StoreEvictionTest {
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 10,
       execution = SAME_THREAD)
-  void writeExactlyMaxSizeBytesByOneEntry(Store store) throws IOException {
+  void writeExactlyMaxSizeBytesByOneEntry(Store store) throws IOException, InterruptedException {
     write(store, "e1", "12345", "abcde"); // Grow size to 10 bytes.
     assertEntryEquals(store, "e1", "12345", "abcde");
     assertThat(store.size()).isEqualTo(10);
@@ -59,7 +59,7 @@ class StoreEvictionTest {
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 10,
       execution = SAME_THREAD)
-  void writeExactlyMaxSizeBytesByTwoEntries(Store store) throws IOException {
+  void writeExactlyMaxSizeBytesByTwoEntries(Store store) throws IOException, InterruptedException {
     write(store, "e1", "12", "abc"); // Grow size to 5 bytes.
     write(store, "e2", "45", "def"); // Grow size to 10 bytes.
     assertEntryEquals(store, "e1", "12", "abc");
@@ -72,7 +72,8 @@ class StoreEvictionTest {
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 15,
       execution = SAME_THREAD)
-  void writeBeyondMaxSize(Store store, StoreContext context) throws IOException {
+  void writeBeyondMaxSize(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "12", "abc"); // Grow size to 5 bytes.
     write(store, "e2", "34", "def"); // Grow size to 10 bytes.
     assertThat(store.size()).isEqualTo(10);
@@ -102,7 +103,8 @@ class StoreEvictionTest {
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 15,
       execution = SAME_THREAD)
-  void discardedWriteBeyondMaxSize(Store store, StoreContext context) throws IOException {
+  void discardedWriteBeyondMaxSize(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "123", "abc"); // Grow size to 6 bytes.
     write(store, "e2", "456", "def"); // Grow size to 12 bytes.
     assertThat(store.size()).isEqualTo(12);
@@ -121,7 +123,8 @@ class StoreEvictionTest {
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 4,
       execution = SAME_THREAD)
-  void writeBeyondMaxSizeByMetadataExpansion(Store store, StoreContext context) throws IOException {
+  void writeBeyondMaxSizeByMetadataExpansion(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "1", "a"); // Grow size to 2 bytes.
     write(store, "e2", "2", "b"); // Grow size to 4 bytes.
     assertThat(store.size()).isEqualTo(4);
@@ -138,7 +141,8 @@ class StoreEvictionTest {
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 4,
       execution = SAME_THREAD)
-  void writeBeyondMaxSizeByDataExpansion(Store store, StoreContext context) throws IOException {
+  void writeBeyondMaxSizeByDataExpansion(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "1", "a"); // Grow size to 2 bytes.
     write(store, "e2", "2", "b"); // Grow size to 4 bytes.
     assertThat(store.size()).isEqualTo(4);
@@ -155,7 +159,7 @@ class StoreEvictionTest {
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 18,
       execution = SAME_THREAD)
-  void lruEviction(Store store, StoreContext context) throws IOException {
+  void lruEviction(Store store, StoreContext context) throws IOException, InterruptedException {
     // Grow size to 6 bytes.
     // LRU queue: e1.
     write(store, "e1", "aaa", "bbb");

@@ -961,7 +961,7 @@ public final class Methanol extends HttpClient {
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException {
-      return Utils.block(interceptAsync(request, chain));
+      return Utils.get(interceptAsync(request, chain));
     }
 
     @Override
@@ -969,7 +969,6 @@ public final class Methanol extends HttpClient {
         HttpRequest request, Chain<T> chain) {
       var timeoutTrigger = new TimeoutTrigger();
       var triggerFuture = delayer.delay(timeoutTrigger::trigger, headersTimeout, SYNC_EXECUTOR);
-
       timeoutTrigger.onCancellation(() -> triggerFuture.cancel(false));
 
       var responseFuture = withHeadersTimeout(chain, timeoutTrigger).forwardAsync(request);

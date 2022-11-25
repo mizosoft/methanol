@@ -43,13 +43,14 @@ import java.util.stream.Stream;
 class StoreTesting {
   private StoreTesting() {}
 
-  static void assertUnreadable(Store store, String key) throws IOException {
+  static void assertUnreadable(Store store, String key) throws IOException, InterruptedException {
     try (var viewer = store.view(key).orElse(null)) {
       assertThat(viewer).withFailMessage("expected entry <%s> to be unreadable", key).isNull();
     }
   }
 
-  static void assertAbsent(Store store, StoreContext context, String... keys) throws IOException {
+  static void assertAbsent(Store store, StoreContext context, String... keys)
+      throws IOException, InterruptedException {
     // Make sure the store knows nothing about the entries.
     for (var key : keys) {
       assertUnreadable(store, key);
@@ -74,13 +75,13 @@ class StoreTesting {
     return Stream.of(values).map(UTF_8::encode).mapToLong(ByteBuffer::remaining).sum();
   }
 
-  static Viewer view(Store store, String key) throws IOException {
+  static Viewer view(Store store, String key) throws IOException, InterruptedException {
     var viewer = store.view(key);
     assertThat(viewer).withFailMessage("expected entry <%s> to be readable", key).isNotEmpty();
     return viewer.orElseThrow();
   }
 
-  static Editor edit(Store store, String key) throws IOException {
+  static Editor edit(Store store, String key) throws IOException, InterruptedException {
     var editor = store.edit(key);
     assertThat(editor).withFailMessage("expected entry <%s> to be editable", key).isNotEmpty();
     return editor.orElseThrow();
@@ -95,37 +96,41 @@ class StoreTesting {
   }
 
   static void assertEntryEquals(Store store, String key, String metadata, String data)
-      throws IOException {
+      throws IOException, InterruptedException {
     try (var viewer = view(store, key)) {
       assertEntryEquals(viewer, metadata, data);
     }
   }
 
-  static void assertEntryEquals(Viewer viewer, String metadata, String data) throws IOException {
+  static void assertEntryEquals(Viewer viewer, String metadata, String data)
+      throws IOException, InterruptedException {
     assertThat(UTF_8.decode(viewer.metadata()).toString()).isEqualTo(metadata);
     assertThat(read(viewer)).isEqualTo(data);
     assertThat(viewer.dataSize()).isEqualTo(sizeOf(data));
     assertThat(viewer.entrySize()).isEqualTo(sizeOf(metadata, data));
   }
 
-  static void write(Store store, String key, String metadata, String data) throws IOException {
+  static void write(Store store, String key, String metadata, String data)
+      throws IOException, InterruptedException {
     try (var editor = edit(store, key)) {
       write(editor, data);
       assertThat(commit(editor, metadata)).isTrue();
     }
   }
 
-  static void write(Editor editor, String data) throws IOException {
+  static void write(Editor editor, String data) throws IOException, InterruptedException {
     write(editor.writer(), data);
   }
 
-  static void setMetadata(Store store, String key, String metadata) throws IOException {
+  static void setMetadata(Store store, String key, String metadata)
+      throws IOException, InterruptedException {
     try (var editor = edit(store, key)) {
       assertThat(commit(editor, metadata)).isTrue();
     }
   }
 
-  static boolean commit(Editor editor, String metadata, String data) throws IOException {
+  static boolean commit(Editor editor, String metadata, String data)
+      throws IOException, InterruptedException {
     write(editor, data);
     return commit(editor, metadata);
   }
@@ -134,19 +139,19 @@ class StoreTesting {
     return editor.commitAsync(UTF_8.encode(metadata)).join();
   }
 
-  static void write(EntryWriter writer, String data) throws IOException {
-    Utils.blockOnIO(writer.write(UTF_8.encode(data)));
+  static void write(EntryWriter writer, String data) throws IOException, InterruptedException {
+    Utils.get(writer.write(UTF_8.encode(data)));
   }
 
-  static String read(Viewer viewer) throws IOException {
+  static String read(Viewer viewer) throws IOException, InterruptedException {
     return read(viewer.newReader());
   }
 
-  static String read(EntryReader reader) throws IOException {
+  static String read(EntryReader reader) throws IOException, InterruptedException {
     var out = new ByteArrayOutputStream();
     var outChannel = Channels.newChannel(out);
     var buffer = ByteBuffer.allocate(1024);
-    while (Utils.blockOnIO(reader.read(buffer.clear())) != -1) {
+    while (Utils.get(reader.read(buffer.clear())) != -1) {
       outChannel.write(buffer.flip());
     }
     return out.toString(UTF_8);

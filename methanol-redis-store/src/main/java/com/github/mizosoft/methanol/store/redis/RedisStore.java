@@ -39,6 +39,7 @@ import io.lettuce.core.ScanCursor;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.StatefulRedisConnection;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
@@ -52,7 +53,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -116,8 +116,8 @@ public final class RedisStore implements Store {
   }
 
   @Override
-  public Optional<Viewer> view(String key) {
-    return Utils.blockUnchecked(viewAsync(key));
+  public Optional<Viewer> view(String key) throws IOException, InterruptedException {
+    return Utils.get(viewAsync(key));
   }
 
   @Override
@@ -158,8 +158,8 @@ public final class RedisStore implements Store {
   }
 
   @Override
-  public Optional<Editor> edit(String key) throws IOException {
-    return Utils.blockOnIO(editAsync(key));
+  public Optional<Editor> edit(String key) throws IOException, InterruptedException {
+    return Utils.get(editAsync(key));
   }
 
   @Override
@@ -205,8 +205,8 @@ public final class RedisStore implements Store {
   }
 
   @Override
-  public boolean remove(String key) {
-    return Utils.blockUnchecked(removeEntryAsync(toEntryKey(key), ANY_ENTRY_VERSION));
+  public boolean remove(String key) throws IOException, InterruptedException {
+    return Utils.get(removeEntryAsync(toEntryKey(key), ANY_ENTRY_VERSION));
   }
 
   @Override
@@ -424,7 +424,7 @@ public final class RedisStore implements Store {
       } catch (RedisException e) {
         logger.log(Level.WARNING, "entry removal failure", e);
       } catch (IllegalStateException ignored) {
-        // Fail silently if closed.
+        // Fail silently if closed or interrupted.
       }
     }
 
@@ -448,13 +448,13 @@ public final class RedisStore implements Store {
           var signal = queue.take();
           if (signal instanceof ScanKey) {
             try {
-              var viewer =
-                  Utils.blockUnchecked(viewAsync(null, ((ScanKey) signal).key)).orElse(null);
+              var viewer = Utils.get(viewAsync(null, ((ScanKey) signal).key)).orElse(null);
               if (viewer != null) {
                 nextViewer = viewer;
                 return true;
               }
-            } catch (RedisException | CompletionException e) {
+            } catch (RedisException | IOException e) {
+              // Log & try with next key.
               logger.log(Level.WARNING, "exception when opening viewer", e);
             }
           } else if (signal instanceof ScanCompletion) {
@@ -579,8 +579,12 @@ public final class RedisStore implements Store {
     }
 
     @Override
-    public boolean removeEntry() {
-      return Utils.blockUnchecked(RedisStore.this.removeEntryAsync(entryKey, entryVersion));
+    public boolean removeEntry() throws IOException {
+      try {
+        return Utils.get(RedisStore.this.removeEntryAsync(entryKey, entryVersion));
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
+      }
     }
 
     @Override

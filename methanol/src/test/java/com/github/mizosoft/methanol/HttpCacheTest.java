@@ -134,6 +134,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.ThrowingConsumer;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvFileSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -242,10 +243,10 @@ class HttpCacheTest {
   }
 
   @Test
-  void buildWithDiskStore() {
+  void buildWithDiskStore(@TempDir Path dir) {
     var cache =
         HttpCache.newBuilder()
-            .cacheOnDisk(Path.of("cache_dir"), 12)
+            .cacheOnDisk(dir, 12)
             .executor(
                 r -> {
                   throw new RejectedExecutionException("NO!");
@@ -254,7 +255,7 @@ class HttpCacheTest {
     var store = cache.store();
     assertThat(store).isInstanceOf(DiskStore.class);
     assertThat(store.maxSize()).isEqualTo(12);
-    assertThat(cache.directory()).hasValue(Path.of("cache_dir"));
+    assertThat(cache.directory()).hasValue(dir);
     assertThat(cache.executor()).isEqualTo(store.executor());
   }
 
@@ -2955,7 +2956,7 @@ class HttpCacheTest {
     }
 
     @Override
-    public Optional<Viewer> view(String key) throws IOException {
+    public Optional<Viewer> view(String key) throws IOException, InterruptedException {
       return delegate.view(key);
     }
 
@@ -2965,7 +2966,7 @@ class HttpCacheTest {
     }
 
     @Override
-    public Optional<Editor> edit(String key) throws IOException {
+    public Optional<Editor> edit(String key) throws IOException, InterruptedException {
       return delegate.edit(key);
     }
 
@@ -2985,7 +2986,7 @@ class HttpCacheTest {
     }
 
     @Override
-    public boolean remove(String key) throws IOException {
+    public boolean remove(String key) throws IOException, InterruptedException {
       return delegate.remove(key);
     }
 
@@ -3151,7 +3152,7 @@ class HttpCacheTest {
     }
 
     @Override
-    public Optional<Viewer> view(String key) throws IOException {
+    public Optional<Viewer> view(String key) throws IOException, InterruptedException {
       return super.view(key).map(EditAwaiterViewer::new);
     }
 
@@ -3161,7 +3162,7 @@ class HttpCacheTest {
     }
 
     @Override
-    public Optional<Editor> edit(String key) throws IOException {
+    public Optional<Editor> edit(String key) throws IOException, InterruptedException {
       return super.edit(key).map(editAwaiter::register);
     }
 
@@ -3191,7 +3192,7 @@ class HttpCacheTest {
     }
 
     @Override
-    public Optional<Viewer> view(String key) throws IOException {
+    public Optional<Viewer> view(String key) throws IOException, InterruptedException {
       return super.view(key).map(FailingViewer::new);
     }
 
@@ -3201,7 +3202,7 @@ class HttpCacheTest {
     }
 
     @Override
-    public Optional<Editor> edit(String key) throws IOException {
+    public Optional<Editor> edit(String key) throws IOException, InterruptedException {
       return super.edit(key).map(FailingEditor::new);
     }
 

@@ -296,8 +296,8 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public Optional<Viewer> view(String key) throws IOException {
-    return Utils.blockOnIO(viewAsync(key));
+  public Optional<Viewer> view(String key) throws IOException, InterruptedException {
+    return Utils.get(viewAsync(key));
   }
 
   @Override
@@ -340,8 +340,8 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public boolean remove(String key) throws IOException {
-    return Utils.blockOnIO(removeAsync(key));
+  public boolean remove(String key) throws IOException, InterruptedException {
+    return Utils.get(removeAsync(key));
   }
 
   @Override
@@ -424,31 +424,25 @@ public final class DiskStore implements Store {
     // Make sure our final index write captures each entry's final state.
     entries.values().forEach(Entry::freeze);
 
-    if (disposing) {
-      // Shutdown the scheduler to avoid overlapping an index write with store directory deletion.
-      indexWriteScheduler.shutdown();
-      deleteStoreContent(directory);
-    } else {
-      evictExcessiveEntries();
-      Utils.blockOnIO(indexWriteScheduler.scheduleNow());
-      indexWriteScheduler.shutdown();
+    try (directoryLock) {
+      if (disposing) {
+        // Shutdown the scheduler to avoid overlapping an index write with store directory deletion.
+        indexWriteScheduler.shutdown();
+        deleteStoreContent(directory);
+      } else {
+        evictExcessiveEntries();
+        indexWriteScheduler.forceSchedule();
+        indexWriteScheduler.shutdown();
+      }
     }
     indexExecutor.shutdown();
     evictionScheduler.shutdown();
     entries.clear();
-    directoryLock.release();
   }
 
   @Override
   public void flush() throws IOException {
-    closeLock.readLock().lock();
-    try {
-      if (!closed) {
-        Utils.blockOnIO(indexWriteScheduler.scheduleNow());
-      }
-    } finally {
-      closeLock.readLock().unlock();
-    }
+    indexWriteScheduler.forceSchedule();
   }
 
   private Set<IndexEntry> indexEntriesSnapshot() {
@@ -717,6 +711,12 @@ public final class DiskStore implements Store {
     private @Nullable Viewer nextViewer;
     private @Nullable Viewer currentViewer;
 
+    /**
+     * Whether the iterating thread has been interrupted. On such case, the iterator stops
+     * advancing.
+     */
+    private boolean interrupted;
+
     ConcurrentViewerIterator() {}
 
     @Override
@@ -750,6 +750,10 @@ public final class DiskStore implements Store {
 
     @EnsuresNonNullIf(expression = "nextViewer", result = true)
     private boolean findNext() {
+      if (interrupted) {
+        return false;
+      }
+
       while (entryIterator.hasNext()) {
         var entry = entryIterator.next();
         var future = viewAsyncIfOpen(entry);
@@ -757,13 +761,16 @@ public final class DiskStore implements Store {
           return false; // Handle closure by gracefully ending iteration.
         }
         try {
-          var viewer = Utils.blockOnIO(future);
+          var viewer = Utils.get(future);
           if (viewer != null) {
             nextViewer = viewer;
             return true;
           }
         } catch (IOException e) {
           logger.log(Level.WARNING, "exception thrown when iterating over entries", e);
+        } catch (InterruptedException e) {
+          interrupted = true;
+          break;
         }
       }
       return false;
@@ -1116,13 +1123,19 @@ public final class DiskStore implements Store {
     }
 
     /** Forcibly submits an index write to the index executor, ignoring the time rate. */
-    CompletableFuture<Void> scheduleNow() {
+    void forceSchedule() throws IOException {
+      try {
+        Utils.get(forceScheduleAsync());
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
+      }
+    }
+
+    private CompletableFuture<Void> forceScheduleAsync() {
       var now = clock.instant();
       while (true) {
         var currentTask = scheduledWriteTask.get();
-        if (currentTask == TOMBSTONE) {
-          return CompletableFuture.completedFuture(null);
-        }
+        requireState(currentTask != TOMBSTONE, "shutdown");
 
         var newTask = new RunnableWriteTask(now);
         if (scheduledWriteTask.compareAndSet(currentTask, newTask)) {
@@ -1261,7 +1274,7 @@ public final class DiskStore implements Store {
    * a single JVM process. This only works in a cooperative manner; it doesn't prevent other
    * entities from using the directory.
    */
-  private static final class DirectoryLock {
+  private static final class DirectoryLock implements AutoCloseable {
     private final Path lockFile;
     private final FileChannel channel;
 
@@ -1270,7 +1283,8 @@ public final class DiskStore implements Store {
       this.channel = channel;
     }
 
-    void release() {
+    @Override
+    public void close() {
       deleteIfExistsQuietly(lockFile);
       closeQuietly(channel); // Closing the channel releases the lock.
     }

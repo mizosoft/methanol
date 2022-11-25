@@ -27,8 +27,6 @@ import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.time.Clock;
@@ -109,13 +107,8 @@ public class Utils {
    * {@code IOException} with {@code throwable} as its cause if cloning is not possible. Return type
    * is only declared for this method to be conveniently used in a {@code throw} statement.
    */
-  private static RuntimeException rethrowAsyncThrowable(
-      Throwable throwable, boolean rethrowInterruptedException)
+  private static RuntimeException rethrowAsyncThrowable(Throwable throwable)
       throws IOException, InterruptedException {
-    if (throwable instanceof InterruptedException && !rethrowInterruptedException) {
-      throw new IOException(throwable);
-    }
-
     var clonedThrowable = tryCloneThrowable(throwable);
     if (clonedThrowable instanceof RuntimeException) {
       throw (RuntimeException) clonedThrowable;
@@ -126,16 +119,16 @@ public class Utils {
     } else if (clonedThrowable instanceof InterruptedException) {
       throw (InterruptedException) clonedThrowable;
     } else {
+      assert clonedThrowable == null;
       throw new IOException(throwable);
     }
   }
 
-  @SuppressWarnings("unchecked")
   private static @Nullable Throwable tryCloneThrowable(Throwable t) {
     // Clone the main cause in a CompletionException|ExecutionException chain.
     var throwableToClone = getDeepCompletionCause(t);
 
-    // Don't bother cloning if we can rethrow the cloned exception.
+    // Don't bother cloning if caller can't rethrow the cloned exception.
     if (!(throwableToClone instanceof RuntimeException
         || throwableToClone instanceof Error
         || throwableToClone instanceof IOException
@@ -143,25 +136,35 @@ public class Utils {
       return null;
     }
 
-    // TODO prefer constructors with 3 args.
+    var throwableClass = throwableToClone.getClass();
+    var message = throwableToClone.getMessage();
     try {
-      for (var constructor :
-          (Constructor<? extends Throwable>[]) throwableToClone.getClass().getConstructors()) {
-        var paramTypes = constructor.getParameterTypes();
-        if (paramTypes.length == 2
-            && paramTypes[0] == String.class
-            && paramTypes[1] == Throwable.class) {
-          return constructor.newInstance(t.getMessage(), t);
-        } else if (paramTypes.length == 1 && paramTypes[0] == String.class) {
-          return constructor.newInstance(t.getMessage()).initCause(t);
-        } else if (paramTypes.length == 1 && paramTypes[0] == Throwable.class) {
-          return constructor.newInstance(t);
-        } else if (paramTypes.length == 0) {
-          return constructor.newInstance().initCause(t);
-        }
-      }
+      return throwableClass
+          .getConstructor(String.class, Throwable.class)
+          .newInstance(message, throwableToClone);
     } catch (ReflectiveOperationException ignored) {
-      // Fallback to throwing an IOException.
+      // Try message-only constructor.
+    }
+
+    try {
+      return throwableClass
+          .getConstructor(String.class)
+          .newInstance(message)
+          .initCause(throwableToClone);
+    } catch (ReflectiveOperationException ignored) {
+      // Try cause-only constructor.
+    }
+
+    try {
+      return throwableClass.getConstructor(Throwable.class).newInstance(throwableToClone);
+    } catch (ReflectiveOperationException ignored) {
+      // Try zero-arg constructor.
+    }
+
+    try {
+      return throwableClass.getConstructor().newInstance().initCause(throwableToClone);
+    } catch (ReflectiveOperationException ignored) {
+      // Make caller fallback to wrapping in an IOException.
     }
     return null;
   }
@@ -178,43 +181,11 @@ public class Utils {
     return cause;
   }
 
-  public static <T> T block(Future<T> future) throws IOException, InterruptedException {
+  public static <T> T get(Future<T> future) throws IOException, InterruptedException {
     try {
       return future.get();
     } catch (ExecutionException e) {
-      throw rethrowAsyncThrowable(e.getCause(), true);
-    }
-  }
-
-  /** Same as {@link #block(Future)} but throws an {@code IOException} when interrupted. */
-  public static <T> T blockOnIO(Future<T> future) throws IOException {
-    try {
-      return future.get();
-    } catch (ExecutionException e) {
-      try {
-        throw rethrowAsyncThrowable(e.getCause(), false);
-      } catch (InterruptedException t) {
-        throw new AssertionError(t);
-      }
-    } catch (InterruptedException e) {
-      throw new IOException("interrupted while waiting for I/O", e);
-    }
-  }
-
-  public static <T> T blockUnchecked(Future<T> future) {
-    try {
-      return future.get();
-    } catch (ExecutionException e) {
-      try {
-        throw rethrowAsyncThrowable(e.getCause(), false);
-      } catch (IOException ioe) {
-        throw new UncheckedIOException(ioe);
-      } catch (InterruptedException t) {
-        // Won't happen.
-        throw new AssertionError(t);
-      }
-    } catch (InterruptedException e) {
-      throw new UncheckedIOException(new IOException("interrupted while waiting for I/O", e));
+      throw rethrowAsyncThrowable(e.getCause());
     }
   }
 
@@ -225,8 +196,7 @@ public class Utils {
    * quote DQUOTE and backslash octets occurring within that string."
    */
   public static String escapeAndQuoteValueIfNeeded(String value) {
-    // If value is already a token then it doesn't need quoting. Special case: if the value is empty
-    // then it is not a token.
+    // If value is already a token then it doesn't need quoting.
     return isValidToken(value) ? value : escapeAndQuote(value);
   }
 

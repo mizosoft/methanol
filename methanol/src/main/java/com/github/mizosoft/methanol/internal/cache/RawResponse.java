@@ -22,9 +22,9 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodyHandler;
@@ -46,7 +46,7 @@ public abstract class RawResponse {
 
   public <T> TrackedResponse<T> handle(BodyHandler<T> handler)
       throws IOException, InterruptedException {
-    return Utils.block(handleAsync(handler, FlowSupport.SYNC_EXECUTOR));
+    return Utils.get(handleAsync(handler, FlowSupport.SYNC_EXECUTOR));
   }
 
   public abstract <T> CompletableFuture<TrackedResponse<T>> handleAsync(

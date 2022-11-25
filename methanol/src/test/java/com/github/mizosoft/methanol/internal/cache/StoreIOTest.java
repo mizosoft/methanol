@@ -38,7 +38,6 @@ import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
@@ -46,9 +45,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.spi.FileSystemProvider;
 import java.time.Duration;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -451,14 +448,5 @@ class StoreIOTest {
     assertThat(channel.calls).hasValue(1);
     assertThat(written).isEqualTo(0);
     assertThat(file).usingCharset(UTF_8).hasContent("1234");
-  }
-
-  public static void main(String[] args) throws Exception {
-    var provider =
-        FileSystemProvider.installedProviders().stream()
-            .filter(prov -> prov.getScheme().equalsIgnoreCase("jimfs"))
-            .findFirst()
-            .orElseThrow();
-    System.out.println(provider.newFileSystem(URI.create("jimfs://path"), Map.of()));
   }
 }

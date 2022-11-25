@@ -47,6 +47,7 @@ import com.github.mizosoft.methanol.internal.cache.StoreExtension;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.Flushable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.URI;
@@ -250,8 +251,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
    * @throws IllegalStateException if closed
    */
   public boolean remove(URI uri) throws IOException {
-    requireNonNull(uri);
-    return store.remove(toCacheKey(uri));
+    try {
+      return store.remove(toCacheKey(uri));
+    } catch (InterruptedException e) {
+      throw (IOException) new InterruptedIOException().initCause(e);
+    }
   }
 
   /**
@@ -260,7 +264,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
    * @throws IllegalStateException if closed
    */
   public boolean remove(HttpRequest request) throws IOException {
-    requireNonNull(request);
     try (var viewer = store.view(toCacheKey(request)).orElse(null)) {
       if (viewer != null) {
         var metadata = tryDecodeMetadata(viewer);
@@ -275,6 +278,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
           }
         }
       }
+    } catch (InterruptedException e) {
+      throw (IOException) new InterruptedIOException().initCause(e);
     }
     return false;
   }
@@ -341,7 +346,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     LocalCacheView() {}
 
     @Override
-    public Optional<CacheResponse> get(HttpRequest request) throws IOException {
+    public Optional<CacheResponse> get(HttpRequest request)
+        throws IOException, InterruptedException {
       return tryReadCacheResponse(request, store.view(toCacheKey(request)));
     }
 

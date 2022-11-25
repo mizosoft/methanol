@@ -22,8 +22,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.Validate.TODO;
-
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -70,11 +68,9 @@ public interface Store extends AutoCloseable, Flushable {
    *
    * @throws IllegalStateException if closed
    */
-  Optional<Viewer> view(String key) throws IOException;
+  Optional<Viewer> view(String key) throws IOException, InterruptedException;
 
-  default CompletableFuture<Optional<Viewer>> viewAsync(String key) {
-    return TODO();
-  }
+  CompletableFuture<Optional<Viewer>> viewAsync(String key);
 
   /**
    * Returns an {@code Optional<Editor>} for the entry associated with the given key (atomically
@@ -82,7 +78,7 @@ public interface Store extends AutoCloseable, Flushable {
    *
    * @throws IllegalStateException if closed
    */
-  Optional<Editor> edit(String key) throws IOException;
+  Optional<Editor> edit(String key) throws IOException, InterruptedException;
 
   CompletableFuture<Optional<Editor>> editAsync(String key);
 
@@ -98,7 +94,7 @@ public interface Store extends AutoCloseable, Flushable {
    *
    * @throws IllegalStateException if closed
    */
-  boolean remove(String key) throws IOException;
+  boolean remove(String key) throws IOException, InterruptedException;
 
   CompletableFuture<Void> removeAllAsync(List<String> keys);
 

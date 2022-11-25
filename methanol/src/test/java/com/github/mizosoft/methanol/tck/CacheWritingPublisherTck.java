@@ -39,12 +39,12 @@ import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -100,8 +100,8 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
           EMPTY_BUFFER,
           Listener.disabled(),
           true);
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+    } catch (IOException | InterruptedException e) {
+      throw new CompletionException(e);
     }
   }
 

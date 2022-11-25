@@ -71,14 +71,14 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void writeThenRead(Store store) throws IOException {
+  void writeThenRead(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Lucario", "Jynx");
     assertEntryEquals(store, "e1", "Lucario", "Jynx");
     assertThat(store.size()).isEqualTo(sizeOf("Lucario", "Jynx"));
   }
 
   @StoreParameterizedTest
-  void writeThenReadTwice(Store store) throws IOException {
+  void writeThenReadTwice(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Lucario", "Jynx");
     assertEntryEquals(store, "e1", "Lucario", "Jynx");
 
@@ -89,7 +89,7 @@ class StoreTest {
 
   @StoreParameterizedTest
   @ExecutorConfig(CACHED_POOL)
-  void concurrentViewers(Store store, Executor executor) throws IOException {
+  void concurrentViewers(Store store, Executor executor) throws IOException, InterruptedException {
     write(store, "e1", "Pokemon", "Charmander");
 
     int viewerCount = 10;
@@ -108,7 +108,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void writeMetadataWithoutData(Store store) throws IOException {
+  void writeMetadataWithoutData(Store store) throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
       assertThat(commit(editor, "abc")).isTrue();
     }
@@ -116,14 +116,15 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void writeNothingOnDiscardedFirstEdit(Store store, StoreContext context) throws IOException {
+  void writeNothingOnDiscardedFirstEdit(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     edit(store, "e1").close();
     assertAbsent(store, context, "e1");
     assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
-  void updateMetadataOnSecondEdit(Store store) throws IOException {
+  void updateMetadataOnSecondEdit(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Mew", "Pickachu");
     try (var editor = edit(store, "e1")) {
       assertThat(commit(editor, "Mewtwo")).isTrue();
@@ -133,7 +134,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void clearMetadataOnSecondEdit(Store store) throws IOException {
+  void clearMetadataOnSecondEdit(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Mr Mime", "Ditto");
     try (var editor = edit(store, "e1")) {
       assertThat(commit(editor, "")).isTrue();
@@ -143,7 +144,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void clearDataOnSecondEdit(Store store) throws IOException {
+  void clearDataOnSecondEdit(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Jynx", "Charmander");
     try (var editor = edit(store, "e1")) {
       assertThat(commit(editor, "Jynx", "")).isTrue();
@@ -153,7 +154,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void writeThenRemove(Store store, StoreContext context) throws IOException {
+  void writeThenRemove(Store store, StoreContext context) throws IOException, InterruptedException {
     write(store, "e1", "Jigglypuff", "Pickachu");
     assertThat(store.remove("e1")).isTrue();
     assertAbsent(store, context, "e1");
@@ -161,7 +162,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void writeThenClear(Store store, StoreContext context) throws IOException {
+  void writeThenClear(Store store, StoreContext context) throws IOException, InterruptedException {
     write(store, "e1", "methanol", "CH3OH");
     write(store, "e2", "ethanol", "C2H5OH");
 
@@ -173,7 +174,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void writeTwice(Store store) throws IOException {
+  void writeTwice(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Mew", "Pickachu");
     write(store, "e1", "Mewtwo", "Eevee");
     assertEntryEquals(store, "e1", "Mewtwo", "Eevee");
@@ -181,7 +182,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void discardEdit(Store store, StoreContext context) throws IOException {
+  void discardEdit(Store store, StoreContext context) throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
       write(editor, "Eevee");
     }
@@ -190,7 +191,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void discardSecondEdit(Store store) throws IOException {
+  void discardSecondEdit(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Mew", "Mewtwo");
     try (var editor = edit(store, "e1")) {
       write(editor, "Eevee");
@@ -200,7 +201,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void editAfterRemove(Store store, StoreContext context) throws IOException {
+  void editAfterRemove(Store store, StoreContext context) throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
       write(editor, "Mew");
       assertThat(store.remove("e1")).isTrue();
@@ -226,7 +227,7 @@ class StoreTest {
 
   @StoreParameterizedTest
   @ExecutorConfig(CACHED_POOL)
-  void contendedEdit(Store store, Executor executor) throws IOException {
+  void contendedEdit(Store store, Executor executor) throws IOException, InterruptedException {
     int threadCount = 10;
     var arrival = new CyclicBarrier(threadCount);
     var endLatch = new CountDownLatch(threadCount);
@@ -267,7 +268,8 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void entryRemainsUnreadableTillFirstEditCompletes(Store store) throws IOException {
+  void entryRemainsUnreadableTillFirstEditCompletes(Store store)
+      throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
       assertUnreadable(store, "e1");
       write(editor, "Squirtle");
@@ -279,7 +281,8 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void entryRemainsUnchangedTillSecondEditCompletes(Store store) throws IOException {
+  void entryRemainsUnchangedTillSecondEditCompletes(Store store)
+      throws IOException, InterruptedException {
     write(store, "e1", "Mew", "Eevee");
     try (var editor = edit(store, "e1")) {
       assertEntryEquals(store, "e1", "Mew", "Eevee");
@@ -302,7 +305,8 @@ class StoreTest {
    * with which files in NIO are normally opened.
    */
   @StoreParameterizedTest
-  void removeWhileReading(Store store, StoreContext context) throws IOException {
+  void removeWhileReading(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "Ditto", "Eevee");
     try (var viewer = view(store, "e1")) {
       assertThat(store.remove("e1")).isTrue();
@@ -320,7 +324,8 @@ class StoreTest {
    */
   @StoreParameterizedTest
   @Disabled // TODO remove when RedisStore implements semi-monotonic versioning
-  void removeThenWriteWhileReading(Store store, StoreContext context) throws IOException {
+  void removeThenWriteWhileReading(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "Ditto", "Eevee");
     try (var viewer = view(store, "e1")) {
       assertThat(store.remove("e1")).isTrue();
@@ -337,7 +342,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void updateMetadataWhileReading(Store store) throws IOException {
+  void updateMetadataWhileReading(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Pickachu", "Psyduck");
     try (var viewer = view(store, "e1")) {
       try (var editor = edit(store, "e1")) {
@@ -350,7 +355,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void editFromViewer(Store store) throws IOException {
+  void editFromViewer(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Pickachu", "Snorlax");
     try (var viewer = view(store, "e1")) {
       try (var editor = edit(viewer)) {
@@ -363,7 +368,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void discardEditFromViewer(Store store) throws IOException {
+  void discardEditFromViewer(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Ditto", "Eevee");
     try (var viewer = view(store, "e1")) {
       try (var editor = edit(viewer)) {
@@ -376,7 +381,8 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void removeWhileEditingFromViewer(Store store, StoreContext context) throws IOException {
+  void removeWhileEditingFromViewer(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "Pickachu", "Mewtwo");
     try (var viewer = view(store, "e1")) {
       try (var editor = edit(viewer)) {
@@ -392,7 +398,8 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void removeFromViewer(Store store, StoreContext context) throws IOException {
+  void removeFromViewer(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "Mew", "Mewtwo");
     try (var viewer = view(store, "e1")) {
       assertThat(viewer.removeEntry()).isTrue();
@@ -406,7 +413,7 @@ class StoreTest {
 
   @StoreParameterizedTest
   void removeFromViewerWhileEditingFromViewer(Store store, StoreContext context)
-      throws IOException {
+      throws IOException, InterruptedException {
     write(store, "e1", "Pickachu", "Mewtwo");
     try (var viewer = view(store, "e1")) {
       try (var editor = edit(viewer)) {
@@ -436,7 +443,7 @@ class StoreTest {
 
   @StoreParameterizedTest
   void removeFromViewerAfterRemovingFromStore(Store store, StoreContext context)
-      throws IOException {
+      throws IOException, InterruptedException {
     write(store, "e1", "Eevee", "Ditto");
     try (var viewer = view(store, "e1")) {
       assertThat(store.remove("e1")).isTrue();
@@ -446,7 +453,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void removeFromStaleViewer(Store store) throws IOException {
+  void removeFromStaleViewer(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Pikachu", "Ditto");
     try (var viewer = view(store, "e1")) {
       // Rewrite the entry, making the viewer stale.
@@ -459,7 +466,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void editFromStaleViewer(Store store) throws IOException {
+  void editFromStaleViewer(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Eevee", "Ditto");
     try (var viewer = view(store, "e1")) {
       // Make viewer stale by writing new values.
@@ -472,7 +479,8 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void editFromStaleViewerDueToRemoval(Store store, StoreContext context) throws IOException {
+  void editFromStaleViewerDueToRemoval(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "Eevee", "Ditto");
     try (var viewer = view(store, "e1")) {
       // Make viewer stale by removing the entry.
@@ -485,7 +493,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void editFromViewerDuringAnOngoingEdit(Store store) throws IOException {
+  void editFromViewerDuringAnOngoingEdit(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Eevee", "Ditto");
     try (var viewer = view(store, "e1")) {
       try (var ignored = edit(store, "e1")) {
@@ -495,7 +503,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void removeNonExistingEntry(Store store) throws IOException {
+  void removeNonExistingEntry(Store store) throws IOException, InterruptedException {
     assertThat(store.remove("e1")).isFalse();
     write(store, "e1", "Raichu", "Eevee");
     assertThat(store.remove("e1")).isTrue();
@@ -503,7 +511,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void iterateEntries(Store store) throws IOException {
+  void iterateEntries(Store store) throws IOException, InterruptedException {
     var entries =
         Map.of(
             "e1", List.of("Pickachu", "Raichu"),
@@ -526,7 +534,8 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void removeFromIterator(Store store, StoreContext context) throws IOException {
+  void removeFromIterator(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     write(store, "e1", "Mew", "Mewtwo");
     write(store, "e2", "Charmander", "Pickachu");
 
@@ -549,7 +558,8 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void removeFromIteratorPointingAtStaleViewer(Store store) throws IOException {
+  void removeFromIteratorPointingAtStaleViewer(Store store)
+      throws IOException, InterruptedException {
     write(store, "e1", "Ditto", "Jynx");
 
     var iter = store.iterator();
@@ -569,7 +579,8 @@ class StoreTest {
 
   /** Ensure Viewers return an independent duplicate of the metadata buffer. */
   @StoreParameterizedTest
-  void mutatePositionOfMetadataBufferReturnedFromViewer(Store store) throws IOException {
+  void mutatePositionOfMetadataBufferReturnedFromViewer(Store store)
+      throws IOException, InterruptedException {
     write(store, "e1", "555", "");
     try (var viewer = view(store, "e1")) {
       var metadata = viewer.metadata();
@@ -580,7 +591,8 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void metadataBufferReturnedFromViewerIsReadOnly(Store store) throws IOException {
+  void metadataBufferReturnedFromViewerIsReadOnly(Store store)
+      throws IOException, InterruptedException {
     write(store, "e1", "555", "");
     try (var viewer = view(store, "e1")) {
       assertThat(viewer.metadata().isReadOnly()).isTrue();
@@ -589,7 +601,7 @@ class StoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(store = {StoreType.DISK, StoreType.REDIS})
-  void writesAfterCommittingAreProhibited(Store store) throws IOException {
+  void writesAfterCommittingAreProhibited(Store store) throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
       write(editor, "Jynx");
       editor.commitAsync(UTF_8.encode("Ditto")); // Don't wait on committing.
@@ -602,7 +614,7 @@ class StoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(store = {StoreType.DISK, StoreType.REDIS})
-  void editorProhibitsWritesAfterClosure(Store store) throws IOException {
+  void editorProhibitsWritesAfterClosure(Store store) throws IOException, InterruptedException {
     var editor = edit(store, "e1");
     try (editor) {
       commit(editor, "Ditto", "Jynx");

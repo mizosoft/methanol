@@ -92,7 +92,7 @@ public final class RedirectingInterceptor implements Interceptor {
       throws IOException, InterruptedException {
     return policy == Redirect.NEVER
         ? chain.forward(request)
-        : Utils.block(doIntercept(request, chain, false));
+        : Utils.get(doIntercept(request, chain, false));
   }
 
   @Override

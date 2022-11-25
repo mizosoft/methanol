@@ -123,7 +123,7 @@ public final class CacheInterceptor implements Interceptor {
   @Override
   public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
       throws IOException, InterruptedException {
-    return Utils.block(exchange(request, chain, false)).handle(chain.bodyHandler());
+    return Utils.get(exchange(request, chain, false)).handle(chain.bodyHandler());
   }
 
   @Override
@@ -163,7 +163,7 @@ public final class CacheInterceptor implements Interceptor {
     if (!"GET".equalsIgnoreCase(request.method())
         || hasPreconditions(request.headers())
         || chain.pushPromiseHandler().isPresent()) {
-      return CompletableFuture.completedFuture(null);
+      return CompletableFuture.completedFuture(Optional.empty());
     }
 
     return asyncAdapter.get(cache, request);

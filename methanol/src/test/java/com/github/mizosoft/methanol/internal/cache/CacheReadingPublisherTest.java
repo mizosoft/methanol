@@ -63,23 +63,25 @@ class CacheReadingPublisherTest {
 
   @ExecutorParameterizedTest
   @StoreSpec(store = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
-  void cacheStringInMemory(Executor executor, Store store) throws IOException {
+  void cacheStringInMemory(Executor executor, Store store)
+      throws IOException, InterruptedException {
     testCachingAsString(executor, store);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
-  void cacheStringOnDisk(Executor executor, Store store) throws IOException {
+  void cacheStringOnDisk(Executor executor, Store store) throws IOException, InterruptedException {
     testCachingAsString(executor, store);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(store = StoreType.REDIS, fileSystem = FileSystemType.NONE)
-  void cacheStringOnRedis(Executor executor, Store store) throws IOException {
+  void cacheStringOnRedis(Executor executor, Store store) throws IOException, InterruptedException {
     testCachingAsString(executor, store);
   }
 
-  private void testCachingAsString(Executor executor, Store store) throws IOException {
+  private void testCachingAsString(Executor executor, Store store)
+      throws IOException, InterruptedException {
     write(store, "e1", "", "Cache me please!");
 
     var publisher = new CacheReadingPublisher(view(store, "e1"), executor);

@@ -36,7 +36,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * and removal.
  */
 public interface LocalCache {
-  Optional<CacheResponse> get(HttpRequest request) throws IOException;
+  Optional<CacheResponse> get(HttpRequest request) throws IOException, InterruptedException;
 
   CompletableFuture<Optional<CacheResponse>> getAsync(HttpRequest request);
 

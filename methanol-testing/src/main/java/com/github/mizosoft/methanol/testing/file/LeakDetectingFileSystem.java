@@ -81,7 +81,6 @@ public final class LeakDetectingFileSystem extends FileSystemWrapper {
           leakedResources.stream()
               .map(ResourceRecord::toThrowable)
               .forEach(leaksDetected::addSuppressed);
-
           throw leaksDetected;
         }
       }
