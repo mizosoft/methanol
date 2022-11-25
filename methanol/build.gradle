@@ -35,8 +35,11 @@ task tckTest(type: Test) {
   scanForTestClasses false
   testLogging {
     events 'failed'
-    exceptionFormat = 'full'
+    exceptionFormat 'full'
     showCauses true
+    showExceptions true
+    showStackTraces true
+    showStandardStreams true
   }
 
   if (System.getenv().GITHUB_ACTIONS) {
