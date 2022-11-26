@@ -1902,7 +1902,7 @@ class HttpCacheTest {
         .containsHeader("Warning", "113 - \"Heuristic Expiration\"");
   }
 
-  /** See https://tools.ietf.org/html/rfc7234#section-4.2.3 */
+  /** See https://tools.ietf.org/html/rfc7234#section-4.2.3. */
   @StoreParameterizedTest
   void computingAge(Store store) throws Exception {
     setUpCache(store);
@@ -1929,25 +1929,86 @@ class HttpCacheTest {
             .build();
 
     // date_value = x
+    // age_value = 10
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Date", formatInstant(clock.instant()))
+            .setHeader("Cache-Control", "max-age=60")
+            .setHeader("Age", "10"));
+
     // now = x + 2
+    clock.advanceSeconds(2);
+
     // request_time = x + 2
     // response_time = request_time + 3 = x + 5
-    // apparent_age = response_time - date_value = 5
-    // age_value = 10
-    clock.advanceSeconds(2);
-    server.enqueue(
-        new MockResponse().setHeader("Cache-Control", "max-age=60").setHeader("Age", "10"));
-    // now = x + 5
+    // now = x + 2 + 3 = x + 5
     verifyThat(get(serverUri)) // Put in cache & advance clock
         .isCacheMiss()
         .requestWasSentAt(clock.instant().minusSeconds(3))
         .responseWasReceivedAt(clock.instant());
 
     // now = x + 10
-    // resident_time = now - responseTime = 5
     clock.advanceSeconds(5);
 
-    // response_delay = 3
+    // apparent_age = max(0, response_time - date_value) = 5
+    // response_delay = response_time - request_time = 3
+    // corrected_age_value = age_value + response_delay = 13
+    // corrected_initial_age = max(apparent_age, corrected_age_value) = 13
+    // resident_time = now - response_time = 5
+    // current_age = corrected_initial_age + resident_time = 18
+    verifyThat(get(serverUri)).isCacheHit().containsHeader("Age", "18");
+  }
+
+  /**
+   * See https://tools.ietf.org/html/rfc7234#section-4.2.3. When a date is not present, the time the
+   * response was received is used instead.
+   */
+  @StoreParameterizedTest
+  void computingAgeNoDate(Store store) throws Exception {
+    setUpCache(store);
+
+    // Simulate response taking 3 seconds to arrive
+    client =
+        clientBuilder
+            .backendInterceptor(
+                new Interceptor() {
+                  @Override
+                  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+                      throws IOException, InterruptedException {
+                    clock.advanceSeconds(3);
+                    return chain.forward(request);
+                  }
+
+                  @Override
+                  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+                      HttpRequest request, Chain<T> chain) {
+                    clock.advanceSeconds(3);
+                    return chain.forwardAsync(request);
+                  }
+                })
+            .build();
+
+    // age_value = 10
+    server.enqueue(
+        new MockResponse().setHeader("Cache-Control", "max-age=60").setHeader("Age", "10"));
+
+    // now = x + 2
+    clock.advanceSeconds(2);
+
+    // request_time = x + 2
+    // response_time = request_time + 3 = x + 5
+    // date_value = response_time = x + 5
+    // now = x + 2 + 3 = x + 5
+    verifyThat(get(serverUri)) // Put in cache & advance clock
+        .isCacheMiss()
+        .requestWasSentAt(clock.instant().minusSeconds(3))
+        .responseWasReceivedAt(clock.instant());
+
+    // now = x + 10
+    clock.advanceSeconds(5);
+
+    // apparent_age = max(0, response_time - date_value) = 0
+    // response_delay = response_time - request_time = 3
     // corrected_age_value = age_value + response_delay = 13
     // corrected_initial_age = max(apparent_age, corrected_age_value) = 13
     // resident_time = now - response_time = 5

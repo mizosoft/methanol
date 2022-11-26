@@ -26,7 +26,6 @@ import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDura
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.max;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
@@ -1111,7 +1110,7 @@ public final class DiskStore implements Store {
           return; // No writes are needed.
         } else {
           var idleness = Duration.between(nextFireTime, now);
-          delay = max(period.minus(idleness), Duration.ZERO);
+          delay = HttpDates.max(period.minus(idleness), Duration.ZERO);
         }
 
         var newTask = new RunnableWriteTask(now.plus(delay));

@@ -1,6 +1,5 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.max;
 import static com.github.mizosoft.methanol.internal.cache.HttpDates.toUtcDateTime;
 import static java.time.ZoneOffset.UTC;
 
@@ -38,17 +37,21 @@ final class FreshnessPolicy {
   private final LocalDateTime effectiveLastModified;
 
   FreshnessPolicy(Optional<Duration> maxAge, TrackedResponse<?> response) {
-    this.timeRequestSent = response.timeRequestSent();
-    this.timeResponseReceived = response.timeResponseReceived();
     this.maxAge = maxAge;
 
-    var dateServed = response.headers().firstValue("Date").map(HttpDates::toHttpDate);
-    date = dateServed.orElseGet(() -> toUtcDateTime(timeResponseReceived));
+    timeRequestSent = response.timeRequestSent();
+    timeResponseReceived = response.timeResponseReceived();
+    date =
+        response
+            .headers()
+            .firstValue("Date")
+            .map(HttpDates::toHttpDate)
+            .orElseGet(() -> toUtcDateTime(timeResponseReceived));
     expires = response.headers().firstValue("Expires").map(HttpDates::toHttpDate);
     effectiveLastModified =
         response.headers().firstValue("Last-Modified").map(HttpDates::toHttpDate).orElse(date);
 
-    // Assume age is zero if there's no Age header or such header can't be parsed
+    // Assume age is zero if there's no Age header or such header can't be parsed.
     age =
         response
             .headers()
@@ -82,10 +85,10 @@ final class FreshnessPolicy {
   /** Computes response's age relative to {@code now} as defined by rfc7324 4.2.3. */
   Duration computeAge(Instant now) {
     var apparentAge =
-        max(Duration.between(date.toInstant(UTC), timeResponseReceived), Duration.ZERO);
+        HttpDates.max(Duration.between(date.toInstant(UTC), timeResponseReceived), Duration.ZERO);
     var responseDelay = Duration.between(timeRequestSent, timeResponseReceived);
     var correctedAge = age.plus(responseDelay);
-    var correctedInitialAge = max(apparentAge, correctedAge);
+    var correctedInitialAge = HttpDates.max(apparentAge, correctedAge);
     var residentTime = Duration.between(timeResponseReceived, now);
     return correctedInitialAge.plus(residentTime);
   }
