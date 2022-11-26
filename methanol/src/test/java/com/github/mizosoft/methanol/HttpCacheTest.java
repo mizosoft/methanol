@@ -1470,18 +1470,14 @@ class HttpCacheTest {
   @StoreParameterizedTest
   void unsatisfiedStaleWhileRevalidate(Store store) throws Exception {
     setUpCache(store);
-    var dateInstant = clock.instant();
-    var lastModifiedInstant = dateInstant.minusSeconds(1);
+
     server.enqueue(
         new MockResponse()
             .setHeader("Cache-Control", "max-age=1, stale-while-revalidate=2")
             .setHeader("ETag", "1")
-            .setHeader("Last-Modified", formatInstant(lastModifiedInstant))
-            .setHeader("Date", formatInstant(dateInstant))
             .setBody("Pikachu"));
     verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
     verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu");
-    server.takeRequest(); // Remove initial request
 
     // Make response stale by 3 seconds (unsatisfied stale-while-revalidate)
     clock.advanceSeconds(4);
@@ -1497,12 +1493,11 @@ class HttpCacheTest {
     // Make response stale by 3 seconds (unsatisfied stale-while-revalidate)
     clock.advanceSeconds(4);
 
+    // Synchronous revalidation is issued when stale-while-revalidate isn't satisfied
     server.enqueue(
         new MockResponse()
             .setHeader("Cache-Control", "max-age=1, stale-while-revalidate=2")
             .setHeader("ETag", "2")
-            .setHeader("Last-Modified", formatInstant(clock.instant().minusSeconds(1)))
-            .setHeader("Date", formatInstant(clock.instant()))
             .setBody("Ricardo"));
     verifyThat(get(serverUri))
         .isConditionalMiss()
@@ -2383,10 +2378,10 @@ class HttpCacheTest {
   @StoreParameterizedTest
   void errorsWhileWritingDiscardsCaching(Store store) throws Exception {
     var failingStore = new FailingStore(store);
-    failingStore.allowReads = true;
     setUpCache(failingStore);
 
     // Write failure is ignored & the response completes normally nevertheless.
+    failingStore.allowReads = true;
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
     assertNotCached(serverUri);
@@ -3291,7 +3286,7 @@ class HttpCacheTest {
       public EntryWriter writer() {
         var delegate = super.writer();
         return src -> {
-          // To simulate delays, fire an actual read on delegate even if reading is prohibited.
+          // To simulate delays, fire an actual write on delegate even if writing is prohibited.
           return delegate
               .write(src)
               .thenCompose(
@@ -3326,7 +3321,7 @@ class HttpCacheTest {
       public EntryReader newReader() {
         var delegate = super.newReader();
         return dst -> {
-          // To simulate delays, fire an actual write on delegate even if writing is prohibited.
+          // To simulate delays, fire an actual read on delegate even if reading is prohibited.
           return delegate
               .read(dst)
               .thenCompose(

@@ -334,7 +334,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
               || STATE.compareAndSet(this, WritingState.IDLE, WritingState.WRITING))) {
         writeQueue.poll(); // Consume
         try {
-          writer.write(buffer).whenComplete((__, error) -> onWriteCompletion(error));
+          writer.write(buffer).whenComplete((__, ex) -> onWriteCompletion(ex));
         } catch (Throwable t) {
           discardEdit();
           listener.onWriteFailure(t);
