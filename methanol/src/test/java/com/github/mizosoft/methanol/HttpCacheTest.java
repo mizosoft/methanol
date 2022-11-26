@@ -113,6 +113,7 @@ import java.util.concurrent.Phaser;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -3120,6 +3121,7 @@ class HttpCacheTest {
     /** An Editor that notifies (arrives at) a Phaser when closed or committed. */
     private static final class NotifyingEditor extends ForwardingEditor {
       private final Phaser phaser;
+      private final AtomicBoolean arrived = new AtomicBoolean();
 
       NotifyingEditor(Editor delegate, Phaser phaser) {
         super(delegate);
@@ -3129,7 +3131,7 @@ class HttpCacheTest {
 
       @Override
       public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
-        return super.commitAsync(metadata).whenComplete((__, ___) -> phaser.arriveAndDeregister());
+        return super.commitAsync(metadata).whenComplete((__, ___) -> notifyPhaser());
       }
 
       @Override
@@ -3137,6 +3139,12 @@ class HttpCacheTest {
         try {
           super.close();
         } finally {
+          notifyPhaser();
+        }
+      }
+
+      private void notifyPhaser() {
+        if (arrived.compareAndSet(false, true)) {
           phaser.arriveAndDeregister();
         }
       }
