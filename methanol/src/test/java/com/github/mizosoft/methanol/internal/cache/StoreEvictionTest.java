@@ -132,8 +132,8 @@ class StoreEvictionTest {
     // Increase metadata by 1 byte, causing size to grow to 5 bytes & e2 to be evicted.
     setMetadata(store, "e1", "12");
     assertAbsent(store, context, "e2");
-    assertEntryEquals(store, "e1", "123456", "abc");
-    assertThat(store.size()).isEqualTo(9);
+    assertEntryEquals(store, "e1", "12", "a");
+    assertThat(store.size()).isEqualTo(3);
   }
 
   @StoreParameterizedTest
@@ -150,8 +150,8 @@ class StoreEvictionTest {
     // Increase data by 1 byte, causing size to grow to 5 bytes & e2 to be evicted.
     write(store, "e1", "1", "ab");
     assertAbsent(store, context, "e2");
-    assertEntryEquals(store, "e1", "123456", "abc");
-    assertThat(store.size()).isEqualTo(9);
+    assertEntryEquals(store, "e1", "1", "ab");
+    assertThat(store.size()).isEqualTo(3);
   }
 
   @StoreParameterizedTest
