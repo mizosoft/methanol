@@ -24,7 +24,7 @@ module methanol.store.redis {
   requires methanol;
   requires lettuce.core;
   requires static org.checkerframework.checker.qual;
-  requires com.google.errorprone.annotations;
+  requires static com.google.errorprone.annotations;
 
   exports com.github.mizosoft.methanol.store.redis;
 }
