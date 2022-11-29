@@ -64,7 +64,7 @@ public final class RedisStoreContext extends StoreContext {
   void attachDebugInfo(Throwable exception) throws IOException {
     var session = lazySession;
     if (session != null) {
-      session.spillRemainingLog(redisLog);
+      session.dumpRemainingLog(redisLog);
       exception.addSuppressed(new RedisLogAttachment(redisLog));
     }
   }

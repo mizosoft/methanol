@@ -29,6 +29,9 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.Reader;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -39,12 +42,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class LocalRedisSession implements AutoCloseable {
+  private static final Logger logger = System.getLogger(LocalRedisSession.class.getName());
+
   private static final String LOOPBACK_ADDRESS = "127.0.0.1";
   private static final int DYNAMIC_PORT_START = 49152;
   private static final int DYNAMIC_PORT_END = 65535;
+
+  private static @MonotonicNonNull Boolean redisAvailable;
 
   private final Process process;
   private final Path directory;
@@ -67,15 +75,18 @@ public final class LocalRedisSession implements AutoCloseable {
     process.destroy();
   }
 
-  void spillRemainingLog(List<String> log) throws IOException {
-    // Spill what's written to redis log while ensuring we won't block.
+  void dumpRemainingLog(List<String> log) throws IOException {
+    dumpRemaining(process.inputReader(UTF_8)).lines().forEach(log::add);
+  }
+
+  private static String dumpRemaining(Reader reader) throws IOException {
+    // Spill what's written while ensuring we won't block.
     var sb = new StringBuilder();
-    var processOutput = process.inputReader(UTF_8);
     int read;
-    while (processOutput.ready() && (read = processOutput.read()) != -1) {
+    while (reader.ready() && (read = reader.read()) != -1) {
       sb.append((char) read);
     }
-    sb.toString().lines().forEach(log::add);
+    return sb.toString();
   }
 
   public static LocalRedisSession start(List<String> log)
@@ -158,6 +169,71 @@ public final class LocalRedisSession implements AutoCloseable {
         process.destroy();
         return null;
       }
+    }
+  }
+
+  public static synchronized boolean isRedisAvailable() {
+    if (redisAvailable == null) {
+      redisAvailable = checkRedisAvailability();
+    }
+    return redisAvailable;
+  }
+
+  private static boolean checkRedisAvailability() {
+    try {
+      var process =
+          new ProcessBuilder()
+              .command("redis-server", "--version")
+              .redirectErrorStream(true)
+              .start();
+      try (var reader = process.inputReader(UTF_8)) {
+        if (!process.waitFor(10, TimeUnit.SECONDS)) {
+          logAvailability("'redis-server --version' timed out", null, reader);
+        }
+        if (process.exitValue() != 0) {
+          logAvailability("'redis-server --version' failed", null, reader);
+        }
+        logAvailability(null, null, reader);
+      }
+      return true;
+    } catch (IOException e) {
+      logAvailability("exception when executing 'redis-server --version'", e, null);
+      return false;
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e); // For lack of a better alternative.
+    }
+  }
+
+  private static void logAvailability(
+      @Nullable String unavailabilityReason, // Null if redis is available.
+      @Nullable Throwable exception,
+      @Nullable Reader reader) {
+    String output;
+    try {
+      if (reader != null) {
+        output = dumpRemaining(reader);
+      } else {
+        output = "<unavailable process output>";
+      }
+    } catch (IOException e) {
+      output = "<problem reading process output>";
+      if (exception != null) {
+        exception.addSuppressed(e);
+      } else {
+        exception = e;
+      }
+    }
+
+    if (unavailabilityReason == null) {
+      logger.log(Level.INFO, "found redis! " + output, exception);
+    } else {
+      logger.log(
+          Level.WARNING,
+          "redis considered unavailable, related tests will be skipped: "
+              + unavailabilityReason
+              + System.lineSeparator()
+              + output,
+          exception);
     }
   }
 }

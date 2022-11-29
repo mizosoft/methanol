@@ -46,7 +46,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
@@ -62,7 +61,7 @@ import org.junit.platform.commons.support.AnnotationSupport;
 
 /** {@code Extension} that provides {@code Store} instances with multiple configurations. */
 public final class StoreExtension
-    implements AfterAllCallback, AfterEachCallback, ArgumentsProvider, ParameterResolver {
+    implements AfterEachCallback, ArgumentsProvider, ParameterResolver {
   private static final Namespace EXTENSION_NAMESPACE = Namespace.create(StoreExtension.class);
   private static final StoreSpec DEFAULT_STORE_SPEC;
 
@@ -81,11 +80,6 @@ public final class StoreExtension
   public StoreExtension() {}
 
   @Override
-  public void afterAll(ExtensionContext context) throws Exception {
-    ManagedStores.get(context).close();
-  }
-
-  @Override
   public void afterEach(ExtensionContext context) throws Exception {
     context
         .getExecutionException()
@@ -102,13 +96,14 @@ public final class StoreExtension
   @Override
   public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) {
     var testMethod = extensionContext.getRequiredTestMethod();
+    var stores = ManagedStores.get(extensionContext);
     return resolveSpec(findSpec(testMethod))
         .map(
             Unchecked.func(
                 config ->
                     resolveArguments(
                         List.of(testMethod.getParameterTypes()),
-                        ManagedStores.get(extensionContext).createContext(testMethod, config))));
+                        stores.createContext(testMethod, config))));
   }
 
   @Override
@@ -143,7 +138,7 @@ public final class StoreExtension
                 config ->
                     resolveArguments(
                         List.of(parameterContext.getParameter().getType()),
-                        stores.getOrCreateFirstContext(executable, config))))
+                        stores.getOrCreateContext(executable, config))))
         .flatMap(args -> Stream.of(args.get()).findFirst().stream())
         .findFirst()
         .orElseThrow(UnsupportedOperationException::new);
@@ -161,6 +156,8 @@ public final class StoreExtension
         arguments.add(context);
       } else if (Store.class.isAssignableFrom(type)) {
         arguments.add(context.createAndRegisterStore());
+      } else {
+        break;
       }
     }
     return Arguments.of(arguments.toArray());
@@ -180,22 +177,28 @@ public final class StoreExtension
                 Set.of(spec.editorLockTtlSeconds()),
                 Set.of(spec.staleEntryLockTtlSeconds())))
         .stream()
-        .filter(StoreExtension::isCompatibleConfig)
+        .filter(configTuple -> isCompatibleConfig(configTuple) && isAvailableConfig(configTuple))
+        .filter(StoreExtension::isAvailableConfig)
         .map(StoreExtension::createConfig);
   }
 
   private static boolean isCompatibleConfig(List<?> tuple) {
     var storeType = (StoreType) tuple.get(0);
-    var fileSystem = (FileSystemType) tuple.get(3);
+    var fileSystemType = (FileSystemType) tuple.get(3);
     switch (storeType) {
       case MEMORY:
       case REDIS:
-        return fileSystem == FileSystemType.NONE;
+        return fileSystemType == FileSystemType.NONE;
       case DISK:
-        return fileSystem != FileSystemType.NONE;
+        return fileSystemType != FileSystemType.NONE;
       default:
         return fail();
     }
+  }
+
+  private static boolean isAvailableConfig(List<?> tuple) {
+    var storeType = (StoreType) tuple.get(0);
+    return storeType != StoreType.REDIS || LocalRedisSession.isRedisAvailable();
   }
 
   public static StoreConfig createConfig(List<?> tuple) {
@@ -304,7 +307,7 @@ public final class StoreExtension
      * Gets the first available context or creates a new one if none is available. Used by
      * resolveParameters to associated provided params with the same context.
      */
-    StoreContext getOrCreateFirstContext(Object key, StoreConfig config) throws IOException {
+    StoreContext getOrCreateContext(Object key, StoreConfig config) throws IOException {
       var contexts = this.contexts.computeIfAbsent(key, __ -> new ArrayList<>());
       if (contexts.isEmpty()) {
         contexts.add(StoreContext.from(config));

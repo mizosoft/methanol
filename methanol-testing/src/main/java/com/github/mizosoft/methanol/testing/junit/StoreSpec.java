@@ -25,7 +25,6 @@ package com.github.mizosoft.methanol.testing.junit;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockDelayer;
-import com.github.mizosoft.methanol.testing.MockExecutor;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -85,12 +84,6 @@ public @interface StoreSpec {
   }
 
   enum Execution {
-    QUEUED {
-      @Override
-      public Executor newExecutor() {
-        return new MockExecutor();
-      }
-    },
     SAME_THREAD {
       @Override
       public Executor newExecutor() {
