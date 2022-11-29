@@ -3177,7 +3177,7 @@ class HttpCacheTest {
     /** An Editor that notifies (arrives at) a Phaser when closed or committed. */
     private static final class NotifyingEditor extends ForwardingEditor {
       private final Phaser phaser;
-      private final AtomicBoolean arrived = new AtomicBoolean();
+      private final AtomicBoolean closed = new AtomicBoolean();
 
       NotifyingEditor(Editor delegate, Phaser phaser) {
         super(delegate);
@@ -3187,7 +3187,16 @@ class HttpCacheTest {
 
       @Override
       public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
-        return super.commitAsync(metadata).whenComplete((__, ___) -> notifyPhaser());
+        // To make sure all changes are applied before waiters are notified, actually do the arrival
+        // when committing completes.
+        boolean arrive = this.closed.compareAndSet(false, true);
+        return super.commitAsync(metadata)
+            .whenComplete(
+                (__, ___) -> {
+                  if (arrive) {
+                    phaser.arriveAndDeregister();
+                  }
+                });
       }
 
       @Override
@@ -3195,13 +3204,9 @@ class HttpCacheTest {
         try {
           super.close();
         } finally {
-          notifyPhaser();
-        }
-      }
-
-      private void notifyPhaser() {
-        if (arrived.compareAndSet(false, true)) {
-          phaser.arriveAndDeregister();
+          if (closed.compareAndSet(false, true)) {
+            phaser.arriveAndDeregister();
+          }
         }
       }
     }

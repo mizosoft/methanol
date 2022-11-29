@@ -1706,11 +1706,12 @@ public final class DiskStore implements Store {
         lock.unlock();
       }
 
+      assert strategy != null ^ existingEntryChannel != null;
+
       CompletableFuture<CommitStrategy> strategyFuture;
       if (strategy != null) {
         strategyFuture = CompletableFuture.completedFuture(strategy);
       } else {
-        assert existingEntryChannel != null;
         strategyFuture =
             tryReadDescriptor(existingEntryChannel, key)
                 .thenApply(
@@ -1751,11 +1752,7 @@ public final class DiskStore implements Store {
       try {
         // Make sure the edit is still active.
         if (currentEditor == null) {
-          if (strategy.updateExisting) {
-            // This will be a different channel from the one associated with the editor, so we
-            // better close it ourselves.
-            closeQuietly(strategy.channel);
-          }
+          closeQuietly(strategy.channel);
           return CompletableFuture.completedFuture(false);
         }
 
@@ -1784,12 +1781,12 @@ public final class DiskStore implements Store {
       long sizeDifference;
       lock.lock();
       try {
+        // Make sure the edit is still active.
         if (currentEditor == null) {
-          if (strategy.updateExisting) {
-            closeQuietly(strategy.channel);
-          }
+          closeQuietly(strategy.channel);
           return false;
         }
+
         currentEditor = null;
 
         var descriptor = strategy.entryDescriptor;

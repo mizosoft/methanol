@@ -385,16 +385,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return cacheResponse
           .editAsync()
           .thenCompose(
-              Unchecked.func(
-                  optionalEditor -> {
-                    if (optionalEditor.isPresent()) {
-                      try (var editor = optionalEditor.get()) {
-                        return editor.commitAsync(
-                            CacheResponseMetadata.from(cacheResponse.get()).encode());
-                      }
-                    }
-                    return CompletableFuture.completedFuture(false);
-                  }));
+              optionalEditor ->
+                  optionalEditor
+                      .map(
+                          Unchecked.func(
+                              editor ->
+                                  editor.commitAsync(
+                                      CacheResponseMetadata.from(cacheResponse.get()).encode())))
+                      .orElseGet(() -> CompletableFuture.completedFuture(false)));
     }
 
     @Override
