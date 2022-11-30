@@ -53,6 +53,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
@@ -76,6 +77,7 @@ class CacheReadingPublisherTest {
 
   @ExecutorParameterizedTest
   @StoreSpec(store = StoreType.REDIS, fileSystem = FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisStoreContext#isAvailable")
   void cacheStringOnRedis(Executor executor, Store store) throws IOException, InterruptedException {
     testCachingAsString(executor, store);
   }

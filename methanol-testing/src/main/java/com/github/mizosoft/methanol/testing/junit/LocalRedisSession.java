@@ -48,6 +48,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class LocalRedisSession implements AutoCloseable {
   private static final Logger logger = System.getLogger(LocalRedisSession.class.getName());
 
+  private static final String REDIS_SERVER_CMD = "redis-server";
   private static final String LOOPBACK_ADDRESS = "127.0.0.1";
   private static final int DYNAMIC_PORT_START = 49152;
   private static final int DYNAMIC_PORT_END = 65535;
@@ -61,7 +62,7 @@ public final class LocalRedisSession implements AutoCloseable {
   private LocalRedisSession(Process process, Path directory, int port) {
     this.process = requireNonNull(process);
     this.directory = requireNonNull(directory);
-    client = RedisClient.create(RedisURI.create(LOOPBACK_ADDRESS, port));
+    this.client = RedisClient.create(RedisURI.create(LOOPBACK_ADDRESS, port));
   }
 
   public RedisClient client() {
@@ -113,7 +114,7 @@ public final class LocalRedisSession implements AutoCloseable {
       throws IOException, TimeoutException, InterruptedException {
     var process =
         new ProcessBuilder(
-                "redis-server",
+                REDIS_SERVER_CMD,
                 "--bind",
                 LOOPBACK_ADDRESS,
                 "--port",
@@ -172,7 +173,7 @@ public final class LocalRedisSession implements AutoCloseable {
     }
   }
 
-  public static synchronized boolean isRedisAvailable() {
+  static synchronized boolean isAvailable() {
     if (redisAvailable == null) {
       redisAvailable = checkRedisAvailability();
     }
@@ -183,21 +184,21 @@ public final class LocalRedisSession implements AutoCloseable {
     try {
       var process =
           new ProcessBuilder()
-              .command("redis-server", "--version")
+              .command(REDIS_SERVER_CMD, "--version")
               .redirectErrorStream(true)
               .start();
       try (var reader = process.inputReader(UTF_8)) {
         if (!process.waitFor(10, TimeUnit.SECONDS)) {
-          logAvailability("'redis-server --version' timed out", null, reader);
+          logAvailability("'" + REDIS_SERVER_CMD + " --version' timed out", null, reader);
         }
         if (process.exitValue() != 0) {
-          logAvailability("'redis-server --version' failed", null, reader);
+          logAvailability("'" + REDIS_SERVER_CMD + " --version' failed", null, reader);
         }
         logAvailability(null, null, reader);
       }
       return true;
     } catch (IOException e) {
-      logAvailability("exception when executing 'redis-server --version'", e, null);
+      logAvailability("exception when executing '" + REDIS_SERVER_CMD + " --version'", e, null);
       return false;
     } catch (InterruptedException e) {
       throw new RuntimeException(e); // For lack of a better alternative.

@@ -35,11 +35,13 @@ import com.github.mizosoft.methanol.testing.FailingPublisher;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestUtils;
+import com.github.mizosoft.methanol.testing.junit.RedisStoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -143,7 +145,12 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
 
   @DataProvider
   public static Object[][] provider() {
-    return new Object[][] {{StoreType.DISK}, {StoreType.MEMORY}};
+    var parameters =
+        new ArrayList<>(List.of(new Object[] {StoreType.DISK}, new Object[] {StoreType.MEMORY}));
+    if (RedisStoreContext.isAvailable()) {
+      parameters.add(new Object[] {StoreType.REDIS});
+    }
+    return parameters.toArray(Object[][]::new);
   }
 
   private enum DisabledEditor implements Editor {

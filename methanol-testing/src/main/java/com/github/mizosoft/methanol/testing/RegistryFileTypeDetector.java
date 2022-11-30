@@ -33,18 +33,18 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A {@link FileTypeDetector} that pulls media types from registered entries. */
 public final class RegistryFileTypeDetector extends FileTypeDetector {
-  private static final ConcurrentMap<String, MediaType> REGISTRY = new ConcurrentHashMap<>();
+  private static final ConcurrentMap<String, MediaType> registry = new ConcurrentHashMap<>();
 
   public RegistryFileTypeDetector() {}
 
   @Override
   public @Nullable String probeContentType(Path path) {
-    var mediaType = REGISTRY.get(getExtension(path).toLowerCase());
+    var mediaType = registry.get(getExtension(path).toLowerCase());
     return mediaType != null ? mediaType.toString() : null;
   }
 
   public static void register(String ext, MediaType mediaType) {
-    REGISTRY.put(ext.toLowerCase(), requireNonNull(mediaType));
+    registry.put(ext.toLowerCase(), requireNonNull(mediaType));
   }
 
   private static String getExtension(Path path) {

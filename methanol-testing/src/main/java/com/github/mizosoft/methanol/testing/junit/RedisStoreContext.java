@@ -101,6 +101,10 @@ public final class RedisStoreContext extends StoreContext {
     return new RedisStoreContext(config);
   }
 
+  public static boolean isAvailable() {
+    return LocalRedisSession.isAvailable();
+  }
+
   /**
    * A {@code Throwable} that is used to attach redis-server's log to a test exception as a
    * suppressed {@code Throwable}. This {@code Throwable} is hence not associated with any stack

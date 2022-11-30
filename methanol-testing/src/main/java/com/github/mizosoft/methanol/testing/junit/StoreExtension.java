@@ -198,7 +198,7 @@ public final class StoreExtension
 
   private static boolean isAvailableConfig(List<?> tuple) {
     var storeType = (StoreType) tuple.get(0);
-    return storeType != StoreType.REDIS || LocalRedisSession.isRedisAvailable();
+    return storeType != StoreType.REDIS || RedisStoreContext.isAvailable();
   }
 
   public static StoreConfig createConfig(List<?> tuple) {

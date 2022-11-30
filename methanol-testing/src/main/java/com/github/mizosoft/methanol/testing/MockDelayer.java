@@ -37,7 +37,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A Delayer that delays tasks based on a MockClock's time. */
+/** A Delayer that delays tasks based on a {@link MockClock}'s time. */
 public final class MockDelayer implements Delayer {
   private final MockClock clock;
 

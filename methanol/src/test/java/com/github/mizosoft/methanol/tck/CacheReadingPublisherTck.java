@@ -29,6 +29,7 @@ import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType;
+import com.github.mizosoft.methanol.testing.junit.RedisStoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
@@ -77,7 +78,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   public CacheReadingPublisherTck(ExecutorType executorType, StoreType storeType) {
     super(TckUtils.testEnvironment());
     this.executorType = executorType;
-    storeConfig = StoreConfig.createDefault(storeType);
+    this.storeConfig = StoreConfig.createDefault(storeType);
   }
 
   @BeforeMethod
@@ -152,14 +153,20 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   @DataProvider
   public static Object[][] provider() {
     // Handcrafted cartesian product.
-    return new Object[][] {
-      {ExecutorType.SAME_THREAD, StoreType.MEMORY},
-      {ExecutorType.FIXED_POOL, StoreType.MEMORY},
-      {ExecutorType.SAME_THREAD, StoreType.DISK},
-      {ExecutorType.FIXED_POOL, StoreType.DISK},
-      {ExecutorType.SAME_THREAD, StoreType.REDIS},
-      {ExecutorType.FIXED_POOL, StoreType.REDIS}
-    };
+    var parameters =
+        new ArrayList<>(
+            List.of(
+                new Object[] {ExecutorType.SAME_THREAD, StoreType.MEMORY},
+                new Object[] {ExecutorType.FIXED_POOL, StoreType.MEMORY},
+                new Object[] {ExecutorType.SAME_THREAD, StoreType.DISK},
+                new Object[] {ExecutorType.FIXED_POOL, StoreType.DISK}));
+    if (RedisStoreContext.isAvailable()) {
+      parameters.addAll(
+          List.of(
+              new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS},
+              new Object[] {ExecutorType.FIXED_POOL, StoreType.REDIS}));
+    }
+    return parameters.toArray(Object[][]::new);
   }
 
   /**
