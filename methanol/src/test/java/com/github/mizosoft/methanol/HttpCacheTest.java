@@ -29,8 +29,8 @@ import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateSt
 import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
 import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.FIXED_POOL;
-import static com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType.DISK;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType.SYSTEM;
+import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;

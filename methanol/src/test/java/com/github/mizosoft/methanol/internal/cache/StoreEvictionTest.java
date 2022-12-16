@@ -28,14 +28,14 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.setMetadata;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
-import static com.github.mizosoft.methanol.testing.junit.StoreSpec.Execution.SAME_THREAD;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.testing.Logging;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension.StoreParameterizedTest;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 
 class StoreEvictionTest {
@@ -47,7 +47,7 @@ class StoreEvictionTest {
   @StoreSpec(
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 10,
-      execution = SAME_THREAD)
+      execution = Execution.SAME_THREAD)
   void writeExactlyMaxSizeBytesByOneEntry(Store store) throws IOException, InterruptedException {
     write(store, "e1", "12345", "abcde"); // Grow size to 10 bytes.
     assertEntryEquals(store, "e1", "12345", "abcde");
@@ -58,7 +58,7 @@ class StoreEvictionTest {
   @StoreSpec(
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 10,
-      execution = SAME_THREAD)
+      execution = Execution.SAME_THREAD)
   void writeExactlyMaxSizeBytesByTwoEntries(Store store) throws IOException, InterruptedException {
     write(store, "e1", "12", "abc"); // Grow size to 5 bytes.
     write(store, "e2", "45", "def"); // Grow size to 10 bytes.
@@ -71,7 +71,7 @@ class StoreEvictionTest {
   @StoreSpec(
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 15,
-      execution = SAME_THREAD)
+      execution = Execution.SAME_THREAD)
   void writeBeyondMaxSize(Store store, StoreContext context)
       throws IOException, InterruptedException {
     write(store, "e1", "12", "abc"); // Grow size to 5 bytes.
@@ -102,7 +102,7 @@ class StoreEvictionTest {
   @StoreSpec(
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 15,
-      execution = SAME_THREAD)
+      execution = Execution.SAME_THREAD)
   void discardedWriteBeyondMaxSize(Store store, StoreContext context)
       throws IOException, InterruptedException {
     write(store, "e1", "123", "abc"); // Grow size to 6 bytes.
@@ -122,7 +122,7 @@ class StoreEvictionTest {
   @StoreSpec(
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 4,
-      execution = SAME_THREAD)
+      execution = Execution.SAME_THREAD)
   void writeBeyondMaxSizeByMetadataExpansion(Store store, StoreContext context)
       throws IOException, InterruptedException {
     write(store, "e1", "1", "a"); // Grow size to 2 bytes.
@@ -140,7 +140,7 @@ class StoreEvictionTest {
   @StoreSpec(
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 4,
-      execution = SAME_THREAD)
+      execution = Execution.SAME_THREAD)
   void writeBeyondMaxSizeByDataExpansion(Store store, StoreContext context)
       throws IOException, InterruptedException {
     write(store, "e1", "1", "a"); // Grow size to 2 bytes.
@@ -158,7 +158,7 @@ class StoreEvictionTest {
   @StoreSpec(
       store = {StoreType.MEMORY, StoreType.DISK},
       maxSize = 18,
-      execution = SAME_THREAD)
+      execution = Execution.SAME_THREAD)
   void lruEviction(Store store, StoreContext context) throws IOException, InterruptedException {
     // Grow size to 6 bytes.
     // LRU queue: e1.

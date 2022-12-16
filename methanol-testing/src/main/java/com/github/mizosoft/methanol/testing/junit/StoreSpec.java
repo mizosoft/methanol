@@ -22,24 +22,23 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockDelayer;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 /** Specifies one or more {@code Store} configurations for a test case. */
 @Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface StoreSpec {
-  int DEFAULT_INDEX_UPDATE_DELAY = -1;
-  long DEFAULT_TTL = -1;
-
-  StoreType[] store() default {StoreType.MEMORY, StoreType.DISK, StoreType.REDIS};
+  StoreType[] store() default {
+    StoreType.MEMORY, StoreType.DISK, StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER
+  };
 
   long maxSize() default Long.MAX_VALUE;
 
@@ -55,7 +54,7 @@ public @interface StoreSpec {
   int appVersion() default 1;
 
   /** Delay between automatic index updates done by the disk store. */
-  long indexUpdateDelaySeconds() default DEFAULT_INDEX_UPDATE_DELAY;
+  int indexUpdateDelaySeconds() default DiskStoreConfig.ABSENT_INDEX_UPDATE_DELAY_SECONDS;
 
   /** Whether {@link MockClock} should automatically advance itself by 1 second. */
   boolean autoAdvanceClock() default true;
@@ -66,37 +65,7 @@ public @interface StoreSpec {
    */
   boolean dispatchEagerly() default true;
 
-  long editorLockTtlSeconds() default DEFAULT_TTL;
+  int editorLockTtlSeconds() default AbstractRedisStoreConfig.ABSENT_EDITOR_LOCK_TTL_SECONDS;
 
-  long staleEntryLockTtlSeconds() default DEFAULT_TTL;
-
-  enum StoreType {
-    MEMORY,
-    DISK,
-    REDIS
-  }
-
-  enum FileSystemType {
-    IN_MEMORY,
-    SYSTEM,
-    EMULATED_WINDOWS, // See WindowsEmulatingFileSystem.
-    NONE
-  }
-
-  enum Execution {
-    SAME_THREAD {
-      @Override
-      public Executor newExecutor() {
-        return FlowSupport.SYNC_EXECUTOR;
-      }
-    },
-    ASYNC {
-      @Override
-      public Executor newExecutor() {
-        return Executors.newCachedThreadPool();
-      }
-    };
-
-    abstract Executor newExecutor();
-  }
+  int staleEntryLockTtlSeconds() default AbstractRedisStoreConfig.ABSENT_STALE_ENTRY_TTL_SECONDS;
 }

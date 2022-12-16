@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol.testing.junit;
 
 import static java.util.Objects.requireNonNull;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
@@ -33,7 +32,7 @@ import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.MockExecutor;
 import com.github.mizosoft.methanol.testing.file.LeakDetectingFileSystem;
 import com.github.mizosoft.methanol.testing.file.WindowsEmulatingFileSystem;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
 import java.io.IOException;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.FileSystem;
@@ -49,7 +48,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public final class DiskStoreContext extends StoreContext {
-  private static final String TEMP_DIRECTORY_PREFIX = "methanol-store-extension-junit";
+  private static final String TEMP_DIRECTORY_PREFIX = DiskStoreContext.class.getName();
   private static final String SYSTEM_ROOT_TEMP_DIRECTORY =
       requireNonNull(System.getProperty("java.io.tmpdir"));
 
@@ -126,21 +125,21 @@ public final class DiskStoreContext extends StoreContext {
             .clock(clock)
             .delayer(delayer)
             .appVersion(config().appVersion());
-    config().indexUpdateDelay().ifPresent(builder::indexUpdateDelay);
+    config()
+        .indexUpdateDelaySeconds()
+        .ifPresent(seconds -> builder.indexUpdateDelay(Duration.ofSeconds(seconds)));
     return builder.build();
   }
 
   @Override
   void close(List<Exception> exceptions) {
-    // Make sure no more tasks are queued. We do ignore rejected tasks as the test might have caused
-    // an executor to be shutdown.
+    // Make sure no more tasks are queued. We ignore rejected tasks as the test might have caused an
+    // executor to be shutdown.
     delayer.drainQueuedTasks(true);
     if (executor instanceof MockExecutor) {
       try {
         var mockExecutor = mockExecutor();
-
-        // Allow queued tasks that submit new tasks to the executor to progress.
-        mockExecutor.executeDirectly(true);
+        mockExecutor.executeDirectly(true); // Allow recursive task submission.
         mockExecutor.runAll();
       } catch (Exception e) {
         exceptions.add(e);
@@ -154,7 +153,7 @@ public final class DiskStoreContext extends StoreContext {
       var service = (ExecutorService) executor;
       service.shutdown();
       try {
-        if (!service.awaitTermination(1, TimeUnit.MINUTES)) {
+        if (!service.awaitTermination(20, TimeUnit.SECONDS)) {
           throw new TimeoutException("timed out while waiting for pool's termination: " + service);
         }
       } catch (Exception e) {
@@ -162,7 +161,6 @@ public final class DiskStoreContext extends StoreContext {
       }
     }
 
-    // Clean our workspace.
     try {
       Directories.deleteRecursively(directory);
     } catch (NoSuchFileException | ClosedFileSystemException ignored) {
@@ -196,22 +194,8 @@ public final class DiskStoreContext extends StoreContext {
   }
 
   private static Path createTempDir(FileSystemType fsType) throws IOException {
-    var fileSystem = createFileSystem(fsType);
-    Path rootTempDir;
-    switch (fsType) {
-      case IN_MEMORY:
-      case EMULATED_WINDOWS:
-        rootTempDir =
-            Files.createDirectories(
-                fileSystem.getRootDirectories().iterator().next().resolve("temp"));
-        break;
-      case SYSTEM:
-        rootTempDir = fileSystem.getPath(SYSTEM_ROOT_TEMP_DIRECTORY);
-        break;
-      default:
-        return fail();
-    }
-    return Files.createTempDirectory(rootTempDir, TEMP_DIRECTORY_PREFIX);
+    return Files.createTempDirectory(
+        getRootTempDirectory(createFileSystem(fsType), fsType), TEMP_DIRECTORY_PREFIX);
   }
 
   private static FileSystem createFileSystem(FileSystemType type) {
@@ -226,7 +210,20 @@ public final class DiskStoreContext extends StoreContext {
             WindowsEmulatingFileSystem.wrap(
                 MemoryFileSystemProvider.installed().newMemoryFileSystem()));
       default:
-        return fail();
+        throw new AssertionError();
+    }
+  }
+
+  private static Path getRootTempDirectory(FileSystem fs, FileSystemType fsType)
+      throws IOException {
+    switch (fsType) {
+      case IN_MEMORY:
+      case EMULATED_WINDOWS:
+        return Files.createDirectories(fs.getRootDirectories().iterator().next().resolve("temp"));
+      case SYSTEM:
+        return fs.getPath(SYSTEM_ROOT_TEMP_DIRECTORY);
+      default:
+        throw new AssertionError();
     }
   }
 }

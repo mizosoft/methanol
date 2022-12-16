@@ -23,6 +23,7 @@ springboot = '2.6.6'
 autoservice = '1.0.1'
 bson4jackson = '2.13.1'
 jacoco = '0.8.8'
+lettuce = '6.2.0.RELEASE'
 
 [libraries]
 junit-bom = { module = 'org.junit:junit-bom', version.ref = 'junit-bom' }
@@ -63,3 +64,4 @@ jackson-xml = { module = 'com.fasterxml.jackson.dataformat:jackson-dataformat-xm
 jackson-protobuf = { module = 'com.fasterxml.jackson.dataformat:jackson-dataformat-protobuf', version.ref = 'jackson' }
 jackson-avro = { module = 'com.fasterxml.jackson.dataformat:jackson-dataformat-avro', version.ref = 'jackson' }
 bson4jackson = { module = 'de.undercouch:bson4jackson', version.ref = 'bson4jackson' }
+lettuce = { module = 'io.lettuce:lettuce-core', version.ref = 'lettuce' }

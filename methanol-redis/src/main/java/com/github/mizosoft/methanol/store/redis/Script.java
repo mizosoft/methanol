@@ -35,6 +35,7 @@ enum Script {
   COMMIT("commit.lua"),
   EDIT("edit.lua"),
   REMOVE("remove.lua"),
+  REMOVE_ALL("remove_all.lua"),
   APPEND("append.lua"),
   GET_STALE_RANGE("get_stale_range.lua");
 

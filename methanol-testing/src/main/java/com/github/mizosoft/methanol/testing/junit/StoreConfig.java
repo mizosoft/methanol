@@ -22,11 +22,12 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.Execution;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public abstract class StoreConfig {
   private final StoreType storeType;
@@ -34,6 +35,7 @@ public abstract class StoreConfig {
   private final int appVersion;
 
   StoreConfig(StoreType storeType, long maxSize, int appVersion) {
+    requireArgument(maxSize > 0, "non-positive maxSize: %s", maxSize);
     this.storeType = requireNonNull(storeType);
     this.maxSize = maxSize;
     this.appVersion = appVersion;
@@ -57,11 +59,56 @@ public abstract class StoreConfig {
         return new MemoryStoreConfig(Long.MAX_VALUE);
       case DISK:
         return new DiskStoreConfig(
-            Long.MAX_VALUE, 1, FileSystemType.SYSTEM, Execution.ASYNC, null, true, true);
-      case REDIS:
-        return new RedisStoreConfig(15000, 10000, 1);
+            Long.MAX_VALUE,
+            1,
+            FileSystemType.SYSTEM,
+            Execution.ASYNC,
+            DiskStoreConfig.ABSENT_INDEX_UPDATE_DELAY_SECONDS,
+            true,
+            true);
+      case REDIS_STANDALONE:
+        return new RedisStandaloneStoreConfig(
+            1,
+            AbstractRedisStoreConfig.ABSENT_EDITOR_LOCK_TTL_SECONDS,
+            AbstractRedisStoreConfig.ABSENT_STALE_ENTRY_TTL_SECONDS);
+      case REDIS_CLUSTER:
+        return new RedisClusterStoreConfig(
+            1,
+            AbstractRedisStoreConfig.ABSENT_EDITOR_LOCK_TTL_SECONDS,
+            AbstractRedisStoreConfig.ABSENT_STALE_ENTRY_TTL_SECONDS);
       default:
         throw new AssertionError();
     }
+  }
+
+  public enum StoreType {
+    MEMORY,
+    DISK,
+    REDIS_STANDALONE,
+    REDIS_CLUSTER
+  }
+
+  public enum FileSystemType {
+    IN_MEMORY,
+    SYSTEM,
+    EMULATED_WINDOWS, // See WindowsEmulatingFileSystem.
+    NONE
+  }
+
+  public enum Execution {
+    SAME_THREAD {
+      @Override
+      public Executor newExecutor() {
+        return FlowSupport.SYNC_EXECUTOR;
+      }
+    },
+    ASYNC {
+      @Override
+      public Executor newExecutor() {
+        return Executors.newCachedThreadPool();
+      }
+    };
+
+    abstract Executor newExecutor();
   }
 }

@@ -1,0 +1,4 @@
+dependencies {
+  api project(':methanol')
+  api libs.lettuce
+}

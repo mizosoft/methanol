@@ -23,20 +23,18 @@
 package com.github.mizosoft.methanol.testing.junit;
 
 import static java.util.Objects.requireNonNull;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.Execution;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -77,10 +75,8 @@ public final class StoreExtension
     }
   }
 
-  public StoreExtension() {}
-
   @Override
-  public void afterEach(ExtensionContext context) throws Exception {
+  public void afterEach(ExtensionContext context) {
     context
         .getExecutionException()
         .ifPresent(
@@ -90,7 +86,6 @@ public final class StoreExtension
                         .allContexts(context.getRequiredTestMethod())
                         .forEach(
                             Unchecked.consumer(storeContext -> storeContext.attachDebugInfo(ex)))));
-    ManagedStores.get(context).close();
   }
 
   @Override
@@ -187,18 +182,26 @@ public final class StoreExtension
     var fileSystemType = (FileSystemType) tuple.get(3);
     switch (storeType) {
       case MEMORY:
-      case REDIS:
+      case REDIS_STANDALONE:
+      case REDIS_CLUSTER:
         return fileSystemType == FileSystemType.NONE;
       case DISK:
         return fileSystemType != FileSystemType.NONE;
       default:
-        return fail();
+        throw new AssertionError();
     }
   }
 
   private static boolean isAvailableConfig(List<?> tuple) {
     var storeType = (StoreType) tuple.get(0);
-    return storeType != StoreType.REDIS || RedisStoreContext.isAvailable();
+    switch (storeType) {
+      case REDIS_STANDALONE:
+        return RedisStandaloneStoreContext.isAvailable();
+      case REDIS_CLUSTER:
+        return RedisClusterStoreContext.isAvailable();
+      default:
+        return true;
+    }
   }
 
   public static StoreConfig createConfig(List<?> tuple) {
@@ -208,10 +211,12 @@ public final class StoreExtension
         return createMemoryStoreConfig(tuple);
       case DISK:
         return createDiskStoreConfig(tuple);
-      case REDIS:
-        return createRedisStoreConfig(tuple);
+      case REDIS_STANDALONE:
+        return createRedisStandaloneConfig(tuple);
+      case REDIS_CLUSTER:
+        return createRedisClusterConfig(tuple);
       default:
-        return fail();
+        throw new AssertionError();
     }
   }
 
@@ -226,11 +231,7 @@ public final class StoreExtension
     int appVersion = (int) tuple.get(i++);
     var fileSystemType = (FileSystemType) tuple.get(i++);
     var execution = (Execution) tuple.get(i++);
-    long indexUpdateDelaySeconds = (long) tuple.get(i++);
-    var indexUpdateDelay =
-        indexUpdateDelaySeconds != StoreSpec.DEFAULT_INDEX_UPDATE_DELAY
-            ? Duration.ofSeconds(indexUpdateDelaySeconds)
-            : null;
+    int indexUpdateDelaySeconds = (int) tuple.get(i++);
     boolean autoAdvanceClock = (boolean) tuple.get(i++);
     boolean dispatchEagerly = (boolean) tuple.get(i);
     return new DiskStoreConfig(
@@ -238,16 +239,23 @@ public final class StoreExtension
         appVersion,
         fileSystemType,
         execution,
-        indexUpdateDelay,
+        indexUpdateDelaySeconds,
         autoAdvanceClock,
         dispatchEagerly);
   }
 
-  private static RedisStoreConfig createRedisStoreConfig(List<?> tuple) {
+  private static RedisStandaloneStoreConfig createRedisStandaloneConfig(List<?> tuple) {
     int appVersion = (int) tuple.get(2);
-    long editorLockTtlSeconds = (long) tuple.get(8);
-    long staleEntryTtlSeconds = (long) tuple.get(9);
-    return new RedisStoreConfig(appVersion, editorLockTtlSeconds, staleEntryTtlSeconds);
+    int editorLockTtlSeconds = (int) tuple.get(8);
+    int staleEntryTtlSeconds = (int) tuple.get(9);
+    return new RedisStandaloneStoreConfig(appVersion, editorLockTtlSeconds, staleEntryTtlSeconds);
+  }
+
+  private static RedisClusterStoreConfig createRedisClusterConfig(List<?> tuple) {
+    int appVersion = (int) tuple.get(2);
+    int editorLockTtlSeconds = (int) tuple.get(8);
+    int staleEntryTtlSeconds = (int) tuple.get(9);
+    return new RedisClusterStoreConfig(appVersion, editorLockTtlSeconds, staleEntryTtlSeconds);
   }
 
   private static Set<List<?>> cartesianProduct(List<Set<?>> sets) {

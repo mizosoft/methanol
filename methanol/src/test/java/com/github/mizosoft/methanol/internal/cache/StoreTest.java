@@ -43,11 +43,11 @@ import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension.StoreParameterizedTest;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -213,7 +213,8 @@ class StoreTest {
           break;
         case MEMORY:
           // MemoryStore doesn't support closure, so it just discards the edit.
-        case REDIS:
+        case REDIS_STANDALONE:
+        case REDIS_CLUSTER:
           // RedisStore supports closure, but can't reliably close the current entry's editor as
           // it may reside in another instance/machine, so it similarly just discards the edit.
           assertThat(commit(editor, "Ditto")).isFalse();
@@ -426,7 +427,8 @@ class StoreTest {
             break;
           case MEMORY:
             // MemoryStore doesn't support closure, so it just discards the edit.
-          case REDIS:
+          case REDIS_STANDALONE:
+          case REDIS_CLUSTER:
             // RedisStore supports closure, but can't reliably close the current entry's editor as
             // it may reside in another instance/machine.
             assertThat(commit(editor, "Ditto")).isFalse();
@@ -600,7 +602,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreSpec(store = {StoreType.DISK, StoreType.REDIS})
+  @StoreSpec(store = {StoreType.DISK, StoreType.REDIS_STANDALONE})
   void writesAfterCommittingAreProhibited(Store store) throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
       write(editor, "Jynx");
@@ -613,7 +615,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreSpec(store = {StoreType.DISK, StoreType.REDIS})
+  @StoreSpec(store = {StoreType.DISK, StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER})
   void editorProhibitsWritesAfterClosure(Store store) throws IOException, InterruptedException {
     var editor = edit(store, "e1");
     try (editor) {

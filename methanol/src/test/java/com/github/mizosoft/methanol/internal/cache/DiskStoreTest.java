@@ -49,12 +49,12 @@ import com.github.mizosoft.methanol.testing.junit.DiskStoreContext;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension.StoreParameterizedTest;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.Execution;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -278,7 +278,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(store = StoreType.DISK)
-  void entryCorruption(DiskStoreContext context) throws IOException, InterruptedException {
+  void entryCorruption(DiskStoreContext context) throws IOException {
     for (var corruptionMode : EntryCorruptionMode.values()) {
       try {
         assertEntryCorruption(context, corruptionMode);
@@ -855,7 +855,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(store = StoreType.DISK)
-  void closedStoreIsInoperable(DiskStoreContext context) throws IOException, InterruptedException {
+  void closedStoreIsInoperable(DiskStoreContext context) throws IOException {
     var store1 = context.createAndRegisterStore();
     context.drainQueuedTasksIfNeeded();
     store1.close();

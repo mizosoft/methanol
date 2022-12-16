@@ -30,8 +30,9 @@ module methanol.testing {
   requires org.junit.jupiter.params;
   requires mockwebserver3;
   requires lettuce.core;
-  requires methanol.store.redis;
+  requires methanol.redis;
   requires static org.checkerframework.checker.qual;
+  requires static com.google.errorprone.annotations;
 
   exports com.github.mizosoft.methanol.testing;
   exports com.github.mizosoft.methanol.testing.decoder;

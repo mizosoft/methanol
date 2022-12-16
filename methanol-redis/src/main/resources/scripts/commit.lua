@@ -4,33 +4,33 @@ local wipDataKey = KEYS[3]
 local editorId = ARGV[1]
 local metadata = ARGV[2]
 local clientDataSize = tonumber(ARGV[3])
-local staleEntryTimeToLiveSeconds = ARGV[4]
+local staleEntryTtlSeconds = ARGV[4]
 local commit = ARGV[5]
 
 local commitData = clientDataSize >= 0
 
 if redis.call('get', editorLockKey) ~= editorId then
     redis.call('unlink', wipDataKey)
-    redis.log(redis.LOG_DEBUG, 'editor lock expired')
+    redis.log(redis.LOG_VERBOSE, 'editor lock expired')
     return false
 end
 redis.call('unlink', editorLockKey)
 
 if commit == '0' then
     redis.call('unlink', wipDataKey)
-    redis.log(redis.LOG_DEBUG, 'edit discarded by client')
+    redis.log(redis.LOG_VERBOSE 'edit discarded by client')
     return false
 end
 
 local wipDataSize = redis.call('strlen', wipDataKey)
-if commitData and wipDataSize ~= clientDataSize then
+if wipDataSize ~= clientDataSize and (commitData or wipDataSize ~= 0) then
     redis.call('unlink', wipDataKey)
     redis.log(redis.LOG_DEBUG, 'client & server disagree on written data size')
     return false
 end
 
 local entryVersion, dataVersion, dataSize = unpack(
-        redis.call('hmget', entryKey, 'entryVersion', 'dataVersion', 'dataSize'))
+    redis.call('hmget', entryKey, 'entryVersion', 'dataVersion', 'dataSize'))
 local newEntryVersion = 1 + (entryVersion or 0)
 
 local newDataSize, newDataVersion
@@ -45,7 +45,7 @@ if commitData then
     -- the entry as a concurrent reader might be in progress.
     if dataVersion then
         local dataKey = entryKey .. ':data:' .. dataVersion
-        redis.call('expire', dataKey, staleEntryTimeToLiveSeconds)
+        redis.call('expire', dataKey, staleEntryTtlSeconds)
         redis.call('rename', dataKey, dataKey .. ':stale')
     end
 else
@@ -63,11 +63,9 @@ else
 end
 
 redis.call(
-        'hset', entryKey,
-        'metadata', metadata,
-        'entryVersion', newEntryVersion,
-        'dataVersion', newDataVersion,
-        'dataSize', newDataSize)
-redis.log(redis.LOG_WARNING, entryKey, unpack(
-        redis.call('hmget', entryKey, 'metadata', 'entryVersion', 'dataVersion', 'dataSize')))
+    'hset', entryKey,
+    'metadata', metadata,
+    'entryVersion', newEntryVersion,
+    'dataVersion', newDataVersion,
+    'dataSize', newDataSize)
 return true

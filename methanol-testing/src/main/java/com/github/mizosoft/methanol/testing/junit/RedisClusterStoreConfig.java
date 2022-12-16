@@ -22,34 +22,25 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
-import java.util.OptionalLong;
+import java.util.OptionalInt;
 
-public final class RedisStoreConfig extends StoreConfig {
-  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private final OptionalLong editorLockTimeToLiveSeconds;
-
-  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private final OptionalLong staleEntryTimeToLiveSeconds;
-
-  public RedisStoreConfig(
-      int appVersion, long editorLockTimeToLiveSeconds, long staleEntryTimeToLiveSeconds) {
-    super(StoreType.REDIS, Long.MAX_VALUE, appVersion);
-    this.editorLockTimeToLiveSeconds =
-        editorLockTimeToLiveSeconds != StoreSpec.DEFAULT_TTL
-            ? OptionalLong.of(editorLockTimeToLiveSeconds)
-            : OptionalLong.empty();
-    this.staleEntryTimeToLiveSeconds =
-        staleEntryTimeToLiveSeconds != StoreSpec.DEFAULT_TTL
-            ? OptionalLong.of(staleEntryTimeToLiveSeconds)
-            : OptionalLong.empty();
+public class RedisClusterStoreConfig extends AbstractRedisStoreConfig {
+  public RedisClusterStoreConfig(
+      int appVersion, int editorLockTimeToLiveSeconds, int staleEntryTimeToLiveSeconds) {
+    super(
+        RedisStoreType.CLUSTER,
+        appVersion,
+        editorLockTimeToLiveSeconds,
+        staleEntryTimeToLiveSeconds);
   }
 
-  public OptionalLong editorLockTimeToLiveSeconds() {
-    return editorLockTimeToLiveSeconds;
+  @Override
+  public OptionalInt editorLockTtlSeconds() {
+    return super.editorLockTtlSeconds();
   }
 
-  public OptionalLong staleEntryTimeToLiveSeconds() {
-    return staleEntryTimeToLiveSeconds;
+  @Override
+  public OptionalInt staleEntryTtlSeconds() {
+    return super.staleEntryTtlSeconds();
   }
 }

@@ -37,7 +37,11 @@ import io.lettuce.core.RedisNoScriptException;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
 import io.lettuce.core.ScriptOutputType;
-import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.StatefulConnection;
+import io.lettuce.core.api.async.RedisHashAsyncCommands;
+import io.lettuce.core.api.async.RedisKeyAsyncCommands;
+import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
+import io.lettuce.core.api.async.RedisStringAsyncCommands;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
@@ -63,39 +67,49 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A {@link Store} implementation that saves content on a standalone redis instance. */
-public final class RedisStore implements Store {
-  private static final Logger logger = System.getLogger(RedisStore.class.getName());
+/** A {@link Store} implementation backed by redis. */
+abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffer>>
+    implements Store {
+  private static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
 
   private static final int STORE_VERSION = 1;
-  private static final long ANY_ENTRY_VERSION = -1;
+  static final long ANY_ENTRY_VERSION = -1;
   private static final int SIGN_BIT = 1 << 31;
 
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
-  private final StatefulRedisConnection<String, ByteBuffer> connection;
-  private final long editorLockTtlSeconds;
-  private final long staleEntryTtlSeconds;
-  private final int appVersion;
+  final C connection;
+  final int editorLockTtlSeconds;
+  final int staleEntryTtlSeconds;
+  final int appVersion;
 
   /**
    * The number of operations using the connection. The connection is closed iff the current ref
    * count, discarding the sign bit, becomes 0 after decrementing (note that the ref count starts
    * with 1 and is decremented when the store is closed). Closing the store sets the count's sign
-   * bit, indicating further increments are prohibited.
+   * bit, indicating that further increments are prohibited.
    */
   private final AtomicInteger connectionRefCount = new AtomicInteger(1); // Register self.
 
-  public RedisStore(
-      StatefulRedisConnection<String, ByteBuffer> connection,
-      long editorLockTtlSeconds,
-      long staleEntryTtlSeconds,
-      int appVersion) {
-    this.connection = connection;
+  AbstractRedisStore(
+      C connection, int editorLockTtlSeconds, int staleEntryTtlSeconds, int appVersion) {
+    requireArgument(
+        editorLockTtlSeconds > 0, "Expected a positive ttl, got: %s", editorLockTtlSeconds);
+    requireArgument(
+        staleEntryTtlSeconds > 0, "Expected a positive ttl, got: %s", staleEntryTtlSeconds);
+    this.connection = requireNonNull(connection);
     this.editorLockTtlSeconds = editorLockTtlSeconds;
     this.staleEntryTtlSeconds = staleEntryTtlSeconds;
     this.appVersion = appVersion;
   }
+
+  abstract <
+          CMD extends
+              RedisHashAsyncCommands<String, ByteBuffer>
+                  & RedisScriptingAsyncCommands<String, ByteBuffer>
+                  & RedisKeyAsyncCommands<String, ByteBuffer>
+                  & RedisStringAsyncCommands<String, ByteBuffer>>
+      CMD commands();
 
   @Override
   public long maxSize() {
@@ -127,8 +141,7 @@ public final class RedisStore implements Store {
 
   private CompletableFuture<Optional<Viewer>> viewAsync(@Nullable String key, String entryKey) {
     referenceConnectionIfOpen();
-    return connection
-        .async()
+    return commands()
         .hmget(entryKey, "metadata", "dataSize", "entryVersion", "dataVersion")
         .thenApply(fields -> createViewer(key, entryKey, fields))
         .whenComplete(
@@ -210,14 +223,6 @@ public final class RedisStore implements Store {
   }
 
   @Override
-  public CompletableFuture<Void> removeAllAsync(List<String> keys) {
-    return CompletableFuture.allOf(
-        keys.stream()
-            .map(key -> removeEntryAsync(toEntryKey(key), ANY_ENTRY_VERSION))
-            .toArray(CompletableFuture<?>[]::new));
-  }
-
-  @Override
   public void clear() {
     referenceConnectionIfOpen();
     try {
@@ -253,7 +258,7 @@ public final class RedisStore implements Store {
     doClose(false);
   }
 
-  private CompletableFuture<Boolean> removeEntryAsync(String entryKey, long targetEntryVersion) {
+  CompletableFuture<Boolean> removeEntryAsync(String entryKey, long targetEntryVersion) {
     referenceConnectionIfOpen();
     return this.<Boolean>evalAsync(
             Script.REMOVE,
@@ -288,19 +293,16 @@ public final class RedisStore implements Store {
   @Override
   public void flush() {}
 
-  private <T> CompletableFuture<T> evalAsync(
+  <T> CompletableFuture<T> evalAsync(
       Script script, List<String> keys, List<ByteBuffer> values, ScriptOutputType outputType) {
     var keysArray = keys.toArray(String[]::new);
     var valuesArray = values.toArray(ByteBuffer[]::new);
-    return connection
-        .async()
+    return commands()
         .<T>evalsha(script.shaHex(), outputType, keysArray, valuesArray)
         .handle(
             (reply, ex) -> {
               if (ex instanceof RedisNoScriptException) {
-                return connection
-                    .async()
-                    .<T>eval(script.content(), outputType, keysArray, valuesArray);
+                return commands().<T>eval(script.content(), outputType, keysArray, valuesArray);
               }
               return ex != null
                   ? CompletableFuture.<T>failedFuture(ex)
@@ -310,12 +312,12 @@ public final class RedisStore implements Store {
         .toCompletableFuture();
   }
 
-  private String toEntryKey(String key) {
+  String toEntryKey(String key) {
     requireArgument(key.indexOf('}') == -1, "key contains a right brace");
     return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, key);
   }
 
-  private void referenceConnectionIfOpen() {
+  void referenceConnectionIfOpen() {
     requireState(tryReferenceConnectionIfOpen(), "closed");
   }
 
@@ -331,8 +333,8 @@ public final class RedisStore implements Store {
     }
   }
 
-  private void dereferenceConnection(boolean close) {
-    int closedBit = close ? SIGN_BIT : 0;
+  void dereferenceConnection(boolean markClosed) {
+    int closedBit = markClosed ? SIGN_BIT : 0;
     while (true) {
       int refCount = connectionRefCount.get();
       int absRefCount = Math.abs(refCount);
@@ -369,7 +371,7 @@ public final class RedisStore implements Store {
     return entryKey.substring(leftBrace + 1, rightBrace);
   }
 
-  private static ByteBuffer encodeLong(long value) {
+  static ByteBuffer encodeLong(long value) {
     return UTF_8.encode(Long.toString(value));
   }
 
@@ -479,9 +481,14 @@ public final class RedisStore implements Store {
         queue.add(new ScanCompletion(ScanCursor.FINISHED));
         return;
       }
-      connection
-          .async()
-          .scan(key -> queue.add(new ScanKey(key)), cursor, args)
+      commands()
+          .scan(
+              key -> {
+                System.out.println("onKey: " + key);
+                queue.add(new ScanKey(key));
+              },
+              cursor,
+              args)
           .whenComplete(this::onScanCompletion);
     }
 
@@ -575,13 +582,13 @@ public final class RedisStore implements Store {
 
     @Override
     public CompletableFuture<Optional<Editor>> editAsync() {
-      return RedisStore.this.editAsync(null, entryKey, entryVersion);
+      return AbstractRedisStore.this.editAsync(null, entryKey, entryVersion);
     }
 
     @Override
     public boolean removeEntry() throws IOException {
       try {
-        return Utils.get(RedisStore.this.removeEntryAsync(entryKey, entryVersion));
+        return Utils.get(AbstractRedisStore.this.removeEntryAsync(entryKey, entryVersion));
       } catch (InterruptedException e) {
         throw (IOException) new InterruptedIOException().initCause(e);
       }
@@ -623,7 +630,7 @@ public final class RedisStore implements Store {
         long inclusiveLimit = position + dst.remaining() - 1;
         var future =
             readingFreshEntry
-                ? connection.async().getrange(dataKey, position, inclusiveLimit)
+                ? commands().getrange(dataKey, position, inclusiveLimit)
                 : getStaleRange(position, inclusiveLimit);
         return future
             .thenCompose(range -> fallbackToStaleEntryIfEmptyRange(range, position, inclusiveLimit))
@@ -652,14 +659,14 @@ public final class RedisStore implements Store {
           return CompletableFuture.completedFuture(range);
         }
         if (!readingFreshEntry) {
-          return CompletableFuture.failedFuture(new EntryEvictedException("stale entry removed"));
+          return CompletableFuture.failedFuture(new IllegalStateException("Stale entry expired"));
         }
         return getStaleRange(position, inclusiveLimit)
             .thenCompose(
                 staleRange -> {
                   if (!staleRange.hasRemaining()) {
                     return CompletableFuture.failedFuture(
-                        new EntryEvictedException("stale entry removed"));
+                        new IllegalStateException("Stale entry expired"));
                   }
                   readingFreshEntry = false;
                   return CompletableFuture.completedFuture(staleRange);
@@ -704,7 +711,7 @@ public final class RedisStore implements Store {
     public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
       requireNonNull(metadata);
       requireState(closed.compareAndSet(false, true), "closed");
-      return RedisStore.this
+      return AbstractRedisStore.this
           .<Boolean>evalAsync(
               Script.COMMIT,
               List.of(entryKey, editorLockKey, wipDataKey),
@@ -771,7 +778,7 @@ public final class RedisStore implements Store {
       private int onWriteCompletion(long wipDataSize, int written) {
         if (written < 0 || totalBytesWritten.addAndGet(written) < wipDataSize) {
           RedisEditor.this.close();
-          throw new IllegalStateException("wip entry evicted");
+          throw new IllegalStateException("Editor expired");
         }
         isWritten = true;
         return written;

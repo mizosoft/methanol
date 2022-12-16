@@ -36,10 +36,10 @@ import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension;
 import com.github.mizosoft.methanol.testing.junit.StoreSpec;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -76,9 +76,18 @@ class CacheReadingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(store = StoreType.REDIS, fileSystem = FileSystemType.NONE)
+  @StoreSpec(store = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisStoreContext#isAvailable")
-  void cacheStringOnRedis(Executor executor, Store store) throws IOException, InterruptedException {
+  void cacheStringOnRedisStandalone(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testCachingAsString(executor, store);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(store = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisStoreContext#isAvailable")
+  void cacheStringOnRedisCluster(Executor executor, Store store)
+      throws IOException, InterruptedException {
     testCachingAsString(executor, store);
   }
 

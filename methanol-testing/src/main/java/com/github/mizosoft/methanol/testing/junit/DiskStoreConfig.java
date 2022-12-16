@@ -22,21 +22,19 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.Execution;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
-import java.time.Duration;
-import java.util.Optional;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.util.OptionalInt;
 
 public final class DiskStoreConfig extends StoreConfig {
+  static final int ABSENT_INDEX_UPDATE_DELAY_SECONDS = -1;
+
   private final FileSystemType fileSystemType;
   private final Execution execution;
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private final Optional<Duration> indexUpdateDelay;
+  private final OptionalInt indexUpdateDelaySeconds;
 
   private final boolean autoAdvanceClock;
   private final boolean dispatchEagerly;
@@ -46,13 +44,18 @@ public final class DiskStoreConfig extends StoreConfig {
       int appVersion,
       FileSystemType fileSystemType,
       Execution execution,
-      @Nullable Duration indexUpdateDelay,
+      int indexUpdateDelaySeconds,
       boolean autoAdvanceClock,
       boolean dispatchEagerly) {
     super(StoreType.DISK, maxSize, appVersion);
     this.fileSystemType = requireNonNull(fileSystemType);
     this.execution = requireNonNull(execution);
-    this.indexUpdateDelay = Optional.ofNullable(indexUpdateDelay);
+    this.indexUpdateDelaySeconds =
+        indexUpdateDelaySeconds != ABSENT_INDEX_UPDATE_DELAY_SECONDS
+            ? OptionalInt.of(indexUpdateDelaySeconds)
+            : OptionalInt.empty();
+    this.indexUpdateDelaySeconds.ifPresent(
+        value -> requireArgument(value >= 0, "expected a non-negative value, got: %d", value));
     this.autoAdvanceClock = autoAdvanceClock;
     this.dispatchEagerly = dispatchEagerly;
   }
@@ -65,8 +68,8 @@ public final class DiskStoreConfig extends StoreConfig {
     return execution;
   }
 
-  public Optional<Duration> indexUpdateDelay() {
-    return indexUpdateDelay;
+  public OptionalInt indexUpdateDelaySeconds() {
+    return indexUpdateDelaySeconds;
   }
 
   public boolean autoAdvanceClock() {

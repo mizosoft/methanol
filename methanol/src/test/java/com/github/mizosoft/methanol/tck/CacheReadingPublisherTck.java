@@ -29,10 +29,11 @@ import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.junit.RedisStoreContext;
+import com.github.mizosoft.methanol.testing.junit.RedisClusterStoreContext;
+import com.github.mizosoft.methanol.testing.junit.RedisStandaloneStoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -160,11 +161,17 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
                 new Object[] {ExecutorType.FIXED_POOL, StoreType.MEMORY},
                 new Object[] {ExecutorType.SAME_THREAD, StoreType.DISK},
                 new Object[] {ExecutorType.FIXED_POOL, StoreType.DISK}));
-    if (RedisStoreContext.isAvailable()) {
+    if (RedisStandaloneStoreContext.isAvailable()) {
       parameters.addAll(
           List.of(
-              new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS},
-              new Object[] {ExecutorType.FIXED_POOL, StoreType.REDIS}));
+              new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS_STANDALONE},
+              new Object[] {ExecutorType.FIXED_POOL, StoreType.REDIS_STANDALONE}));
+    }
+    if (RedisClusterStoreContext.isAvailable()) {
+      parameters.addAll(
+          List.of(
+              new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS_CLUSTER},
+              new Object[] {ExecutorType.FIXED_POOL, StoreType.REDIS_CLUSTER}));
     }
     return parameters.toArray(Object[][]::new);
   }

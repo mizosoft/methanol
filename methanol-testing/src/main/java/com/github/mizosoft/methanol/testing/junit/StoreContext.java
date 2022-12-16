@@ -66,8 +66,7 @@ public abstract class StoreContext implements AutoCloseable {
     if (exceptions.size() == 1) {
       throw exceptions.get(0);
     } else if (exceptions.size() > 1) {
-      var compositeException =
-          new IOException("encountered one or more exceptions while closing stores");
+      var compositeException = new IOException("encountered one or more exceptions when closing");
       exceptions.forEach(compositeException::addSuppressed);
       throw compositeException;
     }
@@ -88,8 +87,10 @@ public abstract class StoreContext implements AutoCloseable {
       return MemoryStoreContext.from((MemoryStoreConfig) config);
     } else if (config instanceof DiskStoreConfig) {
       return DiskStoreContext.from((DiskStoreConfig) config);
+    } else if (config instanceof RedisStandaloneStoreConfig) {
+      return RedisStandaloneStoreContext.from((RedisStandaloneStoreConfig) config);
     } else {
-      return RedisStoreContext.from((RedisStoreConfig) config);
+      return RedisClusterStoreContext.from((RedisClusterStoreConfig) config);
     }
   }
 }

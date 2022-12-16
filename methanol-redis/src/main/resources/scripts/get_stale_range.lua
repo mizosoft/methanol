@@ -6,6 +6,6 @@ local staleEntryTtlSeconds = ARGV[3]
 local staleDataKey = dataKey .. ':stale'
 local range = redis.call('getrange', staleDataKey, position, limit)
 if redis.call('ttl', staleDataKey) < 0.5 * staleEntryTtlSeconds then
-    redis.call('expire', staleDataKey, staleEntryTtlSeconds)
+  redis.call('expire', staleDataKey, staleEntryTtlSeconds)
 end
 return range

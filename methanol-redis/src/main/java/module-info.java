@@ -20,16 +20,11 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.store.redis;
+module methanol.redis {
+  requires methanol;
+  requires lettuce.core;
+  requires static org.checkerframework.checker.qual;
+  requires static com.google.errorprone.annotations;
 
-import java.io.IOException;
-
-public class RedisStoreException extends IOException {
-  public RedisStoreException(String message) {
-    super(message);
-  }
-
-  public RedisStoreException(String message, Throwable cause) {
-    super(message, cause);
-  }
+  exports com.github.mizosoft.methanol.store.redis;
 }

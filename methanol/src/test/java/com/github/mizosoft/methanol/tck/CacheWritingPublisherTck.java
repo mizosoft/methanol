@@ -35,10 +35,11 @@ import com.github.mizosoft.methanol.testing.FailingPublisher;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import com.github.mizosoft.methanol.testing.junit.RedisStoreContext;
+import com.github.mizosoft.methanol.testing.junit.RedisClusterStoreContext;
+import com.github.mizosoft.methanol.testing.junit.RedisStandaloneStoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec.StoreType;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -147,8 +148,11 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
   public static Object[][] provider() {
     var parameters =
         new ArrayList<>(List.of(new Object[] {StoreType.DISK}, new Object[] {StoreType.MEMORY}));
-    if (RedisStoreContext.isAvailable()) {
-      parameters.add(new Object[] {StoreType.REDIS});
+    if (RedisStandaloneStoreContext.isAvailable()) {
+      parameters.add(new Object[] {StoreType.REDIS_STANDALONE});
+    }
+    if (RedisClusterStoreContext.isAvailable()) {
+      parameters.add(new Object[] {StoreType.REDIS_CLUSTER});
     }
     return parameters.toArray(Object[][]::new);
   }

@@ -1,4 +1,0 @@
-dependencies {
-  api project(':methanol')
-  api 'io.lettuce:lettuce-core:6.2.0.RELEASE'
-}

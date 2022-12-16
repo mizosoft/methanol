@@ -20,11 +20,37 @@
  * SOFTWARE.
  */
 
-module methanol.store.redis {
-  requires methanol;
-  requires lettuce.core;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
+package com.github.mizosoft.methanol.testing.junit;
 
-  exports com.github.mizosoft.methanol.store.redis;
+import com.github.mizosoft.methanol.internal.Utils;
+import io.lettuce.core.codec.RedisCodec;
+import java.nio.ByteBuffer;
+
+public enum ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
+  INSTANCE;
+
+  @Override
+  public ByteBuffer decodeKey(ByteBuffer bytes) {
+    return copy(bytes);
+  }
+
+  @Override
+  public ByteBuffer decodeValue(ByteBuffer bytes) {
+    return copy(bytes);
+  }
+
+  @Override
+  public ByteBuffer encodeKey(ByteBuffer key) {
+    return copy(key);
+  }
+
+  @Override
+  public ByteBuffer encodeValue(ByteBuffer value) {
+    return copy(value);
+  }
+
+  private static ByteBuffer copy(ByteBuffer source) {
+    // Copy the buffer without consuming it.
+    return Utils.copy(source.duplicate());
+  }
 }
