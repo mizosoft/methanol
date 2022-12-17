@@ -58,11 +58,9 @@ public class RedisClusterStore
   @Override
   public CompletableFuture<Void> removeAllAsync(List<String> keys) {
     var entryKeys = keys.stream().map(this::toEntryKey).collect(Collectors.toUnmodifiableList());
-    referenceConnectionIfOpen();
     return CompletableFuture.allOf(
-            entryKeys.stream()
-                .map(entryKey -> removeEntryAsync(entryKey, ANY_ENTRY_VERSION))
-                .toArray(CompletableFuture<?>[]::new))
-        .whenComplete((__, ___) -> dereferenceConnection(false));
+        entryKeys.stream()
+            .map(entryKey -> removeEntryAsync(entryKey, ANY_ENTRY_VERSION))
+            .toArray(CompletableFuture<?>[]::new));
   }
 }

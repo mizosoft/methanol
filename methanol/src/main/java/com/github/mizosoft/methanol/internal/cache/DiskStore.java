@@ -304,7 +304,7 @@ public final class DiskStore implements Store {
     requireNonNull(key);
     closeLock.readLock().lock();
     try {
-      requireOpenStore();
+      requireNotClosed();
       var entry = entries.get(hasher.hash(key));
       return entry != null
           ? entry.viewAsync(key).thenApply(Optional::ofNullable)
@@ -319,7 +319,7 @@ public final class DiskStore implements Store {
     requireNonNull(key);
     closeLock.readLock().lock();
     try {
-      requireOpenStore();
+      requireNotClosed();
       return Optional.ofNullable(
           entries.computeIfAbsent(hasher.hash(key), Entry::new).edit(key, Entry.ANY_VERSION));
     } finally {
@@ -353,7 +353,7 @@ public final class DiskStore implements Store {
     requireNonNull(key);
     closeLock.readLock().lock();
     try {
-      requireOpenStore();
+      requireNotClosed();
       var entry = entries.get(hasher.hash(key));
       if (entry != null) {
         var keyIfKnown = entry.keyIfKnown();
@@ -384,7 +384,7 @@ public final class DiskStore implements Store {
   public void clear() throws IOException {
     closeLock.readLock().lock();
     try {
-      requireOpenStore();
+      requireNotClosed();
       for (var entry : entries.values()) {
         removeEntry(entry);
       }
@@ -532,7 +532,7 @@ public final class DiskStore implements Store {
     return Collections.unmodifiableCollection(lruEntries.values());
   }
 
-  private void requireOpenStore() {
+  private void requireNotClosed() {
     assert holdsCloseLock();
     requireState(!closed, "closed");
   }
@@ -1495,17 +1495,17 @@ public final class DiskStore implements Store {
 
     Entry(Hash hash) {
       this.hash = hash;
-      lastUsed = -1;
-      readable = false;
-      writable = true;
+      this.lastUsed = -1;
+      this.readable = false;
+      this.writable = true;
     }
 
     Entry(IndexEntry indexEntry) {
       this.hash = indexEntry.hash;
-      lastUsed = indexEntry.lastUsed;
-      size = indexEntry.size;
-      readable = true;
-      writable = true;
+      this.lastUsed = indexEntry.lastUsed;
+      this.size = indexEntry.size;
+      this.readable = true;
+      this.writable = true;
     }
 
     @Nullable IndexEntry toIndexEntry() {
@@ -1540,6 +1540,7 @@ public final class DiskStore implements Store {
       } finally {
         lock.unlock();
       }
+
       return tryReadDescriptor(channel, expectedKey)
           .thenApply(
               descriptor ->

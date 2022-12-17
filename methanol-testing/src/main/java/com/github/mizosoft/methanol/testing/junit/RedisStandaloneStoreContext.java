@@ -28,6 +28,7 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
 import java.io.IOException;
+import java.nio.file.Files;
 
 public final class RedisStandaloneStoreContext extends AbstractRedisStoreContext<LocalRedisServer> {
   private RedisStandaloneStoreContext(RedisStandaloneStoreConfig config) {
@@ -47,6 +48,12 @@ public final class RedisStandaloneStoreContext extends AbstractRedisStoreContext
         config().editorLockTtlSeconds().orElse(15),
         config().staleEntryTtlSeconds().orElse(15),
         config().appVersion());
+  }
+
+  @Override
+  void attachDebugInfo(Throwable exception) throws IOException {
+    getOrCreateRedisServer().close();
+    exception.addSuppressed(new Throwable(Files.readString(getOrCreateRedisServer().logFile())));
   }
 
   public static RedisStandaloneStoreContext from(RedisStandaloneStoreConfig config)

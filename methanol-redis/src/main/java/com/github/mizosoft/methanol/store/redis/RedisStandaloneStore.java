@@ -59,13 +59,10 @@ public class RedisStandaloneStore
   @Override
   public CompletableFuture<Void> removeAllAsync(List<String> keys) {
     var entryKeys = keys.stream().map(this::toEntryKey).collect(Collectors.toUnmodifiableList());
-    referenceConnectionIfOpen();
     return evalAsync(
-            Script.REMOVE_ALL,
-            entryKeys,
-            List.of(encodeLong(staleEntryTtlSeconds)),
-            ScriptOutputType.STATUS)
-        .thenRun(() -> {})
-        .whenComplete((__, ___) -> dereferenceConnection(false));
+        Script.REMOVE_ALL,
+        entryKeys,
+        List.of(encodeLong(staleEntryTtlSeconds)),
+        ScriptOutputType.STATUS);
   }
 }

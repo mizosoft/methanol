@@ -71,7 +71,7 @@ class RedisSupport {
       logger.log(Level.INFO, () -> "Found " + SERVER_CMD + ": " + version);
     } catch (UnavailableCommandException e) {
       logger.log(
-          Level.WARNING, "Couldn't find " + SERVER_CMD + ". Related tests will be skipped", e);
+          Level.WARNING, "Couldn't find " + SERVER_CMD + ". Related tests will be skipped.", e);
 
       // If we can't launch a redis server, then we surely can't create a redis cluster. We can thus
       // ignore the availability of the CLI client.
@@ -83,7 +83,7 @@ class RedisSupport {
       logger.log(Level.INFO, () -> "Found " + CLI_CMD + ": " + version);
       return Set.of(SERVER_CMD, CLI_CMD);
     } catch (UnavailableCommandException e) {
-      logger.log(Level.WARNING, "Couldn't find " + CLI_CMD + ". Related tests will be skipped", e);
+      logger.log(Level.WARNING, "Couldn't find " + CLI_CMD + ". Related tests will be skipped.", e);
       return Set.of(SERVER_CMD);
     }
   }
