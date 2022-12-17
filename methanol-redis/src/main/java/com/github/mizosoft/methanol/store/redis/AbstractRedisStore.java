@@ -33,8 +33,6 @@ import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.RedisException;
-import io.lettuce.core.RedisNoScriptException;
-import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.async.RedisHashAsyncCommands;
 import io.lettuce.core.api.async.RedisKeyAsyncCommands;
@@ -61,7 +59,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
@@ -181,14 +178,14 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     var editorId = UUID.randomUUID().toString();
     var editorLockKey = entryKey + ":editor";
     var wipDataKey = entryKey + ":wip_data:" + editorId;
-    return this.<Boolean>evalAsync(
-            Script.EDIT,
+    return Script.EDIT
+        .evalOn(commands())
+        .asBoolean(
             List.of(entryKey, editorLockKey, wipDataKey),
             List.of(
                 encodeLong(targetEntryVersion),
                 UTF_8.encode(editorId),
-                encodeLong(editorLockTtlSeconds)),
-            ScriptOutputType.BOOLEAN)
+                encodeLong(editorLockTtlSeconds)))
         .thenApply(
             isLockAcquired ->
                 isLockAcquired
@@ -211,11 +208,11 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
 
   CompletableFuture<Boolean> removeEntryAsync(String entryKey, long targetEntryVersion) {
     requireNotClosed();
-    return evalAsync(
-        Script.REMOVE,
-        List.of(entryKey),
-        List.of(encodeLong(targetEntryVersion), encodeLong(staleEntryTtlSeconds)),
-        ScriptOutputType.BOOLEAN);
+    return Script.REMOVE
+        .evalOn(commands())
+        .asBoolean(
+            List.of(entryKey),
+            List.of(encodeLong(targetEntryVersion), encodeLong(staleEntryTtlSeconds)));
   }
 
   @Override
@@ -275,25 +272,6 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
 
   @Override
   public void flush() {}
-
-  <T> CompletableFuture<T> evalAsync(
-      Script script, List<String> keys, List<ByteBuffer> values, ScriptOutputType outputType) {
-    var keysArray = keys.toArray(String[]::new);
-    var valuesArray = values.toArray(ByteBuffer[]::new);
-    return commands()
-        .<T>evalsha(script.shaHex(), outputType, keysArray, valuesArray)
-        .handle(
-            (reply, ex) -> {
-              if (ex instanceof RedisNoScriptException) {
-                return commands().<T>eval(script.content(), outputType, keysArray, valuesArray);
-              }
-              return ex != null
-                  ? CompletableFuture.<T>failedFuture(ex)
-                  : CompletableFuture.completedFuture(reply);
-            })
-        .thenCompose(Function.identity())
-        .toCompletableFuture();
-  }
 
   String toEntryKey(String key) {
     requireArgument(key.indexOf('}') == -1, "Key contains a right brace");
@@ -428,12 +406,11 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
 
     CompletableFuture<ScanResult> scan() {
       requireNotClosed();
-      return AbstractRedisStore.this
-          .<List<Object>>evalAsync(
-              Script.SCAN_ENTRIES,
+      return Script.SCAN_ENTRIES
+          .evalOn(commands())
+          .asMulti(
               List.of(),
-              List.of(UTF_8.encode(cursor), UTF_8.encode(pattern), encodeLong(SCAN_LIMIT)),
-              ScriptOutputType.MULTI)
+              List.of(UTF_8.encode(cursor), UTF_8.encode(pattern), encodeLong(SCAN_LIMIT)))
           .thenApply(ScanResult::from);
     }
   }
@@ -584,12 +561,14 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
       }
 
       private CompletionStage<ByteBuffer> getStaleRange(long position, long inclusiveLimit) {
-        return evalAsync(
-            Script.GET_STALE_RANGE,
-            List.of(dataKey),
-            List.of(
-                encodeLong(position), encodeLong(inclusiveLimit), encodeLong(staleEntryTtlSeconds)),
-            ScriptOutputType.VALUE);
+        return Script.GET_STALE_RANGE
+            .evalOn(commands())
+            .asValue(
+                List.of(dataKey),
+                List.of(
+                    encodeLong(position),
+                    encodeLong(inclusiveLimit),
+                    encodeLong(staleEntryTtlSeconds)));
       }
 
       private CompletionStage<ByteBuffer> fallbackToStaleEntryIfEmptyRange(
@@ -650,32 +629,32 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
       requireNonNull(metadata);
       requireState(closed.compareAndSet(false, true), "closed");
-      return evalAsync(
-          Script.COMMIT,
-          List.of(entryKey, editorLockKey, wipDataKey),
-          List.of(
-              UTF_8.encode(editorId),
-              metadata,
-              encodeLong(writer.dataSizeIfWritten()), // clientDataSize
-              encodeLong(staleEntryTtlSeconds),
-              encodeLong(1)), // commit
-          ScriptOutputType.BOOLEAN);
+      return Script.COMMIT
+          .evalOn(commands())
+          .asBoolean(
+              List.of(entryKey, editorLockKey, wipDataKey),
+              List.of(
+                  UTF_8.encode(editorId),
+                  metadata,
+                  encodeLong(writer.dataSizeIfWritten()), // clientDataSize
+                  encodeLong(staleEntryTtlSeconds),
+                  encodeLong(1))); // commit
     }
 
     @Override
     public void close() {
       if (closed.compareAndSet(false, true)) {
         // Discard the edit in background.
-        evalAsync(
-            Script.COMMIT,
-            List.of(entryKey, editorLockKey, wipDataKey),
-            List.of(
-                UTF_8.encode(editorId),
-                EMPTY_BUFFER, // metadata
-                encodeLong(-1), // clientDataSize
-                encodeLong(staleEntryTtlSeconds),
-                encodeLong(0)), // commit
-            ScriptOutputType.STATUS);
+        Script.COMMIT
+            .evalOn(commands())
+            .asBoolean(
+                List.of(entryKey, editorLockKey, wipDataKey),
+                List.of(
+                    UTF_8.encode(editorId),
+                    EMPTY_BUFFER, // metadata
+                    encodeLong(-1), // clientDataSize
+                    encodeLong(staleEntryTtlSeconds),
+                    encodeLong(0)));
       }
     }
 
@@ -695,28 +674,33 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
           throw new WritePendingException();
         }
 
-        int toWriteCount = src.remaining();
+        int bytesToWrite = src.remaining();
         return append(src)
-            .thenApply(size -> onWriteCompletion(size, toWriteCount))
+            .thenApply(
+                serverTotalBytesWritten -> onWriteCompletion(bytesToWrite, serverTotalBytesWritten))
             .whenComplete((__, ___) -> pendingWrite.set(false))
             .toCompletableFuture();
       }
 
       private CompletionStage<Long> append(ByteBuffer src) {
-        return evalAsync(
-            Script.APPEND,
-            List.of(editorLockKey, wipDataKey),
-            List.of(src, UTF_8.encode(editorId), encodeLong(editorLockTtlSeconds)),
-            ScriptOutputType.INTEGER);
+        return Script.APPEND
+            .evalOn(commands())
+            .asLong(
+                List.of(editorLockKey, wipDataKey),
+                List.of(src, UTF_8.encode(editorId), encodeLong(editorLockTtlSeconds)));
       }
 
-      private int onWriteCompletion(long wipDataSize, int written) {
-        if (written < 0 || totalBytesWritten.addAndGet(written) < wipDataSize) {
+      private int onWriteCompletion(int bytesWritten, long serverTotalBytesWritten) {
+        if (bytesWritten < 0) {
           RedisEditor.this.close();
-          throw new IllegalStateException("Editor expired");
+          throw new IllegalStateException("Editor lock expired");
+        }
+        if (totalBytesWritten.addAndGet(bytesWritten) != serverTotalBytesWritten) {
+          RedisEditor.this.close();
+          throw new IllegalStateException("Editor data inconsistency");
         }
         isWritten = true;
-        return written;
+        return bytesWritten;
       }
 
       long dataSizeIfWritten() {

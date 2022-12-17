@@ -1,10 +1,13 @@
 local staleEntryTtlSeconds = ARGV[1]
 
 for entryKey in KEYS do
+  local dataVersion = redis.call('hget', entryKey, 'dataVersion')
   redis.call('unlink', entryKey)
-  local dataKey = entryKey .. ':data:' .. dataVersion
-  if redis.call('expire', dataKey, staleEntryTtlSeconds) == 1 then
-    redis.call('rename', dataKey, dataKey .. ':stale')
+  if dataVersion then
+    local dataKey = entryKey .. ':data:' .. dataVersion
+    if redis.call('expire', dataKey, staleEntryTtlSeconds) == 1 then
+      redis.call('rename', dataKey, dataKey .. ':stale')
+    end
   end
 
   -- Invalidate any ongoing edit for this entry.

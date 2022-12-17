@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.store.redis;
 
-import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisHashAsyncCommands;
 import io.lettuce.core.api.async.RedisKeyAsyncCommands;
@@ -59,10 +58,8 @@ public class RedisStandaloneStore
   @Override
   public CompletableFuture<Void> removeAllAsync(List<String> keys) {
     var entryKeys = keys.stream().map(this::toEntryKey).collect(Collectors.toUnmodifiableList());
-    return evalAsync(
-        Script.REMOVE_ALL,
-        entryKeys,
-        List.of(encodeLong(staleEntryTtlSeconds)),
-        ScriptOutputType.STATUS);
+    return Script.REMOVE_ALL
+        .evalOn(commands())
+        .asVoid(entryKeys, List.of(encodeLong(staleEntryTtlSeconds)));
   }
 }

@@ -23,13 +23,20 @@
 package com.github.mizosoft.methanol.store.redis;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
+import io.lettuce.core.RedisNoScriptException;
+import io.lettuce.core.ScriptOutputType;
+import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.file.NoSuchFileException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 enum Script {
   COMMIT("commit.lua"),
@@ -59,6 +66,10 @@ enum Script {
     return shaHex;
   }
 
+  <K, V> RunnableScript<K, V> evalOn(RedisScriptingAsyncCommands<K, V> commands) {
+    return new RunnableScript<>(this, commands);
+  }
+
   private static byte[] load(String path) {
     try (var in = Script.class.getResourceAsStream(path)) {
       if (in == null) {
@@ -86,5 +97,54 @@ enum Script {
       sb.append(upperHex).append(lowerHex);
     }
     return sb.toString();
+  }
+
+  static final class RunnableScript<K, V> {
+    private final Script script;
+    private final RedisScriptingAsyncCommands<K, V> commands;
+
+    RunnableScript(Script script, RedisScriptingAsyncCommands<K, V> commands) {
+      this.script = requireNonNull(script);
+      this.commands = requireNonNull(commands);
+    }
+
+    CompletableFuture<Long> asLong(List<K> keys, List<V> values) {
+      return as(keys, values, ScriptOutputType.INTEGER);
+    }
+
+    CompletableFuture<Boolean> asBoolean(List<K> keys, List<V> values) {
+      return as(keys, values, ScriptOutputType.BOOLEAN);
+    }
+
+    CompletableFuture<List<Object>> asMulti(List<K> keys, List<V> values) {
+      return as(keys, values, ScriptOutputType.MULTI);
+    }
+
+    CompletableFuture<ByteBuffer> asValue(List<K> keys, List<V> values) {
+      return as(keys, values, ScriptOutputType.VALUE);
+    }
+
+    CompletableFuture<Void> asVoid(List<K> keys, List<V> values) {
+      return as(keys, values, ScriptOutputType.STATUS).thenRun(() -> {});
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> CompletableFuture<T> as(List<K> keys, List<V> values, ScriptOutputType outputType) {
+      var keysArray = (K[]) keys.toArray();
+      var valuesArray = (V[]) values.toArray();
+      return commands
+          .<T>evalsha(script.shaHex(), outputType, keysArray, valuesArray)
+          .handle(
+              (reply, ex) -> {
+                if (ex instanceof RedisNoScriptException) {
+                  return commands.<T>eval(script.content(), outputType, keysArray, valuesArray);
+                }
+                return ex != null
+                    ? CompletableFuture.<T>failedFuture(ex)
+                    : CompletableFuture.completedFuture(reply);
+              })
+          .thenCompose(Function.identity())
+          .toCompletableFuture();
+    }
   }
 }
