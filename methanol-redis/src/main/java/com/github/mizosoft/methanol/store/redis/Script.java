@@ -37,6 +37,7 @@ enum Script {
   REMOVE("remove.lua"),
   REMOVE_ALL("remove_all.lua"),
   APPEND("append.lua"),
+  SCAN_ENTRIES("scan_entries.lua"),
   GET_STALE_RANGE("get_stale_range.lua");
 
   private static final String SCRIPTS_PATH = "/scripts/";

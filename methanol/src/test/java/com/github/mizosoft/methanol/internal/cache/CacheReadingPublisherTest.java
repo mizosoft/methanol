@@ -77,7 +77,7 @@ class CacheReadingPublisherTest {
 
   @ExecutorParameterizedTest
   @StoreSpec(store = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
-  @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisStoreContext#isAvailable")
+  @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisStandaloneStoreContext#isAvailable")
   void cacheStringOnRedisStandalone(Executor executor, Store store)
       throws IOException, InterruptedException {
     testCachingAsString(executor, store);
@@ -85,7 +85,7 @@ class CacheReadingPublisherTest {
 
   @ExecutorParameterizedTest
   @StoreSpec(store = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
-  @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisStoreContext#isAvailable")
+  @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisClusterStoreContext#isAvailable")
   void cacheStringOnRedisCluster(Executor executor, Store store)
       throws IOException, InterruptedException {
     testCachingAsString(executor, store);

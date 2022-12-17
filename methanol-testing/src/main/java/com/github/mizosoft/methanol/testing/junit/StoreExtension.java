@@ -57,7 +57,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.platform.commons.support.AnnotationSupport;
 
-/** {@code Extension} that provides {@code Store} instances with multiple configurations. */
+/** {@code Extension} that injects {@code Store} instances with multiple configurations. */
 public final class StoreExtension
     implements AfterEachCallback, ArgumentsProvider, ParameterResolver {
   private static final Namespace EXTENSION_NAMESPACE = Namespace.create(StoreExtension.class);

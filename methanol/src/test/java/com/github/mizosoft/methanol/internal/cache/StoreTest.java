@@ -513,7 +513,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void iterateEntries(Store store) throws IOException, InterruptedException {
+  void iterateOverEntries(Store store) throws IOException, InterruptedException {
     var entries =
         Map.of(
             "e1", List.of("Pickachu", "Raichu"),

@@ -34,8 +34,6 @@ import com.github.mizosoft.methanol.internal.cache.Store;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.RedisException;
 import io.lettuce.core.RedisNoScriptException;
-import io.lettuce.core.ScanArgs;
-import io.lettuce.core.ScanCursor;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.async.RedisHashAsyncCommands;
@@ -50,31 +48,38 @@ import java.lang.System.Logger.Level;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadPendingException;
 import java.nio.channels.WritePendingException;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A {@link Store} implementation backed by redis. */
+/**
+ * A {@link Store} implementation backed by redis. Specialized implementations are {@link
+ * RedisStandaloneStore} and {@link RedisClusterStore} for standalone and cluster setups
+ * respectively.
+ */
 abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffer>>
     implements Store {
   private static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
 
-  private static final int STORE_VERSION = 1;
-
   static final long ANY_ENTRY_VERSION = -1;
+  private static final int STORE_VERSION = 1;
+  private static final String INITIAL_CURSOR = "0";
 
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
@@ -196,14 +201,21 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   @Override
   public Iterator<Viewer> iterator() {
     requireNotClosed();
-    var iter = new ScanningViewerIterator(toEntryKey("*"));
-    iter.fireScan(ScanCursor.INITIAL);
-    return iter;
+    return new ScanningViewerIterator(toEntryKey("*"));
   }
 
   @Override
   public boolean remove(String key) throws IOException, InterruptedException {
     return Utils.get(removeEntryAsync(toEntryKey(key), ANY_ENTRY_VERSION));
+  }
+
+  CompletableFuture<Boolean> removeEntryAsync(String entryKey, long targetEntryVersion) {
+    requireNotClosed();
+    return evalAsync(
+        Script.REMOVE,
+        List.of(entryKey),
+        List.of(encodeLong(targetEntryVersion), encodeLong(staleEntryTtlSeconds)),
+        ScriptOutputType.BOOLEAN);
   }
 
   @Override
@@ -238,15 +250,6 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   @Override
   public void close() {
     doClose(false);
-  }
-
-  CompletableFuture<Boolean> removeEntryAsync(String entryKey, long targetEntryVersion) {
-    requireNotClosed();
-    return evalAsync(
-        Script.REMOVE,
-        List.of(entryKey),
-        List.of(encodeLong(targetEntryVersion), encodeLong(staleEntryTtlSeconds)),
-        ScriptOutputType.BOOLEAN);
   }
 
   private void doClose(boolean dispose) {
@@ -301,6 +304,14 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     requireState(!closed, "Store is closed");
   }
 
+  static ByteBuffer encodeLong(long value) {
+    return UTF_8.encode(Long.toString(value));
+  }
+
+  static long decodeLong(ByteBuffer value) {
+    return Long.parseLong(UTF_8.decode(value).toString());
+  }
+
   private static String extractHashTag(String entryKey) {
     int leftBrace = entryKey.indexOf('{');
     int rightBrace = entryKey.indexOf('}');
@@ -309,33 +320,35 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     return entryKey.substring(leftBrace + 1, rightBrace);
   }
 
-  static ByteBuffer encodeLong(long value) {
-    return UTF_8.encode(Long.toString(value));
-  }
-
-  private static long decodeLong(ByteBuffer value) {
-    return Long.parseLong(UTF_8.decode(value).toString());
-  }
-
-  // TODO we can optimize out round trips with a script that returns the content of scanned keys
-  //      instead of only the keys themselves.
   private final class ScanningViewerIterator implements Iterator<Viewer> {
-    private static final int SCAN_LIMIT = 256;
+    private static final int SCAN_LIMIT = 64;
 
-    private final ScanArgs args;
-    private final BlockingQueue<ScanSignal> queue = new LinkedBlockingQueue<>();
+    private final String pattern;
+
+    private String cursor = INITIAL_CURSOR;
+    private boolean initialScan = true;
+
+    private @Nullable Iterator<ScanEntry> entryIterator;
 
     private @Nullable Viewer nextViewer;
     private @Nullable Viewer currentViewer;
+
+    /**
+     * The set of keys seen so far, tracked to avoid returning duplicate entries. This may happen
+     * when the SCAN command returns iterates over the same key multiple times, which is possible if
+     * the keyspace changes due to how SCAN is implemented.
+     */
+    private final Set<String> seenKeys = new HashSet<>();
 
     private boolean finished;
     private @MonotonicNonNull Throwable exception;
 
     ScanningViewerIterator(String pattern) {
-      this.args = ScanArgs.Builder.limit(SCAN_LIMIT).match(pattern, UTF_8);
+      this.pattern = pattern;
     }
 
     @Override
+    @EnsuresNonNullIf(expression = "nextViewer", result = true)
     public boolean hasNext() {
       return nextViewer != null || findNext();
     }
@@ -368,6 +381,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
       }
     }
 
+    @EnsuresNonNullIf(expression = "nextViewer", result = true)
     private boolean findNext() {
       while (true) {
         if (finished) {
@@ -385,74 +399,76 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
         }
 
         try {
-          var signal = queue.take();
-          if (signal instanceof ScanKey) {
-            try {
-              var viewer = Utils.get(viewAsync(null, ((ScanKey) signal).key)).orElse(null);
-              if (viewer != null) {
-                nextViewer = viewer;
-                return true;
-              }
-            } catch (RedisException | IOException e) {
-              // Log & try with next key.
-              logger.log(Level.WARNING, "Exception when opening viewer", e);
+          var iter = entryIterator;
+          if (iter != null && iter.hasNext()) {
+            var entry = iter.next();
+            if (seenKeys.add(entry.key)) {
+              nextViewer = createViewer(null, entry.key, entry.fields);
+              return true;
             }
-          } else if (signal instanceof ScanCompletion) {
-            var cursor = ((ScanCompletion) signal).cursor;
-            if (cursor.isFinished()) {
-              finished = true;
-            } else {
-              fireScan(cursor);
-            }
+          } else if (!initialScan && cursor.equals(INITIAL_CURSOR)) {
+            // SCAN redirects back to initial cursor ('0') when finished.
+            finished = true;
           } else {
-            exception = ((ScanFailure) signal).exception;
+            var scanResult = scan().get();
+            cursor = scanResult.cursor;
+            entryIterator = scanResult.entries.iterator();
+            initialScan = false;
           }
         } catch (InterruptedException e) {
-          // Handle interruption by gracefully ending iteration.
+          // Handle interruption by gracefully ending iteration and let caller handle the
+          // interruption.
           finished = true;
+          Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+          exception = e.getCause();
         }
       }
     }
 
-    void fireScan(ScanCursor cursor) {
+    CompletableFuture<ScanResult> scan() {
       requireNotClosed();
-      commands()
-          .scan(key -> queue.add(new ScanKey(key)), cursor, args)
-          .whenComplete(this::onScanCompletion);
-    }
-
-    private void onScanCompletion(ScanCursor cursor, Throwable exception) {
-      if (exception != null) {
-        queue.add(new ScanFailure(exception));
-      } else {
-        queue.add(new ScanCompletion(cursor));
-      }
+      return AbstractRedisStore.this
+          .<List<Object>>evalAsync(
+              Script.SCAN_ENTRIES,
+              List.of(),
+              List.of(UTF_8.encode(cursor), UTF_8.encode(pattern), encodeLong(SCAN_LIMIT)),
+              ScriptOutputType.MULTI)
+          .thenApply(ScanResult::from);
     }
   }
 
-  private interface ScanSignal {}
+  private static final class ScanResult {
+    final String cursor;
+    final List<ScanEntry> entries;
 
-  private static final class ScanKey implements ScanSignal {
-    final String key;
-
-    ScanKey(String key) {
-      this.key = key;
-    }
-  }
-
-  private static final class ScanCompletion implements ScanSignal {
-    final ScanCursor cursor;
-
-    ScanCompletion(ScanCursor cursor) {
+    ScanResult(String cursor, List<ScanEntry> entries) {
       this.cursor = cursor;
+      this.entries = entries;
+    }
+
+    static ScanResult from(List<Object> cursorAndEntries) {
+      var cursor = UTF_8.decode((ByteBuffer) cursorAndEntries.get(0)).toString();
+      @SuppressWarnings("unchecked")
+      var entries = (List<List<ByteBuffer>>) cursorAndEntries.get(1);
+      return new ScanResult(
+          cursor, entries.stream().map(ScanEntry::from).collect(Collectors.toUnmodifiableList()));
     }
   }
 
-  private static final class ScanFailure implements ScanSignal {
-    final Throwable exception;
+  private static final class ScanEntry {
+    final String key;
+    final List<ByteBuffer> fields;
 
-    ScanFailure(Throwable exception) {
-      this.exception = exception;
+    ScanEntry(String key, List<ByteBuffer> fields) {
+      this.key = key;
+      this.fields = fields;
+    }
+
+    static ScanEntry from(List<ByteBuffer> keyAndFields) {
+      var key = UTF_8.decode(keyAndFields.get(0)).toString();
+      var fields = keyAndFields.subList(1, keyAndFields.size());
+      return new ScanEntry(key, fields);
     }
   }
 
@@ -464,6 +480,14 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     private final ByteBuffer metadata;
     private final long dataSize;
     private final AtomicBoolean closed = new AtomicBoolean();
+
+    /**
+     * Whether the data we're currently reading is expected to be fresh. Data becomes stale when it
+     * is edited or removed. On such case, the data key is renamed and set to expire. If we detect
+     * that while reading, this field's value is set to {@code false} and never changes. After which
+     * reading is always directed to the stale data entry.
+     */
+    private volatile boolean readingFreshEntry = true;
 
     RedisViewer(
         @Nullable String key,
@@ -525,12 +549,6 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     private final class RedisEntryReader implements EntryReader {
       private final AtomicBoolean pendingRead = new AtomicBoolean();
       private final AtomicLong streamPosition = new AtomicLong();
-
-      /**
-       * Whether it's expected that the data we're currently reading is fresh (i.e. has not been
-       * overwritten or removed).
-       */
-      private volatile boolean readingFreshEntry = true;
 
       RedisEntryReader() {}
 
