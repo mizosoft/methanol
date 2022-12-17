@@ -45,7 +45,7 @@ public class LocalRedisCluster implements AutoCloseable {
   private static final Logger logger = System.getLogger(LocalRedisCluster.class.getName());
 
   private static final int HEALTH_CHECK_MAX_RETRIES = 10;
-  private static final int CLUSTER_JOIN_TIMEOUT_SECONDS = 10;
+  private static final int CLUSTER_JOIN_TIMEOUT_SECONDS = 20;
 
   private final List<LocalRedisServer> nodes;
 
@@ -95,11 +95,12 @@ public class LocalRedisCluster implements AutoCloseable {
                 Map.of(
                     "cluster-enabled", "yes",
                     "cluster-node-timeout", "10000",
+                    "save", "", // Disable rdb snapshotting.
 
-                    // Having no delay in diskless sync makes the cluster operable sooner than
+                    // Having no delay in disk-less sync makes the cluster operable sooner than
                     // otherwise (see checkHealth).
                     "repl-diskless-sync-delay", "0",
-                    "loglevel", "debug"));
+                    "loglevel", "verbose"));
         nodes.add(node);
       } catch (IOException e) {
         try {
@@ -121,8 +122,8 @@ public class LocalRedisCluster implements AutoCloseable {
             .toArray(String[]::new));
     Collections.addAll(
         command, "--cluster-replicas", Integer.toString(replicasPerMaster), "--cluster-yes");
+    var process = new ProcessBuilder(command).redirectErrorStream(true).start();
     try {
-      var process = new ProcessBuilder(command).redirectErrorStream(true).start();
       if (!process.waitFor(CLUSTER_JOIN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
         throw new IOException(
             "redis-cli timed out. Command output: "
@@ -130,9 +131,13 @@ public class LocalRedisCluster implements AutoCloseable {
       }
       if (process.exitValue() != 0) {
         throw new IOException(
-            "Non-zero exit code: " + RedisSupport.dumpRemaining(process.inputReader(UTF_8)));
+            "Non-zero exit code: "
+                + process.exitValue()
+                + ". Command output: "
+                + RedisSupport.dumpRemaining(process.inputReader(UTF_8)));
       }
     } catch (IOException | InterruptedException e) {
+      process.destroyForcibly();
       try {
         closeNodes(nodes);
       } catch (IOException closeEx) {

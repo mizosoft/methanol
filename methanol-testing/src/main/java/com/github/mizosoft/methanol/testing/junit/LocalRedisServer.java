@@ -66,13 +66,15 @@ public class LocalRedisServer implements AutoCloseable {
 
   private static final int PROCESS_WAIT_FOR_TIMEOUT_SECONDS = 4;
 
-  private static final int MAX_RETRIES = 5;
+  private static final int MASTER_SERVER_START_RETRIES = 5;
 
   private final RedisURI uri;
   private final Process process;
   private final Path directory;
   private final boolean deleteDirectoryOnClosure;
   private final Path logFile;
+
+  private boolean closed;
 
   private LocalRedisServer(
       int port, Process process, Path directory, boolean deleteDirectoryOnClosure, Path logFile) {
@@ -97,6 +99,18 @@ public class LocalRedisServer implements AutoCloseable {
 
   @Override
   public void close() throws IOException {
+    if (closed) return;
+
+    closed = true;
+    if (process.isAlive()) {
+      shutdownServer();
+    }
+    if (deleteDirectoryOnClosure) {
+      Directories.deleteRecursively(directory);
+    }
+  }
+
+  private void shutdownServer() {
     boolean sentClientShutdown;
     try (var client = RedisClient.create(uri);
         var connection = client.connect()) {
@@ -116,10 +130,6 @@ public class LocalRedisServer implements AutoCloseable {
       }
     }
     terminate(process);
-
-    if (deleteDirectoryOnClosure) {
-      Directories.deleteRecursively(directory);
-    }
   }
 
   @Override
@@ -180,6 +190,8 @@ public class LocalRedisServer implements AutoCloseable {
       deleteDirectoryOnClosure = false;
     }
 
+    effectiveConfig.putIfAbsent("--loglevel", "verbose");
+
     // Instead of having two different destinations for process output (stdout, logfile), let's
     // redirect all output to the log file instead of using the --logfile option explicitly (see
     // tryStart).
@@ -187,8 +199,8 @@ public class LocalRedisServer implements AutoCloseable {
     var logFile =
         logFileString != null
             ? Path.of(logFileString)
-            : Files.createTempFile(directory, LocalRedisServer.class.getSimpleName(), ".log");
-    for (int retriesLeft = MAX_RETRIES; retriesLeft > 0; retriesLeft--) {
+            : Files.createTempFile(LocalRedisServer.class.getSimpleName(), ".log");
+    for (int retriesLeft = MASTER_SERVER_START_RETRIES; retriesLeft > 0; retriesLeft--) {
       int port = ThreadLocalRandom.current().nextInt(SERVER_PORT_START, SERVER_PORT_END);
       var process = tryStart(effectiveConfig, port, logFile);
       if (process != null) {
@@ -256,8 +268,9 @@ public class LocalRedisServer implements AutoCloseable {
     }
 
     // Ping the server to make sure it's operating properly.
-    try (var client = RedisClient.create(RedisURI.create(LOOPBACK_ADDRESS, port))) {
-      client.connect().sync().ping();
+    try (var client = RedisClient.create(RedisURI.create(LOOPBACK_ADDRESS, port));
+        var connection = client.connect()) {
+      connection.sync().ping();
     } catch (RedisException ignored) {
       return false;
     }
