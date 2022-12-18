@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol.store.redis;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 
 import io.lettuce.core.RedisNoScriptException;
 import io.lettuce.core.ScriptOutputType;
@@ -36,26 +35,27 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
 enum Script {
-  COMMIT("commit.lua"),
-  EDIT("edit.lua"),
-  REMOVE("remove.lua"),
-  REMOVE_ALL("remove_all.lua"),
-  APPEND("append.lua"),
-  SCAN_ENTRIES("scan_entries.lua"),
-  GET_STALE_RANGE("get_stale_range.lua");
-
-  private static final String SCRIPTS_PATH = "/scripts/";
+  COMMIT("/scripts/commit.lua", false),
+  EDIT("/scripts/edit.lua", false),
+  REMOVE("/scripts/remove.lua", false),
+  REMOVE_ALL("/scripts/remove_all.lua", false),
+  APPEND("/scripts/append.lua", false),
+  SCAN_ENTRIES("/scripts/scan_entries.lua", true),
+  GET_STALE_RANGE("/scripts/get_stale_range.lua", false);
 
   private final String content;
   private final String shaHex;
+  private final boolean isReadOnly;
 
-  Script(String filename) {
-    var contentBytes = load(SCRIPTS_PATH + filename);
-    content = UTF_8.decode(ByteBuffer.wrap(contentBytes)).toString();
-    shaHex = toHexString(newSha1Digest().digest(contentBytes));
+  Script(String scriptPath, boolean isReadOnly) {
+    var contentBytes = load(scriptPath);
+    this.content = UTF_8.decode(ByteBuffer.wrap(contentBytes)).toString();
+    this.shaHex = toHexString(newSha1Digest().digest(contentBytes));
+    this.isReadOnly = isReadOnly;
   }
 
   String content() {
@@ -67,7 +67,9 @@ enum Script {
   }
 
   <K, V> RunnableScript<K, V> evalOn(RedisScriptingAsyncCommands<K, V> commands) {
-    return new RunnableScript<>(this, commands);
+    return isReadOnly
+        ? RunnableScript.of(this, commands)
+        : RunnableScript.ofReadonly(this, commands);
   }
 
   private static byte[] load(String path) {
@@ -99,14 +101,8 @@ enum Script {
     return sb.toString();
   }
 
-  static final class RunnableScript<K, V> {
-    private final Script script;
-    private final RedisScriptingAsyncCommands<K, V> commands;
-
-    RunnableScript(Script script, RedisScriptingAsyncCommands<K, V> commands) {
-      this.script = requireNonNull(script);
-      this.commands = requireNonNull(commands);
-    }
+  abstract static class RunnableScript<K, V> {
+    private RunnableScript() {}
 
     CompletableFuture<Long> asLong(List<K> keys, List<V> values) {
       return as(keys, values, ScriptOutputType.INTEGER);
@@ -132,12 +128,11 @@ enum Script {
     private <T> CompletableFuture<T> as(List<K> keys, List<V> values, ScriptOutputType outputType) {
       var keysArray = (K[]) keys.toArray();
       var valuesArray = (V[]) values.toArray();
-      return commands
-          .<T>evalsha(script.shaHex(), outputType, keysArray, valuesArray)
+      return this.<T>evalsha(keysArray, valuesArray, outputType)
           .handle(
               (reply, ex) -> {
                 if (ex instanceof RedisNoScriptException) {
-                  return commands.<T>eval(script.content(), outputType, keysArray, valuesArray);
+                  return this.<T>eval(keysArray, valuesArray, outputType);
                 }
                 return ex != null
                     ? CompletableFuture.<T>failedFuture(ex)
@@ -145,6 +140,48 @@ enum Script {
               })
           .thenCompose(Function.identity())
           .toCompletableFuture();
+    }
+
+    abstract <T> CompletionStage<T> evalsha(
+        K[] keysArray, V[] valuesArray, ScriptOutputType outputType);
+
+    abstract <T> CompletionStage<T> eval(
+        K[] keysArray, V[] valuesArray, ScriptOutputType outputType);
+
+    static <K, V> RunnableScript<K, V> of(
+        Script script, RedisScriptingAsyncCommands<K, V> commands) {
+      return new RunnableScript<>() {
+        @Override
+        public <T> CompletionStage<T> evalsha(
+            K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
+          return commands.evalsha(script.shaHex(), outputType, keysArray, valuesArray);
+        }
+
+        @Override
+        public <T> CompletionStage<T> eval(
+            K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
+          return commands.eval(
+              script.content().getBytes(UTF_8), outputType, keysArray, valuesArray);
+        }
+      };
+    }
+
+    static <K, V> RunnableScript<K, V> ofReadonly(
+        Script script, RedisScriptingAsyncCommands<K, V> commands) {
+      return new RunnableScript<>() {
+        @Override
+        public <T> CompletionStage<T> evalsha(
+            K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
+          return commands.evalshaReadOnly(script.shaHex(), outputType, keysArray, valuesArray);
+        }
+
+        @Override
+        public <T> CompletionStage<T> eval(
+            K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
+          return commands.evalReadOnly(
+              script.content().getBytes(UTF_8), outputType, keysArray, valuesArray);
+        }
+      };
     }
   }
 }

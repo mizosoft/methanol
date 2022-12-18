@@ -128,14 +128,14 @@ public final class StoreExtension
     var executable = parameterContext.getDeclaringExecutable();
     var stores = ManagedStores.get(extensionContext);
     return resolveSpec(findSpec(executable))
+        .findFirst()
         .map(
             Unchecked.func(
                 config ->
                     resolveArguments(
                         List.of(parameterContext.getParameter().getType()),
                         stores.getOrCreateContext(executable, config))))
-        .flatMap(args -> Stream.of(args.get()).findFirst().stream())
-        .findFirst()
+        .flatMap(args -> Stream.of(args.get()).findFirst())
         .orElseThrow(UnsupportedOperationException::new);
   }
 
@@ -152,7 +152,7 @@ public final class StoreExtension
       } else if (Store.class.isAssignableFrom(type)) {
         arguments.add(context.createAndRegisterStore());
       } else {
-        break;
+        break; // Let JUnit handle remaining arguments.
       }
     }
     return Arguments.of(arguments.toArray());

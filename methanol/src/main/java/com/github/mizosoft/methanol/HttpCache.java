@@ -197,8 +197,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
       @Override
       public boolean hasNext() {
-        // Prevent any later remove() from removing the wrong entry as hasNext (called by
-        // findNextUri()) causes the underlying store iterator to advance.
+        // Prevent any later remove() from removing the wrong entry as findNext() causes the
+        // underlying store iterator to advance.
         canRemove = false;
         return nextUri != null || findNext();
       }
@@ -228,6 +228,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
             if (metadata != null) {
               nextUri = metadata.uri();
               return true;
+            } else {
+              viewerIterator.remove();
             }
           }
         }

@@ -40,7 +40,6 @@ import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
 import io.lettuce.core.api.async.RedisStringAsyncCommands;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.io.UncheckedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.ByteBuffer;
@@ -62,7 +61,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -298,13 +296,14 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     return entryKey.substring(leftBrace + 1, rightBrace);
   }
 
-  private final class ScanningViewerIterator implements Iterator<Viewer> {
+  final class ScanningViewerIterator implements Iterator<Viewer> {
     private static final int SCAN_LIMIT = 64;
 
     private final String pattern;
+    private final RedisScriptingAsyncCommands<String, ByteBuffer> commands;
 
     private String cursor = INITIAL_CURSOR;
-    private boolean initialScan = true;
+    private boolean isInitialScan = true;
 
     private @Nullable Iterator<ScanEntry> entryIterator;
 
@@ -316,13 +315,21 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
      * when the SCAN command returns iterates over the same key multiple times, which is possible if
      * the keyspace changes due to how SCAN is implemented.
      */
-    private final Set<String> seenKeys = new HashSet<>();
+    private final Set<String> seenKeys;
 
     private boolean finished;
-    private @MonotonicNonNull Throwable exception;
 
     ScanningViewerIterator(String pattern) {
+      this(pattern, new HashSet<>(), commands());
+    }
+
+    ScanningViewerIterator(
+        String pattern,
+        Set<String> seenKeys,
+        RedisScriptingAsyncCommands<String, ByteBuffer> commands) {
       this.pattern = pattern;
+      this.seenKeys = seenKeys;
+      this.commands = commands;
     }
 
     @Override
@@ -366,16 +373,6 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
           return false;
         }
 
-        if (exception != null) {
-          if (exception instanceof RuntimeException) {
-            throw (RuntimeException) exception;
-          } else if (exception instanceof Error) {
-            throw (Error) exception;
-          } else {
-            throw new UncheckedIOException(new IOException(exception));
-          }
-        }
-
         try {
           var iter = entryIterator;
           if (iter != null && iter.hasNext()) {
@@ -384,14 +381,14 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
               nextViewer = createViewer(null, entry.key, entry.fields);
               return true;
             }
-          } else if (!initialScan && cursor.equals(INITIAL_CURSOR)) {
-            // SCAN redirects back to initial cursor ('0') when finished.
-            finished = true;
-          } else {
+          } else if (!cursor.equals(INITIAL_CURSOR) || isInitialScan) {
             var scanResult = scan().get();
             cursor = scanResult.cursor;
             entryIterator = scanResult.entries.iterator();
-            initialScan = false;
+            isInitialScan = false;
+          } else {
+            // SCAN redirects back to initial cursor ('0') when finished.
+            finished = true;
           }
         } catch (InterruptedException e) {
           // Handle interruption by gracefully ending iteration and let caller handle the
@@ -399,7 +396,8 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
           finished = true;
           Thread.currentThread().interrupt();
         } catch (ExecutionException e) {
-          exception = e.getCause();
+          finished = true;
+          logger.log(Level.WARNING, "Exception thrown when iterating over entries", e.getCause());
         }
       }
     }
@@ -407,7 +405,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     CompletableFuture<ScanResult> scan() {
       requireNotClosed();
       return Script.SCAN_ENTRIES
-          .evalOn(commands())
+          .evalOn(commands)
           .asMulti(
               List.of(),
               List.of(UTF_8.encode(cursor), UTF_8.encode(pattern), encodeLong(SCAN_LIMIT)))

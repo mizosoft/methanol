@@ -66,7 +66,7 @@ public class LocalRedisServer implements AutoCloseable {
 
   private static final int PROCESS_WAIT_FOR_TIMEOUT_SECONDS = 4;
 
-  private static final int MASTER_SERVER_START_RETRIES = 5;
+  private static final int MASTER_SERVER_START_RETRIES = 10;
 
   private final RedisURI uri;
   private final Process process;
