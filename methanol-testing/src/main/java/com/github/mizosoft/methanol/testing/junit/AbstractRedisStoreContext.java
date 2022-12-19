@@ -28,25 +28,38 @@ import java.io.IOException;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-abstract class AbstractRedisStoreContext<R extends AutoCloseable> extends StoreContext {
-  private @MonotonicNonNull R lazyRedisServer;
+abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreContext {
+  private final RedisSessionSingletonPool<R> sessionPool;
+  private @MonotonicNonNull R lazySession;
 
-  AbstractRedisStoreContext(AbstractRedisStoreConfig config) {
+  AbstractRedisStoreContext(
+      AbstractRedisStoreConfig config, RedisSessionSingletonPool<R> sessionPool) {
     super(config);
+    this.sessionPool = sessionPool;
   }
-
-  R getOrCreateRedisServer() throws IOException {
-    var server = lazyRedisServer;
-    if (server == null) {
-      server = createRedisServer();
-      lazyRedisServer = server;
-    }
-    return server;
-  }
-
-  abstract R createRedisServer() throws IOException;
 
   abstract void configure(RedisStorageExtension.Builder builder) throws IOException;
+
+  R getSession() throws IOException {
+    var session = lazySession;
+    if (session == null) {
+      session = sessionPool.acquire();
+      lazySession = session;
+    }
+    return session;
+  }
+
+  void releaseSession(boolean returnToPool) throws IOException {
+    var session = lazySession;
+    if (session != null) {
+      lazySession = null;
+      if (returnToPool) {
+        sessionPool.release(session);
+      } else {
+        session.close();
+      }
+    }
+  }
 
   @Override
   Store createStore() throws IOException {
@@ -65,13 +78,10 @@ abstract class AbstractRedisStoreContext<R extends AutoCloseable> extends StoreC
   void close(List<Exception> exceptions) {
     super.close(exceptions);
 
-    var server = lazyRedisServer;
-    if (server != null) {
-      try {
-        server.close();
-      } catch (Exception e) {
-        exceptions.add(e);
-      }
+    try {
+      releaseSession(true);
+    } catch (IOException e) {
+      exceptions.add(e);
     }
   }
 }

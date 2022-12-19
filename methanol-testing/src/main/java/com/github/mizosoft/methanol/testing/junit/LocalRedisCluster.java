@@ -26,8 +26,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import io.lettuce.core.RedisCommandExecutionException;
 import io.lettuce.core.RedisException;
+import io.lettuce.core.RedisReadOnlyException;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.cluster.RedisClusterClient;
+import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.cluster.models.partitions.RedisClusterNode.NodeFlag;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.System.Logger;
@@ -41,7 +44,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class LocalRedisCluster implements AutoCloseable {
+public class LocalRedisCluster implements RedisSession {
   private static final Logger logger = System.getLogger(LocalRedisCluster.class.getName());
 
   private static final int HEALTH_CHECK_MAX_RETRIES = 10;
@@ -59,6 +62,38 @@ public class LocalRedisCluster implements AutoCloseable {
 
   public final List<Path> logFiles() {
     return nodes.stream().map(LocalRedisServer::logFile).collect(Collectors.toUnmodifiableList());
+  }
+
+  @Override
+  public boolean isHealthy() {
+    try (var client = RedisClusterClient.create(uris());
+        var connection = client.connect()) {
+      checkClusterRouting(connection, connection.getPartitions().size());
+      return true;
+    } catch (RedisException e) {
+      logger.log(Level.WARNING, "unhealthy redis cluster", e);
+      return false;
+    }
+  }
+
+  @Override
+  public void reset() {
+    try (var client = RedisClusterClient.create(uris());
+        var connection = client.connect()) {
+      var masters =
+          connection.getPartitions().stream()
+              .filter(node -> node.is(NodeFlag.UPSTREAM))
+              .collect(Collectors.toUnmodifiableList());
+      for (var node : masters) {
+        try {
+          connection.getConnection(node.getNodeId()).sync().flushall();
+        } catch (RedisReadOnlyException ignored) {
+          // This will be thrown in case the command is sent to a replica, which happens if the
+          // connection doesn't have an up-to-date view of the cluster topology and some replicas
+          // are still flagged as masters.
+        }
+      }
+    }
   }
 
   @Override
@@ -179,12 +214,7 @@ public class LocalRedisCluster implements AutoCloseable {
       int retryWaitMillis = 200;
       while (true) {
         try {
-          // Make sure we have good routing to (probabilistically) most of the nodes.
-          for (int i = 0; i < masterCount; i++) {
-            var key = Integer.toString(ThreadLocalRandom.current().nextInt());
-            connection.sync().set(key, "v");
-            connection.sync().del(key);
-          }
+          checkClusterRouting(connection, masterCount);
           break;
         } catch (RedisCommandExecutionException e) {
           retriesLeft--;
@@ -206,6 +236,16 @@ public class LocalRedisCluster implements AutoCloseable {
         TimeUnit.MILLISECONDS.sleep(retryWaitMillis);
         retryWaitMillis += 200;
       }
+    }
+  }
+
+  private static void checkClusterRouting(
+      StatefulRedisClusterConnection<String, String> connection, int keyCount) {
+    // Make sure we have good routing to (probabilistically) most of the nodes.
+    for (int i = 0; i < keyCount; i++) {
+      var key = "k" + ThreadLocalRandom.current().nextInt();
+      connection.sync().set(key, "v");
+      connection.sync().del(key);
     }
   }
 }

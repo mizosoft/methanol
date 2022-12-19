@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class LocalRedisServer implements AutoCloseable {
+public class LocalRedisServer implements RedisSession {
   private static final Logger logger = System.getLogger(LocalRedisServer.class.getName());
 
   private static final String LOOPBACK_ADDRESS = "127.0.0.1";
@@ -95,6 +95,35 @@ public class LocalRedisServer implements AutoCloseable {
 
   public Path logFile() {
     return logFile;
+  }
+
+  @Override
+  public boolean isHealthy() {
+    if (closed || !process.isAlive()) {
+      return false;
+    }
+
+    try (var client = RedisClient.create(uri);
+        var connection = client.connect()) {
+      connection.sync().set("k", "v");
+      connection.sync().del("k");
+      return true;
+    } catch (RedisException e) {
+      logger.log(Level.WARNING, "unhealthy redis server", e);
+      return false;
+    }
+  }
+
+  @Override
+  public void reset() {
+    if (closed || !process.isAlive()) {
+      throw new IllegalStateException();
+    }
+
+    try (var client = RedisClient.create(uri);
+        var connection = client.connect()) {
+      connection.sync().flushall();
+    }
   }
 
   @Override

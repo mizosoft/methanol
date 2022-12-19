@@ -141,7 +141,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvFileSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-@Timeout(value = 10, unit = TimeUnit.MINUTES)
+@Timeout(value = 5, unit = TimeUnit.MINUTES)
 @ExtendWith({MockWebServerExtension.class, StoreExtension.class, ExecutorExtension.class})
 class HttpCacheTest {
   static {

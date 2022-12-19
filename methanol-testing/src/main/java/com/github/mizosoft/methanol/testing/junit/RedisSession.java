@@ -22,36 +22,14 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
-import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import java.io.IOException;
-import java.nio.file.Files;
 
-public final class RedisStandaloneStoreContext extends AbstractRedisStoreContext<LocalRedisServer> {
-  private static final RedisSessionSingletonPool<LocalRedisServer> serverPool =
-      new RedisSessionSingletonPool<>(LocalRedisServer::start);
+/** A session with a Redis Standalone or Cluster setup. */
+public interface RedisSession extends AutoCloseable {
+  boolean isHealthy();
 
-  private RedisStandaloneStoreContext(RedisStandaloneStoreConfig config) {
-    super(config, serverPool);
-  }
+  void reset();
 
   @Override
-  void configure(RedisStorageExtension.Builder builder) throws IOException {
-    builder.standalone(getSession().uri());
-  }
-
-  @Override
-  void attachDebugInfo(Throwable exception) throws IOException {
-    var session = getSession();
-    releaseSession(false); // Don't pool the server & close it to flush all logs.
-    exception.addSuppressed(new Throwable(Files.readString(session.logFile())));
-  }
-
-  public static RedisStandaloneStoreContext from(RedisStandaloneStoreConfig config)
-      throws IOException {
-    return new RedisStandaloneStoreContext(config);
-  }
-
-  public static boolean isAvailable() {
-    return RedisSupport.isRedisStandaloneAvailable();
-  }
+  void close() throws IOException;
 }

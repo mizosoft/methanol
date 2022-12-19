@@ -29,18 +29,17 @@ public final class RedisClusterStoreContext extends AbstractRedisStoreContext<Lo
   private static final int MASTER_NODE_COUNT = 3;
   private static final int REPLICAS_PER_MASTER = 1;
 
-  private RedisClusterStoreContext(RedisClusterStoreConfig config) {
-    super(config);
-  }
+  private static final RedisSessionSingletonPool<LocalRedisCluster> clusterPool =
+      new RedisSessionSingletonPool<>(
+          () -> LocalRedisCluster.start(MASTER_NODE_COUNT, REPLICAS_PER_MASTER));
 
-  @Override
-  LocalRedisCluster createRedisServer() throws IOException {
-    return LocalRedisCluster.start(MASTER_NODE_COUNT, REPLICAS_PER_MASTER);
+  private RedisClusterStoreContext(RedisClusterStoreConfig config) {
+    super(config, clusterPool);
   }
 
   @Override
   void configure(RedisStorageExtension.Builder builder) throws IOException {
-    builder.cluster(getOrCreateRedisServer().uris());
+    builder.cluster(getSession().uris());
   }
 
   public static RedisClusterStoreContext from(RedisClusterStoreConfig config) throws IOException {

@@ -36,7 +36,9 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface StoreSpec {
-  StoreType[] store() default {StoreType.MEMORY, StoreType.DISK, StoreType.REDIS_STANDALONE};
+  StoreType[] store() default {
+    StoreType.MEMORY, StoreType.DISK, StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER
+  };
 
   /** Specifies {@code StoreTypes} to skip in testing. */
   StoreType[] skipped() default {};

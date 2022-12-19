@@ -213,6 +213,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
 
   @Override
   public void clear() {
+    requireNotClosed();
     var iter = iterator();
     while (iter.hasNext()) {
       try (var viewer = iter.next()) {
