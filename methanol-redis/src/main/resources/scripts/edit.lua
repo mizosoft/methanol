@@ -16,5 +16,4 @@ if not redis.call('set', editorLockKey, editorId, 'nx', 'exat', expireAt) then
   return false
 end
 redis.call('set', wipDataKey, '', 'exat', expireAt)
-redis.log(redis.LOG_WARNING, "acquired editor for ", entryKey, editorLockKey, wipDataKey)
 return true

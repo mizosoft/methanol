@@ -26,7 +26,7 @@ end
 local wipDataSize = redis.call('strlen', wipDataKey)
 if wipDataSize ~= clientDataSize and (commitData or wipDataSize ~= 0) then
   redis.call('unlink', wipDataKey)
-  redis.log(redis.LOG_DEBUG, 'client & server disagree on written data size')
+  redis.log(redis.LOG_WARNING, 'client & server disagree on written data size')
   return false
 end
 

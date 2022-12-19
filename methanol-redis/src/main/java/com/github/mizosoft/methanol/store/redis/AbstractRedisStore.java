@@ -214,6 +214,10 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   @Override
   public void clear() {
     requireNotClosed();
+    unguardedClear();
+  }
+
+  private void unguardedClear() {
     var iter = iterator();
     while (iter.hasNext()) {
       try (var viewer = iter.next()) {
@@ -252,7 +256,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     closed = true;
     if (dispose) {
       try {
-        clear();
+        unguardedClear();
       } catch (RedisException e) {
         logger.log(Level.WARNING, "Exception when clearing the store on closure", e);
       }
@@ -265,7 +269,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   public void flush() {}
 
   String toEntryKey(String key) {
-    requireArgument(key.indexOf('}') == -1, "Key contains a right brace");
+    requireArgument(key.indexOf('}') == -1, "key contains a right brace");
     return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, key);
   }
 
@@ -399,7 +403,6 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     }
 
     CompletableFuture<ScanResult> scan() {
-      requireNotClosed();
       return Script.SCAN_ENTRIES
           .evalOn(commands)
           .asMulti(
