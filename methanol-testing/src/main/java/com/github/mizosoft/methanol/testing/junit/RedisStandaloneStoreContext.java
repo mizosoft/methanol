@@ -22,11 +22,7 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
-import com.github.mizosoft.methanol.internal.cache.Store;
-import com.github.mizosoft.methanol.store.redis.RedisStandaloneStore;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.codec.StringCodec;
+import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import java.io.IOException;
 import java.nio.file.Files;
 
@@ -41,13 +37,8 @@ public final class RedisStandaloneStoreContext extends AbstractRedisStoreContext
   }
 
   @Override
-  Store createStore() throws IOException {
-    var client = registerClient(RedisClient.create(getOrCreateRedisServer().uri()));
-    return new RedisStandaloneStore(
-        client.connect(RedisCodec.of(StringCodec.UTF8, ByteBufferCodec.INSTANCE)),
-        config().editorLockTtlSeconds().orElse(15),
-        config().staleEntryTtlSeconds().orElse(15),
-        config().appVersion());
+  void configure(RedisStorageExtension.Builder builder) throws IOException {
+    builder.standalone(getOrCreateRedisServer().uri());
   }
 
   @Override

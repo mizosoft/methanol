@@ -114,7 +114,7 @@ public final class DiskStoreContext extends StoreContext {
   }
 
   @Override
-  Store createStore() {
+  Store createStore() throws IOException {
     var builder =
         DiskStore.newBuilder()
             .debugIndexOps(true)

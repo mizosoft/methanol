@@ -29,7 +29,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -62,14 +61,6 @@ public final class MemoryStore implements Store {
   @Override
   public Optional<Executor> executor() {
     return Optional.empty();
-  }
-
-  @Override
-  public void initialize() throws IOException {}
-
-  @Override
-  public CompletableFuture<Void> initializeAsync() {
-    return CompletableFuture.completedFuture(null);
   }
 
   @Override

@@ -20,11 +20,27 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.cache;
+package com.github.mizosoft.methanol.store.redis;
 
-import com.github.mizosoft.methanol.HttpCacheExtension;
+import io.lettuce.core.api.StatefulConnection;
+import java.nio.ByteBuffer;
+import java.util.concurrent.CompletionStage;
 
-/** An {@code HttpCacheExtension} that provides a {@link Store} implementation. */
-public interface StoreExtension extends HttpCacheExtension {
-  Store createStore();
+/**
+ * A strategy for connecting to Redis using Lettuce.
+ *
+ * @param <C> the type of the connection
+ */
+public interface RedisConnectionProvider<C extends StatefulConnection<String, ByteBuffer>>
+    extends AutoCloseable {
+
+  /** Asynchronously connects to Redis and returns the connection. */
+  CompletionStage<C> connectAsync();
+
+  /** Specifies that a connection returned by this provider is not needed anymore. */
+  void release(C connection);
+
+  /** Releases the resources associated with this {@code RedisConnectionProvider}. */
+  @Override
+  void close();
 }

@@ -60,6 +60,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
+import com.github.mizosoft.methanol.internal.cache.InternalStorageExtension;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
@@ -213,7 +214,7 @@ class HttpCacheTest {
     var cacheBuilder =
         HttpCache.newBuilder()
             .clock(clock)
-            .store(new EditAwaiterStore(store, editAwaiter))
+            .cacheOn(InternalStorageExtension.singleton(new EditAwaiterStore(store, editAwaiter)))
             .executor(executor);
     if (statsRecorder != null) {
       cacheBuilder.statsRecorder(statsRecorder);
@@ -3000,16 +3001,6 @@ class HttpCacheTest {
     @Override
     public Optional<Executor> executor() {
       return delegate.executor();
-    }
-
-    @Override
-    public void initialize() throws IOException {
-      delegate.initialize();
-    }
-
-    @Override
-    public CompletableFuture<Void> initializeAsync() {
-      return delegate.initializeAsync();
     }
 
     @Override

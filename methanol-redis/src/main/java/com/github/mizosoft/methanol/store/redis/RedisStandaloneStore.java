@@ -32,15 +32,15 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-/** A {@code Store} implementation backed by a standalone redis server. */
-public class RedisStandaloneStore
-    extends AbstractRedisStore<StatefulRedisConnection<String, ByteBuffer>> {
-  public RedisStandaloneStore(
+/** A {@code Store} implementation backed by a Redis Standalone instance. */
+class RedisStandaloneStore extends AbstractRedisStore<StatefulRedisConnection<String, ByteBuffer>> {
+  RedisStandaloneStore(
       StatefulRedisConnection<String, ByteBuffer> connection,
+      RedisConnectionProvider<StatefulRedisConnection<String, ByteBuffer>> connectionProvider,
       int editorLockTtlSeconds,
       int staleEntryTtlSeconds,
       int appVersion) {
-    super(connection, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion);
+    super(connection, connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion);
   }
 
   @SuppressWarnings("unchecked")

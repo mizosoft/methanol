@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.internal.Validate.TODO;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
@@ -38,12 +37,11 @@ import com.github.mizosoft.methanol.internal.cache.CacheResponse;
 import com.github.mizosoft.methanol.internal.cache.CacheResponseMetadata;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
+import com.github.mizosoft.methanol.internal.cache.InternalStorageExtension;
 import com.github.mizosoft.methanol.internal.cache.LocalCache;
-import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.internal.cache.StoreExtension;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.Flushable;
 import java.io.IOException;
@@ -76,7 +74,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * <p>An {@code HttpCache} instance is utilized by configuring it with {@link
  * Methanol.Builder#cache(HttpCache)}. The cache operates by inserting itself as an {@code
  * Interceptor} that can short-circuit requests by serving responses from a specified storage.
- * Responses can be stored either in memory or on disk, all configurable with {@link Builder}.
  *
  * @see <a href="https://mizosoft.github.io/methanol/caching/">Caching with Methanol</a>
  */
@@ -87,37 +84,29 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   private final Store store;
   private final Executor executor;
-  private final boolean userVisibleExecutor;
+  private final boolean isDefaultExecutor;
   private final StatsRecorder statsRecorder;
-  private final StatsRecordingListener listener;
+
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  private final Optional<Listener> userListener;
+
+  private final Listener listener;
   private final Clock clock;
-  private final LocalCache localCache = new LocalCacheView();
 
-  private HttpCache(Builder builder) {
-    var userExecutor = builder.executor;
-    if (userExecutor != null) {
-      executor = userExecutor;
-      userVisibleExecutor = true;
-    } else {
-      executor =
-          Executors.newCachedThreadPool(
-              runnable -> {
-                var thread = new Thread(runnable);
-                thread.setDaemon(true);
-                return thread;
-              });
-      userVisibleExecutor = false;
-    }
+  private final LocalCache localCache = new LocalCacheImpl();
 
-    var storeFactory = builder.storeFactory;
-    store =
-        requireNonNullElseGet(
-            builder.store,
-            () -> storeFactory.create(builder.cacheDirectory, builder.maxSize, executor));
-    statsRecorder =
+  private HttpCache(Store store, Executor executor, boolean isDefaultExecutor, Builder builder) {
+    this.store = requireNonNull(store);
+    this.executor = requireNonNull(executor);
+    this.isDefaultExecutor = isDefaultExecutor;
+    this.statsRecorder =
         requireNonNullElseGet(builder.statsRecorder, StatsRecorder::createConcurrentRecorder);
-    listener = new StatsRecordingListener(statsRecorder, builder.listener);
-    clock = requireNonNullElseGet(builder.clock, Utils::systemMillisUtc);
+    this.userListener = Optional.ofNullable(builder.listener);
+    this.listener =
+        new CompositeListener(
+            userListener.orElse(DisabledListener.INSTANCE),
+            new StatsRecordingListener(statsRecorder));
+    this.clock = requireNonNullElse(builder.clock, Utils.systemMillisUtc());
   }
 
   Store store() {
@@ -138,12 +127,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   /** Returns an {@code Optional} containing this cache's executor if one is explicitly set. */
   public Optional<Executor> executor() {
-    return userVisibleExecutor ? Optional.of(executor) : Optional.empty();
+    return isDefaultExecutor ? Optional.of(executor) : Optional.empty();
   }
 
-  /** Returns this cache's listener if one is specified. */
+  /** Returns the {@link Listener} set by the user. */
   public Optional<Listener> listener() {
-    return listener.userListener();
+    return userListener;
   }
 
   /** Returns the size this cache occupies in bytes. */
@@ -161,10 +150,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return statsRecorder.snapshot(uri);
   }
 
-  // TODO deferring initialization complicates store implementations where most methods depend on
-  //      the resources being initialized. Consider the alternative of always initializing in
-  //      Builder::build and have a Builder::buildAsync for async initialization.
-
   /**
    * Initializes this cache. A cache that operates on disk needs to initialize its in-memory data
    * structures before usage to restore indexing data from previous sessions. Initialization entails
@@ -174,14 +159,22 @@ public final class HttpCache implements AutoCloseable, Flushable {
    * <p>The cache initializes itself automatically on first use. An application might choose to call
    * this method (or {@link #initializeAsync()}) during its startup sequence to allow the cache to
    * operate directly when it's first used.
+   *
+   * @deprecated As of {@code 1.8.0}, a cache is always initialized when created. For background
+   *     initialization, please use {@link Builder#buildAsync()}.
    */
-  public void initialize() throws IOException {
-    store.initialize();
-  }
+  @Deprecated(since = "1.8.0", forRemoval = true)
+  public void initialize() throws IOException {}
 
-  /** Asynchronously {@link #initialize() initializes} this cache. */
+  /**
+   * Asynchronously {@link #initialize() initializes} this cache
+   *
+   * @deprecated As of {@code 1.8.0}, a cache is always initialized when created. For background
+   *     initialization, please use {@link Builder#buildAsync()}.
+   */
+  @Deprecated(since = "1.8.0", forRemoval = true)
   public CompletableFuture<Void> initializeAsync() {
-    return store.initializeAsync();
+    return CompletableFuture.completedFuture(null);
   }
 
   /**
@@ -344,8 +337,38 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return new Builder();
   }
 
-  private final class LocalCacheView implements LocalCache {
-    LocalCacheView() {}
+  private static CacheReadingPublisher.Listener toReadListener(
+      Listener listener, HttpRequest request) {
+    return new CacheReadingPublisher.Listener() {
+      @Override
+      public void onReadSuccess() {
+        listener.onReadSuccess(request);
+      }
+
+      @Override
+      public void onReadFailure(Throwable exception) {
+        listener.onReadFailure(request, exception);
+      }
+    };
+  }
+
+  private static CacheWritingPublisher.Listener toWriteListener(
+      Listener listener, HttpRequest request) {
+    return new CacheWritingPublisher.Listener() {
+      @Override
+      public void onWriteSuccess() {
+        listener.onWriteSuccess(request);
+      }
+
+      @Override
+      public void onWriteFailure(Throwable exception) {
+        listener.onWriteFailure(request, exception);
+      }
+    };
+  }
+
+  private final class LocalCacheImpl implements LocalCache {
+    LocalCacheImpl() {}
 
     @Override
     public Optional<CacheResponse> get(HttpRequest request)
@@ -373,7 +396,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
                           metadata,
                           viewer.orElseThrow(), // We're sure we have a Viewer here.
                           executor,
-                          listener.readListener(request),
+                          toReadListener(listener, request),
                           request,
                           clock.instant()));
       if (cacheResponse.isEmpty()) {
@@ -384,6 +407,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public CompletableFuture<Boolean> updateAsync(CacheResponse cacheResponse) {
+      // TODO don't forget to notify Listener of this write's status
       return cacheResponse
           .editAsync()
           .thenCompose(
@@ -402,16 +426,15 @@ public final class HttpCache implements AutoCloseable, Flushable {
         HttpRequest request,
         NetworkResponse networkResponse,
         @Nullable CacheResponse cacheResponse) {
-      return (cacheResponse != null
-              ? cacheResponse.editAsync()
-              : store.editAsync(toCacheKey(request)))
-          .thenApply(
-              optionalEditor ->
-                  optionalEditor.map(
-                      Unchecked.func(
-                          editor ->
-                              networkResponse.writingWith(
-                                  editor, listener.writeListener(request)))));
+      var editorFuture =
+          cacheResponse != null ? cacheResponse.editAsync() : store.editAsync(toCacheKey(request));
+      return editorFuture.thenApply(
+          optionalEditor ->
+              optionalEditor.map(
+                  Unchecked.func(
+                      editor ->
+                          networkResponse.writingWith(
+                              editor, toWriteListener(listener, request)))));
     }
 
     @Override
@@ -459,57 +482,19 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   private static final class StatsRecordingListener implements Listener {
     private final StatsRecorder statsRecorder;
-    private final Listener userListener;
-    private final boolean hasUserListener;
 
-    StatsRecordingListener(StatsRecorder statsRecorder, @Nullable Listener userListener) {
+    StatsRecordingListener(StatsRecorder statsRecorder) {
       this.statsRecorder = statsRecorder;
-      this.userListener = requireNonNullElse(userListener, DisabledListener.INSTANCE);
-      hasUserListener = userListener != null;
-    }
-
-    CacheReadingPublisher.Listener readListener(HttpRequest request) {
-      return new CacheReadingPublisher.Listener() {
-        @Override
-        public void onReadSuccess() {
-          StatsRecordingListener.this.onReadSuccess(request);
-        }
-
-        @Override
-        public void onReadFailure(Throwable exception) {
-          StatsRecordingListener.this.onReadFailure(request, exception);
-        }
-      };
-    }
-
-    CacheWritingPublisher.Listener writeListener(HttpRequest request) {
-      return new CacheWritingPublisher.Listener() {
-        @Override
-        public void onWriteSuccess() {
-          StatsRecordingListener.this.onWriteSuccess(request);
-        }
-
-        @Override
-        public void onWriteFailure(Throwable exception) {
-          StatsRecordingListener.this.onWriteFailure(request, exception);
-        }
-      };
-    }
-
-    Optional<Listener> userListener() {
-      return hasUserListener ? Optional.of(userListener) : Optional.empty();
     }
 
     @Override
     public void onRequest(HttpRequest request) {
       statsRecorder.recordRequest(request.uri());
-      userListener.onRequest(request);
     }
 
     @Override
     public void onNetworkUse(HttpRequest request, @Nullable TrackedResponse<?> cacheResponse) {
       statsRecorder.recordNetworkUse(request.uri());
-      userListener.onNetworkUse(request, cacheResponse);
     }
 
     @Override
@@ -526,30 +511,71 @@ public final class HttpCache implements AutoCloseable, Flushable {
         default:
           throw new AssertionError("unexpected status: " + response.cacheStatus());
       }
-
-      userListener.onResponse(request, response);
     }
 
     @Override
     public void onReadSuccess(HttpRequest request) {
-      userListener.onReadSuccess(request);
+      // TODO
+      // statsRecorder.recordReadSuccess(request.uri());
     }
 
     @Override
     public void onReadFailure(HttpRequest request, Throwable exception) {
-      userListener.onReadFailure(request, exception);
+      // TODO
+      // statsRecorder.recordReadFailure(request.uri());
     }
 
     @Override
     public void onWriteSuccess(HttpRequest request) {
       statsRecorder.recordWriteSuccess(request.uri());
-      userListener.onWriteSuccess(request);
     }
 
     @Override
     public void onWriteFailure(HttpRequest request, Throwable exception) {
       statsRecorder.recordWriteFailure(request.uri());
-      userListener.onWriteFailure(request, exception);
+    }
+  }
+
+  private static final class CompositeListener implements Listener {
+    private final List<Listener> listeners;
+
+    CompositeListener(Listener... listeners) {
+      this.listeners = List.of(listeners);
+    }
+
+    @Override
+    public void onRequest(HttpRequest request) {
+      listeners.forEach(listener -> listener.onRequest(request));
+    }
+
+    @Override
+    public void onNetworkUse(HttpRequest request, @Nullable TrackedResponse<?> cacheResponse) {
+      listeners.forEach(listener -> listener.onNetworkUse(request, cacheResponse));
+    }
+
+    @Override
+    public void onResponse(HttpRequest request, CacheAwareResponse<?> response) {
+      listeners.forEach(listener -> listener.onResponse(request, response));
+    }
+
+    @Override
+    public void onReadSuccess(HttpRequest request) {
+      listeners.forEach(listener -> listener.onReadSuccess(request));
+    }
+
+    @Override
+    public void onReadFailure(HttpRequest request, Throwable exception) {
+      listeners.forEach(listener -> listener.onReadFailure(request, exception));
+    }
+
+    @Override
+    public void onWriteSuccess(HttpRequest request) {
+      listeners.forEach(listener -> listener.onWriteSuccess(request));
+    }
+
+    @Override
+    public void onWriteFailure(HttpRequest request, Throwable exception) {
+      listeners.forEach(listener -> listener.onWriteFailure(request, exception));
     }
   }
 
@@ -906,28 +932,17 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   /** A builder of {@code HttpCaches}. */
   public static final class Builder {
-    long maxSize;
-    @MonotonicNonNull StoreFactory storeFactory;
-    @MonotonicNonNull Path cacheDirectory;
+    @MonotonicNonNull InternalStorageExtension storageExtension;
     @MonotonicNonNull Executor executor;
     @MonotonicNonNull StatsRecorder statsRecorder;
     @MonotonicNonNull Listener listener;
     @MonotonicNonNull Clock clock;
-    @MonotonicNonNull Store store;
 
     Builder() {}
 
-    public Builder accept(HttpCacheExtension extension) {
-      requireArgument(extension instanceof StoreExtension, "unsupported extension: %s", extension);
-      return TODO();
-    }
-
     /** Specifies that HTTP responses are to be cached on memory with the given size bound. */
     public Builder cacheOnMemory(long maxSize) {
-      checkMaxSize(maxSize);
-      this.maxSize = maxSize;
-      storeFactory = StoreFactory.MEMORY;
-      return this;
+      return cacheOn(StorageExtension.memory(maxSize));
     }
 
     /**
@@ -935,15 +950,17 @@ public final class HttpCache implements AutoCloseable, Flushable {
      * the given size bound.
      */
     public Builder cacheOnDisk(Path directory, long maxSize) {
-      checkMaxSize(maxSize);
-      this.cacheDirectory = requireNonNull(directory);
-      this.maxSize = maxSize;
-      storeFactory = StoreFactory.DISK;
-      return this;
+      return cacheOn(StorageExtension.disk(directory, maxSize));
     }
 
-    public Builder cacheOn(HttpCacheExtension extension) {
-      return TODO();
+    public Builder cacheOn(StorageExtension storageExtension) {
+      requireNonNull(storageExtension);
+      requireArgument(
+          storageExtension instanceof InternalStorageExtension,
+          "unrecognized StorageExtension: %s",
+          storageExtension);
+      this.storageExtension = (InternalStorageExtension) storageExtension;
+      return this;
     }
 
     /** Sets the executor to be used by the cache. */
@@ -969,42 +986,44 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return this;
     }
 
-    Builder store(Store store) {
-      this.store = requireNonNull(store);
-      return this;
+    private Executor getOrCreateExecutor(boolean[] isDefaultExecutor) {
+      var executor = this.executor;
+      if (executor != null) {
+        isDefaultExecutor[0] = false;
+      } else {
+        executor =
+            Executors.newCachedThreadPool(
+                r -> {
+                  var t = new Thread(r);
+                  t.setDaemon(true);
+                  return t;
+                });
+        isDefaultExecutor[0] = true;
+      }
+      return executor;
+    }
+
+    private InternalStorageExtension storageExtension() {
+      var storeExtension = this.storageExtension;
+      requireState(storeExtension != null, "a storage backend must be specified");
+      return storeExtension;
     }
 
     /** Creates a new {@code HttpCache}. */
     public HttpCache build() {
-      requireState(storeFactory != null || store != null, "caching backend must be specified");
-      return new HttpCache(this);
+      var isDefaultExecutor = new boolean[1];
+      var executor = getOrCreateExecutor(isDefaultExecutor);
+      var store = storageExtension().createStore(executor, CACHE_VERSION);
+      return new HttpCache(store, executor, isDefaultExecutor[0], this);
     }
 
-    private void checkMaxSize(long maxSize) {
-      requireArgument(maxSize > 0, "non-positive maxSize");
+    /** Asynchronously creates a new {@code HttpCache}. */
+    public CompletableFuture<HttpCache> buildAsync() {
+      var isDefaultExecutor = new boolean[1];
+      var executor = getOrCreateExecutor(isDefaultExecutor);
+      return storageExtension()
+          .createStoreAsync(executor, CACHE_VERSION)
+          .thenApply(store -> new HttpCache(store, executor, isDefaultExecutor[0], this));
     }
-  }
-
-  private enum StoreFactory {
-    MEMORY {
-      @Override
-      Store create(@Nullable Path directory, long maxSize, Executor executor) {
-        return new MemoryStore(maxSize);
-      }
-    },
-    DISK {
-      @Override
-      Store create(@Nullable Path directory, long maxSize, Executor executor) {
-        requireNonNull(directory, "DiskStore requires a directory");
-        return DiskStore.newBuilder()
-            .directory(directory)
-            .maxSize(maxSize)
-            .executor(executor)
-            .appVersion(CACHE_VERSION)
-            .build();
-      }
-    };
-
-    abstract Store create(@Nullable Path directory, long maxSize, Executor executor);
   }
 }

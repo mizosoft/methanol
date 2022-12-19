@@ -38,6 +38,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -161,7 +162,7 @@ public final class StoreExtension
   private static Stream<StoreConfig> resolveSpec(StoreSpec spec) {
     return cartesianProduct(
             List.of(
-                Set.of(spec.store()),
+                difference(Set.of(spec.store()), Set.of(spec.skipped())),
                 Set.of(spec.maxSize()),
                 Set.of(spec.appVersion()),
                 Set.of(spec.fileSystem()),
@@ -175,6 +176,12 @@ public final class StoreExtension
         .filter(configTuple -> isCompatibleConfig(configTuple) && isAvailableConfig(configTuple))
         .filter(StoreExtension::isAvailableConfig)
         .map(StoreExtension::createConfig);
+  }
+
+  private static <T> Set<T> difference(Set<T> x, Set<T> y) {
+    var diff = new HashSet<>(x);
+    diff.removeAll(y);
+    return Set.copyOf(diff);
   }
 
   private static boolean isCompatibleConfig(List<?> tuple) {

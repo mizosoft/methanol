@@ -30,6 +30,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 public abstract class StoreConfig {
+  static final int UNSET_NUMBER = -1;
+
   private final StoreType storeType;
   private final long maxSize;
   private final int appVersion;
@@ -59,23 +61,11 @@ public abstract class StoreConfig {
         return new MemoryStoreConfig(Long.MAX_VALUE);
       case DISK:
         return new DiskStoreConfig(
-            Long.MAX_VALUE,
-            1,
-            FileSystemType.SYSTEM,
-            Execution.ASYNC,
-            DiskStoreConfig.ABSENT_INDEX_UPDATE_DELAY_SECONDS,
-            true,
-            true);
+            Long.MAX_VALUE, 1, FileSystemType.SYSTEM, Execution.ASYNC, UNSET_NUMBER, true, true);
       case REDIS_STANDALONE:
-        return new RedisStandaloneStoreConfig(
-            1,
-            AbstractRedisStoreConfig.ABSENT_EDITOR_LOCK_TTL_SECONDS,
-            AbstractRedisStoreConfig.ABSENT_STALE_ENTRY_TTL_SECONDS);
+        return new RedisStandaloneStoreConfig(1, UNSET_NUMBER, UNSET_NUMBER);
       case REDIS_CLUSTER:
-        return new RedisClusterStoreConfig(
-            1,
-            AbstractRedisStoreConfig.ABSENT_EDITOR_LOCK_TTL_SECONDS,
-            AbstractRedisStoreConfig.ABSENT_STALE_ENTRY_TTL_SECONDS);
+        return new RedisClusterStoreConfig(1, UNSET_NUMBER, UNSET_NUMBER);
       default:
         throw new AssertionError();
     }

@@ -28,8 +28,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.OptionalInt;
 
 public final class DiskStoreConfig extends StoreConfig {
-  static final int ABSENT_INDEX_UPDATE_DELAY_SECONDS = -1;
-
   private final FileSystemType fileSystemType;
   private final Execution execution;
 
@@ -51,7 +49,7 @@ public final class DiskStoreConfig extends StoreConfig {
     this.fileSystemType = requireNonNull(fileSystemType);
     this.execution = requireNonNull(execution);
     this.indexUpdateDelaySeconds =
-        indexUpdateDelaySeconds != ABSENT_INDEX_UPDATE_DELAY_SECONDS
+        indexUpdateDelaySeconds != UNSET_NUMBER
             ? OptionalInt.of(indexUpdateDelaySeconds)
             : OptionalInt.empty();
     this.indexUpdateDelaySeconds.ifPresent(

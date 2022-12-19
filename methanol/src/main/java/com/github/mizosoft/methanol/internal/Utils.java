@@ -27,6 +27,7 @@ import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.time.Clock;
@@ -222,5 +223,9 @@ public class Utils {
     return t instanceof CompletionException
         ? ((CompletionException) t)
         : new CompletionException(t);
+  }
+
+  public static InterruptedIOException toInterruptedIOException(InterruptedException e) {
+    return (InterruptedIOException) new InterruptedIOException().initCause(e);
   }
 }

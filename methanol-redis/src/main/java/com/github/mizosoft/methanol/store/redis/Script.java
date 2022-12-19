@@ -68,8 +68,8 @@ enum Script {
 
   <K, V> RunnableScript<K, V> evalOn(RedisScriptingAsyncCommands<K, V> commands) {
     return isReadOnly
-        ? RunnableScript.of(this, commands)
-        : RunnableScript.ofReadonly(this, commands);
+        ? RunnableScript.ofReadonly(this, commands)
+        : RunnableScript.of(this, commands);
   }
 
   private static byte[] load(String path) {

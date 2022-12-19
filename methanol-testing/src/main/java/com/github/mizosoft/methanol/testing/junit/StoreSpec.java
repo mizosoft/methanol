@@ -36,9 +36,10 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface StoreSpec {
-  StoreType[] store() default {
-    StoreType.MEMORY, StoreType.DISK, StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER
-  };
+  StoreType[] store() default {StoreType.MEMORY, StoreType.DISK, StoreType.REDIS_STANDALONE};
+
+  /** Specifies {@code StoreTypes} to skip in testing. */
+  StoreType[] skipped() default {};
 
   long maxSize() default Long.MAX_VALUE;
 
@@ -54,7 +55,7 @@ public @interface StoreSpec {
   int appVersion() default 1;
 
   /** Delay between automatic index updates done by the disk store. */
-  int indexUpdateDelaySeconds() default DiskStoreConfig.ABSENT_INDEX_UPDATE_DELAY_SECONDS;
+  int indexUpdateDelaySeconds() default StoreConfig.UNSET_NUMBER;
 
   /** Whether {@link MockClock} should automatically advance itself by 1 second. */
   boolean autoAdvanceClock() default true;
@@ -65,7 +66,7 @@ public @interface StoreSpec {
    */
   boolean dispatchEagerly() default true;
 
-  int editorLockTtlSeconds() default AbstractRedisStoreConfig.ABSENT_EDITOR_LOCK_TTL_SECONDS;
+  int editorLockTtlSeconds() default StoreConfig.UNSET_NUMBER;
 
-  int staleEntryLockTtlSeconds() default AbstractRedisStoreConfig.ABSENT_STALE_ENTRY_TTL_SECONDS;
+  int staleEntryLockTtlSeconds() default StoreConfig.UNSET_NUMBER;
 }

@@ -20,7 +20,32 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol;
+package com.github.mizosoft.methanol.internal.cache;
 
-/** An extension to {@link HttpCache}. */
-public interface HttpCacheExtension {}
+import static java.util.Objects.requireNonNull;
+
+import com.github.mizosoft.methanol.StorageExtension;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+
+public interface InternalStorageExtension extends StorageExtension {
+  Store createStore(Executor executor, int appVersion);
+
+  CompletableFuture<? extends Store> createStoreAsync(Executor executor, int appVersion);
+
+  static InternalStorageExtension singleton(Store store) {
+    requireNonNull(store);
+    return new InternalStorageExtension() {
+      @Override
+      public Store createStore(Executor executor, int appVersion) {
+        return store;
+      }
+
+      @Override
+      public CompletableFuture<? extends Store> createStoreAsync(
+          Executor executor, int appVersion) {
+        return CompletableFuture.completedFuture(store);
+      }
+    };
+  }
+}

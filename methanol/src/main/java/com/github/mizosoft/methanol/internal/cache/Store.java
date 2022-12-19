@@ -56,12 +56,6 @@ public interface Store extends AutoCloseable, Flushable {
   /** Returns the optional executor used for asynchronous or background operations. */
   Optional<Executor> executor();
 
-  /** Initializes this store. */
-  void initialize() throws IOException;
-
-  /** Asynchronously initializes this store. */
-  CompletableFuture<Void> initializeAsync();
-
   /**
    * Returns a {@code Optional<Viewer>} for the entry associated with the given key, or an empty
    * optional if there's no such entry.

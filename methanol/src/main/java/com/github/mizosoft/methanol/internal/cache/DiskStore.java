@@ -49,7 +49,6 @@ import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.io.UncheckedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
@@ -208,7 +207,11 @@ public final class DiskStore implements Store {
   private final ConcurrentHashMap<Hash, Entry> entries = new ConcurrentHashMap<>();
   private final AtomicLong size = new AtomicLong();
 
-  /** A (mostly) monotonic clock used for ordering entries based on recency. */
+  /**
+   * A monotonic clock used for ordering entries based on recency. The clock is not completely
+   * monotonic, however, as the clock value can overflow. But a signed long gives us about 300 years
+   * of monotonicity assuming the clock is incremented every 1 ns, which is not bad at all.
+   */
   private final AtomicLong lruClock = new AtomicLong();
 
   private final ReadWriteLock closeLock = new ReentrantReadWriteLock();
@@ -216,7 +219,7 @@ public final class DiskStore implements Store {
   @GuardedBy("closeLock")
   private boolean closed;
 
-  private DiskStore(Builder builder, boolean debugIndexOps) {
+  private DiskStore(Builder builder, boolean debugIndexOps) throws IOException {
     maxSize = builder.maxSize();
     appVersion = builder.appVersion();
     directory = builder.directory();
@@ -242,9 +245,7 @@ public final class DiskStore implements Store {
       isIndexExecutor.set(true);
     }
     try {
-      directoryLock = initializeStore();
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+      directoryLock = initialize();
     } finally {
       if (debugIndexOps) {
         isIndexExecutor.set(false);
@@ -252,7 +253,7 @@ public final class DiskStore implements Store {
     }
   }
 
-  private DirectoryLock initializeStore() throws IOException {
+  private DirectoryLock initialize() throws IOException {
     var lock = DirectoryLock.acquire(Files.createDirectories(directory));
 
     long totalSize = 0L;
@@ -274,14 +275,6 @@ public final class DiskStore implements Store {
 
   public Path directory() {
     return directory;
-  }
-
-  @Override
-  public void initialize() {}
-
-  @Override
-  public CompletableFuture<Void> initializeAsync() {
-    return CompletableFuture.completedFuture(null);
   }
 
   @Override
@@ -2172,10 +2165,10 @@ public final class DiskStore implements Store {
     private static final int UNSET_NUMBER = -1;
 
     private long maxSize = UNSET_NUMBER;
-    private int appVersion = UNSET_NUMBER;
     private @MonotonicNonNull Path directory;
-    private @MonotonicNonNull Hasher hasher;
     private @MonotonicNonNull Executor executor;
+    private int appVersion = UNSET_NUMBER;
+    private @MonotonicNonNull Hasher hasher;
     private @MonotonicNonNull Clock clock;
     private @MonotonicNonNull Delayer delayer;
     private @MonotonicNonNull Duration indexUpdateDelay;
@@ -2233,7 +2226,7 @@ public final class DiskStore implements Store {
       return this;
     }
 
-    public DiskStore build() {
+    public DiskStore build() throws IOException {
       return new DiskStore(this, debugIndexOps || DebugUtils.isAssertionsEnabled());
     }
 

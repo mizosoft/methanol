@@ -45,7 +45,7 @@ class StoreEvictionTest {
 
   @StoreParameterizedTest
   @StoreSpec(
-      store = {StoreType.MEMORY, StoreType.DISK},
+      skipped = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
       maxSize = 10,
       execution = Execution.SAME_THREAD)
   void writeExactlyMaxSizeBytesByOneEntry(Store store) throws IOException, InterruptedException {
@@ -56,7 +56,7 @@ class StoreEvictionTest {
 
   @StoreParameterizedTest
   @StoreSpec(
-      store = {StoreType.MEMORY, StoreType.DISK},
+      skipped = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
       maxSize = 10,
       execution = Execution.SAME_THREAD)
   void writeExactlyMaxSizeBytesByTwoEntries(Store store) throws IOException, InterruptedException {
@@ -69,7 +69,7 @@ class StoreEvictionTest {
 
   @StoreParameterizedTest
   @StoreSpec(
-      store = {StoreType.MEMORY, StoreType.DISK},
+      skipped = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
       maxSize = 15,
       execution = Execution.SAME_THREAD)
   void writeBeyondMaxSize(Store store, StoreContext context)
@@ -100,7 +100,7 @@ class StoreEvictionTest {
 
   @StoreParameterizedTest
   @StoreSpec(
-      store = {StoreType.MEMORY, StoreType.DISK},
+      skipped = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
       maxSize = 15,
       execution = Execution.SAME_THREAD)
   void discardedWriteBeyondMaxSize(Store store, StoreContext context)
@@ -120,7 +120,7 @@ class StoreEvictionTest {
 
   @StoreParameterizedTest
   @StoreSpec(
-      store = {StoreType.MEMORY, StoreType.DISK},
+      skipped = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
       maxSize = 4,
       execution = Execution.SAME_THREAD)
   void writeBeyondMaxSizeByMetadataExpansion(Store store, StoreContext context)
@@ -138,7 +138,7 @@ class StoreEvictionTest {
 
   @StoreParameterizedTest
   @StoreSpec(
-      store = {StoreType.MEMORY, StoreType.DISK},
+      skipped = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
       maxSize = 4,
       execution = Execution.SAME_THREAD)
   void writeBeyondMaxSizeByDataExpansion(Store store, StoreContext context)
@@ -156,7 +156,7 @@ class StoreEvictionTest {
 
   @StoreParameterizedTest
   @StoreSpec(
-      store = {StoreType.MEMORY, StoreType.DISK},
+      skipped = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
       maxSize = 18,
       execution = Execution.SAME_THREAD)
   void lruEviction(Store store, StoreContext context) throws IOException, InterruptedException {

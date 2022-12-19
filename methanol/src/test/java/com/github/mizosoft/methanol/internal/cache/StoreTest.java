@@ -603,7 +603,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreSpec(store = {StoreType.DISK, StoreType.REDIS_STANDALONE})
+  @StoreSpec(skipped = StoreType.MEMORY)
   void writesAfterCommittingAreProhibited(Store store) throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
       write(editor, "Jynx");
@@ -616,7 +616,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreSpec(store = {StoreType.DISK, StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER})
+  @StoreSpec(skipped = StoreType.MEMORY)
   void editorProhibitsWritesAfterClosure(Store store) throws IOException, InterruptedException {
     var editor = edit(store, "e1");
     try (editor) {

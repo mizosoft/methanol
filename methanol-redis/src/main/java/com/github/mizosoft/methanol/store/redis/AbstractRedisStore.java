@@ -64,8 +64,8 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A {@link Store} implementation backed by redis. Specialized implementations are {@link
- * RedisStandaloneStore} and {@link RedisClusterStore} for standalone and cluster setups
+ * A {@link Store} implementation backed by Redis. Specialized implementations are {@link
+ * RedisStandaloneStore} and {@link RedisClusterStore} for Redis Standalone and Redis Cluster setups
  * respectively.
  */
 abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffer>>
@@ -79,6 +79,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
   final C connection;
+  final RedisConnectionProvider<C> connectionProvider;
   final int editorLockTtlSeconds;
   final int staleEntryTtlSeconds;
   final int appVersion;
@@ -86,12 +87,17 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   private volatile boolean closed;
 
   AbstractRedisStore(
-      C connection, int editorLockTtlSeconds, int staleEntryTtlSeconds, int appVersion) {
+      C connection,
+      RedisConnectionProvider<C> connectionProvider,
+      int editorLockTtlSeconds,
+      int staleEntryTtlSeconds,
+      int appVersion) {
     requireArgument(
         editorLockTtlSeconds > 0, "Expected a positive ttl, got: %s", editorLockTtlSeconds);
     requireArgument(
         staleEntryTtlSeconds > 0, "Expected a positive ttl, got: %s", staleEntryTtlSeconds);
     this.connection = requireNonNull(connection);
+    this.connectionProvider = requireNonNull(connectionProvider);
     this.editorLockTtlSeconds = editorLockTtlSeconds;
     this.staleEntryTtlSeconds = staleEntryTtlSeconds;
     this.appVersion = appVersion;
@@ -113,14 +119,6 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   @Override
   public Optional<Executor> executor() {
     return Optional.empty();
-  }
-
-  @Override
-  public void initialize() {}
-
-  @Override
-  public CompletableFuture<Void> initializeAsync() {
-    return CompletableFuture.completedFuture(null);
   }
 
   @Override
@@ -258,14 +256,8 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
         logger.log(Level.WARNING, "Exception when clearing the store on closure", e);
       }
     }
-    connection
-        .closeAsync()
-        .whenComplete(
-            (__, ex) -> {
-              if (ex != null) {
-                logger.log(Level.WARNING, "Exception when closing connection", ex);
-              }
-            });
+    connectionProvider.release(connection);
+    connectionProvider.close();
   }
 
   @Override
@@ -389,15 +381,18 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
           } else {
             // SCAN redirects back to initial cursor ('0') when finished.
             finished = true;
+            return false;
           }
         } catch (InterruptedException e) {
           // Handle interruption by gracefully ending iteration and let caller handle the
           // interruption.
           finished = true;
           Thread.currentThread().interrupt();
+          return false;
         } catch (ExecutionException e) {
           finished = true;
           logger.log(Level.WARNING, "Exception thrown when iterating over entries", e.getCause());
+          return false;
         }
       }
     }

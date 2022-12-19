@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.store.redis;
 
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 
 import io.lettuce.core.RedisException;
 import io.lettuce.core.api.async.RedisHashAsyncCommands;
@@ -46,17 +47,19 @@ import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-/** A {@code Store} implementation backed a cluster of redis servers. */
-public class RedisClusterStore
+/** A {@code Store} implementation backed by a Redis Cluster. */
+class RedisClusterStore
     extends AbstractRedisStore<StatefulRedisClusterConnection<String, ByteBuffer>> {
   private static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
 
-  public RedisClusterStore(
+  RedisClusterStore(
       StatefulRedisClusterConnection<String, ByteBuffer> connection,
+      RedisConnectionProvider<StatefulRedisClusterConnection<String, ByteBuffer>>
+          connectionProvider,
       int editorLockTtlSeconds,
       int staleEntryTtlSeconds,
       int appVersion) {
-    super(connection, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion);
+    super(connection, connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion);
   }
 
   @SuppressWarnings("unchecked")
@@ -85,9 +88,9 @@ public class RedisClusterStore
     return new ClusterScanningIterator(connection.getPartitions());
   }
 
-  /** An iterator that scans for entries on master cluster nodes. */
+  /** An iterator that scans for entries on all master cluster nodes. */
   // TODO this can be more sophisticated. We can exploit replicas for scanning, and never scan more
-  //      than one node related to the same master to avoid useless duplication.
+  //      than one replica related to the same master to avoid useless duplication.
   private final class ClusterScanningIterator implements Iterator<Viewer> {
     /**
      * The set of keys seen so far, tracked to avoid returning duplicate entries. In addition to the
@@ -132,9 +135,9 @@ public class RedisClusterStore
 
     @Override
     public void remove() {
-      // Let ScanningViewerIterator do the valid state checking.
+      requireState(currentScanningIterator != null, "next() must be called before remove()");
       var scanningIter = castNonNull(currentScanningIterator);
-      scanningIter.remove();
+      scanningIter.remove(); // Fails if not preceded by a call to next().
     }
 
     @EnsuresNonNullIf(expression = "currentScanningIterator", result = true)
@@ -166,6 +169,7 @@ public class RedisClusterStore
           }
         } else {
           finished = true;
+          return false;
         }
       }
     }

@@ -27,9 +27,6 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import java.util.OptionalInt;
 
 class AbstractRedisStoreConfig extends StoreConfig {
-  static final int ABSENT_EDITOR_LOCK_TTL_SECONDS = -1;
-  static final int ABSENT_STALE_ENTRY_TTL_SECONDS = -1;
-
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private final OptionalInt editorLockTimeToLiveSeconds;
 
@@ -43,13 +40,13 @@ class AbstractRedisStoreConfig extends StoreConfig {
       int staleEntryTimeToLiveSeconds) {
     super(redisStoreType.storeType, Long.MAX_VALUE, appVersion);
     this.editorLockTimeToLiveSeconds =
-        editorLockTimeToLiveSeconds != ABSENT_EDITOR_LOCK_TTL_SECONDS
+        editorLockTimeToLiveSeconds != UNSET_NUMBER
             ? OptionalInt.of(editorLockTimeToLiveSeconds)
             : OptionalInt.empty();
     this.editorLockTimeToLiveSeconds.ifPresent(
         value -> requireArgument(value >= 0, "Expected a non-negative value, got: %d", value));
     this.staleEntryTimeToLiveSeconds =
-        staleEntryTimeToLiveSeconds != ABSENT_STALE_ENTRY_TTL_SECONDS
+        staleEntryTimeToLiveSeconds != UNSET_NUMBER
             ? OptionalInt.of(staleEntryTimeToLiveSeconds)
             : OptionalInt.empty();
     this.staleEntryTimeToLiveSeconds.ifPresent(

@@ -22,14 +22,13 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
-import io.lettuce.core.AbstractRedisClient;
+import com.github.mizosoft.methanol.internal.cache.Store;
+import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 abstract class AbstractRedisStoreContext<R extends AutoCloseable> extends StoreContext {
-  final List<AbstractRedisClient> createdClients = new ArrayList<>();
   private @MonotonicNonNull R lazyRedisServer;
 
   AbstractRedisStoreContext(AbstractRedisStoreConfig config) {
@@ -47,26 +46,24 @@ abstract class AbstractRedisStoreContext<R extends AutoCloseable> extends StoreC
 
   abstract R createRedisServer() throws IOException;
 
-  public AbstractRedisStoreConfig config() {
-    return (AbstractRedisStoreConfig) super.config();
+  abstract void configure(RedisStorageExtension.Builder builder) throws IOException;
+
+  @Override
+  Store createStore() throws IOException {
+    var builder = RedisStorageExtension.newBuilder();
+    configure(builder);
+    config().editorLockTtlSeconds().ifPresent(builder::editorLockTtlSeconds);
+    config().staleEntryTtlSeconds().ifPresent(builder::staleEntryTtlSeconds);
+    return builder.build().createStore(Runnable::run, config().appVersion());
   }
 
-  <T extends AbstractRedisClient> T registerClient(T client) {
-    createdClients.add(client);
-    return client;
+  public AbstractRedisStoreConfig config() {
+    return (AbstractRedisStoreConfig) super.config();
   }
 
   @Override
   void close(List<Exception> exceptions) {
     super.close(exceptions);
-    for (var client : createdClients) {
-      try {
-        client.close();
-      } catch (Exception e) {
-        exceptions.add(e);
-      }
-    }
-    createdClients.clear();
 
     var server = lazyRedisServer;
     if (server != null) {

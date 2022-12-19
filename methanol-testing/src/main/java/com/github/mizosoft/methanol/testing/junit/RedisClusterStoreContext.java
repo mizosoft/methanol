@@ -22,11 +22,7 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
-import com.github.mizosoft.methanol.internal.cache.Store;
-import com.github.mizosoft.methanol.store.redis.RedisClusterStore;
-import io.lettuce.core.cluster.RedisClusterClient;
-import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.codec.StringCodec;
+import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import java.io.IOException;
 
 public final class RedisClusterStoreContext extends AbstractRedisStoreContext<LocalRedisCluster> {
@@ -43,13 +39,8 @@ public final class RedisClusterStoreContext extends AbstractRedisStoreContext<Lo
   }
 
   @Override
-  Store createStore() throws IOException {
-    var client = registerClient(RedisClusterClient.create(getOrCreateRedisServer().uris()));
-    return new RedisClusterStore(
-        client.connect(RedisCodec.of(StringCodec.UTF8, ByteBufferCodec.INSTANCE)),
-        config().editorLockTtlSeconds().orElse(15),
-        config().staleEntryTtlSeconds().orElse(15),
-        config().appVersion());
+  void configure(RedisStorageExtension.Builder builder) throws IOException {
+    builder.cluster(getOrCreateRedisServer().uris());
   }
 
   public static RedisClusterStoreContext from(RedisClusterStoreConfig config) throws IOException {
