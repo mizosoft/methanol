@@ -6,6 +6,7 @@ local metadata = ARGV[2]
 local clientDataSize = tonumber(ARGV[3]) -- < 0 to not commit the data stream.
 local staleEntryTtlSeconds = ARGV[4]
 local commit = ARGV[5]
+local clockKey = ARGV[6]
 
 local commitData = clientDataSize >= 0
 
@@ -30,14 +31,33 @@ if wipDataSize ~= clientDataSize and (commitData or wipDataSize ~= 0) then
   return false
 end
 
+local nextVersion
+if (clockKey ~= '') then
+  nextVersion = function()
+    return redis.call('incr', clockKey)
+  end
+else
+  -- Rely on milliseconds in current day for versioning. This can still cause an ABA problem in two scenarios:
+  --   A entry is created, opened for reading, deleted, then created again all in 1 ms.
+  --   A reader is opened, then the entry is deleted and created again a day later, while the
+  --   reader is still active.
+  -- Both cases can hardly occur in practice.
+  nextVersion = function()
+    local time = redis.call('time')
+    local secondsInDay = time[1] % (60 * 60 * 24)
+    local millisInDay = secondsInDay * 1000 + math.floor(time[2] / 1000)
+    return millisInDay
+  end
+end
+
 local entryVersion, dataVersion, dataSize = unpack(
     redis.call('hmget', entryKey, 'entryVersion', 'dataVersion', 'dataSize'))
-local newEntryVersion = 1 + (entryVersion or 0)
+local newEntryVersion = 1 + (entryVersion or nextVersion())
 
 local newDataSize, newDataVersion
 if commitData then
   newDataSize = wipDataSize
-  newDataVersion = 1 + (dataVersion or 0)
+  newDataVersion = 1 + (dataVersion or nextVersion())
 
   redis.call('persist', wipDataKey)
   redis.call('rename', wipDataKey, entryKey .. ':data:' .. newDataVersion)

@@ -34,7 +34,6 @@ import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.cluster.models.partitions.Partitions;
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode.NodeFlag;
-import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
@@ -50,8 +49,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 /** A {@code Store} implementation backed by a Redis Cluster. */
 class RedisClusterStore
     extends AbstractRedisStore<StatefulRedisClusterConnection<String, ByteBuffer>> {
-  private static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
-
   RedisClusterStore(
       StatefulRedisClusterConnection<String, ByteBuffer> connection,
       RedisConnectionProvider<StatefulRedisClusterConnection<String, ByteBuffer>>
@@ -59,7 +56,8 @@ class RedisClusterStore
       int editorLockTtlSeconds,
       int staleEntryTtlSeconds,
       int appVersion) {
-    super(connection, connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion);
+    super(
+        connection, connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion, "");
   }
 
   @SuppressWarnings("unchecked")

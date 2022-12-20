@@ -58,6 +58,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
@@ -70,13 +72,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffer>>
     implements Store {
-  private static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
+  static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
 
   static final long ANY_ENTRY_VERSION = -1;
-  private static final int STORE_VERSION = 1;
-  private static final String INITIAL_CURSOR = "0";
+  static final int STORE_VERSION = 1;
+  static final String INITIAL_CURSOR = "0";
 
-  private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
+  static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
   final C connection;
   final RedisConnectionProvider<C> connectionProvider;
@@ -84,14 +86,38 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   final int staleEntryTtlSeconds;
   final int appVersion;
 
-  private volatile boolean closed;
+  /**
+   * The key to a shared monotonic clock (counter) used for versioning entries (See {@link
+   * Script#COMMIT}). This avoids ABA problems caused by restarting versions with 0. Consider the
+   * following scenario:
+   *
+   * <ul>
+   *   <li>A entry is newly created with dataVersion = 0, and dataKey = '...data:0'.
+   *   <li>A viewer is opened for that entry, referencing data with dataKey = '...data:0'.
+   *   <li>The entry is deleted, then created again with dataVersion = 0 (dataKey = '...data:0'),
+   *       all while the viewer is still active (with activity suspended between deletion and
+   *       creation).
+   *   <li>The viewer continues to read with dataKey = '...data:0', thinking it's still reading the
+   *       data of the entry it was opened for. But the data it reads is partly old & partly new!
+   * </ul>
+   *
+   * <p>A shared counter is only used in Redis Standalone. Scripts executed in clusters base
+   * versioning on time instead, as they can't reliably share one key between nodes.
+   */
+  final String clockKey;
+
+  volatile boolean closed;
+
+  /** A lock to ensure only one call to {@code close()} proceeds to closing underlying resources. */
+  final Lock closeLock = new ReentrantLock();
 
   AbstractRedisStore(
       C connection,
       RedisConnectionProvider<C> connectionProvider,
       int editorLockTtlSeconds,
       int staleEntryTtlSeconds,
-      int appVersion) {
+      int appVersion,
+      String clockKey) {
     requireArgument(
         editorLockTtlSeconds > 0, "Expected a positive ttl, got: %s", editorLockTtlSeconds);
     requireArgument(
@@ -101,6 +127,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     this.editorLockTtlSeconds = editorLockTtlSeconds;
     this.staleEntryTtlSeconds = staleEntryTtlSeconds;
     this.appVersion = appVersion;
+    this.clockKey = requireNonNull(clockKey);
   }
 
   abstract <
@@ -251,9 +278,14 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   }
 
   private void doClose(boolean dispose) {
-    if (closed) return;
+    closeLock.lock();
+    try {
+      if (closed) return;
+      closed = true;
+    } finally {
+      closeLock.unlock();
+    }
 
-    closed = true;
     if (dispose) {
       try {
         unguardedClear();
@@ -635,7 +667,8 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
                   metadata,
                   encodeLong(writer.dataSizeIfWritten()), // clientDataSize
                   encodeLong(staleEntryTtlSeconds),
-                  encodeLong(1))); // commit
+                  encodeLong(1), // commit
+                  UTF_8.encode(clockKey)));
     }
 
     @Override
@@ -651,7 +684,8 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
                     EMPTY_BUFFER, // metadata
                     encodeLong(-1), // clientDataSize
                     encodeLong(staleEntryTtlSeconds),
-                    encodeLong(0)));
+                    encodeLong(0), // commit
+                    UTF_8.encode(clockKey)));
       }
     }
 

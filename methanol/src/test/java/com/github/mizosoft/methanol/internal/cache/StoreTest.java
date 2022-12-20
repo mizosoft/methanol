@@ -59,7 +59,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -324,7 +323,6 @@ class StoreTest {
    * before removal.
    */
   @StoreParameterizedTest
-  @Disabled // TODO remove when RedisStore implements semi-monotonic versioning
   void removeThenWriteWhileReading(Store store, StoreContext context)
       throws IOException, InterruptedException {
     write(store, "e1", "Ditto", "Eevee");
