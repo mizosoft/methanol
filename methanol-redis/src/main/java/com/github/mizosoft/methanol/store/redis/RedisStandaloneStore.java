@@ -30,7 +30,6 @@ import io.lettuce.core.api.async.RedisStringAsyncCommands;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 /** A {@code Store} implementation backed by a Redis Standalone instance. */
 class RedisStandaloneStore extends AbstractRedisStore<StatefulRedisConnection<String, ByteBuffer>> {
@@ -62,8 +61,7 @@ class RedisStandaloneStore extends AbstractRedisStore<StatefulRedisConnection<St
   }
 
   @Override
-  public CompletableFuture<Void> removeAllAsync(List<String> keys) {
-    var entryKeys = keys.stream().map(this::toEntryKey).collect(Collectors.toUnmodifiableList());
+  CompletableFuture<Void> removeAllEntriesAsync(List<String> entryKeys) {
     return Script.REMOVE_ALL
         .evalOn(commands())
         .asVoid(entryKeys, List.of(encodeLong(staleEntryTtlSeconds)));

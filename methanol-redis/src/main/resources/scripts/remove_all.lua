@@ -1,6 +1,6 @@
 local staleEntryTtlSeconds = ARGV[1]
 
-for entryKey in KEYS do
+for _, entryKey in pairs(KEYS) do
   local dataVersion = redis.call('hget', entryKey, 'dataVersion')
   redis.call('unlink', entryKey)
   if dataVersion then

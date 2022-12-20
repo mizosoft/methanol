@@ -73,8 +73,7 @@ class RedisClusterStore
   }
 
   @Override
-  public CompletableFuture<Void> removeAllAsync(List<String> keys) {
-    var entryKeys = keys.stream().map(this::toEntryKey).collect(Collectors.toUnmodifiableList());
+  CompletableFuture<Void> removeAllEntriesAsync(List<String> entryKeys) {
     return CompletableFuture.allOf(
         entryKeys.stream()
             .map(entryKey -> removeEntryAsync(entryKey, ANY_ENTRY_VERSION))
@@ -154,7 +153,7 @@ class RedisClusterStore
           try {
             nodeCommands = connection.async().getConnection(partition.getNodeId());
           } catch (RedisException e) {
-            logger.log(Level.WARNING, "Exception when connecting to cluster node", e);
+            logger.log(Level.WARNING, "Exception thrown when connecting to cluster node", e);
             finished = true;
             return false;
           }

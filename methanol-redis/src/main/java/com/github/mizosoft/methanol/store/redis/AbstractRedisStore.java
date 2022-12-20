@@ -33,13 +33,14 @@ import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.RedisException;
+import io.lettuce.core.ScanArgs;
+import io.lettuce.core.ScanCursor;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.async.RedisHashAsyncCommands;
 import io.lettuce.core.api.async.RedisKeyAsyncCommands;
 import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
 import io.lettuce.core.api.async.RedisStringAsyncCommands;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.ByteBuffer;
@@ -76,7 +77,9 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
 
   static final long ANY_ENTRY_VERSION = -1;
   static final int STORE_VERSION = 1;
-  static final String INITIAL_CURSOR = "0";
+  static final String INITIAL_CURSOR_VALUE = "0";
+  static final int REMOVE_ALL_SCAN_LIMIT = 128;
+  static final int ITERATOR_SCAN_LIMIT = 64;
 
   static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
@@ -119,9 +122,9 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
       int appVersion,
       String clockKey) {
     requireArgument(
-        editorLockTtlSeconds > 0, "Expected a positive ttl, got: %s", editorLockTtlSeconds);
+        editorLockTtlSeconds > 0, "expected a positive ttl, got: %s", editorLockTtlSeconds);
     requireArgument(
-        staleEntryTtlSeconds > 0, "Expected a positive ttl, got: %s", staleEntryTtlSeconds);
+        staleEntryTtlSeconds > 0, "expected a positive ttl, got: %s", staleEntryTtlSeconds);
     this.connection = requireNonNull(connection);
     this.connectionProvider = requireNonNull(connectionProvider);
     this.editorLockTtlSeconds = editorLockTtlSeconds;
@@ -226,11 +229,20 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
 
   @Override
   public boolean remove(String key) throws IOException, InterruptedException {
+    requireNotClosed();
     return Utils.get(removeEntryAsync(toEntryKey(key), ANY_ENTRY_VERSION));
   }
 
-  CompletableFuture<Boolean> removeEntryAsync(String entryKey, long targetEntryVersion) {
+  @Override
+  public CompletableFuture<Void> removeAllAsync(List<String> keys) {
     requireNotClosed();
+    return removeAllEntriesAsync(
+        keys.stream().map(this::toEntryKey).collect(Collectors.toUnmodifiableList()));
+  }
+
+  abstract CompletableFuture<Void> removeAllEntriesAsync(List<String> entryKeys);
+
+  CompletableFuture<Boolean> removeEntryAsync(String entryKey, long targetEntryVersion) {
     return Script.REMOVE
         .evalOn(commands())
         .asBoolean(
@@ -239,21 +251,9 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   }
 
   @Override
-  public void clear() {
+  public void clear() throws IOException {
     requireNotClosed();
-    unguardedClear();
-  }
-
-  private void unguardedClear() {
-    var iter = iterator();
-    while (iter.hasNext()) {
-      try (var viewer = iter.next()) {
-        viewer.removeEntry();
-      } catch (IOException e) {
-        // RedisViewer doesn't throw IOExceptions.
-        throw new AssertionError(e);
-      }
-    }
+    removeAll();
   }
 
   @Override
@@ -288,13 +288,33 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
 
     if (dispose) {
       try {
-        unguardedClear();
-      } catch (RedisException e) {
-        logger.log(Level.WARNING, "Exception when clearing the store on closure", e);
+        removeAll();
+      } catch (IOException e) {
+        logger.log(Level.WARNING, "Exception thrown when clearing the store on closure", e);
       }
     }
     connectionProvider.release(connection);
     connectionProvider.close();
+  }
+
+  private void removeAll() throws IOException {
+    var cursor = ScanCursor.INITIAL;
+    var scanArgs = ScanArgs.Builder.matches(toEntryKey("*")).limit(REMOVE_ALL_SCAN_LIMIT);
+    try {
+      do {
+        cursor =
+            Utils.get(
+                commands()
+                    .scan(cursor, scanArgs)
+                    .thenCompose(
+                        keyScanCursor ->
+                            removeAllEntriesAsync(keyScanCursor.getKeys())
+                                .thenApply(__ -> keyScanCursor))
+                    .toCompletableFuture());
+      } while (!cursor.isFinished());
+    } catch (InterruptedException e) {
+      throw Utils.toInterruptedIOException(e);
+    }
   }
 
   @Override
@@ -326,12 +346,10 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   }
 
   final class ScanningViewerIterator implements Iterator<Viewer> {
-    private static final int SCAN_LIMIT = 64;
-
     private final String pattern;
     private final RedisScriptingAsyncCommands<String, ByteBuffer> commands;
 
-    private String cursor = INITIAL_CURSOR;
+    private String cursor = INITIAL_CURSOR_VALUE;
     private boolean isInitialScan = true;
 
     private @Nullable Iterator<ScanEntry> entryIterator;
@@ -389,7 +407,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
         // RedisViewer doesn't throw IOExceptions.
         throw new AssertionError(e);
       } catch (RedisException e) {
-        logger.log(Level.WARNING, "Entry removal failure", e);
+        logger.log(Level.WARNING, "Exception thrown when removing entry", e);
       } catch (IllegalStateException ignored) {
         // Fail silently if closed or interrupted.
       }
@@ -410,25 +428,23 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
               nextViewer = createViewer(null, entry.key, entry.fields);
               return true;
             }
-          } else if (!cursor.equals(INITIAL_CURSOR) || isInitialScan) {
+          } else if ((!cursor.equals(INITIAL_CURSOR_VALUE) || isInitialScan) && !closed) {
             var scanResult = scan().get();
             cursor = scanResult.cursor;
             entryIterator = scanResult.entries.iterator();
             isInitialScan = false;
           } else {
-            // SCAN redirects back to initial cursor ('0') when finished.
             finished = true;
             return false;
           }
         } catch (InterruptedException e) {
-          // Handle interruption by gracefully ending iteration and let caller handle the
-          // interruption.
+          // Handle interruption gracefully by ending iteration and let caller handle interruption.
           finished = true;
           Thread.currentThread().interrupt();
           return false;
         } catch (ExecutionException e) {
           finished = true;
-          logger.log(Level.WARNING, "Exception thrown when iterating over entries", e.getCause());
+          logger.log(Level.WARNING, "Exception thrown during iteration", e.getCause());
           return false;
         }
       }
@@ -439,7 +455,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
           .evalOn(commands)
           .asMulti(
               List.of(),
-              List.of(UTF_8.encode(cursor), UTF_8.encode(pattern), encodeLong(SCAN_LIMIT)))
+              List.of(UTF_8.encode(cursor), UTF_8.encode(pattern), encodeLong(ITERATOR_SCAN_LIMIT)))
           .thenApply(ScanResult::from);
     }
   }
@@ -542,10 +558,11 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
 
     @Override
     public boolean removeEntry() throws IOException {
+      requireNotClosed();
       try {
         return Utils.get(AbstractRedisStore.this.removeEntryAsync(entryKey, entryVersion));
       } catch (InterruptedException e) {
-        throw (IOException) new InterruptedIOException().initCause(e);
+        throw Utils.toInterruptedIOException(e);
       }
     }
 
