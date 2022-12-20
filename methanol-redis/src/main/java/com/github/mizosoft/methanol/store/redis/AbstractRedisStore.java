@@ -200,7 +200,6 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   private CompletableFuture<Optional<Editor>> editAsync(
       @Nullable String key, String entryKey, long targetEntryVersion) {
     requireNotClosed();
-    // TODO prepend client ID
     var editorId = UUID.randomUUID().toString();
     var editorLockKey = entryKey + ":editor";
     var wipDataKey = entryKey + ":wip_data:" + editorId;
