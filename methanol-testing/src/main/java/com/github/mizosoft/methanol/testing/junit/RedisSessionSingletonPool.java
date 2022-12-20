@@ -27,6 +27,7 @@ import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+/** A pool of a single {@link RedisSession} instance. */
 class RedisSessionSingletonPool<R extends RedisSession> {
   private final ThrowingSupplier<R> factory;
   private @MonotonicNonNull R instance;
@@ -44,8 +45,8 @@ class RedisSessionSingletonPool<R extends RedisSession> {
     }
 
     if (instance != null) {
-      instance.close();
       this.instance = null;
+      instance.close();
     }
 
     try {
@@ -62,8 +63,7 @@ class RedisSessionSingletonPool<R extends RedisSession> {
   }
 
   synchronized void release(R instance) throws IOException {
-    if (instance.isHealthy() && this.instance == null) {
-      instance.reset();
+    if (this.instance == null && instance.reset()) {
       this.instance = instance;
     } else {
       instance.close();

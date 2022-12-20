@@ -44,7 +44,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class LocalRedisCluster implements RedisSession {
+public final class LocalRedisCluster implements RedisSession {
   private static final Logger logger = System.getLogger(LocalRedisCluster.class.getName());
 
   private static final int HEALTH_CHECK_MAX_RETRIES = 10;
@@ -60,24 +60,15 @@ public class LocalRedisCluster implements RedisSession {
     return nodes.stream().map(LocalRedisServer::uri).collect(Collectors.toUnmodifiableList());
   }
 
-  public final List<Path> logFiles() {
-    return nodes.stream().map(LocalRedisServer::logFile).collect(Collectors.toUnmodifiableList());
+  @Override
+  public List<Path> logFiles() {
+    return nodes.stream()
+        .flatMap(server -> server.logFiles().stream())
+        .collect(Collectors.toUnmodifiableList());
   }
 
   @Override
-  public boolean isHealthy() {
-    try (var client = RedisClusterClient.create(uris());
-        var connection = client.connect()) {
-      checkClusterRouting(connection, connection.getPartitions().size());
-      return true;
-    } catch (RedisException e) {
-      logger.log(Level.WARNING, "unhealthy redis cluster", e);
-      return false;
-    }
-  }
-
-  @Override
-  public void reset() {
+  public boolean reset() {
     try (var client = RedisClusterClient.create(uris());
         var connection = client.connect()) {
       var masters =
@@ -93,12 +84,33 @@ public class LocalRedisCluster implements RedisSession {
           // are still flagged as masters.
         }
       }
+      return true;
+    } catch (RedisException e) {
+      logger.log(Level.WARNING, "Inoperable redis cluster", e);
+      return false;
+    }
+  }
+
+  @Override
+  public boolean isHealthy() {
+    try (var client = RedisClusterClient.create(uris());
+        var connection = client.connect()) {
+      checkClusterRouting(connection);
+      return true;
+    } catch (RedisException e) {
+      logger.log(Level.WARNING, "Inoperable redis cluster", e);
+      return false;
     }
   }
 
   @Override
   public void close() throws IOException {
     closeNodes(nodes);
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + "[nodes=" + nodes + "]";
   }
 
   private static void closeNodes(List<LocalRedisServer> nodes) throws IOException {
@@ -214,7 +226,7 @@ public class LocalRedisCluster implements RedisSession {
       int retryWaitMillis = 200;
       while (true) {
         try {
-          checkClusterRouting(connection, masterCount);
+          checkClusterRouting(connection);
           break;
         } catch (RedisCommandExecutionException e) {
           retriesLeft--;
@@ -240,9 +252,9 @@ public class LocalRedisCluster implements RedisSession {
   }
 
   private static void checkClusterRouting(
-      StatefulRedisClusterConnection<String, String> connection, int keyCount) {
-    // Make sure we have good routing to (probabilistically) most of the nodes.
-    for (int i = 0; i < keyCount; i++) {
+      StatefulRedisClusterConnection<String, String> connection) {
+    // Make sure we have good routing to (probabilistically) all of the nodes.
+    for (int i = 0; i < 3 * connection.getPartitions().size(); i++) {
       var key = "k" + ThreadLocalRandom.current().nextInt();
       connection.sync().set(key, "v");
       connection.sync().del(key);

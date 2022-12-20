@@ -489,7 +489,7 @@ public final class CacheInterceptor implements Interceptor {
           .whenComplete(
               (result, ex) -> {
                 if (ex != null) {
-                  logger.log(Level.WARNING, "exception when removing entries", ex);
+                  logger.log(Level.WARNING, "Exception when removing entries", ex);
                 }
               });
       return CompletableFuture.completedFuture(this);

@@ -23,12 +23,23 @@
 package com.github.mizosoft.methanol.testing.junit;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
 
 /** A session with a Redis Standalone or Cluster setup. */
 public interface RedisSession extends AutoCloseable {
-  boolean isHealthy();
 
-  void reset();
+  /** Returns the log files attached to this session. */
+  List<Path> logFiles();
+
+  /**
+   * Resets this session to its initial state. Returns {@code true} if the session is operable after
+   * being reset.
+   */
+  boolean reset();
+
+  /** Returns {@code true} if this session is operable. */
+  boolean isHealthy();
 
   @Override
   void close() throws IOException;

@@ -74,6 +74,7 @@ import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension.UseHttps;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension.StoreParameterizedTest;
@@ -565,7 +566,10 @@ class HttpCacheTest {
             .setHeader("Cache-Control", "max-age=2")
             .setHeader("X-Version", "v1")
             .setBody("STONKS!"));
-    verifyThat(get(serverUri)).isCacheMiss().hasBody("STONKS!").containsHeader("X-Version", "v1");
+    verifyThat(get(serverUri)) //
+        .isCacheMiss()
+        .hasBody("STONKS!")
+        .containsHeader("X-Version", "v1");
     server.takeRequest(); // Remove initial request
 
     // Make stale or retain freshness
@@ -584,6 +588,8 @@ class HttpCacheTest {
     var sentRequest = server.takeRequest();
     assertThat(sentRequest.getHeaders().getInstant("If-Modified-Since"))
         .isEqualTo(effectiveLastModified);
+
+    // If-Non-Match is used only if ETag is present.
     if (config.etag) {
       assertThat(sentRequest.getHeader("If-None-Match")).isEqualTo("1");
     }
@@ -607,7 +613,10 @@ class HttpCacheTest {
             .setHeader("Cache-Control", "max-age=2")
             .setHeader("X-Version", "v1")
             .setBody("STONKS!"));
-    verifyThat(get(serverUri)).isCacheMiss().hasBody("STONKS!").containsHeader("X-Version", "v1");
+    verifyThat(get(serverUri)) //
+        .isCacheMiss()
+        .hasBody("STONKS!")
+        .containsHeader("X-Version", "v1");
     server.takeRequest(); // Remove initial request
 
     // Make stale or retain freshness
@@ -2188,6 +2197,7 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
+  @StoreSpec(store = StoreType.REDIS_CLUSTER)
   void manuallyInvalidateEntries(Store store) throws Exception {
     setUpCache(store);
     var uri1 = serverUri.resolve("/a");
@@ -2967,13 +2977,17 @@ class HttpCacheTest {
     verifyThat(get(request.cacheControl(cacheControl))).isCacheUnsatisfaction();
 
     var dispatcher = server.getDispatcher();
+    boolean prevFailOnUnavailableResponses = failOnUnavailableResponses;
+    failOnUnavailableResponses = false;
     try {
       server.setDispatcher(new QueueDispatcher());
-      server.enqueue(new MockResponse().setResponseCode(HTTP_INTERNAL_ERROR));
+      ((QueueDispatcher) server.getDispatcher())
+          .setFailFast(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
       verifyThat(get(request.copy().removeHeader("Cache-Control")))
-          .hasCode(HTTP_INTERNAL_ERROR)
+          .hasCode(HTTP_UNAVAILABLE)
           .isCacheMiss();
     } finally {
+      failOnUnavailableResponses = prevFailOnUnavailableResponses;
       server.setDispatcher(dispatcher);
     }
   }

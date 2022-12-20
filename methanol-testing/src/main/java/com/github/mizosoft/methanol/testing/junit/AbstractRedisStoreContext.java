@@ -23,12 +23,23 @@
 package com.github.mizosoft.methanol.testing.junit;
 
 import com.github.mizosoft.methanol.internal.cache.Store;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreContext {
+  private static final int MAX_TAIL_LENGTH = 15;
+
+  private static final Logger logger = System.getLogger(AbstractRedisStoreContext.class.getName());
+
   private final RedisSessionSingletonPool<R> sessionPool;
   private @MonotonicNonNull R lazySession;
 
@@ -49,18 +60,6 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
     return session;
   }
 
-  void releaseSession(boolean returnToPool) throws IOException {
-    var session = lazySession;
-    if (session != null) {
-      lazySession = null;
-      if (returnToPool) {
-        sessionPool.release(session);
-      } else {
-        session.close();
-      }
-    }
-  }
-
   @Override
   Store createStore() throws IOException {
     var builder = RedisStorageExtension.newBuilder();
@@ -79,9 +78,41 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
     super.close(exceptions);
 
     try {
-      releaseSession(true);
+      var session = lazySession;
+      if (session != null) {
+        lazySession = null;
+        sessionPool.release(session);
+      }
     } catch (IOException e) {
       exceptions.add(e);
     }
+  }
+
+  @Override
+  void logDebugInfo() {
+    var session = lazySession;
+    if (session != null) {
+      session.logFiles().stream()
+          .map(Unchecked.func(AbstractRedisStoreContext::tail))
+          .forEach(log -> logger.log(Level.WARNING, log));
+    }
+  }
+
+  /**
+   * Returns a string containing at most the last {@value MAX_TAIL_LENGTH} lines of the given file.
+   */
+  private static String tail(Path file) throws IOException {
+    // This is somewhat inefficient, but it suffices for current usage.
+    var tail = new ArrayDeque<String>();
+    try (var stream = Files.lines(file)) {
+      stream.forEach(
+          line -> {
+            tail.add(line);
+            if (tail.size() > MAX_TAIL_LENGTH) {
+              tail.removeFirst();
+            }
+          });
+    }
+    return tail.stream().collect(Collectors.joining(System.lineSeparator()));
   }
 }

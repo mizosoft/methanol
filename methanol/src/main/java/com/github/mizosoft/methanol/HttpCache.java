@@ -127,7 +127,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   /** Returns an {@code Optional} containing this cache's executor if one is explicitly set. */
   public Optional<Executor> executor() {
-    return isDefaultExecutor ? Optional.of(executor) : Optional.empty();
+    return isDefaultExecutor ? Optional.empty() : Optional.of(executor);
   }
 
   /** Returns the {@link Listener} set by the user. */
@@ -269,7 +269,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
           try {
             viewer.removeEntry();
           } catch (IOException e) {
-            logger.log(Level.WARNING, "exception when removing corrupt entry", e);
+            logger.log(Level.WARNING, "Exception when thrown removing corrupt entry", e);
           }
         }
       }
@@ -326,7 +326,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       try {
         return CacheResponseMetadata.decode(viewer.metadata());
       } catch (IOException e) {
-        logger.log(Level.WARNING, "unrecoverable cache entry", e);
+        logger.log(Level.WARNING, "Unrecoverable cache entry", e);
       }
     }
     return null;

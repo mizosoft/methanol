@@ -82,11 +82,10 @@ public final class StoreExtension
         .getExecutionException()
         .ifPresent(
             Unchecked.consumer(
-                ex ->
+                __ ->
                     ManagedStores.get(context)
                         .allContexts(context.getRequiredTestMethod())
-                        .forEach(
-                            Unchecked.consumer(storeContext -> storeContext.attachDebugInfo(ex)))));
+                        .forEach(StoreContext::logDebugInfo)));
   }
 
   @Override

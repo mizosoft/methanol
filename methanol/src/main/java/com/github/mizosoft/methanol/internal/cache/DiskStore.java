@@ -677,7 +677,7 @@ public final class DiskStore implements Store {
     try {
       closeable.close();
     } catch (IOException e) {
-      logger.log(Level.WARNING, "exception when closing: " + closeable, e);
+      logger.log(Level.WARNING, "Exception thrown when closing: " + closeable, e);
     }
   }
 
@@ -685,7 +685,7 @@ public final class DiskStore implements Store {
     try {
       Files.deleteIfExists(path);
     } catch (IOException e) {
-      logger.log(Level.WARNING, "exception when deleting: " + path, e);
+      logger.log(Level.WARNING, "Exception thrown when deleting: " + path, e);
     }
   }
 
@@ -736,7 +736,7 @@ public final class DiskStore implements Store {
       try {
         viewer.removeEntry();
       } catch (IOException e) {
-        logger.log(Level.WARNING, "exception thrown when removing entry", e);
+        logger.log(Level.WARNING, "Exception thrown when removing entry", e);
       }
     }
 
@@ -750,7 +750,7 @@ public final class DiskStore implements Store {
         var entry = entryIterator.next();
         var future = viewAsyncIfOpen(entry);
         if (future == null) {
-          return false; // Handle closure by gracefully ending iteration.
+          return false; // Handle closure gracefully by ending iteration.
         }
         try {
           var viewer = Utils.get(future);
@@ -759,9 +759,11 @@ public final class DiskStore implements Store {
             return true;
           }
         } catch (IOException e) {
-          logger.log(Level.WARNING, "exception thrown when iterating over entries", e);
+          // Try next entry.
+          logger.log(Level.WARNING, "Exception thrown when iterating over entries", e);
         } catch (InterruptedException e) {
           interrupted = true;
+          Thread.currentThread().interrupt();
           break;
         }
       }
@@ -864,7 +866,7 @@ public final class DiskStore implements Store {
         return Set.of();
       } catch (StoreCorruptionException | EOFException e) {
         // TODO consider trying to rebuild the index from a directory scan instead.
-        logger.log(Level.WARNING, "dropping store content due to an unreadable index", e);
+        logger.log(Level.WARNING, "Dropping store content due to an unreadable index", e);
 
         deleteStoreContent(directory);
         return Set.of();
@@ -939,11 +941,11 @@ public final class DiskStore implements Store {
           } else {
             logger.log(
                 Level.WARNING,
-                "unrecognized file or directory found during initialization <"
+                "Unrecognized file or directory found during initialization <"
                     + file
                     + ">. "
                     + System.lineSeparator()
-                    + "It is generally not a good idea to let the store directory be used by other entities");
+                    + "It is generally not a good idea to let the store directory be used by other entities.");
           }
         }
       }
@@ -1190,7 +1192,7 @@ public final class DiskStore implements Store {
           try {
             run();
           } catch (IOException e) {
-            logger.log(Level.ERROR, "exception thrown when writing the index", e);
+            logger.log(Level.ERROR, "Exception thrown when writing the index", e);
           }
         };
       }
@@ -1245,7 +1247,7 @@ public final class DiskStore implements Store {
             break;
           }
         } catch (IOException e) {
-          logger.log(Level.ERROR, "exception thrown when evicting entries in background", e);
+          logger.log(Level.ERROR, "Exception thrown when evicting entries in background", e);
         }
 
         // Exit or consume keep-alive bit.
@@ -1522,7 +1524,7 @@ public final class DiskStore implements Store {
         channel = AsynchronousFileChannel.open(entryFile(), Set.of(READ), channelExecutor());
       } catch (NoSuchFileException missingEntryFile) {
         // Our file disappeared! We'll handle this gracefully by making the store lose track of us.
-        logger.log(Level.WARNING, "dropping entry with missing file", missingEntryFile);
+        logger.log(Level.WARNING, "Dropping entry with missing file", missingEntryFile);
         try {
           removeEntry(this);
         } catch (IOException ignored) {

@@ -56,8 +56,8 @@ public abstract class StoreContext implements AutoCloseable {
   /** If execution is queued, makes sure all tasks queued so far are executed. */
   public void drainQueuedTasksIfNeeded() {}
 
-  /** Attaches debug information to a test failure. */
-  void attachDebugInfo(Throwable exception) throws IOException {}
+  /** Logs debug info after a test failure. */
+  void logDebugInfo() {}
 
   @Override
   public void close() throws Exception {

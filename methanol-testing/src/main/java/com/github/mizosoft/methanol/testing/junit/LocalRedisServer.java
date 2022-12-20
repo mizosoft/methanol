@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class LocalRedisServer implements RedisSession {
+public final class LocalRedisServer implements RedisSession {
   private static final Logger logger = System.getLogger(LocalRedisServer.class.getName());
 
   private static final String LOOPBACK_ADDRESS = "127.0.0.1";
@@ -93,8 +93,25 @@ public class LocalRedisServer implements RedisSession {
     return directory;
   }
 
-  public Path logFile() {
-    return logFile;
+  @Override
+  public List<Path> logFiles() {
+    return List.of(logFile);
+  }
+
+  @Override
+  public boolean reset() {
+    if (closed || !process.isAlive()) {
+      return false;
+    }
+
+    try (var client = RedisClient.create(uri);
+        var connection = client.connect()) {
+      connection.sync().flushall();
+      return true;
+    } catch (RedisException e) {
+      logger.log(Level.WARNING, "Inoperable redis server", e);
+      return false;
+    }
   }
 
   @Override
@@ -109,20 +126,8 @@ public class LocalRedisServer implements RedisSession {
       connection.sync().del("k");
       return true;
     } catch (RedisException e) {
-      logger.log(Level.WARNING, "unhealthy redis server", e);
+      logger.log(Level.WARNING, "Inoperable redis server", e);
       return false;
-    }
-  }
-
-  @Override
-  public void reset() {
-    if (closed || !process.isAlive()) {
-      throw new IllegalStateException();
-    }
-
-    try (var client = RedisClient.create(uri);
-        var connection = client.connect()) {
-      connection.sync().flushall();
     }
   }
 
@@ -163,7 +168,8 @@ public class LocalRedisServer implements RedisSession {
 
   @Override
   public String toString() {
-    return "LocalRedisServer[uri="
+    return getClass().getSimpleName()
+        + "[uri="
         + uri
         + ", process="
         + process
@@ -227,8 +233,8 @@ public class LocalRedisServer implements RedisSession {
     var logFileString = effectiveConfig.remove("--logfile");
     var logFile =
         logFileString != null
-            ? Path.of(logFileString)
-            : Files.createTempFile(LocalRedisServer.class.getSimpleName(), ".log");
+            ? directory.resolve(logFileString)
+            : Files.createTempFile(directory, LocalRedisServer.class.getSimpleName(), ".log");
     for (int retriesLeft = MASTER_SERVER_START_RETRIES; retriesLeft > 0; retriesLeft--) {
       int port = ThreadLocalRandom.current().nextInt(SERVER_PORT_START, SERVER_PORT_END);
       var process = tryStart(effectiveConfig, port, logFile);
