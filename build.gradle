@@ -31,7 +31,7 @@ ext {
   }
 
   // Project has tests that contribute to coverage?
-  contributesToTests = { project ->
+  contributesToCoverage = { project ->
     project.name in [
         'methanol',
         'methanol-blackbox',
@@ -41,19 +41,20 @@ ext {
         'methanol-jackson-flux',
         'methanol-jaxb',
         'methanol-protobuf',
-        // TODO uncomment when redis-specific tests are added 'methanol-redis'
+        // TODO uncomment when redis-specific tests are added
+        // 'methanol-redis'
     ]
   }
 
   // Project is included in coverage report?
   isIncludedInCoverageReport = { project ->
-    isPublished(project) && project.name != 'methanol-benchmarks'
+    isPublished(project) && !(project.name in ['methanol-testing', 'methanol-benchmarks'])
   }
 
   getArtifactId = { project ->
     if (!isPublished(project)) return null
 
-    return project.name == 'methanol-benchmarks' ? 'benchmarks' : project.name
+    return project.name
   }
 }
 
@@ -223,24 +224,21 @@ subprojects { subproject ->
   }
 }
 
-task jacocoMerge(type: JacocoMerge) {
-  subprojects.each { subproject ->
-    if (contributesToTests(subproject)) {
-      executionData subproject.tasks.withType(Test)
-    }
-  }
-}
+tasks.register('jacocoRootReport', JacocoReport) { jacocoRootReport ->
+  subprojects.findAll { subproject -> contributesToCoverage(subproject) }
+      .each { subproject ->
+        subproject.tasks.matching { t -> t.extensions.findByType(JacocoTaskExtension) }
+            .configureEach { task ->
+              executionData task
+              jacocoRootReport.dependsOn task
+            }
+      }
 
-task jacocoRootReport(type: JacocoReport) {
-  dependsOn jacocoMerge
-  executionData jacocoMerge.destinationFile
-  subprojects.each { subproject ->
-    if (isIncludedInCoverageReport(subproject)) {
-      additionalSourceDirs.from subproject.sourceSets.main.allSource.srcDirs
-      sourceDirectories.from subproject.sourceSets.main.allSource.srcDirs
-      classDirectories.from subproject.sourceSets.main.output
-    }
-  }
+  subprojects.findAll { subproject -> isIncludedInCoverageReport(subproject) }
+      .each { subproject ->
+        sourceSets subproject.sourceSets.main
+      }
+
   reports {
     xml.required = true
     html.required = true
@@ -263,7 +261,7 @@ tasks.coveralls {
 }
 
 /** This task generates an aggregate Javadoc for all published modules (except benchmarks). */
-task rootJavadoc(type: Javadoc) {
+tasks.register('rootJavadoc', Javadoc) {
   def lazyModulePath = files() // --module-path
   def moduleSrcPaths = [:] // --module-source-path for multi-module compilation
   subprojects { Project subproject ->
@@ -290,13 +288,13 @@ task rootJavadoc(type: Javadoc) {
 
   doFirst {
     // Must be run in JDK12+ as the specific form of --module-source-path
-    // is used because module names don't match containing directory names
+    // is used because module names don't match containing directory names.
     // https://bugs.java.com/bugdatabase/view_bug.do?bug_id=8208608
     if (!JavaVersion.current().isJava12Compatible()) {
       throw new GradleException('JDK 12 or later is required for multimodule Javadoc');
     }
 
-    // these would otherwise be in gradlew.projectsEvaluated {} but it complains
+    // These would otherwise be in gradle.projectsEvaluated {} but it complains.
     options {
       modulePath lazyModulePath.files.toList()
       addMultilineStringsOption('-module-source-path').with {
@@ -308,6 +306,6 @@ task rootJavadoc(type: Javadoc) {
   }
 }
 
-task clean(type: Delete) {
+tasks.register('clean') {
   delete rootProject.buildDir
 }

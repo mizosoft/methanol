@@ -51,7 +51,7 @@ dependencies {
   testImplementation project(':methanol-testing')
 }
 
-task installBrotli(type: Copy) {
+tasks.register('installBrotli', Copy) {
   description = 'Builds and copies brotli jni natives to the resources directory'
   getJniConfigs(configurations).each { config ->
     if (!config.resolvedConfiguration.hasError()) {

@@ -28,7 +28,7 @@ ext {
   tckLoggers = new ConcurrentHashMap<String, PrintWriter>()
 }
 
-task tckTest(type: Test) {
+tasks.register('tckTest', Test) {
   useTestNG()
   include '**/tck/**'
   shouldRunAfter test
@@ -87,7 +87,7 @@ task tckTest(type: Test) {
   }
 }
 
-task closeTckLoggers {
+tasks.register('closeTckLoggers') {
   doFirst {
     tckLoggers.values().forEach { it.close() }
     tckLoggers.clear()

@@ -19,7 +19,7 @@ shadowJar {
   mergeServiceFiles()
 }
 
-task jmh(type: JavaExec) {
+tasks.register('jmh') {
   classpath = files(shadowJar)
   args('-foe', 'true')
   def additionalArgs = System.properties.jmhArgs
@@ -33,7 +33,7 @@ task jmh(type: JavaExec) {
   }
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
   options.errorprone {
     excludedPaths = '.*/build/generated/.*' // jmh generated code makes errorprone go nuts
   }

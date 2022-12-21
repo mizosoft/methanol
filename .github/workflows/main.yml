@@ -13,14 +13,17 @@ jobs:
           - windows-latest
           - macos-latest
         java: [ 17 ]
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+
       - name: Setup Java ${{ matrix.java }}
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
           java-version: ${{ matrix.java }}
+          distribution: temurin
 
-      - name: Install Redis
+      - name: Setup Redis
         shell: bash
 
         # It seems there's no straightforward way to install a recent redis version on Windows, so
@@ -35,106 +38,55 @@ jobs:
             ./install-redis-ubuntu.sh
           fi 
 
-      - name: Restore Gradle cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: ${{ matrix.os }}-java${{ matrix.java }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ matrix.os }}-java${{ matrix.java }}-gradle
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
       - name: Make gradlew executable
-        if: startsWith(${{ matrix.os }}, 'ubuntu') || startsWith(${{ matrix.os }}, 'macos')
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: chmod +x gradlew
 
-      - name: Run tests
+      - name: Run Tests
         shell: bash
-        run: | # brotli is not currently supported for mac so tests are excluded on macos
+
+        # Brotli is not currently supported on macOS so related tests there are excluded.
+        run: |
           ./gradlew -PenableErrorprone check \
           `if [[ "${{ matrix.os }}" == macos* ]]; then echo '-x :methanol-brotli:test'; fi`
 
-      # Save test results as artifacts
-      - name: Save test results
-        uses: actions/upload-artifact@v2
-        if: ${{ always() }}
-        with:
-          name: ${{ matrix.os }}-java${{ matrix.java }}-test-results
-          path: ./*/build/test-results/
-
-  coverage_report:
-    name: Coverage report
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Java 17
-        uses: actions/setup-java@v1
-        with:
-          java-version: 17
-
-      - name: Install Redis
-        shell: bash
-
-        # It seems there's no straightforward way to install a recent redis version on Windows, so
-        # let's only consider macOS & Ubuntu for RedisStore tests.
-        run: |
-          if [[ "${{ matrix.os }}" == macos* ]]
-          then 
-            brew install redis
-          elif [[ "${{ matrix.os }}" == ubuntu* ]] 
-          then
-            chmod +x install-redis-ubuntu.sh
-            ./install-redis-ubuntu.sh
-          fi  
-
-      - name: Restore Gradle cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: ${{ runner.os }}-java17-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-java17-gradle
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      - name: Upload JaCoCo report to Coveralls
+      - name: Coverage Report
+        if: matrix.os == 'ubuntu-latest'
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: ./gradlew coveralls
 
-      # Save test results as artifacts
-      - name: Save test results
-        uses: actions/upload-artifact@v2
-        if: ${{ always() }}
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        if: always()
         with:
-          name: coverage-report-ubuntu-latest-java-17-test-results
+          name: ${{ matrix.os }}-java-${{ matrix.java }}-test-results
           path: ./*/build/test-results/
 
   publish_snapshot:
-    name: Publish artifacts
+    name: Publish Artifacts
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Java 17
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
           java-version: 17
+          distribution: temurin
 
-      - name: Restore Gradle cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: ${{ runner.os }}-java17-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-java17-gradle
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
       - name: Make gradlew executable
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos'
         run: chmod +x gradlew
 
-      - name: Run gradle publish
+      - name: Publish Artifacts
         env:
           ORG_GRADLE_PROJECT_nexusUsername: ${{ secrets.NEXUS_USERNAME }}
           ORG_GRADLE_PROJECT_nexusPassword: ${{ secrets.NEXUS_PASSWORD }}
@@ -144,27 +96,32 @@ jobs:
         run: ./gradlew publish -x check
 
   publish_site:
-    name: Publish documentation site
+    name: Publish Site
     runs-on: ubuntu-latest
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-java@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
         with:
           java-version: 17
+          distribution: temurin
 
-      # MkDocs needs python to run
+      # MkDocs needs python to run.
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11.1
 
-      - name: Generate docs
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Generate Docs
         run: |
           chmod +x gradlew
           chmod +x ./generate-docs.sh
           ./generate-docs.sh
-      - name: Deploy site
+
+      - name: Deploy Site
         uses: JamesIves/github-pages-deploy-action@4.1.1
         with:
           branch: gh-pages
