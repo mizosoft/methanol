@@ -11,7 +11,7 @@
 <link rel="stylesheet" type="text/css" href="../../../../../../../script-dir/jquery-ui.min.css" title="Style">
 <link rel="stylesheet" type="text/css" href="../../../../../../../jquery-ui.overrides.css" title="Style">
 <script type="text/javascript" src="../../../../../../../script.js"></script>
-<script type="text/javascript" src="../../../../../../../script-dir/jquery-3.5.1.min.js"></script>
+<script type="text/javascript" src="../../../../../../../script-dir/jquery-3.6.0.min.js"></script>
 <script type="text/javascript" src="../../../../../../../script-dir/jquery-ui.min.js"></script>
 </head>
 <body class="class-declaration-page">
@@ -95,7 +95,7 @@ implements <a href="Store.html" title="interface in com.github.mizosoft.methanol
 <h2>Nested Class Summary</h2>
 <div class="inherited-list">
 <h2 id="nested-classes-inherited-from-class-com.github.mizosoft.methanol.internal.cache.Store">Nested classes/interfaces inherited from interface&nbsp;com.github.mizosoft.methanol.internal.cache.<a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></h2>
-<code><a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>, <a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a></code></div>
+<code><a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>, <a href="Store.EntryReader.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.EntryReader</a>, <a href="Store.EntryWriter.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.EntryWriter</a>, <a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a></code></div>
 </section>
 </li>
 <!-- ======== CONSTRUCTOR SUMMARY ======== -->
@@ -137,58 +137,57 @@ implements <a href="Store.html" title="interface in com.github.mizosoft.methanol
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Atomically clears and closes this store.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>@Nullable <a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a></code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#edit(java.lang.String)" class="member-name-link">edit</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns an <code>Editor</code> for the entry associated with the given key (atomically creating a
- new one if necessary), or <code>null</code> if such entry is currently being edited.</div>
+<div class="block">Returns an <code>Optional&lt;Editor&gt;</code> for the entry associated with the given key (atomically
+ creating a new one if necessary), or an empty optional if such entry can't be edited.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#executor()" class="member-name-link">executor</a>()</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the optional executor used for background operations.</div>
-</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#flush()" class="member-name-link">flush</a>()</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>&gt;&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#editAsync(java.lang.String)" class="member-name-link">editAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#executor()" class="member-name-link">executor</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Flushes any data buffered by this store.</div>
+<div class="block">Returns the optional executor used for asynchronous or background operations.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#initialize()" class="member-name-link">initialize</a>()</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#flush()" class="member-name-link">flush</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Initializes this store.</div>
+<div class="block">Flushes any data buffered by this store.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Void.html" title="class or interface in java.lang" class="external-link">Void</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#initializeAsync()" class="member-name-link">initializeAsync</a>()</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Iterator.html" title="class or interface in java.util" class="external-link">Iterator</a>&lt;<a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#iterator()" class="member-name-link">iterator</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Asynchronously initializes this store.</div>
+<div class="block">Returns an iterator of <code>Viewers</code> over the entries in this store.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Iterator.html" title="class or interface in java.util" class="external-link">Iterator</a>&lt;<a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#iterator()" class="member-name-link">iterator</a>()</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>long</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#maxSize()" class="member-name-link">maxSize</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns a iterator of <code>Viewers</code> over the entries in this store.</div>
-</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>long</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#maxSize()" class="member-name-link">maxSize</a>()</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns this store's max size in bytes.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#remove(java.lang.String)" class="member-name-link">remove</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#remove(java.lang.String)" class="member-name-link">remove</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Removes the entry associated with the given key.</div>
 </div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Void.html" title="class or interface in java.lang" class="external-link">Void</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#removeAllAsync(java.util.List)" class="member-name-link">removeAllAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;keys)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>long</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#size()" class="member-name-link">size</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the size in bytes of all entries in this store.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>@Nullable <a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a></code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#view(java.lang.String)" class="member-name-link">view</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns a <code>Viewer</code> for the entry associated with the given key, or <code>null</code> if
- there's no such entry.</div>
+<div class="block">Returns a <code>Optional&lt;Viewer&gt;</code> for the entry associated with the given key, or an empty
+ optional if there's no such entry.</div>
 </div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a>&gt;&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#viewAsync(java.lang.String)" class="member-name-link">viewAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 </div>
 </div>
 </div>
@@ -225,37 +224,10 @@ implements <a href="Store.html" title="interface in com.github.mizosoft.methanol
 <h3>executor</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&gt;</span>&nbsp;<span class="element-name">executor</span>()</div>
 <div class="block"><span class="descfrm-type-label">Description copied from interface:&nbsp;<code><a href="Store.html#executor()">Store</a></code></span></div>
-<div class="block">Returns the optional executor used for background operations.</div>
+<div class="block">Returns the optional executor used for asynchronous or background operations.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="Store.html#executor()">executor</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
-</dl>
-</section>
-</li>
-<li>
-<section class="detail" id="initialize()">
-<h3>initialize</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">initialize</span>()
-                throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></span></div>
-<div class="block"><span class="descfrm-type-label">Description copied from interface:&nbsp;<code><a href="Store.html#initialize()">Store</a></code></span></div>
-<div class="block">Initializes this store.</div>
-<dl class="notes">
-<dt>Specified by:</dt>
-<dd><code><a href="Store.html#initialize()">initialize</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
-<dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></code></dd>
-</dl>
-</section>
-</li>
-<li>
-<section class="detail" id="initializeAsync()">
-<h3>initializeAsync</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Void.html" title="class or interface in java.lang" class="external-link">Void</a>&gt;</span>&nbsp;<span class="element-name">initializeAsync</span>()</div>
-<div class="block"><span class="descfrm-type-label">Description copied from interface:&nbsp;<code><a href="Store.html#initializeAsync()">Store</a></code></span></div>
-<div class="block">Asynchronously initializes this store.</div>
-<dl class="notes">
-<dt>Specified by:</dt>
-<dd><code><a href="Store.html#initializeAsync()">initializeAsync</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
 </dl>
 </section>
 </li>
@@ -286,10 +258,10 @@ implements <a href="Store.html" title="interface in com.github.mizosoft.methanol
 <li>
 <section class="detail" id="view(java.lang.String)">
 <h3>view</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">@Nullable <a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a></span>&nbsp;<span class="element-name">view</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a>&gt;</span>&nbsp;<span class="element-name">view</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</span></div>
 <div class="block"><span class="descfrm-type-label">Description copied from interface:&nbsp;<code><a href="Store.html#view(java.lang.String)">Store</a></code></span></div>
-<div class="block">Returns a <code>Viewer</code> for the entry associated with the given key, or <code>null</code> if
- there's no such entry.</div>
+<div class="block">Returns a <code>Optional&lt;Viewer&gt;</code> for the entry associated with the given key, or an empty
+ optional if there's no such entry.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="Store.html#view(java.lang.String)">view</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
@@ -297,15 +269,35 @@ implements <a href="Store.html" title="interface in com.github.mizosoft.methanol
 </section>
 </li>
 <li>
+<section class="detail" id="viewAsync(java.lang.String)">
+<h3>viewAsync</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a>&gt;&gt;</span>&nbsp;<span class="element-name">viewAsync</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</span></div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="Store.html#viewAsync(java.lang.String)">viewAsync</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
+</dl>
+</section>
+</li>
+<li>
 <section class="detail" id="edit(java.lang.String)">
 <h3>edit</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">@Nullable <a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a></span>&nbsp;<span class="element-name">edit</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>&gt;</span>&nbsp;<span class="element-name">edit</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</span></div>
 <div class="block"><span class="descfrm-type-label">Description copied from interface:&nbsp;<code><a href="Store.html#edit(java.lang.String)">Store</a></code></span></div>
-<div class="block">Returns an <code>Editor</code> for the entry associated with the given key (atomically creating a
- new one if necessary), or <code>null</code> if such entry is currently being edited.</div>
+<div class="block">Returns an <code>Optional&lt;Editor&gt;</code> for the entry associated with the given key (atomically
+ creating a new one if necessary), or an empty optional if such entry can't be edited.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="Store.html#edit(java.lang.String)">edit</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="editAsync(java.lang.String)">
+<h3>editAsync</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>&gt;&gt;</span>&nbsp;<span class="element-name">editAsync</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;key)</span></div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="Store.html#editAsync(java.lang.String)">editAsync</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
 </dl>
 </section>
 </li>
@@ -314,9 +306,9 @@ implements <a href="Store.html" title="interface in com.github.mizosoft.methanol
 <h3>iterator</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Iterator.html" title="class or interface in java.util" class="external-link">Iterator</a>&lt;<a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a>&gt;</span>&nbsp;<span class="element-name">iterator</span>()</div>
 <div class="block"><span class="descfrm-type-label">Description copied from interface:&nbsp;<code><a href="Store.html#iterator()">Store</a></code></span></div>
-<div class="block">Returns a iterator of <code>Viewers</code> over the entries in this store. The iterator doesn't
- throw <code>ConcurrentModificationException</code> when the store is changed but might or might not
- reflect these changes.</div>
+<div class="block">Returns an iterator of <code>Viewers</code> over the entries in this store. The iterator doesn't
+ throw <code>ConcurrentModificationException</code> when the store is modified, but there's no
+ guarantee these changes are reflected.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="Store.html#iterator()">iterator</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
@@ -332,6 +324,16 @@ implements <a href="Store.html" title="interface in com.github.mizosoft.methanol
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="Store.html#remove(java.lang.String)">remove</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="removeAllAsync(java.util.List)">
+<h3>removeAllAsync</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Void.html" title="class or interface in java.lang" class="external-link">Void</a>&gt;</span>&nbsp;<span class="element-name">removeAllAsync</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;keys)</span></div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="Store.html#removeAllAsync(java.util.List)">removeAllAsync</a></code>&nbsp;in interface&nbsp;<code><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></code></dd>
 </dl>
 </section>
 </li>

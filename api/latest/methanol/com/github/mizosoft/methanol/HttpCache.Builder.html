@@ -11,7 +11,7 @@
 <link rel="stylesheet" type="text/css" href="../../../../../script-dir/jquery-ui.min.css" title="Style">
 <link rel="stylesheet" type="text/css" href="../../../../../jquery-ui.overrides.css" title="Style">
 <script type="text/javascript" src="../../../../../script.js"></script>
-<script type="text/javascript" src="../../../../../script-dir/jquery-3.5.1.min.js"></script>
+<script type="text/javascript" src="../../../../../script-dir/jquery-3.6.0.min.js"></script>
 <script type="text/javascript" src="../../../../../script-dir/jquery-ui.min.js"></script>
 </head>
 <body class="class-declaration-page">
@@ -102,8 +102,16 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#build()" class="member-name-link">build</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Builds a new <code>HttpCache</code>.</div>
+<div class="block">Creates a new <code>HttpCache</code>.</div>
 </div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#buildAsync()" class="member-name-link">buildAsync</a>()</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Asynchronously creates a new <code>HttpCache</code>.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cacheOn(com.github.mizosoft.methanol.StorageExtension)" class="member-name-link">cacheOn</a><wbr>(<a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a>&nbsp;storageExtension)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cacheOnDisk(java.nio.file.Path,long)" class="member-name-link">cacheOnDisk</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;directory,
  long&nbsp;maxSize)</code></div>
@@ -165,6 +173,12 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
+<section class="detail" id="cacheOn(com.github.mizosoft.methanol.StorageExtension)">
+<h3>cacheOn</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">cacheOn</span><wbr><span class="parameters">(<a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a>&nbsp;storageExtension)</span></div>
+</section>
+</li>
+<li>
 <section class="detail" id="executor(java.util.concurrent.Executor)">
 <h3>executor</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">executor</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
@@ -189,7 +203,14 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="build()">
 <h3>build</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></span>&nbsp;<span class="element-name">build</span>()</div>
-<div class="block">Builds a new <code>HttpCache</code>.</div>
+<div class="block">Creates a new <code>HttpCache</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="buildAsync()">
+<h3>buildAsync</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a>&gt;</span>&nbsp;<span class="element-name">buildAsync</span>()</div>
+<div class="block">Asynchronously creates a new <code>HttpCache</code>.</div>
 </section>
 </li>
 </ul>

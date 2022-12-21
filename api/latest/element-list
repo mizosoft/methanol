@@ -26,3 +26,11 @@ module:methanol.adapter.protobuf
 com.github.mizosoft.methanol.adapter.protobuf
 module:methanol.brotli
 com.github.mizosoft.methanol.brotli.internal
+module:methanol.redis
+com.github.mizosoft.methanol.store.redis
+module:methanol.testing
+com.github.mizosoft.methanol.testing
+com.github.mizosoft.methanol.testing.decoder
+com.github.mizosoft.methanol.testing.file
+com.github.mizosoft.methanol.testing.junit
+com.github.mizosoft.methanol.testing.verifiers
