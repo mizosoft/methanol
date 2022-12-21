@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,8 +42,9 @@ public class FlowSupport {
 
   // The value is small because usage is normally with ByteBuffer items, which already
   // take non-trivial space (the HTTP-client allocates 16Kb sizes). So using
-  // Flow.defaultBufferSize() (256) with such sizes would require 4Mb of space!
+  // Flow.defaultBufferSize() (256) with such sizes would require 4Mb of space.
   private static final int DEFAULT_PREFETCH = 16;
+
   // Request more when half consumed
   private static final int DEFAULT_PREFETCH_FACTOR = 50;
 
@@ -105,13 +106,13 @@ public class FlowSupport {
 
   /**
    * Returns the prefetch threshold according to the prefetch factor property or a default of
-   * {@value DEFAULT_PREFETCH}{@code / 2}.
+   * {@value DEFAULT_PREFETCH} {@code / 2}.
    */
   public static int prefetchThreshold() {
     return PREFETCH_THRESHOLD;
   }
 
-  /** Adds the given count to demand making sure it doesn't exceed {@code Long.MAX_VALUE}. */
+  /** Adds the given count to demand, making sure it doesn't exceed {@code Long.MAX_VALUE}. */
   public static long getAndAddDemand(Object owner, VarHandle demand, long n) {
     while (true) {
       long currentDemand = (long) demand.getVolatile(owner);
@@ -125,7 +126,7 @@ public class FlowSupport {
     }
   }
 
-  /** Subtracts given count from demand. Caller ensures result won't be negative. */
+  /** Subtracts given count from demand. Caller must ensure the result won't be negative. */
   public static long subtractAndGetDemand(Object owner, VarHandle demand, long n) {
     return (long) demand.getAndAdd(owner, -n) - n;
   }
@@ -135,22 +136,20 @@ public class FlowSupport {
     return (Publisher<T>) EMPTY_PUBLISHER;
   }
 
-  public static IllegalStateException multipleSubscribersToUnicast() {
-    return new IllegalStateException("multiple subscribers to a unicast publisher");
-  }
-
-  public static void refuse(Subscriber<?> subscriber, Throwable error) {
+  public static void rejectMulticast(Subscriber<?> subscriber) {
+    var exception = new IllegalStateException("multiple subscribers to a unicast publisher");
     try {
       subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     } catch (Throwable t) {
-      error.addSuppressed(t);
+      exception.addSuppressed(t);
     } finally {
-      subscriber.onError(error);
+      subscriber.onError(exception);
     }
   }
 
-  public static void onDroppedError(Throwable error) {
-    // TODO allow the user to install a hook instead of always logging
-    logger.log(Level.WARNING, "the following error was dropped", error);
+  // TODO allow the user to install a hook instead of always logging
+
+  public static void onDroppedException(Throwable exception) {
+    logger.log(Level.WARNING, "dropped exception", exception);
   }
 }

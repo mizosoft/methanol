@@ -92,7 +92,7 @@ public final class RedirectingInterceptor implements Interceptor {
       throws IOException, InterruptedException {
     return policy == Redirect.NEVER
         ? chain.forward(request)
-        : Utils.block(doIntercept(request, chain, false));
+        : Utils.get(doIntercept(request, chain, false));
   }
 
   @Override
@@ -182,14 +182,14 @@ public final class RedirectingInterceptor implements Interceptor {
       var response = result();
       var redirectedRequest = redirectedRequest(response);
       if (redirectedRequest == null || redirectCount.incrementAndGet() > MAX_REDIRECTS) {
-        // Reached destination or exceeded allowed redirects
+        // Reached destination or exceeded allowed redirects.
         return CompletableFuture.completedFuture(this);
       }
 
-      // Discard the body of the redirecting response
+      // Discard the body of the redirecting response.
       Handlers.handleAsync(response, BodyHandlers.discarding(), handlerExecutor);
 
-      // Follow redirected request
+      // Follow redirected request.
       return new Redirector(redirectedRequest, sendAdapter, redirectCount, null, response)
           .sendAndFollowUp();
     }

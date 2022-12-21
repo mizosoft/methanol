@@ -29,10 +29,10 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -64,14 +64,6 @@ public final class MemoryStore implements Store {
   }
 
   @Override
-  public void initialize() throws IOException {}
-
-  @Override
-  public CompletableFuture<Void> initializeAsync() {
-    return CompletableFuture.completedFuture(null);
-  }
-
-  @Override
   public long maxSize() {
     return maxSize;
   }
@@ -82,20 +74,29 @@ public final class MemoryStore implements Store {
   }
 
   @Override
-  public @Nullable Viewer view(String key) {
+  public Optional<Viewer> view(String key) {
     requireNonNull(key);
     synchronized (entries) {
-      var entry = entries.get(key);
-      return entry != null ? entry.view() : null;
+      return Optional.ofNullable(entries.get(key)).map(Entry::view);
     }
   }
 
   @Override
-  public @Nullable Editor edit(String key) {
+  public CompletableFuture<Optional<Viewer>> viewAsync(String key) {
+    return CompletableFuture.completedFuture(view(key));
+  }
+
+  @Override
+  public Optional<Editor> edit(String key) {
     requireNonNull(key);
     synchronized (entries) {
-      return entries.computeIfAbsent(key, Entry::new).edit();
+      return Optional.ofNullable(entries.computeIfAbsent(key, Entry::new).edit(Entry.ANY_VERSION));
     }
+  }
+
+  @Override
+  public CompletableFuture<Optional<Editor>> editAsync(String key) {
+    return CompletableFuture.completedFuture(edit(key));
   }
 
   @Override
@@ -117,6 +118,12 @@ public final class MemoryStore implements Store {
       }
       return false;
     }
+  }
+
+  @Override
+  public CompletableFuture<Void> removeAllAsync(List<String> keys) {
+    keys.forEach(this::remove);
+    return CompletableFuture.completedFuture(null);
   }
 
   @Override
@@ -142,18 +149,19 @@ public final class MemoryStore implements Store {
   public void flush() {}
 
   /**
-   * Marks entry for eviction and decrements its last committed size. Called before removal from the
-   * LRU map. Returns the current size after decrementing the evicted entry's size.
+   * Marks the given entry for eviction and decrements its last committed size. Called before
+   * removal from the LRU map. Returns the current size after decrementing the evicted entry's size.
    */
   private long evict(Entry entry) {
-    // Lock must be held to avoid concurrent decrements on `size`
-    // which can cause evictExcessiveEntries() to evict more entries than necessary.
+    // Lock must be held to avoid concurrent decrements on `size` which can cause
+    // evictExcessiveEntries() to evict more entries than necessary.
     assert Thread.holdsLock(entries);
 
-    entry.markEvicted(); // Prevent the entry from increasing size if an edit is yet to be committed
+    // Prevent the entry from increasing this store's size if an edit is yet to be committed.
+    entry.markEvicted();
+
     var viewer = entry.view();
-    long evictedSize = viewer != null ? viewer.entrySize() : 0L;
-    return size.addAndGet(-evictedSize);
+    return viewer != null ? size.addAndGet(-viewer.entrySize()) : size.get();
   }
 
   /** Keeps evicting entries in LRU order till size becomes <= maxSize. */
@@ -171,21 +179,21 @@ public final class MemoryStore implements Store {
   private final class ViewerIterator implements Iterator<Viewer> {
     /**
      * Iterator over a snapshot of currently available keys to avoid CMEs. This however will miss
-     * keys added after this iterator is returned, which is OK.
+     * keys added after this iterator is returned, which is acceptable.
      */
-    private final Iterator<String> keysIterator;
+    private final Iterator<String> keysSnapshotIterator;
 
     private @Nullable MemoryViewer nextViewer;
     private @Nullable MemoryViewer currentViewer;
 
     ViewerIterator(Set<String> keysSnapshot) {
-      keysIterator = keysSnapshot.iterator();
+      keysSnapshotIterator = keysSnapshot.iterator();
     }
 
     @Override
     @EnsuresNonNullIf(expression = "nextViewer", result = true)
     public boolean hasNext() {
-      return nextViewer != null || findNextViewer();
+      return nextViewer != null || findNext();
     }
 
     @Override
@@ -208,11 +216,11 @@ public final class MemoryStore implements Store {
     }
 
     @EnsuresNonNullIf(expression = "nextViewer", result = true)
-    private boolean findNextViewer() {
+    private boolean findNext() {
       assert nextViewer == null;
       synchronized (entries) {
-        while (keysIterator.hasNext()) {
-          var entry = entries.get(keysIterator.next());
+        while (keysSnapshotIterator.hasNext()) {
+          var entry = entries.get(keysSnapshotIterator.next());
           var viewer = entry != null ? entry.view() : null;
           if (viewer != null) {
             nextViewer = viewer;
@@ -235,7 +243,11 @@ public final class MemoryStore implements Store {
     private @Nullable MemoryEditor currentEditor;
     private boolean evicted;
 
-    /** The number of committed edits. 0 means the entry can't be viewed. */
+    /**
+     * This entry's version, also indicating the number of committed edits. A value of 0 means the
+     * entry can't be viewed as it has had 0 edits. This is the case for newly created entries
+     * living in the map during their first edit.
+     */
     private int version;
 
     Entry(String key) {
@@ -245,35 +257,32 @@ public final class MemoryStore implements Store {
     @Nullable MemoryViewer view() {
       lock.lock();
       try {
-        return version > 0
-            ? new MemoryViewer(this, version, metadata.duplicate(), data.duplicate())
-            : null;
+        return version > 0 ? new MemoryViewer(this, version, metadata, data) : null;
       } finally {
         lock.unlock();
       }
-    }
-
-    @Nullable MemoryEditor edit() {
-      return edit(ANY_VERSION);
     }
 
     @Nullable MemoryEditor edit(int targetVersion) {
       lock.lock();
       try {
-        if (currentEditor == null
-            && (targetVersion == ANY_VERSION || targetVersion == version)
-            && !evicted) {
-          var editor = new MemoryEditor(this);
-          currentEditor = editor;
-          return editor;
+        if (currentEditor != null
+            || (targetVersion != ANY_VERSION && targetVersion != version)
+            || evicted) {
+          return null;
         }
-        return null; // Ongoing edit or entry is modified
+
+        var editor = new MemoryEditor(this);
+        currentEditor = editor;
+        return editor;
       } finally {
         lock.unlock();
       }
     }
 
-    /** Prevents any ongoing edit from committing its data. */
+    /**
+     * Tells this entry it's been evicted, which prevents any ongoing edit from committing changes.
+     */
     void markEvicted() {
       lock.lock();
       try {
@@ -283,7 +292,7 @@ public final class MemoryStore implements Store {
       }
     }
 
-    boolean versionMatches(int targetVersion) {
+    boolean versionEquals(int targetVersion) {
       lock.lock();
       try {
         return version == targetVersion;
@@ -292,40 +301,43 @@ public final class MemoryStore implements Store {
       }
     }
 
-    void commitEdit(
+    boolean commit(
         MemoryEditor editor, @Nullable ByteBuffer newMetadata, @Nullable ByteBuffer newData) {
-      long oldEntrySize;
-      long newEntrySize;
+      long entrySizeDifference;
       boolean evictAfterDiscardedFirstEdit = false;
       lock.lock();
       try {
-        assert currentEditor == editor;
-        currentEditor = null;
-        if ((newMetadata == null && newData == null) || evicted) { // Discarded edit or evicted
-          evictAfterDiscardedFirstEdit = version == 0 && !evicted;
-          return;
+        if (currentEditor == null) {
+          return false;
         }
 
-        oldEntrySize = (long) metadata.remaining() + data.remaining();
+        assert currentEditor == editor;
+        currentEditor = null;
+        if ((newMetadata == null && newData == null) || evicted) {
+          evictAfterDiscardedFirstEdit = version == 0 && !evicted;
+          return false;
+        }
+
+        long oldEntrySize = (long) metadata.remaining() + data.remaining();
         if (newMetadata != null) {
           metadata = newMetadata.asReadOnlyBuffer();
         }
         if (newData != null) {
           data = newData.asReadOnlyBuffer();
         }
-        newEntrySize = (long) metadata.remaining() + data.remaining();
+        entrySizeDifference = (long) metadata.remaining() + data.remaining() - oldEntrySize;
         version++;
       } finally {
         lock.unlock();
 
-        // Evict the entry if its first edit ever was discarded. This would be
-        // inside the try block above but that risks a deadlock as lock
-        // and entries lock are held in reverse order in other methods.
+        // Evict the entry if its first edit ever was discarded. This would be inside the try block
+        // above but that risks a deadlock as this lock and store's lock are held in reverse order
+        // in other methods.
         if (evictAfterDiscardedFirstEdit) {
           synchronized (entries) {
             lock.lock();
             try {
-              if (version == 0) { // Recheck as another edit might have been made successfully
+              if (version == 0) { // Recheck as another edit might have been committed successfully.
                 entries.remove(key, this);
               }
             } finally {
@@ -335,10 +347,10 @@ public final class MemoryStore implements Store {
         }
       }
 
-      long netEntrySize = newEntrySize - oldEntrySize; // Might be negative
-      if (size.addAndGet(netEntrySize) > maxSize) {
+      if (size.addAndGet(entrySizeDifference) > maxSize) {
         evictExcessiveEntries();
       }
+      return true;
     }
   }
 
@@ -362,21 +374,29 @@ public final class MemoryStore implements Store {
 
     @Override
     public ByteBuffer metadata() {
-      return metadata.duplicate(); // Duplicate for independent position/limit
+      return metadata.duplicate();
     }
 
     @Override
-    public CompletableFuture<Integer> readAsync(long position, ByteBuffer dst) {
-      requireNonNull(dst);
-      int readCount;
-      if (position < data.limit()) {
-        // duplicate to change position independently in case of concurrent reads
-        var duplicateData = data.duplicate();
-        readCount = Utils.copyRemaining(duplicateData.position((int) position), dst);
-      } else {
-        readCount = -1;
-      }
-      return CompletableFuture.completedFuture(readCount);
+    public EntryReader newReader() {
+      return new EntryReader() {
+        private final ByteBuffer data = MemoryViewer.this.data.duplicate();
+
+        @Override
+        public CompletableFuture<Integer> read(ByteBuffer dst) {
+          requireNonNull(dst);
+          return CompletableFuture.completedFuture(copyRemaining(dst));
+        }
+
+        private int copyRemaining(ByteBuffer dst) {
+          synchronized (data) {
+            if (!data.hasRemaining()) {
+              return -1;
+            }
+            return Utils.copyRemaining(data, dst);
+          }
+        }
+      };
     }
 
     @Override
@@ -390,14 +410,14 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public @Nullable Editor edit() {
-      return entry.edit(entryVersion);
+    public CompletableFuture<Optional<Editor>> editAsync() {
+      return CompletableFuture.completedFuture(Optional.ofNullable(entry.edit(entryVersion)));
     }
 
     @Override
     public boolean removeEntry() {
       synchronized (entries) {
-        if (entry.versionMatches(entryVersion) && entries.remove(entry.key, entry)) {
+        if (entry.versionEquals(entryVersion) && entries.remove(entry.key, entry)) {
           evict(entry);
           return true;
         }
@@ -411,13 +431,9 @@ public final class MemoryStore implements Store {
 
   private static final class MemoryEditor implements Editor {
     private final Entry entry;
-    private final GrowableBuffer data = new GrowableBuffer();
     private final Lock lock = new ReentrantLock();
-
-    private ByteBuffer metadata = EMPTY_BUFFER;
-    private boolean editedMetadata;
-    private boolean editedData;
-    private boolean committed;
+    private final ByteArrayOutputStream data = new ByteArrayOutputStream();
+    private boolean isDataWritten;
 
     MemoryEditor(Entry entry) {
       this.entry = entry;
@@ -429,36 +445,41 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public void metadata(ByteBuffer metadata) {
-      requireNonNull(metadata);
+    public EntryWriter writer() {
       lock.lock();
       try {
-        requireNotCommitted();
-        this.metadata = Utils.copy(metadata).asReadOnlyBuffer();
-        editedMetadata = true;
+        isDataWritten = true;
       } finally {
         lock.unlock();
       }
+      return src -> {
+        requireNonNull(src);
+        lock.lock();
+        try {
+          int byteCount = src.remaining();
+          if (src.hasArray()) {
+            data.write(src.array(), src.arrayOffset() + src.position(), src.remaining());
+          } else {
+            var srcCopy = new byte[src.remaining()];
+            src.get(srcCopy);
+            data.write(srcCopy, 0, srcCopy.length);
+          }
+          return CompletableFuture.completedFuture(byteCount);
+        } finally {
+          lock.unlock();
+        }
+      };
     }
 
     @Override
-    public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-      requireNonNull(src);
-      lock.lock();
-      try {
-        requireNotCommitted();
-        editedData = true;
-        return CompletableFuture.completedFuture(data.write(position, src));
-      } finally {
-        lock.unlock();
-      }
+    public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
+      return CompletableFuture.completedFuture(entry.commit(this, metadata, dataIfWritten()));
     }
 
-    @Override
-    public void commitOnClose() {
+    private @Nullable ByteBuffer dataIfWritten() {
       lock.lock();
       try {
-        committed = true;
+        return isDataWritten ? ByteBuffer.wrap(data.toByteArray()) : null;
       } finally {
         lock.unlock();
       }
@@ -466,84 +487,7 @@ public final class MemoryStore implements Store {
 
     @Override
     public void close() {
-      ByteBuffer newMetadata = null;
-      ByteBuffer newData = null;
-      lock.lock();
-      try {
-        if (committed) {
-          newMetadata = editedMetadata ? metadata : null;
-          newData = editedData ? data.snapshot() : null;
-        }
-      } finally {
-        lock.unlock();
-      }
-      entry.commitEdit(this, newMetadata, newData);
-    }
-
-    private void requireNotCommitted() {
-      requireState(!committed, "committed");
-    }
-  }
-
-  /** Growable buffer allowing writing to arbitrary positions within last-written bounds. */
-  private static final class GrowableBuffer {
-    private final SeekableByteArrayOutputStream output = new SeekableByteArrayOutputStream();
-
-    int write(long position, ByteBuffer src) {
-      output.position(position); // Handles out-of-range position
-      int writeCount = src.remaining();
-      if (src.hasArray()) {
-        output.write(src.array(), src.arrayOffset() + src.position(), writeCount);
-        src.position(writeCount);
-      } else {
-        byte[] srcCopy = new byte[writeCount];
-        src.get(srcCopy);
-        output.write(srcCopy);
-      }
-      return writeCount;
-    }
-
-    ByteBuffer snapshot() {
-      return ByteBuffer.allocate(output.fence()).put(output.array(), 0, output.fence()).flip();
-    }
-
-    /** ByteArrayOutputStream that exposes underlying array buffer & write position. */
-    @SuppressWarnings("UnsynchronizedOverridesSynchronized") // Synchronization is done by caller
-    private static final class SeekableByteArrayOutputStream extends ByteArrayOutputStream {
-      /** Position right after the last written byte. */
-      private int fence;
-
-      SeekableByteArrayOutputStream() {}
-
-      /** Single-byte writes are not used. */
-      @Override
-      public void write(int b) {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public void write(byte[] b, int off, int len) {
-        super.write(b, off, len);
-        fence = Math.max(fence, count);
-      }
-
-      @Override
-      public void write(byte[] b) {
-        write(b, 0, b.length);
-      }
-
-      byte[] array() {
-        return buf;
-      }
-
-      int fence() {
-        return fence;
-      }
-
-      void position(long position) {
-        requireArgument(position >= 0 && position <= fence, "position out of range: %d", position);
-        count = (int) position;
-      }
+      entry.commit(this, null, null);
     }
   }
 }

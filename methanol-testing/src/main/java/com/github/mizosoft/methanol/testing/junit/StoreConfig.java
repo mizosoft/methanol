@@ -22,62 +22,70 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.testing.MockClock;
-import com.github.mizosoft.methanol.testing.MockExecutor;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-/** Specifies one or more {@code Store} configurations for a test case. */
-@Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface StoreConfig {
+public abstract class StoreConfig {
+  static final int UNSET_NUMBER = -1;
 
-  int DEFAULT_INDEX_UPDATE_DELAY = -1;
+  private final StoreType storeType;
+  private final long maxSize;
+  private final int appVersion;
 
-  long maxSize() default Long.MAX_VALUE;
-
-  StoreType[] store() default {StoreType.MEMORY, StoreType.DISK};
-
-  FileSystemType[] fileSystem() default {
-    FileSystemType.IN_MEMORY, FileSystemType.SYSTEM, FileSystemType.EMULATED_WINDOWS
-  };
-
-  Execution execution() default Execution.ASYNC;
-
-  int appVersion() default 1;
-
-  /** Delay between automatic index updates done by the disk store. */
-  long indexUpdateDelaySeconds() default DEFAULT_INDEX_UPDATE_DELAY;
-
-  /** Automatically initialize a created store. */
-  boolean autoInit() default true;
-
-  /** Whether {@link MockClock} should automatically advance itself by 1 second. */
-  boolean autoAdvanceClock() default true;
-
-  enum StoreType {
-    MEMORY,
-    DISK
+  StoreConfig(StoreType storeType, long maxSize, int appVersion) {
+    requireArgument(maxSize > 0, "non-positive maxSize: %s", maxSize);
+    this.storeType = requireNonNull(storeType);
+    this.maxSize = maxSize;
+    this.appVersion = appVersion;
   }
 
-  enum FileSystemType {
+  public StoreType storeType() {
+    return storeType;
+  }
+
+  public long maxSize() {
+    return maxSize;
+  }
+
+  public int appVersion() {
+    return appVersion;
+  }
+
+  public static StoreConfig createDefault(StoreType storeType) {
+    switch (storeType) {
+      case MEMORY:
+        return new MemoryStoreConfig(Long.MAX_VALUE);
+      case DISK:
+        return new DiskStoreConfig(
+            Long.MAX_VALUE, 1, FileSystemType.SYSTEM, Execution.ASYNC, UNSET_NUMBER, true, true);
+      case REDIS_STANDALONE:
+        return new RedisStandaloneStoreConfig(1, UNSET_NUMBER, UNSET_NUMBER);
+      case REDIS_CLUSTER:
+        return new RedisClusterStoreConfig(1, UNSET_NUMBER, UNSET_NUMBER);
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  public enum StoreType {
+    MEMORY,
+    DISK,
+    REDIS_STANDALONE,
+    REDIS_CLUSTER
+  }
+
+  public enum FileSystemType {
     IN_MEMORY,
     SYSTEM,
-    EMULATED_WINDOWS // See WindowsEmulatingFileSystem.
+    EMULATED_WINDOWS, // See WindowsEmulatingFileSystem.
+    NONE
   }
 
-  enum Execution {
-    QUEUED {
-      @Override
-      public Executor newExecutor() {
-        return new MockExecutor();
-      }
-    },
+  public enum Execution {
     SAME_THREAD {
       @Override
       public Executor newExecutor() {

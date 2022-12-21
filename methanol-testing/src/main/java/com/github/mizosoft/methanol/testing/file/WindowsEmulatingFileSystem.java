@@ -44,20 +44,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A {@code FileSystem} that wraps another to emulate Windows behaviour regarding deletion of files
- * with open handles. Tracked handles are only those acquired with {@code FileChannels} and {@code
- * AsynchronousFileChannels} (i.e. using methods like {@code Files::newOutputStream} won't run
- * emulation properly).
+ * A {@code FileSystem} that wraps another to emulate Windows' behaviour regarding deletion of files
+ * with open handles. Only file handles acquired through {@code FileChannels} and {@code
+ * AsynchronousFileChannels} are tracked.
  *
  * <p>On Windows, deleting files while they're open isn't allowed by default. One has to open the
  * file with FILE_SHARE_DELETE for that to work. Luckily, NIO opens file channels as such. The
  * problem is when a file is requested for deletion while having open handles, Windows only
  * guarantees it gets physically deleted after all its open handles are closed. In the meantime, the
- * OS denies access to that file. Since Windows associates handles with file names, the deleted file
- * name hence can't be used. Things like creating a new file with the name of a file marked for
- * deletion, renaming another file to such name or opening any sort of channel to such file all
- * throw {@code AccessDeniedException}. This file system emulates that behavior so we're sure these
- * cases are covered when interacting with files on Windows.
+ * OS denies access to that file. Since Windows associates handles with file names
+ * (https://devblogs.microsoft.com/oldnewthing/20040607-00/?p=38993), the deleted file name is hence
+ * retained till all handles to that file are closed. Things like creating a new file with the name
+ * of a file marked for deletion, renaming another file to such name or opening any sort of channel
+ * to such file all throw {@code AccessDeniedException}. This file system emulates that behavior so
+ * we're sure these cases are covered when interacting with files on Windows.
  */
 public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
   private WindowsEmulatingFileSystem(
@@ -86,7 +86,8 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
               new ForwardingFileChannel(super.newFileChannel(path, options, attrs)) {
                 @Override
                 public void implCloseChannel() throws IOException {
-                  // We don't need a guard as implCloseChannel is called atomically at most once
+                  // We don't need a guard as implCloseChannel is called atomically by parent at
+                  // most once.
                   try (Closeable ignored = super::implCloseChannel) {
                     onClose.accept(this);
                   }
@@ -110,8 +111,8 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
 
                 @Override
                 public void close() throws IOException {
-                  try (var ignored = delegate()) {
-                    if (closed.compareAndSet(false, true)) {
+                  if (closed.compareAndSet(false, true)) {
+                    try (Closeable ignored = super::close) {
                       onClose.accept(this);
                     }
                   }
@@ -126,20 +127,20 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
         var openFile = openFiles.get(path);
         if (openFile != null && openFile.markedForDeletion) {
           throw newAccessDeniedException(
-              path, null, "opening a resource for an open file marked for deletion");
+              path, null, "opening a resource for a deleted file with open handles");
         }
 
-        openFile = openFiles.computeIfAbsent(path, OpenFile::new);
+        if (openFile == null) {
+          openFile = new OpenFile(path);
+          openFiles.put(path, openFile);
+        }
         try {
-          var resourceObject = factory.create(this::onClose);
-          openFile.addResource(resourceRecord, resourceObject);
-          return resourceObject;
+          return openFile.addResource(resourceRecord, factory.create(this::onClose));
         } catch (IOException e) {
-          // Drop the open file record if it's newly created.
+          // Drop the OpenFile if it's newly created.
           if (openFile.hasNoResources()) {
             openFiles.remove(path);
           }
-
           throw e;
         }
       }
@@ -152,7 +153,6 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
             if (openFile.hasNoResources()) {
               openFiles.remove(openFile.path);
               if (openFile.markedForDeletion) {
-                // Perform actual deletion form the delegate file system.
                 super.delete(openFile.path);
               }
             }
@@ -172,12 +172,12 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
         var openFile = openFiles.get(dir);
         if (openFile != null && openFile.markedForDeletion) {
           throw newAccessDeniedException(
-              dir, null, "recycling an open file marked for deletion to a directory");
+              dir, null, "creating a directory with the name of a deleted file with open handles");
         }
       }
 
-      // If there's a record then the path is a file and a FileAlreadyExistsException
-      // should be thrown, but we'll let the delegate FileSystemProvider handle that.
+      // If there's a record then the path is a file and a FileAlreadyExistsException should be
+      // thrown, but we'll let the delegate FileSystemProvider handle that.
       super.createDirectory(dir, attrs);
     }
 
@@ -186,12 +186,10 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
       synchronized (openFiles) {
         var openFile = openFiles.get(path);
         if (openFile != null) {
-          // Deny access if file is already marked for deletion.
           if (openFile.markedForDeletion) {
             throw newAccessDeniedException(
-                path, null, "deleting an open file that's already marked for deletion");
+                path, null, "deleting an already deleted file with open handles");
           }
-
           openFile.markedForDeletion = true;
         } else {
           super.delete(path);
@@ -204,12 +202,10 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
       synchronized (openFiles) {
         var openFile = openFiles.get(path);
         if (openFile != null) {
-          // Deny access if file is already marked for deletion.
           if (openFile.markedForDeletion) {
             throw newAccessDeniedException(
-                path, null, "deleting an open file that's already marked for deletion");
+                path, null, "deleting an already deleted file with open handles");
           }
-
           openFile.markedForDeletion = true;
           return true;
         } else {
@@ -236,7 +232,7 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
 
         super.move(source, target, options);
 
-        // Now associate source open file with the new path.
+        // Now associate sourceOpenFile with the new path.
         openFiles.remove(source);
         if (sourceOpenFile != null) {
           openFiles.put(target, sourceOpenFile.withPath(target));
@@ -265,7 +261,7 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
           new AccessDeniedException(
               source.toString(),
               target != null ? target.toString() : null,
-              message + "; see suppressed exceptions for open resources & their creation sites");
+              message + "; see suppressed exceptions for open resources & their creation sites.");
 
       var sourceOpenFile = openFiles.get(source);
       if (sourceOpenFile != null) {
@@ -300,18 +296,19 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
         this.path = path;
       }
 
-      void addResource(ResourceRecord record, Closeable resourceObject) {
+      <R extends Closeable> R addResource(ResourceRecord record, R resourceObject) {
         resources.add(new OpenFileResource(record, resourceObject));
+        return resourceObject;
       }
 
       boolean removeResource(Closeable resourceObject) {
-        var resource =
+        var resourceToRemove =
             resources.stream()
                 .filter(
-                    openResource ->
-                        openResource.resourceObject == resourceObject) // Match by object identity.
+                    resource ->
+                        resource.resourceObject == resourceObject) // Match by object identity.
                 .findFirst();
-        return resource.map(resources::remove).orElse(false);
+        return resourceToRemove.map(resources::remove).orElse(false);
       }
 
       boolean hasNoResources() {

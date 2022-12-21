@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,9 +41,11 @@ public class TckUtils {
   /**
    * An arbitrary max for the # of elements needed to be precomputed for creating the test
    * publisher. This avoids OMEs when createFlowPublisher() is called with a large # of elements
-   * (currently happens with required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue)
+   * (currently happens with required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue).
    */
   static final int MAX_PRECOMPUTED_ELEMENTS = 1 << 10;
+
+  private TckUtils() {}
 
   static ExecutorService fixedThreadPool() {
     return Executors.newFixedThreadPool(FIXED_POOL_SIZE);
@@ -58,7 +60,7 @@ public class TckUtils {
   }
 
   private static long getTimeout(String prop, long defaultVal) {
-    String value = System.getProperty(prop);
+    var value = System.getProperty(prop);
     if (value == null) {
       return defaultVal;
     }

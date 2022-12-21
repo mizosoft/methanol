@@ -22,30 +22,32 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.MEMORY;
+import static com.github.mizosoft.methanol.testing.TestUtils.EMPTY_BUFFER;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listener;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
+import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.testing.FailingPublisher;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import com.github.mizosoft.methanol.testing.junit.ResolvedStoreConfig;
+import com.github.mizosoft.methanol.testing.junit.RedisClusterStoreContext;
+import com.github.mizosoft.methanol.testing.junit.RedisStandaloneStoreContext;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -59,13 +61,13 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
 
 public class CacheWritingPublisherTck extends FlowPublisherVerification<List<ByteBuffer>> {
-  private static final AtomicInteger entryId = new AtomicInteger();
-
   static {
     Logging.disable(CacheWritingPublisher.class);
   }
 
-  private final ResolvedStoreConfig storeConfig;
+  private static final AtomicInteger entryId = new AtomicInteger();
+
+  private final StoreConfig storeConfig;
 
   private Executor executor;
   private StoreContext storeContext;
@@ -74,14 +76,14 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
   @Factory(dataProvider = "provider")
   public CacheWritingPublisherTck(StoreType storeType) {
     super(TckUtils.testEnvironment());
-    storeConfig = ResolvedStoreConfig.createDefault(storeType);
+    storeConfig = StoreConfig.createDefault(storeType);
   }
 
   @BeforeMethod
   public void setUpExecutor() throws IOException {
     executor = TckUtils.fixedThreadPool();
-    storeContext = storeConfig.createContext();
-    store = storeContext.newStore();
+    storeContext = StoreContext.from(storeConfig);
+    store = storeContext.createAndRegisterStore();
   }
 
   @AfterMethod
@@ -97,18 +99,19 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
     try {
       return new CacheWritingPublisher(
           toFlowPublisher(new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
-          requireNonNull(store.edit("test-entry-" + entryId.getAndIncrement())),
+          store.edit("test-entry-" + entryId.getAndIncrement()).orElseThrow(),
+          EMPTY_BUFFER,
           Listener.disabled(),
           true);
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+    } catch (IOException | InterruptedException e) {
+      throw new CompletionException(e);
     }
   }
 
   @Override
   public Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
     return new CacheWritingPublisher(
-        new FailingPublisher<>(TestException::new), DisabledEditor.INSTANCE);
+        new FailingPublisher<>(TestException::new), DisabledEditor.INSTANCE, EMPTY_BUFFER);
   }
 
   private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {
@@ -143,7 +146,15 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
 
   @DataProvider
   public static Object[][] provider() {
-    return new Object[][] {{DISK}, {MEMORY}};
+    var parameters =
+        new ArrayList<>(List.of(new Object[] {StoreType.DISK}, new Object[] {StoreType.MEMORY}));
+    if (RedisStandaloneStoreContext.isAvailable()) {
+      parameters.add(new Object[] {StoreType.REDIS_STANDALONE});
+    }
+    if (RedisClusterStoreContext.isAvailable()) {
+      parameters.add(new Object[] {StoreType.REDIS_CLUSTER});
+    }
+    return parameters.toArray(Object[][]::new);
   }
 
   private enum DisabledEditor implements Editor {
@@ -155,17 +166,18 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
     }
 
     @Override
-    public void metadata(ByteBuffer metadata) {}
-
-    @Override
-    public CompletableFuture<Integer> writeAsync(long position, ByteBuffer src) {
-      int remaining = src.remaining();
-      src.position(src.position() + remaining);
-      return CompletableFuture.completedFuture(remaining);
+    public EntryWriter writer() {
+      return src -> {
+        int remaining = src.remaining();
+        src.position(src.position() + remaining);
+        return CompletableFuture.completedFuture(remaining);
+      };
     }
 
     @Override
-    public void commitOnClose() {}
+    public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
+      return CompletableFuture.completedFuture(false);
+    }
 
     @Override
     public void close() {}

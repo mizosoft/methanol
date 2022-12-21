@@ -137,9 +137,11 @@ subprojects { subproject ->
     useJUnitPlatform()
     testLogging {
       events 'skipped', 'failed'
-      exceptionFormat = 'full'
+      exceptionFormat 'full'
       showCauses true
-      showStandardStreams = true
+      showExceptions true
+      showStackTraces true
+      showStandardStreams true
     }
   }
 

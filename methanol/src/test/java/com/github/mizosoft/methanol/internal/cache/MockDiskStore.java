@@ -23,15 +23,15 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static com.github.mizosoft.methanol.internal.cache.DiskStore.ENTRY_DESCRIPTOR_SIZE;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.ENTRY_FILE_SUFFIX;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.ENTRY_MAGIC;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.ENTRY_TRAILER_SIZE;
+import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_ENTRY_SIZE;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_FILENAME;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_HEADER_SIZE;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.INDEX_MAGIC;
+import static com.github.mizosoft.methanol.internal.cache.DiskStore.ISOLATED_FILE_PREFIX;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.LOCK_FILENAME;
-import static com.github.mizosoft.methanol.internal.cache.DiskStore.RIP_FILE_PREFIX;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.STORE_VERSION;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.TEMP_ENTRY_FILE_SUFFIX;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.TEMP_INDEX_FILENAME;
@@ -42,19 +42,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hasher;
-import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import com.github.mizosoft.methanol.testing.junit.StoreContext;
+import com.github.mizosoft.methanol.testing.junit.DiskStoreContext;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
-/** Allows reading or writing DiskStore entries directly from/to disk. */
+/** An object that provides direct access to the underlying storage of a {@link DiskStore}. */
 final class MockDiskStore {
   private final Path directory;
   private final Path indexFile;
@@ -62,22 +61,21 @@ final class MockDiskStore {
   private final Path lockFile;
   private final Hasher hasher;
   private final int appVersion;
-  private final MockClock clock;
-  private final Index workIndex;
+  private final Index index;
+  private final AtomicLong lruClock = new AtomicLong();
 
-  MockDiskStore(StoreContext context) {
+  MockDiskStore(DiskStoreContext context) {
     directory = context.directory();
     indexFile = directory.resolve(INDEX_FILENAME);
     tempIndexFile = directory.resolve(TEMP_INDEX_FILENAME);
     lockFile = directory.resolve(LOCK_FILENAME);
     hasher = context.hasher();
     appVersion = context.config().appVersion();
-    workIndex = new Index(appVersion);
-    clock = context.clock();
+    index = new Index(appVersion);
   }
 
-  Index copyWorkIndex() {
-    return new Index(workIndex.encode());
+  Index index() {
+    return index;
   }
 
   Index readIndex() throws IOException {
@@ -89,35 +87,35 @@ final class MockDiskStore {
   }
 
   void writeIndex(Index index, IndexCorruptionMode corruptionMode) throws IOException {
-    Files.write(indexFile, TestUtils.toByteArray(corruptionMode.corrupt(index, appVersion)));
+    Files.write(indexFile, TestUtils.toByteArray(corruptionMode.corrupt(index.copy(), appVersion)));
   }
 
-  void writeWorkIndex() throws IOException {
-    writeIndex(workIndex);
+  void writeIndex() throws IOException {
+    writeIndex(index);
   }
 
   DiskEntry readEntry(String key) throws IOException {
     return new DiskEntry(ByteBuffer.wrap(Files.readAllBytes(entryFile(key))));
   }
 
-  void write(DiskEntry entry, Instant lastUsed) throws IOException {
+  void write(DiskEntry entry, long lastUsed) throws IOException {
     Files.write(entryFile(entry.key), TestUtils.toByteArray(entry.encode()));
-    workIndex.put(entry.toIndexEntry(hasher, lastUsed));
+    index.put(entry.toIndexEntry(hasher, lastUsed));
   }
 
-  void write(String key, String data, String metadata, Instant lastUsed) throws IOException {
+  void write(String key, String data, String metadata, long lastUsed) throws IOException {
     write(new DiskEntry(key, metadata, data, appVersion), lastUsed);
   }
 
   void write(String key, String data, String metadata) throws IOException {
-    write(key, metadata, data, clock.instant());
+    write(key, metadata, data, lruClock.getAndIncrement());
   }
 
   void write(String key, String data, String metadata, EntryCorruptionMode corruptionMode)
       throws IOException {
     var entry = new DiskEntry(key, metadata, data, appVersion);
     Files.write(entryFile(key), TestUtils.toByteArray(corruptionMode.corrupt(entry, appVersion)));
-    workIndex.put(entry.toIndexEntry(hasher, clock.instant()));
+    index.put(entry.toIndexEntry(hasher, lruClock.getAndIncrement()));
   }
 
   void writeDirtyTruncated(String key, String metadata, String data) throws IOException {
@@ -134,7 +132,7 @@ final class MockDiskStore {
         TestUtils.toByteArray(truncate ? truncate(entry.encode()) : entry.encode()));
   }
 
-  void delete(String key) throws IOException {
+  void deleteEntry(String key) throws IOException {
     Files.delete(entryFile(key));
   }
 
@@ -221,7 +219,7 @@ final class MockDiskStore {
     return file.equals(indexFile)
         || file.equals(tempIndexFile)
         || file.equals(lockFile)
-        || file.getFileName().toString().startsWith(RIP_FILE_PREFIX);
+        || file.getFileName().toString().startsWith(ISOLATED_FILE_PREFIX);
   }
 
   Path indexFile() {
@@ -243,7 +241,7 @@ final class MockDiskStore {
   private static ByteBuffer truncate(ByteBuffer buffer) {
     int truncatedLimit = (int) (buffer.limit() - buffer.limit() * 0.2);
     return buffer.limit(
-        Math.min(truncatedLimit, buffer.limit() - 1)); // Make sure something is truncated
+        Math.min(truncatedLimit, buffer.limit() - 1)); // Make sure something is truncated.
   }
 
   static final class Index {
@@ -272,7 +270,7 @@ final class MockDiskStore {
 
     ByteBuffer encode() {
       var buffer =
-          ByteBuffer.allocate(INDEX_HEADER_SIZE + entries.size() * ENTRY_DESCRIPTOR_SIZE)
+          ByteBuffer.allocate(INDEX_HEADER_SIZE + entries.size() * INDEX_ENTRY_SIZE)
               .putLong(magic)
               .putInt(storeVersion)
               .putInt(appVersion)
@@ -292,29 +290,32 @@ final class MockDiskStore {
     boolean contains(Hash hash) {
       return entries.containsKey(hash);
     }
+
+    Index copy() {
+      return new Index(encode());
+    }
   }
 
   static final class IndexEntry {
     final Hash hash;
-    final Instant lastUsed;
+    final long lastUsed;
     final long size;
 
-    IndexEntry(Hash hash, Instant lastUsed, long size) {
+    IndexEntry(Hash hash, long lastUsed, long size) {
       this.hash = hash;
-
       this.lastUsed = lastUsed;
       this.size = size;
     }
 
     IndexEntry(ByteBuffer buffer) {
       hash = new Hash(buffer);
-      lastUsed = Instant.ofEpochMilli(buffer.getLong());
+      lastUsed = buffer.getLong();
       size = buffer.getLong();
     }
 
     void writeTo(ByteBuffer buffer) {
       hash.writeTo(buffer);
-      buffer.putLong(lastUsed.toEpochMilli());
+      buffer.putLong(lastUsed);
       buffer.putLong(size);
     }
   }
@@ -368,7 +369,7 @@ final class MockDiskStore {
       data = UTF_8.decode(buffer.position(0).limit(dataSize)).toString();
     }
 
-    IndexEntry toIndexEntry(Hasher hasher, Instant lastUsed) {
+    IndexEntry toIndexEntry(Hasher hasher, long lastUsed) {
       return new IndexEntry(hasher.hash(key), lastUsed, sizeOf(metadata, data));
     }
 

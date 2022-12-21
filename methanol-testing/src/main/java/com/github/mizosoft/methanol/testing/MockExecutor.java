@@ -38,7 +38,7 @@ public class MockExecutor implements Executor {
   private final Condition notEmpty = lock.newCondition();
 
   private boolean reject;
-  private boolean executeOnSameThread;
+  private boolean executeDirectly;
 
   public MockExecutor() {}
 
@@ -49,7 +49,7 @@ public class MockExecutor implements Executor {
       if (reject) {
         throw new RejectedExecutionException();
       }
-      if (!executeOnSameThread) {
+      if (!executeDirectly) {
         tasks.add(command);
         notEmpty.signalAll();
         return;
@@ -58,7 +58,6 @@ public class MockExecutor implements Executor {
       lock.unlock();
     }
 
-    // executeOnSameThread
     command.run();
   }
 
@@ -112,10 +111,10 @@ public class MockExecutor implements Executor {
     }
   }
 
-  public void executeOnSameThread(boolean on) {
+  public void executeDirectly(boolean on) {
     lock.lock();
     try {
-      this.executeOnSameThread = on;
+      this.executeDirectly = on;
     } finally {
       lock.unlock();
     }
@@ -138,5 +137,17 @@ public class MockExecutor implements Executor {
     } finally {
       lock.unlock();
     }
+  }
+
+  @Override
+  public String toString() {
+    return super.toString()
+        + "{tasks="
+        + tasks
+        + ", reject="
+        + reject
+        + ", executeDirectly="
+        + executeDirectly
+        + "}";
   }
 }

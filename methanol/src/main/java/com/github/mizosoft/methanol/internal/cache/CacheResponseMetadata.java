@@ -25,9 +25,9 @@ package com.github.mizosoft.methanol.internal.cache;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.github.mizosoft.methanol.MutableRequest;
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
-import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -73,7 +73,7 @@ public final class CacheResponseMetadata {
   private final String requestMethod;
   private final HttpHeaders varyHeaders;
   private final int statusCode;
-  private final HttpHeaders headers;
+  private final HttpHeaders responseHeaders;
   private final Instant timeRequestSent;
   private final Instant timeResponseReceived;
   private final @Nullable SSLSession sslSession;
@@ -83,7 +83,7 @@ public final class CacheResponseMetadata {
       String requestMethod,
       HttpHeaders varyHeaders,
       int statusCode,
-      HttpHeaders headers,
+      HttpHeaders responseHeaders,
       Instant timeRequestSent,
       Instant timeResponseReceived,
       @Nullable SSLSession sslSession) {
@@ -91,7 +91,7 @@ public final class CacheResponseMetadata {
     this.requestMethod = requestMethod;
     this.varyHeaders = varyHeaders;
     this.statusCode = statusCode;
-    this.headers = headers;
+    this.responseHeaders = responseHeaders;
     this.timeRequestSent = timeRequestSent;
     this.timeResponseReceived = timeResponseReceived;
     this.sslSession = sslSession;
@@ -113,18 +113,18 @@ public final class CacheResponseMetadata {
 
   private boolean selectedBy(HttpHeaders requestHeaders) {
     // TODO this won't work for ["Value1, Value2"] with ["Value1", "Value2"]
-    return varyFields(headers).stream()
+    return varyFields(responseHeaders).stream()
         .allMatch(
             name -> unorderedEquals(varyHeaders.allValues(name), requestHeaders.allValues(name)));
   }
 
-  private static boolean unorderedEquals(List<String> self, List<String> other) {
-    if (self.size() != other.size()) {
+  private static boolean unorderedEquals(List<String> left, List<String> right) {
+    if (left.size() != right.size()) {
       return false;
     }
 
-    var mutableOther = new ArrayList<>(other);
-    for (var value : self) {
+    var mutableOther = new ArrayList<>(right);
+    for (var value : left) {
       int i = mutableOther.indexOf(value);
       if (i < 0) {
         return false;
@@ -141,7 +141,7 @@ public final class CacheResponseMetadata {
     writer.writeUtf8(requestMethod);
     writer.writeHeaders(varyHeaders);
     writer.writeInt(statusCode);
-    writer.writeHeaders(headers);
+    writer.writeHeaders(responseHeaders);
     writer.writeInstant(timeRequestSent);
     writer.writeInstant(timeResponseReceived);
     if (sslSession != null) {
@@ -159,7 +159,7 @@ public final class CacheResponseMetadata {
                 .headers(varyHeaders)
                 .toImmutableRequest())
         .statusCode(statusCode)
-        .headers(headers)
+        .headers(responseHeaders)
         .timeRequestSent(timeRequestSent)
         .timeResponseReceived(timeResponseReceived)
         .sslSession(sslSession)
@@ -169,7 +169,7 @@ public final class CacheResponseMetadata {
   public static CacheResponseMetadata decode(ByteBuffer metadataBuffer) throws IOException {
     var reader = new MetadataReader(metadataBuffer);
     int flags = reader.readInt();
-    var uri = recoverUri(reader.readUtf8String());
+    var uri = parseUri(reader.readUtf8String());
     var requestMethod = reader.readUtf8String();
     var varyHeaders = reader.readHeaders();
     int statusCode = reader.readInt();
@@ -188,11 +188,11 @@ public final class CacheResponseMetadata {
         sslSession);
   }
 
-  private static URI recoverUri(String uri) throws IOException {
+  private static URI parseUri(String uri) throws IOException {
     try {
       return new URI(uri);
     } catch (URISyntaxException e) {
-      throw new IOException("unrecoverable URI", e);
+      throw new IOException("invalid URI", e);
     }
   }
 
@@ -237,7 +237,7 @@ public final class CacheResponseMetadata {
     private final ByteBuffer buffer;
 
     MetadataReader(ByteBuffer buffer) {
-      // Slice to start with position = 0 to report read bytes when EOF is reached prematurely
+      // Slice to start with position = 0 to report read bytes when EOF is reached prematurely.
       this.buffer = buffer.slice();
     }
 
@@ -252,7 +252,7 @@ public final class CacheResponseMetadata {
     private long readVarint(int sizeInBits) throws IOException {
       long value = 0L;
       for (int shift = 0; shift < sizeInBits; shift += VARINT_SHIFT) {
-        long currentByte = requireByte() & 0xFF; // Use long as shift might exceed 32
+        long currentByte = requireByte() & 0xFF; // Use long as shift might exceed 32.
         value |= (currentByte & VARINT_MASK) << shift;
         if ((currentByte & VARINT_HAS_MORE_MASK) == 0) {
           return value;
@@ -407,7 +407,7 @@ public final class CacheResponseMetadata {
 
     void writeHeaders(HttpHeaders headers) {
       var headersMap = headers.map();
-      var deepHeaderCount = headersMap.values().stream().mapToInt(Collection::size).sum();
+      int deepHeaderCount = headersMap.values().stream().mapToInt(Collection::size).sum();
       writeInt(deepHeaderCount);
       headersMap.forEach((name, values) -> values.forEach(value -> writeUtf8(name + ':' + value)));
     }

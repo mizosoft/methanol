@@ -22,21 +22,23 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.junit.ResolvedStoreConfig;
+import com.github.mizosoft.methanol.testing.junit.RedisClusterStoreContext;
+import com.github.mizosoft.methanol.testing.junit.RedisStandaloneStoreContext;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
@@ -47,6 +49,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
+import org.testng.SkipException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -59,7 +62,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   private static final AtomicLong entryId = new AtomicLong();
 
   private final ExecutorType executorType;
-  private final ResolvedStoreConfig storeConfig;
+  private final StoreConfig storeConfig;
 
   private Executor executor;
   private StoreContext storeContext;
@@ -68,35 +71,32 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   /**
    * The list of viewers opened during a test method execution. CacheReadingPublisher closes the
    * viewer when the body is consumed or an error is signalled amid transmission. However, some
-   * tests don't lead to that (e.g. trying to subscribe with a null subscriber). So we double-check
-   * after each test.
+   * tests don't lead to either (e.g. trying to subscribe with a null subscriber). So we make sure
+   * opened viewer are closed after each test.
    */
   private final List<Viewer> openedViewers = new ArrayList<>();
 
   @Factory(dataProvider = "provider")
   public CacheReadingPublisherTck(ExecutorType executorType, StoreType storeType) {
-    super(TckUtils.testEnvironment());
+    super(TckUtils.testEnvironmentWithTimeout(1000));
     this.executorType = executorType;
-    storeConfig = ResolvedStoreConfig.createDefault(storeType);
+    this.storeConfig = StoreConfig.createDefault(storeType);
   }
 
   @BeforeMethod
   public void setUpExecutor() throws IOException {
     executor = executorType.createExecutor();
-    storeContext = storeConfig.createContext();
-    store = storeContext.newStore();
+    storeContext = StoreContext.from(storeConfig);
+    store = storeContext.createAndRegisterStore();
   }
 
   @AfterMethod
   public void tearDown() throws Exception {
     TestUtils.shutdown(executor);
-
-    // Make sure viewer is closed
     for (var viewer : openedViewers) {
       viewer.close();
     }
     openedViewers.clear();
-
     if (storeContext != null) {
       storeContext.close();
     }
@@ -107,7 +107,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
     var viewer = populateThenViewEntry(elements);
     openedViewers.add(viewer);
 
-    // Limit published items to `elements`
+    // Limit published items to `elements`.
     var publisher = new CacheReadingPublisher(viewer, executor);
     return subscriber ->
         publisher.subscribe(
@@ -117,38 +117,34 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   private Viewer populateThenViewEntry(long elements) {
     try {
       var entryName = "test-entry-" + entryId.getAndIncrement();
-      try (var editor = requireNonNull(store.edit(entryName))) {
-        // Set metadata to not discard the entry if `elements` is 0
-        editor.metadata(ByteBuffer.allocate(1));
-
-        int position = 0;
+      try (var editor = store.edit(entryName).orElseThrow()) {
         for (var buffer : generateData(elements)) {
-          position += editor.writeAsync(position, buffer).join();
+          editor.writer().write(buffer).join();
         }
-        editor.commitOnClose();
+        assertThat(editor.commitAsync(ByteBuffer.allocate(1)).join()).isTrue();
       }
-      return requireNonNull(store.view(entryName));
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+      return store.view(entryName).orElseThrow();
+    } catch (IOException | InterruptedException e) {
+      throw new CompletionException(e);
     }
   }
 
   private List<ByteBuffer> generateData(long elements) {
-    var dataBuffer = ByteBuffer.allocate(BUFFER_SIZE);
+    var buffer = ByteBuffer.allocate(BUFFER_SIZE);
     ThreadLocalRandom.current()
-        .ints(BUFFER_SIZE, 0x20, 0x7f) // ASCII VCHARS
-        .forEach(i -> dataBuffer.put((byte) i));
-    dataBuffer.flip();
+        .ints(BUFFER_SIZE, 0x20, 0x7f) // ASCII VCHARS.
+        .forEach(i -> buffer.put((byte) i));
+    buffer.flip();
     return elements > 0
-        ? Stream.generate(dataBuffer::duplicate)
-            .limit(MAX_BATCH_SIZE * elements) // Produce `elements` items at minimum
+        ? Stream.generate(buffer::duplicate)
+            .limit(MAX_BATCH_SIZE * elements) // Produce `elements` items at minimum.
             .collect(Collectors.toUnmodifiableList())
         : List.of();
   }
 
   @Override
   public Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
-    return null; // Skip as the publisher can only fail if a read is requested
+    return null; // Skip as the publisher can't fail unless a read is requested.
   }
 
   @Override
@@ -158,13 +154,60 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
 
   @DataProvider
   public static Object[][] provider() {
-    // Handcrafted cartesian product
-    return new Object[][] {
-      {ExecutorType.SAME_THREAD, StoreType.MEMORY},
-      {ExecutorType.FIXED_POOL, StoreType.MEMORY},
-      {ExecutorType.SAME_THREAD, StoreType.DISK},
-      {ExecutorType.FIXED_POOL, StoreType.DISK}
-    };
+    // Handcrafted cartesian product.
+    var parameters =
+        new ArrayList<>(
+            List.of(
+                new Object[] {ExecutorType.SAME_THREAD, StoreType.MEMORY},
+                new Object[] {ExecutorType.FIXED_POOL, StoreType.MEMORY},
+                new Object[] {ExecutorType.SAME_THREAD, StoreType.DISK},
+                new Object[] {ExecutorType.FIXED_POOL, StoreType.DISK}));
+    if (RedisStandaloneStoreContext.isAvailable()) {
+      parameters.addAll(
+          List.of(
+              new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS_STANDALONE},
+              new Object[] {ExecutorType.FIXED_POOL, StoreType.REDIS_STANDALONE}));
+    }
+    if (RedisClusterStoreContext.isAvailable()) {
+      parameters.addAll(
+          List.of(
+              new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS_CLUSTER},
+              new Object[] {ExecutorType.FIXED_POOL, StoreType.REDIS_CLUSTER}));
+    }
+    return parameters.toArray(Object[][]::new);
+  }
+
+  // The following tests don't apply to our unicast publisher. They're explicitly skipped as they
+  // otherwise cause AbstractSubscription to spam the log with RejectedExecutionExceptions when
+  // the second subscriber creation fails while there are still ongoing reads for the first
+  // subscriber.
+
+  @Override
+  public void optional_spec111_maySupportMultiSubscribe() {
+    throw new SkipException("not a multicast publisher");
+  }
+
+  @Override
+  public void
+      optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingOneByOne() {
+    throw new SkipException("not a multicast publisher");
+  }
+
+  @Override
+  public void
+      optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfront() {
+    throw new SkipException("not a multicast publisher");
+  }
+
+  @Override
+  public void
+      optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfrontAndCompleteAsExpected() {
+    throw new SkipException("not a multicast publisher");
+  }
+
+  @Override
+  public void optional_spec111_registeredSubscribersMustReceiveOnNextOrOnCompleteSignals() {
+    throw new SkipException("not a multicast publisher");
   }
 
   /**
@@ -185,8 +228,8 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
 
     @Override
     public void onSubscribe(Subscription subscription) {
-      this.upstream = subscription;
       downstream.onSubscribe(subscription);
+      this.upstream = subscription;
     }
 
     @Override

@@ -35,30 +35,43 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A Delayer that delays tasks based on a MockClock's time. */
+/** A Delayer that delays tasks based on a {@link MockClock}'s time. */
 public final class MockDelayer implements Delayer {
   private final MockClock clock;
-  private final Queue<TimestampedTask> taskQueue =
-      new PriorityQueue<>(
-          Comparator.comparing((TimestampedTask task) -> task.stamp)
-              .thenComparingLong(task -> task.sequenceNumber));
+
+  /**
+   * Whether {@link #dispatchReadyTasks(Instant, boolean)} should be eagerly invoked each time a
+   * task is submitted to this delayer. This gives immediately executable tasks no chance to get
+   * observably queued.
+   */
+  private final boolean dispatchEagerly;
+
+  private final Queue<DelayedFuture> taskQueue = new PriorityQueue<>(DelayedFuture.DELAY_ORDER);
 
   public MockDelayer(MockClock clock) {
+    this(clock, true);
+  }
+
+  public MockDelayer(MockClock clock, boolean dispatchEagerly) {
     this.clock = clock;
+    this.dispatchEagerly = dispatchEagerly;
     clock.onTick((instant, ticks) -> dispatchReadyTasks(instant.plus(ticks), false));
   }
 
   @Override
   public Future<Void> delay(Runnable task, Duration delay, Executor executor) {
-    var now = clock.peekInstant(); // Do not advance clock if auto-advancing
-    var timestampedTask = new TimestampedTask(executor, task, now.plus(delay));
+    var now = clock.peekInstant(); // Do not advance clock if auto-advancing.
+    var future = new DelayedFuture(task, now.plus(delay), executor, clock);
     synchronized (taskQueue) {
-      taskQueue.add(timestampedTask);
+      taskQueue.add(future);
     }
 
-    dispatchReadyTasks(now, false);
-    return timestampedTask.future;
+    if (dispatchEagerly) {
+      dispatchReadyTasks(now, false);
+    }
+    return future;
   }
 
   public int taskCount() {
@@ -67,69 +80,91 @@ public final class MockDelayer implements Delayer {
     }
   }
 
-  public CompletableFuture<Void> peekEarliestTaskFuture() {
+  public DelayedFuture peekEarliestFuture() {
     synchronized (taskQueue) {
       assertThat(taskQueue).isNotEmpty();
-      return taskQueue.element().future;
+      return taskQueue.element();
     }
   }
 
-  public CompletableFuture<Void> peekLatestTaskFuture() {
+  public DelayedFuture peekLatestFuture() {
     synchronized (taskQueue) {
       assertThat(taskQueue).isNotEmpty();
 
       var iter = taskQueue.iterator();
-      TimestampedTask last;
+      DelayedFuture future;
       do {
-        last = iter.next();
+        future = iter.next();
       } while (iter.hasNext());
-      return last.future;
+      return future;
     }
   }
 
   void dispatchReadyTasks(Instant now, boolean ignoreRejected) {
-    synchronized (taskQueue) {
-      TimestampedTask task;
-      while ((task = taskQueue.peek()) != null && now.compareTo(task.stamp) >= 0) {
-        taskQueue.poll();
-        try {
-          task.dispatch();
-        } catch (RejectedExecutionException e) {
-          if (!ignoreRejected) {
-            throw e;
-          }
+    DelayedFuture ready;
+    while ((ready = pollReady(now)) != null) {
+      try {
+        ready.dispatch();
+      } catch (RejectedExecutionException e) {
+        if (!ignoreRejected) {
+          throw e;
         }
       }
     }
+  }
+
+  private @Nullable DelayedFuture pollReady(Instant now) {
+    synchronized (taskQueue) {
+      DelayedFuture future;
+      if ((future = taskQueue.peek()) != null && future.isReady(now)) {
+        taskQueue.poll();
+        return future;
+      }
+    }
+    return null;
   }
 
   public void drainQueuedTasks(boolean ignoreRejected) {
     dispatchReadyTasks(Instant.MAX, ignoreRejected);
   }
 
-  private static final class TimestampedTask {
-    /** Sequence number generator to break ties on comparison. */
+  public static final class DelayedFuture extends CompletableFuture<Void> {
+    static final Comparator<DelayedFuture> DELAY_ORDER =
+        Comparator.<DelayedFuture, Instant>comparing(future -> future.when)
+            .thenComparingLong(task -> task.sequenceNumber);
+
+    /** Sequence number generator to break ties on delay comparisons. */
     private static final AtomicLong sequencer = new AtomicLong();
 
-    final Executor executor;
-    final Runnable task;
-    final Instant stamp;
-    final CompletableFuture<Void> future = new CompletableFuture<>();
     final long sequenceNumber = sequencer.getAndIncrement();
 
-    TimestampedTask(Executor executor, Runnable task, Instant stamp) {
+    final Runnable task;
+    final Instant when;
+    final Executor executor;
+    final MockClock clock;
+
+    private DelayedFuture(Runnable task, Instant when, Executor executor, MockClock clock) {
       this.task = task;
-      this.stamp = stamp;
+      this.when = when;
       this.executor = executor;
+      this.clock = clock;
+    }
+
+    public Duration delay() {
+      return Duration.between(clock.peekInstant(), when);
     }
 
     void dispatch() {
-      future.completeAsync(
+      completeAsync(
           () -> {
             task.run();
             return null;
           },
           executor);
+    }
+
+    boolean isReady(Instant now) {
+      return now.compareTo(when) >= 0;
     }
   }
 }

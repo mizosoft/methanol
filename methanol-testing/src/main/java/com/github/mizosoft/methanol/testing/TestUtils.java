@@ -43,7 +43,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Flow.Subscription;
 import java.util.stream.Collectors;
 import java.util.zip.DeflaterInputStream;
 import java.util.zip.GZIPInputStream;
@@ -55,14 +54,7 @@ import okhttp3.tls.HandshakeCertificates;
 import okhttp3.tls.HeldCertificate;
 
 public class TestUtils {
-  public static final Subscription NOOP_SUBSCRIPTION =
-      new Subscription() {
-        @Override
-        public void request(long n) {}
-
-        @Override
-        public void cancel() {}
-      };
+  public static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
   public static void awaitUninterruptibly(CountDownLatch latch) {
     while (true) {
@@ -197,7 +189,7 @@ public class TestUtils {
         .certificate();
   }
 
-  /** Build {@code SSLContext} that trusts a self-assigned certificate for localhost in tests. */
+  /** Build {@code SSLContext} that trusts a self-assigned certificate for the loopback address. */
   public static SSLContext localhostSslContext() {
     var heldCertificate =
         new HeldCertificate.Builder()

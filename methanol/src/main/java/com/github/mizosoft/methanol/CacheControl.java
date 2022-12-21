@@ -189,7 +189,6 @@ public final class CacheControl {
     }
 
     directives.putAll(unrecognizedAddedDirectives);
-
     return Collections.unmodifiableMap(directives);
   }
 
@@ -399,7 +398,6 @@ public final class CacheControl {
     private static final Duration MAX_DELTA_SECONDS = Duration.ofSeconds(Integer.MAX_VALUE);
 
     final @Nullable Map<String, String> parsedDirectives;
-
     final Map<String, String> unrecognizedDirectives = new LinkedHashMap<>();
 
     @MonotonicNonNull Duration maxAge;
@@ -422,7 +420,7 @@ public final class CacheControl {
     Set<String> privateFields = Set.of();
 
     Builder() {
-      parsedDirectives = null;
+      this.parsedDirectives = null;
     }
 
     Builder(Map<String, String> parsedDirectives) {
@@ -562,19 +560,17 @@ public final class CacheControl {
           !(mustHaveArgument(normalizedDirective) && argument.isEmpty()),
           "directive %s requires an argument",
           normalizedDirective);
+
       switch (normalizedDirective) {
         case "max-age":
           maxAge = toDeltaSeconds(argument);
           break;
-
         case "min-fresh":
           minFresh = toDeltaSeconds(argument);
           break;
-
         case "s-maxage":
           sMaxAge = toDeltaSeconds(argument);
           break;
-
         case "max-stale":
           if (argument.isEmpty()) {
             anyMaxStale = true;
@@ -582,56 +578,45 @@ public final class CacheControl {
             maxStale = toDeltaSeconds(argument);
           }
           break;
-
         case "stale-while-revalidate":
           staleWhileRevalidate = toDeltaSeconds(argument);
           break;
-
         case "stale-if-error":
           staleIfError = toDeltaSeconds(argument);
           break;
-
         case "no-cache":
           noCache = true;
           if (!argument.isEmpty()) {
             noCacheFields = parseFieldNames(argument);
           }
           break;
-
         case "no-store":
           noStore = true;
           if (!argument.isEmpty()) {
             noStoreFields = parseFieldNames(argument);
           }
           break;
-
         case "no-transform":
           noTransform = true;
           break;
-
         case "public":
           isPublic = true;
           break;
-
         case "private":
           isPrivate = true;
           if (!argument.isEmpty()) {
             privateFields = parseFieldNames(argument);
           }
           break;
-
         case "only-if-cached":
           onlyIfCached = true;
           break;
-
         case "must-revalidate":
           mustRevalidate = true;
           break;
-
         case "proxy-revalidate":
           proxyRevalidate = true;
           break;
-
         default:
           return false; // Not a standard directive
       }

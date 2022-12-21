@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -78,7 +78,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   private volatile @Nullable SubscriptionImpl downstreamSubscription;
 
   /**
-   * The error received in {@link #closeExceptionally} if a subscriber is yet to arrived while
+   * The error received by {@link #closeExceptionally} if a subscriber is yet to arrived while
    * calling that method. When a subscriber does arrive, it reads this field and completes the
    * subscriber exceptionally right away.
    */
@@ -90,8 +90,8 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   @GuardedBy("writeLock")
   private @Nullable ByteBuffer sinkBuffer;
 
-  private @MonotonicNonNull WritableByteChannel sinkChannel;
-  private @MonotonicNonNull OutputStream sinkOutputStream;
+  private @MonotonicNonNull WritableByteChannel lazyChannel;
+  private @MonotonicNonNull OutputStream lazyOutputStream;
 
   private WritableBodyPublisher(int bufferSize) {
     requireArgument(bufferSize > 0, "non-positive buffer size");
@@ -100,20 +100,20 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
   /** Returns a {@code WritableByteChannel} for writing this body's content. */
   public WritableByteChannel byteChannel() {
-    var channel = sinkChannel;
+    var channel = lazyChannel;
     if (channel == null) {
       channel = new SinkChannel();
-      sinkChannel = channel;
+      lazyChannel = channel;
     }
     return channel;
   }
 
   /** Returns a {@code OutputStream} for writing this body's content. */
   public OutputStream outputStream() {
-    var outputStream = sinkOutputStream;
+    var outputStream = lazyOutputStream;
     if (outputStream == null) {
       outputStream = new SinkOutputStream(byteChannel());
-      sinkOutputStream = outputStream;
+      lazyOutputStream = outputStream;
     }
     return outputStream;
   }
@@ -128,13 +128,13 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     closeLock.lock();
     try {
       if (closed) {
-        FlowSupport.onDroppedError(error);
+        FlowSupport.onDroppedException(error);
         return;
       }
       closed = true;
       subscription = downstreamSubscription;
       if (subscription == null) {
-        // Record the error to consume it when a subscriber arrives
+        // Record the error to consume it when a subscriber arrives.
         pendingCloseError = error;
         return;
       }
@@ -182,7 +182,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   @Override
   public void flush() {
     requireState(!closed, "closed");
-    if (flushInternal()) { // Notify downstream if flushing produced any signals
+    if (flushInternal()) { // Notify downstream if flushing produced any signals.
       signalDownstream(false);
     }
   }
@@ -194,7 +194,6 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
   @Override
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
-    requireNonNull(subscriber);
     var subscription = new SubscriptionImpl(subscriber);
     if (subscribed.compareAndSet(false, true)) {
       Throwable error;
@@ -212,9 +211,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         subscription.signal(true);
       }
     } else {
-      FlowSupport.refuse(
-          subscriber,
-          new IllegalStateException("already subscribed (multiple subscribers not supported)"));
+      FlowSupport.rejectMulticast(subscriber);
     }
   }
 
@@ -246,7 +243,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     return new WritableBodyPublisher(DEFAULT_BUFFER_SIZE);
   }
 
-  /* Returns a new {@code WritableBodyPublisher} with the given buffer size. */
+  /** Returns a new {@code WritableBodyPublisher} with the given buffer size. */
   public static WritableBodyPublisher create(int bufferSize) {
     return new WritableBodyPublisher(bufferSize);
   }
@@ -281,9 +278,9 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
           }
         } while (src.hasRemaining() && isOpen());
 
-        if (closed) { // Check if asynchronously closed
+        if (closed) { // Check if asynchronously closed.
           sinkBuffer = null;
-          if (written <= 0) { // Only report if no bytes were written
+          if (written <= 0) { // Only report if no bytes were written.
             throw new AsynchronousCloseException();
           }
         } else {
@@ -336,7 +333,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       try {
         WritableBodyPublisher.this.flush();
       } catch (IllegalStateException e) {
-        // Throw a more appropriate exception for an OutputStream
+        // Throw a more appropriate exception for an OutputStream.
         throw new IOException("closed", e);
       }
     }
@@ -355,10 +352,10 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
 
     @Override
-    @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel
+    @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel.
     protected long emit(Subscriber<? super ByteBuffer> downstream, long emit) {
-      // The buffer is polled prematurely to detect completion regardless of demand
-      ByteBuffer buffer = latestBuffer;
+      // The buffer is polled prematurely to detect completion regardless of demand.
+      var buffer = latestBuffer;
       latestBuffer = null;
       if (buffer == null) {
         buffer = pipe.poll();
@@ -368,8 +365,8 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         if (buffer == CLOSED_SENTINEL) {
           cancelOnComplete(downstream);
           return 0;
-        } else if (submitted >= emit || buffer == null) { // Exhausted either demand or buffers
-          latestBuffer = buffer; // Save the last polled buffer for later rounds
+        } else if (submitted >= emit || buffer == null) { // Exhausted either demand or buffers.
+          latestBuffer = buffer; // Save the last polled buffer for later rounds.
           return submitted;
         } else if (submitOnNext(downstream, buffer)) {
           submitted++;

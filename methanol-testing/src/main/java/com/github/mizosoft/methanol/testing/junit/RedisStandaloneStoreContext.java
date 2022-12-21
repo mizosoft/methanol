@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,23 +20,30 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.cache;
+package com.github.mizosoft.methanol.testing.junit;
 
+import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpRequest;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** An {@code HttpCache} that's used internally. */
-public interface InternalCache {
-  @Nullable
-  CacheResponse get(HttpRequest request) throws IOException;
+public final class RedisStandaloneStoreContext extends AbstractRedisStoreContext<LocalRedisServer> {
+  private static final RedisSessionSingletonPool<LocalRedisServer> serverPool =
+      new RedisSessionSingletonPool<>(LocalRedisServer::start);
 
-  void update(CacheResponse cacheResponse);
+  private RedisStandaloneStoreContext(RedisStandaloneStoreConfig config) {
+    super(config, serverPool);
+  }
 
-  @Nullable
-  NetworkResponse put(
-      HttpRequest request, @Nullable CacheResponse cacheResponse, NetworkResponse networkResponse);
+  @Override
+  void configure(RedisStorageExtension.Builder builder) throws IOException {
+    builder.standalone(getSession().uri());
+  }
 
-  void remove(URI uri);
+  public static RedisStandaloneStoreContext from(RedisStandaloneStoreConfig config)
+      throws IOException {
+    return new RedisStandaloneStoreContext(config);
+  }
+
+  public static boolean isAvailable() {
+    return RedisSupport.isRedisStandaloneAvailable();
+  }
 }

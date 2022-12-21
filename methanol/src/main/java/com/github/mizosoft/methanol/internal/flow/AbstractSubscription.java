@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.flow;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.flow.FlowSupport.getAndAddDemand;
 import static com.github.mizosoft.methanol.internal.flow.FlowSupport.subtractAndGetDemand;
+import static java.util.Objects.requireNonNull;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.lang.System.Logger;
@@ -90,8 +91,8 @@ public abstract class AbstractSubscription<T> implements Subscription {
   private volatile @Nullable Throwable pendingError;
 
   protected AbstractSubscription(Subscriber<? super T> downstream, Executor executor) {
-    this.downstream = downstream;
-    this.executor = executor;
+    this.downstream = requireNonNull(downstream);
+    this.executor = requireNonNull(executor);
   }
 
   @Override
@@ -99,7 +100,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
     // Only try to signal on previously exhausted (zero) demand. This is to not fire the signaller
     // needlessly and call emit(...) knowing there's demand residue that it couldn't previously
     // satisfy (i.e. it ran out of items). Note that this assumes emit(...) exhausts its source and
-    // doesn't, for instance, selectively choose to reject demand despite having 'items'. Otherwise,
+    // doesn't, for instance, selectively choose to reject demand despite having items. Otherwise,
     // it would never be called unless signal() here is called regardless of demand (or some other
     // part calls signal(boolean)), but this is not how current use cases go. In addition to the
     // first assumption, it's also assumed that signal(boolean) is called when items later become

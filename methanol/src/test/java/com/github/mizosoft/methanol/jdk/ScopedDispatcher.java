@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * A {@code Dispatcher} that delegates to other dispatchers each configured within a URI scope. The
- * dispatcher is selected if its scope is the longest prefix of the request's URI.
+ * dispatcher is selected if its scope is the longest prefix of request's URI.
  */
 class ScopedDispatcher extends Dispatcher {
   private final Map<String, Dispatcher> dispatchers = new HashMap<>();

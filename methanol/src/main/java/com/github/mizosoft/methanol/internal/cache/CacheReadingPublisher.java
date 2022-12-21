@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,12 +22,9 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher.CacheReadingSubscription.ReadingState.DISPOSED;
-import static com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher.CacheReadingSubscription.ReadingState.IDLE;
-import static com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher.CacheReadingSubscription.ReadingState.INITIAL;
-import static com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher.CacheReadingSubscription.ReadingState.READING;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -45,7 +42,7 @@ import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Publisher for the response body read from a cached entry's {@code Viewer}. */
+/** Publisher for the response body as read from a cached entry's {@link Viewer}. */
 public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> {
   private static final Logger logger = System.getLogger(CacheReadingPublisher.class.getName());
 
@@ -70,14 +67,14 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     if (subscribed.compareAndSet(false, true)) {
       new CacheReadingSubscription(subscriber, executor, viewer, listener).signal(true);
     } else {
-      FlowSupport.refuse(subscriber, FlowSupport.multipleSubscribersToUnicast());
+      FlowSupport.rejectMulticast(subscriber);
     }
   }
 
   public interface Listener {
     void onReadSuccess();
 
-    void onReadFailure(Throwable error);
+    void onReadFailure(Throwable exception);
 
     default Listener guarded() {
       return new Listener() {
@@ -91,18 +88,14 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         }
 
         @Override
-        public void onReadFailure(Throwable error) {
+        public void onReadFailure(Throwable exception) {
           try {
-            Listener.this.onReadFailure(error);
+            Listener.this.onReadFailure(exception);
           } catch (Throwable e) {
             logger.log(Level.WARNING, "exception thrown by Listener::onReadFailure", e);
           }
         }
       };
-    }
-
-    static Listener disabled() {
-      return DisabledListener.INSTANCE;
     }
   }
 
@@ -113,53 +106,55 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     public void onReadSuccess() {}
 
     @Override
-    public void onReadFailure(Throwable unused) {}
+    public void onReadFailure(Throwable exception) {}
   }
 
-  @SuppressWarnings("unused") // VarHandle indirection
+  @SuppressWarnings("unused") // VarHandle indirection.
   static final class CacheReadingSubscription extends AbstractSubscription<List<ByteBuffer>> {
     /**
      * The number of buffers to fill readQueue with, without necessarily being requested by
      * downstream.
      */
     private static final int PREFETCH = 8;
+
     /**
      * The maximum number of buffers remaining in readQueue, after consumption by downstream, that
-     * cause the publisher to trigger a readQueue refill.
+     * cause the publisher to trigger a readQueue refill. This allows reading and processing of
+     * earlier items to occur simultaneously.
      */
     private static final int PREFETCH_THRESHOLD = 4;
 
-    // Note: these 2 fields are mirrored in CacheReadingPublisherTck
+    // Note: these 2 fields are mirrored in CacheReadingPublisherTck.
     private static final int BUFFER_SIZE = 8 * 1024;
     private static final int MAX_BATCH_SIZE = 4;
 
     private static final VarHandle STATE;
-    private static final VarHandle POSITION;
 
     static {
-      var lookup = MethodHandles.lookup();
       try {
-        STATE = lookup.findVarHandle(CacheReadingSubscription.class, "state", ReadingState.class);
-        POSITION = lookup.findVarHandle(CacheReadingSubscription.class, "position", long.class);
+        STATE =
+            MethodHandles.lookup()
+                .findVarHandle(CacheReadingSubscription.class, "state", State.class);
       } catch (NoSuchFieldException | IllegalAccessException e) {
         throw new ExceptionInInitializerError(e);
       }
     }
 
     private final Viewer viewer;
+    private final EntryReader reader;
     private final Listener listener;
     private final ConcurrentLinkedQueue<ByteBuffer> readQueue = new ConcurrentLinkedQueue<>();
 
-    private volatile ReadingState state = INITIAL;
-    private volatile long position;
-    private volatile boolean endOfFile;
+    private volatile State state = State.INITIAL;
 
-    enum ReadingState {
+    enum State {
       INITIAL,
       IDLE,
       READING,
-      DISPOSED
+      DONE
     }
+
+    private volatile boolean exhausted;
 
     CacheReadingSubscription(
         Subscriber<? super List<ByteBuffer>> downstream,
@@ -168,24 +163,25 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         Listener listener) {
       super(downstream, executor);
       this.viewer = viewer;
-      this.listener = listener.guarded(); // Ensure the listener doesn't throw
+      this.reader = viewer.newReader();
+      this.listener = listener.guarded(); // Ensure the listener doesn't throw.
     }
 
     @Override
     protected long emit(Subscriber<? super List<ByteBuffer>> downstream, long emit) {
-      // Fill readQueue if this is the first run
-      if (state == INITIAL && STATE.compareAndSet(this, INITIAL, IDLE)) {
+      // Fire a read if this is the first run ever.
+      if (state == State.INITIAL && STATE.compareAndSet(this, State.INITIAL, State.IDLE)) {
         tryScheduleRead(false);
       }
 
       long submitted = 0L;
       while (true) {
         List<ByteBuffer> batch;
-        if (readQueue.isEmpty() && endOfFile) {
+        if (readQueue.isEmpty() && exhausted) {
           cancelOnComplete(downstream);
           return 0L;
         } else if (submitted >= emit
-            || (batch = pollBatch()).isEmpty()) { // Exhausted demand or batches
+            || (batch = pollBatch()).isEmpty()) { // Exhausted demand or batches.
           return submitted;
         } else if (submitOnNext(downstream, batch)) {
           submitted++;
@@ -197,8 +193,12 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
 
     @Override
     protected void abort(boolean flowInterrupted) {
-      state = DISPOSED;
-      viewer.close();
+      state = State.DONE;
+      try {
+        viewer.close();
+      } catch (Throwable t) {
+        logger.log(Level.WARNING, "exception thrown by Viewer::close", t);
+      }
     }
 
     private List<ByteBuffer> pollBatch() {
@@ -215,11 +215,10 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         batch.add(buffer);
       } while (batch.size() < MAX_BATCH_SIZE);
 
-      // Refill readQueue if enough buffers are consumed
+      // Refill readQueue if enough buffers are consumed.
       if (readQueue.size() <= PREFETCH_THRESHOLD) {
         tryScheduleRead(false);
       }
-
       return batch != null ? List.copyOf(batch) : List.of();
     }
 
@@ -229,55 +228,50 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
      */
     private boolean tryScheduleRead(boolean maintainReadingState) {
       if (readQueue.size() < PREFETCH
-          && ((maintainReadingState && state == READING)
-              || STATE.compareAndSet(this, IDLE, READING))) {
-        scheduleRead();
+          && ((maintainReadingState && state == State.READING)
+              || STATE.compareAndSet(this, State.IDLE, State.READING))) {
+        var buffer = ByteBuffer.allocate(BUFFER_SIZE);
+        try {
+          reader
+              .read(buffer)
+              .whenComplete((read, exception) -> onReadCompletion(buffer, read, exception));
+        } catch (Throwable t) {
+          state = State.DONE;
+          listener.onReadFailure(t);
+          signalError(t);
+          return false;
+        }
         return true;
       }
       return false;
     }
 
-    private void scheduleRead() {
-      var buffer = ByteBuffer.allocate(BUFFER_SIZE);
-      try {
-        viewer
-            .readAsync(position, buffer)
-            .whenComplete((read, error) -> onReadCompletion(buffer, read, error));
-      } catch (RuntimeException e) {
-        state = DISPOSED;
-        signalError(e);
-      }
-    }
-
     private void onReadCompletion(
-        ByteBuffer buffer, @Nullable Integer read, @Nullable Throwable error) {
-      assert read != null || error != null;
+        ByteBuffer buffer, @Nullable Integer read, @Nullable Throwable exception) {
+      assert read != null || exception != null;
 
-      // The subscription could've been cancelled while this read was in progress
-      if (state == DISPOSED) {
+      // The subscription could've been cancelled while this read was in progress.
+      if (state == State.DONE) {
         return;
       }
 
-      if (error != null) {
-        state = DISPOSED;
-        listener.onReadFailure(error);
-        signalError(error);
+      if (exception != null) {
+        state = State.DONE;
+        listener.onReadFailure(exception);
+        signalError(exception);
       } else if (read < 0) {
-        endOfFile = true;
-        state = DISPOSED;
+        state = State.DONE;
+        exhausted = true;
         listener.onReadSuccess();
-        signal(true); // Force completion signal
+        signal(true); // Force completion signal.
       } else {
         if (read > 0) {
           readQueue.offer(buffer.flip().asReadOnlyBuffer());
-          POSITION.getAndAdd(this, read);
         }
-
-        if (!tryScheduleRead(true) && STATE.compareAndSet(this, READING, IDLE)) {
-          // There might've been missed signals just before CASing to IDLE
+        if (!tryScheduleRead(true) && STATE.compareAndSet(this, State.READING, State.IDLE)) {
+          // There might've been missed signals just before CASing to IDLE.
           tryScheduleRead(false);
         }
-
         signal(false);
       }
     }

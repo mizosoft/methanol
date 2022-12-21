@@ -26,6 +26,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -35,16 +38,14 @@ import java.lang.reflect.AnnotatedElement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
@@ -57,81 +58,67 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.platform.commons.support.AnnotationSupport;
 
-/** {@code Extension} that provides {@code Store} instances with multiple configurations. */
+/** {@code Extension} that injects {@code Store} instances with multiple configurations. */
 public final class StoreExtension
-    implements BeforeAllCallback,
-        BeforeEachCallback,
-        AfterAllCallback,
-        AfterEachCallback,
-        ArgumentsProvider,
-        ParameterResolver {
+    implements AfterEachCallback, ArgumentsProvider, ParameterResolver {
   private static final Namespace EXTENSION_NAMESPACE = Namespace.create(StoreExtension.class);
-
-  private static final StoreConfig DEFAULT_STORE_CONFIG;
+  private static final StoreSpec DEFAULT_STORE_SPEC;
 
   static {
     try {
-      DEFAULT_STORE_CONFIG =
-          StoreExtension.class
-              .getDeclaredMethod("defaultStoreConfigHolder")
-              .getAnnotation(StoreConfig.class);
-
-      requireNonNull(DEFAULT_STORE_CONFIG);
+      DEFAULT_STORE_SPEC =
+          requireNonNull(
+              StoreExtension.class
+                  .getDeclaredMethod("defaultSpecHolder")
+                  .getAnnotation(StoreSpec.class));
     } catch (NoSuchMethodException e) {
       throw new ExceptionInInitializerError(e);
     }
   }
 
-  public StoreExtension() {}
-
   @Override
-  public void beforeAll(ExtensionContext context) throws Exception {
-    ManagedStores.get(context).initializeAll();
-  }
-
-  @Override
-  public void beforeEach(ExtensionContext context) throws Exception {
-    ManagedStores.get(context).initializeAll();
-  }
-
-  @Override
-  public void afterAll(ExtensionContext context) throws Exception {
-    ManagedStores.get(context).close();
-  }
-
-  @Override
-  public void afterEach(ExtensionContext context) throws Exception {
-    ManagedStores.get(context).close();
+  public void afterEach(ExtensionContext context) {
+    context
+        .getExecutionException()
+        .ifPresent(
+            Unchecked.consumer(
+                __ ->
+                    ManagedStores.get(context)
+                        .allContexts(context.getRequiredTestMethod())
+                        .forEach(StoreContext::logDebugInfo)));
   }
 
   @Override
   public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) {
     var testMethod = extensionContext.getRequiredTestMethod();
-    var storeConfig = findStoreConfig(testMethod);
     var stores = ManagedStores.get(extensionContext);
-    return resolveConfigs(storeConfig)
+    return resolveSpec(findSpec(testMethod))
         .map(
             Unchecked.func(
-                resolvedStoreConfig ->
+                config ->
                     resolveArguments(
-                        Set.of(testMethod.getParameterTypes()),
-                        stores.newContext(testMethod, resolvedStoreConfig))));
+                        List.of(testMethod.getParameterTypes()),
+                        stores.createContext(testMethod, config))));
   }
 
   @Override
   public boolean supportsParameter(
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
-    var element = parameterContext.getDeclaringExecutable();
-
     // Do not compete with our ArgumentsProvider side.
-    var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
-    if (argSource.isPresent() && argSource.get().value() == StoreExtension.class) {
+    boolean isPresentAsArgumentsProvider =
+        AnnotationSupport.findAnnotation(
+                parameterContext.getDeclaringExecutable(), ArgumentsSource.class)
+            .map(ArgumentsSource::value)
+            .filter(StoreExtension.class::equals)
+            .isPresent();
+    if (isPresentAsArgumentsProvider) {
       return false;
     }
 
-    var paramType = parameterContext.getParameter().getType();
-    return paramType == Store.class || paramType == StoreContext.class;
+    var parameterType = parameterContext.getParameter().getType();
+    return Store.class.isAssignableFrom(parameterType)
+        || StoreContext.class.isAssignableFrom(parameterType);
   }
 
   @Override
@@ -139,67 +126,148 @@ public final class StoreExtension
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
     var executable = parameterContext.getDeclaringExecutable();
-    var storeConfig = findStoreConfig(executable);
     var stores = ManagedStores.get(extensionContext);
-    var paramType = parameterContext.getParameter().getType();
-    return resolveConfigs(storeConfig)
+    return resolveSpec(findSpec(executable))
+        .findFirst()
         .map(
             Unchecked.func(
-                resolvedStoreConfig ->
+                config ->
                     resolveArguments(
-                        Set.of(paramType),
-                        stores.getFirstContext(executable, resolvedStoreConfig))))
-        .flatMap(args -> Stream.of(args.get()))
-        .findFirst()
+                        List.of(parameterContext.getParameter().getType()),
+                        stores.getOrCreateContext(executable, config))))
+        .flatMap(args -> Stream.of(args.get()).findFirst())
         .orElseThrow(UnsupportedOperationException::new);
   }
 
-  private static StoreConfig findStoreConfig(AnnotatedElement element) {
-    return AnnotationSupport.findAnnotation(element, StoreConfig.class)
-        .orElse(DEFAULT_STORE_CONFIG);
+  private static StoreSpec findSpec(AnnotatedElement element) {
+    return AnnotationSupport.findAnnotation(element, StoreSpec.class).orElse(DEFAULT_STORE_SPEC);
   }
 
-  private static Arguments resolveArguments(Set<Class<?>> params, StoreContext context)
+  private static Arguments resolveArguments(List<Class<?>> parameterTypes, StoreContext context)
       throws IOException {
-    // Provide the StoreContext or a new Store or both.
-    if (params.containsAll(Set.of(Store.class, StoreContext.class))) {
-      return Arguments.of(context.newStore(), context);
-    } else if (params.contains(StoreContext.class)) {
-      return Arguments.of(context);
-    } else if (params.contains(Store.class)) {
-      return Arguments.of(context.newStore());
-    } else {
-      return Arguments.of(); // Let JUnit handle that.
+    var arguments = new ArrayList<>();
+    for (var type : parameterTypes) {
+      if (StoreContext.class.isAssignableFrom(type)) {
+        arguments.add(context);
+      } else if (Store.class.isAssignableFrom(type)) {
+        arguments.add(context.createAndRegisterStore());
+      } else {
+        break; // Let JUnit handle remaining arguments.
+      }
     }
+    return Arguments.of(arguments.toArray());
   }
 
-  private static Stream<ResolvedStoreConfig> resolveConfigs(StoreConfig config) {
+  private static Stream<StoreConfig> resolveSpec(StoreSpec spec) {
     return cartesianProduct(
-            Set.of(config.maxSize()),
-            Set.of(config.store()),
-            Set.of(config.fileSystem()),
-            Set.of(config.execution()),
-            Set.of(config.appVersion()),
-            Set.of(config.indexUpdateDelaySeconds()),
-            Set.of(config.autoInit()),
-            Set.of(config.autoAdvanceClock()))
+            List.of(
+                difference(Set.of(spec.store()), Set.of(spec.skipped())),
+                Set.of(spec.maxSize()),
+                Set.of(spec.appVersion()),
+                Set.of(spec.fileSystem()),
+                Set.of(spec.execution()),
+                Set.of(spec.indexUpdateDelaySeconds()),
+                Set.of(spec.autoAdvanceClock()),
+                Set.of(spec.dispatchEagerly()),
+                Set.of(spec.editorLockTtlSeconds()),
+                Set.of(spec.staleEntryLockTtlSeconds())))
         .stream()
-        .map(ResolvedStoreConfig::of)
-        .filter(ResolvedStoreConfig::isCompatible);
+        .filter(configTuple -> isCompatibleConfig(configTuple) && isAvailableConfig(configTuple))
+        .filter(StoreExtension::isAvailableConfig)
+        .map(StoreExtension::createConfig);
   }
 
-  private static Set<List<?>> cartesianProduct(Set<?>... sets) {
-    // Cover empty sets case.
-    if (sets.length == 0) {
-      return Set.of(List.of());
+  private static <T> Set<T> difference(Set<T> x, Set<T> y) {
+    var diff = new HashSet<>(x);
+    diff.removeAll(y);
+    return Set.copyOf(diff);
+  }
+
+  private static boolean isCompatibleConfig(List<?> tuple) {
+    var storeType = (StoreType) tuple.get(0);
+    var fileSystemType = (FileSystemType) tuple.get(3);
+    switch (storeType) {
+      case MEMORY:
+      case REDIS_STANDALONE:
+      case REDIS_CLUSTER:
+        return fileSystemType == FileSystemType.NONE;
+      case DISK:
+        return fileSystemType != FileSystemType.NONE;
+      default:
+        throw new AssertionError();
     }
-    return cartesianProduct(List.of(sets));
+  }
+
+  private static boolean isAvailableConfig(List<?> tuple) {
+    var storeType = (StoreType) tuple.get(0);
+    switch (storeType) {
+      case REDIS_STANDALONE:
+        return RedisStandaloneStoreContext.isAvailable();
+      case REDIS_CLUSTER:
+        return RedisClusterStoreContext.isAvailable();
+      default:
+        return true;
+    }
+  }
+
+  public static StoreConfig createConfig(List<?> tuple) {
+    var storeType = (StoreType) tuple.get(0);
+    switch (storeType) {
+      case MEMORY:
+        return createMemoryStoreConfig(tuple);
+      case DISK:
+        return createDiskStoreConfig(tuple);
+      case REDIS_STANDALONE:
+        return createRedisStandaloneConfig(tuple);
+      case REDIS_CLUSTER:
+        return createRedisClusterConfig(tuple);
+      default:
+        throw new AssertionError();
+    }
+  }
+
+  private static MemoryStoreConfig createMemoryStoreConfig(List<?> tuple) {
+    long maxSize = (long) tuple.get(1);
+    return new MemoryStoreConfig(maxSize);
+  }
+
+  private static DiskStoreConfig createDiskStoreConfig(List<?> tuple) {
+    int i = 1;
+    long maxSize = (long) tuple.get(i++);
+    int appVersion = (int) tuple.get(i++);
+    var fileSystemType = (FileSystemType) tuple.get(i++);
+    var execution = (Execution) tuple.get(i++);
+    int indexUpdateDelaySeconds = (int) tuple.get(i++);
+    boolean autoAdvanceClock = (boolean) tuple.get(i++);
+    boolean dispatchEagerly = (boolean) tuple.get(i);
+    return new DiskStoreConfig(
+        maxSize,
+        appVersion,
+        fileSystemType,
+        execution,
+        indexUpdateDelaySeconds,
+        autoAdvanceClock,
+        dispatchEagerly);
+  }
+
+  private static RedisStandaloneStoreConfig createRedisStandaloneConfig(List<?> tuple) {
+    int appVersion = (int) tuple.get(2);
+    int editorLockTtlSeconds = (int) tuple.get(8);
+    int staleEntryTtlSeconds = (int) tuple.get(9);
+    return new RedisStandaloneStoreConfig(appVersion, editorLockTtlSeconds, staleEntryTtlSeconds);
+  }
+
+  private static RedisClusterStoreConfig createRedisClusterConfig(List<?> tuple) {
+    int appVersion = (int) tuple.get(2);
+    int editorLockTtlSeconds = (int) tuple.get(8);
+    int staleEntryTtlSeconds = (int) tuple.get(9);
+    return new RedisClusterStoreConfig(appVersion, editorLockTtlSeconds, staleEntryTtlSeconds);
   }
 
   private static Set<List<?>> cartesianProduct(List<Set<?>> sets) {
     // Cover base cases.
     if (sets.isEmpty()) {
-      return Set.of();
+      return Set.of(List.of());
     } else if (sets.size() == 1) {
       return sets.get(0).stream()
           .map(List::of)
@@ -220,8 +288,8 @@ public final class StoreExtension
     return Collections.unmodifiableSet(product);
   }
 
-  @StoreConfig
-  private static void defaultStoreConfigHolder() {}
+  @StoreSpec
+  private static void defaultSpecHolder() {}
 
   @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
@@ -235,40 +303,36 @@ public final class StoreExtension
   public @interface StoreParameterizedTest {}
 
   private static final class ManagedStores implements CloseableResource {
-    private final Map<Object, List<StoreContext>> contexsts = new HashMap<>();
+    private final Map<Object, List<StoreContext>> contexts = new HashMap<>();
 
     ManagedStores() {}
 
-    StoreContext newContext(Object key, ResolvedStoreConfig config) throws IOException {
-      var context = config.createContext();
-      contexsts.computeIfAbsent(key, __ -> new ArrayList<>()).add(context);
+    StoreContext createContext(Object key, StoreConfig config) throws IOException {
+      var context = StoreContext.from(config);
+      contexts.computeIfAbsent(key, __ -> new ArrayList<>()).add(context);
       return context;
+    }
+
+    List<StoreContext> allContexts(Object key) {
+      return contexts.getOrDefault(key, List.of());
     }
 
     /**
      * Gets the first available context or creates a new one if none is available. Used by
      * resolveParameters to associated provided params with the same context.
      */
-    StoreContext getFirstContext(Object key, ResolvedStoreConfig config) throws IOException {
-      var contexts = contexsts.computeIfAbsent(key, __ -> new ArrayList<>());
+    StoreContext getOrCreateContext(Object key, StoreConfig config) throws IOException {
+      var contexts = this.contexts.computeIfAbsent(key, __ -> new ArrayList<>());
       if (contexts.isEmpty()) {
-        contexts.add(config.createContext());
+        contexts.add(StoreContext.from(config));
       }
       return contexts.get(0);
-    }
-
-    void initializeAll() throws IOException {
-      for (var contexts : contexsts.values()) {
-        for (var context : contexts) {
-          context.initializeAll();
-        }
-      }
     }
 
     @Override
     public void close() throws Exception {
       var exceptions = new ArrayList<Exception>();
-      for (var contexts : contexsts.values()) {
+      for (var contexts : contexts.values()) {
         for (var context : contexts) {
           try {
             context.close();
@@ -277,7 +341,7 @@ public final class StoreExtension
           }
         }
       }
-      contexsts.clear();
+      contexts.clear();
 
       if (exceptions.size() == 1) {
         throw exceptions.get(0);

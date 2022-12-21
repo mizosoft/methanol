@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.testing;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 
@@ -37,7 +38,7 @@ public final class EmptyPublisher<T> implements Publisher<T> {
   public void subscribe(Subscriber<? super T> subscriber) {
     requireNonNull(subscriber);
     try {
-      subscriber.onSubscribe(TestUtils.NOOP_SUBSCRIPTION);
+      subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     } catch (Throwable t) {
       subscriber.onError(t);
       return;

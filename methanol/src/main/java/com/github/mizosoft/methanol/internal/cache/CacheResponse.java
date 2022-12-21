@@ -32,7 +32,6 @@ import com.github.mizosoft.methanol.internal.cache.CacheResponse.CacheStrategy.S
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import java.io.Closeable;
-import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.nio.ByteBuffer;
 import java.time.Duration;
@@ -40,10 +39,10 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Consumer;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A {@code RawResponse} retrieved from cache. */
 public final class CacheResponse extends PublisherResponse implements Closeable {
@@ -86,8 +85,8 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
     viewer.close();
   }
 
-  public @Nullable Editor edit() throws IOException {
-    return viewer.edit();
+  public CompletableFuture<Optional<Editor>> editAsync() {
+    return viewer.editAsync();
   }
 
   public boolean isServable() {
@@ -125,8 +124,8 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
     private final Optional<String> etag;
 
     CacheStrategy(HttpRequest request, TrackedResponse<?> response, Instant now) {
-      this.requestCacheControl = CacheControl.parse(request.headers());
-      this.responseCacheControl = CacheControl.parse(response.headers());
+      requestCacheControl = CacheControl.parse(request.headers());
+      responseCacheControl = CacheControl.parse(response.headers());
 
       var maxAge = requestCacheControl.maxAge().or(responseCacheControl::maxAge);
       var freshnessPolicy = new FreshnessPolicy(maxAge, response);
@@ -140,22 +139,19 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
     }
 
     boolean canServeCacheResponse(StalenessLimit stalenessLimit) {
-      if (requestCacheControl.noCache() || responseCacheControl.noCache()) {
+      if (requestCacheControl.noCache()
+          || responseCacheControl.noCache()
+          || responseCacheControl.mustRevalidate()) {
         return false;
       }
 
       if (!freshness.isNegative()) {
-        // The response is fresh, but might not be fresh enough for the client
+        // The response is fresh, but might not be fresh enough for the client.
         return requestCacheControl.minFresh().isEmpty()
             || freshness.compareTo(requestCacheControl.minFresh().get()) >= 0;
       }
 
-      // The server can impose revalidation for stale responses
-      if (responseCacheControl.mustRevalidate()) {
-        return false;
-      }
-
-      // The response is stale, but might have acceptable staleness
+      // The response is stale, but might have acceptable staleness.
       return stalenessLimit.get(this).filter(limit -> staleness.compareTo(limit) <= 0).isPresent();
     }
 
@@ -179,10 +175,10 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
       MAX_AGE {
         @Override
         Optional<Duration> get(CacheStrategy strategy) {
-          // max-stale is only applicable to requests
+          // max-stale is only applicable to requests.
           var cacheControl = strategy.requestCacheControl;
           return cacheControl.anyMaxStale()
-              ? Optional.of(strategy.staleness) // Always accept current staleness
+              ? Optional.of(strategy.staleness) // Always accept current staleness.
               : cacheControl.maxStale();
         }
       },
@@ -190,7 +186,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
       STALE_WHILE_REVALIDATE {
         @Override
         Optional<Duration> get(CacheStrategy strategy) {
-          // stale-while-revalidate is only applicable to responses
+          // stale-while-revalidate is only applicable to responses.
           return strategy.responseCacheControl.staleWhileRevalidate();
         }
       },
@@ -198,8 +194,8 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
       STALE_IF_ERROR {
         @Override
         Optional<Duration> get(CacheStrategy strategy) {
-          // stale-if-error is applicable to requests and responses,
-          // but the former overrides the latter.
+          // stale-if-error is applicable to requests and responses, but the former overrides the
+          // latter.
           return strategy
               .requestCacheControl
               .staleIfError()

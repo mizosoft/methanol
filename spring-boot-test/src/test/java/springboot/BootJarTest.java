@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2021 Moataz Abdelnasser
+ * Copyright (c) 2022 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -104,7 +104,7 @@ class BootJarTest {
       String line;
       var lineFuture = executorService.submit(in::readLine);
       try {
-        line = lineFuture.get(8, TimeUnit.SECONDS);
+        line = lineFuture.get(10, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
         lineFuture.cancel(true);
         return fail(formatProcessOutput("readLine timed out", processOutput), e);

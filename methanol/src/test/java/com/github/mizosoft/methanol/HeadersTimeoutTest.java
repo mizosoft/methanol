@@ -58,7 +58,7 @@ class HeadersTimeoutTest {
 
     // Make headers arrive before timeout
     var subscriber = recordingClient.latestCall().bodyHandler().apply(new ImmutableResponseInfo());
-    assertThat(delayer.peekEarliestTaskFuture()).isCancelled();
+    assertThat(delayer.peekEarliestFuture()).isCancelled();
     assertThat(subscriber.getBody()).isNotCompletedExceptionally();
 
     // Executing the timeout task is NOOP

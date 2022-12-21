@@ -20,6 +20,21 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
 
+      - name: Install Redis
+        shell: bash
+
+        # It seems there's no straightforward way to install a recent redis version on Windows, so
+        # let's only consider macOS & Ubuntu for RedisStore tests.
+        run: |
+          if [[ "${{ matrix.os }}" == macos* ]]
+          then 
+            brew install redis
+          elif [[ "${{ matrix.os }}" == ubuntu* ]] 
+          then
+            chmod +x install-redis-ubuntu.sh
+            ./install-redis-ubuntu.sh
+          fi 
+
       - name: Restore Gradle cache
         uses: actions/cache@v2
         with:
@@ -56,6 +71,21 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 17
+
+      - name: Install Redis
+        shell: bash
+
+        # It seems there's no straightforward way to install a recent redis version on Windows, so
+        # let's only consider macOS & Ubuntu for RedisStore tests.
+        run: |
+          if [[ "${{ matrix.os }}" == macos* ]]
+          then 
+            brew install redis
+          elif [[ "${{ matrix.os }}" == ubuntu* ]] 
+          then
+            chmod +x install-redis-ubuntu.sh
+            ./install-redis-ubuntu.sh
+          fi  
 
       - name: Restore Gradle cache
         uses: actions/cache@v2

@@ -25,4 +25,8 @@ public class StoreCorruptionException extends IOException {
   public StoreCorruptionException(String message) {
     super(message);
   }
+
+  public StoreCorruptionException(String message, Throwable cause) {
+    super(message, cause);
+  }
 }
