@@ -61,7 +61,7 @@ ext {
 allprojects {
   group = 'com.github.mizosoft.methanol'
   ext.artifactId = getArtifactId(project)
-  version = '1.7.1-SNAPSHOT'
+  version = '1.8.0-SNAPSHOT'
 
   repositories {
     mavenCentral()
@@ -261,7 +261,7 @@ tasks.coveralls {
 }
 
 /** This task generates an aggregate Javadoc for all published modules (except benchmarks). */
-tasks.register('rootJavadoc', Javadoc) {
+task rootJavadoc(type: Javadoc) {
   def lazyModulePath = files() // --module-path
   def moduleSrcPaths = [:] // --module-source-path for multi-module compilation
   subprojects { Project subproject ->
