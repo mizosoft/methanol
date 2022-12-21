@@ -74,7 +74,6 @@ import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension.UseHttps;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension.StoreParameterizedTest;
@@ -2197,7 +2196,6 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreSpec(store = StoreType.REDIS_CLUSTER)
   void manuallyInvalidateEntries(Store store) throws Exception {
     setUpCache(store);
     var uri1 = serverUri.resolve("/a");
