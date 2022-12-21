@@ -22,20 +22,15 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus.HIT;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
 import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
-import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.FIXED_POOL;
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType.SYSTEM;
-import static com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType.DISK;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
-import static java.time.ZoneOffset.UTC;
 import static java.util.function.Predicate.isEqual;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -45,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 
+import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
 import com.github.mizosoft.methanol.HttpCache.Listener;
 import com.github.mizosoft.methanol.HttpCache.Stats;
 import com.github.mizosoft.methanol.HttpCache.StatsRecorder;
@@ -72,8 +68,11 @@ import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension.UseHttps;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreContext;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension.StoreParameterizedTest;
@@ -98,6 +97,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -159,7 +159,7 @@ class HttpCacheTest {
   private boolean failOnUnavailableResponses = true;
 
   @BeforeEach
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorConfig(ExecutorType.CACHED_POOL)
   void setUp(Executor executor, Methanol.Builder builder, MockWebServer server) {
     this.executor = executor;
     this.server = server;
@@ -175,7 +175,10 @@ class HttpCacheTest {
                       throws IOException, InterruptedException {
                     var response = chain.forward(request);
                     if (failOnUnavailableResponses) {
-                      assertThat(response.statusCode()).isNotEqualTo(HTTP_UNAVAILABLE);
+                      assertThat(response.statusCode())
+                          .withFailMessage(
+                              "unavailable response from server (no queued responses, expected to be cached?)")
+                          .isNotEqualTo(HTTP_UNAVAILABLE);
                     }
                     return response;
                   }
@@ -188,7 +191,10 @@ class HttpCacheTest {
                         .thenApply(
                             response -> {
                               if (failOnUnavailableResponses) {
-                                assertThat(response.statusCode()).isNotEqualTo(HTTP_UNAVAILABLE);
+                                assertThat(response.statusCode())
+                                    .withFailMessage(
+                                        "unavailable response from server (no queued responses, expected to be cached?)")
+                                    .isNotEqualTo(HTTP_UNAVAILABLE);
                               }
                               return response;
                             });
@@ -264,44 +270,84 @@ class HttpCacheTest {
   @StoreParameterizedTest
   void cacheGetWithMaxAge(Store store) throws Exception {
     setUpCache(store);
-    assertCachedGet(Duration.ofSeconds(1), "Cache-Control", "max-age=2");
+
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=2").setBody("Pikachu"));
+    verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
+
+    clock.advance(Duration.ofSeconds(1));
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu");
+
+    clock.advance(Duration.ofSeconds(1));
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu");
+
+    clock.advance(Duration.ofSeconds(1));
+    server.enqueue(new MockResponse().setBody("Eevee"));
+    verifyThat(get(serverUri)).isConditionalMiss().hasBody("Eevee");
   }
 
   @StoreParameterizedTest
   void cacheGetWithExpires(Store store) throws Exception {
     setUpCache(store);
 
-    var now = toUtcDateTime(clock.instant());
-    assertCachedGet(Duration.ofHours(12), "Expires", toHttpDateString(now.plusDays(1)));
+    var timeResponseReceived = toUtcDateTime(clock.instant());
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Expires", toHttpDateString(timeResponseReceived.plusDays(1)))
+            .setBody("Pikachu"));
+    verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
+
+    clock.advance(Duration.ofHours(12));
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu");
+
+    clock.advance(Duration.ofHours(12));
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu");
+
+    clock.advance(Duration.ofMillis(1));
+    server.enqueue(new MockResponse().setBody("Eevee"));
+    verifyThat(get(serverUri)).isConditionalMiss().hasBody("Eevee");
   }
 
   @StoreParameterizedTest
   void cacheGetWithExpiresAndDate(Store store) throws Exception {
     setUpCache(store);
 
-    var date = toUtcDateTime(clock.instant());
-    assertCachedGet(
-        Duration.ofDays(1), // Advance clock so freshness is == 0 (response is still servable)
-        "Date",
-        toHttpDateString(date),
-        "Expires",
-        toHttpDateString(date.plusDays(1)));
+    var timeResponseGenerated = toUtcDateTime(clock.instant());
+    clock.advance(Duration.ofHours(12));
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Date", toHttpDateString(timeResponseGenerated))
+            .setHeader("Expires", toHttpDateString(timeResponseGenerated.plusDays(1)))
+            .setBody("Pikachu"));
+    verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
+
+    clock.advance(Duration.ofHours(10));
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu");
+
+    clock.advance(Duration.ofHours(2));
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu");
+
+    clock.advance(Duration.ofMillis(1));
+    server.enqueue(new MockResponse().setBody("Eevee"));
+    verifyThat(get(serverUri)).isConditionalMiss().hasBody("Eevee");
   }
 
   @StoreParameterizedTest
   @UseHttps
   void cacheSecureGetWithMaxAge(Store store) throws Exception {
     setUpCache(store);
-    assertCachedGet(Duration.ofSeconds(1), "Cache-Control", "max-age=2").isCachedWithSsl();
-  }
 
-  private ResponseVerifier<String> assertCachedGet(Duration clockAdvance, String... headers)
-      throws Exception {
-    server.enqueue(new MockResponse().setHeaders(Headers.of(headers)).setBody("Pikachu"));
-    verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu");
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=2").setBody("Pikachu"));
+    verifyThat(get(serverUri)).isCacheMiss().hasBody("Pikachu").isSecure();
 
-    clock.advance(clockAdvance);
-    return verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu");
+    clock.advance(Duration.ofSeconds(1));
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu").isSecure();
+
+    clock.advance(Duration.ofSeconds(1));
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Pikachu").isSecure();
+
+    clock.advance(Duration.ofSeconds(1));
+    server.enqueue(new MockResponse().setBody("Eevee"));
+    verifyThat(get(serverUri)).isConditionalMiss().hasBody("Eevee").isSecure();
   }
 
   @StoreParameterizedTest
@@ -435,7 +481,7 @@ class HttpCacheTest {
         "X-Content-*",
         "X-Webkit-*"
       })
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void retainedStoredHeadersOnRevalidation(String headerName, Store store) throws Exception {
     clientBuilder.autoAcceptEncoding(false);
     setUpCache(store);
@@ -837,7 +883,7 @@ class HttpCacheTest {
                   .apply(verifyThat(getUnchecked(request)))
                   .hasBody("stale on a scale");
           // Must put a warning only if not revalidated
-          if (response.getCacheAwareResponse().cacheStatus() == HIT) {
+          if (response.getCacheAwareResponse().cacheStatus() == CacheStatus.HIT) {
             response.containsHeader("Warning", "110 - \"Response is Stale\"");
           } else {
             response.doesNotContainHeader("Warning");
@@ -972,7 +1018,7 @@ class HttpCacheTest {
    */
   @ParameterizedTest
   @ValueSource(strings = {"Cookie", "Cookie2", "Authorization", "Proxy-Authorization"})
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void responsesVaryingOnImplicitHeadersAreNotStored(String implicitField, Store store)
       throws Exception {
     setUpCache(store);
@@ -1247,7 +1293,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   @ValueSource(ints = {301, 302, 303, 307, 308})
   void cacheableRedirectWithUncacheableTarget(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1286,7 +1332,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   @ValueSource(ints = {301, 302, 303, 307, 308})
   void uncacheableRedirectWithCacheableTarget(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1325,7 +1371,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   @ValueSource(ints = {301, 302, 303, 307, 308})
   void uncacheableRedirectWithUncacheableTarget(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1368,7 +1414,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   @ValueSource(ints = {301, 302, 303, 307, 308})
   void cacheableRedirectWithCacheableTarget(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1516,7 +1562,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   @ValueSource(ints = {500, 502, 503, 504})
   void staleIfErrorWithServerErrorCodes(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1553,7 +1599,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   @ValueSource(ints = {500, 502, 503, 504})
   void unsatisfiedStaleIfErrorWithServerErrorCodes(int code, Store store) throws Exception {
     setUpCache(store);
@@ -1616,7 +1662,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   @ValueSource(classes = {ConnectException.class, UnknownHostException.class})
   void staleIfErrorWithConnectionFailure(Class<? extends Throwable> failureType, Store store)
       throws Exception {
@@ -1650,7 +1696,7 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   @ValueSource(classes = {ConnectException.class, UnknownHostException.class})
   void unsatisfiedStaleIfErrorWithConnectionFailure(
       Class<? extends Throwable> failureType, Store store) throws Exception {
@@ -1799,7 +1845,7 @@ class HttpCacheTest {
    */
   @ParameterizedTest
   @CsvFileSource(resources = "/default_cacheability.csv", numLinesToSkip = 1)
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void defaultCacheability(int code, boolean cacheableByDefault, Store store) throws Exception {
     setUpCache(store);
     client =
@@ -2022,7 +2068,7 @@ class HttpCacheTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void unsafeMethodsInvalidateCache(String method, StoreContext storeContext) throws Exception {
     assertUnsafeMethodInvalidatesCache(storeContext, method, 200, true);
     assertUnsafeMethodInvalidatesCache(storeContext, method, 302, true);
@@ -2030,7 +2076,7 @@ class HttpCacheTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void unsafeMethodsDoNotInvalidateCacheWithErrorResponse(String method, StoreContext storeContext)
       throws Exception {
     assertUnsafeMethodInvalidatesCache(storeContext, method, 104, false);
@@ -2070,7 +2116,7 @@ class HttpCacheTest {
   // TODO find a way to test referenced URIs aren't invalidated if they have different hosts
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void unsafeMethodsInvalidateReferencedUris(String method, Store store) throws Exception {
     setUpCache(store);
     client = clientBuilder.followRedirects(Redirect.NEVER).build();
@@ -2105,7 +2151,7 @@ class HttpCacheTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"POST", "PUT", "PATCH", "DELETE"})
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void unsafeMethodsAreNotCached(String method, Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=2").setBody("Pikachu"));
@@ -2261,7 +2307,7 @@ class HttpCacheTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"private", "public"})
-  @StoreSpec(store = DISK, fileSystem = SYSTEM)
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void responseWithCacheControlPublicOrPrivateIsCacheableByDefault(String directive, Store store)
       throws Exception {
     setUpCache(store);
@@ -2297,7 +2343,7 @@ class HttpCacheTest {
 
   @UseHttps // Test SSLSession persistence
   @StoreParameterizedTest
-  @StoreSpec(store = DISK)
+  @StoreSpec(store = StoreType.DISK)
   void cachePersistence(StoreContext storeContext) throws Exception {
     setUpCache(storeContext.createAndRegisterStore());
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Eevee"));
@@ -2963,7 +3009,7 @@ class HttpCacheTest {
         .atMost(Duration.ofMinutes(2))
         .until(
             () -> get(request),
-            response -> ((CacheAwareResponse<String>) response).cacheStatus() == HIT);
+            response -> ((CacheAwareResponse<String>) response).cacheStatus() == CacheStatus.HIT);
   }
 
   private void assertNotCached(URI uri) throws Exception {
@@ -2991,7 +3037,7 @@ class HttpCacheTest {
   }
 
   private static LocalDateTime toUtcDateTime(Instant instant) {
-    return LocalDateTime.ofInstant(instant, UTC);
+    return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
   }
 
   private static String formatInstant(Instant instant) {
