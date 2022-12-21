@@ -34,8 +34,6 @@ import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.codec.StringCodec;
-import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletionStage;
 
@@ -46,9 +44,6 @@ import java.util.concurrent.CompletionStage;
 abstract class RedisClientConnectionProvider<
         CLIENT extends AbstractRedisClient, CONN extends StatefulConnection<String, ByteBuffer>>
     implements RedisConnectionProvider<CONN> {
-  private static final Logger logger =
-      System.getLogger(RedisClientConnectionProvider.class.getName());
-
   private static final RedisCodec<String, ByteBuffer> CODEC =
       RedisCodec.of(StringCodec.UTF8, ByteBufferCodec.INSTANCE);
 
@@ -62,14 +57,7 @@ abstract class RedisClientConnectionProvider<
 
   @Override
   public void release(CONN connection) {
-    connection
-        .closeAsync()
-        .whenComplete(
-            (__, ex) -> {
-              if (ex != null) {
-                logger.log(Level.WARNING, "Exception when closing connection", ex);
-              }
-            });
+    connection.close();
   }
 
   @Override

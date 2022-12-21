@@ -296,7 +296,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
   /**
    * Closes this cache. Attempting to operate on a closed cache either directly (e.g. removing an
    * entry) or indirectly (e.g. sending requests over a client that uses this cache) will likely
-   * cause an {@code IllegalStateException} to be thrown.
+   * cause an {@code IllegalStateException} (or perhaps some other exception) to be thrown.
    */
   @Override
   public void close() throws IOException {
