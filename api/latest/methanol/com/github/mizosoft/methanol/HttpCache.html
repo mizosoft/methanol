@@ -425,7 +425,7 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
            throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></span></div>
 <div class="block">Closes this cache. Attempting to operate on a closed cache either directly (e.g. removing an
  entry) or indirectly (e.g. sending requests over a client that uses this cache) will likely
- cause an <code>IllegalStateException</code> to be thrown.</div>
+ cause an <code>IllegalStateException</code> (or perhaps some other exception) to be thrown.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/AutoCloseable.html#close()" title="class or interface in java.lang" class="external-link">close</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></code></dd>
