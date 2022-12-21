@@ -63,6 +63,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Timeout;
@@ -962,7 +963,7 @@ class DiskStoreTest {
   private void testDisposeDuringIndexWrite(
       DiskStore store, DiskStoreContext context, Executor executor)
       throws IOException, InterruptedException {
-    // Submit index write tasks.
+    // Submit index write tasks (queued by the delayer).
     int indexWriteCount = 10;
     write(store, "e1", "", "a");
     for (int i = 0; i < indexWriteCount - 1; i++) {
@@ -974,7 +975,11 @@ class DiskStoreTest {
         CompletableFuture.runAsync(
             () -> {
               awaitUninterruptibly(arrival);
-              context.mockClock().advanceSeconds(0); // Trigger delayed index writes.
+              try {
+                context.mockClock().advanceSeconds(0); // Trigger 'delayed' index writes.
+              } catch (RejectedExecutionException ignored) {
+                // This is fine. DiskStore::dispose closes the SerialExecutor used for index writes.
+              }
             },
             executor);
     var invokeDispose =
@@ -982,7 +987,8 @@ class DiskStoreTest {
             () -> {
               awaitUninterruptibly(arrival);
               //noinspection StatementWithEmptyBody
-              while (store.indexWriteCount() < 0.3 * indexWriteCount) {} // Spin
+              while (store.indexWriteCount()
+                  < 0.3 * indexWriteCount) {} // Spin till some writes are completed.
               store.dispose();
             },
             executor);
