@@ -49,6 +49,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
+import org.testng.SkipException;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -77,7 +78,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
 
   @Factory(dataProvider = "provider")
   public CacheReadingPublisherTck(ExecutorType executorType, StoreType storeType) {
-    super(TckUtils.testEnvironment());
+    super(TckUtils.testEnvironmentWithTimeout(1000));
     this.executorType = executorType;
     this.storeConfig = StoreConfig.createDefault(storeType);
   }
@@ -174,6 +175,39 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
               new Object[] {ExecutorType.FIXED_POOL, StoreType.REDIS_CLUSTER}));
     }
     return parameters.toArray(Object[][]::new);
+  }
+
+  // The following tests don't apply to our unicast publisher. They're explicitly skipped as they
+  // otherwise cause AbstractSubscription to spam the log with RejectedExecutionExceptions when
+  // the second subscriber creation fails while there are still ongoing reads for the first
+  // subscriber.
+
+  @Override
+  public void optional_spec111_maySupportMultiSubscribe() {
+    throw new SkipException("not a multicast publisher");
+  }
+
+  @Override
+  public void
+      optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingOneByOne() {
+    throw new SkipException("not a multicast publisher");
+  }
+
+  @Override
+  public void
+      optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfront() {
+    throw new SkipException("not a multicast publisher");
+  }
+
+  @Override
+  public void
+      optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfrontAndCompleteAsExpected() {
+    throw new SkipException("not a multicast publisher");
+  }
+
+  @Override
+  public void optional_spec111_registeredSubscribersMustReceiveOnNextOrOnCompleteSignals() {
+    throw new SkipException("not a multicast publisher");
   }
 
   /**

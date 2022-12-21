@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.testing.junit;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
+import com.github.mizosoft.methanol.testing.Logging;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
@@ -39,6 +40,13 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
   private static final int MAX_TAIL_LENGTH = 15;
 
   private static final Logger logger = System.getLogger(AbstractRedisStoreContext.class.getName());
+
+  static {
+    // This class spams the log with warnings if connection.close() is closed multiple times
+    // (which always happens when the connection is closed, then the client creating that
+    // connection is closed, which is not unusual).
+    Logging.disable("io.lettuce.core.RedisChannelHandler");
+  }
 
   private final RedisSessionSingletonPool<R> sessionPool;
   private @MonotonicNonNull R lazySession;

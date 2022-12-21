@@ -41,7 +41,7 @@ public class TckUtils {
   /**
    * An arbitrary max for the # of elements needed to be precomputed for creating the test
    * publisher. This avoids OMEs when createFlowPublisher() is called with a large # of elements
-   * (currently happens with required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue)
+   * (currently happens with required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue).
    */
   static final int MAX_PRECOMPUTED_ELEMENTS = 1 << 10;
 
