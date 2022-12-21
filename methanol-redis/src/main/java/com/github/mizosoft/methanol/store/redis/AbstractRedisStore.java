@@ -622,14 +622,15 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
           return CompletableFuture.completedFuture(range);
         }
         if (!readingFreshEntry) {
-          return CompletableFuture.failedFuture(new IllegalStateException("Stale entry expired"));
+          return CompletableFuture.failedFuture(
+              new IllegalStateException("stale entry data expired"));
         }
         return getStaleRange(position, inclusiveLimit)
             .thenCompose(
                 staleRange -> {
                   if (!staleRange.hasRemaining()) {
                     return CompletableFuture.failedFuture(
-                        new IllegalStateException("Stale entry expired"));
+                        new IllegalStateException("entry data removed"));
                   }
                   readingFreshEntry = false;
                   return CompletableFuture.completedFuture(staleRange);
