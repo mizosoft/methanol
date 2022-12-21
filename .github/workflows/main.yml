@@ -155,9 +155,9 @@ jobs:
           java-version: 17
 
       # MkDocs needs python to run
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
-          python-version: 3.9.1
+          python-version: 3.11.1
 
       - name: Generate docs
         run: |
