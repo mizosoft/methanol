@@ -25,7 +25,8 @@ ext {
         'methanol-jackson-flux',
         'methanol-jaxb',
         'methanol-protobuf',
-        'methanol-testutils'
+        'methanol-redis',
+        'methanol-testing'
     ]
   }
 
@@ -39,12 +40,13 @@ ext {
         'methanol-jackson',
         'methanol-jackson-flux',
         'methanol-jaxb',
-        'methanol-protobuf'
+        'methanol-protobuf',
+        // TODO uncomment when redis-specific tests are added 'methanol-redis'
     ]
   }
 
   // Project is included in coverage report?
-  contributesToCoverageReport = { project ->
+  isIncludedInCoverageReport = { project ->
     isPublished(project) && project.name != 'methanol-benchmarks'
   }
 
@@ -233,7 +235,7 @@ task jacocoRootReport(type: JacocoReport) {
   dependsOn jacocoMerge
   executionData jacocoMerge.destinationFile
   subprojects.each { subproject ->
-    if (contributesToCoverageReport(subproject)) {
+    if (isIncludedInCoverageReport(subproject)) {
       additionalSourceDirs.from subproject.sourceSets.main.allSource.srcDirs
       sourceDirectories.from subproject.sourceSets.main.allSource.srcDirs
       classDirectories.from subproject.sourceSets.main.output
@@ -249,7 +251,7 @@ task jacocoRootReport(type: JacocoReport) {
 coveralls {
   jacocoReportPath = jacocoRootReport.reports.xml.outputLocation
   subprojects.each { subproject ->
-    if (contributesToCoverageReport(subproject)) {
+    if (isIncludedCoverageReport(subproject)) {
       sourceDirs += subproject.sourceSets.main.allSource.srcDirs.flatten()
     }
   }
