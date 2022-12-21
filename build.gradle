@@ -251,7 +251,7 @@ task jacocoRootReport(type: JacocoReport) {
 coveralls {
   jacocoReportPath = jacocoRootReport.reports.xml.outputLocation
   subprojects.each { subproject ->
-    if (isIncludedCoverageReport(subproject)) {
+    if (isIncludedInCoverageReport(subproject)) {
       sourceDirs += subproject.sourceSets.main.allSource.srcDirs.flatten()
     }
   }
