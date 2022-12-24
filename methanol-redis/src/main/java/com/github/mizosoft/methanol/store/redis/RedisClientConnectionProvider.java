@@ -51,7 +51,7 @@ abstract class RedisClientConnectionProvider<
   final boolean closeClient;
 
   RedisClientConnectionProvider(CLIENT client, boolean closeClient) {
-    this.client = client;
+    this.client = requireNonNull(client);
     this.closeClient = closeClient;
   }
 

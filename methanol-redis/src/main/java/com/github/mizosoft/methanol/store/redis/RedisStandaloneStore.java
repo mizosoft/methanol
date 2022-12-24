@@ -45,7 +45,7 @@ class RedisStandaloneStore extends AbstractRedisStore<StatefulRedisConnection<St
         editorLockTtlSeconds,
         staleEntryTtlSeconds,
         appVersion,
-        String.format("methanol:%d:%d:mclock", STORE_VERSION, appVersion));
+        String.format("methanol:%d:%d:clock", STORE_VERSION, appVersion));
   }
 
   @SuppressWarnings("unchecked")
