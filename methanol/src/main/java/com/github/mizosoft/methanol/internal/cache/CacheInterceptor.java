@@ -23,9 +23,20 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.Utils.startsWithIgnoreCase;
+import static java.net.HttpURLConnection.HTTP_BAD_METHOD;
 import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
+import static java.net.HttpURLConnection.HTTP_GONE;
+import static java.net.HttpURLConnection.HTTP_MOVED_PERM;
+import static java.net.HttpURLConnection.HTTP_MULT_CHOICE;
+import static java.net.HttpURLConnection.HTTP_NOT_AUTHORITATIVE;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_NOT_IMPLEMENTED;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
+import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
+import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PARTIAL;
+import static java.net.HttpURLConnection.HTTP_REQ_TOO_LONG;
+import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.CacheAwareResponse;
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
@@ -64,13 +75,14 @@ import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An {@link Interceptor} that serves incoming requests from cache, network, both, or none (in case
- * of unsatisfiable requests). The interceptor also updates, populates and invalidates cache entries
- * as necessary.
+ * An {@link Interceptor} that serves incoming requests from cache, network, both (in case of
+ * successful/failed revalidation), or none (in case of unsatisfiable requests). The interceptor
+ * also updates, populates and invalidates cache entries as necessary.
  */
 public final class CacheInterceptor implements Interceptor {
   private static final Logger logger = System.getLogger(CacheInterceptor.class.getName());
@@ -109,15 +121,14 @@ public final class CacheInterceptor implements Interceptor {
 
   private final LocalCache cache;
   private final Listener listener;
-  private final Executor handlerExecutor;
+  private final Executor executor;
   private final Clock clock;
 
-  public CacheInterceptor(
-      LocalCache cache, Listener listener, Executor handlerExecutor, Clock clock) {
-    this.cache = cache;
-    this.listener = listener;
-    this.handlerExecutor = handlerExecutor;
-    this.clock = clock;
+  public CacheInterceptor(LocalCache cache, Listener listener, Executor executor, Clock clock) {
+    this.cache = requireNonNull(cache);
+    this.listener = requireNonNull(listener);
+    this.executor = requireNonNull(executor);
+    this.clock = requireNonNull(clock);
   }
 
   @Override
@@ -130,16 +141,17 @@ public final class CacheInterceptor implements Interceptor {
   public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
       HttpRequest request, Chain<T> chain) {
     return exchange(request, chain, true)
-        .thenCompose(rawResponse -> rawResponse.handleAsync(chain.bodyHandler(), handlerExecutor))
+        .thenCompose(rawResponse -> rawResponse.handleAsync(chain.bodyHandler(), executor))
         .thenApply(Function.identity()); // TrackedResponse<T> -> HttpResponse<T>
   }
 
-  public CompletableFuture<RawResponse> exchange(
+  private CompletableFuture<RawResponse> exchange(
       HttpRequest request, Chain<?> chain, boolean async) {
     listener.onRequest(request);
+
     var requestTime = clock.instant();
     var asyncAdapter = new AsyncAdapter(async);
-    var publisherChain = Handlers.toPublisherChain(chain, handlerExecutor);
+    var publisherChain = Handlers.toPublisherChain(chain, executor);
     return getCacheResponse(request, chain, asyncAdapter)
         .thenApply(
             cacheResponse ->
@@ -170,15 +182,15 @@ public final class CacheInterceptor implements Interceptor {
   }
 
   private void handleAsyncRevalidation(
-      @Nullable Exchange networkExchange, @Nullable Throwable error) {
+      @Nullable Exchange networkExchange, @Nullable Throwable exception) {
     var networkResponse = networkExchange != null ? networkExchange.networkResponse : null;
-    assert networkResponse != null || error != null;
+    assert networkResponse != null || exception != null;
     if (networkResponse != null) {
-      // Make sure the network response is released properly. If this is a cache miss, and we're
-      // updating a cache entry, discarding will drain the response body into cache.
-      networkResponse.discard(handlerExecutor);
+      // Make sure the network response is released properly. If we're  updating a cache entry,
+      // discarding will drain the response body into cache.
+      networkResponse.discard(executor);
     } else {
-      logger.log(Level.WARNING, "asynchronous revalidation failure", error);
+      logger.log(Level.WARNING, "Asynchronous revalidation failure", exception);
     }
   }
 
@@ -187,7 +199,7 @@ public final class CacheInterceptor implements Interceptor {
   }
 
   /**
-   * Returns true if the given field name denotes a precondition (rfc7232 section 3). 'If-Match' &
+   * Returns true if the given field name denotes a precondition (rfc7232 Section 3). 'If-Match' &
    * 'If-Unmodified-Since' are meant to be seen by the origin, so requests having them are
    * forwarded. rfc7234 allows caches to evaluate other preconditions, but the added complexity is
    * discouraging, so they're also forwarded.
@@ -230,19 +242,36 @@ public final class CacheInterceptor implements Interceptor {
     return cause instanceof ConnectException || cause instanceof UnknownHostException;
   }
 
-  /** Returns whether the given network response can be cached. Based on rfc7234 section 3. */
+  /** Returns whether the given network response can be cached. Based on rfc7234 Section 3. */
   private static boolean isCacheable(HttpRequest request, TrackedResponse<?> response) {
-    CacheControl responseCacheControl;
-    Set<String> varyFields;
     if (!"GET".equalsIgnoreCase(request.method())
-        || response.statusCode() == HTTP_PARTIAL // We can't handle partial content yet.
         || !request.uri().equals(response.uri())
-        || !request.method().equalsIgnoreCase(response.request().method())
-        || (responseCacheControl = CacheControl.parse(response.headers())).noStore()
-        || CacheControl.parse(request.headers()).noStore()
-        || ((varyFields = CacheResponseMetadata.varyFields(response.headers()))
-                .contains("*") // The response is unmatchable.
-            || varyFields.stream().anyMatch(CacheInterceptor::isImplicitField))) {
+        || !request.method().equalsIgnoreCase(response.request().method())) {
+      return false;
+    }
+
+    // Skip partial content.
+    if (response.statusCode() == HTTP_PARTIAL) {
+      return false;
+    }
+
+    CacheControl responseCacheControl;
+    try {
+      responseCacheControl = CacheControl.parse(response.headers());
+    } catch (IllegalArgumentException e) {
+      // Don't crash the client because of server's ill-formed Cache-Control.
+      logger.log(Level.WARNING, "Invalid Cache-Control in response", e);
+      return false;
+    }
+
+    if (responseCacheControl.noStore() || CacheControl.parse(request.headers()).noStore()) {
+      return false;
+    }
+
+    // Skip if the response is unmatchable or varies with fields what we can't access.
+    Set<String> varyFields;
+    if ((varyFields = CacheResponseMetadata.varyFields(response.headers())).contains("*")
+        || varyFields.stream().anyMatch(CacheInterceptor::isImplicitField)) {
       return false;
     }
 
@@ -254,21 +283,22 @@ public final class CacheInterceptor implements Interceptor {
   }
 
   /**
-   * Returns whether a response with the given code is cacheable by default (can be cached even if
-   * not explicitly allowed by cache headers). Based on rfc7231 6.1.
+   * Returns whether a response with the given code is cacheable by default (can be cached in the
+   * absence of explicit expiry, and hence may rely on heuristic freshness). Based on rfc7231
+   * Section 6.1.
    */
   private static boolean isCacheableByDefault(int statusCode) {
     switch (statusCode) {
-      case 200:
-      case 203:
-      case 204:
-      case 300:
-      case 301:
-      case 404:
-      case 405:
-      case 410:
-      case 414:
-      case 501:
+      case HTTP_OK:
+      case HTTP_NOT_AUTHORITATIVE:
+      case HTTP_NO_CONTENT:
+      case HTTP_MULT_CHOICE:
+      case HTTP_MOVED_PERM:
+      case HTTP_NOT_FOUND:
+      case HTTP_BAD_METHOD:
+      case HTTP_GONE:
+      case HTTP_REQ_TOO_LONG:
+      case HTTP_NOT_IMPLEMENTED:
         return true;
       case HTTP_PARTIAL:
         // Partial responses are cacheable by default, but this implementation doesn't support it.
@@ -277,14 +307,15 @@ public final class CacheInterceptor implements Interceptor {
     }
   }
 
-  /** Updates the cache response after successful revalidation as specified in rfc7234 4.3.4. */
+  /**
+   * Updates the cache response after successful revalidation as specified in rfc7234 Section 4.3.4.
+   */
   private static CacheResponse updateCacheResponse(
       CacheResponse cacheResponse, NetworkResponse networkResponse) {
     return cacheResponse.with(
         builder ->
             builder
-                .clearHeaders()
-                .headers(
+                .setHeaders(
                     mergeHeaders(cacheResponse.get().headers(), networkResponse.get().headers()))
                 .timeRequestSent(networkResponse.get().timeRequestSent())
                 .timeResponseReceived(networkResponse.get().timeResponseReceived()));
@@ -313,7 +344,7 @@ public final class CacheInterceptor implements Interceptor {
             .anyMatch(prefix -> startsWithIgnoreCase(name, prefix)));
   }
 
-  /** Returns the URIs invalidated by the given exchange as specified by rfc7234 section 4.4. */
+  /** Returns the URIs invalidated by the given exchange as specified by rfc7234 Section 4.4. */
   private static List<URI> invalidatedUris(HttpRequest request, TrackedResponse<?> response) {
     if (isUnsafe(request.method())
         && (HttpStatus.isSuccessful(response) || HttpStatus.isRedirection(response))) {
@@ -339,7 +370,7 @@ public final class CacheInterceptor implements Interceptor {
 
   /**
    * Returns whether the given request method is unsafe, and hence may invalidate cached entries.
-   * Based on rfc7231 4.2.1.
+   * Based on rfc7231 Section 4.2.1.
    */
   private static boolean isUnsafe(String method) {
     return !"GET".equalsIgnoreCase(method)
@@ -432,7 +463,7 @@ public final class CacheInterceptor implements Interceptor {
       if (cacheResponse != null && cacheResponse.isServableWhileRevalidating()) {
         // TODO implement a bounding policy on asynchronous revalidation & find a mechanism to
         //      notify caller for revalidation's completion.
-        networkExchange()
+        backgroundNetworkExchange()
             .thenCompose(Exchange::updateCache)
             .whenComplete(CacheInterceptor.this::handleAsyncRevalidation);
         return CompletableFuture.completedFuture(this);
@@ -451,13 +482,14 @@ public final class CacheInterceptor implements Interceptor {
 
     CompletableFuture<Exchange> updateCache() {
       if (networkResponse == null) {
-        return CompletableFuture.completedFuture(this); // There's nothing to update from.
+        return CompletableFuture.completedFuture(this);
       }
 
-      // On successful revalidation, update the stored response as specified by rfc7234 4.3.3.
+      // On successful revalidation, update the stored response as specified by rfc7234 Section
+      // 4.3.3.
       if (cacheResponse != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
         // Release the network response properly.
-        networkResponse.discard(handlerExecutor);
+        networkResponse.discard(executor);
 
         var updatedCacheResponse = updateCacheResponse(cacheResponse, networkResponse);
         cache
@@ -516,7 +548,7 @@ public final class CacheInterceptor implements Interceptor {
         }
 
         // If neither cache nor network was applicable, this is an unsatisfiable request. So serve a
-        // 504 Gateway Timeout response as per rfc7234 5.2.1.7.
+        // 504 Gateway Timeout response as per rfc7234 Section 5.2.1.7.
         closeIfPresent(cacheResponse);
         return NetworkResponse.from(
             new ResponseBuilder<>()
@@ -553,10 +585,23 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     private CompletableFuture<Exchange> networkExchange() {
+      return networkExchange(asyncAdapter::forward);
+    }
+
+    private CompletableFuture<Exchange> backgroundNetworkExchange() {
+      return networkExchange(Chain::forwardAsync);
+    }
+
+    private CompletableFuture<Exchange> networkExchange(
+        BiFunction<
+                Chain<Publisher<List<ByteBuffer>>>,
+                HttpRequest,
+                CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>>>
+            forwarder) {
       var networkRequest =
-          cacheResponse != null ? cacheResponse.toValidationRequest(request) : request;
-      return asyncAdapter
-          .forward(chain, networkRequest)
+          cacheResponse != null ? cacheResponse.conditionalize(this.request) : this.request;
+      return forwarder
+          .apply(chain, networkRequest)
           .thenApply(
               response ->
                   NetworkResponse.from(
@@ -579,16 +624,14 @@ public final class CacheInterceptor implements Interceptor {
           && cacheResponse != null
           && cacheResponse.isServableOnError()) {
         if (networkResponse != null) {
-          networkResponse.discard(handlerExecutor);
+          networkResponse.discard(executor);
         }
         return this;
       }
 
       // stale-if-error isn't satisfied. Forward exception or networkExchange as is.
       if (exception != null) {
-        if (cacheResponse != null) {
-          cacheResponse.close();
-        }
+        closeIfPresent(cacheResponse);
         throw Utils.toCompletionException(exception);
       }
       return networkExchange;

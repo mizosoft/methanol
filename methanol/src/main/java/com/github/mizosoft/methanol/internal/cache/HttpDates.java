@@ -37,11 +37,11 @@ import java.time.temporal.TemporalQueries;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Helpers for parsing/printing HTTP dates. */
+/** Helpers for parsing/formatting HTTP dates. */
 public class HttpDates {
   private static final Logger logger = System.getLogger(HttpDates.class.getName());
 
-  /** A formatter for the preferred format specified by rfc7231 7.1.1.1. */
+  /** A formatter for the preferred format specified by rfc7231 Section 7.1.1.1. */
   private static final DateTimeFormatter PREFERRED_FORMATTER;
 
   /** A list of formatters to try in sequence till one succeeds. */
@@ -50,7 +50,7 @@ public class HttpDates {
   static {
     PREFERRED_FORMATTER = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'");
 
-    // These are the formats specified by rfc7231 section 7.1.1.1 for acceptable HTTP dates.
+    // These are the formats specified by rfc7231 Section 7.1.1.1 for acceptable HTTP dates.
     FORMATTERS =
         List.of(
             // The preferred format is tried first.
@@ -81,7 +81,7 @@ public class HttpDates {
     return toHttpDate0(value, true);
   }
 
-  static @Nullable LocalDateTime toHttpDate0(String value, boolean logFailure) {
+  private static @Nullable LocalDateTime toHttpDate0(String value, boolean logFailure) {
     TemporalAccessor parsedTemporal = null;
     for (var formatter : FORMATTERS) {
       try {
@@ -92,7 +92,7 @@ public class HttpDates {
       }
     }
 
-    DateTimeException illegalHttpDate = null;
+    DateTimeException malformedHttpDate = null;
     if (parsedTemporal != null) {
       try {
         var dateTime = LocalDateTime.from(parsedTemporal);
@@ -101,12 +101,13 @@ public class HttpDates {
             ? dateTime
             : toUtcDateTime(dateTime.toInstant(offset));
       } catch (DateTimeException e) {
-        illegalHttpDate = e;
+        malformedHttpDate = e;
       }
     }
 
     if (logFailure) {
-      logger.log(Level.WARNING, () -> "malformed or illegal HTTP date: " + value, illegalHttpDate);
+      logger.log(
+          Level.WARNING, () -> "Malformed or unrecognized HTTP date: " + value, malformedHttpDate);
     }
     return null;
   }
@@ -116,7 +117,7 @@ public class HttpDates {
     long secondsLong = Long.parseLong(value);
     requireArgument(secondsLong >= 0, "delta seconds can't be negative");
 
-    // Truncate to Integer.MAX_VALUE to avoid overflows (e.g. when calculating freshness).
+    // Truncate to Integer.MAX_VALUE to avoid overflows on further calculations.
     int secondsInt = (int) Math.min(secondsLong, Integer.MAX_VALUE);
     return Duration.ofSeconds(secondsInt);
   }
@@ -131,9 +132,5 @@ public class HttpDates {
 
   static LocalDateTime toUtcDateTime(Instant instant) {
     return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
-  }
-
-  static Duration max(Duration left, Duration right) {
-    return left.compareTo(right) >= 0 ? left : right;
   }
 }

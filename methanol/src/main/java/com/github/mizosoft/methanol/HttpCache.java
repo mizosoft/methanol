@@ -312,12 +312,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
         localCache, listener, requireNonNullElse(clientExecutor, executor), clock);
   }
 
-  private static String toCacheKey(HttpRequest request) {
+  static String toCacheKey(HttpRequest request) {
     // Since the cache is restricted to GETs, only the URI is needed as a primary key.
     return toCacheKey(request.uri());
   }
 
-  private static String toCacheKey(URI uri) {
+  static String toCacheKey(URI uri) {
     return uri.toString();
   }
 
@@ -393,7 +393,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
               .map(
                   metadata ->
                       new CacheResponse(
-                          metadata,
+                          metadata.toResponseBuilder().buildTrackedResponse(),
                           viewer.orElseThrow(), // We're sure we have a Viewer here.
                           executor,
                           toReadListener(listener, request),

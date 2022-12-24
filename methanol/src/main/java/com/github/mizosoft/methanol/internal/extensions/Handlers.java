@@ -66,12 +66,12 @@ public class Handlers {
 
   public static <T> Chain<Publisher<List<ByteBuffer>>> toPublisherChain(
       Chain<T> chain, Executor handlerExecutor) {
-    var screenedPushPromiseHandler =
+    var relayingPushPromiseHandler =
         chain
             .pushPromiseHandler()
-            .map(pushHandler -> screenPushPromiseHandler(pushHandler, handlerExecutor))
+            .map(pushHandler -> toRelayingPushPromiseHandler(pushHandler, handlerExecutor))
             .orElse(null);
-    return chain.with(BodyHandlers.ofPublisher(), screenedPushPromiseHandler);
+    return chain.with(BodyHandlers.ofPublisher(), relayingPushPromiseHandler);
   }
 
   /**
@@ -81,7 +81,7 @@ public class Handlers {
    *
    * @param executor used to invoke the body handlers of accepted push promises
    */
-  private static <T> PushPromiseHandler<Publisher<List<ByteBuffer>>> screenPushPromiseHandler(
+  private static <T> PushPromiseHandler<Publisher<List<ByteBuffer>>> toRelayingPushPromiseHandler(
       PushPromiseHandler<T> downstreamPushPromiseHandler, Executor executor) {
     return (initiatingRequest, pushPromiseRequest, acceptor) -> {
       Function<BodyHandler<T>, CompletableFuture<HttpResponse<T>>> downstreamAcceptor =

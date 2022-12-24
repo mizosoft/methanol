@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.cache;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
+import static java.net.HttpURLConnection.HTTP_SEE_OTHER;
 import static java.util.Objects.requireNonNullElseGet;
 
 import com.github.mizosoft.methanol.HttpStatus;
@@ -108,7 +109,7 @@ public final class RedirectingInterceptor implements Interceptor {
     return new Redirector(
             request, new SendAdapter(Handlers.toPublisherChain(chain, handlerExecutor), async))
         .sendAndFollowUp()
-        .thenApply(Redirector::result)
+        .thenApply(Redirector::requiredResponse)
         .thenCompose(
             response -> Handlers.handleAsync(response, chain.bodyHandler(), handlerExecutor));
   }
@@ -153,14 +154,16 @@ public final class RedirectingInterceptor implements Interceptor {
       this.previousResponse = previousResponse;
     }
 
-    HttpResponse<Publisher<List<ByteBuffer>>> result() {
+    HttpResponse<Publisher<List<ByteBuffer>>> requiredResponse() {
       requireState(response != null, "absent response");
       return castNonNull(response);
     }
 
     private Redirector withResponse(HttpResponse<Publisher<List<ByteBuffer>>> response) {
-      var newResponse = response;
-      if (previousResponse != null) {
+      HttpResponse<Publisher<List<ByteBuffer>>> newResponse;
+      if (previousResponse == null) {
+        newResponse = response;
+      } else {
         var previousResponseWithoutBody =
             ResponseBuilder.newBuilder(previousResponse).dropBody().build();
         newResponse =
@@ -179,38 +182,48 @@ public final class RedirectingInterceptor implements Interceptor {
     }
 
     CompletableFuture<Redirector> followUp() {
-      var response = result();
-      var redirectedRequest = redirectedRequest(response);
-      if (redirectedRequest == null || redirectCount.incrementAndGet() > MAX_REDIRECTS) {
+      var response = requiredResponse();
+      HttpRequest redirectRequest;
+      if (redirectCount.incrementAndGet() > MAX_REDIRECTS
+          || (redirectRequest = createRedirectRequest(response)) == null) {
         // Reached destination or exceeded allowed redirects.
         return CompletableFuture.completedFuture(this);
       }
 
-      // Discard the body of the redirecting response.
+      // Properly release the redirecting response body.
       Handlers.handleAsync(response, BodyHandlers.discarding(), handlerExecutor);
 
-      // Follow redirected request.
-      return new Redirector(redirectedRequest, sendAdapter, redirectCount, null, response)
+      // Follow redirection.
+      return new Redirector(redirectRequest, sendAdapter, redirectCount, null, response)
           .sendAndFollowUp();
     }
 
-    public @Nullable HttpRequest redirectedRequest(HttpResponse<?> response) {
+    public @Nullable HttpRequest createRedirectRequest(HttpResponse<?> response) {
       if (policy == Redirect.NEVER) {
         return null;
       }
 
       int statusCode = response.statusCode();
       if (isRedirecting(statusCode) && statusCode != HTTP_NOT_MODIFIED) {
-        var redirectedUri = redirectedUri(response.headers());
-        var newMethod = redirectedMethod(response.statusCode());
-        if (canRedirectTo(redirectedUri)) {
-          return createRedirectedRequest(redirectedUri, statusCode, newMethod);
+        var redirectUri = redirectUri(response.headers());
+        var redirectMethod = redirectMethod(response.statusCode());
+        if (canRedirectTo(redirectUri)) {
+          boolean retainBody =
+              statusCode != HTTP_SEE_OTHER && request.method().equalsIgnoreCase(redirectMethod);
+          return MutableRequest.copyOf(request)
+              .uri(redirectUri)
+              .method(
+                  redirectMethod,
+                  request
+                      .bodyPublisher()
+                      .filter(__ -> retainBody)
+                      .orElseGet(BodyPublishers::noBody));
         }
       }
       return null;
     }
 
-    private URI redirectedUri(HttpHeaders responseHeaders) {
+    private URI redirectUri(HttpHeaders responseHeaders) {
       return responseHeaders
           .firstValue("Location")
           .map(request.uri()::resolve)
@@ -218,12 +231,12 @@ public final class RedirectingInterceptor implements Interceptor {
     }
 
     // jdk.internal.net.http.RedirectFilter.redirectedMethod
-    private String redirectedMethod(int statusCode) {
+    private String redirectMethod(int statusCode) {
       var originalMethod = request.method();
       switch (statusCode) {
         case 301:
         case 302:
-          return originalMethod.equals("POST") ? "GET" : originalMethod;
+          return originalMethod.equalsIgnoreCase("POST") ? "GET" : originalMethod;
         case 303:
           return "GET";
         case 307:
@@ -234,9 +247,9 @@ public final class RedirectingInterceptor implements Interceptor {
     }
 
     // jdk.internal.net.http.RedirectFilter.canRedirect
-    private boolean canRedirectTo(URI redirectedUri) {
+    private boolean canRedirectTo(URI redirectUri) {
       var oldScheme = request.uri().getScheme();
-      var newScheme = redirectedUri.getScheme();
+      var newScheme = redirectUri.getScheme();
       switch (policy) {
         case ALWAYS:
           return true;
@@ -247,14 +260,6 @@ public final class RedirectingInterceptor implements Interceptor {
         default:
           throw new AssertionError("unexpected policy: " + policy);
       }
-    }
-
-    private HttpRequest createRedirectedRequest(
-        URI redirectedUri, int statusCode, String newMethod) {
-      boolean retainBody = statusCode != 303 && request.method().equals(newMethod);
-      var newBody =
-          request.bodyPublisher().filter(__ -> retainBody).orElseGet(BodyPublishers::noBody);
-      return MutableRequest.copyOf(request).uri(redirectedUri).method(newMethod, newBody);
     }
 
     // jdk.internal.net.http.RedirectFilter.isRedirecting

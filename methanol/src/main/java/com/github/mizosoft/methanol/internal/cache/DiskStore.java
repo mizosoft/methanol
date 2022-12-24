@@ -44,6 +44,7 @@ import com.github.mizosoft.methanol.internal.concurrent.SerialExecutor;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.ThrowingRunnable;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
+import com.github.mizosoft.methanol.internal.util.Compare;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.io.EOFException;
@@ -1105,7 +1106,7 @@ public final class DiskStore implements Store {
           return; // No writes are needed.
         } else {
           var idleness = Duration.between(nextFireTime, now);
-          delay = HttpDates.max(period.minus(idleness), Duration.ZERO);
+          delay = Compare.max(period.minus(idleness), Duration.ZERO);
         }
 
         var newTask = new RunnableWriteTask(now.plus(delay));

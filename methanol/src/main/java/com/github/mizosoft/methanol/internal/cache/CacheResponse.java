@@ -22,21 +22,17 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
+import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.CacheControl;
-import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
-import com.github.mizosoft.methanol.internal.cache.CacheResponse.CacheStrategy.StalenessLimit;
+import com.github.mizosoft.methanol.internal.cache.CacheStrategy.StalenessRule;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import java.io.Closeable;
 import java.net.http.HttpRequest;
 import java.nio.ByteBuffer;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -50,17 +46,17 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
   private final CacheStrategy strategy;
 
   public CacheResponse(
-      CacheResponseMetadata metadata,
+      TrackedResponse<?> response,
       Viewer viewer,
       Executor executor,
       CacheReadingPublisher.Listener readListener,
       HttpRequest request,
       Instant now) {
-    super(
-        metadata.toResponseBuilder().buildTrackedResponse(),
-        new CacheReadingPublisher(viewer, executor, readListener));
-    this.viewer = viewer;
-    this.strategy = new CacheStrategy(request, response, now);
+    this(
+        response,
+        new CacheReadingPublisher(viewer, executor, readListener),
+        viewer,
+        CacheStrategy.newBuilder(request, response).build(now));
   }
 
   private CacheResponse(
@@ -69,8 +65,8 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
       Viewer viewer,
       CacheStrategy strategy) {
     super(response, body);
-    this.viewer = viewer;
-    this.strategy = strategy;
+    this.viewer = requireNonNull(viewer);
+    this.strategy = requireNonNull(strategy);
   }
 
   @Override
@@ -90,120 +86,23 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
   }
 
   public boolean isServable() {
-    return strategy.canServeCacheResponse(StalenessLimit.MAX_AGE);
+    return strategy.canServeCacheResponse(StalenessRule.MAX_STALE);
   }
 
   public boolean isServableWhileRevalidating() {
-    return strategy.canServeCacheResponse(StalenessLimit.STALE_WHILE_REVALIDATE);
+    return strategy.canServeCacheResponse(StalenessRule.STALE_WHILE_REVALIDATE);
   }
 
   public boolean isServableOnError() {
-    return strategy.canServeCacheResponse(StalenessLimit.STALE_IF_ERROR);
+    return strategy.canServeCacheResponse(StalenessRule.STALE_IF_ERROR);
   }
 
-  public HttpRequest toValidationRequest(HttpRequest request) {
-    return strategy.toValidationRequest(request);
+  public HttpRequest conditionalize(HttpRequest request) {
+    return strategy.conditionalize(request);
   }
 
   /** Add the additional cache headers advised by rfc7234 like Age and Warning. */
   public CacheResponse withCacheHeaders() {
     return with(strategy::addCacheHeaders);
-  }
-
-  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  static final class CacheStrategy {
-    private static final Duration ONE_DAY = Duration.ofDays(1);
-
-    private final CacheControl requestCacheControl;
-    private final CacheControl responseCacheControl;
-    private final Duration age;
-    private final Duration freshness;
-    private final Duration staleness;
-    private final boolean usesHeuristics;
-    private final LocalDateTime effectiveLastModified;
-    private final Optional<String> etag;
-
-    CacheStrategy(HttpRequest request, TrackedResponse<?> response, Instant now) {
-      requestCacheControl = CacheControl.parse(request.headers());
-      responseCacheControl = CacheControl.parse(response.headers());
-
-      var maxAge = requestCacheControl.maxAge().or(responseCacheControl::maxAge);
-      var freshnessPolicy = new FreshnessPolicy(maxAge, response);
-      var freshnessLifetime = freshnessPolicy.computeFreshnessLifetime();
-      age = freshnessPolicy.computeAge(now);
-      freshness = freshnessLifetime.minus(age);
-      staleness = freshness.negated();
-      usesHeuristics = freshnessPolicy.usesHeuristics();
-      effectiveLastModified = freshnessPolicy.effectiveLastModified();
-      etag = response.headers().firstValue("ETag");
-    }
-
-    boolean canServeCacheResponse(StalenessLimit stalenessLimit) {
-      if (requestCacheControl.noCache()
-          || responseCacheControl.noCache()
-          || responseCacheControl.mustRevalidate()) {
-        return false;
-      }
-
-      if (!freshness.isNegative()) {
-        // The response is fresh, but might not be fresh enough for the client.
-        return requestCacheControl.minFresh().isEmpty()
-            || freshness.compareTo(requestCacheControl.minFresh().get()) >= 0;
-      }
-
-      // The response is stale, but might have acceptable staleness.
-      return stalenessLimit.get(this).filter(limit -> staleness.compareTo(limit) <= 0).isPresent();
-    }
-
-    void addCacheHeaders(ResponseBuilder<?> builder) {
-      builder.setHeader("Age", Long.toString(age.toSeconds()));
-      if (freshness.isNegative()) {
-        builder.header("Warning", "110 - \"Response is Stale\"");
-      }
-      if (usesHeuristics && age.compareTo(ONE_DAY) > 0) {
-        builder.header("Warning", "113 - \"Heuristic Expiration\"");
-      }
-    }
-
-    HttpRequest toValidationRequest(HttpRequest request) {
-      return MutableRequest.copyOf(request)
-          .setHeader("If-Modified-Since", toHttpDateString(effectiveLastModified))
-          .apply(self -> etag.ifPresent(etag -> self.setHeader("If-None-Match", etag)));
-    }
-
-    enum StalenessLimit {
-      MAX_AGE {
-        @Override
-        Optional<Duration> get(CacheStrategy strategy) {
-          // max-stale is only applicable to requests.
-          var cacheControl = strategy.requestCacheControl;
-          return cacheControl.anyMaxStale()
-              ? Optional.of(strategy.staleness) // Always accept current staleness.
-              : cacheControl.maxStale();
-        }
-      },
-
-      STALE_WHILE_REVALIDATE {
-        @Override
-        Optional<Duration> get(CacheStrategy strategy) {
-          // stale-while-revalidate is only applicable to responses.
-          return strategy.responseCacheControl.staleWhileRevalidate();
-        }
-      },
-
-      STALE_IF_ERROR {
-        @Override
-        Optional<Duration> get(CacheStrategy strategy) {
-          // stale-if-error is applicable to requests and responses, but the former overrides the
-          // latter.
-          return strategy
-              .requestCacheControl
-              .staleIfError()
-              .or(strategy.responseCacheControl::staleIfError);
-        }
-      };
-
-      abstract Optional<Duration> get(CacheStrategy strategy);
-    }
   }
 }

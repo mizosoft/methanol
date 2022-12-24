@@ -26,6 +26,11 @@ class HttpDatesTest {
   }
 
   @Test
+  void caseInsensitiveDate() {
+    assertThat(toHttpDate("fri, 09 sep 2022 23:03:14 gmt")).isEqualTo("2022-09-09T23:03:14");
+  }
+
+  @Test
   void dateWithOffset() {
     assertThat(toHttpDate("Sat, 10 Sep 2022 01:03:14 +0200")).isEqualTo("2022-09-09T23:03:14");
   }
@@ -41,7 +46,7 @@ class HttpDatesTest {
   }
 
   @Test
-  void test() {
+  void dateWithGmtZoneLiteral() {
     assertThat(toHttpDate("Fri, 09 Sep 2022 23:03:14 GMT")).isEqualTo("2022-09-09T23:03:14");
   }
 
