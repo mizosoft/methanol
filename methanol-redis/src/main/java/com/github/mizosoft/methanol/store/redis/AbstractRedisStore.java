@@ -288,12 +288,14 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     if (dispose) {
       try {
         removeAll();
-      } catch (IOException e) {
+      } catch (IOException | RedisException e) {
         logger.log(Level.WARNING, "Exception thrown when clearing the store on closure", e);
       }
     }
-    connectionProvider.release(connection);
-    connectionProvider.close();
+
+    try (connectionProvider) {
+      connectionProvider.release(connection);
+    }
   }
 
   private void removeAll() throws IOException {
