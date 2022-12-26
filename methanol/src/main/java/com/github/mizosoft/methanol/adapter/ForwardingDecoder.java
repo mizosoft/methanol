@@ -44,13 +44,13 @@ public class ForwardingDecoder extends ForwardingBodyAdapter implements Decoder 
   }
 
   @Override
-  public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-    return delegate.toObject(type, mediaType);
+  public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+    return delegate.toObject(objectType, mediaType);
   }
 
   @Override
   public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-      TypeRef<T> type, @Nullable MediaType mediaType) {
-    return delegate.toDeferredObject(type, mediaType);
+      TypeRef<T> objectType, @Nullable MediaType mediaType) {
+    return delegate.toDeferredObject(objectType, mediaType);
   }
 }

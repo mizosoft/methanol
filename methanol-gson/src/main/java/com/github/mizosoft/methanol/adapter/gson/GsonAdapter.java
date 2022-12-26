@@ -104,11 +104,11 @@ abstract class GsonAdapter extends AbstractBodyAdapter {
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-      requireNonNull(type);
-      requireSupport(type);
+    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+      requireNonNull(objectType);
+      requireSupport(objectType);
       requireCompatibleOrNull(mediaType);
-      TypeAdapter<T> adapter = getAdapter(type);
+      TypeAdapter<T> adapter = getAdapter(objectType);
       Charset charset = charsetOrUtf8(mediaType);
       return BodySubscribers.mapping(
           BodySubscribers.ofByteArray(),
@@ -119,11 +119,11 @@ abstract class GsonAdapter extends AbstractBodyAdapter {
 
     @Override
     public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeRef<T> type, @Nullable MediaType mediaType) {
-      requireNonNull(type);
-      requireSupport(type);
+        TypeRef<T> objectType, @Nullable MediaType mediaType) {
+      requireNonNull(objectType);
+      requireSupport(objectType);
       requireCompatibleOrNull(mediaType);
-      TypeAdapter<T> adapter = getAdapter(type);
+      TypeAdapter<T> adapter = getAdapter(objectType);
       return BodySubscribers.mapping(
           MoreBodySubscribers.ofReader(charsetOrUtf8(mediaType)),
           in -> () -> toJsonUnchecked(in, adapter));

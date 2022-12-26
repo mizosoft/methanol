@@ -166,13 +166,13 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-      requireNonNull(type);
-      requireSupport(type);
+    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+      requireNonNull(objectType);
+      requireSupport(objectType);
       requireCompatibleOrNull(mediaType);
-      Type elementType = getFirstTypeArgumentOrParameter(type.type());
+      Type elementType = getFirstTypeArgumentOrParameter(objectType.type());
       JsonParser asyncParser = createAsyncParser();
-      Class<? super T> rawPublisherType = type.rawType();
+      Class<? super T> rawPublisherType = objectType.rawType();
       BodySubscriber<?> subscriber;
       if (rawPublisherType == Mono.class) {
         subscriber =

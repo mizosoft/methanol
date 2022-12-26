@@ -35,9 +35,9 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Provides additional {@link BodyPublisher} implementations. */
+/** Factory for additional {@link BodyPublisher} implementations. */
 public class MoreBodyPublishers {
-  private MoreBodyPublishers() {} // non-instantiable
+  private MoreBodyPublishers() {}
 
   /**
    * Returns a {@code BodyPublisher} that reads what's written to the {@code OutputStream} received
@@ -64,34 +64,28 @@ public class MoreBodyPublishers {
   /**
    * Adapts the given {@code BodyPublisher} into a {@link MimeBodyPublisher} with the given media
    * type.
-   *
-   * @param bodyPublisher the publisher
-   * @param mediaType the body's media type
    */
   public static MimeBodyPublisher ofMediaType(BodyPublisher bodyPublisher, MediaType mediaType) {
     return new MimeBodyPublisherAdapter(bodyPublisher, mediaType);
   }
 
   /**
-   * Returns a {@code BodyPublisher} as specified by {@link Encoder#toBody(Object, MediaType)} using
-   * an installed encoder.
+   * Returns a {@code BodyPublisher} that encodes the given object into a request body using an
+   * installed {@link Encoder#toBody(Object, MediaType) encoder}.
    *
-   * @param object the object
-   * @param mediaType the media type
-   * @throws UnsupportedOperationException if no {@code } that supports the runtime type of the
-   *     given object or the given media type is installed
+   * @throws UnsupportedOperationException if no {@link Encoder} that supports the given object's
+   *     runtime type or the given media type is installed
    */
   public static BodyPublisher ofObject(Object object, @Nullable MediaType mediaType) {
-    TypeRef<?> runtimeType = TypeRef.from(object.getClass());
-    Encoder encoder =
-        Encoder.getEncoder(runtimeType, mediaType)
-            .orElseThrow(() -> unsupportedConversion(runtimeType, mediaType));
-    return encoder.toBody(object, mediaType);
+    var runtimeType = TypeRef.from(object.getClass());
+    return Encoder.getEncoder(runtimeType, mediaType)
+        .orElseThrow(() -> unsupportedConversion(runtimeType, mediaType))
+        .toBody(object, mediaType);
   }
 
   private static UnsupportedOperationException unsupportedConversion(
-      TypeRef<?> type, @Nullable MediaType mediaType) {
-    String message = "unsupported conversion from an object type <" + type + ">";
+      TypeRef<?> objectType, @Nullable MediaType mediaType) {
+    var message = "unsupported conversion from an object type <" + objectType + ">";
     if (mediaType != null) {
       message += " with media type <" + mediaType + ">";
     }

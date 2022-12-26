@@ -69,7 +69,7 @@ class BodyAdapterTest {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
+    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
       return (BodySubscriber<T>) BodySubscribers.replacing(value);
     }
   }

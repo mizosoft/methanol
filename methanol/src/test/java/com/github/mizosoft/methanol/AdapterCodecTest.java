@@ -250,7 +250,7 @@ class AdapterCodecTest {
 
       @SuppressWarnings("unchecked")
       @Override
-      public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
+      public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
         return (BodySubscriber<T>)
             BodySubscribers.mapping(BodySubscribers.ofString(charsetOrUtf8(mediaType)), decode);
       }

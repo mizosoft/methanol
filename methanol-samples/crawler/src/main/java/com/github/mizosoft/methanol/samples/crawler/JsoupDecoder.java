@@ -44,8 +44,8 @@ public class JsoupDecoder extends AbstractBodyAdapter implements BodyAdapter.Dec
   }
 
   @Override
-  public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-    requireSupport(type);
+  public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+    requireSupport(objectType);
     requireCompatibleOrNull(mediaType);
 
     var charset = charsetOrUtf8(mediaType);

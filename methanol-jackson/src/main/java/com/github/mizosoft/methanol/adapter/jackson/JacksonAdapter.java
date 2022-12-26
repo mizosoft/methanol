@@ -133,22 +133,22 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-      requireNonNull(type);
-      requireSupport(type);
+    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+      requireNonNull(objectType);
+      requireSupport(objectType);
       requireCompatibleOrNull(mediaType);
-      var objReader = readerFactory.createReader(mapper, type);
+      var objReader = readerFactory.createReader(mapper, objectType);
       return BodySubscribers.mapping(
           BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(objReader, bytes, mediaType));
     }
 
     @Override
     public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeRef<T> type, @Nullable MediaType mediaType) {
-      requireNonNull(type);
-      requireSupport(type);
+        TypeRef<T> objectType, @Nullable MediaType mediaType) {
+      requireNonNull(objectType);
+      requireSupport(objectType);
       requireCompatibleOrNull(mediaType);
-      var objReader = readerFactory.createReader(mapper, type);
+      var objReader = readerFactory.createReader(mapper, objectType);
       return BodySubscribers.mapping(
           BodySubscribers.ofInputStream(),
           inputStream -> () -> readValueUnchecked(objReader, inputStream, mediaType));

@@ -44,11 +44,11 @@ public final class StringDecoder extends AbstractBodyAdapter implements BodyAdap
   }
 
   @Override
-  public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-    requireNonNull(type);
-    requireSupport(type);
+  public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+    requireNonNull(objectType);
+    requireSupport(objectType);
     requireCompatibleOrNull(mediaType);
     var subscriber = BodySubscribers.ofString(charsetOrDefault(mediaType, StandardCharsets.UTF_8));
-    return BodySubscribers.mapping(subscriber, type.exactRawType()::cast);
+    return BodySubscribers.mapping(subscriber, objectType.exactRawType()::cast);
   }
 }

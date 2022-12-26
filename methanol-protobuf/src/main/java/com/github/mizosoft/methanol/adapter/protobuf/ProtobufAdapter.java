@@ -78,12 +78,12 @@ abstract class ProtobufAdapter extends AbstractBodyAdapter {
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-      requireNonNull(type);
-      requireSupport(type);
+    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+      requireNonNull(objectType);
+      requireSupport(objectType);
       requireCompatibleOrNull(mediaType);
       // We know that T is <= MessageLite to the caller, but the compiler doesn't
-      Class<T> messageClass = type.exactRawType();
+      Class<T> messageClass = objectType.exactRawType();
       MessageLite.Builder builder = getBuilderForMessage(messageClass);
       return BodySubscribers.mapping(
           BodySubscribers.ofByteArray(), data -> buildMessage(messageClass, builder, data));
@@ -91,11 +91,11 @@ abstract class ProtobufAdapter extends AbstractBodyAdapter {
 
     @Override
     public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeRef<T> type, @Nullable MediaType mediaType) {
-      requireNonNull(type);
-      requireSupport(type);
+        TypeRef<T> objectType, @Nullable MediaType mediaType) {
+      requireNonNull(objectType);
+      requireSupport(objectType);
       requireCompatibleOrNull(mediaType);
-      Class<T> messageClass = type.exactRawType();
+      Class<T> messageClass = objectType.exactRawType();
       MessageLite.Builder builder = getBuilderForMessage(messageClass);
       return BodySubscribers.mapping(
           BodySubscribers.ofInputStream(), in -> () -> buildMessage(messageClass, builder, in));

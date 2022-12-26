@@ -32,53 +32,43 @@ import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An object that uses a defined format for converting high level objects to or from request or
- * response {@code ByteBuffer} streams. The two specializations are {@link Encoder} and {@link
- * Decoder}, implementations of which are normally registered as service-providers by means
- * described in the {@link java.util.ServiceLoader} class.
+ * An object that converts high objects to or from request or response bodies respectively, using a
+ * defined format. The two specialized subtypes are {@link Encoder} and {@link Decoder}.
  *
  * <p>A {@code BodyAdapter} communicates the format it uses and the set of types it supports through
  * {@link #isCompatibleWith(MediaType)} and {@link #supportsType(TypeRef)} respectively. For
- * example, a {@code BodyAdapter} that uses the JSON format is compatible with any {@code
- * application/json} media type, and supports any object type supported by the underlying
- * serializer/deserializer.
+ * example, a {@code BodyAdapter} that uses JSON is compatible with any {@code application/json}
+ * media type, and supports any object type supported by the underlying serializer/deserializer.
  */
 public interface BodyAdapter {
 
   /**
    * Returns {@code true} if the format this adapter uses is {@link
    * MediaType#isCompatibleWith(MediaType) compatible} with the given media type.
-   *
-   * @param mediaType the media type
    */
   boolean isCompatibleWith(MediaType mediaType);
 
-  /**
-   * Returns {@code true} if this adapter supports the given type.
-   *
-   * @param type the object type
-   */
+  /** Returns {@code true} if this adapter supports the given type. */
   boolean supportsType(TypeRef<?> type);
 
   private static <A extends BodyAdapter> Optional<A> lookupAdapter(
-      List<A> installed, TypeRef<?> type, @Nullable MediaType mediaType) {
+      List<A> installed, TypeRef<?> objectType, @Nullable MediaType mediaType) {
     return installed.stream()
-        .filter(a -> a.supportsType(type) && (mediaType == null || a.isCompatibleWith(mediaType)))
+        .filter(
+            a -> a.supportsType(objectType) && (mediaType == null || a.isCompatibleWith(mediaType)))
         .findFirst();
   }
 
-  /** {@code BodyAdapter} specialization for converting objects into request bodies. */
+  /** A {@code BodyAdapter} that encodes objects into request bodies. */
   interface Encoder extends BodyAdapter {
 
     /**
      * Returns a {@code BodyPublisher} that encodes the given object into a request body using the
      * format specified by the given media type. If {@code mediaType} is {@code null}, the encoder's
-     * default format settings will be used.
+     * default format parameters (e.g. charset) are be used.
      *
-     * @param object the object
-     * @param mediaType the media type
-     * @throws UnsupportedOperationException if the given object's type or the given media type are
-     *     not supported
+     * @throws UnsupportedOperationException if the given object's runtime type or the given media
+     *     type are not supported
      */
     BodyPublisher toBody(Object object, @Nullable MediaType mediaType);
 
@@ -89,57 +79,42 @@ public interface BodyAdapter {
 
     /**
      * Returns an {@code Optional} containing an {@code Encoder} that supports the given object type
-     * and media type. If {@code mediaType} is {@code null}, any encoder supporting the given type
-     * will be returned.
-     *
-     * @param type the object type
-     * @param mediaType an optional media type defining the serialization format
+     * and media type. If {@code mediaType} is {@code null}, any encoder supporting the given object
+     * type is returned
      */
-    static Optional<Encoder> getEncoder(TypeRef<?> type, @Nullable MediaType mediaType) {
-      return BodyAdapter.lookupAdapter(installed(), type, mediaType);
+    static Optional<Encoder> getEncoder(TypeRef<?> objectType, @Nullable MediaType mediaType) {
+      return BodyAdapter.lookupAdapter(installed(), objectType, mediaType);
     }
   }
 
-  /**
-   * {@code BodyAdapter} specialization for converting response bodies into objects.
-   *
-   * @see <a
-   *     href="http://localhost:8000/object_mapping/#buffering-vs-streaming">
-   *     {@code T} vs {@code Supplier<}{@code T>}</a>
-   */
+  /** A {@code BodyAdapter} that decodes response bodies into objects. */
   interface Decoder extends BodyAdapter {
 
     /**
      * Returns a {@code BodySubscriber} that decodes the response body into an object of the given
      * type using the format specified by the given media type. If {@code mediaType} is {@code
-     * null}, the decoders's default format settings will be used.
-     *
-     * @param type the object type
-     * @param mediaType the media type
-     * @param <T> the type represent by {@code type}
+     * null}, the decoder's default format parameters (e.g. charset) are used.
      */
-    <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType);
+    <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType);
 
     /**
      * Returns a completed {@code BodySubscriber} that lazily decodes the response body into an
      * object of the given type using the format specified by the given media type. If {@code
-     * mediaType} is {@code null}, the decoder's default format settings will be used.
+     * mediaType} is {@code null}, the decoder's default format parameters (e.g. charset) are used.
      *
      * <p>The default implementation returns a subscriber completed with a supplier that blocks
-     * (uninterruptedly) on the subscriber returned by {@link #toObject(TypeRef, MediaType)}. Any
+     * ,uninterruptedly, on the subscriber returned by {@link #toObject(TypeRef, MediaType)}. Any
      * completion exception raised while blocking is rethrown from the supplier as a {@code
      * CompletionException}. Encoders that support reading from a blocking source should override
      * this method to defer reading from such a source until the supplier is called.
-     *
-     * @param type the object type
-     * @param mediaType the media type
-     * @param <T> the type represent by {@code type}
      */
     default <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeRef<T> type, @Nullable MediaType mediaType) {
+        TypeRef<T> objectType, @Nullable MediaType mediaType) {
       return MoreBodySubscribers.fromAsyncSubscriber(
-          toObject(type, mediaType),
-          s -> CompletableFuture.completedStage(() -> s.getBody().toCompletableFuture().join()));
+          toObject(objectType, mediaType),
+          subscriber ->
+              CompletableFuture.completedStage(
+                  () -> subscriber.getBody().toCompletableFuture().join()));
     }
 
     /** Returns an immutable list containing the installed decoders. */
@@ -149,14 +124,11 @@ public interface BodyAdapter {
 
     /**
      * Returns an {@code Optional} containing a {@code Decoder} that supports the given object type
-     * and media type. If {@code mediaType} is {@code null}, any decoder supporting the given type
-     * will be returned.
-     *
-     * @param type the object type
-     * @param mediaType an optional media type defining the deserialization format
+     * and media type. If {@code mediaType} is {@code null}, any decoder supporting the given object
+     * type is returned.
      */
-    static Optional<Decoder> getDecoder(TypeRef<?> type, @Nullable MediaType mediaType) {
-      return BodyAdapter.lookupAdapter(installed(), type, mediaType);
+    static Optional<Decoder> getDecoder(TypeRef<?> objectType, @Nullable MediaType mediaType) {
+      return BodyAdapter.lookupAdapter(installed(), objectType, mediaType);
     }
   }
 }

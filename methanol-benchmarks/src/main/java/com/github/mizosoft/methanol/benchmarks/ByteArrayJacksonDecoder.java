@@ -51,12 +51,12 @@ final class ByteArrayJacksonDecoder extends AbstractBodyAdapter implements BodyA
   }
 
   @Override
-  public <T> BodySubscriber<T> toObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-    requireNonNull(type);
-    requireSupport(type);
+  public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+    requireNonNull(objectType);
+    requireSupport(objectType);
     requireCompatibleOrNull(mediaType);
     return BodySubscribers.mapping(
-        BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(type, bytes));
+        BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(objectType, bytes));
   }
 
   private <T> T readValueUnchecked(TypeRef<T> type, byte[] body) {
