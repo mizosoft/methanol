@@ -61,6 +61,11 @@ public final class BodyPublisherVerifier {
     return this;
   }
 
+  public BodyPublisherVerifier hasNoMediaType() {
+    assertThat(publisher).isNotInstanceOf(MimeBodyPublisher.class);
+    return this;
+  }
+
   public BodyPublisherVerifier hasContentLength(long contentLength) {
     assertThat(publisher.contentLength()).isEqualTo(contentLength);
     return this;

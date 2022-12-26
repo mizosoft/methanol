@@ -161,6 +161,14 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
       this.subscriber = subscriber;
     }
 
+    public BodySubscriberVerifier<T> publishing(String body) {
+      try (var publisher = new SubmissionPublisher<List<ByteBuffer>>()) {
+        publisher.subscribe(subscriber);
+        publisher.submit(List.of(UTF_8.encode(body)));
+      }
+      return this;
+    }
+
     public ObjectAssert<T> completedBody() {
       return assertThat(subscriber.getBody()).isCompleted().succeedsWithin(Duration.ZERO);
     }
