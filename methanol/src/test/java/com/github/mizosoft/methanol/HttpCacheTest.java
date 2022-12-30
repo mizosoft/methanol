@@ -131,7 +131,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -910,27 +909,89 @@ class HttpCacheTest {
   }
 
   @StoreParameterizedTest
-  void imposeRevalidationWhenStaleWithMustRevalidate(Store store) throws Exception {
+  void mustRevalidateWhenStaleWithMaxStale(Store store) throws Exception {
     setUpCache(store);
 
     server.enqueue(
         new MockResponse()
             .setHeader("Cache-Control", "max-age=1, must-revalidate")
-            .setBody("popeye"));
-    verifyThat(get(serverUri)).isCacheMiss().hasBody("popeye");
+            .setBody("Popeye"));
+    verifyThat(get(serverUri)).isCacheMiss().hasBody("Popeye");
 
-    // Make response stale
+    // Make response stale.
     clock.advanceSeconds(2);
 
-    // A revalidation is made despite request's max-stale=2
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    var request = GET(serverUri).header("Cache-Control", "max-stale=2");
-    verifyThat(get(request)).isConditionalHit().hasBody("popeye");
+    var request1 =
+        GET(serverUri)
+            .cacheControl(CacheControl.newBuilder().maxStale(Duration.ofSeconds(5)).build());
+    verifyThat(get(request1)).isConditionalHit().hasBody("Popeye");
+
+    // Make response stale.
+    clock.advanceSeconds(2);
+
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1, must-revalidate")
+            .setBody("Olive Oyl"));
+    var request2 =
+        GET(serverUri)
+            .cacheControl(CacheControl.newBuilder().maxStale(Duration.ofSeconds(5)).build());
+    verifyThat(get(request2)).isConditionalMiss().hasBody("Olive Oyl");
   }
 
   @StoreParameterizedTest
-  @Disabled("bug!") // TODO fix
-  void mustRevalidateOnFreshResponse(Store store) throws Exception {
+  void mustRevalidateWhenStaleWithStaleWhileRevalidateAndStaleIfErrorOnResponse(Store store)
+      throws Exception {
+    setUpCache(store);
+
+    // Although Cache-Control here doesn't make much sense, it ensures server's must-revalidate
+    // never permits stale responses, even if allowed by the server itself.
+    server.enqueue(
+        new MockResponse()
+            .setHeader(
+                "Cache-Control",
+                "max-age=1, must-revalidate, stale-while-revalidate=5, stale-if-error=5")
+            .setBody("Popeye"));
+    verifyThat(get(serverUri)).isCacheMiss().hasBody("Popeye");
+
+    // Make response stale.
+    clock.advanceSeconds(2);
+
+    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+    verifyThat(get(serverUri)).isConditionalHit().hasBody("Popeye");
+
+    // Make response stale.
+    clock.advanceSeconds(2);
+
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1, must-revalidate")
+            .setBody("Olive Oyl"));
+    verifyThat(get(serverUri)).isConditionalMiss().hasBody("Olive Oyl");
+  }
+
+  @StoreParameterizedTest
+  void mustRevalidateWhenStaleWithStaleIfErrorOnRequest(Store store) throws Exception {
+    setUpCache(store);
+
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1, must-revalidate")
+            .setBody("Popeye"));
+    verifyThat(get(serverUri)).isCacheMiss().hasBody("Popeye");
+
+    // Make response stale.
+    clock.advanceSeconds(2);
+
+    client = clientBuilder.backendInterceptor(new FailingInterceptor(TestException::new)).build();
+
+    var request = GET(serverUri).header("Cache-Control", "stale-if-error=5");
+    assertThatThrownBy(() -> get(request)).isInstanceOf(TestException.class);
+  }
+
+  @StoreParameterizedTest
+  void mustRevalidateWhenFresh(Store store) throws Exception {
     setUpCache(store);
 
     server.enqueue(
@@ -940,7 +1001,7 @@ class HttpCacheTest {
     verifyThat(get(serverUri)).isCacheMiss().hasBody("Picasso");
 
     // must-revalidate only applies to stale responses.
-    verifyThat(get(serverUri)).isCacheMiss().hasBody("Picasso");
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Picasso");
   }
 
   @StoreParameterizedTest

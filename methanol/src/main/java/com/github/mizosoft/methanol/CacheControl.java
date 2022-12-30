@@ -86,10 +86,7 @@ public final class CacheControl {
   private final Set<String> noStoreFields;
   private final Set<String> privateFields;
 
-  /**
-   * The map of all directives, lazily initialized if this instance wasn't parsed from a string
-   * (created with new Builder()).
-   */
+  /** The map of all directives, lazily initialized if this instance wasn't parsed from a string. */
   private @MonotonicNonNull Map<String, String> directives;
 
   /**
@@ -120,9 +117,10 @@ public final class CacheControl {
     noStoreFields = builder.noStoreFields;
     privateFields = builder.privateFields;
 
-    if (builder.parsedDirectives != null) {
-      // Safe to retain a reference as parsedDirectives is never modified again
-      directives = Collections.unmodifiableMap(builder.parsedDirectives);
+    var parsedDirectives = builder.parsedDirectives;
+    if (parsedDirectives != null) {
+      // Safe to retain a reference as parsedDirectives is never modified again when parsed.
+      directives = Collections.unmodifiableMap(parsedDirectives);
       unrecognizedAddedDirectives = Map.of();
     } else {
       unrecognizedAddedDirectives = Map.copyOf(builder.unrecognizedDirectives);

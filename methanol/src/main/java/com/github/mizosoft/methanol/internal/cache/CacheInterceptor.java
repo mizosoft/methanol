@@ -516,14 +516,17 @@ public final class CacheInterceptor implements Interceptor {
       }
 
       // An uncacheable response might invalidate itself and other related responses.
-      cache
-          .removeAllAsync(invalidatedUris(request, networkResponse.get()))
-          .whenComplete(
-              (result, ex) -> {
-                if (ex != null) {
-                  logger.log(Level.WARNING, "Exception when removing entries", ex);
-                }
-              });
+      var invalidatedUris = invalidatedUris(request, networkResponse.get());
+      if (!invalidatedUris.isEmpty()) {
+        cache
+            .removeAllAsync(invalidatedUris)
+            .whenComplete(
+                (result, ex) -> {
+                  if (ex != null) {
+                    logger.log(Level.WARNING, "Exception when removing entries", ex);
+                  }
+                });
+      }
       return CompletableFuture.completedFuture(this);
     }
 

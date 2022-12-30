@@ -67,9 +67,7 @@ class CacheStrategy {
   }
 
   boolean canServeCacheResponse(StalenessRule stalenessRule) {
-    if (requestCacheControl.noCache()
-        || responseCacheControl.noCache()
-        || responseCacheControl.mustRevalidate()) {
+    if (requestCacheControl.noCache() || responseCacheControl.noCache()) {
       return false;
     }
 
@@ -89,7 +87,8 @@ class CacheStrategy {
       return requestCacheControl.minFresh().isEmpty()
           || freshness.compareTo(requestCacheControl.minFresh().get()) >= 0;
     }
-    return stalenessRule.permits(staleness, requestCacheControl, responseCacheControl);
+    return !responseCacheControl.mustRevalidate()
+        && stalenessRule.permits(staleness, requestCacheControl, responseCacheControl);
   }
 
   void addCacheHeaders(ResponseBuilder<?> builder) {
