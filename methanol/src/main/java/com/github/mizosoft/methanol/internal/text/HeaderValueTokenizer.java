@@ -29,6 +29,7 @@ import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.QUOTED
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.QUOTED_TEXT_MATCHER;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.nio.CharBuffer;
 
 /** Tokenizes delimited header values into individual components. */
@@ -40,14 +41,8 @@ public final class HeaderValueTokenizer {
   }
 
   public String nextToken() {
-    buffer.mark();
-    consumeCharsMatching(TOKEN_MATCHER);
-    int tokenLimit = buffer.position();
-    buffer.reset();
-    requireState(buffer.position() < tokenLimit, "expected a token at %d", buffer.position());
-    int originalLimit = buffer.limit();
-    var token = buffer.limit(tokenLimit).toString();
-    buffer.position(tokenLimit).limit(originalLimit);
+    var token = nextMatching(TOKEN_MATCHER);
+    requireState(!token.isEmpty(), "expected a token at %d", buffer.position());
     return token;
   }
 
@@ -61,12 +56,39 @@ public final class HeaderValueTokenizer {
     }
   }
 
+  @CanIgnoreReturnValue
   public boolean consumeCharIfPresent(char c) {
     if (buffer.hasRemaining() && buffer.get(buffer.position()) == c) {
       buffer.get(); // consume
       return true;
     }
     return false;
+  }
+
+  @CanIgnoreReturnValue
+  public boolean consumeIfPresent(String value) {
+    if (value.length() > buffer.remaining()) {
+      return false;
+    }
+
+    for (int i = 0; i < value.length(); i++) {
+      if (buffer.get(buffer.position() + i) != value.charAt(i)) {
+        return false;
+      }
+    }
+    buffer.position(buffer.position() + value.length());
+    return true;
+  }
+
+  public String nextMatching(CharMatcher matcher) {
+    buffer.mark();
+    consumeCharsMatching(matcher);
+    int tokenLimit = buffer.position();
+    buffer.reset();
+    int originalLimit = buffer.limit();
+    var result = buffer.limit(tokenLimit).toString();
+    buffer.position(tokenLimit).limit(originalLimit);
+    return result;
   }
 
   public void requireCharacter(char c) {
@@ -88,6 +110,7 @@ public final class HeaderValueTokenizer {
 
   public boolean consumeDelimiter(char delimiter, boolean requireDelimiter) {
     // 1*( OWS <delimiter> OWS ) | <empty-string> | OWS ; Last OWS if requireDelimiter is false
+    // TODO first consume OWS
     if (hasRemaining()) {
       consumeCharsMatching(OWS_MATCHER);
       if (requireDelimiter) {
@@ -96,7 +119,7 @@ public final class HeaderValueTokenizer {
         consumeCharIfPresent(delimiter);
       }
 
-      // Ignore dangling delimiters, https://github.com/google/guava/issues/1726
+      // Ignore dangling delimiters: https://github.com/google/guava/issues/1726
       do {
         consumeCharsMatching(OWS_MATCHER);
       } while (consumeCharIfPresent(delimiter));

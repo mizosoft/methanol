@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.Utils.startsWithIgnoreCase;
 import static java.net.HttpURLConnection.HTTP_BAD_METHOD;
 import static java.net.HttpURLConnection.HTTP_GATEWAY_TIMEOUT;
 import static java.net.HttpURLConnection.HTTP_GONE;
@@ -51,6 +50,8 @@ import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
+import com.github.mizosoft.methanol.internal.text.CharMatcher;
+import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.System.Logger;
@@ -65,6 +66,7 @@ import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -119,6 +121,15 @@ public final class CacheInterceptor implements Interceptor {
     RETAINED_HEADER_PREFIXES = Set.of("X-Content-", "X-Webkit-");
   }
 
+  /** Matcher for valid characters in an entity-tag, as specified by rfc7232 Section 2.3. */
+  private static final CharMatcher ETAG_C_MATCHER =
+      CharMatcher.only(0x21)
+          .or(CharMatcher.closedRange(0x23, 0x7e))
+          .or(CharMatcher.closedRange(0x80, 0xff));
+
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  private static final Optional<Boolean> TRUE_OPTIONAL = Optional.of(true);
+
   private final LocalCache cache;
   private final Listener listener;
   private final Executor executor;
@@ -168,16 +179,11 @@ public final class CacheInterceptor implements Interceptor {
 
   private CompletableFuture<Optional<CacheResponse>> getCacheResponse(
       HttpRequest request, Chain<?> chain, AsyncAdapter asyncAdapter) {
-    // Bypass cache if:
-    //   - Request method isn't GET; This implementation only caches GETs.
-    //   - The request is conditional.
-    //   - The request accepts push promises; We don't know what might be pushed by the server.
     if (!"GET".equalsIgnoreCase(request.method())
-        || hasPreconditions(request.headers())
+        || hasUnsupportedPreconditions(request.headers())
         || chain.pushPromiseHandler().isPresent()) {
       return CompletableFuture.completedFuture(Optional.empty());
     }
-
     return asyncAdapter.get(cache, request);
   }
 
@@ -186,37 +192,29 @@ public final class CacheInterceptor implements Interceptor {
     var networkResponse = networkExchange != null ? networkExchange.networkResponse : null;
     assert networkResponse != null || exception != null;
     if (networkResponse != null) {
-      // Make sure the network response is released properly. If we're  updating a cache entry,
-      // discarding will drain the response body into cache.
+      // Make sure the network response is released properly. If we're updating a cache entry,
+      // discarding will drain the response body into cache in background.
       networkResponse.discard(executor);
     } else {
       logger.log(Level.WARNING, "Asynchronous revalidation failure", exception);
     }
   }
 
-  private static boolean hasPreconditions(HttpHeaders headers) {
-    return headers.map().keySet().stream().anyMatch(CacheInterceptor::isPreconditionField);
+  private static boolean hasUnsupportedPreconditions(HttpHeaders requestHeaders) {
+    return requestHeaders.map().keySet().stream()
+        .anyMatch(CacheInterceptor::isUnsupportedPrecondition);
   }
 
-  /**
-   * Returns true if the given field name denotes a precondition (rfc7232 Section 3). 'If-Match' &
-   * 'If-Unmodified-Since' are meant to be seen by the origin, so requests having them are
-   * forwarded. rfc7234 allows caches to evaluate other preconditions, but the added complexity is
-   * discouraging, so they're also forwarded.
-   */
-  private static boolean isPreconditionField(String name) {
+  private static boolean isUnsupportedPrecondition(String name) {
     return "If-Match".equalsIgnoreCase(name)
         || "If-Unmodified-Since".equalsIgnoreCase(name)
-        || "If-None-Match".equalsIgnoreCase(name)
-        || "If-Modified-Since".equalsIgnoreCase(name)
         || "If-Range".equalsIgnoreCase(name);
   }
 
   /**
-   * Returns true if the given field name can be added implicitly by HttpClient's own filters. This
-   * can happen if an Authenticator or a CookieHandler is installed. If a response varies with
-   * these, it's rendered uncacheable as we can't access the corresponding values from requests, so
-   * we won't be able to match them with the correct response.
+   * Returns true if the given field name can be implicitly added by HttpClient's own filters. This
+   * can happen if an Authenticator or a CookieHandler is installed. If a response varies with such
+   * fields, it's rendered uncacheable as we can't access the corresponding values from requests.
    */
   private static boolean isImplicitField(String name) {
     return "Cookie".equalsIgnoreCase(name)
@@ -259,7 +257,7 @@ public final class CacheInterceptor implements Interceptor {
     try {
       responseCacheControl = CacheControl.parse(response.headers());
     } catch (IllegalArgumentException e) {
-      // Don't crash the client because of server's ill-formed Cache-Control.
+      // Don't crash because of server's ill-formed Cache-Control.
       logger.log(Level.WARNING, "Invalid Cache-Control in response", e);
       return false;
     }
@@ -269,8 +267,8 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     // Skip if the response is unmatchable or varies with fields what we can't access.
-    Set<String> varyFields;
-    if ((varyFields = CacheResponseMetadata.varyFields(response.headers())).contains("*")
+    Set<String> varyFields = CacheResponseMetadata.varyFields(response.headers());
+    if (varyFields.contains("*")
         || varyFields.stream().anyMatch(CacheInterceptor::isImplicitField)) {
       return false;
     }
@@ -278,16 +276,15 @@ public final class CacheInterceptor implements Interceptor {
     return responseCacheControl.maxAge().isPresent()
         || responseCacheControl.isPublic()
         || responseCacheControl.isPrivate()
-        || isCacheableByDefault(response.statusCode())
+        || isHeuristicallyCacheable(response.statusCode())
         || response.headers().firstValue("Expires").filter(HttpDates::isHttpDate).isPresent();
   }
 
   /**
-   * Returns whether a response with the given code is cacheable by default (can be cached in the
-   * absence of explicit expiry, and hence may rely on heuristic freshness). Based on rfc7231
-   * Section 6.1.
+   * Returns whether a response with the given code can be cached based on heuristic expiry in case
+   * explicit expiry is absent. Based on rfc7231 Section 6.1.
    */
-  private static boolean isCacheableByDefault(int statusCode) {
+  private static boolean isHeuristicallyCacheable(int statusCode) {
     switch (statusCode) {
       case HTTP_OK:
       case HTTP_NOT_AUTHORITATIVE:
@@ -301,14 +298,15 @@ public final class CacheInterceptor implements Interceptor {
       case HTTP_NOT_IMPLEMENTED:
         return true;
       case HTTP_PARTIAL:
-        // Partial responses are cacheable by default, but this implementation doesn't support it.
+        // Although partial responses are heuristically cacheable, they're not supported by this
+        // implementation.
       default:
         return false;
     }
   }
 
   /**
-   * Updates the cache response after successful revalidation as specified in rfc7234 Section 4.3.4.
+   * Updates the cache response after successful revalidation as specified by rfc7234 Section 4.3.4.
    */
   private static CacheResponse updateCacheResponse(
       CacheResponse cacheResponse, NetworkResponse networkResponse) {
@@ -321,14 +319,14 @@ public final class CacheInterceptor implements Interceptor {
                 .timeResponseReceived(networkResponse.get().timeResponseReceived()));
   }
 
-  private static HttpHeaders mergeHeaders(HttpHeaders cacheHeaders, HttpHeaders networkHeaders) {
+  private static HttpHeaders mergeHeaders(HttpHeaders storedHeaders, HttpHeaders networkHeaders) {
     var builder = new HeadersBuilder();
-    builder.addAllLenient(cacheHeaders);
+    builder.addAllLenient(storedHeaders);
     networkHeaders
         .map()
         .forEach(
             (name, values) -> {
-              if (canReplaceCacheHeader(name)) {
+              if (canReplaceStoredHeader(name)) {
                 builder.setLenient(name, values);
               }
             });
@@ -338,10 +336,10 @@ public final class CacheInterceptor implements Interceptor {
     return builder.build();
   }
 
-  private static boolean canReplaceCacheHeader(String name) {
+  private static boolean canReplaceStoredHeader(String name) {
     return !(RETAINED_HEADERS.contains(name)
         || RETAINED_HEADER_PREFIXES.stream()
-            .anyMatch(prefix -> startsWithIgnoreCase(name, prefix)));
+            .anyMatch(prefix -> Utils.startsWithIgnoreCase(name, prefix)));
   }
 
   /** Returns the URIs invalidated by the given exchange as specified by rfc7234 Section 4.4. */
@@ -379,6 +377,123 @@ public final class CacheInterceptor implements Interceptor {
         && !"TRACE".equalsIgnoreCase(method);
   }
 
+  /**
+   * Evaluates given request's preconditions against the given cache response. Only {@code
+   * If-None-Match} and {@code If-Modified-Since} are evaluated as requests with other preconditions
+   * are forwarded to the origin.
+   */
+  private static boolean evaluatePreconditions(
+      HttpRequest request, TrackedResponse<?> cacheResponse) {
+    return evaluateIfNoneMatch(request, cacheResponse)
+        .or(() -> evaluateIfModifiedSince(request, cacheResponse))
+        .orElse(true);
+  }
+
+  private static Optional<Boolean> evaluateIfNoneMatch(
+      HttpRequest request, TrackedResponse<?> cacheResponse) {
+    var ifNoneMatch = request.headers().allValues("If-None-Match");
+    if (!ifNoneMatch.isEmpty()) {
+      return cacheResponse
+          .headers()
+          .firstValue("ETag")
+          .map(etag -> !anyMatch(ifNoneMatch, etag))
+          .or(() -> TRUE_OPTIONAL); // Assume a hypothetical etag that matches with nothing.
+    }
+    return Optional.empty();
+  }
+
+  private static Optional<Boolean> evaluateIfModifiedSince(
+      HttpRequest request, TrackedResponse<?> cacheResponse) {
+    return request
+        .headers()
+        .firstValue("If-Modified-Since")
+        .map(HttpDates::toHttpDate)
+        .map(value -> isModifiedSince(cacheResponse, value));
+  }
+
+  private static boolean anyMatch(List<String> candidates, String target) {
+    // Fast path for single etag.
+    if (candidates.size() == 1 && !candidates.get(0).contains(",")) {
+      return !candidates.get(0).equals("*") && weaklyMatches(target, candidates.get(0));
+    }
+
+    // If-None-Match = "*" / 1#entity-tag
+    // entity-tag = [ weak ] opaque-tag
+    // weak       = %x57.2F ; "W/", case-sensitive
+    // opaque-tag = DQUOTE *etagc DQUOTE
+    // etagc      = %x21 / %x23-7E / obs-text
+    //            ; VCHAR except double quotes, plus obs-text
+    try {
+      for (var value : candidates) {
+        var tokenizer = new HeaderValueTokenizer(value);
+        do {
+          tokenizer.consumeIfPresent("W/");
+          tokenizer.requireCharacter('"');
+          var candidate = tokenizer.nextMatching(ETAG_C_MATCHER);
+          tokenizer.requireCharacter('"');
+          if (weaklyMatches(target, "\"" + candidate + "\"")) {
+            return true;
+          }
+        } while (tokenizer.consumeDelimiter(','));
+      }
+    } catch (IllegalArgumentException ignored) {
+    }
+    return false;
+  }
+
+  /**
+   * Returns whether the given entity tags match as per the weak comparison rule specified by
+   * rfc7232 Section 2.3.2. Weak comparison must be used when evaluating {@code If-None-Match} as
+   * specified by rfc7232 Section 3.2.
+   */
+  private static boolean weaklyMatches(String firstTag, String secondTag) {
+    int firstTagBegin = 0;
+    if (firstTag.startsWith("W/")) {
+      firstTagBegin += 2;
+    }
+
+    int secondTagBegin = 0;
+    if (secondTag.startsWith("W/")) {
+      secondTagBegin += 2;
+    }
+
+    int firstTagLength = firstTag.length() - firstTagBegin;
+    if (firstTagLength != (secondTag.length() - secondTagBegin)) {
+      return false;
+    }
+
+    // Entity tags must be quoted.
+    if (firstTagLength < 2
+        || firstTag.charAt(firstTagBegin) != '"'
+        || firstTag.charAt(firstTag.length() - 1) != '"'
+        || secondTag.charAt(secondTagBegin) != '"'
+        || secondTag.charAt(secondTag.length() - 1) != '"') {
+      return false;
+    }
+
+    return firstTag.regionMatches(firstTagBegin, secondTag, secondTagBegin, firstTagLength);
+  }
+
+  private static boolean isModifiedSince(TrackedResponse<?> cacheResponse, LocalDateTime dateTime) {
+    return cacheResponse
+        .headers()
+        .firstValue("Last-Modified")
+        .or(() -> cacheResponse.headers().firstValue("Date"))
+        .map(HttpDates::toHttpDate)
+        .orElseGet(() -> HttpDates.toUtcDateTime(cacheResponse.timeResponseReceived()))
+        .isAfter(dateTime);
+  }
+
+  private static <T> TrackedResponse<T> toTrackedResponse(
+      HttpResponse<T> response, Instant requestTime, Clock clock) {
+    return response instanceof TrackedResponse<?>
+        ? (TrackedResponse<T>) response
+        : ResponseBuilder.newBuilder(response)
+            .timeRequestSent(requestTime)
+            .timeResponseReceived(clock.instant())
+            .buildTrackedResponse();
+  }
+
   private static void closeIfPresent(@Nullable CacheResponse c) {
     if (c != null) {
       c.close();
@@ -387,9 +502,8 @@ public final class CacheInterceptor implements Interceptor {
 
   /**
    * An object that masks synchronous operations as {@code CompletableFuture} calls that are
-   * executed on the caller thread and hence are always completed when returned. This is important
-   * in order to share major logic between {@code intercept} and {@code interceptAsync}, which
-   * facilitates implementation & maintenance.
+   * executed on the caller thread. This is important in order to share major logic between {@code
+   * intercept} and {@code interceptAsync}, which facilitates implementation & maintenance.
    */
   private static final class AsyncAdapter {
     private final boolean async;
@@ -463,6 +577,7 @@ public final class CacheInterceptor implements Interceptor {
       if (cacheResponse != null && cacheResponse.isServableWhileRevalidating()) {
         // TODO implement a bounding policy on asynchronous revalidation & find a mechanism to
         //      notify caller for revalidation's completion.
+        listener.onNetworkUse(request, cacheResponse.get());
         backgroundNetworkExchange()
             .thenCompose(Exchange::updateCache)
             .whenComplete(CacheInterceptor.this::handleAsyncRevalidation);
@@ -488,7 +603,6 @@ public final class CacheInterceptor implements Interceptor {
       // On successful revalidation, update the stored response as specified by rfc7234 Section
       // 4.3.3.
       if (cacheResponse != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
-        // Release the network response properly.
         networkResponse.discard(executor);
 
         var updatedCacheResponse = updateCacheResponse(cacheResponse, networkResponse);
@@ -521,7 +635,7 @@ public final class CacheInterceptor implements Interceptor {
         cache
             .removeAllAsync(invalidatedUris)
             .whenComplete(
-                (result, ex) -> {
+                (__, ex) -> {
                   if (ex != null) {
                     logger.log(Level.WARNING, "Exception when removing entries", ex);
                   }
@@ -532,13 +646,31 @@ public final class CacheInterceptor implements Interceptor {
 
     RawResponse serveResponse() {
       if (networkResponse == null) {
-        // No network was used. We might have a suitable cache response. It's also possible that
-        // we're recovering from a network failure as per stale-if-error, or asynchronously
-        // revalidating as per stale-while-revalidate.
+        // No network was used. We may have a servable cache response.
         if (cacheResponse != null
             && (cacheResponse.isServable()
                 || cacheResponse.isServableWhileRevalidating()
                 || cacheResponse.isServableOnError())) {
+          // As per rfc7234 Section 4.3.2, preconditions should be evaluated only for 200 & 206. We
+          // don't cache 206, so only 200 is considered.
+          if (cacheResponse.get().statusCode() == HTTP_OK
+              && !evaluatePreconditions(request, cacheResponse.get())) {
+            cacheResponse.close();
+            return NetworkResponse.from(
+                new ResponseBuilder<>()
+                    .uri(request.uri())
+                    .request(request)
+                    .cacheStatus(CacheStatus.HIT)
+                    .statusCode(HTTP_NOT_MODIFIED)
+                    .version(Version.HTTP_1_1)
+                    .cacheResponse(cacheResponse.get())
+                    .headers(cacheResponse.get().headers())
+                    .timeRequestSent(requestTime)
+                    .timeResponseReceived(clock.instant())
+                    .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
+                    .buildCacheAwareResponse());
+          }
+
           var cacheResponse = this.cacheResponse.withCacheHeaders();
           return cacheResponse.with(
               builder ->
@@ -550,8 +682,8 @@ public final class CacheInterceptor implements Interceptor {
                       .timeResponseReceived(clock.instant()));
         }
 
-        // If neither cache nor network was applicable, this is an unsatisfiable request. So serve a
-        // 504 Gateway Timeout response as per rfc7234 Section 5.2.1.7.
+        // Neither cache nor network was applicable due to 'only-if-cached'. Serve a 504 Gateway
+        // Timeout response as per rfc7234 Section 5.2.1.7.
         closeIfPresent(cacheResponse);
         return NetworkResponse.from(
             new ResponseBuilder<>()
@@ -563,11 +695,10 @@ public final class CacheInterceptor implements Interceptor {
                 .timeRequestSent(requestTime)
                 .timeResponseReceived(clock.instant())
                 .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
-                .buildTrackedResponse());
+                .buildCacheAwareResponse());
       }
 
       if (cacheResponse != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
-        // This is a successful revalidation.
         return cacheResponse.with(
             builder ->
                 builder
@@ -606,26 +737,21 @@ public final class CacheInterceptor implements Interceptor {
       return forwarder
           .apply(chain, networkRequest)
           .thenApply(
-              response ->
-                  NetworkResponse.from(
-                      ResponseBuilder.newBuilder(response)
-                          .timeRequestSent(requestTime)
-                          .timeResponseReceived(clock.instant())
-                          .buildTrackedResponse()))
+              response -> NetworkResponse.from(toTrackedResponse(response, requestTime, clock)))
           .thenApply(this::withNetworkResponse);
     }
 
     /**
-     * Handles a network exchange, falling back to the cache response if one that satisfies
-     * stale-if-error is available.
+     * Handles an error in a network exchange, falling back to the cache response if one that
+     * satisfies stale-if-error is available.
      */
     private Exchange handleNetworkOrServerError(
         @Nullable Exchange networkExchange, @Nullable Throwable exception) {
       var networkResponse = networkExchange != null ? networkExchange.networkResponse : null;
       assert networkResponse != null || exception != null;
-      if (isNetworkOrServerError(networkResponse, exception)
-          && cacheResponse != null
-          && cacheResponse.isServableOnError()) {
+      if (cacheResponse != null
+          && cacheResponse.isServableOnError()
+          && isNetworkOrServerError(networkResponse, exception)) {
         if (networkResponse != null) {
           networkResponse.discard(executor);
         }

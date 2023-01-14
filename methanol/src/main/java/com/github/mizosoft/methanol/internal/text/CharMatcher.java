@@ -59,4 +59,8 @@ public interface CharMatcher {
     requireArgument((c1 | c2 | (c2 - c1)) >= 0, "illegal range [%d, %d]", c1, c2);
     return c -> c >= c1 && c <= c2;
   }
+
+  static CharMatcher only(int c) {
+    return x -> c == x;
+  }
 }

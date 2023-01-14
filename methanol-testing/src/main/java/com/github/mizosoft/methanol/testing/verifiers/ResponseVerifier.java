@@ -77,6 +77,11 @@ public final class ResponseVerifier<T> {
     return this;
   }
 
+  public ResponseVerifier<T> hasNoBody() {
+    assertThat(response.body()).isNull();
+    return this;
+  }
+
   public ResponseVerifier<T> containsHeader(String name, String value) {
     assertContainsHeader(name, value, response.headers());
     return this;
@@ -221,6 +226,24 @@ public final class ResponseVerifier<T> {
     var cacheResponse = cacheResponse().get();
     hasUri(cacheResponse.uri())
         .hasCode(cacheResponse.statusCode())
+        .containsHeadersExactlyDiscardingStrippedContentEncoding(cacheResponse.headers())
+        .hasSslSession(cacheResponse.sslSession());
+    return this;
+  }
+
+  /**
+   * Tests if this is a conditional cache hit resulting from a request that is conditionalized by
+   * the client and evaluated by the cache, rather than conditionalized by the cache and evaluated
+   * by the origin. The latter is checked with {@link #isConditionalHit()}.
+   */
+  public ResponseVerifier<T> isExternallyConditionalCacheHit() {
+    hasCacheStatus(HIT);
+    hasCacheResponse();
+    hasNoNetworkResponse();
+
+    var cacheResponse = cacheResponse().get();
+    hasUri(cacheResponse.uri())
+        .hasCode(HTTP_NOT_MODIFIED)
         .containsHeadersExactlyDiscardingStrippedContentEncoding(cacheResponse.headers())
         .hasSslSession(cacheResponse.sslSession());
     return this;

@@ -29,7 +29,9 @@ import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.HTTP_MOVED_PERM;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
+import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static java.util.function.Predicate.isEqual;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -92,6 +94,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
@@ -156,6 +159,7 @@ class HttpCacheTest {
   private EditAwaiter editAwaiter;
   private HttpCache cache;
   private boolean failOnUnavailableResponses = true;
+  private Duration advanceOnSend = Duration.ZERO;
 
   @BeforeEach
   @ExecutorConfig(ExecutorType.CACHED_POOL)
@@ -176,9 +180,10 @@ class HttpCacheTest {
                     if (failOnUnavailableResponses) {
                       assertThat(response.statusCode())
                           .withFailMessage(
-                              "unavailable response from server (no queued responses, expected to be cached?)")
+                              "server has no queued responses, expected something to be cached?")
                           .isNotEqualTo(HTTP_UNAVAILABLE);
                     }
+                    clock.advance(advanceOnSend);
                     return response;
                   }
 
@@ -192,9 +197,10 @@ class HttpCacheTest {
                               if (failOnUnavailableResponses) {
                                 assertThat(response.statusCode())
                                     .withFailMessage(
-                                        "unavailable response from server (no queued responses, expected to be cached?)")
+                                        "server has no queued responses, expected something to be cached?")
                                     .isNotEqualTo(HTTP_UNAVAILABLE);
                               }
+                              clock.advance(advanceOnSend);
                               return response;
                             });
                   }
@@ -1556,15 +1562,11 @@ class HttpCacheTest {
     server.enqueue(new MockResponse().setResponseCode(301).setHeader("Location", "/redirect"));
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
 
-    // Offer the response to cache
     verifyThat(get(serverUri))
         .hasCode(200)
         .hasUri(serverUri.resolve("/redirect"))
         .isCacheMiss()
         .hasBody("Pikachu");
-
-    // The cache refuses the response as its URI is different from that of the request it
-    // intercepted.
     assertNotCached(serverUri.resolve("/redirect"));
   }
 
@@ -1715,7 +1717,7 @@ class HttpCacheTest {
     verifyThat(get(serverUri))
         .hasCode(code)
         .isCacheMissWithCacheResponse()
-        .hasBody("") // No body in the error response
+        .hasBody("")
         .doesNotContainHeader("Warning");
   }
 
@@ -2073,26 +2075,8 @@ class HttpCacheTest {
   void computingAge(Store store) throws Exception {
     setUpCache(store);
 
-    // Simulate response taking 3 seconds to arrive
-    client =
-        clientBuilder
-            .backendInterceptor(
-                new Interceptor() {
-                  @Override
-                  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
-                      throws IOException, InterruptedException {
-                    clock.advanceSeconds(3);
-                    return chain.forward(request);
-                  }
-
-                  @Override
-                  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-                      HttpRequest request, Chain<T> chain) {
-                    clock.advanceSeconds(3);
-                    return chain.forwardAsync(request);
-                  }
-                })
-            .build();
+    // Simulate response taking 3 seconds to arrive.
+    advanceOnSend = Duration.ofSeconds(3);
 
     // date_value = x
     // age_value = 10
@@ -2134,25 +2118,7 @@ class HttpCacheTest {
     setUpCache(store);
 
     // Simulate response taking 3 seconds to arrive
-    client =
-        clientBuilder
-            .backendInterceptor(
-                new Interceptor() {
-                  @Override
-                  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
-                      throws IOException, InterruptedException {
-                    clock.advanceSeconds(3);
-                    return chain.forward(request);
-                  }
-
-                  @Override
-                  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-                      HttpRequest request, Chain<T> chain) {
-                    clock.advanceSeconds(3);
-                    return chain.forwardAsync(request);
-                  }
-                })
-            .build();
+    advanceOnSend = Duration.ofSeconds(3);
 
     // age_value = 10
     server.enqueue(
@@ -2316,7 +2282,7 @@ class HttpCacheTest {
         request.header(field, formatInstant(clock.instant().minusSeconds(3)));
       }
     },
-    TAG("If-Match", "If-None-Match", "If-Range") { // If range can be both
+    TAG("If-Match", "If-None-Match", "If-Range") { // If range can be either a tag or a date.
       @Override
       void add(MutableRequest request, String field, Clock clock) {
         request.header(field, "1");
@@ -2342,14 +2308,20 @@ class HttpCacheTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"If-Match", "If-Unmodified-Since", "If-None-Match", "If-Range"})
-  void requestsWithPreconditionsAreForwarded(String preconditionField, Store store)
+  @ValueSource(
+      strings = {
+        "If-Match",
+        "If-Unmodified-Since",
+        //        "If-None-Match",
+        "If-Range",
+        //        "If-Modified-Since"
+      })
+  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
+  void requestWithUnsupportedPreconditionIsForwarded(String preconditionField, Store store)
       throws Exception {
     setUpCache(store);
-    server.enqueue(
-        new MockResponse().setBody("For Darkseid").addHeader("Cache-Control", "max-age=1"));
-    verifyThat(get(serverUri)).isCacheMiss().hasBody("For Darkseid");
-    verifyThat(get(serverUri)).isCacheHit().hasBody("For Darkseid");
+
+    putInCache(new MockResponse().setBody("For Darkseid").addHeader("Cache-Control", "max-age=1"));
 
     var request = GET(serverUri);
     PreconditionKind.get(preconditionField).add(request, preconditionField, clock);
@@ -2357,6 +2329,341 @@ class HttpCacheTest {
         new MockResponse().setBody("For Darkseid").addHeader("Cache-Control", "max-age=1"));
     verifyThat(get(request)).isCacheMiss().hasBody("For Darkseid");
     verifyThat(get(request.removeHeader(preconditionField))).isCacheHit().hasBody("For Darkseid");
+  }
+
+  @StoreParameterizedTest
+  void ifNoneMatchWithStrongTag(Store store) throws Exception {
+    setUpCache(store);
+
+    putInCache(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1")
+            .setHeader("ETag", "\"1\"")
+            .setBody("abc"));
+
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"1\"")))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"2\""))).isCacheHit().hasBody("abc");
+
+    // Weak comparison (used in If-None-Match) matches weak tags to equivalent strong tag.
+    verifyThat(get(GET(serverUri).header("If-None-Match", "W/\"1\"")))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+
+    clock.advanceSeconds(2);
+
+    // Preconditions are ignored when the response is stale.
+    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"1\"")))
+        .isConditionalHit()
+        .hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void ifNoneMatchWithWeakTag(Store store) throws Exception {
+    setUpCache(store);
+
+    putInCache(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1")
+            .setHeader("ETag", "W/\"1\"")
+            .setBody("abc"));
+
+    verifyThat(get(GET(serverUri).header("If-None-Match", "W/\"1\"")))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"2\""))).isCacheHit().hasBody("abc");
+
+    // Weak comparison (used in If-None-Match) matches strong tags to equivalent weak tag.
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"1\"")))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"\""))).isCacheHit().hasBody("abc");
+
+    clock.advanceSeconds(2);
+
+    // Preconditions are ignored when the response is stale.
+    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+    verifyThat(get(GET(serverUri).header("If-None-Match", "W/\"1\"")))
+        .isConditionalHit()
+        .hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void ifNoneMatchWithMultipleTagsForStrongTag(Store store) throws Exception {
+    setUpCache(store);
+
+    putInCache(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1")
+            .setHeader("ETag", "\"1\"")
+            .setBody("abc"));
+
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"1\", \"2\"")))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"2\", \"1\"")))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(get(GET(serverUri).header("If-None-Match", "W/\"1\", \"2\"")))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"2\", W/\"4\",  W/\"1\", \"3\"")))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"2\", \"3\", \"4\"")))
+        .isCacheHit()
+        .hasBody("abc");
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"12\", \"2\", \"3\", \"4\"")))
+        .isCacheHit()
+        .hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void ifNoneMatchWithInvalidETag(Store store) throws Exception {
+    setUpCache(store);
+
+    putInCache(
+        new MockResponse()
+            .setBody("abc")
+            .setHeader("Cache-Control", "max-age=1")
+            .setHeader("ETag", "W/\"1\""));
+
+    verifyThat(get(GET(serverUri).header("If-None-Match", "1"))) // Unquoted.
+        .isCacheHit()
+        .hasBody("abc");
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"1"))) // Mis-quoted.
+        .isCacheHit()
+        .hasBody("abc");
+    verifyThat(get(GET(serverUri).header("If-None-Match", "1\""))) // Mis-quoted.
+        .isCacheHit()
+        .hasBody("abc");
+    verifyThat(get(GET(serverUri).header("If-None-Match", ""))) // Unquoted.
+        .isCacheHit()
+        .hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void ifNoneMatchWithStar(Store store) throws Exception {
+    setUpCache(store);
+
+    putInCache(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1")
+            .setHeader("ETag", "\"1\"")
+            .setBody("abc"));
+
+    verifyThat(get(GET(serverUri).header("If-None-Match", "*"))).isCacheHit().hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void ifNoneMatchWithAbsentEtag(Store store) throws Exception {
+    setUpCache(store);
+
+    putInCache(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("abc"));
+
+    verifyThat(get(GET(serverUri).header("If-None-Match", "\"1\""))).isCacheHit().hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void ifModifiedSinceWithLastModified(Store store) throws Exception {
+    setUpCache(store);
+
+    var date = toUtcDateTime(clock.instant());
+    var lastModified = date.minusSeconds(3);
+    putInCache(
+        new MockResponse()
+            .setBody("abc")
+            .setHeader("Cache-Control", "max-age=1")
+            .setHeader("Date", toHttpDateString(date))
+            .setHeader("Last-Modified", toHttpDateString(lastModified)));
+
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header("If-Modified-Since", toHttpDateString(lastModified.plusSeconds(2)))))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header("If-Modified-Since", toHttpDateString(lastModified.plusSeconds(1)))))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(get(GET(serverUri).header("If-Modified-Since", toHttpDateString(lastModified))))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header("If-Modified-Since", toHttpDateString(lastModified.minusSeconds(1)))))
+        .isCacheHit()
+        .hasBody("abc");
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header("If-Modified-Since", toHttpDateString(lastModified.minusSeconds(2)))))
+        .isCacheHit()
+        .hasBody("abc");
+
+    clock.advanceSeconds(2);
+
+    // Preconditions are ignored when the response is stale.
+    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+    verifyThat(get(GET(serverUri).header("If-Modified-Since", toHttpDateString(lastModified))))
+        .hasCode(HTTP_OK)
+        .isConditionalHit()
+        .hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void ifModifiedSinceWithDate(Store store) throws Exception {
+    setUpCache(store);
+
+    var date = toUtcDateTime(clock.instant());
+    putInCache(
+        new MockResponse()
+            .setBody("abc")
+            .setHeader("Cache-Control", "max-age=1")
+            .setHeader("Date", toHttpDateString(date)));
+
+    verifyThat(
+            get(GET(serverUri).header("If-Modified-Since", toHttpDateString(date.plusSeconds(2)))))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(
+            get(GET(serverUri).header("If-Modified-Since", toHttpDateString(date.plusSeconds(1)))))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(get(GET(serverUri).header("If-Modified-Since", toHttpDateString(date))))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+
+    verifyThat(
+            get(GET(serverUri).header("If-Modified-Since", toHttpDateString(date.minusSeconds(1)))))
+        .isCacheHit()
+        .hasBody("abc");
+    verifyThat(
+            get(GET(serverUri).header("If-Modified-Since", toHttpDateString(date.minusSeconds(2)))))
+        .isCacheHit()
+        .hasBody("abc");
+
+    clock.advanceSeconds(2);
+
+    // Preconditions are ignored when the response is stale.
+    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+    verifyThat(get(GET(serverUri).header("If-Modified-Since", toHttpDateString(date))))
+        .hasCode(HTTP_OK)
+        .isConditionalHit()
+        .hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void ifModifiedSinceWithTimeResponseReceived(Store store) throws Exception {
+    setUpCache(store);
+
+    advanceOnSend = Duration.ofSeconds(1);
+    var timeResponseReceived = clock.instant().plus(advanceOnSend);
+    putInCache(new MockResponse().setBody("abc").setHeader("Cache-Control", "max-age=2"));
+
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header(
+                        "If-Modified-Since", formatInstant(timeResponseReceived.plusSeconds(2)))))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header(
+                        "If-Modified-Since", formatInstant(timeResponseReceived.plusSeconds(1)))))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(get(GET(serverUri).header("If-Modified-Since", formatInstant(timeResponseReceived))))
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header(
+                        "If-Modified-Since", formatInstant(timeResponseReceived.minusSeconds(1)))))
+        .isCacheHit()
+        .hasBody("abc");
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header(
+                        "If-Modified-Since", formatInstant(timeResponseReceived.minusSeconds(2)))))
+        .isCacheHit()
+        .hasBody("abc");
+
+    clock.advanceSeconds(3);
+
+    // Preconditions are ignored when the response is stale.
+    server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header(
+                        "If-Modified-Since",
+                        formatInstant(timeResponseReceived.plus(advanceOnSend)))))
+        .hasCode(HTTP_OK)
+        .isConditionalHit()
+        .hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void preconditionPrecedence(Store store) throws Exception {
+    setUpCache(store);
+
+    var date = toUtcDateTime(clock.instant());
+    var lastModified = date.minusSeconds(3);
+    putInCache(
+        new MockResponse()
+            .setHeader("ETag", "\"1\"")
+            .setHeader("date", toHttpDateString(date))
+            .setHeader("Last-Modified", toHttpDateString(lastModified))
+            .setBody("abc"));
+
+    // If-None-Match takes precedence over If-Modified-Since.
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header("If-None-Match", "\"1\"") // Satisfied.
+                    .header("If-Modified-Since", toHttpDateString(lastModified)))) // Unsatisfied.
+        .isExternallyConditionalCacheHit()
+        .hasBody("");
+    verifyThat(
+            get(
+                GET(serverUri)
+                    .header("If-None-Match", "\"2\"") // Satisfied.
+                    .header(
+                        "If-Modified-Since",
+                        toHttpDateString(lastModified.minusSeconds(1))))) // Unsatisfied.
+        .isCacheHit()
+        .hasBody("abc");
+  }
+
+  @StoreParameterizedTest
+  void preconditionWithNone200CacheResponse(Store store) throws Exception {
+    setUpCache(store);
+
+    var date = toUtcDateTime(clock.instant());
+    var lastModified = date.minusSeconds(3);
+    putInCache(
+        new MockResponse()
+            .setResponseCode(HTTP_MOVED_PERM)
+            .setHeader("Last-Modified", toHttpDateString(lastModified)));
+
+    // If-Modified-Since isn't evaluated.
+    verifyThat(get(GET(serverUri).header("If-Modified-Since", toHttpDateString(lastModified))))
+        .isCacheHit();
   }
 
   @StoreParameterizedTest
@@ -3085,6 +3392,19 @@ class HttpCacheTest {
         this.error = error;
       }
     }
+  }
+
+  private void putInCache(MockResponse response) throws IOException, InterruptedException {
+    if (response.getBody() == null) {
+      response.setBody("");
+    }
+    server.enqueue(response);
+    verifyThat(get(serverUri))
+        .isCacheMiss()
+        .hasBody(response.getBody().readString(StandardCharsets.UTF_8));
+    verifyThat(get(serverUri))
+        .isCacheHit()
+        .hasBody(response.getBody().readString(StandardCharsets.UTF_8));
   }
 
   private HttpResponse<String> get(URI uri) throws IOException, InterruptedException {
