@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
 import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
@@ -42,6 +41,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 
+import com.github.mizosoft.methanol.AbstractHttpCacheTest.EditAwaiter;
+import com.github.mizosoft.methanol.AbstractHttpCacheTest.EditAwaiterStore;
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
 import com.github.mizosoft.methanol.HttpCache.Listener;
 import com.github.mizosoft.methanol.HttpCache.Stats;
@@ -113,10 +114,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -3482,7 +3480,7 @@ class HttpCacheTest {
     return toHttpDateString(toUtcDateTime(instant));
   }
 
-  private static class ForwardingStore implements Store {
+  static class ForwardingStore implements Store {
     final Store delegate;
 
     ForwardingStore(Store delegate) {
@@ -3560,8 +3558,8 @@ class HttpCacheTest {
     }
   }
 
-  private static class ForwardingEditor implements Editor {
-    private final Editor delegate;
+  static class ForwardingEditor implements Editor {
+    final Editor delegate;
 
     ForwardingEditor(Editor delegate) {
       this.delegate = delegate;
@@ -3588,7 +3586,7 @@ class HttpCacheTest {
     }
   }
 
-  private static class ForwardingViewer implements Viewer {
+  static class ForwardingViewer implements Viewer {
     final Viewer delegate;
 
     ForwardingViewer(Viewer delegate) {
@@ -3633,109 +3631,6 @@ class HttpCacheTest {
     @Override
     public void close() {
       delegate.close();
-    }
-  }
-
-  /**
-   * Awaits ongoing edits to be completed. By design, {@link
-   * com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher} doesn't make downstream
-   * completion wait for the whole body to be written. So if writes take time, the response entry is
-   * committed a while after the response is completed. This however agitates tests as they expect
-   * things to happen sequentially. This is solved by waiting for all open editors to close after a
-   * client.send(...) is issued.
-   */
-  private static final class EditAwaiter {
-    private final Phaser phaser = new Phaser(1); // Register self.
-
-    EditAwaiter() {}
-
-    Editor register(Editor editor) {
-      return new NotifyingEditor(editor, phaser);
-    }
-
-    void await() {
-      try {
-        phaser.awaitAdvanceInterruptibly(phaser.arrive(), 20, TimeUnit.SECONDS);
-      } catch (InterruptedException | TimeoutException e) {
-        fail("timed out while waiting for editors to be closed", e);
-      }
-    }
-
-    /** An Editor that notifies (arrives at) a Phaser when closed or committed. */
-    private static final class NotifyingEditor extends ForwardingEditor {
-      private final Phaser phaser;
-      private final AtomicBoolean closed = new AtomicBoolean();
-
-      NotifyingEditor(Editor delegate, Phaser phaser) {
-        super(delegate);
-        this.phaser = phaser;
-        requireState(phaser.register() >= 0, "phaser terminated");
-      }
-
-      @Override
-      public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
-        // To make sure all changes are applied before waiters are notified, actually do the arrival
-        // when committing completes.
-        boolean arrive = this.closed.compareAndSet(false, true);
-        return super.commitAsync(metadata)
-            .whenComplete(
-                (__, ___) -> {
-                  if (arrive) {
-                    phaser.arriveAndDeregister();
-                  }
-                });
-      }
-
-      @Override
-      public void close() {
-        try {
-          super.close();
-        } finally {
-          if (closed.compareAndSet(false, true)) {
-            phaser.arriveAndDeregister();
-          }
-        }
-      }
-    }
-  }
-
-  private static final class EditAwaiterStore extends ForwardingStore {
-    private final EditAwaiter editAwaiter;
-
-    EditAwaiterStore(Store delegate, EditAwaiter editAwaiter) {
-      super(delegate);
-      this.editAwaiter = editAwaiter;
-    }
-
-    @Override
-    public Optional<Viewer> view(String key) throws IOException, InterruptedException {
-      return super.view(key).map(EditAwaiterViewer::new);
-    }
-
-    @Override
-    public CompletableFuture<Optional<Viewer>> viewAsync(String key) {
-      return super.viewAsync(key).thenApply(viewer -> viewer.map(EditAwaiterViewer::new));
-    }
-
-    @Override
-    public Optional<Editor> edit(String key) throws IOException, InterruptedException {
-      return super.edit(key).map(editAwaiter::register);
-    }
-
-    @Override
-    public CompletableFuture<Optional<Editor>> editAsync(String key) {
-      return super.editAsync(key).thenApply(editor -> editor.map(editAwaiter::register));
-    }
-
-    private final class EditAwaiterViewer extends ForwardingViewer {
-      EditAwaiterViewer(Viewer delegate) {
-        super(delegate);
-      }
-
-      @Override
-      public CompletableFuture<Optional<Editor>> editAsync() {
-        return super.editAsync().thenApply(editor -> editor.map(editAwaiter::register));
-      }
     }
   }
 

@@ -101,7 +101,6 @@ public final class Methanol extends HttpClient {
   private final HttpClient backend;
   private final Redirect redirectPolicy;
   private final HttpHeaders defaultHeaders;
-  private final Optional<HttpCache> cache;
   private final Optional<String> userAgent;
   private final Optional<URI> baseUri;
   private final Optional<Duration> headersTimeout;
@@ -110,6 +109,7 @@ public final class Methanol extends HttpClient {
   private final boolean autoAcceptEncoding;
   private final List<Interceptor> interceptors;
   private final List<Interceptor> backendInterceptors;
+  private final List<HttpCache> caches;
 
   /** The complete list of interceptors invoked throughout the chain. */
   private final List<Interceptor> mergedInterceptors;
@@ -118,7 +118,6 @@ public final class Methanol extends HttpClient {
     backend = builder.buildBackend();
     redirectPolicy = requireNonNullElse(builder.redirectPolicy, backend.followRedirects());
     defaultHeaders = builder.defaultHeadersBuilder.build();
-    cache = Optional.ofNullable(builder.cache);
     userAgent = Optional.ofNullable(builder.userAgent);
     baseUri = Optional.ofNullable(builder.baseUri);
     headersTimeout = Optional.ofNullable(builder.headersTimeout);
@@ -127,7 +126,11 @@ public final class Methanol extends HttpClient {
     autoAcceptEncoding = builder.autoAcceptEncoding;
     interceptors = List.copyOf(builder.interceptors);
     backendInterceptors = List.copyOf(builder.backendInterceptors);
+    caches = builder.caches;
+    mergedInterceptors = mergeInterceptors(builder);
+  }
 
+  private List<Interceptor> mergeInterceptors(BaseBuilder<?> builder) {
     var mergedInterceptors = new ArrayList<>(interceptors);
     mergedInterceptors.add(
         new RequestRewritingInterceptor(
@@ -144,14 +147,15 @@ public final class Methanol extends HttpClient {
         timeout ->
             mergedInterceptors.add(
                 new ReadTimeoutInterceptor(timeout, castNonNull(builder.readTimeoutDelayer))));
-    cache.ifPresent(
-        cache -> {
-          var executor = backend.executor().orElse(null);
-          mergedInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
-          mergedInterceptors.add(cache.interceptor(executor));
-        });
+
+    var executor = backend.executor().orElse(null);
+    if (!caches.isEmpty()) {
+      mergedInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
+    }
+    caches.forEach(cache -> mergedInterceptors.add(cache.interceptor(executor)));
+
     mergedInterceptors.addAll(backendInterceptors);
-    this.mergedInterceptors = Collections.unmodifiableList(mergedInterceptors);
+    return Collections.unmodifiableList(mergedInterceptors);
   }
 
   /**
@@ -252,7 +256,11 @@ public final class Methanol extends HttpClient {
 
   /** Returns this client's {@link HttpCache cache}. */
   public Optional<HttpCache> cache() {
-    return cache;
+    return caches.stream().findFirst();
+  }
+
+  public List<HttpCache> caches() {
+    return caches;
   }
 
   @Override
@@ -465,12 +473,12 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull Delayer readTimeoutDelayer;
     boolean autoAcceptEncoding = true;
 
-    // These fields are put here for convenience, they're only writable by Builder
-    @MonotonicNonNull HttpCache cache;
-    @MonotonicNonNull Redirect redirectPolicy;
-
     final List<Interceptor> interceptors = new ArrayList<>();
     final List<Interceptor> backendInterceptors = new ArrayList<>();
+
+    // These fields are put here for convenience, they're only writable by Builder
+    @MonotonicNonNull List<HttpCache> caches = List.of();
+    @MonotonicNonNull Redirect redirectPolicy;
 
     /** Calls the given consumer against this builder. */
     public final B apply(Consumer<? super B> consumer) {
@@ -663,7 +671,15 @@ public final class Methanol extends HttpClient {
 
     /** Sets the {@link HttpCache} to be used by the client. */
     public Builder cache(HttpCache cache) {
-      super.cache = requireNonNull(cache);
+      super.caches = List.of(cache);
+      return this;
+    }
+
+    public Builder cache(HttpCache firstCache, HttpCache... otherCaches) {
+      var caches = new HttpCache[1 + otherCaches.length];
+      caches[0] = firstCache;
+      System.arraycopy(otherCaches, 0, caches, 1, otherCaches.length);
+      super.caches = List.of(caches);
       return this;
     }
 
@@ -736,9 +752,9 @@ public final class Methanol extends HttpClient {
 
     @Override
     HttpClient buildBackend() {
-      // Apply redirectPolicy if a cache is not set. In such case we let the backend handle
+      // Apply redirectPolicy if no caches are set. In such case we let the backend handle
       // redirects.
-      if (cache == null && redirectPolicy != null) {
+      if (caches.isEmpty() && redirectPolicy != null) {
         backendBuilder.followRedirects(redirectPolicy);
       }
       return backendBuilder.build();

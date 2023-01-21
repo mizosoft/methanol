@@ -595,7 +595,7 @@ public final class CacheInterceptor implements Interceptor {
           .thenCompose(Exchange::updateCache);
     }
 
-    CompletableFuture<Exchange> updateCache() {
+    private CompletableFuture<Exchange> updateCache() {
       if (networkResponse == null) {
         return CompletableFuture.completedFuture(this);
       }
