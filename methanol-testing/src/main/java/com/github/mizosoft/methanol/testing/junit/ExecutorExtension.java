@@ -42,8 +42,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
@@ -57,8 +55,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.platform.commons.support.AnnotationSupport;
 
 /** {@code Extension} that provides {@code Executors} and terminates them after tests. */
-public final class ExecutorExtension
-    implements AfterEachCallback, AfterAllCallback, ArgumentsProvider, ParameterResolver {
+public final class ExecutorExtension implements ArgumentsProvider, ParameterResolver {
   private static final Namespace EXTENSION_NAMESPACE = Namespace.create(ExecutorExtension.class);
 
   private static final ExecutorConfig DEFAULT_EXECUTOR_CONFIG;
@@ -66,11 +63,10 @@ public final class ExecutorExtension
   static {
     try {
       DEFAULT_EXECUTOR_CONFIG =
-          ExecutorExtension.class
-              .getDeclaredMethod("defaultStoreConfigHolder")
-              .getAnnotation(ExecutorConfig.class);
-
-      requireNonNull(DEFAULT_EXECUTOR_CONFIG);
+          requireNonNull(
+              ExecutorExtension.class
+                  .getDeclaredMethod("defaultExecutorConfigHolder")
+                  .getAnnotation(ExecutorConfig.class));
     } catch (NoSuchMethodException e) {
       throw new ExceptionInInitializerError(e);
     }
@@ -79,16 +75,6 @@ public final class ExecutorExtension
   private static final int FIXED_POOL_SIZE = 8;
 
   public ExecutorExtension() {}
-
-  @Override
-  public void afterEach(ExtensionContext context) throws Exception {
-    ManagedExecutors.get(context).shutdownAndTerminate();
-  }
-
-  @Override
-  public void afterAll(ExtensionContext context) throws Exception {
-    ManagedExecutors.get(context).shutdownAndTerminate();
-  }
 
   @Override
   public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
@@ -102,11 +88,14 @@ public final class ExecutorExtension
   public boolean supportsParameter(
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
-    var element = parameterContext.getDeclaringExecutable();
-
     // Do not compete with our ArgumentsProvider side.
-    var argSource = AnnotationSupport.findAnnotation(element, ArgumentsSource.class);
-    if (argSource.isPresent() && argSource.get().value() == ExecutorExtension.class) {
+    boolean isPresentAsArgumentsProvider =
+        AnnotationSupport.findAnnotation(
+                parameterContext.getDeclaringExecutable(), ArgumentsSource.class)
+            .map(ArgumentsSource::value)
+            .filter(ExecutorExtension.class::equals)
+            .isPresent();
+    if (isPresentAsArgumentsProvider) {
       return false;
     }
 
@@ -134,7 +123,7 @@ public final class ExecutorExtension
   }
 
   @ExecutorConfig
-  private static void defaultStoreConfigHolder() {}
+  private static void defaultExecutorConfigHolder() {}
 
   @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
