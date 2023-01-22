@@ -22,12 +22,6 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.HttpStatus.StatusKind.CLIENT_ERROR;
-import static com.github.mizosoft.methanol.HttpStatus.StatusKind.INFORMATIONAL;
-import static com.github.mizosoft.methanol.HttpStatus.StatusKind.REDIRECTION;
-import static com.github.mizosoft.methanol.HttpStatus.StatusKind.SERVER_ERROR;
-import static com.github.mizosoft.methanol.HttpStatus.StatusKind.SUCCESSFUL;
-
 import java.net.http.HttpResponse;
 
 /** Static functions for checking response status codes. */
@@ -36,7 +30,7 @@ public class HttpStatus {
 
   /** Returns {@code true} if {@code statusCode} is a 1xx informational status code. */
   public static boolean isInformational(int statusCode) {
-    return INFORMATIONAL.includes(statusCode);
+    return StatusKind.INFORMATIONAL.includes(statusCode);
   }
 
   /** Returns {@code true} if {@code response.statusCode()} is a 1xx informational status code. */
@@ -46,7 +40,7 @@ public class HttpStatus {
 
   /** Returns {@code true} if {@code statusCode} is a 2xx success status code. */
   public static boolean isSuccessful(int statusCode) {
-    return SUCCESSFUL.includes(statusCode);
+    return StatusKind.SUCCESSFUL.includes(statusCode);
   }
 
   /** Returns {@code true} if {@code response.statusCode()} is a 2xx successful status code. */
@@ -56,7 +50,7 @@ public class HttpStatus {
 
   /** Returns {@code true} if {@code statusCode} is a 3xx redirection status code. */
   public static boolean isRedirection(int statusCode) {
-    return REDIRECTION.includes(statusCode);
+    return StatusKind.REDIRECTION.includes(statusCode);
   }
 
   /** Returns {@code true} if {@code response.statusCode()} is a 3xx redirection status code. */
@@ -66,7 +60,7 @@ public class HttpStatus {
 
   /** Returns {@code true} if {@code statusCode} is a 4xx client error status code. */
   public static boolean isClientError(int statusCode) {
-    return CLIENT_ERROR.includes(statusCode);
+    return StatusKind.CLIENT_ERROR.includes(statusCode);
   }
 
   /** Returns {@code true} if {@code response.statusCode()} is a 4xx client error status code. */
@@ -76,7 +70,7 @@ public class HttpStatus {
 
   /** Returns {@code true} if {@code statusCode} is a 5xx server error status code. */
   public static boolean isServerError(int statusCode) {
-    return SERVER_ERROR.includes(statusCode);
+    return StatusKind.SERVER_ERROR.includes(statusCode);
   }
 
   /** Returns {@code true} if {@code response.statusCode()} is a 5xx server error status code. */
