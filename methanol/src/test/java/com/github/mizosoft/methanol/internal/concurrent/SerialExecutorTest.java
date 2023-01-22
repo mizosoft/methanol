@@ -24,24 +24,22 @@ package com.github.mizosoft.methanol.internal.concurrent;
 
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.CACHED_POOL;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.github.mizosoft.methanol.testing.MockExecutor;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import java.util.ArrayList;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,43 +60,45 @@ class SerialExecutorTest {
   @Test
   void sequentialExecution() {
     var calls = new AtomicInteger();
-    Runnable incrementTask = () -> {
-      calls.incrementAndGet();
-      // There shouldn't be any awaiting drain tasks
-      assertFalse(mockExecutor.hasNext());
-    };
+    Runnable incrementTask =
+        () -> {
+          calls.incrementAndGet();
+          // There shouldn't be any awaiting drain tasks.
+          assertThat(mockExecutor.hasNext()).isFalse();
+        };
 
     executor.execute(incrementTask);
-    assertEquals(1, mockExecutor.taskCount());
+    assertThat(mockExecutor.taskCount()).isOne();
+
+    // SerialExecutor's drain task is only submitted once.
     executor.execute(incrementTask);
-    // SerialExecutor's drain task is only submitted once
-    assertEquals(1, mockExecutor.taskCount());
-    // Nothing is run so far
-    assertEquals(0, calls.get());
-    // Run drain task -> all submitted incrementTasks run
+    assertThat(mockExecutor.taskCount()).isOne();
+
+    // Nothing is run so far.
+    assertThat(calls).hasValue(0);
+
+    // Run drain task -> all submitted incrementTasks run.
     mockExecutor.runNext();
-    assertEquals(2, calls.get());
-    assertFalse(mockExecutor.hasNext());
+    assertThat(calls).hasValue(2);
+    assertThat(mockExecutor.hasNext()).isFalse();
 
     for (int i = 0; i < 10; i++) {
       executor.execute(incrementTask);
     }
-    assertEquals(1, mockExecutor.taskCount());
+    assertThat(mockExecutor.taskCount()).isOne();
     mockExecutor.runNext();
-    assertEquals(12, calls.get());
+    assertThat(calls).hasValue(12);
   }
 
   @Test
   void executionOrder() {
     var order = new ArrayList<Integer>();
     for (int i = 0; i < 10; i++) {
-      int val = i; // Can't use i in lambda
+      int val = i; // Can't use i in lambda.
       executor.execute(() -> order.add(val));
     }
     mockExecutor.runNext();
-
-    var expectedOrder = IntStream.range(0, 10).boxed().collect(Collectors.toUnmodifiableList());
-    assertEquals(expectedOrder, order);
+    assertThat(order).containsExactly(IntStream.range(0, 10).boxed().toArray(Integer[]::new));
   }
 
   @Test
@@ -106,21 +106,21 @@ class SerialExecutorTest {
     var calls = new AtomicInteger();
 
     mockExecutor.reject(true);
-    assertThrows(RejectedExecutionException.class, () -> executor.execute(calls::incrementAndGet));
-    assertEquals(0, mockExecutor.taskCount());
+    assertThatThrownBy(() -> executor.execute(calls::incrementAndGet))
+        .isInstanceOf(RejectedExecutionException.class);
+    assertThat(mockExecutor.taskCount()).isZero();
 
     mockExecutor.reject(false);
     executor.execute(calls::incrementAndGet);
-    assertEquals(1, mockExecutor.taskCount());
+    assertThat(mockExecutor.taskCount()).isOne();
 
     mockExecutor.reject(true);
-    // No drain task is submitted to the delegate so nothing is rejected
     executor.execute(calls::incrementAndGet);
-    assertEquals(1, mockExecutor.taskCount());
+    assertThat(mockExecutor.taskCount()).isOne();
 
+    // The first rejected task is not retained, so there are only 2 increments.
     mockExecutor.runNext();
-    // The first rejected task is not retained, so there are only 2 increments
-    assertEquals(2, calls.get());
+    assertThat(calls).hasValue(2);
   }
 
   @Test
@@ -128,124 +128,126 @@ class SerialExecutorTest {
     var calls = new AtomicInteger();
 
     executor.execute(calls::incrementAndGet);
-    assertEquals(1, mockExecutor.taskCount());
     executor.shutdown();
-    assertThrows(RejectedExecutionException.class, () -> executor.execute(calls::incrementAndGet));
+    assertThatThrownBy(() -> executor.execute(calls::incrementAndGet))
+        .isInstanceOf(RejectedExecutionException.class);
 
-    // Shutdown doesn't prevent already scheduled drain from running
+    // Shutdown doesn't prevent already scheduled drain from running.
     mockExecutor.runNext();
-    assertEquals(1, calls.get());
+    assertThat(calls).hasValue(1);
   }
 
   @Test
   void throwFromTask() {
     var calls = new AtomicInteger();
     Runnable saneTask = calls::incrementAndGet;
-    Runnable crazyTask = () -> {
-      calls.incrementAndGet();
-      throw new TestException();
-    };
+    Runnable crazyTask =
+        () -> {
+          calls.incrementAndGet();
+          throw new TestException();
+        };
 
     executor.execute(saneTask);
     executor.execute(crazyTask);
     executor.execute(saneTask);
-    // Drain task is submitted
-    assertEquals(1, mockExecutor.taskCount());
 
-    // saneTask runs then exception propagates from crazyTask
-    // to delegate executor's thread (current thread)
-    assertThrows(TestException.class, mockExecutor::runNext);
-    assertEquals(2, calls.get());
-    // Drain task is retried
-    assertTrue(mockExecutor.awaitNext(10, TimeUnit.SECONDS), "drain task wasn't retried in 10 secs");
-    assertEquals(1, mockExecutor.taskCount());
+    // saneTask runs then exception propagates from crazyTask to delegate executor's thread (current
+    // thread).
+    assertThatThrownBy(mockExecutor::runNext).isInstanceOf(TestException.class);
+    assertThat(calls).hasValue(2);
+
+    // Drain task is retried.
+    assertThat(mockExecutor.awaitNext(5, TimeUnit.SECONDS))
+        .withFailMessage("drain task retry timed out")
+        .isTrue();
+    assertThat(mockExecutor.taskCount()).isOne();
 
     mockExecutor.runNext();
-    assertEquals(3, calls.get());
+    assertThat(calls).hasValue(3);
   }
 
   /** See javadoc of {@link SerialExecutor#sync}. */
   @Test
   void submissionABA() {
-    Executor sameThreadExecutor = r -> {
-      assertFalse(executor.isRunningBitSet());
-      r.run();
-      assertFalse(executor.isRunningBitSet());
-    };
-    executor = new SerialExecutor(sameThreadExecutor);
+    executor =
+        new SerialExecutor(
+            r -> {
+              assertThat(executor.isRunningBitSet()).isFalse();
+              r.run();
+              assertThat(executor.isRunningBitSet()).isFalse();
+            });
 
     var calls = new AtomicInteger();
-    Runnable incrementTask = () -> {
-      calls.incrementAndGet();
-      // Make sure the drain task sets the RUNNING bit
-      assertTrue(executor.isRunningBitSet());
-    };
+    Runnable incrementTask =
+        () -> {
+          calls.incrementAndGet();
+          assertThat(executor.isRunningBitSet()).isTrue();
+        };
 
     executor.execute(incrementTask);
-    assertEquals(1, calls.get());
-    assertEquals(1, executor.drainCount());
-    assertFalse(executor.isSubmittedBitSet());
+    assertThat(calls).hasValue(1);
+    assertThat(executor.drainCount()).isOne();
+    assertThat(executor.isSubmittedBitSet()).isFalse();
+
     executor.execute(incrementTask);
-    assertEquals(2, calls.get());
-    assertEquals(2, executor.drainCount());
-    assertFalse(executor.isSubmittedBitSet());
+    assertThat(calls).hasValue(2);
+    assertThat(executor.drainCount()).isEqualTo(2);
+    assertThat(executor.isSubmittedBitSet()).isFalse();
   }
 
   @RepeatedTest(10)
   @ExtendWith(ExecutorExtension.class)
   @ExecutorConfig(CACHED_POOL)
-  void executionFromMultipleThreads(Executor threadPool) throws InterruptedException {
+  void executionFromMultipleThreads(Executor threadPool) {
     executor = new SerialExecutor(threadPool);
 
-    var stochasticLatch = new Object() {
-      private final AtomicBoolean acquired = new AtomicBoolean();
-
-      void acquire() {
-        assertTrue(acquired.compareAndSet(false, true), "concurrent access detected");
-      }
-
-      void release() {
-        assertTrue(acquired.compareAndSet(true, false), "concurrent access detected");
-      }
-    };
-
+    var running = new AtomicBoolean();
     int threadCount = 10;
     var arrival = new CyclicBarrier(threadCount);
-    var endLatch = new CountDownLatch(threadCount);
     var calls = new AtomicInteger();
+    var futures = new ArrayList<CompletableFuture<Void>>();
     for (int i = 0; i < threadCount; i++) {
-      threadPool.execute(() -> {
-        awaitUninterruptibly(arrival);
-        executor.execute(() -> {
-          stochasticLatch.acquire();
-          try {
-            calls.incrementAndGet();
-          } finally {
-            stochasticLatch.release();
-            endLatch.countDown();
-          }
-        });
-      });
+      var future = new CompletableFuture<Void>();
+      futures.add(future);
+      threadPool.execute(
+          () -> {
+            awaitUninterruptibly(arrival);
+            future.completeAsync(
+                () -> {
+                  assertThat(running.compareAndSet(false, true))
+                      .withFailMessage("concurrent access detected")
+                      .isTrue();
+                  try {
+                    calls.incrementAndGet();
+                  } finally {
+                    assertThat(running.compareAndSet(true, false))
+                        .withFailMessage("concurrent access detected")
+                        .isTrue();
+                  }
+                  return null;
+                },
+                executor);
+          });
     }
 
-    assertTrue(endLatch.await(10, TimeUnit.SECONDS));
-    assertEquals(threadCount, calls.get());
+    assertAll(futures.stream().map(future -> future::join));
+    assertThat(calls).hasValue(threadCount);
   }
 
   @Test
   void incrementingDrainCountMaintainsStateBits() {
     executor.execute(() -> {});
-    assertEquals(1, mockExecutor.taskCount());
+    assertThat(mockExecutor.taskCount()).isOne();
 
-    // Set SHUTDOWN bit
+    // Set SHUTDOWN bit.
     executor.shutdown();
-    assertTrue(executor.isShutdownBitSet());
+    assertThat(executor.isShutdownBitSet()).isTrue();
 
-    // Execute drain to increment drain count
+    // Execute drain to increment drain count.
     mockExecutor.runNext();
-    assertEquals(1, executor.drainCount());
+    assertThat(executor.drainCount()).isOne();
 
-    // Shutdown bit isn't touched
-    assertTrue(executor.isShutdownBitSet());
+    // Shutdown bit isn't touched.
+    assertThat(executor.isShutdownBitSet()).isTrue();
   }
 }
