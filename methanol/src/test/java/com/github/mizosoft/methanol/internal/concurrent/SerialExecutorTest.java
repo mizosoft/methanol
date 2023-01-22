@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
-import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
 import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -211,7 +211,7 @@ class SerialExecutorTest {
       futures.add(future);
       threadPool.execute(
           () -> {
-            awaitUninterruptibly(arrival);
+            awaitUnchecked(arrival);
             future.completeAsync(
                 () -> {
                   assertThat(running.compareAndSet(false, true))

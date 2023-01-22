@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,6 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.setMetada
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
-import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -448,7 +447,7 @@ class DiskStoreTest {
       assertionTasks.add(
           Unchecked.runAsync(
               () -> {
-                awaitUninterruptibly(arrival);
+                arrival.await();
                 assertThat(!store.remove("e1") || removed.compareAndSet(false, true))
                     .withFailMessage("more than one removal succeeded")
                     .isTrue();
@@ -515,7 +514,7 @@ class DiskStoreTest {
           CompletableFuture.runAsync(
               Unchecked.runnable(
                   () -> {
-                    awaitUninterruptibly(arrival);
+                    arrival.await();
                     write(store, "e" + j, "12", "ab");
                   }),
               executor));
@@ -972,9 +971,9 @@ class DiskStoreTest {
 
     var arrival = new CyclicBarrier(2);
     var triggerIndexWrites =
-        CompletableFuture.runAsync(
+        Unchecked.runAsync(
             () -> {
-              awaitUninterruptibly(arrival);
+              arrival.await();
               try {
                 context.mockClock().advanceSeconds(0); // Trigger 'delayed' index writes.
               } catch (RejectedExecutionException ignored) {
@@ -985,7 +984,7 @@ class DiskStoreTest {
     var invokeDispose =
         Unchecked.runAsync(
             () -> {
-              awaitUninterruptibly(arrival);
+              arrival.await();
               //noinspection StatementWithEmptyBody
               while (store.indexWriteCount()
                   < 0.3 * indexWriteCount) {} // Spin till some writes are completed.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -67,16 +67,11 @@ public class TestUtils {
     }
   }
 
-  public static void awaitUninterruptibly(CyclicBarrier barrier) {
-    while (true) {
-      try {
-        barrier.await();
-        return;
-      } catch (InterruptedException ignored) {
-        // continue;
-      } catch (BrokenBarrierException e) {
-        throw new RuntimeException(e);
-      }
+  public static void awaitUnchecked(CyclicBarrier barrier) {
+    try {
+      barrier.await();
+    } catch (InterruptedException | BrokenBarrierException e) {
+      throw new RuntimeException(e);
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -98,7 +98,7 @@ class StoreTest {
       assertionTasks.add(
           Unchecked.runAsync(
               () -> {
-                awaitUninterruptibly(arrival);
+                arrival.await();
                 assertEntryEquals(store, "e1", "Pokemon", "Charmander");
               },
               executor));
@@ -237,7 +237,7 @@ class StoreTest {
       assertionTasks.add(
           Unchecked.runAsync(
               () -> {
-                awaitUninterruptibly(arrival);
+                arrival.await();
 
                 Optional<Editor> editor;
                 try {
