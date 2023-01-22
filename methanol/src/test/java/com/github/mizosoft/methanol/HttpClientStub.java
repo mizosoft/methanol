@@ -38,21 +38,69 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 
 public class HttpClientStub extends HttpClient {
+  public HttpClientStub() {}
 
-  @Override public Optional<CookieHandler> cookieHandler() { throw new AssertionError(); }
-  @Override public Optional<Duration> connectTimeout() { throw new AssertionError(); }
-  @Override public Redirect followRedirects() { throw new AssertionError(); }
-  @Override public Optional<ProxySelector> proxy() { throw new AssertionError(); }
-  @Override public SSLContext sslContext() { throw new AssertionError(); }
-  @Override public SSLParameters sslParameters() { throw new AssertionError(); }
-  @Override public Optional<Authenticator> authenticator() { throw new AssertionError(); }
-  @Override public Version version() { throw new AssertionError(); }
-  @Override public Optional<Executor> executor() { throw new AssertionError(); }
-  @Override public <T> HttpResponse<T> send(
-      HttpRequest request, BodyHandler<T> responseBodyHandler) { throw new AssertionError(); }
-  @Override public <T> CompletableFuture<HttpResponse<T>> sendAsync(
-      HttpRequest request, BodyHandler<T> responseBodyHandler,
-      PushPromiseHandler<T> pushPromiseHandler) { throw new AssertionError(); }
-  @Override public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request,
-      BodyHandler<T> responseBodyHandler) { throw new AssertionError(); }
+  @Override
+  public Optional<CookieHandler> cookieHandler() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Optional<Duration> connectTimeout() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Redirect followRedirects() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Optional<ProxySelector> proxy() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public SSLContext sslContext() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public SSLParameters sslParameters() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Optional<Authenticator> authenticator() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Version version() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Optional<Executor> executor() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public <T> HttpResponse<T> send(HttpRequest request, BodyHandler<T> responseBodyHandler) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public <T> CompletableFuture<HttpResponse<T>> sendAsync(
+      HttpRequest request,
+      BodyHandler<T> responseBodyHandler,
+      PushPromiseHandler<T> pushPromiseHandler) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public <T> CompletableFuture<HttpResponse<T>> sendAsync(
+      HttpRequest request, BodyHandler<T> responseBodyHandler) {
+    throw new UnsupportedOperationException();
+  }
 }

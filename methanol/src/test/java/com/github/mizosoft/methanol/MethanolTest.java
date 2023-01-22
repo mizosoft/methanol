@@ -47,6 +47,7 @@ import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -417,10 +418,16 @@ class MethanolTest {
       return sendAsync(request, responseBodyHandler, null);
     }
 
-    // Methanol's constructor calls this so don't throw AssertionError
+    // Override these methods to not crash when Methanol's constructor calls them.
+
     @Override
     public Redirect followRedirects() {
       return Redirect.NORMAL;
+    }
+
+    @Override
+    public Optional<Executor> executor() {
+      return Optional.empty();
     }
   }
 }

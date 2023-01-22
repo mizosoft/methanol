@@ -41,7 +41,7 @@ public final class HttpResponseStub<T> implements HttpResponse<T> {
 
   @Override
   public HttpRequest request() {
-    return MutableRequest.GET("http://example.com").toImmutableRequest();
+    return MutableRequest.GET("https://example.com").toImmutableRequest();
   }
 
   @Override
@@ -66,7 +66,7 @@ public final class HttpResponseStub<T> implements HttpResponse<T> {
 
   @Override
   public URI uri() {
-    return URI.create("http://example.com");
+    return URI.create("https://example.com");
   }
 
   @Override
