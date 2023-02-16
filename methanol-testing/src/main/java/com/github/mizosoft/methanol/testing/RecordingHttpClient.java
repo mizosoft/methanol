@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,31 +22,38 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.mizosoft.methanol.ResponseBuilder;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
 import java.net.ProxySelector;
-import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.PushPromiseHandler;
+import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLSession;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class RecordingHttpClient extends HttpClient {
-  private @MonotonicNonNull CallRecord<?> latestCall;
+  private final BlockingDeque<Call<?>> calls = new LinkedBlockingDeque<>();
+  private final AtomicInteger sendCount = new AtomicInteger();
   private boolean completeCallsEagerly;
 
   public RecordingHttpClient() {}
@@ -57,15 +64,26 @@ public final class RecordingHttpClient extends HttpClient {
 
   public void completeLatestCall() {
     var call = latestCall();
-    call.future().complete(new FakeHttpResponse<>(call.request()));
+    call.future().complete(defaultResponseFor(call.request()));
   }
 
-  public CallRecord<?> latestCall() {
-    var call = latestCall;
-    if (call == null) {
-      throw new AssertionError("received no requests");
+  @SuppressWarnings("unchecked")
+  public <T> Call<T> latestCall() {
+    assertThat(calls).isNotEmpty();
+    return (Call<T>) calls.getLast();
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T> Call<T> awaitCall() {
+    try {
+      return (Call<T>) calls.takeLast();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
-    return call;
+  }
+
+  public int sendCount() {
+    return sendCount.get();
   }
 
   @Override
@@ -116,22 +134,42 @@ public final class RecordingHttpClient extends HttpClient {
   @Override
   public <T> HttpResponse<T> send(HttpRequest request, BodyHandler<T> responseBodyHandler)
       throws IOException, InterruptedException {
-    var call = new CallRecord<>(request, responseBodyHandler, null);
+    sendCount.incrementAndGet();
+
+    var call = new Call<>(request, responseBodyHandler, null);
     if (completeCallsEagerly) {
-      call.future().complete(new FakeHttpResponse<>(request));
+      call.future().complete(defaultResponseFor(request));
     }
-    latestCall = call;
-    return call.future().join();
+    calls.add(call);
+
+    try {
+      return call.future().get();
+    } catch (ExecutionException e) {
+      var cause = e.getCause();
+      if (cause instanceof RuntimeException) {
+        throw (RuntimeException) cause;
+      } else if (cause instanceof Error) {
+        throw (Error) cause;
+      } else if (cause instanceof IOException) {
+        throw (IOException) cause;
+      } else if (cause instanceof InterruptedException) {
+        throw (InterruptedException) cause;
+      } else {
+        throw new IOException(cause);
+      }
+    }
   }
 
   @Override
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(
       HttpRequest request, BodyHandler<T> responseBodyHandler) {
-    var call = new CallRecord<>(request, responseBodyHandler, null);
+    sendCount.incrementAndGet();
+
+    var call = new Call<>(request, responseBodyHandler, null);
     if (completeCallsEagerly) {
-      call.future().complete(new FakeHttpResponse<>(request));
+      call.future().complete(defaultResponseFor(request));
     }
-    latestCall = call;
+    calls.add(call);
     return call.future();
   }
 
@@ -140,27 +178,59 @@ public final class RecordingHttpClient extends HttpClient {
       HttpRequest request,
       BodyHandler<T> responseBodyHandler,
       PushPromiseHandler<T> pushPromiseHandler) {
-    var call = new CallRecord<>(request, responseBodyHandler, pushPromiseHandler);
+    sendCount.incrementAndGet();
+
+    var call = new Call<>(request, responseBodyHandler, pushPromiseHandler);
     if (completeCallsEagerly) {
-      call.future().complete(new FakeHttpResponse<>(request));
+      call.future().complete(defaultResponseFor(request));
     }
-    latestCall = call;
+    calls.add(call);
     return call.future();
   }
 
-  public static final class CallRecord<T> {
+  public static <T> HttpResponse<T> defaultResponseFor(HttpRequest request) {
+    return new ResponseBuilder<T>()
+        .statusCode(HTTP_OK)
+        .request(request)
+        .uri(request.uri())
+        .version(Version.HTTP_1_1)
+        .build();
+  }
+
+  public static <T> HttpResponse<T> defaultResponseFor(
+      HttpRequest request, ByteBuffer responseBody, BodyHandler<T> bodyHandler) {
+    return new ResponseBuilder<T>()
+        .statusCode(HTTP_OK)
+        .request(request)
+        .uri(request.uri())
+        .version(Version.HTTP_1_1)
+        .body(decodeBody(responseBody, bodyHandler))
+        .build();
+  }
+
+  private static <T> T decodeBody(ByteBuffer responseBody, BodyHandler<T> bodyHandler) {
+    var subscriber =
+        bodyHandler.apply(new ImmutableResponseInfo(HTTP_OK, headers(), Version.HTTP_1_1));
+    subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
+    subscriber.onNext(List.of(responseBody));
+    subscriber.onComplete();
+    return subscriber.getBody().toCompletableFuture().join();
+  }
+
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  public static final class Call<T> {
     private final HttpRequest request;
     private final BodyHandler<T> bodyHandler;
-    private final @Nullable PushPromiseHandler<T> pushPromiseHandler;
+    private final Optional<PushPromiseHandler<T>> pushPromiseHandler;
     private final CompletableFuture<HttpResponse<T>> responseFuture = new CompletableFuture<>();
 
-    private CallRecord(
+    private Call(
         HttpRequest request,
         BodyHandler<T> bodyHandler,
         @Nullable PushPromiseHandler<T> pushPromiseHandler) {
       this.request = request;
       this.bodyHandler = bodyHandler;
-      this.pushPromiseHandler = pushPromiseHandler;
+      this.pushPromiseHandler = Optional.ofNullable(pushPromiseHandler);
     }
 
     public HttpRequest request() {
@@ -171,60 +241,29 @@ public final class RecordingHttpClient extends HttpClient {
       return bodyHandler;
     }
 
-    public PushPromiseHandler<T> pushPromiseHandler() {
+    public Optional<PushPromiseHandler<T>> pushPromiseHandler() {
       return pushPromiseHandler;
+    }
+
+    public PushPromiseHandler<T> requiredPushPromiseHandler() {
+      return pushPromiseHandler.orElseThrow(AssertionError::new);
     }
 
     public CompletableFuture<HttpResponse<T>> future() {
       return responseFuture;
     }
-  }
 
-  private static final class FakeHttpResponse<T> implements HttpResponse<T> {
-    private final HttpRequest request;
-
-    FakeHttpResponse(HttpRequest request) {
-      this.request = request;
+    public void complete() {
+      assertThat(responseFuture.complete(defaultResponseFor(request))).isTrue();
     }
 
-    @Override
-    public int statusCode() {
-      return HTTP_OK;
+    public void complete(ByteBuffer responseBody) {
+      assertThat(responseFuture.complete(defaultResponseFor(request, responseBody, bodyHandler)))
+          .isTrue();
     }
 
-    @Override
-    public HttpRequest request() {
-      return request;
-    }
-
-    @Override
-    public Optional<HttpResponse<T>> previousResponse() {
-      return Optional.empty();
-    }
-
-    @Override
-    public HttpHeaders headers() {
-      return TestUtils.headers(/* empty */ );
-    }
-
-    @Override
-    public T body() {
-      return null;
-    }
-
-    @Override
-    public Optional<SSLSession> sslSession() {
-      return Optional.empty();
-    }
-
-    @Override
-    public URI uri() {
-      return request.uri();
-    }
-
-    @Override
-    public Version version() {
-      return request.version().orElse(Version.HTTP_1_1);
+    public void completeExceptionally(Throwable exception) {
+      assertThat(responseFuture.completeExceptionally(exception)).isTrue();
     }
   }
 }

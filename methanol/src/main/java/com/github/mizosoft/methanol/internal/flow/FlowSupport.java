@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -137,7 +137,7 @@ public class FlowSupport {
   }
 
   public static void rejectMulticast(Subscriber<?> subscriber) {
-    var exception = new IllegalStateException("multiple subscribers to a unicast publisher");
+    var exception = new IllegalStateException("multiple subscribers not supported");
     try {
       subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     } catch (Throwable t) {

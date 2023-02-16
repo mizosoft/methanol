@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,65 +22,66 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.testing.TestUtils.localhostSslContext;
+import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.tck.HttpResponsePublisherTck.ResponseHandle;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-import mockwebserver3.Dispatcher;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.PushPromise;
-import mockwebserver3.RecordedRequest;
 import okhttp3.Headers;
-import org.jetbrains.annotations.NotNull;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Factory;
 
 public class HttpResponsePublisherTck extends FlowPublisherVerification<ResponseHandle> {
-
-  private static final String BODY = "Who's Joe Mama?";
+  private final Supplier<Executor> executorFactory;
 
   private HttpClient client;
   private MockWebServer server;
-  private HttpRequest request;
+  private Executor executor;
 
-  public HttpResponsePublisherTck() {
-    super(TckUtils.testEnvironmentWithTimeout(1_000)); // have a decent timeout due to actual IO
+  @Factory(dataProvider = "provider")
+  public HttpResponsePublisherTck(Supplier<Executor> executorFactory) {
+    super(TckUtils.testEnvironmentWithTimeout(1_000));
+    this.executorFactory = executorFactory;
   }
 
-  @BeforeClass
-  public void setUpLifecycle() throws IOException {
-    // HttpClient restricts HTTP/2 to HTTPS
+  @BeforeMethod
+  public void setMeUp() throws IOException {
+    executor = executorFactory.get();
+
+    // HttpClient restricts HTTP/2 to HTTPS.
     var sslContext = localhostSslContext();
     client = HttpClient.newBuilder().sslContext(sslContext).version(Version.HTTP_2).build();
     server = new MockWebServer();
     server.useHttps(sslContext.getSocketFactory(), false);
     server.start();
-    request = GET(server.url("/").uri()).build();
   }
 
-  @AfterClass
-  public void tearDownLifecycle() throws IOException {
+  @AfterMethod
+  public void tearMeDown() throws IOException {
     server.shutdown();
-  }
-
-  // Overridden by ResponsePublisherWithExecutorTck for async version
-  Executor executor() {
-    return FlowSupport.SYNC_EXECUTOR;
+    TestUtils.shutdown(executor);
   }
 
   @Override
@@ -89,28 +90,21 @@ public class HttpResponsePublisherTck extends FlowPublisherVerification<Response
       throw new SkipException("can publish at least one response before completion");
     }
 
-    var mockResponse = mockResponseWithPush((int) elements - 1);
-    server.setDispatcher(new Dispatcher() {
-      @NotNull
-      @Override
-      public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
-        return mockResponse;
-      }
-    });
-    var publisher =
+    server.enqueue(buildMockResponseWithPushPromises((int) elements - 1));
+    return map(
         new HttpResponsePublisher<>(
             client,
-            request,
+            MutableRequest.GET(server.url("/").uri()),
             BodyHandlers.ofString(),
-            req -> BodyHandlers.ofString(),
-            executor());
-    return subscriber -> publisher.subscribe(subscriber != null ? mapSubscriber(subscriber) : null);
+            __ -> BodyHandlers.ofString(),
+            executor),
+        ResponseHandle::new);
   }
 
   @Override
   public Publisher<ResponseHandle> createFailedFlowPublisher() {
-    // subscription.request(at least 1) must be called to try a request and fail
-    throw new SkipException("should be able to try at least one request before failing");
+    // subscription.request(at least 1) must be called to try a request and fail.
+    throw new SkipException("must be able to try at least one request before failing");
   }
 
   @Override
@@ -118,42 +112,63 @@ public class HttpResponsePublisherTck extends FlowPublisherVerification<Response
     return TckUtils.MAX_PRECOMPUTED_ELEMENTS;
   }
 
-  private Subscriber<HttpResponse<String>> mapSubscriber(
-      Subscriber<? super ResponseHandle> subscriber) {
-    return new Subscriber<>() {
-      @Override public void onSubscribe(Subscription s) {
-        subscriber.onSubscribe(s);
-      }
-      @Override public void onNext(HttpResponse<String> response) {
-        subscriber.onNext(new ResponseHandle(response));
-      }
-      @Override public void onError(Throwable t) {
-        subscriber.onError(t);
-      }
-      @Override public void onComplete() {
-        subscriber.onComplete();
-      }
-    };
-  }
-
-  private MockResponse mockResponseWithPush(int pushedCount) {
-    var response = new MockResponse().setBody(BODY);
-    for (int i = 0; i < pushedCount; i++) {
-      var pushedResponse = new MockResponse().setBody(BODY);
-      var pushPromise = new PushPromise(
-          "GET", "/push" + i, Headers.of(":scheme", "https"), pushedResponse);
+  private static MockResponse buildMockResponseWithPushPromises(int pushPromiseCount) {
+    var response = new MockResponse().setBody("A");
+    for (int i = 0; i < pushPromiseCount; i++) {
+      var pushedResponse = new MockResponse().setBody("B-" + i);
+      var pushPromise =
+          new PushPromise("GET", "/push" + i, Headers.of(":scheme", "https"), pushedResponse);
       response.withPush(pushPromise);
     }
     return response;
   }
 
-  /** Implements Object::equals. */
-  static final class ResponseHandle {
+  private static <T, R> Publisher<R> map(
+      Publisher<T> publisher, Function<? super T, ? extends R> mapper) {
+    return subscriber ->
+        publisher.subscribe(
+            subscriber != null
+                ? new Subscriber<>() {
+                  @Override
+                  public void onSubscribe(Subscription subscription) {
+                    subscriber.onSubscribe(subscription);
+                  }
 
+                  @Override
+                  public void onNext(T item) {
+                    subscriber.onNext(mapper.apply(item));
+                  }
+
+                  @Override
+                  public void onError(Throwable throwable) {
+                    subscriber.onError(throwable);
+                  }
+
+                  @Override
+                  public void onComplete() {
+                    subscriber.onComplete();
+                  }
+                }
+                : null);
+  }
+
+  @DataProvider
+  public static Object[][] provider() {
+    return new Object[][] {
+      {(Supplier<Executor>) () -> FlowSupport.SYNC_EXECUTOR},
+      {(Supplier<Executor>) Executors::newCachedThreadPool}
+    };
+  }
+
+  /**
+   * Implements equivalence for an {@code HttpResponse} based on the request and the response body.
+   */
+  static final class ResponseHandle {
     private final HttpResponse<String> response;
 
     ResponseHandle(HttpResponse<String> response) {
-      this.response = response;
+      this.response = requireNonNull(response);
+      System.out.println(response);
     }
 
     @Override
@@ -161,9 +176,13 @@ public class HttpResponsePublisherTck extends FlowPublisherVerification<Response
       if (!(obj instanceof ResponseHandle)) {
         return false;
       }
-      HttpResponse<String> other = ((ResponseHandle) obj).response;
-      return response.request().equals(other.request())
-          && response.body().equals(other.body());
+      var other = ((ResponseHandle) obj).response;
+      return response.request().equals(other.request()) && response.body().equals(other.body());
+    }
+
+    @Override
+    public String toString() {
+      return "ResponseHandle[" + response.toString() + "]";
     }
   }
 }

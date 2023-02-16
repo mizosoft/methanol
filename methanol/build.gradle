@@ -34,7 +34,7 @@ tasks.register('tckTest', Test) {
   shouldRunAfter test
   scanForTestClasses false
   testLogging {
-    events 'failed'
+    events 'failed', 'skipped'
     exceptionFormat 'full'
     showCauses true
     showExceptions true

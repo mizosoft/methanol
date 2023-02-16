@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -180,9 +180,9 @@ public final class Methanol extends HttpClient {
   public <T> Publisher<HttpResponse<T>> exchange(
       HttpRequest request,
       BodyHandler<T> bodyHandler,
-      Function<HttpRequest, @Nullable BodyHandler<T>> pushPromiseAcceptor) {
+      Function<HttpRequest, @Nullable BodyHandler<T>> pushPromiseMapper) {
     return new HttpResponsePublisher<>(
-        this, request, bodyHandler, pushPromiseAcceptor, executor().orElse(SYNC_EXECUTOR));
+        this, request, bodyHandler, pushPromiseMapper, executor().orElse(SYNC_EXECUTOR));
   }
 
   /** Returns the underlying {@code HttpClient} used for sending requests. */
