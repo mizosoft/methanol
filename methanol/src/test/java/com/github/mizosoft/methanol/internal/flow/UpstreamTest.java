@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,7 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.LinkedList;
@@ -32,70 +31,67 @@ import java.util.concurrent.Flow.Subscription;
 import org.junit.jupiter.api.Test;
 
 class UpstreamTest {
-
   @Test
   void setOrCancel() {
-    var s1 = new TestSubscription();
-    var ups = new Upstream();
-    assertTrue(ups.setOrCancel(s1));
-    var s2 = new TestSubscription();
-    assertFalse(ups.setOrCancel(s2));
-    assertEquals(1, s2.cancels);
+    var upstream = new Upstream();
+    assertThat(upstream.setOrCancel(new TestSubscription())).isTrue();
+
+    var secondSubscription = new TestSubscription();
+    assertThat(upstream.setOrCancel(secondSubscription)).isFalse();
+    assertThat(secondSubscription.cancelCount).isOne();
   }
 
   @Test
   void setOrCancelCleared() {
-    var s = new TestSubscription();
-    var ups = new Upstream();
-    ups.clear();
-    assertFalse(ups.setOrCancel(s));
-    assertEquals(1, s.cancels);
+    var subscription = new TestSubscription();
+    var upstream = new Upstream();
+    upstream.clear();
+    assertThat(upstream.setOrCancel(subscription)).isFalse();
+    assertThat(subscription.cancelCount).isOne();
   }
 
   @Test
   void setOrCancelCancelled() {
-    var s = new TestSubscription();
-    var ups = new Upstream();
-    ups.cancel();
-    assertFalse(ups.setOrCancel(s));
-    assertEquals(1, s.cancels);
+    var subscription = new TestSubscription();
+    var upstream = new Upstream();
+    upstream.cancel();
+    assertThat(upstream.setOrCancel(subscription)).isFalse();
+    assertThat(subscription.cancelCount).isOne();
   }
 
   @Test
   void clear() {
-    var s = new TestSubscription();
-    var ups = new Upstream();
-    assertTrue(ups.setOrCancel(s));
-    ups.clear();
-    assertEquals(0, s.cancels);
+    var subscription = new TestSubscription();
+    var upstream = new Upstream();
+    assertTrue(upstream.setOrCancel(subscription));
+    upstream.clear();
+    assertThat(subscription.cancelCount).isZero();
   }
 
   @Test
   void cancel() {
-    var s = new TestSubscription();
-    var ups = new Upstream();
-    assertTrue(ups.setOrCancel(s));
-    ups.cancel();
-    assertEquals(1, s.cancels);
+    var subscription = new TestSubscription();
+    var upstream = new Upstream();
+    assertTrue(upstream.setOrCancel(subscription));
+    upstream.cancel();
+    assertThat(subscription.cancelCount).isOne();
   }
 
   @Test
   void request() {
-    var s = new TestSubscription();
-    var ups = new Upstream();
-    ups.request(1);
-    ups.setOrCancel(s);
-    ups.request(5);
-    ups.cancel();
-    ups.request(1);
-    assertEquals(1, s.cancels);
-    assertEquals(1, s.demands.size());
-    assertEquals(5, s.demands.poll());
+    var subscription = new TestSubscription();
+    var upstream = new Upstream();
+    upstream.request(1);
+    upstream.setOrCancel(subscription);
+    upstream.request(5);
+    upstream.cancel();
+    upstream.request(1);
+    assertThat(subscription.cancelCount).isOne();
+    assertThat(subscription.demands).hasSize(1).first().isEqualTo(5L);
   }
 
   private static final class TestSubscription implements Subscription {
-
-    private int cancels;
+    private int cancelCount;
     private final Queue<Long> demands = new LinkedList<>();
 
     TestSubscription() {}
@@ -107,7 +103,7 @@ class UpstreamTest {
 
     @Override
     public void cancel() {
-      cancels++;
+      cancelCount++;
     }
   }
 }

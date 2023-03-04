@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@ import java.util.concurrent.Flow.Subscription;
 /** A forwarding subscriber that ensures signals aren't called concurrently. */
 public abstract class SerializedSubscriber<T> extends ForwardingSubscriber<T> {
   private final SerialExecutor serialExecutor = new SerialExecutor(FlowSupport.SYNC_EXECUTOR);
-  private boolean done; // Visibility piggybacks on SerialExecutor's synchronization
+  private boolean done; // Visibility piggybacks on SerialExecutor's synchronization.
 
   protected SerializedSubscriber() {}
 

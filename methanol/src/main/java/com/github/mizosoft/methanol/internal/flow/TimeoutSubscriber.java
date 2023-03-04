@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,34 +35,24 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.Future;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A subscriber that intercepts requests to upstream and schedules error completion if each
  * requested item isn't received within a timeout.
  */
-@SuppressWarnings({"UnusedVariable", "unused"}) // VarHandle indirection
 public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
     extends SerializedSubscriber<T> {
-  /** Indicates that no further timeouts are to be scheduled as the stream has been terminated. */
-  private static final Future<Void> DISABLED_TIMEOUT = CompletableFuture.completedFuture(null);
+  private static final Future<Void> COMPLETED_FUTURE = CompletableFuture.completedFuture(null);
 
-  /**
-   * Indicates that further downstream signals are to be ignored as the stream has been terminated,
-   * possibly due to timeout.
-   */
-  private static final long TOMBSTONE = -1;
-
-  private static final VarHandle INDEX;
   private static final VarHandle DEMAND;
-  private static final VarHandle TIMEOUT_FUTURE;
+  private static final VarHandle TIMEOUT_TASK;
 
   static {
     var lookup = MethodHandles.lookup();
     try {
-      INDEX = lookup.findVarHandle(TimeoutSubscriber.class, "index", long.class);
       DEMAND = lookup.findVarHandle(TimeoutSubscriber.class, "demand", long.class);
-      TIMEOUT_FUTURE = lookup.findVarHandle(TimeoutSubscriber.class, "timeoutFuture", Future.class);
+      TIMEOUT_TASK =
+          lookup.findVarHandle(TimeoutSubscriber.class, "timeoutTask", TimeoutTask.class);
     } catch (IllegalAccessException | NoSuchFieldException e) {
       throw new IllegalArgumentException(e);
     }
@@ -73,21 +63,17 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
   private final Delayer delayer;
 
   /**
-   * The upstream as received from this.onSubscribe(...), without wrapping in a TimeoutSubscription.
+   * The upstream subscription as received from this.onSubscribe(...), without wrapping in a
+   * TimeoutSubscription.
    */
   private final Upstream unwrappedUpstream = new Upstream();
 
   /** Tracks downstream demand to know when to schedule timeouts. */
+  @SuppressWarnings("unused") // VarHandle indirection.
   private volatile long demand;
 
-  /**
-   * The index of the item to which a timeout is scheduled (or yet to be scheduled by request() if
-   * demand was 0).
-   */
-  private volatile long index;
-
-  /** Represents the timeout scheduled for the currently awaited item. */
-  private volatile @Nullable Future<Void> timeoutFuture;
+  @SuppressWarnings("FieldMayBeFinal") // VarHandle indirection.
+  private volatile TimeoutTask timeoutTask = new TimeoutTask(0, COMPLETED_FUTURE);
 
   public TimeoutSubscriber(S downstream, Duration timeout, Delayer delayer) {
     this.downstream = requireNonNull(downstream);
@@ -112,90 +98,93 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
   public void onNext(T item) {
     requireNonNull(item);
 
-    var currentTimeoutFuture = timeoutFuture;
-    if (currentTimeoutFuture == null
-        || currentTimeoutFuture == DISABLED_TIMEOUT
-        || !TIMEOUT_FUTURE.compareAndSet(this, currentTimeoutFuture, null)) {
+    var currentTimeoutTask = timeoutTask;
+    if (currentTimeoutTask == TimeoutTask.TOMBSTONE) {
       upstream.cancel();
-      if (currentTimeoutFuture == null) {
-        super.onError(
-            new IllegalStateException(
-                "missing backpressure support or illegal (concurrent) usage"));
-      }
       return;
     }
 
-    currentTimeoutFuture.cancel(false);
+    currentTimeoutTask.cancel();
 
     super.onNext(item);
 
-    var currentIndex = index;
-    if (currentIndex == TOMBSTONE || !INDEX.compareAndSet(this, currentIndex, currentIndex + 1)) {
-      upstream.cancel();
-      super.onError(
-          new IllegalStateException("missing backpressure support or illegal (concurrent) usage"));
-      return;
-    }
-
-    if (subtractAndGetDemand(this, DEMAND, 1) > 0) {
-      // We still have requests, so start a new timeout for the next item
+    long currentDemand = subtractAndGetDemand(this, DEMAND, 1);
+    if (currentDemand > 0) {
+      // We still have requests, so start a new timeout for the next item.
       try {
-        scheduleTimeout(currentIndex + 1);
+        scheduleTimeout(currentTimeoutTask.index + 1);
       } catch (RuntimeException | Error e) {
-        upstream.cancel();
-        super.onError(e);
+        cancelOnError(this, e);
       }
+    } else if (currentDemand < 0) {
+      // We're getting overflowed.
+      cancelOnError(this, new IllegalStateException("getting more items than requested"));
     }
   }
 
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
-    if ((long) INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) {
-      disableTimeouts();
-      super.onError(throwable);
-    }
+    cancelTimeout();
+    super.onError(throwable);
   }
 
   @Override
   public void onComplete() {
-    if ((long) INDEX.getAndSet(this, TOMBSTONE) != TOMBSTONE) {
-      disableTimeouts();
-      super.onComplete();
-    }
+    cancelTimeout();
+    super.onComplete();
   }
 
-  private void disableTimeouts() {
-    var currentTimeoutFuture = (Future<?>) TIMEOUT_FUTURE.getAndSet(this, DISABLED_TIMEOUT);
-    if (currentTimeoutFuture != null) {
-      currentTimeoutFuture.cancel(false);
-    }
+  private void cancelTimeout() {
+    var currentTimeoutTask = (TimeoutTask) TIMEOUT_TASK.getAndSet(this, TimeoutTask.TOMBSTONE);
+    currentTimeoutTask.cancel();
   }
 
-  /**
-   * Called by request() & onNext() in a mutually exclusive manner. Calls come from request() only
-   * when incremented demand was previously 0 (no ongoing onNext), and from onNext() only when
-   * demand is still larger than 0 when decremented.
-   */
-  private void scheduleTimeout(long nextTimeoutIndex) {
-    var currentTimeoutFuture = timeoutFuture;
-    if (currentTimeoutFuture != DISABLED_TIMEOUT) {
-      var nextTimeoutFuture =
-          delayer.delay(() -> onTimeout(index), timeout, FlowSupport.SYNC_EXECUTOR);
-      if (!TIMEOUT_FUTURE.compareAndSet(this, currentTimeoutFuture, nextTimeoutFuture)) {
-        // Discard timeout on failed CAS. Expected contention is with onError(), onComplete() or
-        // cancel(), all marking stream termination.
-        nextTimeoutFuture.cancel(false);
+  private void scheduleTimeout(long newTimeoutIndex) {
+    TimeoutTask newTimeoutTask = null;
+    while (true) {
+      var currentTimeoutTask = timeoutTask;
+      if (currentTimeoutTask == TimeoutTask.TOMBSTONE
+          || newTimeoutIndex <= currentTimeoutTask.index) {
+        if (newTimeoutTask != null) {
+          newTimeoutTask.future.cancel(false);
+        }
+        return;
       }
+
+      if (newTimeoutTask == null) {
+        newTimeoutTask =
+            new TimeoutTask(
+                newTimeoutIndex,
+                delayer.delay(
+                    () -> onTimeout(newTimeoutIndex), timeout, FlowSupport.SYNC_EXECUTOR));
+      }
+      if (TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, newTimeoutTask)) {
+        currentTimeoutTask.future.cancel(false);
+        return;
+      }
+    }
+  }
+
+  private void cancelOnError(Subscriber<?> subscriber, Throwable exception) {
+    // Capture the subscription before it's cleared by onError. The subscription is cancelled after
+    // onError as the HTTP client seems to sometimes complete downstream with an IOException if
+    // the subscription is cancelled, which causes the wrong exception to be passed on.
+    var subscription = upstream.get();
+    try {
+      subscriber.onError(exception);
+    } finally {
+      subscription.cancel();
     }
   }
 
   protected abstract Throwable timeoutError(long index, Duration timeout);
 
   private void onTimeout(long timeoutIndex) {
-    if (INDEX.compareAndSet(this, timeoutIndex, TOMBSTONE)) {
-      upstream.cancel();
-      super.onError(timeoutError(timeoutIndex, timeout));
+    var currentTimeoutTask = timeoutTask;
+    if (currentTimeoutTask.index == timeoutIndex
+        && TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, TimeoutTask.TOMBSTONE)) {
+      cancelOnError(downstream(), timeoutError(timeoutIndex, timeout));
     }
   }
 
@@ -204,15 +193,15 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
 
     @Override
     public void request(long n) {
-      var currentIndex = index;
-      if (currentIndex == TOMBSTONE) {
+      var currentIndex = timeoutTask.index;
+      if (currentIndex == TimeoutTask.TOMBSTONE_INDEX) {
         return;
       }
 
       if (n > 0 && getAndAddDemand(TimeoutSubscriber.this, DEMAND, n) == 0) {
         try {
-          scheduleTimeout(currentIndex);
-        } catch (RuntimeException | Error e) { // delay() can throw
+          scheduleTimeout(currentIndex + 1);
+        } catch (RuntimeException | Error e) {
           cancel();
           throw e;
         }
@@ -222,9 +211,30 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
 
     @Override
     public void cancel() {
-      index = TOMBSTONE;
-      disableTimeouts();
+      cancelTimeout();
       unwrappedUpstream.cancel();
+    }
+  }
+
+  private static final class TimeoutTask {
+    static final int TOMBSTONE_INDEX = -1;
+
+    /**
+     * A sentinel value indicating that no further timeouts are to be scheduled as the stream has
+     * been terminated.
+     */
+    static final TimeoutTask TOMBSTONE = new TimeoutTask(TOMBSTONE_INDEX, COMPLETED_FUTURE);
+
+    final long index;
+    final Future<?> future;
+
+    TimeoutTask(long index, Future<?> future) {
+      this.index = index;
+      this.future = future;
+    }
+
+    void cancel() {
+      future.cancel(false);
     }
   }
 }

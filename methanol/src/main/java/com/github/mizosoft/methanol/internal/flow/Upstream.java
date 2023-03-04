@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +25,26 @@ package com.github.mizosoft.methanol.internal.flow;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.concurrent.Flow.Subscription;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A one-use atomic reference to an upstream subscription. */
 public final class Upstream {
+  private static final Subscription UNSET_SUBSCRIPTION =
+      new Subscription() {
+        @Override
+        public void request(long n) {}
+
+        @Override
+        public void cancel() {}
+      };
+
+  private static final Subscription CANCELLED_SUBSCRIPTION =
+      new Subscription() {
+        @Override
+        public void request(long n) {}
+
+        @Override
+        public void cancel() {}
+      };
 
   private static final VarHandle SUBSCRIPTION;
 
@@ -41,7 +57,7 @@ public final class Upstream {
     }
   }
 
-  private volatile @Nullable Subscription subscription;
+  private volatile Subscription subscription = UNSET_SUBSCRIPTION;
 
   public Upstream() {}
 
@@ -50,9 +66,13 @@ public final class Upstream {
     return subscription != null;
   }
 
+  public boolean isCancelled() {
+    return subscription == CANCELLED_SUBSCRIPTION;
+  }
+
   /** Sets incoming subscription, cancels it if already set. */
   public boolean setOrCancel(Subscription incoming) {
-    if (!SUBSCRIPTION.compareAndSet(this, null, incoming)) {
+    if (!SUBSCRIPTION.compareAndSet(this, UNSET_SUBSCRIPTION, incoming)) {
       incoming.cancel();
       return false;
     }
@@ -61,7 +81,7 @@ public final class Upstream {
 
   /** Requests {@code n} items from upstream if set. */
   public void request(long n) {
-    Subscription currentSubscription = subscription;
+    var currentSubscription = subscription;
     if (currentSubscription != null) {
       currentSubscription.request(n);
     }
@@ -69,15 +89,18 @@ public final class Upstream {
 
   /** Cancels the upstream if set. */
   public void cancel() {
-    Subscription currentSubscription =
-        (Subscription) SUBSCRIPTION.getAndSet(this, FlowSupport.NOOP_SUBSCRIPTION);
-    if (currentSubscription != null) {
-      currentSubscription.cancel();
+    var cancelledSubscription = (Subscription) SUBSCRIPTION.getAndSet(this, CANCELLED_SUBSCRIPTION);
+    if (cancelledSubscription != null) {
+      cancelledSubscription.cancel();
     }
   }
 
   /** Just loses the reference to upstream if cancellation it is not required. */
   public void clear() {
-    subscription = FlowSupport.NOOP_SUBSCRIPTION;
+    subscription = CANCELLED_SUBSCRIPTION;
+  }
+
+  public Subscription get() {
+    return subscription;
   }
 }
