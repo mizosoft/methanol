@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,16 +26,12 @@ import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
 
 public final class MemoryStoreContext extends StoreContext {
-  private MemoryStoreContext(MemoryStoreConfig config) {
+  MemoryStoreContext(MemoryStoreConfig config) {
     super(config);
   }
 
   @Override
   Store createStore() {
     return new MemoryStore(config().maxSize());
-  }
-
-  public static MemoryStoreContext from(MemoryStoreConfig config) {
-    return new MemoryStoreContext(config);
   }
 }

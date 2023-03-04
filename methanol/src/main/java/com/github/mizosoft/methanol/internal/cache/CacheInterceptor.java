@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -123,9 +123,9 @@ public final class CacheInterceptor implements Interceptor {
 
   /** Matcher for valid characters in an entity-tag, as specified by rfc7232 Section 2.3. */
   private static final CharMatcher ETAG_C_MATCHER =
-      CharMatcher.only(0x21)
-          .or(CharMatcher.closedRange(0x23, 0x7e))
-          .or(CharMatcher.closedRange(0x80, 0xff));
+      CharMatcher.is(0x21)
+          .or(CharMatcher.withinClosedRange(0x23, 0x7e))
+          .or(CharMatcher.withinClosedRange(0x80, 0xff));
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private static final Optional<Boolean> TRUE_OPTIONAL = Optional.of(true);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -178,7 +178,7 @@ public final class DiskStoreContext extends StoreContext {
     }
   }
 
-  public static DiskStoreContext from(DiskStoreConfig spec) throws IOException {
+  public static DiskStoreContext create(DiskStoreConfig spec) throws IOException {
     var directory = createTempDir(spec.fileSystemType());
     var clock = new MockClock();
     if (spec.autoAdvanceClock()) {

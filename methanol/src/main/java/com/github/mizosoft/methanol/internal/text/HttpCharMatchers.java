@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,8 +23,8 @@
 package com.github.mizosoft.methanol.internal.text;
 
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.anyOf;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.closedRange;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.lettersOrDigits;
+import static com.github.mizosoft.methanol.internal.text.CharMatcher.withinClosedRange;
 
 /** Common {@code CharMatchers} for HTTP headers and the like. */
 public class HttpCharMatchers {
@@ -50,21 +50,21 @@ public class HttpCharMatchers {
   //                ; see Section 3.2.4
   // (obs-fold & obs-test will be forbidden)
   public static final CharMatcher FIELD_VALUE_MATCHER =
-      closedRange(0x21, 0x7E) // VCHAR
+      withinClosedRange(0x21, 0x7E) // VCHAR
           .or(anyOf(" \t")); // ( SP / HTAB )
 
   // quoted-string  = DQUOTE *( qdtext / quoted-pair ) DQUOTE
   // qdtext         = HTAB / SP / %x21 / %x23-5B / %x5D-7E / obs-text
   // obs-text       = %x80-FF
   public static final CharMatcher QUOTED_TEXT_MATCHER =
-      anyOf("\t \u0021") // HTAB + SP + 0x21
-          .or(closedRange(0x23, 0x5B))
-          .or(closedRange(0x5D, 0x7E));
+      anyOf("\t !") // HTAB + SP + 0x21
+          .or(withinClosedRange(0x23, 0x5B))
+          .or(withinClosedRange(0x5D, 0x7E));
 
   // quoted-pair    = "\" ( HTAB / SP / VCHAR / obs-text )
   public static final CharMatcher QUOTED_PAIR_MATCHER =
       anyOf("\t ") // HTAB + SP
-          .or(closedRange(0x21, 0x7E)); // VCHAR
+          .or(withinClosedRange(0x21, 0x7E)); // VCHAR
 
   //  OWS = *( SP / HTAB )
   public static final CharMatcher OWS_MATCHER = anyOf("\t ");

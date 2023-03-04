@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -66,7 +66,7 @@ public final class MediaType {
   private static final String IMAGE_TYPE = "image";
   private static final String TEXT_TYPE = "text";
 
-  /*---Media ranges---*/
+  /*---Media Ranges---*/
 
   /** Matches any type ({@code *}{@code /*}). */
   public static final MediaType ANY = new MediaType("*", "*");
@@ -80,7 +80,7 @@ public final class MediaType {
   /** Matches any text type ({@code text}{@code /*}). */
   public static final MediaType TEXT_ANY = new MediaType(TEXT_TYPE, "*");
 
-  /*---Application types---*/
+  /*---Application Types---*/
 
   /** {@code application/x-www-form-urlencoded} */
   public static final MediaType APPLICATION_FORM_URLENCODED =
@@ -104,7 +104,7 @@ public final class MediaType {
   public static final MediaType APPLICATION_X_PROTOBUF =
       new MediaType(APPLICATION_TYPE, "x-protobuf");
 
-  /*---Image types---*/
+  /*---Image Types---*/
 
   /** {@code image/gif} */
   public static final MediaType IMAGE_GIF = new MediaType(IMAGE_TYPE, "gif");
@@ -115,7 +115,7 @@ public final class MediaType {
   /** {@code image/png} */
   public static final MediaType IMAGE_PNG = new MediaType(IMAGE_TYPE, "png");
 
-  /*---Text types---*/
+  /*---Text Types---*/
 
   /** {@code text/html} */
   public static final MediaType TEXT_HTML = new MediaType(TEXT_TYPE, "html");
@@ -174,7 +174,7 @@ public final class MediaType {
    */
   public Optional<Charset> charset() {
     if (!isCharsetParsed) {
-      String charsetName = parameters.get(CHARSET_ATTRIBUTE);
+      var charsetName = parameters.get(CHARSET_ATTRIBUTE);
       if (charsetName != null) {
         lazyCharset = Charset.forName(charsetName);
       }
@@ -243,7 +243,7 @@ public final class MediaType {
    */
   public MediaType withCharset(Charset charset) {
     requireNonNull(charset);
-    MediaType mediaType = withParameter(CHARSET_ATTRIBUTE, charset.name());
+    var mediaType = withParameter(CHARSET_ATTRIBUTE, charset.name());
     mediaType.lazyCharset = charset;
     mediaType.isCharsetParsed = true;
     return mediaType;
@@ -357,10 +357,10 @@ public final class MediaType {
     requireArgument(
         !WILDCARD.equals(type) || WILDCARD.equals(subtype),
         "cannot have a wildcard type with a concrete subtype");
-    String normalizedType = validateAndNormalizeToken(type);
-    String normalizedSubtype = validateAndNormalizeToken(subtype);
+    var normalizedType = validateAndNormalizeToken(type);
+    var normalizedSubtype = validateAndNormalizeToken(subtype);
     for (var entry : parameters.entrySet()) {
-      String normalizedAttribute = validateAndNormalizeToken(entry.getKey());
+      var normalizedAttribute = validateAndNormalizeToken(entry.getKey());
       String normalizedValue;
       if (CHARSET_ATTRIBUTE.equals(normalizedAttribute)) {
         normalizedValue = validateAndNormalizeToken(entry.getValue());

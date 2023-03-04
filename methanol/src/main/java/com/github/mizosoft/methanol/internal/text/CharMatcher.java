@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.internal.text;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 
-/** Simple char matching API to use internally. */
+/** Char matching API to use internally. */
 public interface CharMatcher {
   boolean matches(char c);
 
@@ -55,12 +55,12 @@ public interface CharMatcher {
     return c -> chars.indexOf(c) >= 0;
   }
 
-  static CharMatcher closedRange(int c1, int c2) {
+  static CharMatcher withinClosedRange(int c1, int c2) {
     requireArgument((c1 | c2 | (c2 - c1)) >= 0, "illegal range [%d, %d]", c1, c2);
     return c -> c >= c1 && c <= c2;
   }
 
-  static CharMatcher only(int c) {
+  static CharMatcher is(int c) {
     return x -> c == x;
   }
 }

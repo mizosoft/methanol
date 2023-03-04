@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,17 +33,13 @@ public final class RedisClusterStoreContext extends AbstractRedisStoreContext<Lo
       new RedisSessionSingletonPool<>(
           () -> LocalRedisCluster.start(MASTER_NODE_COUNT, REPLICAS_PER_MASTER));
 
-  private RedisClusterStoreContext(RedisClusterStoreConfig config) {
+  RedisClusterStoreContext(RedisClusterStoreConfig config) {
     super(config, clusterPool);
   }
 
   @Override
   void configure(RedisStorageExtension.Builder builder) throws IOException {
     builder.cluster(getSession().uris());
-  }
-
-  public static RedisClusterStoreContext from(RedisClusterStoreConfig config) throws IOException {
-    return new RedisClusterStoreContext(config);
   }
 
   public static boolean isAvailable() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,18 +29,13 @@ public final class RedisStandaloneStoreContext extends AbstractRedisStoreContext
   private static final RedisSessionSingletonPool<LocalRedisServer> serverPool =
       new RedisSessionSingletonPool<>(LocalRedisServer::start);
 
-  private RedisStandaloneStoreContext(RedisStandaloneStoreConfig config) {
+  RedisStandaloneStoreContext(RedisStandaloneStoreConfig config) {
     super(config, serverPool);
   }
 
   @Override
   void configure(RedisStorageExtension.Builder builder) throws IOException {
     builder.standalone(getSession().uri());
-  }
-
-  public static RedisStandaloneStoreContext from(RedisStandaloneStoreConfig config)
-      throws IOException {
-    return new RedisStandaloneStoreContext(config);
   }
 
   public static boolean isAvailable() {
