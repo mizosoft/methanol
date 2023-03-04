@@ -20,146 +20,310 @@
  * SOFTWARE.
  */
 
-/*
- * This code is adapted from https://githubcom/openjdk/jdk/blob/36e5ad61e63e2f1da9cf565c607db28f23622ea9/test/jdk/java/util/concurrent/tck/SubmissionPublisherTest.java#L67.
- * The source file contained the following licenses.
- */
-
-/*
- * This file is available under and governed by the GNU General Public
- * License version 2 only, as published by the Free Software Foundation.
- * However, the following notice accompanied the original version of this
- * file:
- *
- * Written by Doug Lea and Martin Buchholz with assistance from
- * members of JCP JSR-166 Expert Group and released to the public
- * domain, as explained at
- * http://creativecommons.org/publicdomain/zero/1.0/
- */
-
 package com.github.mizosoft.methanol.testing;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import java.time.Duration;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
+import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BooleanSupplier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
- * A {@code Subscriber} implementation that facilitates testing {@code Publisher} implementations
+ * A {@link Subscriber} implementation that facilitates testing {@link Publisher} implementations
  * and the like.
  */
 public class TestSubscriber<T> implements Subscriber<T> {
-  public final Deque<T> items = new ArrayDeque<>();
+  private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(4);
 
-  public volatile int nextCount;
-  public volatile int errorCount;
-  public volatile int completionCount;
-  public volatile long request = 1L;
-  public volatile @MonotonicNonNull Subscription subscription;
-  public volatile @MonotonicNonNull Throwable lastError;
-  public volatile boolean throwOnCall;
-  private volatile int pendingNextCount;
+  private final Lock lock = new ReentrantLock();
+  private final Condition subscriptionReceived = lock.newCondition();
+  private final Condition itemsAvailable = lock.newCondition();
+  private final Condition completion = lock.newCondition();
+
+  @GuardedBy("lock")
+  private int nextCount;
+
+  @GuardedBy("lock")
+  private int errorCount;
+
+  @GuardedBy("lock")
+  private int completionCount;
+
+  @GuardedBy("lock")
+  private long autoRequest = 1;
+
+  @GuardedBy("lock")
+  private @MonotonicNonNull Subscription subscription;
+
+  @GuardedBy("lock")
+  private @MonotonicNonNull Throwable lastError;
+
+  @GuardedBy("lock")
+  private final Deque<T> items = new ArrayDeque<>();
+
+  @GuardedBy("lock")
+  private boolean throwOnSubscribe = false;
+
+  @GuardedBy("lock")
+  private boolean throwOnNext = false;
 
   public TestSubscriber() {}
 
+  public int nextCount() {
+    lock.lock();
+    try {
+      return nextCount;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public int completionCount() {
+    lock.lock();
+    try {
+      return completionCount;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public int errorCount() {
+    lock.lock();
+    try {
+      return errorCount;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public TestSubscriber<T> throwOnSubscribeAndOnNext(boolean on) {
+    lock.lock();
+    try {
+      throwOnSubscribe = on;
+      throwOnNext = on;
+      return this;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public TestSubscriber<T> throwOnSubscribe(boolean on) {
+    lock.lock();
+    try {
+      throwOnSubscribe = on;
+      return this;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public TestSubscriber<T> throwOnNext(boolean on) {
+    lock.lock();
+    try {
+      throwOnNext = on;
+      return this;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public TestSubscriber<T> autoRequest(long n) {
+    lock.lock();
+    try {
+      autoRequest = n;
+      return this;
+    } finally {
+      lock.unlock();
+    }
+  }
+
   @Override
-  public synchronized void onSubscribe(Subscription subscription) {
+  public void onSubscribe(Subscription subscription) {
     requireNonNull(subscription);
-    if (this.subscription != null) {
-      throw new AssertionError("my subscription is not null");
-    }
-    this.subscription = subscription;
-    notifyAll();
-    if (throwOnCall) {
-      throw new TestException();
-    }
-    if (request != 0L) {
-      subscription.request(request);
+    lock.lock();
+    try {
+      this.subscription = subscription;
+      subscriptionReceived.signalAll();
+      if (autoRequest > 0) {
+        subscription.request(autoRequest);
+      }
+      if (throwOnSubscribe) {
+        throw new TestException();
+      }
+    } finally {
+      lock.unlock();
     }
   }
 
   @Override
-  public synchronized void onNext(T item) {
+  public void onNext(T item) {
     requireNonNull(item);
-    items.addLast(item);
-    nextCount++;
-    pendingNextCount++;
-    notifyAll();
-    if (throwOnCall) {
-      throw new TestException();
-    }
-    if (request != 0L) {
-      subscription.request(request);
+    lock.lock();
+    try {
+      nextCount++;
+      items.addLast(item);
+      itemsAvailable.signalAll();
+      if (autoRequest > 0) {
+        subscription.request(autoRequest);
+      }
+      if (throwOnNext) {
+        throw new TestException();
+      }
+    } finally {
+      lock.unlock();
     }
   }
 
   @Override
-  public synchronized void onError(Throwable throwable) {
+  public void onError(Throwable throwable) {
     requireNonNull(throwable);
-    errorCount++;
-    lastError = throwable;
-    notifyAll();
+    lock.lock();
+    try {
+      errorCount++;
+      lastError = throwable;
+      completion.signalAll();
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
-  public synchronized void onComplete() {
-    completionCount++;
-    notifyAll();
-  }
-
-  public synchronized Subscription awaitOnSubscribe() {
-    while (subscription == null) {
-      try {
-        wait();
-      } catch (Exception ex) {
-        throw new AssertionError(ex);
-      }
-    }
-    return subscription;
-  }
-
-  public synchronized void awaitOnNext(int n) {
-    while (nextCount < n) {
-      try {
-        wait();
-      } catch (Exception ex) {
-        throw new AssertionError(ex);
-      }
+  public void onComplete() {
+    lock.lock();
+    try {
+      completionCount++;
+      completion.signalAll();
+    } finally {
+      lock.unlock();
     }
   }
 
-  public synchronized T awaitNextItem() {
-    while (pendingNextCount <= 0) {
-      try {
-        wait();
-      } catch (Exception e) {
-        throw new AssertionError(e);
-      }
-    }
-    pendingNextCount--;
-    return items.peekLast();
+  public Subscription awaitSubscription() {
+    return awaitSubscription(DEFAULT_TIMEOUT);
   }
 
-  public synchronized void awaitComplete() {
-    while (completionCount == 0 && errorCount == 0) {
-      try {
-        wait();
-      } catch (Exception ex) {
-        throw new AssertionError(ex);
-      }
+  public Subscription awaitSubscription(Duration timeout) {
+    lock.lock();
+    try {
+      assertThat(await(subscriptionReceived, () -> subscription != null, timeout))
+          .withFailMessage("expected onSubscribe within " + timeout)
+          .isTrue();
+      return subscription;
+    } finally {
+      lock.unlock();
     }
   }
 
-  public synchronized void awaitError() {
-    while (errorCount == 0) {
+  public void requestItems(long n) {
+    awaitSubscription().request(n);
+  }
+
+  public List<T> peekAvailable() {
+    lock.lock();
+    try {
+      return List.copyOf(items);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public List<T> pollAll() {
+    lock.lock();
+    try {
+      awaitCompletion();
+      var remainingItems = new ArrayList<T>();
+      while (!items.isEmpty()) {
+        remainingItems.add(items.remove());
+      }
+      return List.copyOf(remainingItems);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public T pollNext() {
+    return pollNext(1).get(0);
+  }
+
+  public List<T> pollNext(int n) {
+    return pollNext(n, DEFAULT_TIMEOUT);
+  }
+
+  public List<T> pollNext(int n, Duration timeout) {
+    lock.lock();
+    try {
+      assertThat(await(itemsAvailable, () -> items.size() >= n, timeout))
+          .withFailMessage("expected onNext within " + timeout)
+          .isTrue();
+      var polled = new ArrayList<T>();
+      for (int i = 0; i < n; i++) {
+        polled.add(items.remove());
+      }
+      return List.copyOf(polled);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public void awaitCompletion() {
+    awaitCompletion(DEFAULT_TIMEOUT);
+  }
+
+  public void awaitCompletion(Duration timeout) {
+    lock.lock();
+    try {
+      assertThat(await(completion, () -> completionCount > 0 || errorCount > 0, timeout))
+          .withFailMessage("expected completion within " + timeout)
+          .isTrue();
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  public Throwable awaitError() {
+    return awaitError(DEFAULT_TIMEOUT);
+  }
+
+  public Throwable awaitError(Duration timeout) {
+    lock.lock();
+    try {
+      assertThat(await(completion, () -> completionCount > 0 || errorCount > 0, timeout))
+          .withFailMessage("expected an error within " + timeout)
+          .isTrue();
+      assertThat(lastError).withFailMessage("expected onError but got onComplete").isNotNull();
+      return castNonNull(lastError);
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  @GuardedBy("lock")
+  private boolean await(Condition condition, BooleanSupplier awaitUntil, Duration timeout) {
+    long remainingNanos = TimeUnit.NANOSECONDS.convert(timeout);
+    while (!awaitUntil.getAsBoolean()) {
       try {
-        wait();
-      } catch (Exception ex) {
-        throw new AssertionError(ex);
+        if (remainingNanos <= 0) {
+          return false;
+        }
+        remainingNanos = condition.awaitNanos(remainingNanos);
+      } catch (InterruptedException ex) {
+        throw new RuntimeException(ex);
       }
     }
+    return true;
   }
 }

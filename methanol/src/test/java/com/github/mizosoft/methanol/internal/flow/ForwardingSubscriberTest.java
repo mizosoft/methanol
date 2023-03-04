@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,56 +22,59 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
-import java.util.List;
 import java.util.concurrent.Flow.Subscription;
 import org.junit.jupiter.api.Test;
 
 class ForwardingSubscriberTest {
-
   @Test
   void forwardsBodyToDownstream() {
     var subscriber = new TestForwardingSubscriber();
+    var downstream = subscriber.downstream();
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    assertSame(FlowSupport.NOOP_SUBSCRIPTION, subscriber.downstream.subscription);
-    var seq = List.of(1, 2, 3);
-    seq.forEach(subscriber::onNext);
+    assertThat(downstream.awaitSubscription()).isSameAs(FlowSupport.NOOP_SUBSCRIPTION);
+
+    subscriber.onNext(1);
+    subscriber.onNext(2);
+    subscriber.onNext(3);
     subscriber.onComplete();
-    assertEquals(1, subscriber.downstream.completionCount);
-    assertEquals(seq, List.copyOf(subscriber.downstream.items));
+    assertThat(downstream.completionCount()).isOne();
+    assertThat(downstream.pollNext(3)).containsExactly(1, 2, 3);
   }
 
   @Test
   void forwardsErrorCompletion() {
     var subscriber = new TestForwardingSubscriber();
+    var downstream = subscriber.downstream();
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     subscriber.onNext(1);
     subscriber.onNext(2);
     subscriber.onError(new TestException());
     assertTrue(
-        subscriber.downstream.lastError instanceof TestException,
-        String.valueOf(subscriber.downstream.lastError));
-    assertEquals(2, subscriber.downstream.nextCount);
+        downstream.awaitError() instanceof TestException, String.valueOf(downstream.awaitError()));
+    assertThat(downstream.nextCount()).isEqualTo(2);
   }
 
   @Test
   void callOnSubscribeTwice() {
     var subscriber = new TestForwardingSubscriber();
-    var subscription = new Subscription() {
-      int cancels;
+    var subscription =
+        new Subscription() {
+          int cancels;
 
-      @Override public void request(long n) {}
+          @Override
+          public void request(long n) {}
 
-      @Override
-      public void cancel() {
-        cancels++;
-      }
-    };
+          @Override
+          public void cancel() {
+            cancels++;
+          }
+        };
     subscriber.onSubscribe(subscription);
     subscriber.onSubscribe(subscription);
     subscriber.onSubscribe(subscription);
@@ -79,7 +82,6 @@ class ForwardingSubscriberTest {
   }
 
   private static final class TestForwardingSubscriber extends ForwardingSubscriber<Integer> {
-
     private final TestSubscriber<Integer> downstream;
 
     TestForwardingSubscriber() {

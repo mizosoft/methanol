@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -256,7 +256,7 @@ public final class ProgressTracker {
 
     Builder() {}
 
-    Builder clockForTesting(Clock clock) {
+    Builder clock(Clock clock) {
       this.clock = requireNonNull(clock);
       return this;
     }
@@ -586,6 +586,7 @@ public final class ProgressTracker {
 
     @Override
     public void onSubscribe(Subscription subscription) {
+      requireNonNull(subscription);
       if (upstream.setOrCancel(subscription)) {
         try {
           listenerSubscription.onSubscribe();

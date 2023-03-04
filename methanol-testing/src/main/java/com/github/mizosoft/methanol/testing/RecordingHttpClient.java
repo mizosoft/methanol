@@ -54,21 +54,16 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class RecordingHttpClient extends HttpClient {
   private final BlockingDeque<Call<?>> calls = new LinkedBlockingDeque<>();
   private final AtomicInteger sendCount = new AtomicInteger();
-  private boolean completeCallsEagerly;
 
   public RecordingHttpClient() {}
 
-  public void completeCallsEagerly(boolean on) {
-    completeCallsEagerly = on;
-  }
-
-  public void completeLatestCall() {
-    var call = latestCall();
+  public void completeLastCall() {
+    var call = lastCall();
     call.future().complete(defaultResponseFor(call.request()));
   }
 
   @SuppressWarnings("unchecked")
-  public <T> Call<T> latestCall() {
+  public <T> Call<T> lastCall() {
     assertThat(calls).isNotEmpty();
     return (Call<T>) calls.getLast();
   }
@@ -137,9 +132,6 @@ public final class RecordingHttpClient extends HttpClient {
     sendCount.incrementAndGet();
 
     var call = new Call<>(request, responseBodyHandler, null);
-    if (completeCallsEagerly) {
-      call.future().complete(defaultResponseFor(request));
-    }
     calls.add(call);
 
     try {
@@ -166,9 +158,6 @@ public final class RecordingHttpClient extends HttpClient {
     sendCount.incrementAndGet();
 
     var call = new Call<>(request, responseBodyHandler, null);
-    if (completeCallsEagerly) {
-      call.future().complete(defaultResponseFor(request));
-    }
     calls.add(call);
     return call.future();
   }
@@ -181,9 +170,6 @@ public final class RecordingHttpClient extends HttpClient {
     sendCount.incrementAndGet();
 
     var call = new Call<>(request, responseBodyHandler, pushPromiseHandler);
-    if (completeCallsEagerly) {
-      call.future().complete(defaultResponseFor(request));
-    }
     calls.add(call);
     return call.future();
   }

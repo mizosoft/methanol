@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -118,10 +118,9 @@ class CacheReadingPublisherTest {
     var publisher = new CacheReadingPublisher(failingViewer, executor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
     publisher.subscribe(subscriber);
-    subscriber.awaitComplete();
-    assertThat(subscriber.errorCount).isOne();
-    assertThat(subscriber.errorCount).isOne();
-    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
+    subscriber.awaitCompletion();
+    assertThat(subscriber.errorCount()).isOne();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
   }
 
   /** No new reads should be scheduled after the subscription is cancelled. */
@@ -144,8 +143,7 @@ class CacheReadingPublisherTest {
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
     publisher.subscribe(subscriber);
     awaitUninterruptibly(firstReadLatch);
-    subscriber.awaitOnSubscribe();
-    subscriber.subscription.cancel();
+    subscriber.awaitSubscription().cancel();
 
     // Trigger CacheReadingPublisher's read completion callback.
     readAsyncFuture.complete(null);
@@ -154,9 +152,9 @@ class CacheReadingPublisherTest {
     assertThat(viewer.readAsyncCalls.get()).isEqualTo(1);
 
     // The subscriber receives no signals.
-    assertThat(subscriber.nextCount).isZero();
-    assertThat(subscriber.completionCount).isZero();
-    assertThat(subscriber.errorCount).isZero();
+    assertThat(subscriber.nextCount()).isZero();
+    assertThat(subscriber.completionCount()).isZero();
+    assertThat(subscriber.errorCount()).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -169,11 +167,10 @@ class CacheReadingPublisherTest {
           }
         };
     var publisher = new CacheReadingPublisher(emptyViewer, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
-    subscriber.request = 0L; // Request nothing.
+    var subscriber = new TestSubscriber<List<ByteBuffer>>().autoRequest(0);
     publisher.subscribe(subscriber);
-    subscriber.awaitComplete();
-    assertThat(subscriber.nextCount).isEqualTo(0);
+    subscriber.awaitCompletion();
+    assertThat(subscriber.nextCount()).isEqualTo(0);
   }
 
   @Test
@@ -190,8 +187,7 @@ class CacheReadingPublisherTest {
 
     var secondSubscriber = new TestSubscriber<>();
     publisher.subscribe(secondSubscriber);
-    secondSubscriber.awaitError();
-    assertThat(secondSubscriber.lastError).isInstanceOf(IllegalStateException.class);
+    assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
   }
 
   private abstract static class TestViewer implements Viewer {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,6 @@ package com.github.mizosoft.methanol.internal.flow;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittableSubscription;
@@ -57,6 +56,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -70,211 +70,273 @@ class AbstractSubscriptionTest {
   @ExecutorParameterizedTest
   void subscribeNoSignals(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitOnSubscribe();
-    assertNotNull(subscriber.subscription);
-    assertThat(subscriber.subscription).isNotNull();
-    assertThat(subscriber.nextCount).isZero();
-    assertThat(subscriber.errorCount).isZero();
-    assertThat(subscriber.completionCount).isZero();
+    assertThat(subscriber.awaitSubscription()).isSameAs(subscription);
+    assertThat(subscriber.nextCount()).isZero();
+    assertThat(subscriber.errorCount()).isZero();
+    assertThat(subscriber.completionCount()).isZero();
   }
 
   @ExecutorParameterizedTest
   void noItems(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
     subscription.complete();
-    subscriber.awaitComplete();
-    assertThat(subscriber.nextCount).isZero();
-    assertThat(subscriber.errorCount).isZero();
-    assertThat(subscriber.completionCount).isOne();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.nextCount()).isZero();
+    assertThat(subscriber.errorCount()).isZero();
+    assertThat(subscriber.completionCount()).isOne();
   }
 
   @ExecutorParameterizedTest
   void errorSignal(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signalError(new TestException());
-    subscriber.awaitError();
-    assertThat(subscriber.nextCount).isZero();
-    assertThat(subscriber.completionCount).isZero();
-    assertThat(subscriber.errorCount).isOne();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
+    assertThat(subscriber.nextCount()).isZero();
+    assertThat(subscriber.completionCount()).isZero();
+    assertThat(subscriber.errorCount()).isOne();
   }
 
   @ExecutorParameterizedTest
   void errorOnSubscribe(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
-    subscriber.throwOnCall = true;
-    var subscription = subscription(subscriber, executor);
+    var subscriber = new TestSubscriber<Integer>().throwOnSubscribeAndOnNext(true);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitError();
-    assertThat(subscriber.nextCount).isZero();
-    assertThat(subscriber.errorCount).isOne();
-    assertThat(subscriber.completionCount).isZero();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
+    assertThat(subscriber.nextCount()).isZero();
+    assertThat(subscriber.errorCount()).isOne();
+    assertThat(subscriber.completionCount()).isZero();
   }
 
   @ExecutorParameterizedTest
   void oneItem(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
     subscription.submit(1);
+    assertThat(subscriber.pollNext()).isOne();
     subscription.complete();
-    subscriber.awaitComplete();
-    assertThat(subscriber.nextCount).isOne();
-    assertThat(subscriber.completionCount).isOne();
-    assertThat(subscriber.errorCount).isZero();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.nextCount()).isOne();
+    assertThat(subscriber.completionCount()).isOne();
+    assertThat(subscriber.errorCount()).isZero();
   }
 
   @ExecutorParameterizedTest
-  void oneItemThenError(Executor executor) {
+  void oneItemThenErrorNoWaitForItem(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
     subscription.submit(1);
     subscription.signalError(new TestException());
-    subscriber.awaitOnSubscribe();
-    subscriber.awaitError();
-    assertThat(subscriber.nextCount).isLessThanOrEqualTo(1);
-    assertThat(subscriber.errorCount).isOne();
-    assertThat(subscriber.completionCount).isZero();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
+    assertThat(subscriber.nextCount()).isLessThanOrEqualTo(1);
+    assertThat(subscriber.errorCount()).isOne();
+    assertThat(subscriber.completionCount()).isZero();
+  }
+
+  @ExecutorParameterizedTest
+  void oneItemThenErrorWaitForItem(Executor executor) {
+    var subscriber = new TestSubscriber<Integer>();
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
+    subscription.signal(true);
+    subscription.submit(1);
+    assertThat(subscriber.pollNext()).isOne();
+    subscription.signalError(new TestException());
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
+    assertThat(subscriber.nextCount()).isEqualTo(1);
+    assertThat(subscriber.errorCount()).isOne();
+    assertThat(subscriber.completionCount()).isZero();
   }
 
   @ExecutorParameterizedTest
   void itemsAfterCancellation(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitOnSubscribe();
-    subscription.submit(1);
-    subscriber.subscription.cancel();
-    for (int i = 2; i <= 20; ++i) {
+    for (int i = 1; i <= 40; ++i) {
       subscription.submit(i);
+      if (i == 1) {
+        subscription.cancel(); // Cancel after first onNext.
+      }
     }
     subscription.complete();
-    assertThat(subscriber.nextCount).isLessThan(20);
-    assertThat(subscriber.completionCount).isZero();
+    assertThat(subscriber.completionCount()).isZero();
+
+    // No guarantee no items are received but not so many items should be received.
+    assertThat(subscriber.nextCount()).isLessThanOrEqualTo(20);
   }
 
   @ExecutorParameterizedTest
   void errorOnNext(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitOnSubscribe();
     subscription.submit(1);
-    subscriber.throwOnCall = true;
+    subscriber.throwOnNext(true);
     subscription.submit(2);
     subscription.complete();
-    subscriber.awaitComplete();
-    assertThat(subscriber.errorCount).isOne();
-    assertThat(subscriber.completionCount).isZero();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
+    assertThat(subscriber.errorCount()).isOne();
+    assertThat(subscriber.completionCount()).isZero();
+
+    // No guarantee whether throw happens in first or second onNext.
+    assertThat(subscriber.nextCount()).isLessThanOrEqualTo(2);
   }
 
   @ExecutorParameterizedTest
   void itemOrder(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
     for (int i = 1; i <= 20; ++i) {
       subscription.submit(i);
     }
     subscription.complete();
-    subscriber.awaitComplete();
-    assertThat(subscriber.nextCount).isEqualTo(20);
-    assertThat(subscriber.items.peekLast()).isEqualTo(20);
-    assertThat(subscriber.completionCount).isOne();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.nextCount()).isEqualTo(20);
+    assertThat(subscriber.pollNext(20))
+        .containsExactly(IntStream.rangeClosed(1, 20).boxed().toArray(Integer[]::new));
+    assertThat(subscriber.completionCount()).isOne();
   }
 
   @ExecutorParameterizedTest
   void noItemsWithoutRequests(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
-    subscriber.request = 0L;
-    var subscription = subscription(subscriber, executor);
+    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitOnSubscribe();
     subscription.submit(1);
     subscription.submit(2);
-    assertThat(subscriber.nextCount).isEqualTo(0);
-    subscriber.subscription.request(3);
+
+    subscriber.awaitSubscription();
+    assertThat(subscriber.nextCount()).isEqualTo(0);
+
+    subscriber.requestItems(3);
     subscription.submit(3);
     subscription.complete();
-    subscriber.awaitComplete();
-    assertThat(subscriber.nextCount).isEqualTo(3);
-    assertThat(subscriber.completionCount).isOne();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.pollNext(3)).containsExactly(1, 2, 3);
+    assertThat(subscriber.nextCount()).isEqualTo(3);
+    assertThat(subscriber.completionCount()).isOne();
+  }
+
+  @ExecutorParameterizedTest
+  void noItemsMoreThanRequestedAreReceived(Executor executor) {
+    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
+    subscription.signal(true);
+    subscription.submit(1);
+    subscription.submit(2);
+    subscription.submit(3);
+
+    subscriber.requestItems(1);
+    assertThat(subscriber.pollNext()).isEqualTo(1);
+    assertThat(subscriber.nextCount()).isEqualTo(1);
+
+    subscriber.requestItems(2);
+    assertThat(subscriber.pollNext(2)).containsExactly(2, 3);
+    assertThat(subscriber.nextCount()).isEqualTo(3);
+
+    subscription.complete();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.nextCount()).isEqualTo(3);
+    assertThat(subscriber.completionCount()).isOne();
+  }
+
+  @ExecutorParameterizedTest
+  void requestMoreThanAvailable(Executor executor) {
+    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
+    subscription.signal(true);
+    subscriber.requestItems(2);
+    assertThat(subscriber.nextCount()).isZero();
+
+    subscription.submit(1);
+    assertThat(subscriber.pollNext()).isOne();
+    assertThat(subscriber.nextCount()).isOne();
+
+    subscriber.requestItems(Long.MAX_VALUE);
+    subscriber.requestItems(Long.MAX_VALUE);
+    assertThat(subscription.currentDemand()).isPositive();
+
+    subscription.submit(2);
+    subscription.submit(3);
+    subscription.complete();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.pollNext(2)).containsExactly(2, 3);
   }
 
   @ExecutorParameterizedTest
   void requestOneReceiveOne(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitOnSubscribe(); // Requests 1 item
-    subscriber.request = 0L;
+    subscriber.awaitSubscription(); // Makes sure one item is automatically requested.
+    subscriber.autoRequest(0);
     subscription.submit(1);
     subscription.submit(2);
     subscription.complete();
-    subscriber.awaitOnNext(1);
-    assertThat(subscriber.nextCount).isOne();
+    assertThat(subscriber.pollNext()).isOne();
+    assertThat(subscriber.nextCount()).isOne();
   }
 
   @ExecutorParameterizedTest
   void zeroRequest(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitOnSubscribe();
-    subscriber.subscription.request(0);
+    subscriber.awaitSubscription();
+    subscription.request(0);
     subscription.submit(1);
     subscription.submit(2);
     subscription.complete();
-    subscriber.awaitError();
-    assertThat(subscriber.errorCount).isOne();
-    assertThat(subscriber.lastError).isInstanceOf(IllegalArgumentException.class);
+    assertThat(subscriber.awaitError()).isInstanceOf(IllegalArgumentException.class);
+    assertThat(subscriber.errorCount()).isOne();
   }
 
   @ExecutorParameterizedTest
   void negativeRequest(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitOnSubscribe();
-    subscriber.subscription.request(-1L);
+    subscriber.requestItems(-1);
     subscription.submit(1);
     subscription.submit(2);
     subscription.complete();
-    subscriber.awaitError();
-    assertThat(subscriber.errorCount).isOne();
-    assertThat(subscriber.lastError).isInstanceOf(IllegalArgumentException.class);
+    assertThat(subscriber.awaitError()).isInstanceOf(IllegalArgumentException.class);
+    assertThat(subscriber.errorCount()).isOne();
   }
 
-  /**
-   * Tests scenario for
-   * JDK-8187947: A race condition in SubmissionPublisher
-   */
+  /** Tests scenario for JDK-8187947: A race condition in SubmissionPublisher. */
   @ExecutorParameterizedTest
   void testMissedSignal_8187947(Executor executor) throws Exception {
     int N =
         ((ForkJoinPool.getCommonPoolParallelism() < 2) // JDK-8212899
-            ? (1 << 5)
-            : (1 << 10))
+                ? (1 << 5)
+                : (1 << 10))
             * ((1 << 6));
     var finished = new CountDownLatch(1);
     var ref = new AtomicReference<SubmittableSubscription<Boolean>>();
     class Sub implements Subscriber<Boolean> {
       int received;
+
       public void onSubscribe(Subscription s) {
         s.request(N);
       }
+
       public void onNext(Boolean item) {
-        if (++received == N)
-          finished.countDown();
-        else
-          CompletableFuture.runAsync(() -> ref.get().submit(Boolean.TRUE));
+        if (++received == N) finished.countDown();
+        else CompletableFuture.runAsync(() -> ref.get().submit(Boolean.TRUE));
       }
-      public void onError(Throwable t) { throw new AssertionError(t); }
+
+      public void onError(Throwable t) {
+        throw new AssertionError(t);
+      }
+
       public void onComplete() {}
     }
     var subscription = new SubmittableSubscription<>(new Sub(), executor);
@@ -286,9 +348,11 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void abortByCancellation(Executor executor) {
-    var subscription = subscription(new TestSubscriber<>(), executor);
-    subscription.cancel();
-    subscription.cancel();
+    var downstream = new TestSubscriber<Integer>();
+    var subscription = new SubmittableSubscription<>(downstream, executor);
+    for (int i = 0; i < 5; i++) {
+      subscription.cancel();
+    }
     subscription.awaitAbort();
     assertThat(subscription.abortCount()).isOne();
     assertThat(subscription.flowInterrupted()).isTrue();
@@ -297,11 +361,11 @@ class AbstractSubscriptionTest {
   @ExecutorParameterizedTest
   void abortByCompletion(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.submit(1);
     subscription.complete();
-    subscriber.awaitComplete();
-    subscriber.subscription.cancel();
+    subscriber.awaitCompletion(); // Complete first.
+    subscription.cancel(); // Mustn't call abort() again.
     subscription.awaitAbort();
     assertThat(subscription.abortCount()).isOne();
     assertThat(subscription.flowInterrupted()).isFalse();
@@ -310,10 +374,11 @@ class AbstractSubscriptionTest {
   @ExecutorParameterizedTest
   void abortByError(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.submit(1);
     subscription.signalError(new TestException());
-    subscriber.awaitError();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class); // Complete first.
+    subscription.cancel(); // Mustn't call abort() again.
     subscription.awaitAbort();
     assertThat(subscription.abortCount()).isOne();
     assertThat(subscription.flowInterrupted()).isFalse();
@@ -321,36 +386,36 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void abortByErrorOnSubscribe(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
-    subscriber.throwOnCall = true;
-    var subscription = subscription(subscriber, executor);
+    var subscriber = new TestSubscriber<Integer>().throwOnSubscribe(true);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitError();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
     subscription.awaitAbort();
-    assertThat(subscriber.errorCount).isOne();
+    assertThat(subscriber.errorCount()).isOne();
     assertThat(subscription.abortCount()).isOne();
     assertThat(subscription.flowInterrupted()).isTrue();
   }
 
   @ExecutorParameterizedTest
   void abortByErrorOnNext(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
-    var subscription = subscription(subscriber, executor);
+    var subscriber = new TestSubscriber<Integer>().throwOnNext(true);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
-    subscriber.awaitOnSubscribe();
-    subscriber.throwOnCall = true;
     subscription.submit(1);
     subscription.complete();
-    subscriber.awaitError();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
     subscription.awaitAbort();
-    assertThat(subscriber.errorCount).isOne();
+    assertThat(subscriber.errorCount()).isOne();
     assertThat(subscription.abortCount()).isOne();
     assertThat(subscription.flowInterrupted()).isTrue();
   }
 
   @ExecutorParameterizedTest
   void rejectedExecution() {
-    Executor busyExecutor = r -> { throw new RejectedExecutionException(); };
+    Executor busyExecutor =
+        r -> {
+          throw new RejectedExecutionException();
+        };
     var subscription = new SubmittableSubscription<>(new TestSubscriber<Integer>(), busyExecutor);
     assertThatExceptionOfType(RejectedExecutionException.class)
         .isThrownBy(() -> subscription.signal(true));
@@ -360,14 +425,14 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void multipleErrors(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
-    subscriber.throwOnCall = true;
-    var subscription = subscription(subscriber, executor);
-    var error = new TestException();
-    subscription.signalError(error);
-    subscriber.awaitError();
-    assertThat(subscriber.errorCount).isOne();
-    assertThat(subscriber.lastError).hasSuppressedException(error);
+    var subscriber = new TestSubscriber<Integer>().throwOnSubscribeAndOnNext(true);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
+    var suppressed = new TestException();
+    subscription.signalError(suppressed);
+    assertThat(subscriber.awaitError())
+        .isInstanceOf(TestException.class)
+        .hasSuppressedException(suppressed);
+    assertThat(subscriber.errorCount()).isOne();
   }
 
   /** Test that emit() stops in case of an asynchronous signalError detected by submitOnNext. */
@@ -375,42 +440,36 @@ class AbstractSubscriptionTest {
   void pendingErrorStopsSubmission(Executor executor) {
     var onErrorLatch = new CountDownLatch(1);
     var firstOnNextLatch = new CountDownLatch(1);
-    var subscriber = new TestSubscriber<Integer>() {
-      @Override
-      public void onNext(Integer item) {
-        firstOnNextLatch.countDown();
-        awaitUninterruptibly(onErrorLatch);
-        super.onNext(item);
-      }
-    };
-    var subscription = subscription(subscriber, executor);
-    subscriber.request = 0L;
+    var subscriber =
+        new TestSubscriber<Integer>() {
+          @Override
+          public void onNext(Integer item) {
+            firstOnNextLatch.countDown();
+            awaitUninterruptibly(onErrorLatch);
+            super.onNext(item);
+          }
+        }.autoRequest(0);
+    var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.signal(true);
 
-    // Make 2 items available
+    // Make 2 items available without signalling.
     subscription.items().offer(1);
     subscription.items().offer(1);
 
-    // Request 2 items (request asynchronously to not block in case the executor is synchronous)
-    subscriber.awaitOnSubscribe();
-    CompletableFuture.runAsync(() -> subscriber.subscription.request(2L));
+    // Request 2 items (request asynchronously to not block in case the executor is synchronous).
+    CompletableFuture.runAsync(() -> subscriber.requestItems(2L));
 
-    // Wait till first onNext comes
+    // Wait till first onNext comes.
     awaitUninterruptibly(firstOnNextLatch);
 
-    // Set pendingError (first onNext now blocking)
+    // Set pendingError (first onNext now blocking).
     subscription.signalError(new TestException());
 
-    // Let first onNext pass
+    // Let first onNext pass.
     onErrorLatch.countDown();
-    subscriber.awaitError();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
 
-    // Second onNext shouldn't be called!
-    assertThat(subscriber.nextCount).isOne();
-  }
-
-  private SubmittableSubscription<Integer> subscription(
-      Subscriber<? super Integer> downstream, Executor executor) {
-    return new SubmittableSubscription<>(downstream, executor);
+    // Second onNext isn't called!
+    assertThat(subscriber.nextCount()).isOne();
   }
 }

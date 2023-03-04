@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -288,7 +288,7 @@ class MoreBodySubscribersTest {
     var timeoutMillis = 50L;
     var timeoutSubscriber = withReadTimeout(ofString(UTF_8), Duration.ofMillis(timeoutMillis));
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    assertReadTimeout(timeoutSubscriber, 0, timeoutMillis);
+    assertReadTimeout(timeoutSubscriber, 1, timeoutMillis);
   }
 
   @Test
@@ -298,7 +298,7 @@ class MoreBodySubscribersTest {
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
-    assertReadTimeout(timeoutSubscriber, 2, timeoutMillis);
+    assertReadTimeout(timeoutSubscriber, 3, timeoutMillis);
   }
 
   @Test
@@ -310,28 +310,28 @@ class MoreBodySubscribersTest {
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
-    assertReadTimeout(timeoutSubscriber, 2, timeoutMillis);
+    assertReadTimeout(timeoutSubscriber, 3, timeoutMillis);
   }
 
   @Test
   void withReadTimeout_racyOnError() throws InterruptedException {
-    var timeoutMillis = 100L;
+    var timeoutMillis = 20L;
     var baseSubscriber = new TestSubscriber<List<ByteBuffer>>();
     var timeoutSubscriber = withReadTimeout(
         fromSubscriber(baseSubscriber), Duration.ofMillis(timeoutMillis));
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     // Race with background timeout task on completing the subscriber exceptionally
-    Thread.sleep(timeoutMillis + 1);
+    Thread.sleep(timeoutMillis);
     timeoutSubscriber.onError(new TestException());
-    baseSubscriber.awaitError();
-    assertThat(baseSubscriber.lastError)
+    assertThat(baseSubscriber.awaitError())
         .isInstanceOfAny(TestException.class, HttpReadTimeoutException.class)
-        .satisfies(t -> {
-          if (t instanceof HttpReadTimeoutException) {
-            assertThat(t).hasMessage("read [1] timed out after 100 ms");
-          }
-        });
+        .satisfies(
+            t -> {
+              if (t instanceof HttpReadTimeoutException) {
+                assertThat(t).hasMessage("read [2] timed out after " + timeoutMillis + " ms");
+              }
+            });
   }
 
   @Test
@@ -342,9 +342,9 @@ class MoreBodySubscribersTest {
         fromSubscriber(baseSubscriber), Duration.ofMillis(timeoutMillis));
     var subscription = new ToBeCancelledSubscription();
     timeoutSubscriber.onSubscribe(subscription);
-    baseSubscriber.awaitError();
+    assertThat(baseSubscriber.awaitError()).isInstanceOf(HttpReadTimeoutException.class);
     subscription.assertCancelled();
-    assertReadTimeout(timeoutSubscriber, 0, timeoutMillis);
+    assertReadTimeout(timeoutSubscriber, 1, timeoutMillis);
   }
 
   @Test
@@ -355,15 +355,14 @@ class MoreBodySubscribersTest {
         throw new RejectedExecutionException();
       }
     };
-    var baseSubscriber = new TestSubscriber<>();
+    var baseSubscriber = new TestSubscriber<>().autoRequest(0); // Request manually.
     var timeoutSubscriber = withReadTimeout(
         fromSubscriber(baseSubscriber), Duration.ofSeconds(Long.MAX_VALUE), superBusyScheduler);
     var subscription = new ToBeCancelledSubscription();
-    baseSubscriber.request = 0L; // Request manually
     timeoutSubscriber.onSubscribe(subscription);
-    baseSubscriber.awaitOnSubscribe();
+    baseSubscriber.awaitSubscription();
     assertThatExceptionOfType(RejectedExecutionException.class)
-        .isThrownBy(() -> baseSubscriber.subscription.request(1));
+        .isThrownBy(() -> baseSubscriber.requestItems(1));
     subscription.assertCancelled();
   }
 
@@ -383,24 +382,21 @@ class MoreBodySubscribersTest {
         return future;
       }
     };
-    var baseSubscriber = new TestSubscriber<>();
+    var baseSubscriber = new TestSubscriber<>().autoRequest(0);
     var timeoutSubscriber = withReadTimeout(
         fromSubscriber(baseSubscriber), Duration.ofSeconds(Long.MAX_VALUE), busyScheduler);
     var subscription = new ToBeCancelledSubscription();
 
-    baseSubscriber.request = 0;
     timeoutSubscriber.onSubscribe(subscription);
 
     // Request 2 items to trigger a second timeout task from onNext when it receives the first item
-    baseSubscriber.awaitOnSubscribe();
-    baseSubscriber.subscription.request(2L);
+    baseSubscriber.requestItems(2);
 
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1))); // Second timeout is rejected
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     timeoutSubscriber.onComplete();
-    baseSubscriber.awaitError();
-    assertThat(baseSubscriber.nextCount).isEqualTo(1); // First item is received
-    assertThat(baseSubscriber.lastError).isInstanceOf(RejectedExecutionException.class);
+    assertThat(baseSubscriber.awaitError()).isInstanceOf(RejectedExecutionException.class);
+    assertThat(baseSubscriber.nextCount()).isEqualTo(1); // First item is received
     subscription.assertCancelled();
     assertThat(scheduledFuture)
         .withFailMessage("First ScheduledFuture isn't cancelled after rejection")

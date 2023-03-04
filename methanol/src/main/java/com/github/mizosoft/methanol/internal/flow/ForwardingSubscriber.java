@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,11 +29,9 @@ import java.util.concurrent.Flow.Subscription;
 
 /** A {@code Subscriber<T>} that forwards to a downstream {@code Subscriber<? super T>}. */
 public abstract class ForwardingSubscriber<T> implements Subscriber<T> {
-  protected final Upstream upstream;
+  protected final Upstream upstream = new Upstream();
 
-  protected ForwardingSubscriber() {
-    upstream = new Upstream();
-  }
+  protected ForwardingSubscriber() {}
 
   /** Returns the downstream to which signals are forwarded. */
   protected abstract Subscriber<? super T> downstream();

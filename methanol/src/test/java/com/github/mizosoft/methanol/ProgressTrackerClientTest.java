@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -72,7 +72,7 @@ class ProgressTrackerClientTest {
 
     var body =
         BodyCollector.collect(
-            subscriber.items.stream()
+            subscriber.pollAll().stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toUnmodifiableList()));
     assertThat(UTF_8.decode(body).toString()).isEqualTo("Pikachu");

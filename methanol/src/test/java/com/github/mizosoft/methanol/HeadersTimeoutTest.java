@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -57,7 +57,7 @@ class HeadersTimeoutTest {
     assertThat(delayer.taskCount()).isOne();
 
     // Make headers arrive before timeout
-    var subscriber = recordingClient.latestCall().bodyHandler().apply(new ImmutableResponseInfo());
+    var subscriber = recordingClient.lastCall().bodyHandler().apply(new ImmutableResponseInfo());
     assertThat(delayer.peekEarliestFuture()).isCancelled();
     assertThat(subscriber.getBody()).isNotCompletedExceptionally();
 
@@ -65,7 +65,7 @@ class HeadersTimeoutTest {
     clock.advanceSeconds(1);
     assertThat(delayer.taskCount()).isZero();
 
-    recordingClient.completeLatestCall();
+    recordingClient.completeLastCall();
     assertThat(responseFuture).isCompleted();
   }
 
@@ -84,9 +84,9 @@ class HeadersTimeoutTest {
         .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(HttpHeadersTimeoutException.class);
-    assertThat(recordingClient.latestCall().future()).isCancelled();
+    assertThat(recordingClient.lastCall().future()).isCancelled();
 
-    var subscriber = recordingClient.latestCall().bodyHandler().apply(new ImmutableResponseInfo());
+    var subscriber = recordingClient.lastCall().bodyHandler().apply(new ImmutableResponseInfo());
     verifyThat(subscriber).failsWith(HttpHeadersTimeoutException.class);
   }
 }

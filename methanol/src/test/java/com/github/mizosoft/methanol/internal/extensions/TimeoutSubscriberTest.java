@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,179 +53,161 @@ class TimeoutSubscriberTest {
   void timeoutOnSecondItem() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     var upstreamSubscription = new RecordingSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
-    assertThat(downstream.subscription).isNotNull();
 
     // No timeouts are scheduled unless items are requested
     assertThat(delayer.taskCount()).isZero();
 
-    downstream.subscription.request(2);
+    downstream.requestItems(2);
     assertThat(upstreamSubscription.request).isEqualTo(2);
     assertThat(delayer.taskCount()).isOne();
 
     // Receive first item within time
     clock.advanceSeconds(1);
     timeoutSubscriber.onNext(1);
-    assertThat(downstream.items).last().isEqualTo(1);
+    assertThat(downstream.pollNext()).isEqualTo(1);
     assertThat(delayer.peekEarliestFuture()).isCancelled();
     assertThat(delayer.taskCount()).isEqualTo(2); // Timeout is scheduled for the second item
 
     // Trigger first timeout, which was cancelled & so is discarded
     clock.advanceSeconds(1);
     assertThat(delayer.taskCount()).isOne();
-    assertThat(downstream.errorCount)
-        .withFailMessage(() -> String.valueOf(downstream.lastError))
+    assertThat(downstream.errorCount())
+        .withFailMessage(() -> String.valueOf(downstream.awaitError()))
         .isZero();
 
     // Trigger timeout
     clock.advanceSeconds(1);
     timeoutSubscriber.onNext(1);
     timeoutSubscriber.onComplete();
-    assertThat(downstream.nextCount).isOne(); // Item after timeout isn't received
-    assertThat(downstream.errorCount).isOne();
-    assertThat(downstream.completionCount).isZero();
-    assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
+    assertThat(downstream.nextCount()).isOne(); // Item after timeout isn't received
+    assertThat(downstream.errorCount()).isOne();
+    assertThat(downstream.completionCount()).isZero();
+    assertThat(downstream.awaitError()).isInstanceOf(ItemTimeoutException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
 
-    // Timeout occurs at second item (index starts at 0)
-    assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(1);
+    // Timeout occurs at second item (index starts at 1)
+    assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(2);
   }
 
   @Test
   void timeoutOnFirstItem() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     var upstreamSubscription = new RecordingSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
-    assertThat(downstream.subscription).isNotNull();
 
-    downstream.subscription.request(1);
+    downstream.requestItems(1);
     assertThat(upstreamSubscription.request).isOne();
     assertThat(delayer.taskCount()).isOne();
 
     // Trigger timeout
     clock.advanceSeconds(1);
-    assertThat(downstream.nextCount).isZero();
-    assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
+    assertThat(downstream.nextCount()).isZero();
+    assertThat(downstream.awaitError()).isInstanceOf(ItemTimeoutException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
-    assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(0);
+    assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(1);
 
     // Further signals are ignored
     timeoutSubscriber.onNext(1);
     timeoutSubscriber.onComplete();
-    assertThat(downstream.nextCount).isZero();
-    assertThat(downstream.completionCount).isZero();
+    assertThat(downstream.nextCount()).isZero();
+    assertThat(downstream.completionCount()).isZero();
   }
 
   @Test
   void timeoutBeforeOnComplete() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    assertThat(downstream.subscription).isNotNull();
 
     // A timeout is scheduled for this request
-    downstream.subscription.request(3);
+    downstream.requestItems(3);
     assertThat(delayer.taskCount()).isOne();
 
     clock.advanceSeconds(1);
     timeoutSubscriber.onNext(1);
-    assertThat(downstream.items).last().isEqualTo(1);
+    assertThat(downstream.pollNext()).isEqualTo(1);
 
     clock.advanceSeconds(1);
     timeoutSubscriber.onNext(2);
-    assertThat(downstream.items).last().isEqualTo(2);
+    assertThat(downstream.pollNext()).isEqualTo(2);
 
     // Trigger timeout
     clock.advanceSeconds(2);
-    assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
-    assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(2);
+    assertThat(downstream.awaitError()).isInstanceOf(ItemTimeoutException.class);
+    assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(3);
 
     // Further signals are ignored
     timeoutSubscriber.onComplete();
-    assertThat(downstream.completionCount).isZero();
+    assertThat(downstream.completionCount()).isZero();
   }
 
   @Test
   void timeoutBeforeOnError() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    assertThat(downstream.subscription).isNotNull();
 
-    downstream.subscription.request(3);
+    downstream.requestItems(3);
     assertThat(delayer.taskCount()).isOne();
 
     clock.advanceSeconds(1);
     timeoutSubscriber.onNext(1);
-    assertThat(downstream.items).last().isEqualTo(1);
+    assertThat(downstream.pollNext()).isEqualTo(1);
 
     clock.advanceSeconds(1);
     timeoutSubscriber.onNext(2);
-    assertThat(downstream.items).last().isEqualTo(2);
+    assertThat(downstream.pollNext()).isEqualTo(2);
 
     // Trigger timeout
     clock.advanceSeconds(2);
-    assertThat(downstream.errorCount).isOne();
-    assertThat(downstream.lastError).isInstanceOf(ItemTimeoutException.class);
-    assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(2);
+    assertThat(downstream.errorCount()).isOne();
+    assertThat(downstream.awaitError()).isInstanceOf(ItemTimeoutException.class);
+    assertThat(timeoutSubscriber.timeoutIndex).isEqualTo(3);
 
     // Further signals are ignored
     timeoutSubscriber.onError(new TestException());
-    assertThat(downstream.errorCount).isOne();
+    assertThat(downstream.errorCount()).isOne();
   }
 
   @Test
   void timeoutAfterOnError() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    assertThat(downstream.subscription).isNotNull();
 
-    downstream.subscription.request(2);
+    downstream.requestItems(2);
     assertThat(delayer.taskCount()).isOne();
 
     clock.advanceSeconds(1);
     timeoutSubscriber.onNext(1);
-    assertThat(downstream.items).last().isEqualTo(1);
+    assertThat(downstream.pollNext()).isEqualTo(1);
 
     timeoutSubscriber.onError(new TestException());
-    assertThat(downstream.lastError).isInstanceOf(TestException.class);
+    assertThat(downstream.awaitError()).isInstanceOf(TestException.class);
     assertThat(delayer.peekLatestFuture()).isCancelled();
 
     // Trigger timeout, which is ignored
     clock.advanceSeconds(2);
     assertThat(delayer.taskCount()).isZero();
-    assertThat(downstream.errorCount).isOne();
+    assertThat(downstream.errorCount()).isOne();
   }
 
   @Test
   void schedulingTimeouts() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    assertThat(downstream.subscription).isNotNull();
     assertThat(delayer.taskCount()).isZero();
 
     // Demand was == 0 -> schedule
-    downstream.subscription.request(1);
+    downstream.requestItems(1);
     assertThat(delayer.taskCount()).isOne();
 
     // Demand was > 0 -> don't schedule
-    downstream.subscription.request(1);
+    downstream.requestItems(1);
     assertThat(delayer.taskCount()).isOne();
 
     // Demand becomes > 0 -> schedule
@@ -237,7 +219,7 @@ class TimeoutSubscriberTest {
     assertThat(delayer.taskCount()).isEqualTo(2);
 
     // Demand was == 0 -> schedule
-    downstream.subscription.request(1);
+    downstream.requestItems(1);
     assertThat(delayer.taskCount()).isEqualTo(3);
   }
 
@@ -245,23 +227,20 @@ class TimeoutSubscriberTest {
   void timeoutAfterCancellation() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    assertThat(downstream.subscription).isNotNull();
 
-    downstream.subscription.request(1);
+    downstream.requestItems(1);
     assertThat(delayer.taskCount()).isOne();
 
-    downstream.subscription.cancel();
+    downstream.awaitSubscription().cancel();
     assertThat(delayer.peekEarliestFuture()).isCancelled();
 
     // Trigger timeout for first item
     clock.advanceSeconds(2);
     assertThat(delayer.taskCount()).isZero();
-    assertThat(downstream.nextCount).isZero();
-    assertThat(downstream.completionCount).isZero();
-    assertThat(downstream.errorCount).isZero();
+    assertThat(downstream.nextCount()).isZero();
+    assertThat(downstream.completionCount()).isZero();
+    assertThat(downstream.errorCount()).isZero();
   }
 
   @Test
@@ -272,14 +251,11 @@ class TimeoutSubscriberTest {
         };
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), rejectingDelayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     var upstreamSubscription = new RecordingSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
-    assertThat(downstream.subscription).isNotNull();
 
     // Schedule a new timeout for the 1st item, which is rejected
-    assertThatThrownBy(() -> downstream.subscription.request(2))
+    assertThatThrownBy(() -> downstream.requestItems(2))
         .isInstanceOf(RejectedExecutionException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
   }
@@ -297,20 +273,17 @@ class TimeoutSubscriberTest {
         };
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), rejectingDelayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     var upstreamSubscription = new RecordingSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
-    assertThat(downstream.subscription).isNotNull();
 
-    downstream.subscription.request(2);
+    downstream.requestItems(2);
     assertThat(upstreamSubscription.request).isEqualTo(2);
     assertThat(delayCount).hasValue(1);
 
     // Schedule a new timeout for the 2nd item, which is rejected
     timeoutSubscriber.onNext(1);
     assertThat(delayCount).hasValue(2);
-    assertThat(downstream.lastError).isInstanceOf(RejectedExecutionException.class);
+    assertThat(downstream.awaitError()).isInstanceOf(RejectedExecutionException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
   }
 
@@ -318,19 +291,17 @@ class TimeoutSubscriberTest {
   void moreOnNextThanRequested() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
     var downstream = timeoutSubscriber.downstream();
-    downstream.request = 0;
-
     var upstreamSubscription = new RecordingSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
 
-    downstream.subscription.request(2);
+    downstream.requestItems(2);
 
     timeoutSubscriber.onNext(1);
     timeoutSubscriber.onNext(2);
-    assertThat(downstream.items).containsExactly(1, 2);
+    assertThat(downstream.pollNext(2)).containsExactly(1, 2);
 
     timeoutSubscriber.onNext(3);
-    assertThat(downstream.lastError).isInstanceOf(IllegalStateException.class);
+    assertThat(downstream.awaitError()).isInstanceOf(IllegalStateException.class);
     assertThat(upstreamSubscription.cancelled).isTrue();
     assertThat(delayer.peekLatestFuture()).isCancelled();
   }
@@ -357,7 +328,7 @@ class TimeoutSubscriberTest {
     volatile long timeoutIndex;
 
     TestTimeoutSubscriber(Duration timeout, Delayer delayer) {
-      super(new TestSubscriber<>(), timeout, delayer);
+      super(new TestSubscriber<Integer>().autoRequest(0), timeout, delayer);
     }
 
     @Override
@@ -366,7 +337,7 @@ class TimeoutSubscriberTest {
     }
 
     @Override
-    protected Throwable timeoutError(long index, Duration timeout) {
+    protected Exception timeoutError(long index, Duration timeout) {
       timeoutIndex = index;
       return new ItemTimeoutException();
     }

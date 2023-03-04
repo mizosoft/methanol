@@ -30,6 +30,7 @@ import static java.net.HttpURLConnection.HTTP_OK;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.HttpClientStub;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -62,15 +63,14 @@ class HttpResponsePublisherTest {
     var client = new RecordingHttpClient();
     var publisher =
         new HttpResponsePublisher<>(client, request, BodyHandlers.replacing("A"), null, executor);
-    var subscriber = new TestSubscriber<HttpResponse<?>>();
-    subscriber.request = 0L;
+    var subscriber = new TestSubscriber<HttpResponse<?>>().autoRequest(0);
     publisher.subscribe(subscriber);
 
     // The request isn't sent until the first demand from downstream.
-    subscriber.awaitOnSubscribe();
+    subscriber.awaitSubscription();
     assertThat(client.sendCount()).isZero();
 
-    subscriber.subscription.request(1);
+    subscriber.requestItems(1);
 
     var call = client.awaitCall();
     call.complete();
@@ -79,11 +79,11 @@ class HttpResponsePublisherTest {
     // As push promises can be received anytime amid receiving the main response body, downstream
     // waits for body's completion and not just for the response completion (the former may happen
     // after the latter for InputStream bodies and the like).
-    assertThat(subscriber.completionCount).isZero();
+    assertThat(subscriber.completionCount()).isZero();
 
     complete(call.bodyHandler());
-    subscriber.awaitComplete();
-    assertThat(subscriber.items).map(HttpResponse::request).containsExactly(request);
+    subscriber.awaitCompletion();
+    assertThat(subscriber.pollNext()).returns(request, from(HttpResponse::request));
   }
 
   @ExecutorParameterizedTest
@@ -92,13 +92,11 @@ class HttpResponsePublisherTest {
     var client = new RecordingHttpClient();
     var publisher =
         new HttpResponsePublisher<>(client, request, BodyHandlers.replacing("A"), null, executor);
-    var subscriber = new TestSubscriber<>();
-    subscriber.request = 0;
+    var subscriber = new TestSubscriber<>().autoRequest(0);
     publisher.subscribe(subscriber);
-    subscriber.awaitOnSubscribe().request(1);
+    subscriber.requestItems(1);
     client.awaitCall().completeExceptionally(new TestException());
-    subscriber.awaitError();
-    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
   }
 
   @ExecutorParameterizedTest
@@ -115,12 +113,11 @@ class HttpResponsePublisherTest {
                     ? BodyHandlers.ofString()
                     : null,
             executor);
-    var subscriber = new TestSubscriber<HttpResponse<String>>();
-    subscriber.request = 0;
+    var subscriber = new TestSubscriber<HttpResponse<String>>().autoRequest(0);
     publisher.subscribe(subscriber);
 
     // Request one to send the request.
-    subscriber.awaitOnSubscribe().request(1);
+    subscriber.requestItems(1);
 
     var call = client.<String>awaitCall();
     var pushPromiseTracker = new PushPromiseTracker<String>(request);
@@ -136,25 +133,19 @@ class HttpResponsePublisherTest {
     assertThat(pushPromiseTracker.acceptedCount()).isEqualTo(2);
 
     pushPromiseTracker.completeNextPushPromise(UTF_8.encode("push1"));
-    subscriber.awaitOnNext(1);
-    assertThat(subscriber.completionCount).isZero();
+    assertThat(subscriber.pollNext())
+        .returns(GET("https://localhost/accept1"), from(HttpResponse::request));
+    assertThat(subscriber.completionCount()).isZero();
 
     call.complete(UTF_8.encode("main"));
     pushPromiseTracker.completeNextPushPromise(UTF_8.encode("push2"));
-    subscriber.subscription.request(2);
-    subscriber.awaitOnNext(3);
-
-    assertThat(subscriber.items)
+    subscriber.requestItems(2);
+    assertThat(subscriber.pollNext(2))
         .map(HttpResponse::request)
-        .containsExactlyInAnyOrder(
-            request, GET("https://localhost/accept1"), GET("https://localhost/accept2"));
+        .containsExactlyInAnyOrder(request, GET("https://localhost/accept2"));
 
-    assertThat(subscriber.items)
-        .map(HttpResponse::body)
-        .containsExactlyInAnyOrder("main", "push1", "push2");
-
-    subscriber.awaitComplete();
-    assertThat(subscriber.nextCount).isEqualTo(3);
+    subscriber.awaitCompletion();
+    assertThat(subscriber.nextCount()).isEqualTo(3);
     assertThat(client.sendCount()).isEqualTo(1);
   }
 
@@ -178,10 +169,9 @@ class HttpResponsePublisherTest {
     var publisher =
         new HttpResponsePublisher<>(
             client, request, BodyHandlers.replacing("A"), faultyPushPromiseMapper, executor);
-    var subscriber = new TestSubscriber<HttpResponse<String>>();
-    subscriber.request = 0;
+    var subscriber = new TestSubscriber<HttpResponse<String>>().autoRequest(0);
     publisher.subscribe(subscriber);
-    subscriber.awaitOnSubscribe().request(1);
+    subscriber.requestItems(1);
 
     var call = client.<String>awaitCall();
     var pushPromiseTracker = new PushPromiseTracker<String>(request);
@@ -191,9 +181,7 @@ class HttpResponsePublisherTest {
     pushPromiseTracker.apply(
         pushPromiseHandler, GET("https://localhost/push2")); // Ignored due to previous failure.
     assertThat(pushPromiseTracker.acceptedCount()).isOne();
-
-    subscriber.awaitError();
-    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
   }
 
   @ExecutorParameterizedTest
@@ -211,12 +199,10 @@ class HttpResponsePublisherTest {
         };
     var publisher =
         new HttpResponsePublisher<>(client, request, BodyHandlers.replacing("A"), null, executor);
-    var subscriber = new TestSubscriber<>();
-    subscriber.request = 0;
+    var subscriber = new TestSubscriber<>().autoRequest(0);
     publisher.subscribe(subscriber);
-    subscriber.awaitOnSubscribe().request(1);
-    subscriber.awaitError();
-    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
+    subscriber.requestItems(1);
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
   }
 
   /** Check that the publisher refuses push promises after initial response body completion. */
@@ -231,10 +217,9 @@ class HttpResponsePublisherTest {
             BodyHandlers.replacing("A"),
             __ -> BodyHandlers.replacing("B"),
             executor);
-    var subscriber = new TestSubscriber<HttpResponse<String>>();
-    subscriber.request = 0;
+    var subscriber = new TestSubscriber<HttpResponse<String>>().autoRequest(0);
     publisher.subscribe(subscriber);
-    subscriber.awaitOnSubscribe().request(1);
+    subscriber.requestItems(1);
 
     var call = client.<String>awaitCall();
     complete(call.bodyHandler());
@@ -244,9 +229,7 @@ class HttpResponsePublisherTest {
     pushPromiseTracker.apply(pushPromiseHandler, GET("https://localhost/push1"));
     pushPromiseTracker.apply(pushPromiseHandler, GET("https://localhost/push2"));
     assertThat(pushPromiseTracker.acceptedCount()).isZero();
-
-    subscriber.awaitError();
-    assertThat(subscriber.lastError).isInstanceOf(IllegalStateException.class);
+    assertThat(subscriber.awaitError()).isInstanceOf(IllegalStateException.class);
   }
 
   @ExecutorParameterizedTest
@@ -267,10 +250,8 @@ class HttpResponsePublisherTest {
     var pushPromiseTracker = new PushPromiseTracker<String>(request);
     var pushPromiseHandler = call.requiredPushPromiseHandler();
     pushPromiseTracker.apply(pushPromiseHandler, GET("https://localhost/push"));
-
     pushPromiseTracker.completeNextPromiseExceptionally(new TestException());
-    subscriber.awaitError();
-    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
   }
 
   private static <T> void complete(BodyHandler<T> bodyHandler) {

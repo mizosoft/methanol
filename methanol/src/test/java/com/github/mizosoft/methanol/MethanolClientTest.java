@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -289,14 +289,13 @@ class MethanolClientTest {
 
     var client = clientBuilder.build();
     var publisher = client.exchange(GET(serverUri), BodyHandlers.ofString());
-    var subscriber = new TestSubscriber<HttpResponse<String>>();
-    subscriber.request = 20L;
+    var subscriber = new TestSubscriber<HttpResponse<String>>().autoRequest(20L);
     publisher.subscribe(subscriber);
-    subscriber.awaitComplete();
+    subscriber.awaitCompletion();
 
-    assertThat(subscriber.lastError).isNull();
-    assertThat(subscriber.items).hasSize(1);
-    verifyThat(subscriber.items.peekFirst())
+    assertThat(subscriber.errorCount()).isZero();
+    assertThat(subscriber.nextCount()).isOne();
+    verifyThat(subscriber.pollNext())
         .hasCode(200)
         .hasBody("Pikachu")
         .doesNotContainHeader("Content-Encoding")
@@ -339,11 +338,11 @@ class MethanolClientTest {
             req -> rejectFirstPush.compareAndSet(false, true) ? null : BodyHandlers.ofString());
     var subscriber = new TestSubscriber<HttpResponse<String>>();
     publisher.subscribe(subscriber);
-    subscriber.awaitComplete();
-    assertThat(subscriber.items)
-        .hasSize(1 + (pushCount - 1)); // Main response + all push promises but the rejected one
+    subscriber.awaitCompletion();
+    assertThat(subscriber.nextCount())
+        .isEqualTo(1 + (pushCount - 1)); // Main response + all push promises but the rejected one
 
-    for (var response : subscriber.items) {
+    for (var response : subscriber.pollAll()) {
       var path = response.request().uri().getPath();
       if (path.startsWith("/push")) {
         assertThat(path).isNotEqualTo("/push0"); // First push promise isn't accepted

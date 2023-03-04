@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -113,11 +113,11 @@ class MoreBodyPublishersTest {
 
   @Test
   @ExecutorConfig(FIXED_POOL)
-  void ofOutputStream_onlySubmitsOnSubscribe(ExecutorService service) throws Exception {
+  void ofOutputStream_onlySubmitsIfSubscribed(ExecutorService service) throws Exception {
     var inWriter = new AtomicBoolean();
     MoreBodyPublishers.ofOutputStream(out -> inWriter.set(true), service);
     service.shutdown();
-    assertThat(service.awaitTermination(0, TimeUnit.SECONDS)).isTrue();
+    assertThat(service.awaitTermination(0, TimeUnit.SECONDS)).isTrue(); // No tasks are submitted.
     assertThat(inWriter).isFalse();
   }
 
@@ -130,13 +130,12 @@ class MoreBodyPublishersTest {
         new TestSubscriber<>() {
           @Override
           public synchronized void onSubscribe(Subscription subscription) {
-            super.onSubscribe(subscription);
             subscription.cancel();
+            super.onSubscribe(subscription);
           }
         });
-
     service.shutdown();
-    assertThat(service.awaitTermination(0, TimeUnit.SECONDS)).isTrue();
+    assertThat(service.awaitTermination(0, TimeUnit.SECONDS)).isTrue(); // No tasks are submitted.
     assertThat(inWriter).isFalse();
   }
 }

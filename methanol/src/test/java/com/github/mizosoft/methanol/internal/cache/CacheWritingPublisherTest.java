@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,6 @@ import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorParameterizedTest;
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -72,7 +71,6 @@ class CacheWritingPublisherTest {
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBody("Cache me if you can!"));
     upstream.close();
-    subscriber.awaitComplete();
     assertThat(subscriber.bodyToString()).isEqualTo("Cache me if you can!");
     assertThat(editor.writtenString()).isEqualTo("Cache me if you can!");
 
@@ -87,7 +85,7 @@ class CacheWritingPublisherTest {
         new CacheWritingPublisher(FlowSupport.emptyPublisher(), editor, UTF_8.encode("abc"));
     var subscriber = new TestSubscriber<>();
     publisher.subscribe(subscriber);
-    subscriber.awaitComplete();
+    subscriber.awaitCompletion();
     assertThat(editor.metadata)
         .isNotNull()
         .extracting(buffer -> UTF_8.decode(buffer).toString(), STRING)
@@ -102,9 +100,9 @@ class CacheWritingPublisherTest {
 
     var secondSubscriber = new TestSubscriber<>();
     publisher.subscribe(secondSubscriber);
-    secondSubscriber.awaitComplete();
-    assertThat(secondSubscriber.errorCount).isOne();
-    assertThat(secondSubscriber.lastError).isInstanceOf(IllegalStateException.class);
+    secondSubscriber.awaitCompletion();
+    assertThat(secondSubscriber.errorCount()).isOne();
+    assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
   }
 
   /**
@@ -120,8 +118,7 @@ class CacheWritingPublisherTest {
     publisher.subscribe(subscriber);
 
     // Cancel before submitting items.
-    subscriber.awaitOnSubscribe();
-    subscriber.subscription.cancel();
+    subscriber.awaitSubscription().cancel();
     upstream.submitAll(toResponseBody("Cancel me if you can!"));
     upstream.close();
 
@@ -132,7 +129,7 @@ class CacheWritingPublisherTest {
     assertThat(editor.writtenString()).isEqualTo("Cancel me if you can!");
 
     // Subscriber's cancellation request is satisfied & body flow stops.
-    assertThat(subscriber.items)
+    assertThat(subscriber.peekAvailable())
         .withFailMessage(() -> "unexpectedly received: " + subscriber.bodyToString())
         .isEmpty();
   }
@@ -158,8 +155,7 @@ class CacheWritingPublisherTest {
     failingEditor.awaitClose();
 
     // This cancellation is propagated as there's nothing being written.
-    subscriber.awaitOnSubscribe();
-    subscriber.subscription.cancel();
+    subscriber.awaitSubscription().cancel();
     var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
     assertThat(subscription.flowInterrupted()).isTrue();
@@ -186,8 +182,7 @@ class CacheWritingPublisherTest {
 
     // Cancel subscription eagerly.
     publisher.subscribe(subscriber);
-    subscriber.awaitOnSubscribe();
-    subscriber.subscription.cancel();
+    subscriber.awaitSubscription().cancel();
     upstream.submit(List.of(ByteBuffer.allocate(1)));
 
     // Cancellation isn't propagated until the editor fails.
@@ -208,8 +203,7 @@ class CacheWritingPublisherTest {
     upstream.firstSubscription().signalError(new TestException());
     upstream.close();
 
-    subscriber.awaitError();
-    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
 
     editor.awaitClose();
     assertThat(editor.discarded).isTrue();
@@ -252,8 +246,6 @@ class CacheWritingPublisherTest {
 
     failingEditor.awaitClose();
     assertThat(failingEditor.discarded).isTrue();
-
-    subscriber.awaitComplete();
     assertThat(subscriber.bodyToString()).isEqualTo("Cache me if you can!");
   }
 
@@ -278,14 +270,13 @@ class CacheWritingPublisherTest {
     var publisher = new CacheWritingPublisher(upstream, laggyEditor, EMPTY_BUFFER);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
-    subscriber.awaitOnSubscribe();
+    subscriber.awaitSubscription();
     executor.execute(
         () -> {
           upstream.submitAll(toResponseBody("Cyberpunk"));
           upstream.close();
         });
 
-    subscriber.awaitComplete();
     assertThat(subscriber.bodyToString()).isEqualTo("Cyberpunk");
 
     // Allow the editor to progress.
@@ -300,17 +291,15 @@ class CacheWritingPublisherTest {
     var publisher =
         new CacheWritingPublisher(
             upstream, new TestEditor(), EMPTY_BUFFER, Listener.disabled(), true);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
-    subscriber.request = 0;
+    var subscriber = new TestSubscriber<List<ByteBuffer>>().autoRequest(0);
     publisher.subscribe(subscriber);
-    subscriber.awaitOnSubscribe();
-    subscriber.subscription.request(2);
+    subscriber.requestItems(2);
     assertThat(upstream.firstSubscription().currentDemand()).isEqualTo(2);
 
-    subscriber.subscription.cancel();
+    subscriber.awaitSubscription().cancel();
 
     // This request isn't forwarded upstream as the subscription is cancelled.
-    subscriber.subscription.request(1);
+    subscriber.requestItems(1);
     assertThat(upstream.firstSubscription().currentDemand()).isEqualTo(2);
   }
 
@@ -388,7 +377,7 @@ class CacheWritingPublisherTest {
     String bodyToString() {
       var body =
           BodyCollector.collect(
-              items.stream().flatMap(Collection::stream).collect(Collectors.toUnmodifiableList()));
+              pollAll().stream().flatMap(List::stream).collect(Collectors.toUnmodifiableList()));
       return UTF_8.decode(body).toString();
     }
   }

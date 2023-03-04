@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -64,15 +64,12 @@ class WritableBodyPublisherTest {
   @Test
   void flushAfterWritingWithOutputStream() throws IOException {
     var publisher = WritableBodyPublisher.create();
-    var subscriber = new TestSubscriber<ByteBuffer>();
-    subscriber.request = 0;
+    var subscriber = new TestSubscriber<ByteBuffer>().autoRequest(0);
     publisher.subscribe(subscriber);
-    subscriber.awaitOnSubscribe();
-    subscriber.subscription.request(1);
-
+    subscriber.requestItems(1);
     publisher.outputStream().write('a');
     publisher.flush();
-    assertThat(subscriber.items)
+    assertThat(subscriber.peekAvailable())
         .singleElement()
         .returns(1, from(ByteBuffer::remaining))
         .returns((byte) 'a', from(ByteBuffer::get));
@@ -81,15 +78,12 @@ class WritableBodyPublisherTest {
   @Test
   void flushAfterWritingWithByteChannel() throws IOException {
     var publisher = WritableBodyPublisher.create();
-    var subscriber = new TestSubscriber<ByteBuffer>();
-    subscriber.request = 0;
+    var subscriber = new TestSubscriber<ByteBuffer>().autoRequest(0);
     publisher.subscribe(subscriber);
-    subscriber.awaitOnSubscribe();
-    subscriber.subscription.request(1);
-
+    subscriber.requestItems(1);
     publisher.byteChannel().write(ByteBuffer.wrap(new byte[] {'a'}));
     publisher.flush();
-    assertThat(subscriber.items)
+    assertThat(subscriber.peekAvailable())
         .singleElement()
         .returns(1, from(ByteBuffer::remaining))
         .returns((byte) 'a', from(ByteBuffer::get));
@@ -101,7 +95,7 @@ class WritableBodyPublisherTest {
     var subscriber = new TestSubscriber<ByteBuffer>();
     publisher.subscribe(subscriber);
     publisher.byteChannel().close();
-    assertThat(subscriber.completionCount).isEqualTo(1);
+    assertThat(subscriber.completionCount()).isEqualTo(1);
     assertThat(publisher.byteChannel().isOpen()).isFalse();
   }
 
@@ -111,7 +105,7 @@ class WritableBodyPublisherTest {
     var subscriber = new TestSubscriber<ByteBuffer>();
     publisher.subscribe(subscriber);
     publisher.outputStream().close();
-    assertThat(subscriber.completionCount).isEqualTo(1);
+    assertThat(subscriber.completionCount()).isEqualTo(1);
 
     // The WritableByteChannel view is also closed
     assertThat(publisher.byteChannel().isOpen()).isFalse();
@@ -128,8 +122,8 @@ class WritableBodyPublisherTest {
 
     var subscriber = new TestSubscriber<ByteBuffer>();
     publisher.subscribe(subscriber);
-    assertThat(subscriber.items).isEmpty();
-    assertThat(subscriber.lastError).isInstanceOf(TestException.class);
+    assertThat(subscriber.nextCount()).isZero();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
   }
 
   @Test
@@ -139,7 +133,7 @@ class WritableBodyPublisherTest {
 
     var secondSubscriber = new TestSubscriber<ByteBuffer>();
     publisher.subscribe(secondSubscriber);
-    assertThat(secondSubscriber.lastError).isInstanceOf(IllegalStateException.class);
+    assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -185,13 +179,13 @@ class WritableBodyPublisherTest {
     publisher.subscribe(subscriber);
     try (var out = publisher.outputStream()) {
       out.write(new byte[10]);
-      assertThat(subscriber.awaitNextItem()).returns(10, from(ByteBuffer::remaining));
+      assertThat(subscriber.pollNext()).returns(10, from(ByteBuffer::remaining));
 
       out.write(new byte[9]);
-      assertThat(subscriber.nextCount).isOne(); // No new signals are received
+      assertThat(subscriber.nextCount()).isOne(); // No new signals are received
 
       out.write('a');
-      assertThat(subscriber.awaitNextItem()).returns(10, from(ByteBuffer::remaining));
+      assertThat(subscriber.pollNext()).returns(10, from(ByteBuffer::remaining));
     }
   }
 }
