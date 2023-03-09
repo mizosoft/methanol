@@ -66,12 +66,14 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -1865,29 +1867,64 @@ public final class DiskStore implements Store {
     }
 
     private final class DiskEntryReader implements EntryReader {
-      private final AtomicLong streamPosition = new AtomicLong();
       private final Lock lock = new ReentrantLock();
+      private long position;
 
       DiskEntryReader() {}
 
       @Override
       public int read(ByteBuffer dst) throws IOException {
         requireNonNull(dst);
-
         lock.lock();
         try {
           // Make sure we don't exceed data stream bounds.
-          long position = streamPosition.get();
-          long remainingBytes = descriptor.dataSize - position;
-          if (remainingBytes <= 0) {
+          long currentPosition = position;
+          long available = descriptor.dataSize - currentPosition;
+          if (available <= 0) {
             return -1;
           }
 
-          int bytesToRead = (int) Math.min(remainingBytes, dst.remaining());
-          var boundedDst = dst.duplicate().limit(dst.position() + bytesToRead);
-          int read = StoreIO.readBytes(channel, boundedDst, position);
-          streamPosition.getAndAdd(read);
+          int maxReadable = (int) Math.min(available, dst.remaining());
+          var boundedDst = dst.duplicate().limit(dst.position() + maxReadable);
+          int read = StoreIO.readBytes(channel, boundedDst);
+          position += read;
           dst.position(dst.position() + read);
+          return read;
+        } finally {
+          lock.unlock();
+        }
+      }
+
+      @Override
+      public long read(List<ByteBuffer> dsts) throws IOException {
+        requireNonNull(dsts);
+        lock.lock();
+        try {
+          // Make sure we don't exceed data stream bounds.
+          long currentPosition = position;
+          long available = descriptor.dataSize - currentPosition;
+          if (available <= 0) {
+            return -1;
+          }
+
+          var boundedDsts = new ArrayList<ByteBuffer>(dsts.size());
+          long maxReadable = 0;
+          for (var dst : dsts) {
+            var boundedDst = dst.duplicate();
+            boundedDsts.add(boundedDst);
+            int dstMaxReadable = (int) Math.min(boundedDst.remaining(), available - maxReadable);
+            boundedDst.limit(boundedDst.position() + dstMaxReadable);
+            maxReadable = Math.addExact(maxReadable, dstMaxReadable);
+            if (maxReadable >= available) {
+              break;
+            }
+          }
+
+          long read = StoreIO.readBytes(channel, boundedDsts.toArray(ByteBuffer[]::new));
+          position += read;
+          for (int i = 0; i < boundedDsts.size(); i++) {
+            dsts.get(i).position(boundedDsts.get(i).position());
+          }
           return read;
         } finally {
           lock.unlock();
@@ -1940,7 +1977,7 @@ public final class DiskStore implements Store {
 
     private final class DiskEntryWriter implements EntryWriter {
       private final Lock lock = new ReentrantLock();
-      private long streamPosition;
+      private long position;
       private boolean isWritten;
 
       DiskEntryWriter() {}
@@ -1951,8 +1988,23 @@ public final class DiskStore implements Store {
         requireState(!closed.get(), "closed");
         lock.lock();
         try {
-          int written = StoreIO.writeBytes(channel, src, streamPosition);
-          streamPosition += written;
+          int written = StoreIO.writeBytes(channel, src);
+          position += written;
+          isWritten = true;
+          return written;
+        } finally {
+          lock.unlock();
+        }
+      }
+
+      @Override
+      public long write(List<ByteBuffer> srcs) throws IOException {
+        requireNonNull(srcs);
+        requireState(!closed.get(), "closed");
+        lock.lock();
+        try {
+          long written = StoreIO.writeBytes(channel, srcs.toArray(ByteBuffer[]::new));
+          position += written;
           isWritten = true;
           return written;
         } finally {
@@ -1963,7 +2015,7 @@ public final class DiskStore implements Store {
       long dataSizeIfWritten() {
         lock.lock();
         try {
-          return isWritten ? streamPosition : -1;
+          return isWritten ? position : -1;
         } finally {
           lock.unlock();
         }

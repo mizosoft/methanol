@@ -41,14 +41,10 @@ public class StoreIO {
       throws IOException {
     var buffer = ByteBuffer.allocate(byteCount);
     int totalRead = 0;
-    for (int read = 0; read >= 0 && buffer.hasRemaining(); totalRead += read) {
-      read = position >= 0 ? channel.read(buffer, position) : channel.read(buffer);
-      if (read >= 0) {
-        totalRead += read;
-        if (position >= 0) {
-          position += read;
-        }
-      }
+    int read;
+    while (buffer.hasRemaining()
+        && (read = position >= 0 ? channel.read(buffer, position) : channel.read(buffer)) >= 0) {
+      totalRead += read;
     }
     if (buffer.hasRemaining()) {
       throw new EOFException(format("expected %d bytes, found %d", byteCount, totalRead));
@@ -56,18 +52,43 @@ public class StoreIO {
     return buffer.flip();
   }
 
-  static int readBytes(FileChannel channel, ByteBuffer dst, long position) throws IOException {
-    int read = 0;
-    while (dst.hasRemaining()) {
-      read += channel.read(dst, position);
+  //  static int readBytes(FileChannel channel, ByteBuffer dst, long position) throws IOException {
+  //    int read = 0;
+  //    while (dst.hasRemaining()) {
+  //      read += channel.read(dst, position);
+  //    }
+  //    return read;
+  //  }
+
+  static int readBytes(FileChannel channel, ByteBuffer dst) throws IOException {
+    int totalRead = 0;
+    int read;
+    while (dst.hasRemaining() && (read = channel.read(dst)) >= 0) {
+      totalRead += read;
     }
-    return read;
+    return totalRead;
   }
 
-  static void writeBytes(FileChannel channel, ByteBuffer src) throws IOException {
+  static long readBytes(FileChannel channel, ByteBuffer[] dsts) throws IOException {
+    long totalRemaining = 0;
+    for (var dst : dsts) {
+      totalRemaining = Math.addExact(totalRemaining, dst.remaining());
+    }
+
+    long totalRead = 0;
+    long read;
+    while (totalRead < totalRemaining && (read = channel.read(dsts)) >= 0) {
+      totalRead = Math.addExact(totalRead, read);
+    }
+    return totalRead;
+  }
+
+  static int writeBytes(FileChannel channel, ByteBuffer src) throws IOException {
+    int written = 0;
     do {
-      channel.write(src);
+      written += channel.write(src);
     } while (src.hasRemaining());
+    return written;
   }
 
   static int writeBytes(FileChannel channel, ByteBuffer src, long position) throws IOException {
@@ -76,5 +97,19 @@ public class StoreIO {
       position += channel.write(src, position);
     }
     return remaining;
+  }
+
+  static long writeBytes(FileChannel channel, ByteBuffer[] srcs) throws IOException {
+    long totalRemaining = 0;
+    for (var src : srcs) {
+      totalRemaining = Math.addExact(totalRemaining, src.remaining());
+    }
+
+    long totalWritten = 0;
+    while (totalWritten < totalRemaining) {
+      long written = channel.write(srcs);
+      totalWritten = Math.addExact(totalRemaining, written);
+    }
+    return totalWritten;
   }
 }
