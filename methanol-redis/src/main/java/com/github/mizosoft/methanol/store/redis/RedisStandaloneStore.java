@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,13 +23,12 @@
 package com.github.mizosoft.methanol.store.redis;
 
 import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.async.RedisHashAsyncCommands;
-import io.lettuce.core.api.async.RedisKeyAsyncCommands;
-import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
-import io.lettuce.core.api.async.RedisStringAsyncCommands;
+import io.lettuce.core.api.sync.RedisHashCommands;
+import io.lettuce.core.api.sync.RedisKeyCommands;
+import io.lettuce.core.api.sync.RedisScriptingCommands;
+import io.lettuce.core.api.sync.RedisStringCommands;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /** A {@code Store} implementation backed by a Redis Standalone instance. */
 class RedisStandaloneStore extends AbstractRedisStore<StatefulRedisConnection<String, ByteBuffer>> {
@@ -52,18 +51,16 @@ class RedisStandaloneStore extends AbstractRedisStore<StatefulRedisConnection<St
   @Override
   <
           CMD extends
-              RedisHashAsyncCommands<String, ByteBuffer>
-                  & RedisScriptingAsyncCommands<String, ByteBuffer>
-                  & RedisKeyAsyncCommands<String, ByteBuffer>
-                  & RedisStringAsyncCommands<String, ByteBuffer>>
+              RedisHashCommands<String, ByteBuffer> & RedisScriptingCommands<String, ByteBuffer>
+                  & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>>
       CMD commands() {
-    return (CMD) connection.async();
+    return (CMD) connection.sync();
   }
 
   @Override
-  CompletableFuture<Void> removeAllEntriesAsync(List<String> entryKeys) {
+  boolean removeAllEntries(List<String> entryKeys) {
     return Script.REMOVE_ALL
         .evalOn(commands())
-        .asVoid(entryKeys, List.of(encodeLong(staleEntryTtlSeconds)));
+        .asBoolean(entryKeys, List.of(encodeLong(staleEntryTtlSeconds)));
   }
 }

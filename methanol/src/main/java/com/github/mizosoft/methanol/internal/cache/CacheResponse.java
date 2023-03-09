@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,12 +30,12 @@ import com.github.mizosoft.methanol.internal.cache.CacheStrategy.StalenessRule;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import java.io.Closeable;
+import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Consumer;
@@ -81,8 +81,8 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
     viewer.close();
   }
 
-  public CompletableFuture<Optional<Editor>> editAsync() {
-    return viewer.editAsync();
+  public Optional<Editor> edit() throws IOException, InterruptedException {
+    return viewer.edit();
   }
 
   public boolean isServable() {

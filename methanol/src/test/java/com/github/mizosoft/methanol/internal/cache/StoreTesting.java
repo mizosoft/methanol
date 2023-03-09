@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,8 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
@@ -88,11 +88,15 @@ class StoreTesting {
   }
 
   static Editor edit(Viewer viewer) {
-    var editor = viewer.editAsync().join();
-    assertThat(editor)
-        .withFailMessage("expected entry <%s> to be editable through given viewer", viewer.key())
-        .isNotEmpty();
-    return editor.orElseThrow();
+    try {
+      var editor = viewer.edit();
+      assertThat(editor)
+          .withFailMessage("expected entry <%s> to be editable through given viewer", viewer.key())
+          .isNotEmpty();
+      return editor.orElseThrow();
+    } catch (IOException | InterruptedException e) {
+      return fail("unexpected exception", e);
+    }
   }
 
   static void assertEntryEquals(Store store, String key, String metadata, String data)
@@ -136,11 +140,15 @@ class StoreTesting {
   }
 
   static boolean commit(Editor editor, String metadata) {
-    return editor.commitAsync(UTF_8.encode(metadata)).join();
+    try {
+      return editor.commit(UTF_8.encode(metadata));
+    } catch (IOException e) {
+      return fail("unexpected exception", e);
+    }
   }
 
   static void write(EntryWriter writer, String data) throws IOException, InterruptedException {
-    Utils.get(writer.write(UTF_8.encode(data)));
+    writer.write(UTF_8.encode(data));
   }
 
   static String read(Viewer viewer) throws IOException, InterruptedException {
@@ -151,7 +159,7 @@ class StoreTesting {
     var out = new ByteArrayOutputStream();
     var outChannel = Channels.newChannel(out);
     var buffer = ByteBuffer.allocate(1024);
-    while (Utils.get(reader.read(buffer.clear())) != -1) {
+    while (reader.read(buffer.clear()) != -1) {
       outChannel.write(buffer.flip());
     }
     return out.toString(UTF_8);

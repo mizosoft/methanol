@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -107,13 +107,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -1029,7 +1029,7 @@ class HttpCacheTest {
     assertNotCached(serverUri);
 
     // The response isn't stored.
-    assertThat(store.view(HttpCache.toCacheKey(serverUri))).isEmpty();
+    assertThat(store.view(HttpCache.toStoreKey(serverUri))).isEmpty();
   }
 
   @StoreParameterizedTest
@@ -1042,7 +1042,7 @@ class HttpCacheTest {
     assertNotCached(serverUri);
 
     // The response isn't stored.
-    assertThat(store.view(HttpCache.toCacheKey(serverUri))).isEmpty();
+    assertThat(store.view(HttpCache.toStoreKey(serverUri))).isEmpty();
   }
 
   @StoreParameterizedTest
@@ -1057,7 +1057,7 @@ class HttpCacheTest {
     assertNotCached(serverUri);
 
     // The response isn't stored.
-    assertThat(store.view(HttpCache.toCacheKey(serverUri))).isEmpty();
+    assertThat(store.view(HttpCache.toStoreKey(serverUri))).isEmpty();
   }
 
   @StoreParameterizedTest
@@ -1124,7 +1124,7 @@ class HttpCacheTest {
             .setBody("aaa"));
     verifyThat(get(serverUri)).isCacheMiss().hasBody("aaa");
     assertNotCached(serverUri);
-    assertThat(store.view(HttpCache.toCacheKey(serverUri))).isEmpty();
+    assertThat(store.view(HttpCache.toStoreKey(serverUri))).isEmpty();
   }
 
   @StoreParameterizedTest
@@ -3223,20 +3223,19 @@ class HttpCacheTest {
     setUpCache(failingStore, null, listener);
 
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
-    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
 
     var request = GET(serverUri);
     get(request);
-    await().pollDelay(Duration.ZERO).until(() -> !listener.events.isEmpty());
     listener
         .assertNext(OnWriteFailure.class, request)
         .extracting(
             event -> Utils.getDeepCompletionCause(event.error)) // Can be a CompletionException
         .isInstanceOf(TestException.class);
 
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+
     failingStore.allowWrites = true;
     get(request);
-    await().pollDelay(Duration.ZERO).until(() -> !listener.events.isEmpty());
     listener.assertNext(OnWriteSuccess.class, request);
 
     assertThatExceptionOfType(TestException.class).isThrownBy(() -> get(request));
@@ -3252,8 +3251,10 @@ class HttpCacheTest {
   }
 
   static final class RecordingListener implements Listener {
+    private static final int TIMEOUT_SECONDS = 5;
+
     final EventType toRecord;
-    final Queue<Event> events = new ConcurrentLinkedQueue<>();
+    final BlockingQueue<Event> events = new LinkedBlockingQueue<>();
 
     enum EventType {
       READ_WRITE,
@@ -3264,8 +3265,20 @@ class HttpCacheTest {
       this.toRecord = toRecord;
     }
 
+    Event pollNext() {
+      try {
+        var event = events.poll(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        assertThat(event)
+            .withFailMessage(() -> "expected an event within " + TIMEOUT_SECONDS + " seconds")
+            .isNotNull();
+        return event;
+      } catch (InterruptedException e) {
+        return fail("unexpected exception", e);
+      }
+    }
+
     <T extends Event> ObjectAssert<T> assertNext(Class<T> expected) {
-      return assertThat(events.poll()).asInstanceOf(InstanceOfAssertFactories.type(expected));
+      return assertThat(pollNext()).asInstanceOf(InstanceOfAssertFactories.type(expected));
     }
 
     <T extends Event> ObjectAssert<T> assertNext(Class<T> expected, TaggableRequest request) {
@@ -3503,23 +3516,13 @@ class HttpCacheTest {
     }
 
     @Override
-    public CompletableFuture<Optional<Viewer>> viewAsync(String key) {
-      return delegate.viewAsync(key);
-    }
-
-    @Override
     public Optional<Editor> edit(String key) throws IOException, InterruptedException {
       return delegate.edit(key);
     }
 
     @Override
-    public CompletableFuture<Optional<Editor>> editAsync(String key) {
-      return delegate.editAsync(key);
-    }
-
-    @Override
-    public CompletableFuture<Void> removeAllAsync(List<String> keys) {
-      return delegate.removeAllAsync(keys);
+    public boolean removeAll(List<String> keys) throws IOException, InterruptedException {
+      return delegate.removeAll(keys);
     }
 
     @Override
@@ -3576,8 +3579,8 @@ class HttpCacheTest {
     }
 
     @Override
-    public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
-      return delegate.commitAsync(metadata);
+    public boolean commit(ByteBuffer metadata) throws IOException {
+      return delegate.commit(metadata);
     }
 
     @Override
@@ -3619,8 +3622,8 @@ class HttpCacheTest {
     }
 
     @Override
-    public CompletableFuture<Optional<Editor>> editAsync() {
-      return delegate.editAsync();
+    public Optional<Editor> edit() throws IOException, InterruptedException {
+      return delegate.edit();
     }
 
     @Override
@@ -3648,18 +3651,8 @@ class HttpCacheTest {
     }
 
     @Override
-    public CompletableFuture<Optional<Viewer>> viewAsync(String key) {
-      return super.viewAsync(key).thenApply(viewer -> viewer.map(FailingViewer::new));
-    }
-
-    @Override
     public Optional<Editor> edit(String key) throws IOException, InterruptedException {
       return super.edit(key).map(FailingEditor::new);
-    }
-
-    @Override
-    public CompletableFuture<Optional<Editor>> editAsync(String key) {
-      return super.editAsync(key).thenApply(editor -> editor.map(FailingEditor::new));
     }
 
     private final class FailingEditor extends ForwardingEditor {
@@ -3674,20 +3667,18 @@ class HttpCacheTest {
         var delegate = super.writer();
         return src -> {
           // To simulate delays, fire an actual write on delegate even if writing is prohibited.
-          return delegate
-              .write(src)
-              .thenCompose(
-                  read ->
-                      allowWrites
-                          ? CompletableFuture.completedFuture(read)
-                          : CompletableFuture.failedFuture(new TestException()));
+          int written = delegate.write(src);
+          if (!allowWrites) {
+            throw new TestException();
+          }
+          return written;
         };
       }
 
       @Override
-      public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
+      public boolean commit(ByteBuffer metadata) throws IOException {
         committed = true;
-        return super.commitAsync(metadata);
+        return super.commit(metadata);
       }
 
       @Override
@@ -3709,19 +3700,17 @@ class HttpCacheTest {
         var delegate = super.newReader();
         return dst -> {
           // To simulate delays, fire an actual read on delegate even if reading is prohibited.
-          return delegate
-              .read(dst)
-              .thenCompose(
-                  read ->
-                      allowReads
-                          ? CompletableFuture.completedFuture(read)
-                          : CompletableFuture.failedFuture(new TestException()));
+          int read = delegate.read(dst);
+          if (!allowReads) {
+            throw new TestException();
+          }
+          return read;
         };
       }
 
       @Override
-      public CompletableFuture<Optional<Editor>> editAsync() {
-        return super.editAsync().thenApply(editor -> editor.map(FailingEditor::new));
+      public Optional<Editor> edit() throws IOException, InterruptedException {
+        return super.edit().map(FailingEditor::new);
       }
     }
   }

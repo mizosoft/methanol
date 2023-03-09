@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,12 +39,17 @@ public final class NetworkResponse extends PublisherResponse {
     super(response, publisher);
   }
 
-  public NetworkResponse writingWith(Editor editor, CacheWritingPublisher.Listener writeListener)
+  public NetworkResponse writingWith(
+      Editor editor, Executor executor, CacheWritingPublisher.Listener writeListener)
       throws IOException {
     return new NetworkResponse(
         response,
         new CacheWritingPublisher(
-            publisher, editor, CacheResponseMetadata.from(response).encode(), writeListener));
+            publisher,
+            editor,
+            CacheResponseMetadata.from(response).encode(),
+            executor,
+            writeListener));
   }
 
   /** Discards the response body in background. */

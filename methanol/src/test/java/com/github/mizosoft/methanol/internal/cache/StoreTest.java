@@ -473,7 +473,7 @@ class StoreTest {
       write(store, "e1", "Jynx", "Psyduck");
       assertEntryEquals(store, "e1", "Jynx", "Psyduck");
 
-      assertThat(viewer.editAsync().join()).isEmpty(); // Uneditable.
+      assertThat(viewer.edit()).isEmpty(); // Uneditable.
       assertEntryEquals(viewer, "Eevee", "Ditto");
     }
   }
@@ -487,7 +487,7 @@ class StoreTest {
       assertThat(store.remove("e1")).isTrue();
       assertAbsent(store, context, "e1");
 
-      assertThat(viewer.editAsync().join()).isEmpty(); // Uneditable.
+      assertThat(viewer.edit()).isEmpty(); // Uneditable.
       assertEntryEquals(viewer, "Eevee", "Ditto");
     }
   }
@@ -497,7 +497,7 @@ class StoreTest {
     write(store, "e1", "Eevee", "Ditto");
     try (var viewer = view(store, "e1")) {
       try (var ignored = edit(store, "e1")) {
-        assertThat(viewer.editAsync().join()).isEmpty(); // Uneditable.
+        assertThat(viewer.edit()).isEmpty(); // Uneditable.
       }
     }
   }
@@ -605,11 +605,10 @@ class StoreTest {
   void writesAfterCommittingAreProhibited(Store store) throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
       write(editor, "Jynx");
-      editor.commitAsync(UTF_8.encode("Ditto")); // Don't wait on committing.
+      editor.commit(UTF_8.encode("Ditto"));
       assertThatIllegalStateException()
           .isThrownBy(() -> editor.writer().write(ByteBuffer.allocate(0)));
-      assertThatIllegalStateException()
-          .isThrownBy(() -> editor.commitAsync(ByteBuffer.allocate(0)));
+      assertThatIllegalStateException().isThrownBy(() -> editor.commit(ByteBuffer.allocate(0)));
     }
   }
 

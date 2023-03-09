@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,31 +23,23 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.testing.TestUtils.toByteArray;
-import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import com.github.mizosoft.methanol.testing.file.ForwardingAsynchronousFileChannel;
 import com.github.mizosoft.methanol.testing.file.ForwardingFileChannel;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.CompletionHandler;
 import java.nio.channels.FileChannel;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -144,60 +136,7 @@ class StoreIOTest {
     assertThat(channel.calls).hasValue(3);
     assertThat(toByteArray(buffer)).asString(UTF_8).isEqualTo("Pikachu");
   }
-
-  @Test
-  @ExecutorConfig(CACHED_POOL)
-  void fragmentedAsyncRead(ExecutorService service) throws IOException {
-    Files.writeString(file, "1234Pikachu");
-
-    var channel = new ForwardingAsynchronousFileChannel(
-        AsynchronousFileChannel.open(file, Set.of(READ), service)) {
-      final AtomicInteger calls = new AtomicInteger();
-
-      @Override
-      public <A> void read(
-          ByteBuffer dst,
-          long position,
-          A attachment,
-          CompletionHandler<Integer, ? super A> handler) {
-        int callCount = calls.incrementAndGet();
-        if (callCount == 1) {
-          // Read only half the buffer on first call
-          int originalLimit = dst.limit();
-          dst.limit(dst.position() + dst.remaining() / 2);
-          super.read(dst, position, attachment, new CompletionHandler<>() {
-            @Override
-            public void completed(Integer result, A attachment) {
-              dst.limit(originalLimit);
-              handler.completed(result, attachment);
-            }
-
-            @Override
-            public void failed(Throwable exc, A attachment) {
-              handler.failed(exc, attachment);
-            }
-          });
-        } else if (callCount == 2) {
-          // Read nothing on second call
-          handler.completed(0, attachment);
-        } else {
-          super.read(dst, position, attachment, handler);
-        }
-      }
-    };
-
-    var buffer = ByteBuffer.allocate("Pikachu".length());
-    int read;
-    try (channel) {
-      var future = StoreIO.readBytesAsync(channel, buffer, 4);
-      assertThat(future).succeedsWithin(Duration.ofSeconds(20));
-      read = future.join();
-    }
-    assertThat(channel.calls).hasValue(3);
-    assertThat(read).isEqualTo("Pikachu".length());
-    assertThat(toByteArray(buffer.flip())).asString(UTF_8).isEqualTo("Pikachu");
-  }
-
+  
   @Test
   void emptyRead() throws IOException {
     var channel = new ForwardingFileChannel(FileChannel.open(file, READ)) {
@@ -225,40 +164,6 @@ class StoreIOTest {
     assertThat(channel.calls).hasValue(0);
     assertThat(buffer.remaining()).isEqualTo(0);
     assertThat(buffer2.remaining()).isEqualTo(0);
-  }
-
-  @Test
-  @ExecutorConfig(CACHED_POOL)
-  void emptyAsyncRead(ExecutorService service) throws IOException {
-    Files.writeString(file, "1234");
-
-    var channel = new ForwardingAsynchronousFileChannel(
-        AsynchronousFileChannel.open(file, Set.of(READ), service)) {
-      final AtomicInteger calls = new AtomicInteger();
-
-      @Override
-      public <A> void read(
-          ByteBuffer dst,
-          long position,
-          A attachment,
-          CompletionHandler<Integer, ? super A> handler) {
-        calls.incrementAndGet();
-        super.read(dst, position, attachment, handler);
-      }
-    };
-
-    var buffer = ByteBuffer.allocate(10);
-    int read;
-    try (channel) {
-      var future = StoreIO.readBytesAsync(channel, buffer, 4);
-      assertThat(future).succeedsWithin(Duration.ofSeconds(20));
-      read = future.join();
-    }
-    assertThat(channel.calls).hasValue(1);
-    assertThat(read).isEqualTo(-1);
-    assertThat(buffer.position()).isEqualTo(0);
-    assertThat(buffer.limit()).isEqualTo(buffer.capacity());
-    assertThat(toByteArray(buffer.flip())).asString(UTF_8).isEqualTo("");
   }
 
   @Test
@@ -341,58 +246,6 @@ class StoreIOTest {
   }
 
   @Test
-  @ExecutorConfig(CACHED_POOL)
-  void fragmentedAsyncWrite(ExecutorService service) throws IOException {
-    Files.writeString(file, "1234");
-
-    var channel = new ForwardingAsynchronousFileChannel(
-        AsynchronousFileChannel.open(file, Set.of(WRITE), service)) {
-      final AtomicInteger calls = new AtomicInteger();
-
-      @Override
-      public <A> void write(
-          ByteBuffer dst,
-          long position,
-          A attachment,
-          CompletionHandler<Integer, ? super A> handler) {
-        int callCount = calls.incrementAndGet();
-        if (callCount == 1) {
-          // Write only half the buffer on first call
-          int originalLimit = dst.limit();
-          dst.limit(dst.position() + dst.remaining() / 2);
-          super.write(dst, position, attachment, new CompletionHandler<>() {
-            @Override
-            public void completed(Integer result, A attachment) {
-              dst.limit(originalLimit);
-              handler.completed(result, attachment);
-            }
-
-            @Override
-            public void failed(Throwable exc, A attachment) {
-              handler.failed(exc, attachment);
-            }
-          });
-        } else if (callCount == 2) {
-          // Write nothing on second call
-          handler.completed(0, attachment);
-        } else {
-          super.write(dst, position, attachment, handler);
-        }
-      }
-    };
-
-    int written;
-    try (channel) {
-      var future = StoreIO.writeBytesAsync(channel, UTF_8.encode("Pikachu"), 4);
-      assertThat(future).succeedsWithin(Duration.ofSeconds(20));
-      written = future.join();
-    }
-    assertThat(channel.calls).hasValue(3);
-    assertThat(written).isEqualTo("Pikachu".length());
-    assertThat(file).usingCharset(UTF_8).hasContent("1234Pikachu");
-  }
-
-  @Test
   void emptyWrite() throws IOException {
     Files.writeString(file, "1234");
 
@@ -416,37 +269,6 @@ class StoreIOTest {
       StoreIO.writeBytes(channel, ByteBuffer.allocate(0));
       StoreIO.writeBytes(channel, ByteBuffer.allocate(0), 4);
     }
-    assertThat(file).usingCharset(UTF_8).hasContent("1234");
-  }
-
-  @Test
-  @ExecutorConfig(CACHED_POOL)
-  void emptyAsyncWrite(ExecutorService service) throws IOException {
-    Files.writeString(file, "1234");
-
-    var channel = new ForwardingAsynchronousFileChannel(
-        AsynchronousFileChannel.open(file, Set.of(WRITE), service)) {
-      final AtomicInteger calls = new AtomicInteger();
-
-      @Override
-      public <A> void write(
-          ByteBuffer dst,
-          long position,
-          A attachment,
-          CompletionHandler<Integer, ? super A> handler) {
-        calls.incrementAndGet();
-        super.write(dst, position, attachment, handler);
-      }
-    };
-
-    int written;
-    try (channel) {
-      var future = StoreIO.writeBytesAsync(channel, ByteBuffer.allocate(0), 4);
-      assertThat(future).succeedsWithin(Duration.ofSeconds(20));
-      written = future.join();
-    }
-    assertThat(channel.calls).hasValue(1);
-    assertThat(written).isEqualTo(0);
     assertThat(file).usingCharset(UTF_8).hasContent("1234");
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,6 @@ import com.github.mizosoft.methanol.internal.cache.LocalCache;
 import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -247,7 +246,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
    */
   public boolean remove(URI uri) throws IOException {
     try {
-      return store.remove(toCacheKey(uri));
+      return store.remove(toStoreKey(uri));
     } catch (InterruptedException e) {
       throw (IOException) new InterruptedIOException().initCause(e);
     }
@@ -259,7 +258,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
    * @throws IllegalStateException if closed
    */
   public boolean remove(HttpRequest request) throws IOException {
-    try (var viewer = store.view(toCacheKey(request)).orElse(null)) {
+    try (var viewer = store.view(toStoreKey(request)).orElse(null)) {
       if (viewer != null) {
         var metadata = tryDecodeMetadata(viewer);
         if (metadata != null && metadata.matches(request)) {
@@ -312,12 +311,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
         localCache, listener, requireNonNullElse(clientExecutor, executor), clock);
   }
 
-  static String toCacheKey(HttpRequest request) {
+  static String toStoreKey(HttpRequest request) {
     // Since the cache is restricted to GETs, only the URI is needed as a primary key.
-    return toCacheKey(request.uri());
+    return toStoreKey(request.uri());
   }
 
-  static String toCacheKey(URI uri) {
+  static String toStoreKey(URI uri) {
     return uri.toString();
   }
 
@@ -373,19 +372,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     @Override
     public Optional<CacheResponse> get(HttpRequest request)
         throws IOException, InterruptedException {
-      return tryReadCacheResponse(request, store.view(toCacheKey(request)));
-    }
-
-    @Override
-    public CompletableFuture<Optional<CacheResponse>> getAsync(HttpRequest request) {
-      return store
-          .viewAsync(toCacheKey(request))
-          .thenApply(viewer -> tryReadCacheResponse(request, viewer));
-    }
-
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    private Optional<CacheResponse> tryReadCacheResponse(
-        HttpRequest request, Optional<Viewer> viewer) {
+      var viewer = store.view(toStoreKey(request));
       var cacheResponse =
           viewer
               .map(HttpCache::tryDecodeMetadata)
@@ -406,41 +393,31 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public CompletableFuture<Boolean> updateAsync(CacheResponse cacheResponse) {
-      // TODO don't forget to notify Listener of this write's status
-      return cacheResponse
-          .editAsync()
-          .thenCompose(
-              optionalEditor ->
-                  optionalEditor
-                      .map(
-                          Unchecked.func(
-                              editor ->
-                                  editor.commitAsync(
-                                      CacheResponseMetadata.from(cacheResponse.get()).encode())))
-                      .orElseGet(() -> CompletableFuture.completedFuture(false)));
+    public boolean update(CacheResponse cacheResponse) throws IOException, InterruptedException {
+      try (var editor = cacheResponse.edit().orElse(null)) {
+        if (editor != null) {
+          return editor.commit(CacheResponseMetadata.from(cacheResponse.get()).encode());
+        }
+      }
+      return false;
     }
 
     @Override
-    public CompletableFuture<Optional<NetworkResponse>> putAsync(
-        HttpRequest request,
-        NetworkResponse networkResponse,
-        @Nullable CacheResponse cacheResponse) {
-      var editorFuture =
-          cacheResponse != null ? cacheResponse.editAsync() : store.editAsync(toCacheKey(request));
-      return editorFuture.thenApply(
-          optionalEditor ->
-              optionalEditor.map(
-                  Unchecked.func(
-                      editor ->
-                          networkResponse.writingWith(
-                              editor, toWriteListener(listener, request)))));
+    public Optional<NetworkResponse> put(
+        HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse)
+        throws IOException, InterruptedException {
+      var editor = cacheResponse != null ? cacheResponse.edit() : store.edit(toStoreKey(request));
+      return editor.isPresent()
+          ? Optional.of(
+              networkResponse.writingWith(
+                  editor.get(), executor, toWriteListener(listener, request)))
+          : Optional.empty();
     }
 
     @Override
-    public CompletableFuture<Void> removeAllAsync(List<URI> uris) {
-      return store.removeAllAsync(
-          uris.stream().map(HttpCache::toCacheKey).collect(Collectors.toUnmodifiableList()));
+    public boolean removeAll(List<URI> uris) throws IOException, InterruptedException {
+      return store.removeAll(
+          uris.stream().map(HttpCache::toStoreKey).collect(Collectors.toUnmodifiableList()));
     }
   }
 

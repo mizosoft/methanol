@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,10 @@ import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 
 import io.lettuce.core.RedisException;
-import io.lettuce.core.api.async.RedisHashAsyncCommands;
-import io.lettuce.core.api.async.RedisKeyAsyncCommands;
-import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
-import io.lettuce.core.api.async.RedisStringAsyncCommands;
+import io.lettuce.core.api.sync.RedisHashCommands;
+import io.lettuce.core.api.sync.RedisKeyCommands;
+import io.lettuce.core.api.sync.RedisScriptingCommands;
+import io.lettuce.core.api.sync.RedisStringCommands;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.cluster.models.partitions.Partitions;
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
@@ -41,7 +41,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -64,20 +63,19 @@ class RedisClusterStore
   @Override
   <
           CMD extends
-              RedisHashAsyncCommands<String, ByteBuffer>
-                  & RedisScriptingAsyncCommands<String, ByteBuffer>
-                  & RedisKeyAsyncCommands<String, ByteBuffer>
-                  & RedisStringAsyncCommands<String, ByteBuffer>>
+              RedisHashCommands<String, ByteBuffer> & RedisScriptingCommands<String, ByteBuffer>
+                  & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>>
       CMD commands() {
-    return (CMD) connection.async();
+    return (CMD) connection.sync();
   }
 
   @Override
-  CompletableFuture<Void> removeAllEntriesAsync(List<String> entryKeys) {
-    return CompletableFuture.allOf(
-        entryKeys.stream()
-            .map(entryKey -> removeEntryAsync(entryKey, ANY_ENTRY_VERSION))
-            .toArray(CompletableFuture<?>[]::new));
+  boolean removeAllEntries(List<String> entryKeys) {
+    boolean removedAny = false;
+    for (var entryKey : entryKeys) {
+      removedAny |= removeEntry(entryKey, ANY_ENTRY_VERSION);
+    }
+    return removedAny;
   }
 
   @Override
@@ -149,9 +147,9 @@ class RedisClusterStore
           return true;
         } else if (nodeIterator.hasNext()) {
           var partition = nodeIterator.next();
-          RedisScriptingAsyncCommands<String, ByteBuffer> nodeCommands;
+          RedisScriptingCommands<String, ByteBuffer> nodeCommands;
           try {
-            nodeCommands = connection.async().getConnection(partition.getNodeId());
+            nodeCommands = connection.sync().getConnection(partition.getNodeId());
           } catch (RedisException e) {
             logger.log(Level.WARNING, "Exception thrown when connecting to cluster node", e);
             finished = true;

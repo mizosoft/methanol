@@ -28,6 +28,7 @@ import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
@@ -141,6 +142,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     private final Viewer viewer;
+    private final Executor executor;
     private final EntryReader reader;
     private final Listener listener;
     private final ConcurrentLinkedQueue<ByteBuffer> readQueue = new ConcurrentLinkedQueue<>();
@@ -163,6 +165,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         Listener listener) {
       super(downstream, executor);
       this.viewer = viewer;
+      this.executor = executor;
       this.reader = viewer.newReader();
       this.listener = listener.guarded(); // Ensure the listener doesn't throw.
     }
@@ -232,8 +235,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
               || STATE.compareAndSet(this, State.IDLE, State.READING))) {
         var buffer = ByteBuffer.allocate(BUFFER_SIZE);
         try {
-          reader
-              .read(buffer)
+          Unchecked.supplyAsync(() -> reader.read(buffer), executor)
               .whenComplete((read, exception) -> onReadCompletion(buffer, read, exception));
         } catch (Throwable t) {
           state = State.DONE;

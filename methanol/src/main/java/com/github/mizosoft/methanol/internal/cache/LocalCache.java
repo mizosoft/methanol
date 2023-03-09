@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,6 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -38,14 +37,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface LocalCache {
   Optional<CacheResponse> get(HttpRequest request) throws IOException, InterruptedException;
 
-  CompletableFuture<Optional<CacheResponse>> getAsync(HttpRequest request);
+  @CanIgnoreReturnValue
+  boolean update(CacheResponse cacheResponse) throws IOException, InterruptedException;
+
+  Optional<NetworkResponse> put(
+      HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse)
+      throws IOException, InterruptedException;
 
   @CanIgnoreReturnValue
-  CompletableFuture<Boolean> updateAsync(CacheResponse cacheResponse);
-
-  CompletableFuture<Optional<NetworkResponse>> putAsync(
-      HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse);
-
-  @CanIgnoreReturnValue
-  CompletableFuture<Void> removeAllAsync(List<URI> uris);
+  boolean removeAll(List<URI> uris) throws IOException, InterruptedException;
 }

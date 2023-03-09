@@ -35,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.Future;
+import java.util.function.Consumer;
 
 /**
  * A subscriber that intercepts requests to upstream and schedules error completion if each
@@ -114,30 +115,33 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
       try {
         scheduleTimeout(currentTimeoutTask.index + 1);
       } catch (RuntimeException | Error e) {
-        cancelOnError(this, e);
+        cancelOnError(this::onError, e);
       }
     } else if (currentDemand < 0) {
       // We're getting overflowed.
-      cancelOnError(this, new IllegalStateException("getting more items than requested"));
+      cancelOnError(this::onError, new IllegalStateException("getting more items than requested"));
     }
   }
 
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
-    cancelTimeout();
-    super.onError(throwable);
+    if (cancelTimeout()) {
+      super.onError(throwable);
+    }
   }
 
   @Override
   public void onComplete() {
-    cancelTimeout();
-    super.onComplete();
+    if (cancelTimeout()) {
+      super.onComplete();
+    }
   }
 
-  private void cancelTimeout() {
+  private boolean cancelTimeout() {
     var currentTimeoutTask = (TimeoutTask) TIMEOUT_TASK.getAndSet(this, TimeoutTask.TOMBSTONE);
     currentTimeoutTask.cancel();
+    return currentTimeoutTask != TimeoutTask.TOMBSTONE;
   }
 
   private void scheduleTimeout(long newTimeoutIndex) {
@@ -166,13 +170,13 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
     }
   }
 
-  private void cancelOnError(Subscriber<?> subscriber, Throwable exception) {
+  private void cancelOnError(Consumer<Throwable> onError, Throwable exception) {
     // Capture the subscription before it's cleared by onError. The subscription is cancelled after
     // onError as the HTTP client seems to sometimes complete downstream with an IOException if
     // the subscription is cancelled, which causes the wrong exception to be passed on.
     var subscription = upstream.get();
     try {
-      subscriber.onError(exception);
+      onError.accept(exception);
     } finally {
       subscription.cancel();
     }
@@ -184,7 +188,7 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
     var currentTimeoutTask = timeoutTask;
     if (currentTimeoutTask.index == timeoutIndex
         && TIMEOUT_TASK.compareAndSet(this, currentTimeoutTask, TimeoutTask.TOMBSTONE)) {
-      cancelOnError(downstream(), timeoutError(timeoutIndex, timeout));
+      cancelOnError(super::onError, timeoutError(timeoutIndex, timeout));
     }
   }
 

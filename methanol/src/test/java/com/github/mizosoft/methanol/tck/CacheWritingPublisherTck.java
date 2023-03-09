@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,9 +46,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -81,7 +81,7 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
 
   @BeforeMethod
   public void setUpExecutor() throws IOException {
-    executor = TckUtils.fixedThreadPool();
+    executor = Executors.newCachedThreadPool();
     storeContext = StoreContext.from(storeConfig);
     store = storeContext.createAndRegisterStore();
   }
@@ -101,6 +101,7 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
           toFlowPublisher(new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
           store.edit("test-entry-" + entryId.getAndIncrement()).orElseThrow(),
           EMPTY_BUFFER,
+          executor,
           Listener.disabled(),
           true);
     } catch (IOException | InterruptedException e) {
@@ -111,7 +112,10 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
   @Override
   public Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
     return new CacheWritingPublisher(
-        new FailingPublisher<>(TestException::new), DisabledEditor.INSTANCE, EMPTY_BUFFER);
+        new FailingPublisher<>(TestException::new),
+        DisabledEditor.INSTANCE,
+        EMPTY_BUFFER,
+        executor);
   }
 
   private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {
@@ -170,13 +174,13 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
       return src -> {
         int remaining = src.remaining();
         src.position(src.position() + remaining);
-        return CompletableFuture.completedFuture(remaining);
+        return remaining;
       };
     }
 
     @Override
-    public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
-      return CompletableFuture.completedFuture(false);
+    public boolean commit(ByteBuffer metadata) {
+      return false;
     }
 
     @Override

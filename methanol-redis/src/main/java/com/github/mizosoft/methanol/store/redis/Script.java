@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import io.lettuce.core.RedisNoScriptException;
 import io.lettuce.core.ScriptOutputType;
-import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
+import io.lettuce.core.api.sync.RedisScriptingCommands;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -34,9 +34,6 @@ import java.nio.file.NoSuchFileException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
 
 enum Script {
   COMMIT("/scripts/commit.lua", false),
@@ -66,7 +63,7 @@ enum Script {
     return shaHex;
   }
 
-  <K, V> RunnableScript<K, V> evalOn(RedisScriptingAsyncCommands<K, V> commands) {
+  <K, V> RunnableScript<K, V> evalOn(RedisScriptingCommands<K, V> commands) {
     return isReadOnly
         ? RunnableScript.ofReadonly(this, commands)
         : RunnableScript.of(this, commands);
@@ -104,62 +101,46 @@ enum Script {
   abstract static class RunnableScript<K, V> {
     private RunnableScript() {}
 
-    CompletableFuture<Long> asLong(List<K> keys, List<V> values) {
+    long asLong(List<K> keys, List<V> values) {
       return as(keys, values, ScriptOutputType.INTEGER);
     }
 
-    CompletableFuture<Boolean> asBoolean(List<K> keys, List<V> values) {
+    boolean asBoolean(List<K> keys, List<V> values) {
       return as(keys, values, ScriptOutputType.BOOLEAN);
     }
 
-    CompletableFuture<List<Object>> asMulti(List<K> keys, List<V> values) {
+    List<Object> asMulti(List<K> keys, List<V> values) {
       return as(keys, values, ScriptOutputType.MULTI);
     }
 
-    CompletableFuture<ByteBuffer> asValue(List<K> keys, List<V> values) {
+    ByteBuffer asValue(List<K> keys, List<V> values) {
       return as(keys, values, ScriptOutputType.VALUE);
     }
 
-    CompletableFuture<Void> asVoid(List<K> keys, List<V> values) {
-      return as(keys, values, ScriptOutputType.STATUS).thenRun(() -> {});
-    }
-
     @SuppressWarnings("unchecked")
-    private <T> CompletableFuture<T> as(List<K> keys, List<V> values, ScriptOutputType outputType) {
+    private <T> T as(List<K> keys, List<V> values, ScriptOutputType outputType) {
       var keysArray = (K[]) keys.toArray();
       var valuesArray = (V[]) values.toArray();
-      return this.<T>evalsha(keysArray, valuesArray, outputType)
-          .handle(
-              (reply, ex) -> {
-                if (ex instanceof RedisNoScriptException) {
-                  return this.<T>eval(keysArray, valuesArray, outputType);
-                }
-                return ex != null
-                    ? CompletableFuture.<T>failedFuture(ex)
-                    : CompletableFuture.completedFuture(reply);
-              })
-          .thenCompose(Function.identity())
-          .toCompletableFuture();
+      try {
+        return evalsha(keysArray, valuesArray, outputType);
+      } catch (RedisNoScriptException e) {
+        return eval(keysArray, valuesArray, outputType);
+      }
     }
 
-    abstract <T> CompletionStage<T> evalsha(
-        K[] keysArray, V[] valuesArray, ScriptOutputType outputType);
+    abstract <T> T evalsha(K[] keysArray, V[] valuesArray, ScriptOutputType outputType);
 
-    abstract <T> CompletionStage<T> eval(
-        K[] keysArray, V[] valuesArray, ScriptOutputType outputType);
+    abstract <T> T eval(K[] keysArray, V[] valuesArray, ScriptOutputType outputType);
 
-    static <K, V> RunnableScript<K, V> of(
-        Script script, RedisScriptingAsyncCommands<K, V> commands) {
+    static <K, V> RunnableScript<K, V> of(Script script, RedisScriptingCommands<K, V> commands) {
       return new RunnableScript<>() {
         @Override
-        public <T> CompletionStage<T> evalsha(
-            K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
+        public <T> T evalsha(K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
           return commands.evalsha(script.shaHex(), outputType, keysArray, valuesArray);
         }
 
         @Override
-        public <T> CompletionStage<T> eval(
-            K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
+        public <T> T eval(K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
           return commands.eval(
               script.content().getBytes(UTF_8), outputType, keysArray, valuesArray);
         }
@@ -167,17 +148,15 @@ enum Script {
     }
 
     static <K, V> RunnableScript<K, V> ofReadonly(
-        Script script, RedisScriptingAsyncCommands<K, V> commands) {
+        Script script, RedisScriptingCommands<K, V> commands) {
       return new RunnableScript<>() {
         @Override
-        public <T> CompletionStage<T> evalsha(
-            K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
+        public <T> T evalsha(K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
           return commands.evalshaReadOnly(script.shaHex(), outputType, keysArray, valuesArray);
         }
 
         @Override
-        public <T> CompletionStage<T> eval(
-            K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
+        public <T> T eval(K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
           return commands.evalReadOnly(
               script.content().getBytes(UTF_8), outputType, keysArray, valuesArray);
         }

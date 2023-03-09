@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -119,9 +119,9 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
       var entryName = "test-entry-" + entryId.getAndIncrement();
       try (var editor = store.edit(entryName).orElseThrow()) {
         for (var buffer : generateData(elements)) {
-          editor.writer().write(buffer).join();
+          editor.writer().write(buffer);
         }
-        assertThat(editor.commitAsync(ByteBuffer.allocate(1)).join()).isTrue();
+        assertThat(editor.commit(ByteBuffer.allocate(1))).isTrue();
       }
       return store.view(entryName).orElseThrow();
     } catch (IOException | InterruptedException e) {

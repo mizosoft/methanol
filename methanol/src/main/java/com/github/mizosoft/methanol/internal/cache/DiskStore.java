@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,6 @@ import com.github.mizosoft.methanol.internal.DebugUtils;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.concurrent.SerialExecutor;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.ThrowingRunnable;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.internal.util.Compare;
@@ -55,10 +54,7 @@ import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.FileChannel;
-import java.nio.channels.ReadPendingException;
-import java.nio.channels.WritePendingException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.FileAlreadyExistsException;
@@ -76,7 +72,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -85,13 +80,13 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -204,7 +199,6 @@ public final class DiskStore implements Store {
   private final IndexWriteScheduler indexWriteScheduler;
   private final EvictionScheduler evictionScheduler;
   private final DirectoryLock directoryLock;
-
   private final ConcurrentHashMap<Hash, Entry> entries = new ConcurrentHashMap<>();
   private final AtomicLong size = new AtomicLong();
 
@@ -290,19 +284,12 @@ public final class DiskStore implements Store {
 
   @Override
   public Optional<Viewer> view(String key) throws IOException, InterruptedException {
-    return Utils.get(viewAsync(key));
-  }
-
-  @Override
-  public CompletableFuture<Optional<Viewer>> viewAsync(String key) {
     requireNonNull(key);
     closeLock.readLock().lock();
     try {
       requireNotClosed();
       var entry = entries.get(hasher.hash(key));
-      return entry != null
-          ? entry.viewAsync(key).thenApply(Optional::ofNullable)
-          : CompletableFuture.completedFuture(Optional.empty());
+      return Optional.ofNullable(entry != null ? entry.view(key) : null);
     } finally {
       closeLock.readLock().unlock();
     }
@@ -322,28 +309,12 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public CompletableFuture<Optional<Editor>> editAsync(String key) {
-    // No need to call edit(key) in a different thread.
-    return Unchecked.supplyAsync(() -> edit(key), FlowSupport.SYNC_EXECUTOR);
-  }
-
-  @Override
   public Iterator<Viewer> iterator() throws IOException {
     return new ConcurrentViewerIterator();
   }
 
   @Override
   public boolean remove(String key) throws IOException, InterruptedException {
-    return Utils.get(removeAsync(key));
-  }
-
-  @Override
-  public CompletableFuture<Void> removeAllAsync(List<String> keys) {
-    return CompletableFuture.allOf(
-        keys.stream().map(this::removeAsync).toArray(CompletableFuture<?>[]::new));
-  }
-
-  private CompletableFuture<Boolean> removeAsync(String key) {
     requireNonNull(key);
     closeLock.readLock().lock();
     try {
@@ -352,23 +323,15 @@ public final class DiskStore implements Store {
       if (entry != null) {
         var keyIfKnown = entry.keyIfKnown();
         if (key.equals(keyIfKnown)) {
-          return CompletableFuture.completedFuture(removeEntry(entry));
+          return removeEntry(entry);
         } else if (keyIfKnown == null) {
           // Delete the entry through its Viewer to know we're deleting the correct entry.
-          return entry
-              .viewAsync(key)
-              .thenApply(
-                  Unchecked.func(
-                      viewer -> {
-                        try (viewer) {
-                          return viewer != null && viewer.removeEntry();
-                        }
-                      }));
+          try (var viewer = entry.view(key)) {
+            return viewer != null && viewer.removeEntry();
+          }
         }
       }
-      return CompletableFuture.completedFuture(false);
-    } catch (IOException e) {
-      return CompletableFuture.failedFuture(e);
+      return false;
     } finally {
       closeLock.readLock().unlock();
     }
@@ -690,8 +653,11 @@ public final class DiskStore implements Store {
     }
   }
 
-  private static boolean keyMismatches(@Nullable String keyIfKnown, @Nullable String expectedKey) {
-    return keyIfKnown != null && expectedKey != null && !keyIfKnown.equals(expectedKey);
+  private static boolean keyMismatches(
+      @Nullable String keyIfKnown, @Nullable String expectedKeyIfKnown) {
+    return keyIfKnown != null
+        && expectedKeyIfKnown != null
+        && !keyIfKnown.equals(expectedKeyIfKnown);
   }
 
   public static Builder newBuilder() {
@@ -703,12 +669,6 @@ public final class DiskStore implements Store {
 
     private @Nullable Viewer nextViewer;
     private @Nullable Viewer currentViewer;
-
-    /**
-     * Whether the iterating thread has been interrupted. On such case, the iterator stops
-     * advancing.
-     */
-    private boolean interrupted;
 
     ConcurrentViewerIterator() {}
 
@@ -743,18 +703,10 @@ public final class DiskStore implements Store {
 
     @EnsuresNonNullIf(expression = "nextViewer", result = true)
     private boolean findNext() {
-      if (interrupted) {
-        return false;
-      }
-
       while (entryIterator.hasNext()) {
         var entry = entryIterator.next();
-        var future = viewAsyncIfOpen(entry);
-        if (future == null) {
-          return false; // Handle closure gracefully by ending iteration.
-        }
         try {
-          var viewer = Utils.get(future);
+          var viewer = view(entry);
           if (viewer != null) {
             nextViewer = viewer;
             return true;
@@ -762,22 +714,19 @@ public final class DiskStore implements Store {
         } catch (IOException e) {
           // Try next entry.
           logger.log(Level.WARNING, "Exception thrown when iterating over entries", e);
-        } catch (InterruptedException e) {
-          interrupted = true;
-          Thread.currentThread().interrupt();
-          break;
+        } catch (IllegalStateException e) {
+          // Handle closure gracefully by ending iteration.
+          return false;
         }
       }
       return false;
     }
 
-    private @Nullable CompletableFuture<@Nullable Viewer> viewAsyncIfOpen(Entry entry) {
+    private @Nullable Viewer view(Entry entry) throws IOException {
       closeLock.readLock().lock();
       try {
-        if (closed) {
-          return null;
-        }
-        return entry.viewAsync(null);
+        requireState(!closed, "closed");
+        return entry.view(null);
       } finally {
         closeLock.readLock().unlock();
       }
@@ -1487,7 +1436,8 @@ public final class DiskStore implements Store {
     private @MonotonicNonNull Path lazyTempEntryFile;
 
     /** An {@code EntryDescriptor} for this entry as known from the last read or write. */
-    private volatile @MonotonicNonNull EntryDescriptor cachedDescriptor;
+    @GuardedBy("lock")
+    private @MonotonicNonNull EntryDescriptor cachedDescriptor;
 
     Entry(Hash hash) {
       this.hash = hash;
@@ -1513,16 +1463,37 @@ public final class DiskStore implements Store {
       }
     }
 
-    CompletableFuture<Viewer> viewAsync(@Nullable String expectedKey) {
-      int currentVersion;
-      AsynchronousFileChannel channel;
+    @Nullable Viewer view(@Nullable String expectedKey) throws IOException {
+      var viewer = openViewerForKey(expectedKey);
+      if (viewer != null) {
+        indexWriteScheduler.trySchedule();
+      }
+      return viewer;
+    }
+
+    private @Nullable Viewer openViewerForKey(@Nullable String expectedKey) throws IOException {
       lock.lock();
       try {
         if (!readable || maybeKeyMismatches(expectedKey)) {
-          return CompletableFuture.completedFuture(null);
+          return null;
         }
-        currentVersion = version;
-        channel = AsynchronousFileChannel.open(entryFile(), Set.of(READ), channelExecutor());
+
+        var channel = FileChannel.open(entryFile(), READ);
+        try {
+          var descriptor = readDescriptorForKey(channel, expectedKey);
+          if (descriptor != null) {
+            return createViewer(channel, version, descriptor);
+          }
+          channel.close();
+          return null;
+        } catch (IOException e) {
+          try {
+            channel.close();
+          } catch (IOException closeEx) {
+            e.addSuppressed(closeEx);
+          }
+          throw e;
+        }
       } catch (NoSuchFileException missingEntryFile) {
         // Our file disappeared! We'll handle this gracefully by making the store lose track of us.
         logger.log(Level.WARNING, "Dropping entry with missing file", missingEntryFile);
@@ -1530,113 +1501,72 @@ public final class DiskStore implements Store {
           removeEntry(this);
         } catch (IOException ignored) {
         }
-        return CompletableFuture.completedFuture(null);
-      } catch (IOException e) {
-        return CompletableFuture.failedFuture(e);
+        return null;
       } finally {
         lock.unlock();
       }
-
-      return tryReadDescriptor(channel, expectedKey)
-          .thenApply(
-              descriptor ->
-                  descriptor != null ? createViewer(channel, currentVersion, descriptor) : null)
-          .whenComplete(
-              (viewer, __) -> {
-                if (viewer == null) {
-                  closeQuietly(channel);
-                }
-              });
     }
 
+    // TODO correct
     /**
      * Returns {@code true} if the given key certainly mismatches this entry's key. {@code false} is
      * returned if this entry's key, as known from {@link #cachedDescriptor}, either matches the
      * given key or the key must be read from disk to know for sure ({@code cachedDescriptor} is not
      * set).
      */
+    @GuardedBy("lock")
     private boolean maybeKeyMismatches(@Nullable String expectedKey) {
       return keyMismatches(keyIfKnown(), expectedKey);
     }
 
-    private CompletableFuture<@Nullable EntryDescriptor> tryReadDescriptor(
-        AsynchronousFileChannel channel, @Nullable String expectedKey) {
-      return readDescriptor(channel)
-          .thenApply(descriptor -> !keyMismatches(descriptor.key, expectedKey) ? descriptor : null);
+    @GuardedBy("lock")
+    private @Nullable EntryDescriptor readDescriptorForKey(
+        FileChannel channel, @Nullable String expectedKey) throws IOException {
+      var descriptor = readDescriptor(channel);
+      return !keyMismatches(descriptor.key, expectedKey) ? descriptor : null;
     }
 
-    private CompletableFuture<EntryDescriptor> readDescriptor(AsynchronousFileChannel channel) {
-      var descriptor = cachedDescriptor;
-      if (descriptor != null) {
-        return CompletableFuture.completedFuture(descriptor);
-      }
-
-      // TODO a smarter thing to do is to read a larger buffer from the end and optimistically
-      //      expect key and metadata to be there. Or store the sizes of metadata, data & key in the
-      //      index.
-      long fileSize;
-      try {
-        fileSize = channel.size();
-      } catch (IOException e) {
-        return CompletableFuture.failedFuture(e);
-      }
-      return StoreIO.readNBytesAsync(channel, ENTRY_TRAILER_SIZE, fileSize - ENTRY_TRAILER_SIZE)
-          .thenCompose(trailer -> readDescriptor(channel, trailer))
-          .thenApply(this::setCachedDescriptorIfNull);
-    }
-
-    private EntryDescriptor setCachedDescriptorIfNull(EntryDescriptor descriptor) {
-      lock.lock();
-      try {
-        if (cachedDescriptor == null) {
-          cachedDescriptor = descriptor;
-        }
-      } finally {
-        lock.unlock();
+    @GuardedBy("lock")
+    private EntryDescriptor readDescriptor(FileChannel channel) throws IOException {
+      var descriptor = this.cachedDescriptor;
+      if (descriptor == null) {
+        // TODO a smarter thing to do is to read a larger buffer from the end and optimistically
+        //      expect key and metadata to be there. Or store the sizes of metadata, data & key in
+        //      the index.
+        long fileSize = channel.size();
+        var trailer =
+            StoreIO.readNBytes(channel, ENTRY_TRAILER_SIZE, fileSize - ENTRY_TRAILER_SIZE);
+        descriptor = readDescriptor(channel, trailer);
+        this.cachedDescriptor = descriptor;
       }
       return descriptor;
     }
 
-    private CompletableFuture<EntryDescriptor> readDescriptor(
-        AsynchronousFileChannel channel, ByteBuffer trailer) {
-      try {
-        long magic = trailer.getLong();
-        int storeVersion = trailer.getInt();
-        int appVersion = trailer.getInt();
-        int keySize = getNonNegativeInt(trailer);
-        int metadataSize = getNonNegativeInt(trailer);
-        long dataSize = getNonNegativeLong(trailer);
-        checkValue(ENTRY_MAGIC, magic, "not in entry file format");
-        checkValue(STORE_VERSION, storeVersion, "unexpected store version");
-        checkValue(DiskStore.this.appVersion, appVersion, "unexpected app version");
-        return StoreIO.readNBytesAsync(channel, keySize + metadataSize, dataSize)
-            .thenApply(
-                keyAndMetadata -> {
-                  var key = UTF_8.decode(keyAndMetadata.limit(keySize)).toString();
-                  var metadata =
-                      keyAndMetadata
-                          .limit(keySize + metadataSize)
-                          .slice() // Slice to have 0 position & metadataSize capacity.
-                          .asReadOnlyBuffer();
-                  return new EntryDescriptor(key, metadata, dataSize);
-                });
-      } catch (IOException e) {
-        return CompletableFuture.failedFuture(e);
-      }
+    private EntryDescriptor readDescriptor(FileChannel channel, ByteBuffer trailer)
+        throws IOException {
+      long magic = trailer.getLong();
+      int storeVersion = trailer.getInt();
+      int appVersion = trailer.getInt();
+      int keySize = getNonNegativeInt(trailer);
+      int metadataSize = getNonNegativeInt(trailer);
+      long dataSize = getNonNegativeLong(trailer);
+      checkValue(ENTRY_MAGIC, magic, "not in entry file format");
+      checkValue(STORE_VERSION, storeVersion, "unexpected store version");
+      checkValue(DiskStore.this.appVersion, appVersion, "unexpected app version");
+      var keyAndMetadata = StoreIO.readNBytes(channel, keySize + metadataSize, dataSize);
+      var key = UTF_8.decode(keyAndMetadata.limit(keySize)).toString();
+      var metadata =
+          keyAndMetadata
+              .limit(keySize + metadataSize)
+              .slice() // Slice to have 0 position & metadataSize capacity.
+              .asReadOnlyBuffer();
+      return new EntryDescriptor(key, metadata, dataSize);
     }
 
-    private Viewer createViewer(
-        AsynchronousFileChannel channel, int version, EntryDescriptor descriptor) {
-      Viewer viewer;
-      lock.lock();
-      try {
-        viewer = new DiskViewer(this, version, descriptor, channel);
-        viewerCount++;
-        lastUsed = lruClock.getAndIncrement();
-      } finally {
-        lock.unlock();
-      }
-      indexWriteScheduler.trySchedule();
+    private Viewer createViewer(FileChannel channel, int version, EntryDescriptor descriptor) {
+      var viewer = new DiskViewer(this, version, descriptor, channel);
+      viewerCount++;
+      lastUsed = lruClock.getAndIncrement();
       return viewer;
     }
 
@@ -1648,12 +1578,7 @@ public final class DiskStore implements Store {
             || (targetVersion != ANY_VERSION && targetVersion != version)) {
           return null;
         }
-        var editor =
-            new DiskEditor(
-                this,
-                key,
-                AsynchronousFileChannel.open(
-                    tempEntryFile(), Set.of(WRITE, CREATE), channelExecutor()));
+        var editor = new DiskEditor(this, key, FileChannel.open(tempEntryFile(), WRITE, CREATE));
         currentEditor = editor;
         return editor;
       } finally {
@@ -1661,151 +1586,76 @@ public final class DiskStore implements Store {
       }
     }
 
-    CompletableFuture<Boolean> commit(
+    boolean commit(
         DiskEditor editor,
         String key,
         ByteBuffer metadata,
         long dataSize,
-        AsynchronousFileChannel editorChannel) {
-      CommitStrategy strategy;
-      AsynchronousFileChannel existingEntryChannel;
-      lock.lock();
-      try {
-        if (currentEditor == null) {
-          // The edit to be committed has been discarded.
-          return CompletableFuture.completedFuture(false);
-        }
-
-        requireState(currentEditor == editor, "unexpected editor");
-        if (dataSize >= 0) {
-          // Some data was written to the editor's file. We'll append an epilogue (key, metadata &
-          // trailer) to the file and atomically replace the existing entry file with the former.
-          strategy =
-              new CommitStrategy(
-                  new EntryDescriptor(key, metadata, dataSize), editorChannel, false);
-          existingEntryChannel = null;
-        } else if (readable) {
-          // No new data was written. We'll append a new epilogue to the existing entry file.
-          // However, there's an infinitesimal chance (1/2^40) the editor was opened for a different
-          // logical entry in case of a hash collision. On such case, a new entry with an empty data
-          // stream replaces the conflicting entry.
-          strategy = null;
-          existingEntryChannel = AsynchronousFileChannel.open(entryFile(), READ, WRITE);
-        } else {
-          // The entry wasn't readable and no data was written. We'll assume an empty data stream.
-          strategy =
-              new CommitStrategy(new EntryDescriptor(key, metadata, 0), editorChannel, false);
-          existingEntryChannel = null;
-        }
-      } catch (IOException e) {
-        return CompletableFuture.failedFuture(e);
-      } finally {
-        lock.unlock();
-      }
-
-      assert strategy != null ^ existingEntryChannel != null;
-
-      CompletableFuture<CommitStrategy> strategyFuture;
-      if (strategy != null) {
-        strategyFuture = CompletableFuture.completedFuture(strategy);
-      } else {
-        strategyFuture =
-            tryReadDescriptor(existingEntryChannel, key)
-                .thenApply(
-                    descriptor -> {
-                      if (descriptor != null) {
-                        // Discard editor's channel.
-                        closeQuietly(editorChannel);
-                        return new CommitStrategy(
-                            new EntryDescriptor(key, metadata, descriptor.dataSize),
-                            existingEntryChannel,
-                            true);
-                      } else {
-                        // This is a new logical entry. Assume an empty data stream.
-                        closeQuietly(existingEntryChannel);
-                        return new CommitStrategy(
-                            new EntryDescriptor(key, metadata, 0), editorChannel, false);
-                      }
-                    })
-                .whenComplete(
-                    (__, ex) -> {
-                      if (ex != null) {
-                        closeQuietly(existingEntryChannel);
-                      }
-                    });
-      }
-      return strategyFuture
-          .thenCompose(this::commit)
-          .whenComplete(
-              (__, ex) -> {
-                if (ex != null) {
-                  discard(editor, editor.channel, false);
-                }
-              });
-    }
-
-    private CompletableFuture<Boolean> commit(CommitStrategy strategy) {
-      lock.lock();
-      try {
-        // Make sure the edit is still active.
-        if (currentEditor == null) {
-          closeQuietly(strategy.channel);
-          return CompletableFuture.completedFuture(false);
-        }
-
-        if (strategy.updateExisting) {
-          // Make the entry file temporarily unreadable before modifying it. This also has to
-          // reflect on store's size.
-          replace(entryFile(), tempEntryFile());
-          readable = false;
-          DiskStore.this.size.addAndGet(-size);
-          size = 0;
-        }
-      } catch (IOException e) {
-        return CompletableFuture.failedFuture(e);
-      } finally {
-        lock.unlock();
-      }
-
-      var descriptor = strategy.entryDescriptor;
-      return StoreIO.writeBytesAsync(
-              strategy.channel, descriptor.encodeToEpilogue(appVersion), descriptor.dataSize)
-          .thenApply(Unchecked.func(written -> finishEdit(strategy, written)));
-    }
-
-    private boolean finishEdit(CommitStrategy strategy, int epilogueSize) throws IOException {
+        FileChannel editorChannel)
+        throws IOException {
       long newSize;
       long sizeDifference;
       lock.lock();
       try {
-        // Make sure the edit is still active.
         if (currentEditor == null) {
-          closeQuietly(strategy.channel);
-          return false;
+          return false; // The edit to be committed has been discarded.
         }
 
+        requireState(currentEditor == editor, "unexpected editor");
         currentEditor = null;
 
-        var descriptor = strategy.entryDescriptor;
-        try (var channel = strategy.channel) {
-          if (strategy.updateExisting) {
-            // Truncate to correct size in case the previous entry had a larger epilogue.
-            channel.truncate(descriptor.dataSize + epilogueSize);
+        EntryDescriptor committedDescriptor;
+        try (editorChannel;
+            var existingEntryChannel =
+                dataSize < 0 && readable ? FileChannel.open(entryFile(), READ, WRITE) : null) {
+          var targetChannel = editorChannel;
+          EntryDescriptor existingDescriptor = null;
+          if (existingEntryChannel != null
+              && (existingDescriptor = readDescriptorForKey(existingEntryChannel, key)) != null) {
+            targetChannel = existingEntryChannel;
+            committedDescriptor = new EntryDescriptor(key, metadata, existingDescriptor.dataSize);
+
+            // Close editor's file channel before deleting. See isolatedDelete(...).
+            closeQuietly(editorChannel);
+
+            // Make the entry file temporarily unreadable before modifying it. This also has to
+            // reflect on store's size.
+            replace(entryFile(), tempEntryFile());
+            readable = false;
+            DiskStore.this.size.addAndGet(-size);
+            size = 0;
+          } else {
+            committedDescriptor = new EntryDescriptor(key, metadata, Math.max(dataSize, 0));
           }
-          channel.force(false);
+
+          int written =
+              StoreIO.writeBytes(
+                  targetChannel,
+                  committedDescriptor.encodeToEpilogue(appVersion),
+                  committedDescriptor.dataSize);
+
+          if (existingDescriptor != null) {
+            // Truncate to correct size in case the previous entry had a larger epilogue.
+            targetChannel.truncate(committedDescriptor.dataSize + written);
+          }
+          targetChannel.force(false);
+        } catch (IOException e) {
+          discardCurrentEdit();
+          throw e;
         }
+
         if (viewerCount > 0) {
           isolatedDeleteIfExists(entryFile());
         }
         replace(tempEntryFile(), entryFile());
-        version++;
 
-        newSize = descriptor.metadata.remaining() + descriptor.dataSize;
+        version++;
+        newSize = committedDescriptor.metadata.remaining() + committedDescriptor.dataSize;
         sizeDifference = newSize - size;
         size = newSize;
         readable = true;
         lastUsed = lruClock.getAndIncrement();
-        cachedDescriptor = descriptor;
+        cachedDescriptor = committedDescriptor;
       } finally {
         lock.unlock();
       }
@@ -1867,7 +1717,7 @@ public final class DiskStore implements Store {
     }
 
     @GuardedBy("lock")
-    private void discardCurrentEdit(AsynchronousFileChannel channel) {
+    private void discardCurrentEdit(FileChannel channel) {
       currentEditor = null;
       closeQuietly(channel);
       deleteIfExistsQuietly(tempEntryFile());
@@ -1879,12 +1729,12 @@ public final class DiskStore implements Store {
       }
     }
 
-    void discard(DiskEditor editor, AsynchronousFileChannel channel, boolean failOnForeignEditor) {
+    void discard(DiskEditor editor, FileChannel channel) {
       lock.lock();
       try {
         if (currentEditor == editor) {
           discardCurrentEdit(channel);
-        } else if (currentEditor != null && failOnForeignEditor) {
+        } else if (currentEditor != null) {
           throw new IllegalStateException("unexpected editor");
         }
       } finally {
@@ -1901,7 +1751,19 @@ public final class DiskStore implements Store {
       }
     }
 
+    @GuardedBy("lock")
     @Nullable String keyIfKnown() {
+      var descriptor = cachedDescriptor;
+      if (descriptor != null) {
+        return descriptor.key;
+      }
+
+      var editor = currentEditor;
+      return editor != null ? editor.key() : null;
+    }
+
+    /*
+     @Nullable String keyIfKnown() {
       var descriptor = cachedDescriptor;
       if (descriptor != null) {
         return descriptor.key;
@@ -1918,6 +1780,7 @@ public final class DiskStore implements Store {
       }
       return null;
     }
+     */
 
     Path entryFile() {
       var entryFile = lazyEntryFile;
@@ -1936,23 +1799,6 @@ public final class DiskStore implements Store {
       }
       return tempEntryFile;
     }
-
-    ExecutorService channelExecutor() {
-      return ExecutorServiceAdapter.adapt(executor);
-    }
-  }
-
-  private static final class CommitStrategy {
-    final EntryDescriptor entryDescriptor;
-    final AsynchronousFileChannel channel;
-    final boolean updateExisting;
-
-    CommitStrategy(
-        EntryDescriptor entryDescriptor, AsynchronousFileChannel channel, boolean updateExisting) {
-      this.entryDescriptor = entryDescriptor;
-      this.channel = channel;
-      this.updateExisting = updateExisting;
-    }
   }
 
   private final class DiskViewer implements Viewer {
@@ -1965,14 +1811,10 @@ public final class DiskStore implements Store {
     private final int entryVersion;
 
     private final EntryDescriptor descriptor;
-    private final AsynchronousFileChannel channel;
+    private final FileChannel channel;
     private final AtomicBoolean closed = new AtomicBoolean();
 
-    DiskViewer(
-        Entry entry,
-        int entryVersion,
-        EntryDescriptor descriptor,
-        AsynchronousFileChannel channel) {
+    DiskViewer(Entry entry, int entryVersion, EntryDescriptor descriptor, FileChannel channel) {
       this.entry = entry;
       this.entryVersion = entryVersion;
       this.descriptor = descriptor;
@@ -1995,13 +1837,8 @@ public final class DiskStore implements Store {
     }
 
     @Override
-    public CompletableFuture<Optional<Editor>> editAsync() {
-      try {
-        return CompletableFuture.completedFuture(
-            Optional.ofNullable(entry.edit(key(), entryVersion)));
-      } catch (IOException e) {
-        return CompletableFuture.failedFuture(e);
-      }
+    public Optional<Editor> edit() throws IOException {
+      return Optional.ofNullable(entry.edit(key(), entryVersion));
     }
 
     @Override
@@ -2029,44 +1866,32 @@ public final class DiskStore implements Store {
 
     private final class DiskEntryReader implements EntryReader {
       private final AtomicLong streamPosition = new AtomicLong();
-
-      /**
-       * Whether a read is currently in progress. This is used to reject concurrent reads, which
-       * would otherwise necessitate a position lock, or perhaps something more clever (i.e. read
-       * queues). As current expected usage is sequential, the added complexity/overhead is not
-       * worth it.
-       */
-      private final AtomicBoolean pendingRead = new AtomicBoolean();
+      private final Lock lock = new ReentrantLock();
 
       DiskEntryReader() {}
 
       @Override
-      public CompletableFuture<Integer> read(ByteBuffer dst) {
+      public int read(ByteBuffer dst) throws IOException {
         requireNonNull(dst);
-        if (!pendingRead.compareAndSet(false, true)) {
-          throw new ReadPendingException();
-        }
 
-        // Make sure we don't exceed data stream bounds.
-        long position = streamPosition.get();
-        long remainingBytes = descriptor.dataSize - position;
-        if (remainingBytes <= 0) {
-          pendingRead.set(false);
-          return CompletableFuture.completedFuture(-1);
-        }
+        lock.lock();
+        try {
+          // Make sure we don't exceed data stream bounds.
+          long position = streamPosition.get();
+          long remainingBytes = descriptor.dataSize - position;
+          if (remainingBytes <= 0) {
+            return -1;
+          }
 
-        int bytesToRead = (int) Math.min(remainingBytes, dst.remaining());
-        var boundedDst = dst.duplicate().limit(dst.position() + bytesToRead);
-        var readFuture = StoreIO.readBytesAsync(channel, boundedDst, position);
-        return readFuture.whenComplete((read, __) -> completePendingRead(read, dst));
-      }
-
-      private void completePendingRead(@Nullable Integer read, ByteBuffer dst) {
-        if (read != null) {
+          int bytesToRead = (int) Math.min(remainingBytes, dst.remaining());
+          var boundedDst = dst.duplicate().limit(dst.position() + bytesToRead);
+          int read = StoreIO.readBytes(channel, boundedDst, position);
           streamPosition.getAndAdd(read);
           dst.position(dst.position() + read);
+          return read;
+        } finally {
+          lock.unlock();
         }
-        pendingRead.set(false);
       }
     }
   }
@@ -2074,11 +1899,11 @@ public final class DiskStore implements Store {
   private static final class DiskEditor implements Editor {
     private final Entry entry;
     private final String key;
-    private final AsynchronousFileChannel channel;
+    private final FileChannel channel;
     private final DiskEntryWriter writer;
     private final AtomicBoolean closed = new AtomicBoolean();
 
-    DiskEditor(Entry entry, String key, AsynchronousFileChannel channel) {
+    DiskEditor(Entry entry, String key, FileChannel channel) {
       this.entry = entry;
       this.key = key;
       this.channel = channel;
@@ -2096,7 +1921,7 @@ public final class DiskStore implements Store {
     }
 
     @Override
-    public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
+    public boolean commit(ByteBuffer metadata) throws IOException {
       requireNonNull(metadata);
       requireState(closed.compareAndSet(false, true), "closed");
       return entry.commit(this, key, metadata, writer.dataSizeIfWritten(), channel);
@@ -2105,7 +1930,7 @@ public final class DiskStore implements Store {
     @Override
     public void close() {
       if (closed.compareAndSet(false, true)) {
-        entry.discard(this, channel, true);
+        entry.discard(this, channel);
       }
     }
 
@@ -2114,38 +1939,34 @@ public final class DiskStore implements Store {
     }
 
     private final class DiskEntryWriter implements EntryWriter {
-      /**
-       * Whether a write is currently in progress. See comments on {@link
-       * DiskViewer.DiskEntryReader#pendingRead}.
-       */
-      private final AtomicBoolean pendingWrite = new AtomicBoolean();
-
-      private final AtomicInteger streamPosition = new AtomicInteger();
-      private volatile boolean isWritten;
+      private final Lock lock = new ReentrantLock();
+      private long streamPosition;
+      private boolean isWritten;
 
       DiskEntryWriter() {}
 
       @Override
-      public CompletableFuture<Integer> write(ByteBuffer src) {
+      public int write(ByteBuffer src) throws IOException {
         requireNonNull(src);
         requireState(!closed.get(), "closed");
-        if (!pendingWrite.compareAndSet(false, true)) {
-          throw new WritePendingException();
-        }
-        return StoreIO.writeBytesAsync(channel, src, streamPosition.get())
-            .whenComplete((written, __) -> onWriteCompletion(written));
-      }
-
-      private void onWriteCompletion(@Nullable Integer written) {
-        if (written != null) {
-          streamPosition.getAndAdd(written);
+        lock.lock();
+        try {
+          int written = StoreIO.writeBytes(channel, src, streamPosition);
+          streamPosition += written;
           isWritten = true;
+          return written;
+        } finally {
+          lock.unlock();
         }
-        pendingWrite.set(false);
       }
 
       long dataSizeIfWritten() {
-        return isWritten ? streamPosition.get() : -1;
+        lock.lock();
+        try {
+          return isWritten ? streamPosition : -1;
+        } finally {
+          lock.unlock();
+        }
       }
     }
   }

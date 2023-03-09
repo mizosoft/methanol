@@ -31,11 +31,12 @@ import static org.assertj.core.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.junit.StoreExtension;
@@ -46,10 +47,9 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
@@ -108,11 +108,13 @@ class CacheReadingPublisherTest {
     var failingViewer =
         new TestViewer() {
           @Override
-          public CompletableFuture<Integer> readAsync(ByteBuffer dst) {
-            var future = new CompletableFuture<Integer>();
-            CompletableFuture.delayedExecutor(100, TimeUnit.MILLISECONDS)
-                .execute(() -> future.completeExceptionally(new TestException()));
-            return future;
+          public int read(ByteBuffer dst) {
+            try {
+              Thread.sleep(50);
+            } catch (InterruptedException e) {
+              return fail("unexpected exception", e);
+            }
+            throw new TestException();
           }
         };
     var publisher = new CacheReadingPublisher(failingViewer, executor);
@@ -120,23 +122,27 @@ class CacheReadingPublisherTest {
     publisher.subscribe(subscriber);
     subscriber.awaitCompletion();
     assertThat(subscriber.errorCount()).isOne();
-    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
+    assertThat(subscriber.awaitError())
+        .isInstanceOf(CompletionException.class)
+        .hasCauseInstanceOf(TestException.class);
   }
 
   /** No new reads should be scheduled after the subscription is cancelled. */
-  @ExecutorParameterizedTest
+  @Test
+  @ExecutorConfig(ExecutorType.CACHED_POOL)
   void cancelSubscriptionWhileReadIsPending(Executor executor) {
     var firstReadLatch = new CountDownLatch(1);
-    var readAsyncFuture = new CompletableFuture<Integer>();
+    var endReadLatch = new CountDownLatch(1);
     var viewer =
         new TestViewer() {
           final AtomicInteger readAsyncCalls = new AtomicInteger();
 
           @Override
-          public CompletableFuture<Integer> readAsync(ByteBuffer dst) {
+          public int read(ByteBuffer dst) {
             readAsyncCalls.incrementAndGet();
             firstReadLatch.countDown();
-            return readAsyncFuture;
+            awaitUninterruptibly(endReadLatch);
+            return -1;
           }
         };
     var publisher = new CacheReadingPublisher(viewer, executor);
@@ -146,7 +152,7 @@ class CacheReadingPublisherTest {
     subscriber.awaitSubscription().cancel();
 
     // Trigger CacheReadingPublisher's read completion callback.
-    readAsyncFuture.complete(null);
+    endReadLatch.countDown();
 
     // No further reads are scheduled.
     assertThat(viewer.readAsyncCalls.get()).isEqualTo(1);
@@ -162,8 +168,8 @@ class CacheReadingPublisherTest {
     var emptyViewer =
         new TestViewer() {
           @Override
-          public CompletableFuture<Integer> readAsync(ByteBuffer dst) {
-            return CompletableFuture.completedFuture(-1);
+          public int read(ByteBuffer dst) {
+            return -1;
           }
         };
     var publisher = new CacheReadingPublisher(emptyViewer, executor);
@@ -173,16 +179,16 @@ class CacheReadingPublisherTest {
     assertThat(subscriber.nextCount()).isEqualTo(0);
   }
 
-  @Test
-  void publisherIsUnicast() {
+  @ExecutorParameterizedTest
+  void publisherIsUnicast(Executor executor) {
     var emptyViewer =
         new TestViewer() {
           @Override
-          public CompletableFuture<Integer> readAsync(ByteBuffer dst) {
-            return CompletableFuture.completedFuture(-1);
+          public int read(ByteBuffer dst) {
+            return -1;
           }
         };
-    var publisher = new CacheReadingPublisher(emptyViewer, FlowSupport.SYNC_EXECUTOR);
+    var publisher = new CacheReadingPublisher(emptyViewer, executor);
     publisher.subscribe(new TestSubscriber<>());
 
     var secondSubscriber = new TestSubscriber<>();
@@ -213,15 +219,15 @@ class CacheReadingPublisherTest {
       return fail("unexpected call");
     }
 
-    abstract CompletableFuture<Integer> readAsync(ByteBuffer dst);
+    abstract int read(ByteBuffer dst);
 
     @Override
     public Store.EntryReader newReader() {
-      return this::readAsync;
+      return this::read;
     }
 
     @Override
-    public CompletableFuture<Optional<Editor>> editAsync() {
+    public Optional<Editor> edit() {
       return fail("unexpected call");
     }
 

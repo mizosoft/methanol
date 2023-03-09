@@ -161,7 +161,7 @@ public final class CacheInterceptor implements Interceptor {
     listener.onRequest(request);
 
     var requestTime = clock.instant();
-    var asyncAdapter = new AsyncAdapter(async);
+    var asyncAdapter = new AsyncAdapter(async, executor);
     var publisherChain = Handlers.toPublisherChain(chain, executor);
     return getCacheResponse(request, chain, asyncAdapter)
         .thenApply(
@@ -507,9 +507,11 @@ public final class CacheInterceptor implements Interceptor {
    */
   private static final class AsyncAdapter {
     private final boolean async;
+    private final Executor executor;
 
-    AsyncAdapter(boolean async) {
+    AsyncAdapter(boolean async, Executor asyncExecutor) {
       this.async = async;
+      this.executor = async ? asyncExecutor : FlowSupport.SYNC_EXECUTOR;
     }
 
     <T> CompletableFuture<HttpResponse<T>> forward(Chain<T> chain, HttpRequest request) {
@@ -519,9 +521,16 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     CompletableFuture<Optional<CacheResponse>> get(LocalCache cache, HttpRequest request) {
-      return async
-          ? cache.getAsync(request)
-          : Unchecked.supplyAsync(() -> cache.get(request), FlowSupport.SYNC_EXECUTOR);
+      return Unchecked.supplyAsync(() -> cache.get(request), executor);
+    }
+
+    CompletableFuture<Optional<NetworkResponse>> put(
+        LocalCache cache,
+        HttpRequest request,
+        NetworkResponse networkResponse,
+        @Nullable CacheResponse cacheResponse) {
+      return Unchecked.supplyAsync(
+          () -> cache.put(request, networkResponse, cacheResponse), executor);
     }
   }
 
@@ -606,8 +615,7 @@ public final class CacheInterceptor implements Interceptor {
         networkResponse.discard(executor);
 
         var updatedCacheResponse = updateCacheResponse(cacheResponse, networkResponse);
-        cache
-            .updateAsync(updatedCacheResponse)
+        Unchecked.supplyAsync(() -> cache.update(updatedCacheResponse), executor)
             .whenComplete(
                 (updated, ex) -> {
                   if (ex != null) {
@@ -622,8 +630,8 @@ public final class CacheInterceptor implements Interceptor {
       }
 
       if (isCacheable(request, networkResponse.get())) {
-        return cache
-            .putAsync(request, networkResponse, cacheResponse)
+        return asyncAdapter
+            .put(cache, request, networkResponse, cacheResponse)
             .thenApply(
                 cacheUpdatingNetworkResponse ->
                     cacheUpdatingNetworkResponse.map(this::withNetworkResponse).orElse(this));
@@ -632,8 +640,7 @@ public final class CacheInterceptor implements Interceptor {
       // An uncacheable response might invalidate itself and other related responses.
       var invalidatedUris = invalidatedUris(request, networkResponse.get());
       if (!invalidatedUris.isEmpty()) {
-        cache
-            .removeAllAsync(invalidatedUris)
+        Unchecked.runAsync(() -> cache.removeAll(invalidatedUris), executor)
             .whenComplete(
                 (__, ex) -> {
                   if (ex != null) {

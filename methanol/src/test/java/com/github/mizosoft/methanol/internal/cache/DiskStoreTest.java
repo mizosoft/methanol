@@ -429,7 +429,7 @@ class DiskStoreTest {
       assertEntryEquals(viewer, "Mew", "Mewtwo");
 
       // No edits are allowed.
-      assertThat(viewer.editAsync().join()).isEmpty();
+      assertThat(viewer.edit()).isEmpty();
     }
   }
 

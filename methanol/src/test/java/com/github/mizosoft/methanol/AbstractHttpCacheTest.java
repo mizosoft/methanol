@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -195,17 +195,15 @@ abstract class AbstractHttpCacheTest {
       }
 
       @Override
-      public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
+      public boolean commit(ByteBuffer metadata) throws IOException {
         // To make sure all changes are applied before waiters are notified, actually do the arrival
         // when committing completes.
         boolean arrive = this.closed.compareAndSet(false, true);
-        return super.commitAsync(metadata)
-            .whenComplete(
-                (__, ___) -> {
-                  if (arrive) {
-                    phaser.arriveAndDeregister();
-                  }
-                });
+        boolean committed = super.commit(metadata);
+        if (arrive) {
+          phaser.arriveAndDeregister();
+        }
+        return committed;
       }
 
       @Override
@@ -235,18 +233,8 @@ abstract class AbstractHttpCacheTest {
     }
 
     @Override
-    public CompletableFuture<Optional<Viewer>> viewAsync(String key) {
-      return super.viewAsync(key).thenApply(viewer -> viewer.map(EditAwaiterViewer::new));
-    }
-
-    @Override
     public Optional<Editor> edit(String key) throws IOException, InterruptedException {
       return super.edit(key).map(editAwaiter::register);
-    }
-
-    @Override
-    public CompletableFuture<Optional<Editor>> editAsync(String key) {
-      return super.editAsync(key).thenApply(editor -> editor.map(editAwaiter::register));
     }
 
     @Override
@@ -260,8 +248,8 @@ abstract class AbstractHttpCacheTest {
       }
 
       @Override
-      public CompletableFuture<Optional<Editor>> editAsync() {
-        return super.editAsync().thenApply(editor -> editor.map(editAwaiter::register));
+      public Optional<Editor> edit() throws IOException, InterruptedException {
+        return super.edit().map(editAwaiter::register);
       }
     }
   }

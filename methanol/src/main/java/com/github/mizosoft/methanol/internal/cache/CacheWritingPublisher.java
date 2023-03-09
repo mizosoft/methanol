@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@ import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
@@ -36,6 +37,7 @@ import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -62,6 +64,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
   private final Publisher<List<ByteBuffer>> upstream;
   private final Editor editor;
   private final ByteBuffer metadata;
+  private final Executor executor;
   private final Listener listener;
 
   /**
@@ -73,24 +76,36 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
   private final AtomicBoolean subscribed = new AtomicBoolean();
 
   public CacheWritingPublisher(
-      Publisher<List<ByteBuffer>> upstream, Editor editor, ByteBuffer metadata) {
-    this(upstream, editor, metadata, DisabledListener.INSTANCE, DEFAULT_PROPAGATE_CANCELLATION);
-  }
-
-  public CacheWritingPublisher(
-      Publisher<List<ByteBuffer>> upstream, Editor editor, ByteBuffer metadata, Listener listener) {
-    this(upstream, editor, metadata, listener, DEFAULT_PROPAGATE_CANCELLATION);
+      Publisher<List<ByteBuffer>> upstream, Editor editor, ByteBuffer metadata, Executor executor) {
+    this(
+        upstream,
+        editor,
+        metadata,
+        executor,
+        DisabledListener.INSTANCE,
+        DEFAULT_PROPAGATE_CANCELLATION);
   }
 
   public CacheWritingPublisher(
       Publisher<List<ByteBuffer>> upstream,
       Editor editor,
       ByteBuffer metadata,
+      Executor executor,
+      Listener listener) {
+    this(upstream, editor, metadata, executor, listener, DEFAULT_PROPAGATE_CANCELLATION);
+  }
+
+  public CacheWritingPublisher(
+      Publisher<List<ByteBuffer>> upstream,
+      Editor editor,
+      ByteBuffer metadata,
+      Executor executor,
       Listener listener,
       boolean propagateCancellation) {
     this.upstream = requireNonNull(upstream);
     this.editor = requireNonNull(editor);
     this.metadata = requireNonNull(metadata);
+    this.executor = requireNonNull(executor);
     this.listener = requireNonNull(listener);
     this.propagateCancellation = propagateCancellation;
   }
@@ -101,7 +116,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     if (subscribed.compareAndSet(false, true)) {
       upstream.subscribe(
           new CacheWritingSubscriber(
-              subscriber, editor, metadata, listener, propagateCancellation));
+              subscriber, editor, metadata, executor, listener, propagateCancellation));
     } else {
       FlowSupport.rejectMulticast(subscriber);
     }
@@ -162,11 +177,12 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         Subscriber<? super List<ByteBuffer>> downstream,
         Editor editor,
         ByteBuffer metadata,
+        Executor executor,
         Listener listener,
         boolean propagateCancellation) {
       downstreamSubscription =
           new CacheWritingSubscription(
-              downstream, editor, metadata, listener, propagateCancellation);
+              downstream, editor, metadata, executor, listener, propagateCancellation);
     }
 
     @Override
@@ -211,6 +227,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private final Editor editor;
     private final ByteBuffer metadata;
     private final EntryWriter writer;
+    private final Executor executor;
     private final Listener listener;
     private final boolean propagateCancellation;
     private final Upstream upstream = new Upstream();
@@ -238,11 +255,13 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         @NonNull Subscriber<? super List<ByteBuffer>> downstream,
         Editor editor,
         ByteBuffer metadata,
+        Executor executor,
         Listener listener,
         boolean propagateCancellation) {
       this.downstream = downstream;
       this.editor = editor;
       this.metadata = metadata;
+      this.executor = executor;
       this.writer = editor.writer();
       this.listener = listener.guarded(); // Ensure the listener doesn't throw.
       this.propagateCancellation = propagateCancellation;
@@ -334,7 +353,8 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
               || STATE.compareAndSet(this, WritingState.IDLE, WritingState.WRITING))) {
         writeQueue.poll(); // Consume
         try {
-          writer.write(buffer).whenComplete((__, ex) -> onWriteCompletion(ex));
+          Unchecked.supplyAsync(() -> writer.write(buffer), executor)
+              .whenComplete((__, ex) -> onWriteCompletion(ex));
         } catch (Throwable t) {
           discardEdit();
           listener.onWriteFailure(t);
@@ -369,8 +389,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private void commitEdit() {
       if (STATE.getAndSet(this, WritingState.DONE) != WritingState.DONE) {
         try {
-          editor
-              .commitAsync(metadata)
+          Unchecked.supplyAsync(() -> editor.commit(metadata), executor)
               .whenComplete(
                   (committed, ex) -> {
                     if (ex != null) {

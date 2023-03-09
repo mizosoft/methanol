@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,16 +28,15 @@ import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -82,21 +81,11 @@ public final class MemoryStore implements Store {
   }
 
   @Override
-  public CompletableFuture<Optional<Viewer>> viewAsync(String key) {
-    return CompletableFuture.completedFuture(view(key));
-  }
-
-  @Override
   public Optional<Editor> edit(String key) {
     requireNonNull(key);
     synchronized (entries) {
       return Optional.ofNullable(entries.computeIfAbsent(key, Entry::new).edit(Entry.ANY_VERSION));
     }
-  }
-
-  @Override
-  public CompletableFuture<Optional<Editor>> editAsync(String key) {
-    return CompletableFuture.completedFuture(edit(key));
   }
 
   @Override
@@ -118,12 +107,6 @@ public final class MemoryStore implements Store {
       }
       return false;
     }
-  }
-
-  @Override
-  public CompletableFuture<Void> removeAllAsync(List<String> keys) {
-    keys.forEach(this::remove);
-    return CompletableFuture.completedFuture(null);
   }
 
   @Override
@@ -383,9 +366,9 @@ public final class MemoryStore implements Store {
         private final ByteBuffer data = MemoryViewer.this.data.duplicate();
 
         @Override
-        public CompletableFuture<Integer> read(ByteBuffer dst) {
+        public int read(ByteBuffer dst) {
           requireNonNull(dst);
-          return CompletableFuture.completedFuture(copyRemaining(dst));
+          return copyRemaining(dst);
         }
 
         private int copyRemaining(ByteBuffer dst) {
@@ -410,8 +393,8 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public CompletableFuture<Optional<Editor>> editAsync() {
-      return CompletableFuture.completedFuture(Optional.ofNullable(entry.edit(entryVersion)));
+    public Optional<Editor> edit() {
+      return Optional.ofNullable(entry.edit(entryVersion));
     }
 
     @Override
@@ -433,6 +416,8 @@ public final class MemoryStore implements Store {
     private final Entry entry;
     private final Lock lock = new ReentrantLock();
     private final ByteArrayOutputStream data = new ByteArrayOutputStream();
+
+    @GuardedBy("lock")
     private boolean isDataWritten;
 
     MemoryEditor(Entry entry) {
@@ -456,7 +441,7 @@ public final class MemoryStore implements Store {
         requireNonNull(src);
         lock.lock();
         try {
-          int byteCount = src.remaining();
+          int remaining = src.remaining();
           if (src.hasArray()) {
             data.write(src.array(), src.arrayOffset() + src.position(), src.remaining());
           } else {
@@ -464,7 +449,7 @@ public final class MemoryStore implements Store {
             src.get(srcCopy);
             data.write(srcCopy, 0, srcCopy.length);
           }
-          return CompletableFuture.completedFuture(byteCount);
+          return remaining;
         } finally {
           lock.unlock();
         }
@@ -472,8 +457,8 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public CompletableFuture<Boolean> commitAsync(ByteBuffer metadata) {
-      return CompletableFuture.completedFuture(entry.commit(this, metadata, dataIfWritten()));
+    public boolean commit(ByteBuffer metadata) {
+      return entry.commit(this, metadata, dataIfWritten());
     }
 
     private @Nullable ByteBuffer dataIfWritten() {

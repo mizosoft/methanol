@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,27 +29,9 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-/**
- * A repository of binary data entries identified by string keys. Each entry has a metadata block
- * and a data stream. Each data stream can be read from or written to asynchronously. An entry's
- * metadata block and data stream can be accessed by a {@link Viewer} and modified by an {@link
- * Editor}. An entry can have at most one active {@code Editor} but can have multiple concurrent
- * {@code Viewers}.
- *
- * <p>{@code Store} may bound its size by automatic eviction of entries, possibly in background. The
- * size bound is not strict. A store's {@link #size} might temporarily exceed its bound in case the
- * store is being actively expanded while eviction is in progress. Additionally, a store's size
- * doesn't include the overhead of the underlying filesystem or any metadata the store itself uses
- * for indexing purposes. Thus, a store's {@link #maxSize} is not exact and might be slightly
- * exceeded as necessary.
- *
- * <p>{@code Store} is thread-safe and is suitable for concurrent use.
- */
-public interface Store extends AutoCloseable, Flushable {
-
+public interface Store extends Closeable, Flushable {
   /** Returns this store's max size in bytes. */
   long maxSize();
 
@@ -64,8 +46,6 @@ public interface Store extends AutoCloseable, Flushable {
    */
   Optional<Viewer> view(String key) throws IOException, InterruptedException;
 
-  CompletableFuture<Optional<Viewer>> viewAsync(String key);
-
   /**
    * Returns an {@code Optional<Editor>} for the entry associated with the given key (atomically
    * creating a new one if necessary), or an empty optional if such entry can't be edited.
@@ -73,8 +53,6 @@ public interface Store extends AutoCloseable, Flushable {
    * @throws IllegalStateException if closed
    */
   Optional<Editor> edit(String key) throws IOException, InterruptedException;
-
-  CompletableFuture<Optional<Editor>> editAsync(String key);
 
   /**
    * Returns an iterator of {@code Viewers} over the entries in this store. The iterator doesn't
@@ -90,7 +68,13 @@ public interface Store extends AutoCloseable, Flushable {
    */
   boolean remove(String key) throws IOException, InterruptedException;
 
-  CompletableFuture<Void> removeAllAsync(List<String> keys);
+  default boolean removeAll(List<String> keys) throws IOException, InterruptedException {
+    boolean removedAny = false;
+    for (var key : keys) {
+      removedAny |= remove(key);
+    }
+    return removedAny;
+  }
 
   /**
    * Removes all entries from this store.
@@ -144,7 +128,7 @@ public interface Store extends AutoCloseable, Flushable {
      *
      * @throws IllegalStateException if the store is closed
      */
-    CompletableFuture<Optional<Editor>> editAsync();
+    Optional<Editor> edit() throws IOException, InterruptedException;
 
     /**
      * Removes the entry associated with this viewer only if it hasn't changed since this viewer was
@@ -172,21 +156,43 @@ public interface Store extends AutoCloseable, Flushable {
      *
      * @throws IllegalStateException if the editor is closed
      */
-    CompletableFuture<Boolean> commitAsync(ByteBuffer metadata);
+    boolean commit(ByteBuffer metadata) throws IOException;
 
     /**
-     * Closes this editor. If {@link #commitAsync(ByteBuffer)} hasn't been called prior to this
-     * method, changes made by this editor are discarded.
+     * Closes this editor. If {@link #commit(ByteBuffer)} hasn't been called prior to this method,
+     * changes made by this editor are discarded.
      */
     @Override
     void close();
   }
 
   interface EntryReader {
-    CompletableFuture<Integer> read(ByteBuffer dst);
+    int read(ByteBuffer dst) throws IOException;
+
+    default long read(List<ByteBuffer> dsts) throws IOException {
+      long totalRead = 0;
+      for (var dst : dsts) {
+        int read;
+        while ((read = read(dst)) != -1) {
+          totalRead = Math.addExact(totalRead, read);
+        }
+      }
+      return totalRead;
+    }
   }
 
   interface EntryWriter {
-    CompletableFuture<Integer> write(ByteBuffer src);
+    int write(ByteBuffer src) throws IOException;
+
+    default long write(List<ByteBuffer> srcs) throws IOException {
+      long totalWritten = 0;
+      for (var src : srcs) {
+        while (src.hasRemaining()) {
+          int written = write(src);
+          totalWritten = Math.addExact(totalWritten, written);
+        }
+      }
+      return totalWritten;
+    }
   }
 }

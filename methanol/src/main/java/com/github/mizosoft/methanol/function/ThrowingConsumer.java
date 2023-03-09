@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,8 @@
 
 package com.github.mizosoft.methanol.function;
 
-import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
+import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
 /**
@@ -43,7 +43,7 @@ public interface ThrowingConsumer<T> {
         accept(t);
       } catch (Exception e) {
         Unchecked.propagateIfUnchecked(e);
-        throw Utils.toCompletionException(e);
+        throw new CompletionException(e);
       }
     };
   }
