@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,13 +24,12 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.lettersOrDigits;
 import static com.github.mizosoft.methanol.internal.text.CharMatcher.anyOf;
+import static com.github.mizosoft.methanol.internal.text.CharMatcher.lettersOrDigits;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.BOUNDARY_MATCHER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.Validate;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;
@@ -63,11 +62,10 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A {@code BodyPublisher} implementing the multipart request type.
- *
- * @see <a href="https://tools.ietf.org/html/rfc2046#section-5.1">RFC 2046 Multipart Media Type</a>
+ * A {@code BodyPublisher} for <a
+ * href="https://tools.ietf.org/html/rfc2046#section-5.1">multipart</a> bodies.
  */
-@SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
+@SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values.
 public final class MultipartBodyPublisher implements MimeBodyPublisher {
   private static final Logger logger = System.getLogger(MultipartBodyPublisher.class.getName());
 
@@ -78,18 +76,19 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
   private final List<Part> parts;
   private final MediaType mediaType;
-  private long contentLength;
+  private final String boundary;
+  private long lazyContentLength = UNINITIALIZED_LENGTH;
 
   private MultipartBodyPublisher(List<Part> parts, MediaType mediaType) {
-    this.parts = parts;
-    this.mediaType = mediaType;
-    contentLength = UNINITIALIZED_LENGTH;
+    this.parts = requireNonNull(parts);
+    this.mediaType = requireNonNull(mediaType);
+    this.boundary = mediaType.parameters().get(BOUNDARY_ATTRIBUTE);
+    requireArgument(this.boundary != null, "missing boundary");
   }
 
   /** Returns the boundary of this multipart body. */
   public String boundary() {
-    return Validate.castNonNull(
-        mediaType.parameters().get(BOUNDARY_ATTRIBUTE)); // A boundary attr is guaranteed to exist
+    return boundary;
   }
 
   /** Returns an immutable list containing this body's parts. */
@@ -104,44 +103,43 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
   @Override
   public long contentLength() {
-    long len = contentLength;
-    if (len == UNINITIALIZED_LENGTH) {
-      len = computeLength();
-      contentLength = len;
+    long contentLength = lazyContentLength;
+    if (contentLength == UNINITIALIZED_LENGTH) {
+      contentLength = computeContentLength();
+      lazyContentLength = contentLength;
     }
-    return len;
+    return contentLength;
   }
 
   @Override
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
-    requireNonNull(subscriber);
-    new MultipartSubscription(this, subscriber).signal(true); // apply onSubscribe
+    new MultipartSubscription(this, subscriber).signal(true);
   }
 
-  private long computeLength() {
-    long lengthOfParts = 0L;
-    String boundary = boundary();
-    StringBuilder headings = new StringBuilder();
-    for (int i = 0, sz = parts.size(); i < sz; i++) {
-      Part part = parts.get(i);
-      long partLength = part.bodyPublisher().contentLength();
-      if (partLength < 0) {
+  private long computeContentLength() {
+    long rawContentLength = 0L; // Content length of "raw" parts without metadata.
+    var metadata = new StringBuilder();
+    for (int i = 0; i < parts.size(); i++) {
+      var part = parts.get(i);
+      long partContentLength = part.bodyPublisher().contentLength();
+      if (partContentLength < 0) {
         return UNKNOWN_LENGTH;
       }
-      lengthOfParts += partLength;
-      // Append preceding boundary + part header
-      BoundaryAppender.get(i, sz).append(headings, boundary);
-      appendPartHeaders(headings, part);
-      headings.append("\r\n");
+      rawContentLength += partContentLength;
+
+      BoundaryAppender.get(i, parts.size()).append(metadata, boundary);
+      appendPartHeaders(metadata, part);
+      metadata.append("\r\n");
     }
-    BoundaryAppender.LAST.append(headings, boundary);
-    // Use headings' utf8-encoded length
-    return lengthOfParts + UTF_8.encode(CharBuffer.wrap(headings)).remaining();
+    BoundaryAppender.LAST.append(metadata, boundary);
+    return rawContentLength + UTF_8.encode(CharBuffer.wrap(metadata)).remaining();
   }
 
   private static void appendPartHeaders(StringBuilder target, Part part) {
-    part.headers().map().forEach((n, vs) -> vs.forEach(v -> appendHeader(target, n, v)));
-    BodyPublisher publisher = part.bodyPublisher();
+    part.headers()
+        .map()
+        .forEach((name, values) -> values.forEach(value -> appendHeader(target, name, value)));
+    var publisher = part.bodyPublisher();
     if (publisher instanceof MimeBodyPublisher) {
       appendHeader(target, "Content-Type", ((MimeBodyPublisher) publisher).mediaType().toString());
     }
@@ -164,19 +162,17 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     private final BodyPublisher bodyPublisher;
 
     Part(HttpHeaders headers, BodyPublisher bodyPublisher) {
-      requireNonNull(headers, "headers");
-      requireNonNull(bodyPublisher, "bodyPublisher");
+      this.headers = requireNonNull(headers);
+      this.bodyPublisher = requireNonNull(bodyPublisher);
       validateHeaderNames(headers.map().keySet(), bodyPublisher);
-      this.headers = headers;
-      this.bodyPublisher = bodyPublisher;
     }
 
-    /** Returns the headers of this part. */
+    /** Returns this part's headers. */
     public HttpHeaders headers() {
       return headers;
     }
 
-    /** Returns the {@code BodyPublisher} that publishes this part's content. */
+    /** Returns the {@code BodyPublisher} of this part's content. */
     public BodyPublisher bodyPublisher() {
       return bodyPublisher;
     }
@@ -184,11 +180,8 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     /**
      * Creates and returns a new {@code Part} with the given headers and body publisher.
      *
-     * @param headers the part's headers
-     * @param bodyPublisher the part's body publisher
-     * @throws IllegalArgumentException if the name of any of the given headers is invalid or if a
-     *     {@code Content-Type} header is present but the given publisher is a {@link
-     *     MimeBodyPublisher}
+     * @throws IllegalArgumentException if any of the given headers' names is invalid or if a {@code
+     *     Content-Type} header is present but the given publisher is a {@link MimeBodyPublisher}
      */
     public static Part create(HttpHeaders headers, BodyPublisher bodyPublisher) {
       return new Part(headers, bodyPublisher);
@@ -198,7 +191,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       requireArgument(
           !(names.contains("Content-Type") && publisher instanceof MimeBodyPublisher),
           "unexpected Content-Type header");
-      for (String name : names) {
+      for (var name : names) {
         requireArgument(
             TOKEN_MATCHER.allMatch(name) && !name.isEmpty(), "illegal header name: %s", name);
       }
@@ -215,16 +208,11 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
   public static final class Builder {
     private static final int MAX_BOUNDARY_LENGTH = 70;
 
-    private static final String MULTIPART_TYPE = "multipart";
-    private static final String FORM_DATA_SUBTYPE = "form-data";
+    private static final MediaType DEFAULT_MULTIPART_MEDIA_TYPE =
+        MediaType.of("multipart", "form-data");
 
-    private final List<Part> parts;
-    private MediaType mediaType;
-
-    Builder() {
-      parts = new ArrayList<>();
-      mediaType = MediaType.of(MULTIPART_TYPE, FORM_DATA_SUBTYPE);
-    }
+    private final List<Part> parts = new ArrayList<>();
+    private MediaType mediaType = DEFAULT_MULTIPART_MEDIA_TYPE;
 
     /**
      * Sets the boundary of the multipart body.
@@ -232,68 +220,46 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      * @throws IllegalArgumentException if the boundary is invalid
      */
     public Builder boundary(String boundary) {
-      requireNonNull(boundary);
       mediaType = mediaType.withParameter(BOUNDARY_ATTRIBUTE, validateBoundary(boundary));
       return this;
     }
 
     /**
-     * Sets the media type of the multipart body. If the given media type has a boundary parameter
-     * then it will be used as the body's boundary.
+     * Sets the media type of the multipart body. If the given media type has a boundary parameter,
+     * it will be used as the body's boundary.
      *
-     * @param mediaType the multipart media type
      * @throws IllegalArgumentException if the given media type is not a multipart type or if it has
      *     an invalid boundary parameter
      */
     public Builder mediaType(MediaType mediaType) {
-      requireNonNull(mediaType);
       this.mediaType = checkMediaType(mediaType);
       return this;
     }
 
-    /**
-     * Adds the given part.
-     *
-     * @param part the part
-     */
+    /** Adds the given part. */
     public Builder part(Part part) {
-      requireNonNull(part);
-      parts.add(part);
+      parts.add(requireNonNull(part));
       return this;
     }
 
-    /**
-     * Adds a form field with the given name and body.
-     *
-     * @param name the field's name
-     * @param bodyPublisher the field's body publisher
-     */
+    /** Adds a form field with the given name and body. */
     public Builder formPart(String name, BodyPublisher bodyPublisher) {
-      requireNonNull(name, "name");
-      requireNonNull(bodyPublisher, "body");
       return part(Part.create(getFormHeaders(name, null), bodyPublisher));
     }
 
-    /**
-     * Adds a form field with the given name, filename and body.
-     *
-     * @param name the field's name
-     * @param filename the field's filename
-     * @param body the field's body publisher
-     */
+    /** Adds a form field with the given name, filename and body. */
     public Builder formPart(String name, String filename, BodyPublisher body) {
-      requireNonNull(name, "name");
-      requireNonNull(filename, "filename");
-      requireNonNull(body, "body");
       return part(Part.create(getFormHeaders(name, filename), body));
+    }
+
+    /** Adds a form field with the given name, filename, body and media type. */
+    public Builder formPart(String name, String filename, BodyPublisher body, MediaType mediaType) {
+      return formPart(name, filename, MoreBodyPublishers.ofMediaType(body, mediaType));
     }
 
     /**
      * Adds a {@code text/plain} form field with the given name and value. {@code UTF-8} is used for
      * encoding the field's body.
-     *
-     * @param name the field's name
-     * @param value an object whose string representation is used as the value
      */
     public Builder textPart(String name, Object value) {
       return textPart(name, value, UTF_8);
@@ -302,23 +268,16 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     /**
      * Adds a {@code text/plain} form field with the given name and value using the given charset
      * for encoding the field's body.
-     *
-     * @param name the field's name
-     * @param value an object whose string representation is used as the value
-     * @param charset the charset for encoding the field's body
      */
     public Builder textPart(String name, Object value, Charset charset) {
-      requireNonNull(name, "name");
-      requireNonNull(value, "value");
-      requireNonNull(charset, "charset");
       return formPart(name, BodyPublishers.ofString(value.toString(), charset));
     }
 
     /**
      * Adds a file form field with the given name and file. The field's filename property will be
      * that of the given path's {@link Path#getFileName() filename compontent}. The given path will
-     * be used to {@link Files#probeContentType(Path) probe} the part's media type. If the probing
-     * operation fails, either by throwing an exception or returning {@code null}, {@code
+     * be used to {@link Files#probeContentType(Path) probe} the part's media type. If probing
+     * fails, either by throwing an exception or returning {@code null}, {@code
      * application/octet-stream} will be used.
      *
      * @param name the field's name
@@ -333,21 +292,14 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      * Adds a file form field with given name, file and media type. The field's filename property
      * will be that of the given path's {@link Path#getFileName() filename compontent}.
      *
-     * @param name the field's name
-     * @param file the file's path
-     * @param mediaType the part's media type
      * @throws FileNotFoundException if a file with the given path cannot be found
      */
     public Builder filePart(String name, Path file, MediaType mediaType)
         throws FileNotFoundException {
-      requireNonNull(name, "name");
-      requireNonNull(file, "file");
-      requireNonNull(mediaType, "mediaType");
-      @Nullable Path filenameComponent = file.getFileName();
-      String filename = filenameComponent != null ? filenameComponent.toString() : "";
-      MimeBodyPublisher publisher =
-          MoreBodyPublishers.ofMediaType(BodyPublishers.ofFile(file), mediaType);
-      return formPart(name, filename, publisher);
+      var filenameComponent = file.getFileName();
+      var filenameString = filenameComponent != null ? filenameComponent.toString() : "";
+      var publisher = MoreBodyPublishers.ofMediaType(BodyPublishers.ofFile(file), mediaType);
+      return formPart(name, filenameString, publisher);
     }
 
     /**
@@ -357,14 +309,14 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      * @throws IllegalStateException if no part was added
      */
     public MultipartBodyPublisher build() {
-      List<Part> addedParts = List.copyOf(parts);
-      requireState(!addedParts.isEmpty(), "at least one part should be added");
-      MediaType localMediaType = mediaType;
+      var partsCopy = List.copyOf(parts);
+      requireState(!partsCopy.isEmpty(), "at least one part should be added");
+      var localMediaType = mediaType;
       if (!localMediaType.parameters().containsKey(BOUNDARY_ATTRIBUTE)) {
         localMediaType =
             localMediaType.withParameter(BOUNDARY_ATTRIBUTE, UUID.randomUUID().toString());
       }
-      return new MultipartBodyPublisher(addedParts, localMediaType);
+      return new MultipartBodyPublisher(partsCopy, localMediaType);
     }
 
     private static String validateBoundary(String boundary) {
@@ -381,8 +333,8 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
     private static MediaType checkMediaType(MediaType mediaType) {
       requireArgument(
-          MULTIPART_TYPE.equals(mediaType.type()), "not a multipart type: %s", mediaType.type());
-      String boundary = mediaType.parameters().get(BOUNDARY_ATTRIBUTE);
+          "multipart".equals(mediaType.type()), "not a multipart type: %s", mediaType.type());
+      var boundary = mediaType.parameters().get(BOUNDARY_ATTRIBUTE);
       if (boundary != null) {
         validateBoundary(boundary);
       }
@@ -390,18 +342,18 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     private static HttpHeaders getFormHeaders(String name, @Nullable String filename) {
-      StringBuilder disposition = new StringBuilder();
-      appendEscaped(disposition.append("form-data; name="), name);
+      var contentDisposition = new StringBuilder();
+      appendEscaped(contentDisposition.append("form-data; name="), name);
       if (filename != null) {
-        appendEscaped(disposition.append("; filename="), filename);
+        appendEscaped(contentDisposition.append("; filename="), filename);
       }
       return HttpHeaders.of(
-          Map.of("Content-Disposition", List.of(disposition.toString())), (n, v) -> true);
+          Map.of("Content-Disposition", List.of(contentDisposition.toString())), (__, ___) -> true);
     }
 
     private static void appendEscaped(StringBuilder target, String field) {
       target.append("\"");
-      for (int i = 0, len = field.length(); i < len; i++) {
+      for (int i = 0; i < field.length(); i++) {
         char c = field.charAt(i);
         if (c == '\\' || c == '\"') {
           target.append('\\');
@@ -413,12 +365,12 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
     private static MediaType probeMediaType(Path file) {
       try {
-        String contentType = Files.probeContentType(file);
+        var contentType = Files.probeContentType(file);
         if (contentType != null) {
           return MediaType.parse(contentType);
         }
       } catch (IOException ignored) {
-        // Use OCTET_STREAM
+        // Fallback to application/octet-stream.
       }
       return MediaType.APPLICATION_OCTET_STREAM;
     }
@@ -436,9 +388,8 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
         public void onNextPart(Part part) {
           try {
             PartSequenceListener.this.onNextPart(part);
-          } catch (Throwable error) {
-            logger.log(
-                Level.WARNING, "exception thrown by PartSequenceListener::onNextPart", error);
+          } catch (Throwable e) {
+            logger.log(Level.WARNING, "exception thrown by PartSequenceListener::onNextPart", e);
           }
         }
 
@@ -446,11 +397,9 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
         public void onSequenceCompletion() {
           try {
             PartSequenceListener.this.onSequenceCompletion();
-          } catch (Throwable error) {
+          } catch (Throwable e) {
             logger.log(
-                Level.WARNING,
-                "exception thrown by PartSequenceListener::onSequenceCompletion",
-                error);
+                Level.WARNING, "exception thrown by PartSequenceListener::onSequenceCompletion", e);
           }
         }
       };
@@ -487,7 +436,6 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
   }
 
   private static final class MultipartSubscription extends AbstractSubscription<ByteBuffer> {
-
     private static final VarHandle PART_SUBSCRIBER;
 
     static {
@@ -501,7 +449,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     /**
-     * A tombstone indicating no more parts are to be subscribed to. This protects against race
+     * A sentinel value indicating no more parts are to be subscribed to. This protects against race
      * conditions that would otherwise occur if a thread tries to abort() while another tries to
      * nextPartHeaders(), which might lead to a newly subscribed part being missed by abort().
      */
@@ -522,17 +470,19 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
     private final String boundary;
     private final List<Part> parts;
-    private volatile @MonotonicNonNull Subscriber<ByteBuffer> partSubscriber;
     private int partIndex;
     private boolean complete;
+
+    /** A subscriber to the currently streaming part. */
+    private volatile @MonotonicNonNull Subscriber<ByteBuffer> partSubscriber;
 
     private final List<PartSequenceListener> listeners = new CopyOnWriteArrayList<>();
 
     MultipartSubscription(
         MultipartBodyPublisher upstream, Subscriber<? super ByteBuffer> downstream) {
       super(downstream, FlowSupport.SYNC_EXECUTOR);
-      boundary = upstream.boundary();
-      parts = upstream.parts();
+      this.boundary = upstream.boundary();
+      this.parts = upstream.parts();
     }
 
     void registerListener(PartSequenceListener listener) {
@@ -543,14 +493,13 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     protected long emit(Subscriber<? super ByteBuffer> downstream, long emit) {
       long submitted = 0L;
       while (true) {
-        ByteBuffer batch;
+        ByteBuffer next;
         if (complete) {
           cancelOnComplete(downstream);
           return 0;
-        } else if (submitted >= emit
-            || (batch = pollNext()) == null) { // exhausted demand or batches
+        } else if (submitted >= emit || (next = pollNext()) == null) { // Exhausted demand or data.
           return submitted;
-        } else if (submitOnNext(downstream, batch)) {
+        } else if (submitOnNext(downstream, next)) {
           submitted++;
         } else {
           return 0;
@@ -561,17 +510,16 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     @Override
     @SuppressWarnings("unchecked")
     protected void abort(boolean flowInterrupted) {
-      Subscriber<ByteBuffer> previous =
-          (Subscriber<ByteBuffer>) PART_SUBSCRIBER.getAndSet(this, CANCELLED);
-      if (previous instanceof PartSubscriber) {
-        ((PartSubscriber) previous).abortUpstream(flowInterrupted);
+      var prevSubscriber = (Subscriber<ByteBuffer>) PART_SUBSCRIBER.getAndSet(this, CANCELLED);
+      if (prevSubscriber instanceof PartSubscriber) {
+        ((PartSubscriber) prevSubscriber).abortUpstream(flowInterrupted);
       }
     }
 
     private @Nullable ByteBuffer pollNext() {
-      Subscriber<ByteBuffer> subscriber = partSubscriber;
-      if (subscriber instanceof PartSubscriber) { // not cancelled & not null
-        ByteBuffer next = ((PartSubscriber) subscriber).pollNext();
+      var subscriber = partSubscriber;
+      if (subscriber instanceof PartSubscriber) { // Not CANCELLED & not null.
+        var next = ((PartSubscriber) subscriber).pollNext();
         if (next != PartSubscriber.END_OF_PART) {
           return next;
         }
@@ -580,31 +528,30 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     private @Nullable ByteBuffer nextPartHeaders() {
-      StringBuilder heading = new StringBuilder();
-      BoundaryAppender.get(partIndex, parts.size()).append(heading, boundary);
+      var metadata = new StringBuilder();
+      BoundaryAppender.get(partIndex, parts.size()).append(metadata, boundary);
       if (partIndex < parts.size()) {
-        Part part = parts.get(partIndex++);
+        var part = parts.get(partIndex++);
         if (!subscribeToPart(part)) {
           return null;
         }
-        appendPartHeaders(heading, part);
-        heading.append("\r\n");
-
+        appendPartHeaders(metadata, part);
+        metadata.append("\r\n");
         listeners.forEach(listener -> listener.onNextPart(part));
       } else {
-        partSubscriber = CANCELLED; // race against abort() here is OK
+        partSubscriber = CANCELLED; // Race against abort() here is OK.
         complete = true;
-
         listeners.forEach(PartSequenceListener::onSequenceCompletion);
       }
-      return UTF_8.encode(CharBuffer.wrap(heading));
+      return UTF_8.encode(CharBuffer.wrap(metadata));
     }
 
     private boolean subscribeToPart(Part part) {
-      PartSubscriber subscriber = new PartSubscriber(this);
-      Subscriber<ByteBuffer> current = partSubscriber;
-      if (current != CANCELLED && PART_SUBSCRIBER.compareAndSet(this, current, subscriber)) {
-        part.bodyPublisher().subscribe(subscriber);
+      var nextSubscriber = new PartSubscriber(this);
+      var currentSubscriber = partSubscriber;
+      if (currentSubscriber != CANCELLED
+          && PART_SUBSCRIBER.compareAndSet(this, currentSubscriber, nextSubscriber)) {
+        part.bodyPublisher().subscribe(nextSubscriber);
         return true;
       }
       return false;
@@ -612,36 +559,31 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
   }
 
   private static final class PartSubscriber implements Subscriber<ByteBuffer> {
-
     static final ByteBuffer END_OF_PART = ByteBuffer.allocate(0);
 
-    private final MultipartSubscription downstream; // for signalling
-    private final ConcurrentLinkedQueue<ByteBuffer> buffers;
-    private final Upstream upstream;
-    private final Prefetcher prefetcher;
+    private final ConcurrentLinkedQueue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
+    private final Upstream upstream = new Upstream();
+    private final Prefetcher prefetcher = new Prefetcher();
+
+    private final MultipartSubscription downstream;
 
     PartSubscriber(MultipartSubscription downstream) {
-      this.downstream = downstream;
-      buffers = new ConcurrentLinkedQueue<>();
-      upstream = new Upstream();
-      prefetcher = new Prefetcher();
+      this.downstream = requireNonNull(downstream);
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
       requireNonNull(subscription);
       if (upstream.setOrCancel(subscription)) {
-        // The only possible concurrent access to prefetcher applies here.
-        // But the operation need not be atomic as other reads/writes
-        // are done serially when ByteBuffers are polled, which is only
-        // possible after this volatile write.
+        // The only possible concurrent access to prefetcher applies here. But the operation need
+        // not be protected by a lock as other reads/writes are done serially when ByteBuffers are
+        // polled, which is only possible after this volatile write.
         prefetcher.initialize(upstream);
       }
     }
 
     @Override
     public void onNext(ByteBuffer item) {
-      requireNonNull(item);
       buffers.offer(item);
       downstream.signal(false);
     }
@@ -657,7 +599,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     public void onComplete() {
       abortUpstream(false);
       buffers.offer(END_OF_PART);
-      downstream.signal(true); // force completion signal
+      downstream.signal(true); // Force completion signal.
     }
 
     void abortUpstream(boolean cancel) {
@@ -668,11 +610,10 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       }
     }
 
-    @Nullable
-    ByteBuffer pollNext() {
-      ByteBuffer next = buffers.peek();
+    @Nullable ByteBuffer pollNext() {
+      var next = buffers.peek();
       if (next != null && next != END_OF_PART) {
-        buffers.poll(); // remove
+        buffers.poll(); // Consume.
         prefetcher.update(upstream);
       }
       return next;
