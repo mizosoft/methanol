@@ -329,7 +329,13 @@ public final class DiskStore implements Store {
         } else if (keyIfKnown == null) {
           // Delete the entry through its Viewer to know we're deleting the correct entry.
           try (var viewer = entry.view(key)) {
-            return viewer != null && viewer.removeEntry();
+            if (viewer != null) {
+              return viewer.removeEntry();
+            }
+          }
+
+          if (key.equals(entry.currentEditorKey())) {
+            return removeEntry(entry);
           }
         }
       }
@@ -424,7 +430,7 @@ public final class DiskStore implements Store {
    */
   private boolean removeEntry(Entry entry, int targetVersion) throws IOException {
     long evictedSize = evict(entry, targetVersion);
-    if (evictedSize >= 0) {
+    if (evictedSize < 0) {
       size.addAndGet(-evictedSize);
       return true;
     }
@@ -437,11 +443,10 @@ public final class DiskStore implements Store {
    */
   private long evict(Entry entry, int targetVersion) throws IOException {
     long evictedSize = entry.evict(targetVersion);
-    if (evictedSize < 0) {
-      return -1;
+    if (evictedSize >= 0) {
+      entries.remove(entry.hash, entry);
+      indexWriteScheduler.trySchedule();
     }
-    entries.remove(entry.hash, entry);
-    indexWriteScheduler.trySchedule();
     return evictedSize;
   }
 
@@ -1476,7 +1481,7 @@ public final class DiskStore implements Store {
     private @Nullable Viewer openViewerForKey(@Nullable String expectedKey) throws IOException {
       lock.lock();
       try {
-        if (!readable || maybeKeyMismatches(expectedKey)) {
+        if (!readable || keyIfKnownMismatches(expectedKey)) {
           return null;
         }
 
@@ -1509,15 +1514,13 @@ public final class DiskStore implements Store {
       }
     }
 
-    // TODO correct
     /**
-     * Returns {@code true} if the given key certainly mismatches this entry's key. {@code false} is
-     * returned if this entry's key, as known from {@link #cachedDescriptor}, either matches the
-     * given key or the key must be read from disk to know for sure ({@code cachedDescriptor} is not
-     * set).
+     * Returns {@code true} if the given key is not equal to this entry's key if known. {@code
+     * false} is returned if this entry's key, either equals the given key or the key must be read
+     * from disk to know for sure.
      */
     @GuardedBy("lock")
-    private boolean maybeKeyMismatches(@Nullable String expectedKey) {
+    private boolean keyIfKnownMismatches(@Nullable String expectedKey) {
       return keyMismatches(keyIfKnown(), expectedKey);
     }
 
@@ -1603,13 +1606,16 @@ public final class DiskStore implements Store {
           return false; // The edit to be committed has been discarded.
         }
 
-        requireState(currentEditor == editor, "unexpected editor");
+        requireState(currentEditor == editor, "committing from unexpected editor");
         currentEditor = null;
 
+        requireState(writable, "committing a non-discarded edit to a non-writable entry");
+
         EntryDescriptor committedDescriptor;
+        boolean editInPlace = dataSize < 0 && readable;
         try (editorChannel;
             var existingEntryChannel =
-                dataSize < 0 && readable ? FileChannel.open(entryFile(), READ, WRITE) : null) {
+                editInPlace ? FileChannel.open(entryFile(), READ, WRITE) : null) {
           var targetChannel = editorChannel;
           EntryDescriptor existingDescriptor = null;
           if (existingEntryChannel != null
@@ -1617,7 +1623,7 @@ public final class DiskStore implements Store {
             targetChannel = existingEntryChannel;
             committedDescriptor = new EntryDescriptor(key, metadata, existingDescriptor.dataSize);
 
-            // Close editor's file channel before deleting. See isolatedDelete(...).
+            // Close editor's file channel before deleting. See isolatedDeleteIfExists(Path)
             closeQuietly(editorChannel);
 
             // Make the entry file temporarily unreadable before modifying it. This also has to
@@ -1642,7 +1648,7 @@ public final class DiskStore implements Store {
           }
           targetChannel.force(false);
         } catch (IOException e) {
-          discardCurrentEdit();
+          discardCurrentEdit(editor);
           throw e;
         }
 
@@ -1713,31 +1719,31 @@ public final class DiskStore implements Store {
     private void discardCurrentEdit() {
       var editor = currentEditor;
       if (editor != null) {
-        editor.setClosed();
-        discardCurrentEdit(editor.channel);
+        currentEditor = null;
+        discardCurrentEdit(editor);
       }
     }
 
     @GuardedBy("lock")
-    private void discardCurrentEdit(FileChannel channel) {
-      currentEditor = null;
-      closeQuietly(channel);
-      deleteIfExistsQuietly(tempEntryFile());
+    private void discardCurrentEdit(DiskEditor editor) {
       if (!readable) {
         // Remove the entry as it could never be readable. It's safe to directly remove it from the
         // map since it's not visible to the outside world at this point (no views/edits) and
         // doesn't contribute to store size.
         entries.remove(hash, this);
       }
+
+      editor.setClosed();
+      closeQuietly(editor.channel);
+      deleteIfExistsQuietly(tempEntryFile());
     }
 
-    void discard(DiskEditor editor, FileChannel channel) {
+    void discardIfCurrentEdit(DiskEditor editor) {
       lock.lock();
       try {
-        if (currentEditor == editor) {
-          discardCurrentEdit(channel);
-        } else if (currentEditor != null) {
-          throw new IllegalStateException("unexpected editor");
+        if (editor == currentEditor) {
+          currentEditor = null;
+          discardCurrentEdit(editor);
         }
       } finally {
         lock.unlock();
@@ -1753,36 +1759,20 @@ public final class DiskStore implements Store {
       }
     }
 
-    @GuardedBy("lock")
     @Nullable String keyIfKnown() {
       var descriptor = cachedDescriptor;
-      if (descriptor != null) {
-        return descriptor.key;
-      }
-
-      var editor = currentEditor;
-      return editor != null ? editor.key() : null;
+      return descriptor != null ? descriptor.key : null;
     }
 
-    /*
-     @Nullable String keyIfKnown() {
-      var descriptor = cachedDescriptor;
-      if (descriptor != null) {
-        return descriptor.key;
-      }
-
+    @Nullable String currentEditorKey() {
       lock.lock();
       try {
         var editor = currentEditor;
-        if (editor != null) {
-          return editor.key();
-        }
+        return editor != null ? editor.key() : null;
       } finally {
         lock.unlock();
       }
-      return null;
     }
-     */
 
     Path entryFile() {
       var entryFile = lazyEntryFile;
@@ -1808,13 +1798,15 @@ public final class DiskStore implements Store {
 
     /**
      * Entry's version at the time of opening this viewer. This is used to not edit or remove an
-     * entry, through this viewer, that this wasn't opened for.
+     * entry that's been updated after this viewer had been created.
      */
     private final int entryVersion;
 
     private final EntryDescriptor descriptor;
     private final FileChannel channel;
     private final AtomicBoolean closed = new AtomicBoolean();
+
+    private final AtomicBoolean createdFirstReader = new AtomicBoolean();
 
     DiskViewer(Entry entry, int entryVersion, EntryDescriptor descriptor, FileChannel channel) {
       this.entry = entry;
@@ -1835,7 +1827,9 @@ public final class DiskStore implements Store {
 
     @Override
     public EntryReader newReader() {
-      return new DiskEntryReader();
+      return createdFirstReader.compareAndSet(false, true)
+          ? new ScatteringDiskEntryReader()
+          : new DiskEntryReader();
     }
 
     @Override
@@ -1866,9 +1860,9 @@ public final class DiskStore implements Store {
       }
     }
 
-    private final class DiskEntryReader implements EntryReader {
-      private final Lock lock = new ReentrantLock();
-      private long position;
+    private class DiskEntryReader implements EntryReader {
+      final Lock lock = new ReentrantLock();
+      long position;
 
       DiskEntryReader() {}
 
@@ -1878,15 +1872,14 @@ public final class DiskStore implements Store {
         lock.lock();
         try {
           // Make sure we don't exceed data stream bounds.
-          long currentPosition = position;
-          long available = descriptor.dataSize - currentPosition;
+          long available = descriptor.dataSize - position;
           if (available <= 0) {
             return -1;
           }
 
           int maxReadable = (int) Math.min(available, dst.remaining());
           var boundedDst = dst.duplicate().limit(dst.position() + maxReadable);
-          int read = StoreIO.readBytes(channel, boundedDst);
+          int read = readBytes(boundedDst);
           position += read;
           dst.position(dst.position() + read);
           return read;
@@ -1895,14 +1888,31 @@ public final class DiskStore implements Store {
         }
       }
 
+      int readBytes(ByteBuffer dst) throws IOException {
+        return StoreIO.readBytes(channel, dst, position);
+      }
+    }
+
+    /**
+     * A reader that uses scattering API for bulk reads. This reader relies on the file's native
+     * position (scattering API doesn't take a position argument). As such, it must only be created
+     * once.
+     */
+    private final class ScatteringDiskEntryReader extends DiskEntryReader {
+      ScatteringDiskEntryReader() {}
+
+      @Override
+      int readBytes(ByteBuffer dst) throws IOException {
+        return StoreIO.readBytes(channel, dst); // Use native file position.
+      }
+
       @Override
       public long read(List<ByteBuffer> dsts) throws IOException {
         requireNonNull(dsts);
         lock.lock();
         try {
           // Make sure we don't exceed data stream bounds.
-          long currentPosition = position;
-          long available = descriptor.dataSize - currentPosition;
+          long available = descriptor.dataSize - position;
           if (available <= 0) {
             return -1;
           }
@@ -1910,10 +1920,8 @@ public final class DiskStore implements Store {
           var boundedDsts = new ArrayList<ByteBuffer>(dsts.size());
           long maxReadable = 0;
           for (var dst : dsts) {
-            var boundedDst = dst.duplicate();
-            boundedDsts.add(boundedDst);
-            int dstMaxReadable = (int) Math.min(boundedDst.remaining(), available - maxReadable);
-            boundedDst.limit(boundedDst.position() + dstMaxReadable);
+            int dstMaxReadable = (int) Math.min(dst.remaining(), available - maxReadable);
+            boundedDsts.add(dst.duplicate().limit(dst.position() + dstMaxReadable));
             maxReadable = Math.addExact(maxReadable, dstMaxReadable);
             if (maxReadable >= available) {
               break;
@@ -1967,7 +1975,7 @@ public final class DiskStore implements Store {
     @Override
     public void close() {
       if (closed.compareAndSet(false, true)) {
-        entry.discard(this, channel);
+        entry.discardIfCurrentEdit(this);
       }
     }
 

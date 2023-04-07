@@ -171,10 +171,16 @@ public interface Store extends Closeable, Flushable {
 
     default long read(List<ByteBuffer> dsts) throws IOException {
       long totalRead = 0;
+      outerLoop:
       for (var dst : dsts) {
         int read;
-        while ((read = read(dst)) != -1) {
-          totalRead = Math.addExact(totalRead, read);
+        while (dst.hasRemaining()) {
+          read = read(dst);
+          if (read != -1) {
+            totalRead = Math.addExact(totalRead, read);
+          } else {
+            break outerLoop;
+          }
         }
       }
       return totalRead;
