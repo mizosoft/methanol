@@ -43,6 +43,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.checkerframework.checker.lock.qual.GuardedBy;
@@ -69,29 +70,54 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
   private static final ByteBuffer CLOSED_SENTINEL = ByteBuffer.allocate(0);
 
-  private final Lock closeLock = new ReentrantLock();
+  /** A lock that serializes writing to {@code pipe}. */
   private final Lock writeLock = new ReentrantLock();
+
   private final ConcurrentLinkedQueue<ByteBuffer> pipe = new ConcurrentLinkedQueue<>();
   private final AtomicBoolean subscribed = new AtomicBoolean();
   private final int bufferSize;
 
-  private volatile @Nullable SubscriptionImpl downstreamSubscription;
+  private final AtomicReference<State> state = new AtomicReference<>(Initial.INSTANCE);
 
-  /**
-   * The error received by {@link #closeExceptionally} if a subscriber is yet to arrived while
-   * calling that method. When a subscriber does arrive, it reads this field and completes the
-   * subscriber exceptionally right away.
-   */
-  @GuardedBy("lock")
-  private @MonotonicNonNull Throwable pendingCloseError;
+  private interface State {}
 
-  private volatile boolean closed;
+  private enum Initial implements State {
+    INSTANCE
+  }
+
+  private static final class Subscribed implements State {
+    final SubscriptionImpl subscription;
+
+    Subscribed(SubscriptionImpl subscription) {
+      this.subscription = requireNonNull(subscription);
+    }
+  }
+
+  private static final class Closed implements State {
+    static final Closed NORMALLY = new Closed(null);
+
+    final @Nullable Throwable exception;
+
+    Closed(@Nullable Throwable exception) {
+      this.exception = exception;
+    }
+
+    static Closed normally() {
+      return NORMALLY;
+    }
+
+    static Closed exceptionally(Throwable exception) {
+      return new Closed(requireNonNull(exception));
+    }
+  }
 
   @GuardedBy("writeLock")
   private @Nullable ByteBuffer sinkBuffer;
 
   private @MonotonicNonNull WritableByteChannel lazyChannel;
   private @MonotonicNonNull OutputStream lazyOutputStream;
+
+  private volatile boolean submittedSentinel;
 
   private WritableBodyPublisher(int bufferSize) {
     requireArgument(bufferSize > 0, "non-positive buffer size");
@@ -119,54 +145,60 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   }
 
   /**
-   * Unless already closed, causes any subscribed (or yet to subscribe) client to fail with the
-   * given error.
+   * Unless already closed, causes the subscribed (or yet to subscribe) client to fail with the
+   * given exception.
    */
-  public void closeExceptionally(Throwable error) {
-    requireNonNull(error);
-    SubscriptionImpl subscription;
-    closeLock.lock();
-    try {
-      if (closed) {
-        FlowSupport.onDroppedException(error);
+  public void closeExceptionally(Throwable exception) {
+    State prevState;
+    while (true) {
+      var currentState = state.get();
+      if (currentState instanceof Closed) {
+        FlowSupport.onDroppedException(exception);
         return;
       }
-      closed = true;
-      subscription = downstreamSubscription;
-      if (subscription == null) {
-        // Record the error to consume it when a subscriber arrives.
-        pendingCloseError = error;
-        return;
+
+      prevState = currentState;
+
+      // If subscribed, we can pass the exception to the subscription & skip storing it.
+      if (currentState instanceof Subscribed
+          && state.compareAndSet(currentState, Closed.normally())) {
+        break;
       }
-    } finally {
-      closeLock.unlock();
+
+      // If not subscribed, we must store the exception so the future subscriber consumes it.
+      if (currentState == Initial.INSTANCE
+          && state.compareAndSet(currentState, Closed.exceptionally(exception))) {
+        break;
+      }
     }
 
-    subscription.fireOrKeepAliveOnError(error);
+    if (prevState instanceof Subscribed) {
+      ((Subscribed) prevState).subscription.fireOrKeepAliveOnError(exception);
+    }
   }
 
   /**
-   * Unless already closed, causes any subscribed (or yet to subscribe) client to be completed after
-   * the written content has been consumed.
+   * Unless already closed, causes the subscribed (or yet to subscribe) client to be completed after
+   * the content written so far has been consumed.
    */
   @Override
   public void close() {
-    closeLock.lock();
-    try {
-      if (closed) {
+    State prevState;
+    while (true) {
+      var currentState = state.get();
+      if (currentState instanceof Closed) {
         return;
       }
-      closed = true;
-    } finally {
-      closeLock.unlock();
+
+      prevState = currentState;
+      if (state.compareAndSet(currentState, Closed.normally())) {
+        break;
+      }
     }
 
-    flushInternal();
-    pipe.offer(CLOSED_SENTINEL);
-
-    var subscription = downstreamSubscription;
-    if (subscription != null) {
-      subscription.fireOrKeepAlive();
+    submitSentinel();
+    if (prevState instanceof Subscribed) {
+      ((Subscribed) prevState).subscription.fireOrKeepAlive();
     }
   }
 
@@ -175,7 +207,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
    * #closeExceptionally}.
    */
   public boolean isClosed() {
-    return closed;
+    return state.get() instanceof Closed;
   }
 
   /**
@@ -185,12 +217,12 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
    */
   @Override
   public void flush() {
-    requireState(!closed, "closed");
-    if (flushInternal()) { // Notify downstream if flushing produced any signals.
-      var subscription = downstreamSubscription;
-      if (subscription != null) {
-        subscription.fireOrKeepAliveOnNext();
-      }
+    requireState(!isClosed(), "closed");
+
+    // Notify downstream if flushing produced any signals.
+    State currentState;
+    if (flushBuffer() && (currentState = state.get()) instanceof Subscribed) {
+      ((Subscribed) currentState).subscription.fireOrKeepAliveOnNext();
     }
   }
 
@@ -201,41 +233,63 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
   @Override
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
-    var subscription = new SubscriptionImpl(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      Throwable error;
-      closeLock.lock();
-      try {
-        downstreamSubscription = subscription;
-        error = pendingCloseError;
-      } finally {
-        closeLock.unlock();
-      }
-
-      if (error != null) {
-        subscription.fireOrKeepAliveOnError(error);
-      } else {
+      var subscription = new SubscriptionImpl(subscriber);
+      if (state.compareAndSet(Initial.INSTANCE, new Subscribed(subscription))) {
         subscription.fireOrKeepAlive();
+      } else {
+        var currentState = state.get();
+        if (currentState instanceof Closed) {
+          var exception = ((Closed) currentState).exception;
+          if (exception != null) {
+            subscription.fireOrKeepAliveOnError(exception);
+          } else {
+            // As close() submits the sentinel value AFTER setting the state, we must make
+            // double-check the sentinel has been submitted before starting the subscription.
+            // Otherwise, the subscription might miss the sentinel submitted by close().
+            submitSentinel();
+            subscription.fireOrKeepAlive();
+          }
+        }
       }
     } else {
       FlowSupport.rejectMulticast(subscriber);
     }
   }
 
-  private boolean flushInternal() {
-    boolean signalsAvailable = false;
+  private boolean flushBuffer() {
     writeLock.lock();
     try {
-      var buffer = sinkBuffer;
-      if (buffer != null && buffer.position() > 0) {
-        sinkBuffer = null;
-        pipe.offer(buffer.flip().asReadOnlyBuffer());
-        signalsAvailable = true;
-      }
+      return unguardedFlushBuffer();
     } finally {
       writeLock.unlock();
     }
-    return signalsAvailable;
+  }
+
+  @GuardedBy("writeLock")
+  private boolean unguardedFlushBuffer() {
+    var buffer = sinkBuffer;
+    if (buffer != null && buffer.position() > 0) {
+      sinkBuffer = null;
+      pipe.offer(buffer.flip().asReadOnlyBuffer());
+      return true;
+    }
+    return false;
+  }
+
+  private void submitSentinel() {
+    if (!submittedSentinel) {
+      writeLock.lock();
+      try {
+        if (!submittedSentinel) {
+          submittedSentinel = true;
+          flushBuffer();
+          pipe.offer(CLOSED_SENTINEL);
+        }
+      } finally {
+        writeLock.unlock();
+      }
+    }
   }
 
   /** Returns a new {@code WritableBodyPublisher}. */
@@ -254,7 +308,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     @Override
     public int write(ByteBuffer src) throws ClosedChannelException {
       requireNonNull(src);
-      if (closed) {
+      if (isClosed()) {
         throw new ClosedChannelException();
       }
       if (!src.hasRemaining()) {
@@ -278,11 +332,12 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
           }
         } while (src.hasRemaining() && isOpen());
 
-        if (closed) { // Check if asynchronously closed.
+        if (isClosed()) { // Check if asynchronously closed.
           sinkBuffer = null;
           if (written <= 0) { // Only report if no bytes were written.
             throw new AsynchronousCloseException();
           }
+          return written;
         } else {
           sinkBuffer = buffer;
         }
@@ -290,18 +345,16 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         writeLock.unlock();
       }
 
-      if (signalsAvailable) {
-        var subscription = downstreamSubscription;
-        if (subscription != null) {
-          subscription.fireOrKeepAliveOnNext();
-        }
+      State currentState;
+      if (signalsAvailable && (currentState = state.get()) instanceof Subscribed) {
+        ((Subscribed) currentState).subscription.fireOrKeepAliveOnNext();
       }
       return written;
     }
 
     @Override
     public boolean isOpen() {
-      return !closed;
+      return !isClosed();
     }
 
     @Override
@@ -355,11 +408,17 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     @Override
     protected void abort(boolean flowInterrupted) {
       pipe.clear();
+
+      // Make sure state also reflects unexpected cancellations. This also allows a possibly active
+      // writer to detect asynchronous closure.
       if (flowInterrupted) {
-        // If this publisher is cancelled "abnormally" (amid writing), possibly ongoing writers
-        // should know (by setting closed to true) so they can abort writing by throwing an
-        // exception.
-        closed = true;
+        while (true) {
+          var currentState = state.get();
+          if (!(currentState instanceof Subscribed)
+              || state.compareAndSet(currentState, Closed.normally())) {
+            return;
+          }
+        }
       }
     }
   }
