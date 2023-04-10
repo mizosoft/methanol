@@ -430,7 +430,7 @@ public final class DiskStore implements Store {
    */
   private boolean removeEntry(Entry entry, int targetVersion) throws IOException {
     long evictedSize = evict(entry, targetVersion);
-    if (evictedSize < 0) {
+    if (evictedSize >= 0) {
       size.addAndGet(-evictedSize);
       return true;
     }
