@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,62 +22,61 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 
 class FlowSupportTest {
-
   @Test
   void SYNC_EXECUTOR_executesInCurrentThread() {
     var threadRef = new AtomicReference<Thread>();
     FlowSupport.SYNC_EXECUTOR.execute(() -> threadRef.set(Thread.currentThread()));
-    assertEquals(Thread.currentThread(), threadRef.get());
+    assertThat(threadRef).hasValue(Thread.currentThread());
   }
 
   @Test
   void loadPrefetch_canSetPrefetch() {
-    System.setProperty("com.github.mizosoft.methanol.flow.prefetch", "123");
-    assertEquals(123, FlowSupport.loadPrefetch());
+    System.setProperty(FlowSupport.PREFETCH_PROP, "123");
+    assertThat(FlowSupport.loadPrefetch()).isEqualTo(123);
   }
 
   @Test
   void loadPrefetchFactor_canSetPrefetchFactor() {
     for (int i : List.of(0, 75, 100)) {
-      System.setProperty("com.github.mizosoft.methanol.flow.prefetchFactor", Integer.toString(i));
-      assertEquals(i, FlowSupport.loadPrefetchFactor());
+      System.setProperty(FlowSupport.PREFETCH_FACTOR_PROP, Integer.toString(i));
+      assertThat(FlowSupport.loadPrefetchFactor()).isEqualTo(i);
     }
   }
 
   @Test
   void loadPrefetch_usesDefaultOnNonPositiveValue() {
-    System.setProperty("com.github.mizosoft.methanol.flow.prefetch", "0");
-    assertEquals(16, FlowSupport.loadPrefetch());
+    System.setProperty(FlowSupport.PREFETCH_PROP, "0");
+    assertThat(FlowSupport.loadPrefetch()).isEqualTo(FlowSupport.DEFAULT_PREFETCH);
   }
 
   @Test
   void loadPrefetch_usesDefaultOnNonIntegerValue() {
-    System.setProperty("com.github.mizosoft.methanol.flow.prefetch", "123.33f");
-    assertEquals(16, FlowSupport.loadPrefetch());
+    System.setProperty(FlowSupport.PREFETCH_PROP, "123.33f");
+    assertThat(FlowSupport.loadPrefetch()).isEqualTo(FlowSupport.DEFAULT_PREFETCH);
   }
 
   @Test
   void loadPrefetchFactor_usesDefaultOnNegativeValue() {
-    System.setProperty("com.github.mizosoft.methanol.flow.prefetchFactor", "-1");
-    assertEquals(50, FlowSupport.loadPrefetchFactor());
+    System.setProperty(FlowSupport.PREFETCH_FACTOR_PROP, "-1");
+    assertThat(FlowSupport.loadPrefetchFactor()).isEqualTo(FlowSupport.DEFAULT_PREFETCH_FACTOR);
   }
 
   @Test
   void loadPrefetchFactor_usesDefaultOnNonPercentageValue() {
-    System.setProperty("com.github.mizosoft.methanol.flow.prefetchFactor", "101");
-    assertEquals(50, FlowSupport.loadPrefetchFactor());
+    System.setProperty(FlowSupport.PREFETCH_FACTOR_PROP, "101");
+    assertThat(FlowSupport.loadPrefetchFactor()).isEqualTo(FlowSupport.DEFAULT_PREFETCH_FACTOR);
   }
 
   @Test
   void loadPrefetchFactor_usesDefaultOnNonIntegerValue() {
-    System.setProperty("com.github.mizosoft.methanol.flow.prefetchFactor", "12.123f");
-    assertEquals(50, FlowSupport.loadPrefetchFactor());
+    System.setProperty(FlowSupport.PREFETCH_FACTOR_PROP, "12.123f");
+    assertThat(FlowSupport.loadPrefetchFactor()).isEqualTo(FlowSupport.DEFAULT_PREFETCH_FACTOR);
   }
 }

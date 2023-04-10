@@ -71,7 +71,7 @@ class AbstractSubscriptionTest {
   void subscribeNoSignals(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     assertThat(subscriber.awaitSubscription()).isSameAs(subscription);
     assertThat(subscriber.nextCount()).isZero();
     assertThat(subscriber.errorCount()).isZero();
@@ -82,7 +82,7 @@ class AbstractSubscriptionTest {
   void noItems(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscription.complete();
     subscriber.awaitCompletion();
     assertThat(subscriber.nextCount()).isZero();
@@ -94,7 +94,7 @@ class AbstractSubscriptionTest {
   void errorSignal(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signalError(new TestException());
+    subscription.fireOrKeepAliveOnError(new TestException());
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
     assertThat(subscriber.nextCount()).isZero();
     assertThat(subscriber.completionCount()).isZero();
@@ -105,7 +105,7 @@ class AbstractSubscriptionTest {
   void errorOnSubscribe(Executor executor) {
     var subscriber = new TestSubscriber<Integer>().throwOnSubscribeAndOnNext(true);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
     assertThat(subscriber.nextCount()).isZero();
     assertThat(subscriber.errorCount()).isOne();
@@ -116,7 +116,7 @@ class AbstractSubscriptionTest {
   void oneItem(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscription.submit(1);
     assertThat(subscriber.pollNext()).isOne();
     subscription.complete();
@@ -130,9 +130,9 @@ class AbstractSubscriptionTest {
   void oneItemThenErrorNoWaitForItem(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscription.submit(1);
-    subscription.signalError(new TestException());
+    subscription.fireOrKeepAliveOnError(new TestException());
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
     assertThat(subscriber.nextCount()).isLessThanOrEqualTo(1);
     assertThat(subscriber.errorCount()).isOne();
@@ -143,10 +143,10 @@ class AbstractSubscriptionTest {
   void oneItemThenErrorWaitForItem(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscription.submit(1);
     assertThat(subscriber.pollNext()).isOne();
-    subscription.signalError(new TestException());
+    subscription.fireOrKeepAliveOnError(new TestException());
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
     assertThat(subscriber.nextCount()).isEqualTo(1);
     assertThat(subscriber.errorCount()).isOne();
@@ -157,7 +157,7 @@ class AbstractSubscriptionTest {
   void itemsAfterCancellation(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     for (int i = 1; i <= 40; ++i) {
       subscription.submit(i);
       if (i == 1) {
@@ -175,7 +175,7 @@ class AbstractSubscriptionTest {
   void errorOnNext(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscription.submit(1);
     subscriber.throwOnNext(true);
     subscription.submit(2);
@@ -192,7 +192,7 @@ class AbstractSubscriptionTest {
   void itemOrder(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     for (int i = 1; i <= 20; ++i) {
       subscription.submit(i);
     }
@@ -208,7 +208,7 @@ class AbstractSubscriptionTest {
   void noItemsWithoutRequests(Executor executor) {
     var subscriber = new TestSubscriber<Integer>().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscription.submit(1);
     subscription.submit(2);
 
@@ -228,7 +228,7 @@ class AbstractSubscriptionTest {
   void noItemsMoreThanRequestedAreReceived(Executor executor) {
     var subscriber = new TestSubscriber<Integer>().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscription.submit(1);
     subscription.submit(2);
     subscription.submit(3);
@@ -251,7 +251,7 @@ class AbstractSubscriptionTest {
   void requestMoreThanAvailable(Executor executor) {
     var subscriber = new TestSubscriber<Integer>().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscriber.requestItems(2);
     assertThat(subscriber.nextCount()).isZero();
 
@@ -274,7 +274,7 @@ class AbstractSubscriptionTest {
   void requestOneReceiveOne(Executor executor) {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscriber.awaitSubscription(); // Makes sure one item is automatically requested.
     subscriber.autoRequest(0);
     subscription.submit(1);
@@ -288,7 +288,7 @@ class AbstractSubscriptionTest {
   void zeroRequest(Executor executor) {
     var subscriber = new TestSubscriber<Integer>().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscriber.awaitSubscription();
     subscription.request(0);
     subscription.submit(1);
@@ -302,7 +302,7 @@ class AbstractSubscriptionTest {
   void negativeRequest(Executor executor) {
     var subscriber = new TestSubscriber<Integer>().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscriber.requestItems(-1);
     subscription.submit(1);
     subscription.submit(2);
@@ -341,7 +341,7 @@ class AbstractSubscriptionTest {
     }
     var subscription = new SubmittableSubscription<>(new Sub(), executor);
     ref.set(subscription);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     CompletableFuture.runAsync(() -> subscription.submit(Boolean.TRUE)).get(20, TimeUnit.SECONDS);
     assertThat(finished.await(20, TimeUnit.SECONDS)).isTrue();
   }
@@ -376,7 +376,7 @@ class AbstractSubscriptionTest {
     var subscriber = new TestSubscriber<Integer>();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.submit(1);
-    subscription.signalError(new TestException());
+    subscription.fireOrKeepAliveOnError(new TestException());
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class); // Complete first.
     subscription.cancel(); // Mustn't call abort() again.
     subscription.awaitAbort();
@@ -388,7 +388,7 @@ class AbstractSubscriptionTest {
   void abortByErrorOnSubscribe(Executor executor) {
     var subscriber = new TestSubscriber<Integer>().throwOnSubscribe(true);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
     subscription.awaitAbort();
     assertThat(subscriber.errorCount()).isOne();
@@ -400,7 +400,7 @@ class AbstractSubscriptionTest {
   void abortByErrorOnNext(Executor executor) {
     var subscriber = new TestSubscriber<Integer>().throwOnNext(true);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
     subscription.submit(1);
     subscription.complete();
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
@@ -418,21 +418,9 @@ class AbstractSubscriptionTest {
         };
     var subscription = new SubmittableSubscription<>(new TestSubscriber<Integer>(), busyExecutor);
     assertThatExceptionOfType(RejectedExecutionException.class)
-        .isThrownBy(() -> subscription.signal(true));
+        .isThrownBy(subscription::fireOrKeepAlive);
     assertThat(subscription.abortCount()).isOne();
     assertThat(subscription.flowInterrupted()).isTrue();
-  }
-
-  @ExecutorParameterizedTest
-  void multipleErrors(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>().throwOnSubscribeAndOnNext(true);
-    var subscription = new SubmittableSubscription<>(subscriber, executor);
-    var suppressed = new TestException();
-    subscription.signalError(suppressed);
-    assertThat(subscriber.awaitError())
-        .isInstanceOf(TestException.class)
-        .hasSuppressedException(suppressed);
-    assertThat(subscriber.errorCount()).isOne();
   }
 
   /** Test that emit() stops in case of an asynchronous signalError detected by submitOnNext. */
@@ -450,11 +438,11 @@ class AbstractSubscriptionTest {
           }
         }.autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
-    subscription.signal(true);
+    subscription.fireOrKeepAlive();
 
     // Make 2 items available without signalling.
-    subscription.items().offer(1);
-    subscription.items().offer(1);
+    subscription.submitSilently(1);
+    subscription.submitSilently(1);
 
     // Request 2 items (request asynchronously to not block in case the executor is synchronous).
     CompletableFuture.runAsync(() -> subscriber.requestItems(2L));
@@ -463,7 +451,7 @@ class AbstractSubscriptionTest {
     awaitUninterruptibly(firstOnNextLatch);
 
     // Set pendingError (first onNext now blocking).
-    subscription.signalError(new TestException());
+    subscription.fireOrKeepAliveOnError(new TestException());
 
     // Let first onNext pass.
     onErrorLatch.countDown();

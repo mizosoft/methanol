@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,72 +22,122 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.from;
+import static org.assertj.core.api.InstanceOfAssertFactories.LONG;
 
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Flow.Subscription;
 import org.junit.jupiter.api.Test;
 
 class PrefetcherTest {
+  @Test
+  void defaultConstructor() {
+    assertThat(new Prefetcher())
+        .returns(FlowSupport.prefetch(), from(Prefetcher::prefetch))
+        .returns(FlowSupport.prefetchThreshold(), from(Prefetcher::prefetchThreshold));
+  }
 
   @Test
   void initializeRequestsPrefetch() {
-    var s = new RecordingSubscription();
-    var ups = new Upstream();
-    ups.setOrCancel(s);
-    var pref = new Prefetcher();
-    pref.initialize(ups);
-    assertEquals(1, s.demands.size());
-    assertEquals(FlowSupport.prefetch(), s.demands.poll());
+    var subscription = new RecordingSubscription();
+    var upstream = new Upstream();
+    assertThat(upstream.setOrCancel(subscription)).isTrue();
+
+    var prefetcher = new Prefetcher(10, 5);
+    prefetcher.initialize(upstream);
+    assertThat(subscription.demands).hasSize(1).first(LONG).isEqualTo(10);
   }
 
   @Test
   void updateAfterThreshold() {
-    var s = new RecordingSubscription();
-    var ups = new Upstream();
-    ups.setOrCancel(s);
-    var pref = new Prefetcher();
-    pref.initialize(ups);
-    int limit = FlowSupport.prefetch() - FlowSupport.prefetchThreshold();
-    for (int i = 0; i < Math.max(1, limit); i++) { // should have at least 1 update
-      assertEquals(1, s.demands.size());
-      assertEquals(FlowSupport.prefetch(), s.demands.peek());
-      pref.update(ups);
+    var subscription = new RecordingSubscription();
+    var upstream = new Upstream();
+    assertThat(upstream.setOrCancel(subscription)).isTrue();
+
+    var prefetcher = new Prefetcher(10, 7);
+    prefetcher.initialize(upstream);
+    assertThat(subscription.demands).first(LONG).isEqualTo(10);
+
+    int limit = 3;
+    for (int i = 0; i < limit; i++) {
+      assertThat(subscription.demands.size()).isEqualTo(1); // No new requests are made.
+      prefetcher.update(upstream);
     }
-    assertEquals(2, s.demands.size());
-    s.demands.poll();
-    int expectedRequest = Math.max(1, limit);
-    assertEquals(expectedRequest, s.demands.poll());
+
+    assertThat(subscription.demands).hasSize(2).element(1, LONG).isEqualTo(limit);
+
+    for (int i = 0; i < limit; i++) {
+      assertThat(subscription.demands.size()).isEqualTo(2); // No new requests are made.
+      prefetcher.update(upstream);
+    }
+
+    assertThat(subscription.demands).hasSize(3).element(1, LONG).isEqualTo(limit);
+  }
+
+  @Test
+  void maxPrefetchThreshold() {
+    var subscription = new RecordingSubscription();
+    var upstream = new Upstream();
+    assertThat(upstream.setOrCancel(subscription)).isTrue();
+
+    var prefetcher = new Prefetcher(10, 10);
+    prefetcher.initialize(upstream);
+    assertThat(subscription.demands).first(LONG).isEqualTo(10);
+
+    prefetcher.update(upstream);
+    assertThat(subscription.demands).hasSize(2).element(1, LONG).isEqualTo(1);
+
+    prefetcher.update(upstream);
+    assertThat(subscription.demands).hasSize(3).element(1, LONG).isEqualTo(1);
+  }
+
+  @Test
+  void minPrefetchThreshold() {
+    var subscription = new RecordingSubscription();
+    var upstream = new Upstream();
+    assertThat(upstream.setOrCancel(subscription)).isTrue();
+
+    var prefetcher = new Prefetcher(10, 0);
+    prefetcher.initialize(upstream);
+    assertThat(subscription.demands).first(LONG).isEqualTo(10);
+
+    for (int i = 0; i < 10; i++) {
+      assertThat(subscription.demands).hasSize(1);
+      prefetcher.update(upstream);
+    }
+
+    assertThat(subscription.demands).hasSize(2).element(1, LONG).isEqualTo(10);
   }
 
   @Test
   void activeUpdates() {
-    var s = new RecordingSubscription();
-    var ups = new Upstream();
-    ups.setOrCancel(s);
-    var pref = new Prefetcher();
-    pref.initialize(ups);
-    for (int i = 0; i < 1 + 100 * FlowSupport.prefetch(); i++) {
-      pref.update(ups);
-      int w = pref.currentWindow();
-      assertTrue(w <= FlowSupport.prefetch() && w >= FlowSupport.prefetchThreshold(),
-          "unexpected window: " + w);
+    var subscription = new RecordingSubscription();
+    var upstream = new Upstream();
+    upstream.setOrCancel(subscription);
+
+    var prefetcher = new Prefetcher(10, 7);
+    prefetcher.initialize(upstream);
+    for (int i = 0; i < 100 * 10; i++) {
+      prefetcher.update(upstream);
+      int w = prefetcher.currentWindow();
+      assertThat(w).isBetween(7, 11); // [7, 10]
     }
   }
 
   private static class RecordingSubscription implements Subscription {
-
-    private final Queue<Long> demands = new LinkedList<>();
+    private final List<Long> demands = new ArrayList<>();
 
     RecordingSubscription() {}
 
-    @Override public synchronized void request(long n) {
-      demands.offer(n);
+    @Override
+    public void request(long n) {
+      demands.add(n);
     }
 
-    @Override public void cancel() {
+    @Override
+    public void cancel() {
       throw new AssertionError();
     }
   }

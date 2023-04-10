@@ -634,7 +634,7 @@ class ProgressTrackerTest {
     var subscriber = tracker.tracking(BodySubscribers.fromSubscriber(downstream), listener, -1);
     upstream.subscribe(subscriber);
     listener.awaitSubscription();
-    upstream.firstSubscription().signalError(new TestException());
+    upstream.firstSubscription().fireOrKeepAliveOnError(new TestException());
     assertThat(listener.awaitError()).isInstanceOf(TestException.class);
     assertThat(downstream.awaitError()).isInstanceOf(TestException.class);
   }
@@ -1382,7 +1382,7 @@ class ProgressTrackerTest {
     var subscriber = new TestSubscriber<>();
     publisher.subscribe(subscriber);
     listener.awaitSubscription();
-    upstream.firstSubscription().signalError(new TestException());
+    upstream.firstSubscription().fireOrKeepAliveOnError(new TestException());
     assertThat(listener.awaitError()).isInstanceOf(TestException.class);
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
   }

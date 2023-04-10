@@ -30,7 +30,7 @@ import static java.util.Objects.requireNonNullElse;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.PartSequenceListener;
 import com.github.mizosoft.methanol.internal.extensions.ForwardingBodyPublisher;
-import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
+import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -43,7 +43,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -103,8 +102,6 @@ public final class ProgressTracker {
    * Returns a {@code BodyPublisher} that tracks the given {@code BodyPublisher}'s upload progress.
    */
   public BodyPublisher tracking(BodyPublisher upstream, Listener listener) {
-    requireNonNull(upstream, "upstream");
-    requireNonNull(listener, "listener");
     var trackingPublisher = new TrackingBodyPublisher(upstream, listener, options);
     // Don't swallow upstream's MediaType if there's one
     return upstream instanceof MimeBodyPublisher
@@ -119,8 +116,6 @@ public final class ProgressTracker {
    */
   public MimeBodyPublisher trackingMultipart(
       MultipartBodyPublisher upstream, MultipartListener listener) {
-    requireNonNull(upstream, "upstream");
-    requireNonNull(listener, "listener");
     return new MultipartTrackingBodyPublisher(upstream, listener, options);
   }
 
@@ -131,8 +126,6 @@ public final class ProgressTracker {
    */
   public <T> BodySubscriber<T> tracking(
       BodySubscriber<T> downstream, Listener listener, long contentLengthIfKnown) {
-    requireNonNull(downstream, "downstream");
-    requireNonNull(listener, "listener");
     return new TrackingBodySubscriber<>(downstream, listener, options, contentLengthIfKnown);
   }
 
@@ -141,8 +134,8 @@ public final class ProgressTracker {
    * returned by the given handler.
    */
   public <T> BodyHandler<T> tracking(BodyHandler<T> handler, Listener listener) {
-    requireNonNull(handler, "handler");
-    requireNonNull(listener, "listener");
+    requireNonNull(handler);
+    requireNonNull(listener);
     return responseInfo ->
         tracking(
             handler.apply(responseInfo),
@@ -324,9 +317,9 @@ public final class ProgressTracker {
         Clock clock) {
       this.bytesTransferredThreshold = bytesTransferredThreshold;
       this.timePassedThreshold = timePassedThreshold;
-      this.executor = executor;
+      this.executor = requireNonNull(executor);
       this.enclosedProgress = enclosedProgress;
-      this.clock = clock;
+      this.clock = requireNonNull(clock);
     }
   }
 
@@ -574,7 +567,7 @@ public final class ProgressTracker {
 
     abstract long countBytes(B batch);
 
-    // Overriden by MultipartTrackingSubscriber
+    // Overridden by MultipartTrackingSubscriber.
     void updateProgression(R progression, Instant updateTime, long byteCount) {
       progression.update(updateTime, byteCount);
     }
@@ -620,11 +613,9 @@ public final class ProgressTracker {
       }
     }
 
-    private final class ProgressSubscription extends AbstractSubscription<P> {
+    private final class ProgressSubscription extends AbstractQueueSubscription<P> {
       private final Options options;
       private final R progression;
-      private final ConcurrentLinkedQueue<P> progressEvents = new ConcurrentLinkedQueue<>();
-      private volatile boolean complete;
 
       /**
        * Whether to signal a 100% progress from onComplete(). This can be avoided in case a 100%
@@ -638,32 +629,12 @@ public final class ProgressTracker {
         this.progression = progression;
       }
 
-      @Override
-      protected long emit(Subscriber<? super P> downstream, long emit) {
-        long submitted = 0L;
-        while (true) {
-          P progress;
-          if (progressEvents.isEmpty() && complete) {
-            cancelOnComplete(downstream);
-            return 0L;
-          } else if (submitted >= emit
-              || (progress = progressEvents.poll()) == null) { // Exhausted demand or progresses
-            return submitted;
-          } else if (submitOnNext(downstream, progress)) {
-            submitted++;
-          } else {
-            return 0L;
-          }
-        }
-      }
-
       void onSubscribe() {
         progression.start(options.clock.instant());
         if (options.enclosedProgress) {
-          // Publish a 0% progress event
-          progressEvents.offer(progression.snapshot(false));
+          submitSilently(progression.snapshot(false));
         }
-        signal(true);
+        fireOrKeepAlive();
       }
 
       void onNext(long byteCount) {
@@ -671,24 +642,23 @@ public final class ProgressTracker {
         if (progression.hasPendingProgress()) {
           var progress = progression.snapshot(false);
           signaledLastProgress = progress.done();
-          progressEvents.offer(progress);
           progression.rewind();
-          signal(false);
+          submit(progress);
         }
       }
 
       void onError(Throwable error) {
-        signalError(error);
+        fireOrKeepAliveOnError(error);
       }
 
       void onComplete() {
         if (options.enclosedProgress && !signaledLastProgress) {
           // Signal 100% progress after updating time
           updateProgression(progression, options.clock.instant(), 0);
-          progressEvents.offer(progression.snapshot(true));
+          submitAndComplete(progression.snapshot(true));
+        } else {
+          complete();
         }
-        complete = true;
-        signal(true);
       }
     }
   }
@@ -729,8 +699,8 @@ public final class ProgressTracker {
 
     TrackingBodyPublisher(BodyPublisher upstream, Listener listener, Options options) {
       super(upstream);
-      this.listener = listener;
-      this.options = options;
+      this.listener = requireNonNull(listener);
+      this.options = requireNonNull(options);
     }
 
     @Override
@@ -771,8 +741,8 @@ public final class ProgressTracker {
     MultipartTrackingBodyPublisher(
         MultipartBodyPublisher upstream, MultipartListener listener, Options options) {
       super(upstream);
-      this.listener = listener;
-      this.options = options;
+      this.listener = requireNonNull(listener);
+      this.options = requireNonNull(options);
       this.parts = upstream.parts();
       this.mediaType = upstream.mediaType();
     }

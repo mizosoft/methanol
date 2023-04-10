@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,37 +22,47 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
-/** Simple class for encapsulating prefetch logic used across subscribers. */
-public final class Prefetcher {
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 
+/** An object that prefetches items from upstream and maintains a certain number of . */
+public final class Prefetcher {
   private final int prefetch;
-  private final int prefetchThreshold;
-  private volatile int upstreamWindow;
+  private final int limit;
+  private int consumed;
 
   public Prefetcher() {
-    prefetch = FlowSupport.prefetch();
-    prefetchThreshold = FlowSupport.prefetchThreshold();
+    this(FlowSupport.prefetch(), FlowSupport.prefetchThreshold());
+  }
+
+  public Prefetcher(int prefetch, int prefetchThreshold) {
+    requireArgument(
+        prefetch > 0 && prefetchThreshold >= 0 && prefetchThreshold <= prefetch,
+        "illegal prefetch and/or prefetchThreshold");
+    this.prefetch = prefetch;
+    this.limit = prefetch - prefetchThreshold;
   }
 
   public void initialize(Upstream upstream) {
-    upstreamWindow = prefetch;
     upstream.request(prefetch);
   }
 
   public void update(Upstream upstream) {
-    // Decrement current window and bring it back to
-    // prefetch if became <= prefetchThreshold
-    int update = upstreamWindow - 1;
-    if (update <= prefetchThreshold) {
-      upstreamWindow = prefetch;
-      upstream.request(prefetch - update);
-    } else {
-      upstreamWindow = update;
+    int c = ++consumed;
+    if (c >= limit) {
+      consumed = 0;
+      upstream.request(c);
     }
   }
 
-  // for testing
+  int prefetch() {
+    return prefetch;
+  }
+
+  int prefetchThreshold() {
+    return prefetch - limit;
+  }
+
   int currentWindow() {
-    return upstreamWindow;
+    return prefetch - consumed;
   }
 }

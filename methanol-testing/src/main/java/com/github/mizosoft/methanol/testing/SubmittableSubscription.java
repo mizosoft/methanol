@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,69 +24,81 @@ package com.github.mizosoft.methanol.testing;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import org.checkerframework.checker.lock.qual.GuardedBy;
 
-/** Minimal AbstractSubscription implementation that publishes submitted items. */
-public final class SubmittableSubscription<T> extends AbstractSubscription<T> {
-  private final ConcurrentLinkedQueue<T> items;
-  private volatile boolean complete;
-  private volatile int abortCount;
-  private volatile boolean flowInterrupted;
+/** A subscription that publishes submitted items. */
+public final class SubmittableSubscription<T> extends AbstractQueueSubscription<T> {
+  private static final int AWAIT_ABORT_TIMEOUT_SECONDS = 2;
+
+  private final Lock abortLock = new ReentrantLock();
+  private final Condition abortedCondition = abortLock.newCondition();
+
+  @GuardedBy("abortLock")
+  private int abortCount;
+
+  @GuardedBy("abortLock")
+  private boolean flowInterrupted;
 
   public SubmittableSubscription(Subscriber<? super T> downstream, Executor executor) {
     super(downstream, executor);
-    items = new ConcurrentLinkedQueue<>();
   }
 
   @Override
-  protected long emit(Subscriber<? super T> downstream, long emit) {
-    long submitted = 0L;
-    while (true) {
-      if (items.isEmpty() && complete) { // End of source.
-        cancelOnComplete(downstream);
-        return 0;
-      } else if (items.isEmpty() || submitted >= emit) { // Exhausted source or demand.
-        return submitted;
-      } else if (!submitOnNext(downstream, items.poll())) {
-        return 0;
-      } else {
-        submitted++;
+  protected void abort(boolean flowInterrupted) {
+    super.abort(flowInterrupted);
+    abortLock.lock();
+    try {
+      if (abortCount++ == 0) {
+        this.flowInterrupted = flowInterrupted;
       }
+      abortedCondition.signalAll();
+    } finally {
+      abortLock.unlock();
+    }
+  }
+
+  public void awaitAbort() {
+    abortLock.lock();
+    try {
+      long remainingNanos = TimeUnit.SECONDS.toNanos(AWAIT_ABORT_TIMEOUT_SECONDS);
+      while (abortCount == 0) {
+        if (remainingNanos <= 0) {
+          fail("timed out while waiting for abort()");
+        }
+        try {
+          remainingNanos = abortedCondition.awaitNanos(remainingNanos);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    } finally {
+      abortLock.unlock();
     }
   }
 
   @Override
-  protected synchronized void abort(boolean flowInterrupted) {
-    if (abortCount++ == 0) {
-      this.flowInterrupted = flowInterrupted;
-    }
-    notifyAll();
-  }
-
-  public synchronized void awaitAbort() {
-    while (abortCount == 0) {
-      try {
-        wait();
-      } catch (InterruptedException e) {
-        fail(e);
-      }
-    }
-  }
-
   public void submit(T item) {
-    items.offer(item);
-    signal(false);
+    super.submit(item);
   }
 
+  @Override
+  public void submitSilently(T item) {
+    super.submitSilently(item);
+  }
+
+  @Override
   public void complete() {
-    complete = true;
-    signal(true);
+    super.complete();
   }
 
+  @Override
   public long currentDemand() {
     return super.currentDemand();
   }
@@ -97,9 +109,5 @@ public final class SubmittableSubscription<T> extends AbstractSubscription<T> {
 
   public boolean flowInterrupted() {
     return flowInterrupted;
-  }
-
-  public Queue<T> items() {
-    return items;
   }
 }

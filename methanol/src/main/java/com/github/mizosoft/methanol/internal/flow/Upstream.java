@@ -100,6 +100,14 @@ public final class Upstream {
     subscription = CANCELLED_SUBSCRIPTION;
   }
 
+  public void cancel(boolean flowInterrupted) {
+    if (flowInterrupted) {
+      cancel();
+    } else {
+      clear();
+    }
+  }
+
   public Subscription get() {
     return subscription;
   }

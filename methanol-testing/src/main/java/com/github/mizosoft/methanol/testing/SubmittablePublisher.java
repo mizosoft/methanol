@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,7 +48,7 @@ public final class SubmittablePublisher<T> implements Publisher<T>, AutoCloseabl
   public void subscribe(Subscriber<? super T> subscriber) {
     var subscription = new SubmittableSubscription<T>(subscriber, executor);
     subscriptions.add(subscription);
-    subscription.signal(true); // Apply onSubscribe.
+    subscription.fireOrKeepAlive();
   }
 
   public SubmittableSubscription<T> firstSubscription() {

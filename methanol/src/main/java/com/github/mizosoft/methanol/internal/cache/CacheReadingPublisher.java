@@ -26,7 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
+import com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.lang.System.Logger;
@@ -66,7 +66,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
   public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      new CacheReadingSubscription(subscriber, executor, viewer, listener).signal(true);
+      new CacheReadingSubscription(subscriber, executor, viewer, listener).fireOrKeepAlive();
     } else {
       FlowSupport.rejectMulticast(subscriber);
     }
@@ -111,7 +111,8 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
   }
 
   @SuppressWarnings("unused") // VarHandle indirection.
-  static final class CacheReadingSubscription extends AbstractSubscription<List<ByteBuffer>> {
+  static final class CacheReadingSubscription
+      extends AbstractPollableSubscription<List<ByteBuffer>> {
     /**
      * The number of buffers to fill readQueue with, without necessarily being requested by
      * downstream.
@@ -171,40 +172,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     @Override
-    protected long emit(Subscriber<? super List<ByteBuffer>> downstream, long emit) {
-      // Fire a read if this is the first run ever.
-      if (state == State.INITIAL && STATE.compareAndSet(this, State.INITIAL, State.IDLE)) {
-        tryScheduleRead(false);
-      }
-
-      long submitted = 0L;
-      while (true) {
-        List<ByteBuffer> batch;
-        if (exhausted && readQueue.isEmpty()) {
-          cancelOnComplete(downstream);
-          return 0L;
-        } else if (submitted >= emit
-            || (batch = pollBatch()).isEmpty()) { // Exhausted demand or batches.
-          return submitted;
-        } else if (submitOnNext(downstream, batch)) {
-          submitted++;
-        } else {
-          return 0L;
-        }
-      }
-    }
-
-    @Override
-    protected void abort(boolean flowInterrupted) {
-      state = State.DONE;
-      try {
-        viewer.close();
-      } catch (Throwable t) {
-        logger.log(Level.WARNING, "exception thrown by Viewer::close", t);
-      }
-    }
-
-    private List<ByteBuffer> pollBatch() {
+    protected @Nullable List<ByteBuffer> poll() {
       List<ByteBuffer> batch = null;
       do {
         var buffer = readQueue.poll();
@@ -219,10 +187,34 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       } while (batch.size() < MAX_BATCH_SIZE);
 
       // Refill readQueue if enough buffers are consumed.
-      if (readQueue.size() <= PREFETCH_THRESHOLD) {
+      if (!exhausted && readQueue.size() <= PREFETCH_THRESHOLD) {
         tryScheduleRead(false);
       }
-      return batch != null ? List.copyOf(batch) : List.of();
+      return batch;
+    }
+
+    @Override
+    protected boolean isComplete() {
+      return exhausted && readQueue.isEmpty();
+    }
+
+    @Override
+    protected long emit(Subscriber<? super List<ByteBuffer>> downstream, long emit) {
+      // Fire a read if this is the first run ever.
+      if (state == State.INITIAL && STATE.compareAndSet(this, State.INITIAL, State.IDLE)) {
+        tryScheduleRead(false);
+      }
+      return super.emit(downstream, emit);
+    }
+
+    @Override
+    protected void abort(boolean flowInterrupted) {
+      state = State.DONE;
+      try {
+        viewer.close();
+      } catch (Throwable t) {
+        logger.log(Level.WARNING, "exception thrown by Viewer::close", t);
+      }
     }
 
     /**
@@ -240,7 +232,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         } catch (Throwable t) {
           state = State.DONE;
           listener.onReadFailure(t);
-          signalError(t);
+          fireOrKeepAliveOnError(t);
           return false;
         }
         return true;
@@ -260,12 +252,12 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       if (exception != null) {
         state = State.DONE;
         listener.onReadFailure(exception);
-        signalError(exception);
+        fireOrKeepAliveOnError(exception);
       } else if (read < 0) {
         state = State.DONE;
         exhausted = true;
         listener.onReadSuccess();
-        signal(true); // Force completion signal.
+        fireOrKeepAlive();
       } else {
         if (read > 0) {
           readQueue.offer(buffer.flip().asReadOnlyBuffer());
@@ -274,7 +266,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
           // There might've been missed signals just before CASing to IDLE.
           tryScheduleRead(false);
         }
-        signal(false);
+        fireOrKeepAliveOnNext();
       }
     }
   }

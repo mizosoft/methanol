@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,16 +24,17 @@ package com.github.mizosoft.methanol.tck;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 
 public class AbstractSubscriptionTck extends FlowPublisherVerification<Long> {
-
   public AbstractSubscriptionTck() {
     super(TckUtils.testEnvironment());
   }
@@ -45,16 +46,15 @@ public class AbstractSubscriptionTck extends FlowPublisherVerification<Long> {
 
   @Override
   public Publisher<Long> createFlowPublisher(long elements) {
-    return d -> new RangeSubscription(d, executor(), 0, elements).signal(true);
+    return d -> new RangeSubscription(d, executor(), 0, elements).fireOrKeepAlive();
   }
 
   @Override
   public Publisher<Long> createFailedFlowPublisher() {
-    return d -> new FailedSubscription(d, executor()).signal(true);
+    return d -> new FailedSubscription(d, executor()).fireOrKeepAlive();
   }
 
-  private static final class RangeSubscription extends AbstractSubscription<Long> {
-
+  private static final class RangeSubscription extends AbstractPollableSubscription<Long> {
     private long from;
     private final long toExclusive;
 
@@ -66,22 +66,17 @@ public class AbstractSubscriptionTck extends FlowPublisherVerification<Long> {
     }
 
     @Override
-    protected long emit(Subscriber<? super Long> downstream, long emit) {
-      for (long c = 0L; ; c++) {
-        if (from >= toExclusive) {
-          cancelOnComplete(downstream);
-          return 0;
-        } else if (c >= emit) {
-          return c;
-        } else if (!submitOnNext(downstream, from++)) {
-          return 0;
-        }
-      }
+    protected @Nullable Long poll() {
+      return from < toExclusive ? from++ : null;
+    }
+
+    @Override
+    protected boolean isComplete() {
+      return from >= toExclusive;
     }
   }
 
   private static final class FailedSubscription extends AbstractSubscription<Long> {
-
     FailedSubscription(Subscriber<? super Long> downstream, Executor executor) {
       super(requireNonNull(downstream), executor);
     }

@@ -212,7 +212,7 @@ class CacheWritingPublisherTest {
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
     publisher.subscribe(subscriber);
-    upstream.firstSubscription().signalError(new TestException());
+    upstream.firstSubscription().fireOrKeepAliveOnError(new TestException());
     upstream.close();
 
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);

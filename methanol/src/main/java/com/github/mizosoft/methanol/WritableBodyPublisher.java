@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
+import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.Flushable;
 import java.io.IOException;
@@ -50,15 +50,15 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A {@code BodyPublisher} that exposes a sink for writing the body's content. It is recommended to
- * use {@link MoreBodyPublishers#ofOutputStream} or {@link MoreBodyPublishers#ofWritableByteChannel}
- * instead of directly using on this class.
+ * A {@code BodyPublisher} that allows streaming the body's content through an {@code OutputStream}
+ * or a {@code WritableByteChannel}. It is recommended to use {@link
+ * MoreBodyPublishers#ofOutputStream} or {@link MoreBodyPublishers#ofWritableByteChannel} instead of
+ * directly using this class.
  *
- * <p>The sink can be acquired either as a {@link WritableByteChannel} or an {@link OutputStream}.
- * After writing is finished, the publisher must be closed to complete the request (either by
- * calling {@link #close()} or closing one of the returned sinks, or using a try-with-resources
- * construct). Additionally, {@link #closeExceptionally(Throwable)} can be used to fail the request
- * in case an error is encountered while writing.
+ * <p>After writing is finished, the publisher must be closed to complete the request (either by
+ * calling {@link #close()} or closing the {@code OutputStream} or the {@code WritableByteChannel},
+ * or using a try-with-resources construct). Additionally, {@link #closeExceptionally(Throwable)}
+ * can be used to fail the request in case an error is encountered while writing.
  *
  * <p>Note that ({@link #contentLength()} always returns {@code -1}). If the content length is known
  * prior to writing, {@link BodyPublishers#fromPublisher(Publisher, long)} can be used to attach the
@@ -142,7 +142,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       closeLock.unlock();
     }
 
-    subscription.signalError(error);
+    subscription.fireOrKeepAliveOnError(error);
   }
 
   /**
@@ -163,7 +163,11 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
     flushInternal();
     pipe.offer(CLOSED_SENTINEL);
-    signalDownstream(true);
+
+    var subscription = downstreamSubscription;
+    if (subscription != null) {
+      subscription.fireOrKeepAlive();
+    }
   }
 
   /**
@@ -183,7 +187,10 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   public void flush() {
     requireState(!closed, "closed");
     if (flushInternal()) { // Notify downstream if flushing produced any signals.
-      signalDownstream(false);
+      var subscription = downstreamSubscription;
+      if (subscription != null) {
+        subscription.fireOrKeepAliveOnNext();
+      }
     }
   }
 
@@ -206,19 +213,12 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       }
 
       if (error != null) {
-        subscription.signalError(error);
+        subscription.fireOrKeepAliveOnError(error);
       } else {
-        subscription.signal(true);
+        subscription.fireOrKeepAlive();
       }
     } else {
       FlowSupport.rejectMulticast(subscriber);
-    }
-  }
-
-  private void signalDownstream(boolean force) {
-    var subscription = downstreamSubscription;
-    if (subscription != null) {
-      subscription.signal(force);
     }
   }
 
@@ -291,7 +291,10 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       }
 
       if (signalsAvailable) {
-        signalDownstream(false);
+        var subscription = downstreamSubscription;
+        if (subscription != null) {
+          subscription.fireOrKeepAliveOnNext();
+        }
       }
       return written;
     }
@@ -344,37 +347,9 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
-  private final class SubscriptionImpl extends AbstractSubscription<ByteBuffer> {
-    private @Nullable ByteBuffer latestBuffer;
-
+  private final class SubscriptionImpl extends AbstractQueueSubscription<ByteBuffer> {
     SubscriptionImpl(Subscriber<? super ByteBuffer> downstream) {
-      super(downstream, FlowSupport.SYNC_EXECUTOR);
-    }
-
-    @Override
-    @SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel.
-    protected long emit(Subscriber<? super ByteBuffer> downstream, long emit) {
-      // The buffer is polled prematurely to detect completion regardless of demand.
-      var buffer = latestBuffer;
-      latestBuffer = null;
-      if (buffer == null) {
-        buffer = pipe.poll();
-      }
-      long submitted = 0L;
-      while (true) {
-        if (buffer == CLOSED_SENTINEL) {
-          cancelOnComplete(downstream);
-          return 0;
-        } else if (submitted >= emit || buffer == null) { // Exhausted either demand or buffers.
-          latestBuffer = buffer; // Save the last polled buffer for later rounds.
-          return submitted;
-        } else if (submitOnNext(downstream, buffer)) {
-          submitted++;
-          buffer = pipe.poll();
-        } else {
-          return 0;
-        }
-      }
+      super(downstream, FlowSupport.SYNC_EXECUTOR, pipe, CLOSED_SENTINEL);
     }
 
     @Override

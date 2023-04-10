@@ -24,17 +24,15 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.anyOf;
-import static com.github.mizosoft.methanol.internal.text.CharMatcher.lettersOrDigits;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.BOUNDARY_MATCHER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
+import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
-import com.github.mizosoft.methanol.internal.text.CharMatcher;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.System.Logger;
@@ -113,7 +111,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
   @Override
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
-    new MultipartSubscription(this, subscriber).signal(true);
+    new MultipartSubscription(boundary, parts, subscriber).fireOrKeepAlive();
   }
 
   private long computeContentLength() {
@@ -156,8 +154,6 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
   /** Represents a part in a multipart request body. */
   public static final class Part {
-    private static final CharMatcher TOKEN_MATCHER = anyOf("!#$%&'*+-.^_`|~").or(lettersOrDigits());
-
     private final HttpHeaders headers;
     private final BodyPublisher bodyPublisher;
 
@@ -178,7 +174,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     /**
-     * Creates and returns a new {@code Part} with the given headers and body publisher.
+     * Returns a new {@code Part} with the given headers and body publisher.
      *
      * @throws IllegalArgumentException if any of the given headers' names is invalid or if a {@code
      *     Content-Type} header is present but the given publisher is a {@link MimeBodyPublisher}
@@ -191,10 +187,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       requireArgument(
           !(names.contains("Content-Type") && publisher instanceof MimeBodyPublisher),
           "unexpected Content-Type header");
-      for (var name : names) {
-        requireArgument(
-            TOKEN_MATCHER.allMatch(name) && !name.isEmpty(), "illegal header name: %s", name);
-      }
+      names.forEach(Utils::requireValidHeaderName);
     }
   }
 
@@ -266,8 +259,8 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     /**
-     * Adds a {@code text/plain} form field with the given name and value using the given charset
-     * for encoding the field's body.
+     * Adds a {@code text/plain} form field with the given name and value, using the given charset
+     * for encoding the field's value.
      */
     public Builder textPart(String name, Object value, Charset charset) {
       return formPart(name, BodyPublishers.ofString(value.toString(), charset));
@@ -275,13 +268,11 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
     /**
      * Adds a file form field with the given name and file. The field's filename property will be
-     * that of the given path's {@link Path#getFileName() filename compontent}. The given path will
+     * that of the given path's {@link Path#getFileName() filename component}. The given path will
      * be used to {@link Files#probeContentType(Path) probe} the part's media type. If probing
      * fails, either by throwing an exception or returning {@code null}, {@code
      * application/octet-stream} will be used.
      *
-     * @param name the field's name
-     * @param file the file's path
      * @throws FileNotFoundException if a file with the given path cannot be found
      */
     public Builder filePart(String name, Path file) throws FileNotFoundException {
@@ -303,14 +294,14 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     /**
-     * Creates and returns a new {@code MultipartBodyPublisher} with a snapshot of the added parts.
-     * If no boundary was previously set, a randomly generated one is used.
+     * Returns a new {@code MultipartBodyPublisher}. If no boundary has been set, a randomly
+     * generated one is used.
      *
      * @throws IllegalStateException if no part was added
      */
     public MultipartBodyPublisher build() {
       var partsCopy = List.copyOf(parts);
-      requireState(!partsCopy.isEmpty(), "at least one part should be added");
+      requireState(!partsCopy.isEmpty(), "at least one part must be added");
       var localMediaType = mediaType;
       if (!localMediaType.parameters().containsKey(BOUNDARY_ATTRIBUTE)) {
         localMediaType =
@@ -431,11 +422,12 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     static BoundaryAppender get(int partIndex, int partsSize) {
-      return partIndex <= 0 ? FIRST : (partIndex >= partsSize ? LAST : MIDDLE);
+      return partIndex == 0 ? FIRST : (partIndex < partsSize ? MIDDLE : LAST);
     }
   }
 
-  private static final class MultipartSubscription extends AbstractSubscription<ByteBuffer> {
+  private static final class MultipartSubscription
+      extends AbstractPollableSubscription<ByteBuffer> {
     private static final VarHandle PART_SUBSCRIBER;
 
     static {
@@ -451,7 +443,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     /**
      * A sentinel value indicating no more parts are to be subscribed to. This protects against race
      * conditions that would otherwise occur if a thread tries to abort() while another tries to
-     * nextPartHeaders(), which might lead to a newly subscribed part being missed by abort().
+     * advancePart(), which might lead to a newly subscribed part being missed by abort().
      */
     private static final Subscriber<ByteBuffer> CANCELLED =
         new Subscriber<>() {
@@ -479,10 +471,10 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     private final List<PartSequenceListener> listeners = new CopyOnWriteArrayList<>();
 
     MultipartSubscription(
-        MultipartBodyPublisher upstream, Subscriber<? super ByteBuffer> downstream) {
+        String boundary, List<Part> parts, Subscriber<? super ByteBuffer> downstream) {
       super(downstream, FlowSupport.SYNC_EXECUTOR);
-      this.boundary = upstream.boundary();
-      this.parts = upstream.parts();
+      this.boundary = boundary;
+      this.parts = parts;
     }
 
     void registerListener(PartSequenceListener listener) {
@@ -490,68 +482,63 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     }
 
     @Override
-    protected long emit(Subscriber<? super ByteBuffer> downstream, long emit) {
-      long submitted = 0L;
-      while (true) {
-        ByteBuffer next;
-        if (complete) {
-          cancelOnComplete(downstream);
-          return 0;
-        } else if (submitted >= emit || (next = pollNext()) == null) { // Exhausted demand or data.
-          return submitted;
-        } else if (submitOnNext(downstream, next)) {
-          submitted++;
-        } else {
-          return 0;
+    protected @Nullable ByteBuffer poll() {
+      var subscriber = partSubscriber;
+      if (subscriber instanceof PartSubscriber) {
+        var next = ((PartSubscriber) subscriber).poll();
+        if (next != PartSubscriber.END_OF_PART) {
+          return next;
         }
       }
+      return advancePart();
+    }
+
+    @Override
+    protected boolean isComplete() {
+      return complete;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     protected void abort(boolean flowInterrupted) {
-      var prevSubscriber = (Subscriber<ByteBuffer>) PART_SUBSCRIBER.getAndSet(this, CANCELLED);
-      if (prevSubscriber instanceof PartSubscriber) {
-        ((PartSubscriber) prevSubscriber).abortUpstream(flowInterrupted);
+      var subscriber = (Subscriber<ByteBuffer>) PART_SUBSCRIBER.getAndSet(this, CANCELLED);
+      if (subscriber instanceof PartSubscriber) {
+        ((PartSubscriber) subscriber).abort(flowInterrupted);
       }
     }
 
-    private @Nullable ByteBuffer pollNext() {
-      var subscriber = partSubscriber;
-      if (subscriber instanceof PartSubscriber) { // Not CANCELLED & not null.
-        var next = ((PartSubscriber) subscriber).pollNext();
-        if (next != PartSubscriber.END_OF_PART) {
-          return next;
-        }
-      }
-      return subscriber != CANCELLED ? nextPartHeaders() : null;
-    }
-
-    private @Nullable ByteBuffer nextPartHeaders() {
+    /** Advances the currently streaming part and returns its multipart metadata. */
+    private @Nullable ByteBuffer advancePart() {
       var metadata = new StringBuilder();
-      BoundaryAppender.get(partIndex, parts.size()).append(metadata, boundary);
       if (partIndex < parts.size()) {
-        var part = parts.get(partIndex++);
-        if (!subscribeToPart(part)) {
+        var part = parts.get(partIndex);
+        if (!subscribeTo(part.bodyPublisher())) {
           return null;
         }
+        BoundaryAppender.get(partIndex, parts.size()).append(metadata, boundary);
         appendPartHeaders(metadata, part);
         metadata.append("\r\n");
+        partIndex++;
         listeners.forEach(listener -> listener.onNextPart(part));
-      } else {
-        partSubscriber = CANCELLED; // Race against abort() here is OK.
+      } else if (partIndex == parts.size()) {
+        BoundaryAppender.LAST.append(metadata, boundary);
+        partIndex++;
         complete = true;
+        partSubscriber = CANCELLED; // Race against abort() here is OK.
         listeners.forEach(PartSequenceListener::onSequenceCompletion);
+      } else {
+        return null;
       }
       return UTF_8.encode(CharBuffer.wrap(metadata));
     }
 
-    private boolean subscribeToPart(Part part) {
-      var nextSubscriber = new PartSubscriber(this);
+    private boolean subscribeTo(BodyPublisher bodyPublisher) {
       var currentSubscriber = partSubscriber;
+      PartSubscriber nextSubscriber;
       if (currentSubscriber != CANCELLED
-          && PART_SUBSCRIBER.compareAndSet(this, currentSubscriber, nextSubscriber)) {
-        part.bodyPublisher().subscribe(nextSubscriber);
+          && PART_SUBSCRIBER.compareAndSet(
+              this, currentSubscriber, nextSubscriber = new PartSubscriber(this))) {
+        bodyPublisher.subscribe(nextSubscriber);
         return true;
       }
       return false;
@@ -561,23 +548,19 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
   private static final class PartSubscriber implements Subscriber<ByteBuffer> {
     static final ByteBuffer END_OF_PART = ByteBuffer.allocate(0);
 
-    private final ConcurrentLinkedQueue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
+    private final MultipartSubscription downstream;
     private final Upstream upstream = new Upstream();
     private final Prefetcher prefetcher = new Prefetcher();
-
-    private final MultipartSubscription downstream;
+    private final ConcurrentLinkedQueue<ByteBuffer> buffers = new ConcurrentLinkedQueue<>();
 
     PartSubscriber(MultipartSubscription downstream) {
-      this.downstream = requireNonNull(downstream);
+      this.downstream = downstream;
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
       requireNonNull(subscription);
       if (upstream.setOrCancel(subscription)) {
-        // The only possible concurrent access to prefetcher applies here. But the operation need
-        // not be protected by a lock as other reads/writes are done serially when ByteBuffers are
-        // polled, which is only possible after this volatile write.
         prefetcher.initialize(upstream);
       }
     }
@@ -585,35 +568,30 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     @Override
     public void onNext(ByteBuffer item) {
       buffers.offer(item);
-      downstream.signal(false);
+      downstream.fireOrKeepAliveOnNext();
     }
 
     @Override
     public void onError(Throwable throwable) {
       requireNonNull(throwable);
-      abortUpstream(false);
-      downstream.signalError(throwable);
+      abort(false);
+      downstream.fireOrKeepAliveOnError(throwable);
     }
 
     @Override
     public void onComplete() {
-      abortUpstream(false);
+      abort(false);
       buffers.offer(END_OF_PART);
-      downstream.signal(true); // Force completion signal.
+      downstream.fireOrKeepAlive();
     }
 
-    void abortUpstream(boolean cancel) {
-      if (cancel) {
-        upstream.cancel();
-      } else {
-        upstream.clear();
-      }
+    void abort(boolean flowInterrupted) {
+      upstream.cancel(flowInterrupted);
     }
 
-    @Nullable ByteBuffer pollNext() {
-      var next = buffers.peek();
+    @Nullable ByteBuffer poll() {
+      var next = buffers.poll();
       if (next != null && next != END_OF_PART) {
-        buffers.poll(); // Consume.
         prefetcher.update(upstream);
       }
       return next;

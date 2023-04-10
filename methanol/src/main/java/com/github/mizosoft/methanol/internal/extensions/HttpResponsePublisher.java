@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.internal.extensions;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
+import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -36,7 +36,6 @@ import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.net.http.HttpResponse.ResponseInfo;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
@@ -76,13 +75,14 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
   @Override
   public void subscribe(Subscriber<? super HttpResponse<T>> subscriber) {
     if (subscribed.compareAndSet(false, true)) {
-      new SubscriptionImpl<>(subscriber, this).signal(true);
+      new SubscriptionImpl<>(subscriber, this).fireOrKeepAlive();
     } else {
       FlowSupport.rejectMulticast(subscriber);
     }
   }
 
-  private static final class SubscriptionImpl<V> extends AbstractSubscription<HttpResponse<V>> {
+  private static final class SubscriptionImpl<V>
+      extends AbstractQueueSubscription<HttpResponse<V>> {
     /**
      * Initial value for {@link #ongoing} indicating that the request/response(s) exchange hasn't
      * been initiated yet. MUST be negative! So it is not confused with any next possible value for
@@ -105,7 +105,6 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
     private final HttpRequest initialRequest;
     private final BodyHandler<V> handler;
     private final @Nullable PushPromiseHandler<V> pushPromiseHandler;
-    private final ConcurrentLinkedQueue<Signal> signals = new ConcurrentLinkedQueue<>();
 
     /**
      * The number of currently ongoing requests (the original request plus push promises, if any),
@@ -115,8 +114,6 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
     private volatile int ongoing = IDLE;
 
     private volatile boolean isInitialResponseBodyReceived;
-
-    private volatile @Nullable Signal currentSignal;
 
     SubscriptionImpl(
         Subscriber<? super HttpResponse<V>> downstream, HttpResponsePublisher<V> publisher) {
@@ -130,7 +127,6 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
               : null;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected long emit(Subscriber<? super HttpResponse<V>> downstream, long emit) {
       if (emit > 0 && ongoing == IDLE) {
@@ -146,37 +142,13 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
           return 0;
         }
       }
-
-      var signal = currentSignal;
-      currentSignal = null;
-      if (signal == null) {
-        signal = signals.poll();
-      }
-
-      long submitted = 0L;
-      while (true) {
-        if (signal == OnComplete.INSTANCE) {
-          cancelOnComplete(downstream);
-          return 0;
-        } else if (submitted >= emit || signal == null) { // Exhausted demand or signals.
-          currentSignal = signal;
-          return submitted;
-        } else if (submitOnNext(downstream, ((OnResponse<V>) signal).response)) {
-          submitted++;
-          signal = signals.poll();
-        } else {
-          return 0;
-        }
-      }
+      return super.emit(downstream, emit);
     }
 
     private void onResponse(HttpResponse<V> response, Throwable exception) {
       if (exception != null) {
-        signalError(exception);
+        fireOrKeepAliveOnError(exception);
       } else {
-        signals.offer(new OnResponse<>(response));
-        int currentOngoing = (int) ONGOING.getAndAdd(this, -1) - 1;
-
         // The testing order here is significant. After isInitialResponseBodyReceived is true, no
         // increments to ongoing are possible as all push promises would've been received (if we see
         // a zero, then it's the final state, and it is guaranteed that everything is done).
@@ -189,11 +161,11 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         //   - The testing thread wakes up.
         //   - Observe isInitialResponseBodyReceived == true (second test succeeds).
         //   - Downstream completes without waiting for received push promise(s).
+        int currentOngoing = (int) ONGOING.getAndAdd(this, -1) - 1;
         if (isInitialResponseBodyReceived && currentOngoing == 0) {
-          signals.offer(OnComplete.INSTANCE);
-          signal(true);
+          submitAndComplete(response);
         } else {
-          signal(false);
+          submit(response);
         }
       }
     }
@@ -201,11 +173,10 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
     private void onReceivedInitialResponseBody() {
       isInitialResponseBodyReceived = true;
       if (ongoing == 0) {
-        signals.offer(OnComplete.INSTANCE);
+        complete();
+      } else {
+        fireOrKeepAlive();
       }
-
-      // Must force the signal as downstream might be waiting for completion (ongoing == 0).
-      signal(true);
     }
 
     private BodySubscriber<V> notifyOnBodyCompletion(ResponseInfo info) {
@@ -226,7 +197,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
           HttpRequest pushPromiseRequest,
           Function<BodyHandler<V>, CompletableFuture<HttpResponse<V>>> acceptor) {
         if (isInitialResponseBodyReceived) {
-          signalError(
+          fireOrKeepAliveOnError(
               new IllegalStateException(
                   "receiving push promise after initial response body has been received: "
                       + pushPromiseRequest));
@@ -242,7 +213,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         try {
           pushedResponseBodyHandler = this.acceptor.apply(pushPromiseRequest);
         } catch (Throwable t) {
-          signalError(t);
+          fireOrKeepAliveOnError(t);
           return;
         }
 
@@ -252,20 +223,6 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         }
       }
     }
-  }
-
-  private interface Signal {}
-
-  private static final class OnResponse<R> implements Signal {
-    final HttpResponse<R> response;
-
-    OnResponse(HttpResponse<R> response) {
-      this.response = response;
-    }
-  }
-
-  private enum OnComplete implements Signal {
-    INSTANCE
   }
 
   /** A {@link BodySubscriber} that invokes a callback after the body has been fully received. */

@@ -36,22 +36,18 @@ import java.util.concurrent.Flow.Subscriber;
 public class FlowSupport {
   private static final Logger logger = System.getLogger(FlowSupport.class.getName());
 
-  private static final String PREFETCH_PROP = "com.github.mizosoft.methanol.flow.prefetch";
-  private static final String PREFETCH_FACTOR_PROP =
-      "com.github.mizosoft.methanol.flow.prefetchFactor";
+  static final String PREFETCH_PROP = "com.github.mizosoft.methanol.flow.prefetch";
+  static final String PREFETCH_FACTOR_PROP = "com.github.mizosoft.methanol.flow.prefetchFactor";
 
-  // The value is small because usage is normally with ByteBuffer items, which already
-  // take non-trivial space (the HTTP-client allocates 16Kb sizes). So using
-  // Flow.defaultBufferSize() (256) with such sizes would require 4Mb of space.
-  private static final int DEFAULT_PREFETCH = 16;
+  /** Have a humble number as we're dealing with 16Kb buffers. */
+  static final int DEFAULT_PREFETCH = 8;
 
-  // Request more when half consumed
-  private static final int DEFAULT_PREFETCH_FACTOR = 50;
+  static final int DEFAULT_PREFETCH_FACTOR = 50; // Request more when half are consumed.
 
   private static final int PREFETCH = loadPrefetch();
   private static final int PREFETCH_THRESHOLD = (int) (PREFETCH * (loadPrefetchFactor() / 100f));
 
-  /** A subscription that does nothing */
+  /** A subscription that does nothing. */
   public static final Flow.Subscription NOOP_SUBSCRIPTION =
       new Flow.Subscription() {
         @Override
