@@ -323,20 +323,11 @@ public final class DiskStore implements Store {
       requireNotClosed();
       var entry = entries.get(hasher.hash(key));
       if (entry != null) {
-        var keyIfKnown = entry.keyIfKnown();
-        if (key.equals(keyIfKnown)) {
-          return removeEntry(entry);
-        } else if (keyIfKnown == null) {
-          // Delete the entry through its Viewer to know we're deleting the correct entry.
-          try (var viewer = entry.view(key)) {
-            if (viewer != null) {
-              return viewer.removeEntry();
-            }
-          }
-
-          if (key.equals(entry.currentEditorKey())) {
-            return removeEntry(entry);
-          }
+        var versionHolder = new int[1];
+        var keyIfKnown = entry.keyIfKnown(versionHolder);
+        System.out.println(keyIfKnown + " " + key);
+        if (keyIfKnown == null || key.equals(keyIfKnown) || key.equals(entry.currentEditorKey())) {
+          return removeEntry(entry, versionHolder[0]);
         }
       }
       return false;
@@ -1442,7 +1433,7 @@ public final class DiskStore implements Store {
     private @MonotonicNonNull Path lazyEntryFile;
     private @MonotonicNonNull Path lazyTempEntryFile;
 
-    /** An {@code EntryDescriptor} for this entry as known from the last read or write. */
+    /** This entry's descriptor as known from the last read or write. */
     @GuardedBy("lock")
     private @MonotonicNonNull EntryDescriptor cachedDescriptor;
 
@@ -1481,7 +1472,7 @@ public final class DiskStore implements Store {
     private @Nullable Viewer openViewerForKey(@Nullable String expectedKey) throws IOException {
       lock.lock();
       try {
-        if (!readable || keyIfKnownMismatches(expectedKey)) {
+        if (!readable) {
           return null;
         }
 
@@ -1503,52 +1494,40 @@ public final class DiskStore implements Store {
         }
       } catch (NoSuchFileException missingEntryFile) {
         // Our file disappeared! We'll handle this gracefully by making the store lose track of us.
+        // This is done after releasing the lock to not incur a potential index write while holding
+        // it.
         logger.log(Level.WARNING, "Dropping entry with missing file", missingEntryFile);
-        try {
-          removeEntry(this);
-        } catch (IOException ignored) {
-        }
-        return null;
       } finally {
         lock.unlock();
       }
+
+      try {
+        removeEntry(this);
+      } catch (IOException ignored) {
+      }
+      return null;
     }
 
-    /**
-     * Returns {@code true} if the given key is not equal to this entry's key if known. {@code
-     * false} is returned if this entry's key, either equals the given key or the key must be read
-     * from disk to know for sure.
-     */
-    @GuardedBy("lock")
-    private boolean keyIfKnownMismatches(@Nullable String expectedKey) {
-      return keyMismatches(keyIfKnown(), expectedKey);
-    }
-
-    @GuardedBy("lock")
+    @GuardedBy("lock") // Lock must be held due to potential write to cachedDescriptor.
     private @Nullable EntryDescriptor readDescriptorForKey(
         FileChannel channel, @Nullable String expectedKey) throws IOException {
-      var descriptor = readDescriptor(channel);
-      return !keyMismatches(descriptor.key, expectedKey) ? descriptor : null;
-    }
-
-    @GuardedBy("lock")
-    private EntryDescriptor readDescriptor(FileChannel channel) throws IOException {
-      var descriptor = this.cachedDescriptor;
+      var descriptor = cachedDescriptor;
       if (descriptor == null) {
-        // TODO a smarter thing to do is to read a larger buffer from the end and optimistically
-        //      expect key and metadata to be there. Or store the sizes of metadata, data & key in
-        //      the index.
-        long fileSize = channel.size();
-        var trailer =
-            StoreIO.readNBytes(channel, ENTRY_TRAILER_SIZE, fileSize - ENTRY_TRAILER_SIZE);
-        descriptor = readDescriptor(channel, trailer);
-        this.cachedDescriptor = descriptor;
+        descriptor = readDescriptor(channel);
       }
+      if (keyMismatches(descriptor.key, expectedKey)) {
+        return null;
+      }
+      cachedDescriptor = descriptor;
       return descriptor;
     }
 
-    private EntryDescriptor readDescriptor(FileChannel channel, ByteBuffer trailer)
-        throws IOException {
+    private EntryDescriptor readDescriptor(FileChannel channel) throws IOException {
+      // TODO a smarter thing to do is to read a larger buffer from the end and optimistically
+      //      expect key and metadata to be there. Or store the sizes of metadata, data & key in
+      //      the index.
+      long fileSize = channel.size();
+      var trailer = StoreIO.readNBytes(channel, ENTRY_TRAILER_SIZE, fileSize - ENTRY_TRAILER_SIZE);
       long magic = trailer.getLong();
       int storeVersion = trailer.getInt();
       int appVersion = trailer.getInt();
@@ -1568,6 +1547,7 @@ public final class DiskStore implements Store {
       return new EntryDescriptor(key, metadata, dataSize);
     }
 
+    @GuardedBy("lock")
     private Viewer createViewer(FileChannel channel, int version, EntryDescriptor descriptor) {
       var viewer = new DiskViewer(this, version, descriptor, channel);
       viewerCount++;
@@ -1623,7 +1603,7 @@ public final class DiskStore implements Store {
             targetChannel = existingEntryChannel;
             committedDescriptor = new EntryDescriptor(key, metadata, existingDescriptor.dataSize);
 
-            // Close editor's file channel before deleting. See isolatedDeleteIfExists(Path)
+            // Close editor's file channel before deleting. See isolatedDeleteIfExists(Path).
             closeQuietly(editorChannel);
 
             // Make the entry file temporarily unreadable before modifying it. This also has to
@@ -1759,9 +1739,18 @@ public final class DiskStore implements Store {
       }
     }
 
-    @Nullable String keyIfKnown() {
-      var descriptor = cachedDescriptor;
-      return descriptor != null ? descriptor.key : null;
+    @Nullable String keyIfKnown(int[] versionHolder) {
+      lock.lock();
+      try {
+        var descriptor = cachedDescriptor;
+        if (descriptor != null) {
+          versionHolder[0] = version;
+          return descriptor.key;
+        }
+        return null;
+      } finally {
+        lock.unlock();
+      }
     }
 
     @Nullable String currentEditorKey() {
