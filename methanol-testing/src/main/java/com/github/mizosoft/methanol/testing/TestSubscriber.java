@@ -219,7 +219,9 @@ public class TestSubscriber<T> implements Subscriber<T> {
   public Subscription awaitSubscription(Duration timeout) {
     lock.lock();
     try {
-      assertThat(await(subscriptionReceived, () -> subscription != null, timeout))
+      @SuppressWarnings("GuardedBy")
+      BooleanSupplier hasSubscription = () -> subscription != null;
+      assertThat(await(subscriptionReceived, hasSubscription, timeout))
           .withFailMessage("expected onSubscribe within " + timeout)
           .isTrue();
       return subscription;
@@ -266,7 +268,9 @@ public class TestSubscriber<T> implements Subscriber<T> {
   public List<T> pollNext(int n, Duration timeout) {
     lock.lock();
     try {
-      assertThat(await(itemsAvailable, () -> items.size() >= n, timeout))
+      @SuppressWarnings("GuardedBy")
+      BooleanSupplier hasEnoughItems = () -> items.size() >= n;
+      assertThat(await(itemsAvailable, hasEnoughItems, timeout))
           .withFailMessage("expected onNext within " + timeout)
           .isTrue();
       var polled = new ArrayList<T>();
@@ -286,7 +290,9 @@ public class TestSubscriber<T> implements Subscriber<T> {
   public void awaitCompletion(Duration timeout) {
     lock.lock();
     try {
-      assertThat(await(completion, () -> completionCount > 0 || errorCount > 0, timeout))
+      @SuppressWarnings("GuardedBy")
+      BooleanSupplier isComplete = () -> completionCount > 0 || errorCount > 0;
+      assertThat(await(completion, isComplete, timeout))
           .withFailMessage("expected completion within " + timeout)
           .isTrue();
     } finally {
@@ -301,7 +307,9 @@ public class TestSubscriber<T> implements Subscriber<T> {
   public Throwable awaitError(Duration timeout) {
     lock.lock();
     try {
-      assertThat(await(completion, () -> completionCount > 0 || errorCount > 0, timeout))
+      @SuppressWarnings("GuardedBy")
+      BooleanSupplier isComplete = () -> completionCount > 0 || errorCount > 0;
+      assertThat(await(completion, isComplete, timeout))
           .withFailMessage("expected an error within " + timeout)
           .isTrue();
       assertThat(lastError).withFailMessage("expected onError but got onComplete").isNotNull();

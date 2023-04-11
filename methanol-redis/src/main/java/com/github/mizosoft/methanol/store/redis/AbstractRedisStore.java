@@ -656,7 +656,8 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
       @GuardedBy("lock")
       private long totalBytesWritten;
 
-      private volatile boolean isWritten;
+      @GuardedBy("lock")
+      private boolean isWritten;
 
       RedisEntryWriter() {}
 
@@ -695,7 +696,12 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
       }
 
       long dataSizeIfWritten() {
-        return isWritten ? totalBytesWritten : -1;
+        lock.lock();
+        try {
+          return isWritten ? totalBytesWritten : -1;
+        } finally {
+          lock.unlock();
+        }
       }
     }
   }

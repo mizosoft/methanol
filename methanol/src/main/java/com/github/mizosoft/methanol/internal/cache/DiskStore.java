@@ -325,7 +325,6 @@ public final class DiskStore implements Store {
       if (entry != null) {
         var versionHolder = new int[1];
         var keyIfKnown = entry.keyIfKnown(versionHolder);
-        System.out.println(keyIfKnown + " " + key);
         if (keyIfKnown == null || key.equals(keyIfKnown) || key.equals(entry.currentEditorKey())) {
           return removeEntry(entry, versionHolder[0]);
         }
