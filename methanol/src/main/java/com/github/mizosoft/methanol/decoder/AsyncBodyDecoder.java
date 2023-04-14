@@ -69,7 +69,14 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   private final QueueByteSource source = new QueueByteSource();
   private final StackByteSink sink = new StackByteSink();
 
-  private volatile @MonotonicNonNull SubscriptionImpl downstreamSubscription;
+  private @MonotonicNonNull SubscriptionImpl downstreamSubscription;
+
+  /**
+   * Whether this subscriber has been completed. That's good to know as there's a case where we
+   * complete ourselves (if the decoder throws), and upstream might not detect cancellation right
+   * away.
+   */
+  private boolean complete;
 
   /** Creates an {@code AsyncBodyDecoder} in sync mode. */
   public AsyncBodyDecoder(AsyncDecoder decoder, BodySubscriber<T> downstream) {
@@ -126,6 +133,10 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   @Override
   public void onNext(List<ByteBuffer> buffers) {
     requireNonNull(buffers);
+    if (complete) {
+      return;
+    }
+
     source.push(buffers);
     try {
       decoder.decode(source, sink);
@@ -141,12 +152,22 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
+    if (complete) {
+      return;
+    }
+
+    complete = true;
     upstream.clear();
     subscription().fireOrKeepAliveOnError(throwable);
   }
 
   @Override
   public void onComplete() {
+    if (complete) {
+      return;
+    }
+
+    complete = true;
     upstream.clear();
     try (decoder) {
       // Acknowledge final decode round.

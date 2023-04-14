@@ -214,7 +214,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
             Level.WARNING, () -> "exception thrown by subscriber's onError: " + downstream, t);
       }
     } else {
-      logger.log(Level.ERROR, "dropped exception", exception);
+      FlowSupport.onDroppedException(exception);
     }
   }
 
