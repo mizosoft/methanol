@@ -244,9 +244,9 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
           if (exception != null) {
             subscription.fireOrKeepAliveOnError(exception);
           } else {
-            // As close() submits the sentinel value AFTER setting the state, we must make
-            // double-check the sentinel has been submitted before starting the subscription.
-            // Otherwise, the subscription might miss the sentinel submitted by close().
+            // As close() submits the sentinel value AFTER setting the state, we must double-check
+            // the sentinel has been submitted before starting the subscription. Otherwise, the
+            // subscription might miss the sentinel submitted by close().
             submitSentinel();
             subscription.fireOrKeepAlive();
           }
