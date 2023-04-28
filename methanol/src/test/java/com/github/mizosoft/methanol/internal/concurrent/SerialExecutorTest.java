@@ -166,35 +166,6 @@ class SerialExecutorTest {
     assertThat(calls).hasValue(3);
   }
 
-  /** See javadoc of {@link SerialExecutor#sync}. */
-  @Test
-  void submissionABA() {
-    executor =
-        new SerialExecutor(
-            r -> {
-              assertThat(executor.isRunningBitSet()).isFalse();
-              r.run();
-              assertThat(executor.isRunningBitSet()).isFalse();
-            });
-
-    var calls = new AtomicInteger();
-    Runnable incrementTask =
-        () -> {
-          calls.incrementAndGet();
-          assertThat(executor.isRunningBitSet()).isTrue();
-        };
-
-    executor.execute(incrementTask);
-    assertThat(calls).hasValue(1);
-    assertThat(executor.drainCount()).isOne();
-    assertThat(executor.isSubmittedBitSet()).isFalse();
-
-    executor.execute(incrementTask);
-    assertThat(calls).hasValue(2);
-    assertThat(executor.drainCount()).isEqualTo(2);
-    assertThat(executor.isSubmittedBitSet()).isFalse();
-  }
-
   @RepeatedTest(10)
   @ExtendWith(ExecutorExtension.class)
   @ExecutorConfig(CACHED_POOL)
@@ -232,22 +203,5 @@ class SerialExecutorTest {
 
     assertAll(futures.stream().map(future -> future::join));
     assertThat(calls).hasValue(threadCount);
-  }
-
-  @Test
-  void incrementingDrainCountMaintainsStateBits() {
-    executor.execute(() -> {});
-    assertThat(mockExecutor.taskCount()).isOne();
-
-    // Set SHUTDOWN bit.
-    executor.shutdown();
-    assertThat(executor.isShutdownBitSet()).isTrue();
-
-    // Execute drain to increment drain count.
-    mockExecutor.runNext();
-    assertThat(executor.drainCount()).isOne();
-
-    // Shutdown bit isn't touched.
-    assertThat(executor.isShutdownBitSet()).isTrue();
   }
 }
