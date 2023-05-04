@@ -8,6 +8,7 @@ dependencies {
   testImplementation libs.testng
   testImplementation libs.junit.params
   testImplementation libs.reactivestreams.tck.flow
+  testImplementation libs.reactivestreams.examples
   testImplementation libs.mockwebserver
   testImplementation libs.jimfs
 }

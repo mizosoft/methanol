@@ -1,5 +1,5 @@
 plugins {
-  id 'org.openjfx.javafxplugin' version '0.0.12' apply false
+  id 'org.openjfx.javafxplugin' version '0.0.14' apply false
 }
 
 subprojects {
@@ -7,7 +7,7 @@ subprojects {
   apply plugin: 'org.openjfx.javafxplugin'
 
   javafx {
-    version = "14"
+    version = "20"
     modules 'javafx.controls'
   }
 }
