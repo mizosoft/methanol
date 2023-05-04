@@ -57,7 +57,7 @@ public class Controller {
         });
   }
 
-  @GetMapping
+  @GetMapping("/")
   public Point pointPingPong(
       @RequestParam(value = "x", defaultValue = "0") int x,
       @RequestParam(value = "y", defaultValue = "0") int y)
