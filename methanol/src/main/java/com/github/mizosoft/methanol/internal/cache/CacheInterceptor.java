@@ -179,6 +179,7 @@ public final class CacheInterceptor implements Interceptor {
 
   private CompletableFuture<Optional<CacheResponse>> getCacheResponse(
       HttpRequest request, Chain<?> chain, AsyncAdapter asyncAdapter) {
+    // TODO check for no-cache here.
     if (!"GET".equalsIgnoreCase(request.method())
         || hasUnsupportedPreconditions(request.headers())
         || chain.pushPromiseHandler().isPresent()) {

@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -56,7 +55,7 @@ public final class MockClock extends Clock {
   public MockClock(ZoneId zoneId, Instant inception) {
     this.zoneId = zoneId;
     this.inception = inception;
-    now = new AtomicReference<>(new Instant[] {inception});
+    this.now = new AtomicReference<>(new Instant[] {inception});
   }
 
   @Override
@@ -109,7 +108,7 @@ public final class MockClock extends Clock {
     advance(Duration.ofSeconds(seconds));
   }
 
-  public void autoAdvance(Duration ticks) {
-    this.autoAdvance = requireNonNull(ticks);
+  public void autoAdvance(@Nullable Duration ticks) {
+    this.autoAdvance = ticks;
   }
 }

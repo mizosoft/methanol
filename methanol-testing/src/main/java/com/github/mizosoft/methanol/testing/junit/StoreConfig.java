@@ -61,7 +61,15 @@ public abstract class StoreConfig {
         return new MemoryStoreConfig(Long.MAX_VALUE);
       case DISK:
         return new DiskStoreConfig(
-            Long.MAX_VALUE, 1, FileSystemType.SYSTEM, Execution.ASYNC, UNSET_NUMBER, true, true);
+            Long.MAX_VALUE,
+            1,
+            FileSystemType.SYSTEM,
+            Execution.ASYNC,
+            UNSET_NUMBER,
+            true,
+            true,
+            true,
+            true);
       case REDIS_STANDALONE:
         return new RedisStandaloneStoreConfig(1, UNSET_NUMBER, UNSET_NUMBER);
       case REDIS_CLUSTER:

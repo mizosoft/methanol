@@ -1648,10 +1648,13 @@ public final class DiskStore implements Store {
       }
 
       long newStoreSize = DiskStore.this.size.addAndGet(sizeDifference);
+
+      // Don't bother with the entry if it'll cause everything to be evicted.
       if (newSize > maxSize) {
         removeEntry(this);
         return false;
       }
+
       if (newStoreSize > maxSize) {
         evictionScheduler.schedule();
       }

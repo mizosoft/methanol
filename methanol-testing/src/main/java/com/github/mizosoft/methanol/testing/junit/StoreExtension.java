@@ -246,8 +246,10 @@ public final class StoreExtension
         fileSystemType,
         execution,
         indexUpdateDelaySeconds,
+        true,
         autoAdvanceClock,
-        dispatchEagerly);
+        dispatchEagerly,
+        true);
   }
 
   private static RedisStandaloneStoreConfig createRedisStandaloneConfig(List<?> tuple) {

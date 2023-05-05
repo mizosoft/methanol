@@ -34,8 +34,10 @@ public final class DiskStoreConfig extends StoreConfig {
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private final OptionalInt indexUpdateDelaySeconds;
 
+  private final boolean mockTime;
   private final boolean autoAdvanceClock;
   private final boolean dispatchEagerly;
+  private final boolean mockHashing;
 
   public DiskStoreConfig(
       long maxSize,
@@ -43,8 +45,10 @@ public final class DiskStoreConfig extends StoreConfig {
       FileSystemType fileSystemType,
       Execution execution,
       int indexUpdateDelaySeconds,
+      boolean mockTime,
       boolean autoAdvanceClock,
-      boolean dispatchEagerly) {
+      boolean dispatchEagerly,
+      boolean mockHashing) {
     super(StoreType.DISK, maxSize, appVersion);
     this.fileSystemType = requireNonNull(fileSystemType);
     this.execution = requireNonNull(execution);
@@ -54,8 +58,10 @@ public final class DiskStoreConfig extends StoreConfig {
             : OptionalInt.empty();
     this.indexUpdateDelaySeconds.ifPresent(
         value -> requireArgument(value >= 0, "expected a non-negative value, got: %d", value));
+    this.mockTime = mockTime;
     this.autoAdvanceClock = autoAdvanceClock;
     this.dispatchEagerly = dispatchEagerly;
+    this.mockHashing = mockHashing;
   }
 
   public FileSystemType fileSystemType() {
@@ -70,11 +76,19 @@ public final class DiskStoreConfig extends StoreConfig {
     return indexUpdateDelaySeconds;
   }
 
+  public boolean mockTime() {
+    return mockTime;
+  }
+
   public boolean autoAdvanceClock() {
     return autoAdvanceClock;
   }
 
   public boolean dispatchEagerly() {
     return dispatchEagerly;
+  }
+
+  public boolean mockHashing() {
+    return mockHashing;
   }
 }

@@ -22,10 +22,6 @@
 
 package com.github.mizosoft.methanol.benchmarks;
 
-import com.github.mizosoft.methanol.internal.concurrent.SerialExecutor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -33,94 +29,63 @@ import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-@State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 5, time = 5)
 @Measurement(iterations = 5, time = 5)
-@OutputTimeUnit(TimeUnit.MILLISECONDS)
+@OutputTimeUnit(TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
-public class SerialExecutorBenchmark {
-  private final ExecutorService delegate = Executors.newCachedThreadPool();
-  private final SerialExecutor executor = new SerialExecutor(delegate);
+@State(Scope.Benchmark)
+public class DiskStoreEvictionBenchmark extends DiskStoreState {
+  @Param({"1", "100", "10000", "1000000"})
+  int entryCount;
 
-  @TearDown
-  public void tearDown() throws InterruptedException {
-    delegate.shutdown();
-    if (!delegate.awaitTermination(2, TimeUnit.SECONDS)) {
-      throw new RuntimeException("timed out while waiting for termination");
+  @Setup
+  public void setUp(KeyGenerator keyGenerator, WriteSrc src) throws Exception {
+    super.setupStore((long) entryCount * ENTRY_SIZE);
+
+    for (int i = 0; i < entryCount; i++) {
+      write(keyGenerator.next(), src);
+    }
+    if (store.size() != store.maxSize()) {
+      throw new AssertionError(store.size() + " != " + store.maxSize());
     }
   }
 
   @Benchmark
   @Threads(1)
-  public int execute_1thread(PhaserState state) {
-    executor.execute(state.phaser::arrive);
-    return state.phaser.arriveAndAwaitAdvance();
+  public void triggerEviction(KeyGenerator keyGenerator, WriteSrc src) throws Exception {
+    write(keyGenerator.next(), src);
   }
 
-  @Benchmark
-  @Threads(2)
-  public int execute_2thread(PhaserState state) {
-    executor.execute(state.phaser::arrive);
-    return state.phaser.arriveAndAwaitAdvance();
-  }
-
-  @Benchmark
-  @Threads(4)
-  public int execute_4threads(PhaserState state) {
-    executor.execute(state.phaser::arrive);
-    return state.phaser.arriveAndAwaitAdvance();
-  }
-
-  @Benchmark
-  @Threads(8)
-  public int execute_8threads(PhaserState state) {
-    executor.execute(state.phaser::arrive);
-    return state.phaser.arriveAndAwaitAdvance();
-  }
-
-  @Benchmark
-  @Threads(Threads.MAX)
-  public void bulkExecute(PhaserState phaserState, Counter counter) {
-    counter.val = 0;
-    int iterations = 100;
-    for (int i = 0; i < iterations; i++) {
-      executor.execute(counter::incr);
-    }
-    executor.execute(phaserState.phaser::arrive);
-    phaserState.phaser.arriveAndAwaitAdvance();
-    if (counter.val != iterations) {
-      throw new AssertionError("expected: " + iterations + ", actual: " + counter.val);
-    }
-  }
-
+  /**
+   * A key generator that ensures keys are of the same length for as long as possible. This ensures
+   * calculating hashes for keys of different sizes don't skew benchmark results.
+   */
   @State(Scope.Thread)
-  public static class PhaserState {
-    final Phaser phaser = new Phaser(2);
-  }
+  public static class KeyGenerator {
+    private long next = 1_000_000_000_000_000_000L;
 
-  @State(Scope.Thread)
-  public static class Counter {
-    int val;
-
-    void incr() {
-      val++;
+    String next() {
+      var key = Long.toString(next);
+      next++;
+      return key;
     }
   }
 
   public static void main(String[] args) throws RunnerException {
     var builder =
         new OptionsBuilder()
-            .include(SerialExecutorBenchmark.class.getSimpleName())
+            .include(DiskStoreEvictionBenchmark.class.getSimpleName())
             .shouldFailOnError(true);
     new Runner(builder.build()).run();
   }

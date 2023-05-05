@@ -1986,7 +1986,7 @@ class HttpCacheTest {
   @StoreParameterizedTest
   void heuristicExpiration(Store store) throws Exception {
     setUpCache(store);
-    // Last-Modified:      20 seconds from date
+    // Last-Modified:      30 seconds from date
     // Heuristic lifetime: 3 seconds
     // Age:                1 second
     var lastModifiedInstant = clock.instant();

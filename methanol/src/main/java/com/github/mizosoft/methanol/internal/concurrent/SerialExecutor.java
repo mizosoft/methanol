@@ -65,7 +65,7 @@ public final class SerialExecutor implements Executor {
 
   @Override
   public void execute(Runnable task) {
-    if ((sync & SHUTDOWN) != 0) {
+    if (isShutdownBitSet()) {
       throw new RejectedExecutionException("shutdown");
     }
 
@@ -77,11 +77,11 @@ public final class SerialExecutor implements Executor {
 
       // If drain has been asked to recheck for tasks, but hasn't yet rechecked after adding the
       // new task, then it will surely see the added task.
-      if ((s & KEEP_ALIVE) != 0) {
+      if (isKeepAliveBitSet()) {
         return;
       }
 
-      if ((s & RUNNING) == 0) {
+      if (!isRunningBitSet()) {
         if (SYNC.compareAndSet(this, s, s | RUNNING)) {
           tryStart(decoratedTask);
           return;
