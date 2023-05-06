@@ -25,9 +25,10 @@ package com.github.mizosoft.methanol.testing.junit;
 import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import java.io.IOException;
 
-public final class RedisStandaloneStoreContext extends AbstractRedisStoreContext<LocalRedisServer> {
-  private static final RedisSessionSingletonPool<LocalRedisServer> serverPool =
-      new RedisSessionSingletonPool<>(LocalRedisServer::start);
+public final class RedisStandaloneStoreContext
+    extends AbstractRedisStoreContext<RedisStandaloneSession> {
+  private static final RedisSessionSingletonPool<RedisStandaloneSession> serverPool =
+      new RedisSessionSingletonPool<>(RedisStandaloneSession::start);
 
   RedisStandaloneStoreContext(RedisStandaloneStoreConfig config) {
     super(config, serverPool);

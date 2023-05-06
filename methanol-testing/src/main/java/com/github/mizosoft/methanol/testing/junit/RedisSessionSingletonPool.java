@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.testing.junit;
 
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.internal.function.ThrowingSupplier;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
@@ -33,7 +35,7 @@ class RedisSessionSingletonPool<R extends RedisSession> {
   private @MonotonicNonNull R instance;
 
   RedisSessionSingletonPool(ThrowingSupplier<R> factory) {
-    this.factory = factory;
+    this.factory = requireNonNull(factory);
     Runtime.getRuntime().addShutdownHook(new Thread(Unchecked.runnable(this::closePooledInstance)));
   }
 

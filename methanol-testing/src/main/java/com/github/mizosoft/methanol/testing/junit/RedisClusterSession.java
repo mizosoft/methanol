@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,20 +44,20 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public final class LocalRedisCluster implements RedisSession {
-  private static final Logger logger = System.getLogger(LocalRedisCluster.class.getName());
+public final class RedisClusterSession implements RedisSession {
+  private static final Logger logger = System.getLogger(RedisClusterSession.class.getName());
 
   private static final int HEALTH_CHECK_MAX_RETRIES = 10;
   private static final int CLUSTER_JOIN_TIMEOUT_SECONDS = 20;
 
-  private final List<LocalRedisServer> nodes;
+  private final List<RedisStandaloneSession> nodes;
 
-  private LocalRedisCluster(List<LocalRedisServer> nodes) {
+  private RedisClusterSession(List<RedisStandaloneSession> nodes) {
     this.nodes = List.copyOf(nodes);
   }
 
   public List<RedisURI> uris() {
-    return nodes.stream().map(LocalRedisServer::uri).collect(Collectors.toUnmodifiableList());
+    return nodes.stream().map(RedisStandaloneSession::uri).collect(Collectors.toUnmodifiableList());
   }
 
   @Override
@@ -113,7 +113,7 @@ public final class LocalRedisCluster implements RedisSession {
     return getClass().getSimpleName() + "[nodes=" + nodes + "]";
   }
 
-  private static void closeNodes(List<LocalRedisServer> nodes) throws IOException {
+  private static void closeNodes(List<RedisStandaloneSession> nodes) throws IOException {
     IOException closeException = null;
     for (var node : nodes) {
       try {
@@ -132,13 +132,14 @@ public final class LocalRedisCluster implements RedisSession {
     }
   }
 
-  public static LocalRedisCluster start(int masterCount, int replicasPerMaster) throws IOException {
+  public static RedisClusterSession start(int masterCount, int replicasPerMaster)
+      throws IOException {
     int nodeCount = masterCount + masterCount * replicasPerMaster;
-    var nodes = new ArrayList<LocalRedisServer>(nodeCount);
+    var nodes = new ArrayList<RedisStandaloneSession>(nodeCount);
     for (int i = 0; i < nodeCount; i++) {
       try {
         var node =
-            LocalRedisServer.start(
+            RedisStandaloneSession.start(
                 Map.of(
                     "cluster-enabled", "yes",
                     "cluster-node-timeout", "10000",
@@ -196,7 +197,7 @@ public final class LocalRedisCluster implements RedisSession {
       throw (IOException) e;
     }
 
-    var cluster = new LocalRedisCluster(nodes);
+    var cluster = new RedisClusterSession(nodes);
     try {
       checkHealth(cluster, masterCount);
       return cluster;
@@ -218,7 +219,7 @@ public final class LocalRedisCluster implements RedisSession {
    * replication. In any case, we keep retrying key-related commands till the cluster is operable
    * before we return it.
    */
-  private static void checkHealth(LocalRedisCluster cluster, int masterCount)
+  private static void checkHealth(RedisClusterSession cluster, int masterCount)
       throws InterruptedException {
     try (var client = RedisClusterClient.create(cluster.uris());
         var connection = client.connect()) {

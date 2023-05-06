@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,8 @@
  */
 
 package com.github.mizosoft.methanol.testing.junit;
+
+import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
@@ -54,7 +56,7 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
   AbstractRedisStoreContext(
       AbstractRedisStoreConfig config, RedisSessionSingletonPool<R> sessionPool) {
     super(config);
-    this.sessionPool = sessionPool;
+    this.sessionPool = requireNonNull(sessionPool);
   }
 
   abstract void configure(RedisStorageExtension.Builder builder) throws IOException;

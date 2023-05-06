@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -50,8 +50,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class LocalRedisServer implements RedisSession {
-  private static final Logger logger = System.getLogger(LocalRedisServer.class.getName());
+public final class RedisStandaloneSession implements RedisSession {
+  private static final Logger logger = System.getLogger(RedisStandaloneSession.class.getName());
 
   private static final String LOOPBACK_ADDRESS = "127.0.0.1";
 
@@ -76,7 +76,7 @@ public final class LocalRedisServer implements RedisSession {
 
   private boolean closed;
 
-  private LocalRedisServer(
+  private RedisStandaloneSession(
       int port, Process process, Path directory, boolean deleteDirectoryOnClosure, Path logFile) {
     this.uri = RedisURI.create(LOOPBACK_ADDRESS, port);
     this.process = requireNonNull(process);
@@ -198,11 +198,11 @@ public final class LocalRedisServer implements RedisSession {
     }
   }
 
-  public static LocalRedisServer start() throws IOException {
+  public static RedisStandaloneSession start() throws IOException {
     return start(Map.of());
   }
 
-  public static LocalRedisServer start(Map<String, String> config) throws IOException {
+  public static RedisStandaloneSession start(Map<String, String> config) throws IOException {
     var effectiveConfig = new LinkedHashMap<String, String>();
     for (var entry : config.entrySet()) {
       var key = entry.getKey();
@@ -216,7 +216,7 @@ public final class LocalRedisServer implements RedisSession {
     boolean deleteDirectoryOnClosure;
     Path directory;
     if (!effectiveConfig.containsKey("--dir")) {
-      directory = Files.createTempDirectory(LocalRedisServer.class.getSimpleName());
+      directory = Files.createTempDirectory(RedisStandaloneSession.class.getSimpleName());
       effectiveConfig.put("--dir", directory.toString());
       deleteDirectoryOnClosure = true;
     } else {
@@ -234,12 +234,13 @@ public final class LocalRedisServer implements RedisSession {
     var logFile =
         logFileString != null
             ? directory.resolve(logFileString)
-            : Files.createTempFile(directory, LocalRedisServer.class.getSimpleName(), ".log");
+            : Files.createTempFile(directory, RedisStandaloneSession.class.getSimpleName(), ".log");
     for (int retriesLeft = MASTER_SERVER_START_RETRIES; retriesLeft > 0; retriesLeft--) {
       int port = ThreadLocalRandom.current().nextInt(SERVER_PORT_START, SERVER_PORT_END);
       var process = tryStart(effectiveConfig, port, logFile);
       if (process != null) {
-        return new LocalRedisServer(port, process, directory, deleteDirectoryOnClosure, logFile);
+        return new RedisStandaloneSession(
+            port, process, directory, deleteDirectoryOnClosure, logFile);
       }
 
       String logString;

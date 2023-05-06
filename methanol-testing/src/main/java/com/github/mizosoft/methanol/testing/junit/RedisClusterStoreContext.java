@@ -25,13 +25,13 @@ package com.github.mizosoft.methanol.testing.junit;
 import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import java.io.IOException;
 
-public final class RedisClusterStoreContext extends AbstractRedisStoreContext<LocalRedisCluster> {
+public final class RedisClusterStoreContext extends AbstractRedisStoreContext<RedisClusterSession> {
   private static final int MASTER_NODE_COUNT = 3;
   private static final int REPLICAS_PER_MASTER = 1;
 
-  private static final RedisSessionSingletonPool<LocalRedisCluster> clusterPool =
+  private static final RedisSessionSingletonPool<RedisClusterSession> clusterPool =
       new RedisSessionSingletonPool<>(
-          () -> LocalRedisCluster.start(MASTER_NODE_COUNT, REPLICAS_PER_MASTER));
+          () -> RedisClusterSession.start(MASTER_NODE_COUNT, REPLICAS_PER_MASTER));
 
   RedisClusterStoreContext(RedisClusterStoreConfig config) {
     super(config, clusterPool);
