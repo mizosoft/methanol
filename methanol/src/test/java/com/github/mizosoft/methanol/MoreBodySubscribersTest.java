@@ -78,7 +78,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
-@Timeout(60)
+@Timeout(5)
 @ExtendWith(ExecutorExtension.class)
 class MoreBodySubscribersTest {
   @Test
