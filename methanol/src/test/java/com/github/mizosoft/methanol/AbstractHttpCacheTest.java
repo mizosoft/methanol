@@ -24,17 +24,19 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
-import com.github.mizosoft.methanol.HttpCacheTest.ForwardingEditor;
-import com.github.mizosoft.methanol.HttpCacheTest.ForwardingStore;
-import com.github.mizosoft.methanol.HttpCacheTest.ForwardingViewer;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
+import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
+import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
+import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
@@ -45,13 +47,17 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.HttpResponse.PushPromiseHandler;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
@@ -60,6 +66,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.QueueDispatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -74,7 +81,7 @@ abstract class AbstractHttpCacheTest {
   boolean failOnUnavailableResponses = true;
   Duration advanceOnSend = Duration.ZERO;
 
-  Methanol client; // Must be set by subclass.
+  Methanol client; // Must be set by subclass to apply cache setup.
 
   @BeforeEach
   @ExecutorConfig(ExecutorType.CACHED_POOL)
@@ -155,16 +162,184 @@ abstract class AbstractHttpCacheTest {
     return response;
   }
 
+  HttpResponse<String> sendUnchecked(HttpRequest request) {
+    try {
+      return send(request);
+    } catch (IOException | InterruptedException e) {
+      return Assertions.fail(e);
+    }
+  }
+
+  HttpResponse<String> sendWithPushPromiseHandler(URI uri) {
+    var response =
+        client
+            .sendAsync(
+                GET(uri),
+                BodyHandlers.ofString(),
+                PushPromiseHandler.of(__ -> BodyHandlers.ofString(), new ConcurrentHashMap<>()))
+            .join();
+    editAwaiter.await();
+    return response;
+  }
+
   static LocalDateTime toUtcDateTime(Instant instant) {
     return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
   }
 
+  static String instantToHttpDateString(Instant instant) {
+    return toHttpDateString(toUtcDateTime(instant));
+  }
+
+  static class ForwardingStore implements Store {
+    final Store delegate;
+
+    ForwardingStore(Store delegate) {
+      this.delegate = requireNonNull(delegate);
+    }
+
+    @Override
+    public long maxSize() {
+      return delegate.maxSize();
+    }
+
+    @Override
+    public Optional<Executor> executor() {
+      return delegate.executor();
+    }
+
+    @Override
+    public Optional<Viewer> view(String key) throws IOException, InterruptedException {
+      return delegate.view(key);
+    }
+
+    @Override
+    public Optional<Editor> edit(String key) throws IOException, InterruptedException {
+      return delegate.edit(key);
+    }
+
+    @Override
+    public boolean removeAll(List<String> keys) throws IOException, InterruptedException {
+      return delegate.removeAll(keys);
+    }
+
+    @Override
+    public Iterator<Viewer> iterator() throws IOException {
+      return delegate.iterator();
+    }
+
+    @Override
+    public boolean remove(String key) throws IOException, InterruptedException {
+      return delegate.remove(key);
+    }
+
+    @Override
+    public void clear() throws IOException {
+      delegate.clear();
+    }
+
+    @Override
+    public long size() throws IOException {
+      return delegate.size();
+    }
+
+    @Override
+    public void dispose() throws IOException {
+      delegate.dispose();
+    }
+
+    @Override
+    public void close() throws IOException {
+      delegate.close();
+    }
+
+    @Override
+    public void flush() throws IOException {
+      delegate.flush();
+    }
+  }
+
+  static class ForwardingViewer implements Viewer {
+    final Viewer delegate;
+
+    ForwardingViewer(Viewer delegate) {
+      this.delegate = requireNonNull(delegate);
+    }
+
+    @Override
+    public String key() {
+      return delegate.key();
+    }
+
+    @Override
+    public ByteBuffer metadata() {
+      return delegate.metadata();
+    }
+
+    @Override
+    public EntryReader newReader() {
+      return delegate.newReader();
+    }
+
+    @Override
+    public long dataSize() {
+      return delegate.dataSize();
+    }
+
+    @Override
+    public long entrySize() {
+      return delegate.entrySize();
+    }
+
+    @Override
+    public Optional<Editor> edit() throws IOException, InterruptedException {
+      return delegate.edit();
+    }
+
+    @Override
+    public boolean removeEntry() throws IOException {
+      return delegate.removeEntry();
+    }
+
+    @Override
+    public void close() {
+      delegate.close();
+    }
+  }
+
+  static class ForwardingEditor implements Editor {
+    final Editor delegate;
+
+    ForwardingEditor(Editor delegate) {
+      this.delegate = requireNonNull(delegate);
+    }
+
+    @Override
+    public String key() {
+      return delegate.key();
+    }
+
+    @Override
+    public EntryWriter writer() {
+      return delegate.writer();
+    }
+
+    @Override
+    public boolean commit(ByteBuffer metadata) throws IOException {
+      return delegate.commit(metadata);
+    }
+
+    @Override
+    public void close() {
+      delegate.close();
+    }
+  }
+
   /**
-   * Awaits ongoing edits to be completed. By design, {@link CacheWritingPublisher} doesn't make
-   * downstream completion wait for the entire body to be written to cache. So if writes take time,
-   * the response entry is committed a while after the response is completed. This however agitates
-   * tests as they expect things to happen sequentially. This is solved by waiting for all open
-   * editors to close after a client.send(...) is issued.
+   * An object that allows awaiting ongoing edits. By design, {@link CacheWritingPublisher} doesn't
+   * make downstream completion wait for the entire body to be written to cache. So if writes take
+   * time, the response entry is committed a while after the response is completed. This however
+   * agitates tests as they expect things to happen sequentially. This is solved by waiting for all
+   * open editors to close after each client.send(...).
    */
   static final class EditAwaiter {
     private final Phaser phaser = new Phaser(1); // Register self.
@@ -177,7 +352,7 @@ abstract class AbstractHttpCacheTest {
 
     void await() {
       try {
-        phaser.awaitAdvanceInterruptibly(phaser.arrive(), 20, TimeUnit.SECONDS);
+        phaser.awaitAdvanceInterruptibly(phaser.arrive(), 5, TimeUnit.SECONDS);
       } catch (InterruptedException | TimeoutException e) {
         fail("timed out while waiting for editors to be closed", e);
       }
@@ -196,14 +371,7 @@ abstract class AbstractHttpCacheTest {
 
       @Override
       public boolean commit(ByteBuffer metadata) throws IOException {
-        // To make sure all changes are applied before waiters are notified, actually do the arrival
-        // when committing completes.
-        boolean arrive = this.closed.compareAndSet(false, true);
-        boolean committed = super.commit(metadata);
-        if (arrive) {
-          phaser.arriveAndDeregister();
-        }
-        return committed;
+        return super.commit(metadata);
       }
 
       @Override
@@ -224,7 +392,7 @@ abstract class AbstractHttpCacheTest {
 
     EditAwaiterStore(Store delegate, EditAwaiter editAwaiter) {
       super(delegate);
-      this.editAwaiter = editAwaiter;
+      this.editAwaiter = requireNonNull(editAwaiter);
     }
 
     @Override

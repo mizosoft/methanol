@@ -168,7 +168,6 @@ public class HttpResponsePublisherTck extends FlowPublisherVerification<Response
 
     ResponseHandle(HttpResponse<String> response) {
       this.response = requireNonNull(response);
-      System.out.println(response);
     }
 
     @Override
