@@ -72,7 +72,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({MockWebServerExtension.class, ExecutorExtension.class})
 abstract class AbstractHttpCacheTest {
-  Executor executor;
+  AwaitableExecutor executor;
   Methanol.Builder clientBuilder;
   MockWebServer server;
   URI serverUri;
@@ -86,7 +86,7 @@ abstract class AbstractHttpCacheTest {
   @BeforeEach
   @ExecutorConfig(ExecutorType.CACHED_POOL)
   void setUp(Executor executor, Methanol.Builder builder, MockWebServer server) {
-    this.executor = executor;
+    this.executor = new AwaitableExecutor(executor);
     this.server = server;
     this.serverUri = server.url("/").uri();
     this.clock = new MockClock();
@@ -144,6 +144,7 @@ abstract class AbstractHttpCacheTest {
   HttpResponse<String> send(HttpRequest request) throws IOException, InterruptedException {
     var response = client.send(request, BodyHandlers.ofString());
     editAwaiter.await();
+    executor.await();
     return response;
   }
 
@@ -159,6 +160,7 @@ abstract class AbstractHttpCacheTest {
       throws IOException, InterruptedException {
     var response = client.send(request, BodyHandlers.ofString());
     editAwaiter.await();
+    executor.await();
     return response;
   }
 
@@ -179,6 +181,7 @@ abstract class AbstractHttpCacheTest {
                 PushPromiseHandler.of(__ -> BodyHandlers.ofString(), new ConcurrentHashMap<>()))
             .join();
     editAwaiter.await();
+    executor.await();
     return response;
   }
 
@@ -354,7 +357,7 @@ abstract class AbstractHttpCacheTest {
       try {
         phaser.awaitAdvanceInterruptibly(phaser.arrive(), 5, TimeUnit.SECONDS);
       } catch (InterruptedException | TimeoutException e) {
-        fail("timed out while waiting for editors to be closed", e);
+        fail("timed out / interrupted while waiting for editors to be closed", e);
       }
     }
 
@@ -387,17 +390,17 @@ abstract class AbstractHttpCacheTest {
     }
   }
 
-  static final class EditAwaiterStore extends ForwardingStore {
+  static final class EditAwaitableStore extends ForwardingStore {
     private final EditAwaiter editAwaiter;
 
-    EditAwaiterStore(Store delegate, EditAwaiter editAwaiter) {
+    EditAwaitableStore(Store delegate, EditAwaiter editAwaiter) {
       super(delegate);
       this.editAwaiter = requireNonNull(editAwaiter);
     }
 
     @Override
     public Optional<Viewer> view(String key) throws IOException, InterruptedException {
-      return super.view(key).map(EditAwaiterStore.EditAwaiterViewer::new);
+      return super.view(key).map(EditAwaitableViewer::new);
     }
 
     @Override
@@ -410,14 +413,54 @@ abstract class AbstractHttpCacheTest {
       return delegate.toString();
     }
 
-    private final class EditAwaiterViewer extends ForwardingViewer {
-      EditAwaiterViewer(Viewer delegate) {
+    private final class EditAwaitableViewer extends ForwardingViewer {
+      EditAwaitableViewer(Viewer delegate) {
         super(delegate);
       }
 
       @Override
       public Optional<Editor> edit() throws IOException, InterruptedException {
         return super.edit().map(editAwaiter::register);
+      }
+    }
+  }
+
+  /** An executor that allows blocking until a delegate executor has no scheduled tasks. */
+  static final class AwaitableExecutor implements Executor {
+    private final Executor delegate;
+    private final Phaser phaser = new Phaser(1); // Register self.
+
+    AwaitableExecutor(Executor delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void execute(Runnable command) {
+      var deregister = new AtomicBoolean();
+      phaser.register();
+      try {
+        delegate.execute(
+            () -> {
+              try {
+                command.run();
+              } finally {
+                if (deregister.compareAndSet(false, true)) {
+                  phaser.arriveAndDeregister();
+                }
+              }
+            });
+      } catch (RuntimeException | Error e) {
+        if (deregister.compareAndSet(false, true)) {
+          phaser.arriveAndDeregister();
+        }
+      }
+    }
+
+    void await() {
+      try {
+        phaser.awaitAdvanceInterruptibly(phaser.arrive(), 5, TimeUnit.SECONDS);
+      } catch (InterruptedException | TimeoutException e) {
+        fail("timed out / interrupted while waiting for tasks to finish", e);
       }
     }
   }

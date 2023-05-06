@@ -144,7 +144,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     var cacheBuilder =
         HttpCache.newBuilder()
             .clock(clock)
-            .cacheOn(InternalStorageExtension.singleton(new EditAwaiterStore(store, editAwaiter)))
+            .cacheOn(InternalStorageExtension.singleton(new EditAwaitableStore(store, editAwaiter)))
             .executor(executor);
     if (statsRecorder != null) {
       cacheBuilder.statsRecorder(statsRecorder);

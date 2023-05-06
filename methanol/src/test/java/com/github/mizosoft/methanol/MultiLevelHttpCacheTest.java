@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
             .executor(executor)
             .cacheOn(
                 InternalStorageExtension.singleton(
-                    new EditAwaiterStore(storeContext.createAndRegisterStore(), editAwaiter)))
+                    new EditAwaitableStore(storeContext.createAndRegisterStore(), editAwaiter)))
             .clock(clock)
             .build();
     return new CacheSetup(storeContext, cache);
