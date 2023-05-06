@@ -141,7 +141,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvFileSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-@Timeout(value = 5, unit = TimeUnit.MINUTES)
+@Timeout(10)
 @ExtendWith({MockWebServerExtension.class, StoreExtension.class, ExecutorExtension.class})
 class HttpCacheTest {
   static {
@@ -617,7 +617,6 @@ class HttpCacheTest {
         tester.accept(config);
 
         // Clean workspace for next config
-        storeContext.drainQueuedTasksIfNeeded();
         cache.dispose();
       } catch (AssertionError failed) {
         fail(config.toString(), failed);
@@ -1987,7 +1986,7 @@ class HttpCacheTest {
   void heuristicExpiration(Store store) throws Exception {
     setUpCache(store);
     // Last-Modified:      30 seconds from date
-    // Heuristic lifetime: 3 seconds
+    // Heuristic lifetime: 3 seconds (10% of duration between Last-Modified & Date)
     // Age:                1 second
     var lastModifiedInstant = clock.instant();
     clock.advanceSeconds(30);
@@ -2169,7 +2168,6 @@ class HttpCacheTest {
       throws Exception {
     // Perform cleanup for previous call
     if (cache != null) {
-      storeContext.drainQueuedTasksIfNeeded();
       cache.dispose();
     }
     setUpCache(storeContext.createAndRegisterStore());

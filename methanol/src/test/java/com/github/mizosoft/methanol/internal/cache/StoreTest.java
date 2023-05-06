@@ -62,7 +62,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(30)
+@Timeout(5)
 @ExtendWith({StoreExtension.class, ExecutorExtension.class})
 class StoreTest {
   static {

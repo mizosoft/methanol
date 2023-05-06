@@ -53,9 +53,6 @@ public abstract class StoreContext implements AutoCloseable {
 
   abstract Store createStore() throws IOException;
 
-  /** If execution is queued, makes sure all tasks queued so far are executed. */
-  public void drainQueuedTasksIfNeeded() {}
-
   /** Logs debug info after a test failure. */
   void logDebugInfo() {}
 

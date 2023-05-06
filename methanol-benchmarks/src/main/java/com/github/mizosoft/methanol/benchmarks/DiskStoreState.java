@@ -46,7 +46,7 @@ public class DiskStoreState {
     context =
         StoreContext.from(
             new DiskStoreConfig(
-                maxSize, 1, FileSystemType.SYSTEM, Execution.ASYNC, 1, false, false, false, false));
+                maxSize, 1, FileSystemType.SYSTEM, Execution.ASYNC, 1, false, false, false));
     store = context.createAndRegisterStore();
   }
 

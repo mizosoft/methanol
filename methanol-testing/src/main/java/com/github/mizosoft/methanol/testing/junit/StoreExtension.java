@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -248,8 +248,7 @@ public final class StoreExtension
         indexUpdateDelaySeconds,
         true,
         autoAdvanceClock,
-        dispatchEagerly,
-        true);
+        dispatchEagerly);
   }
 
   private static RedisStandaloneStoreConfig createRedisStandaloneConfig(List<?> tuple) {

@@ -44,6 +44,8 @@ import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexCorruption
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexEntry;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.Logging;
+import com.github.mizosoft.methanol.testing.MockClock;
+import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.junit.DiskStoreContext;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
@@ -70,7 +72,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /** DiskStore specific tests that are complementary to {@link StoreTest}. */
-@Timeout(30)
+@Timeout(5)
 @ExtendWith({StoreExtension.class, ExecutorExtension.class})
 class DiskStoreTest {
   static {
@@ -109,7 +111,6 @@ class DiskStoreTest {
     try (var store1 = context.createAndRegisterStore()) {
       write(store1, "e1", "Mewtwo", "Charmander");
       write(store1, "e2", "Psyduck", "Pikachu");
-      context.drainQueuedTasksIfNeeded();
     }
 
     var store2 = context.createAndRegisterStore();
@@ -568,7 +569,6 @@ class DiskStoreTest {
     view(store1, "e2").close();
 
     long lruTimeBeforeClosure = store1.lruTime();
-    context.drainQueuedTasksIfNeeded();
     store1.close();
 
     var store2 = (DiskStore) context.createAndRegisterStore();
@@ -615,8 +615,8 @@ class DiskStoreTest {
       dispatchEagerly = false)
   void indexUpdateEvents(DiskStore store, DiskStoreContext context)
       throws IOException, InterruptedException {
-    var delayer = context.mockDelayer();
-    var clock = context.mockClock();
+    var delayer = (MockDelayer) store.delayer();
+    var clock = (MockClock) store.clock();
     var mockStore = new MockDiskStore(context);
 
     // Opening an editor doesn't issue an index write.
@@ -721,8 +721,8 @@ class DiskStoreTest {
       indexUpdateDelaySeconds = 1)
   void indexUpdatesAreTimeLimited(DiskStore store, DiskStoreContext context)
       throws IOException, InterruptedException {
-    var delayer = context.mockDelayer();
-    var clock = context.mockClock();
+    var delayer = (MockDelayer) store.delayer();
+    var clock = (MockClock) store.clock();
     int indexWriteCount = 0;
 
     // t = 0
@@ -858,7 +858,6 @@ class DiskStoreTest {
   @StoreSpec(store = StoreType.DISK)
   void closedStoreIsInoperable(DiskStoreContext context) throws IOException {
     var store1 = context.createAndRegisterStore();
-    context.drainQueuedTasksIfNeeded();
     store1.close();
     assertInoperable(store1);
 
@@ -976,7 +975,7 @@ class DiskStoreTest {
             () -> {
               arrival.await();
               try {
-                context.mockClock().advanceSeconds(0); // Trigger 'delayed' index writes.
+                ((MockClock) store.clock()).advanceSeconds(0); // Trigger 'delayed' index writes.
               } catch (RejectedExecutionException ignored) {
                 // This is fine. DiskStore::dispose closes the SerialExecutor used for index writes.
               }

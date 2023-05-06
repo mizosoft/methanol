@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,6 @@ public final class DiskStoreConfig extends StoreConfig {
   private final boolean mockTime;
   private final boolean autoAdvanceClock;
   private final boolean dispatchEagerly;
-  private final boolean mockHashing;
 
   public DiskStoreConfig(
       long maxSize,
@@ -47,8 +46,7 @@ public final class DiskStoreConfig extends StoreConfig {
       int indexUpdateDelaySeconds,
       boolean mockTime,
       boolean autoAdvanceClock,
-      boolean dispatchEagerly,
-      boolean mockHashing) {
+      boolean dispatchEagerly) {
     super(StoreType.DISK, maxSize, appVersion);
     this.fileSystemType = requireNonNull(fileSystemType);
     this.execution = requireNonNull(execution);
@@ -61,7 +59,6 @@ public final class DiskStoreConfig extends StoreConfig {
     this.mockTime = mockTime;
     this.autoAdvanceClock = autoAdvanceClock;
     this.dispatchEagerly = dispatchEagerly;
-    this.mockHashing = mockHashing;
   }
 
   public FileSystemType fileSystemType() {
@@ -86,9 +83,5 @@ public final class DiskStoreConfig extends StoreConfig {
 
   public boolean dispatchEagerly() {
     return dispatchEagerly;
-  }
-
-  public boolean mockHashing() {
-    return mockHashing;
   }
 }

@@ -250,6 +250,14 @@ public final class DiskStore implements Store {
     }
   }
 
+  Clock clock() {
+    return indexWriteScheduler.clock();
+  }
+
+  Delayer delayer() {
+    return indexWriteScheduler.delayer();
+  }
+
   private DirectoryLock initialize() throws IOException {
     var lock = DirectoryLock.acquire(Files.createDirectories(directory));
 
@@ -1027,6 +1035,14 @@ public final class DiskStore implements Store {
       this.period = period;
       this.delayer = delayer;
       this.clock = clock;
+    }
+
+    Clock clock() {
+      return clock;
+    }
+
+    Delayer delayer() {
+      return delayer;
     }
 
     void trySchedule() {

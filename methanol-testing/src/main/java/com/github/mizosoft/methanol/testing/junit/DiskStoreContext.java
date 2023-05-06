@@ -26,7 +26,6 @@ import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
-import com.github.mizosoft.methanol.internal.cache.DiskStore.Hasher;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.testing.MemoryFileSystemProvider;
@@ -59,24 +58,13 @@ public final class DiskStoreContext extends StoreContext {
   private final Path directory;
   private final FileSystem fileSystem;
   private final Executor executor;
-  private final Clock clock;
-  private final Delayer delayer;
-  private final Hasher hasher;
+  private final MockHasher hasher = new MockHasher();
 
-  private DiskStoreContext(
-      DiskStoreConfig config,
-      Path directory,
-      FileSystem fileSystem,
-      Clock clock,
-      Delayer delayer,
-      Hasher hasher) {
+  private DiskStoreContext(DiskStoreConfig config, Path directory, FileSystem fileSystem) {
     super(config);
     this.directory = requireNonNull(directory);
     this.fileSystem = requireNonNull(fileSystem);
     this.executor = config.execution().newExecutor();
-    this.clock = requireNonNull(clock);
-    this.delayer = requireNonNull(delayer);
-    this.hasher = requireNonNull(hasher);
   }
 
   @Override
@@ -88,40 +76,30 @@ public final class DiskStoreContext extends StoreContext {
     return directory;
   }
 
-  public MockClock mockClock() {
-    requireState(clock instanceof MockClock, "not a MockClock");
-    return (MockClock) clock;
-  }
-
-  public MockDelayer mockDelayer() {
-    requireState(delayer instanceof MockDelayer, "not a MockDelayer");
-    return (MockDelayer) delayer;
-  }
-
   public MockHasher hasher() {
-    requireState(hasher instanceof MockHasher, "not a MockHasher");
-    return (MockHasher) hasher;
+    return hasher;
   }
 
   public MockExecutor mockExecutor() {
-    if (!(executor instanceof MockExecutor)) {
-      throw new UnsupportedOperationException("unavailable MockExecutor");
-    }
+    requireState(executor instanceof MockExecutor, "unavailable MockExecutor");
     return ((MockExecutor) executor);
   }
 
   @Override
-  public void drainQueuedTasksIfNeeded() {
-    if (delayer instanceof MockDelayer) {
-      ((MockDelayer) delayer).drainQueuedTasks(false);
-    }
-    if (executor instanceof MockExecutor) {
-      ((MockExecutor) executor).runAll();
-    }
-  }
-
-  @Override
   Store createStore() throws IOException {
+    Clock clock;
+    Delayer delayer;
+    if (config().mockTime()) {
+      var mockClock = new MockClock();
+      if (config().autoAdvanceClock()) {
+        mockClock.autoAdvance(Duration.ofSeconds(1));
+      }
+      clock = mockClock;
+      delayer = new MockDelayer(mockClock, config().dispatchEagerly());
+    } else {
+      clock = Clock.systemUTC();
+      delayer = Delayer.systemDelayer();
+    }
     var builder =
         DiskStore.newBuilder()
             .debugIndexOps(true)
@@ -140,12 +118,8 @@ public final class DiskStoreContext extends StoreContext {
 
   @Override
   void close(List<Exception> exceptions) {
-    // Make sure no more tasks are queued. We ignore rejected tasks as the test might have caused an
-    // executor to be shutdown.
-    if (delayer instanceof MockDelayer) {
-      ((MockDelayer) delayer).drainQueuedTasks(true);
-    }
     if (executor instanceof MockExecutor) {
+      // Drain queued tasks & allow progress.
       try {
         var mockExecutor = mockExecutor();
         mockExecutor.executeDirectly(true); // Allow recursive task submission.
@@ -189,26 +163,7 @@ public final class DiskStoreContext extends StoreContext {
 
   public static DiskStoreContext create(DiskStoreConfig config) throws IOException {
     var directory = createTempDir(config.fileSystemType());
-    Clock clock;
-    Delayer delayer;
-    if (config.mockTime()) {
-      var mockClock = new MockClock();
-      if (config.autoAdvanceClock()) {
-        mockClock.autoAdvance(Duration.ofSeconds(1));
-      }
-      clock = mockClock;
-      delayer = new MockDelayer(mockClock, config.dispatchEagerly());
-    } else {
-      clock = Clock.systemUTC();
-      delayer = Delayer.systemDelayer();
-    }
-    return new DiskStoreContext(
-        config,
-        directory,
-        directory.getFileSystem(),
-        clock,
-        delayer,
-        config.mockHashing() ? new MockHasher() : Hasher.TRUNCATED_SHA_256);
+    return new DiskStoreContext(config, directory, directory.getFileSystem());
   }
 
   private static Path createTempDir(FileSystemType fsType) throws IOException {
