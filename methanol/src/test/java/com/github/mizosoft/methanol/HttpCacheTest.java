@@ -1998,6 +1998,7 @@ class HttpCacheTest {
             .setHeader("Date", formatInstant(dateInstant))
             .setBody("Cache me pls!"));
     verifyThat(get(serverUri)).isCacheMiss().hasBody("Cache me pls!");
+    verifyThat(get(serverUri)).isCacheHit().hasBody("Cache me pls!").containsHeader("Age", "1");
 
     // Retain heuristic freshness (age = 2 secs, heuristic lifetime = 3 secs)
     clock.advanceSeconds(1);
@@ -2011,12 +2012,16 @@ class HttpCacheTest {
     // Make response stale (age = 3 secs, heuristic lifetime = 3 secs)
     clock.advanceSeconds(1);
 
+    verifyThat(get(GET(serverUri).cacheControl(CacheControl.newBuilder().onlyIfCached().build())))
+        .isCacheUnsatisfaction();
+
     var revalidationDateInstant = clock.instant();
-    clock.advanceSeconds(1); // age = 1 second
+    clock.advanceSeconds(1); // curr age = 4 seconds, new (revalidated) age = 1 second.
     server.enqueue(
         new MockResponse()
             .setResponseCode(HTTP_NOT_MODIFIED)
-            .setHeader("Date", formatInstant(revalidationDateInstant)));
+            .setHeader("Date", formatInstant(revalidationDateInstant))
+            .setHeader("Last-Modified", formatInstant(revalidationDateInstant.minusSeconds(30))));
     verifyThat(get(serverUri))
         .isConditionalHit()
         .hasBody("Cache me pls!")
@@ -2026,19 +2031,6 @@ class HttpCacheTest {
         .isCacheHit()
         .hasBody("Cache me pls!")
         .containsHeader("Age", "1")
-        .doesNotContainHeader("Warning");
-
-    // Make response stale (age = 4 secs, heuristic lifetime = 3 secs)
-    clock.advanceSeconds(3);
-
-    server.enqueue(
-        new MockResponse()
-            .setResponseCode(HTTP_NOT_MODIFIED)
-            .setHeader("Date", toUtcDateTime(clock.instant())));
-    verifyThat(get(serverUri))
-        .isConditionalHit()
-        .hasBody("Cache me pls!")
-        .doesNotContainHeader("Age") // The response has no Age as it has just been revalidated
         .doesNotContainHeader("Warning");
   }
 
