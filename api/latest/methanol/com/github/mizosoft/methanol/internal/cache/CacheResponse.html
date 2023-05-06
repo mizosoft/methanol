@@ -99,7 +99,7 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.github.mizosoft.methanol.internal.cache.CacheResponseMetadata,com.github.mizosoft.methanol.internal.cache.Store.Viewer,java.util.concurrent.Executor,com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher.Listener,java.net.http.HttpRequest,java.time.Instant)" class="member-name-link">CacheResponse</a><wbr>(<a href="CacheResponseMetadata.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheResponseMetadata</a>&nbsp;metadata,
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.github.mizosoft.methanol.TrackedResponse,com.github.mizosoft.methanol.internal.cache.Store.Viewer,java.util.concurrent.Executor,com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher.Listener,java.net.http.HttpRequest,java.time.Instant)" class="member-name-link">CacheResponse</a><wbr>(<a href="../../TrackedResponse.html" title="interface in com.github.mizosoft.methanol">TrackedResponse</a>&lt;?&gt;&nbsp;response,
  <a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a>&nbsp;viewer,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
  <a href="CacheReadingPublisher.Listener.html" title="interface in com.github.mizosoft.methanol.internal.cache">CacheReadingPublisher.Listener</a>&nbsp;readListener,
@@ -123,24 +123,24 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#close()" class="member-name-link">close</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>&gt;&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#editAsync()" class="member-name-link">editAsync</a>()</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#conditionalize(java.net.http.HttpRequest)" class="member-name-link">conditionalize</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="../../TrackedResponse.html" title="interface in com.github.mizosoft.methanol">TrackedResponse</a>&lt;T&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleAsync(java.net.http.HttpResponse.BodyHandler,java.util.concurrent.Executor)" class="member-name-link">handleAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;handler,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#edit()" class="member-name-link">edit</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#isServable()" class="member-name-link">isServable</a>()</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="../../TrackedResponse.html" title="interface in com.github.mizosoft.methanol">TrackedResponse</a>&lt;T&gt;&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#handleAsync(java.net.http.HttpResponse.BodyHandler,java.util.concurrent.Executor)" class="member-name-link">handleAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;handler,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#isServableOnError()" class="member-name-link">isServableOnError</a>()</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#isServable()" class="member-name-link">isServable</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#isServableWhileRevalidating()" class="member-name-link">isServableWhileRevalidating</a>()</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#isServableOnError()" class="member-name-link">isServableOnError</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toValidationRequest(java.net.http.HttpRequest)" class="member-name-link">toValidationRequest</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#isServableWhileRevalidating()" class="member-name-link">isServableWhileRevalidating</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="CacheResponse.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheResponse</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#with(java.util.function.Consumer)" class="member-name-link">with</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Consumer.html" title="class or interface in java.util.function" class="external-link">Consumer</a>&lt;<a href="../../ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;?&gt;&gt;&nbsp;mutator)</code></div>
@@ -171,9 +171,9 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <h2>Constructor Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="&lt;init&gt;(com.github.mizosoft.methanol.internal.cache.CacheResponseMetadata,com.github.mizosoft.methanol.internal.cache.Store.Viewer,java.util.concurrent.Executor,com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher.Listener,java.net.http.HttpRequest,java.time.Instant)">
+<section class="detail" id="&lt;init&gt;(com.github.mizosoft.methanol.TrackedResponse,com.github.mizosoft.methanol.internal.cache.Store.Viewer,java.util.concurrent.Executor,com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher.Listener,java.net.http.HttpRequest,java.time.Instant)">
 <h3>CacheResponse</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">CacheResponse</span><wbr><span class="parameters">(<a href="CacheResponseMetadata.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheResponseMetadata</a>&nbsp;metadata,
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">CacheResponse</span><wbr><span class="parameters">(<a href="../../TrackedResponse.html" title="interface in com.github.mizosoft.methanol">TrackedResponse</a>&lt;?&gt;&nbsp;response,
  <a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a>&nbsp;viewer,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
  <a href="CacheReadingPublisher.Listener.html" title="interface in com.github.mizosoft.methanol.internal.cache">CacheReadingPublisher.Listener</a>&nbsp;readListener,
@@ -212,9 +212,16 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 </section>
 </li>
 <li>
-<section class="detail" id="editAsync()">
-<h3>editAsync</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>&gt;&gt;</span>&nbsp;<span class="element-name">editAsync</span>()</div>
+<section class="detail" id="edit()">
+<h3>edit</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a>&gt;</span>&nbsp;<span class="element-name">edit</span>()
+                            throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a>,
+<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></span></div>
+<dl class="notes">
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></code></dd>
+</dl>
 </section>
 </li>
 <li>
@@ -236,9 +243,9 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 </section>
 </li>
 <li>
-<section class="detail" id="toValidationRequest(java.net.http.HttpRequest)">
-<h3>toValidationRequest</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></span>&nbsp;<span class="element-name">toValidationRequest</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</span></div>
+<section class="detail" id="conditionalize(java.net.http.HttpRequest)">
+<h3>conditionalize</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></span>&nbsp;<span class="element-name">conditionalize</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</span></div>
 </section>
 </li>
 <li>

@@ -76,7 +76,7 @@ loadScripts(document, 'script');</script>
 <section class="class-description" id="class-description">
 <hr>
 <div class="type-signature"><span class="modifiers">public interface </span><span class="element-name type-name-label">CharMatcher</span></div>
-<div class="block">Simple char matching API to use internally.</div>
+<div class="block">Char matching API to use internally.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -98,11 +98,10 @@ loadScripts(document, 'script');</script>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#anyOf(java.lang.String)" class="member-name-link">anyOf</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;chars)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#closedRange(int,int)" class="member-name-link">closedRange</a><wbr>(int&nbsp;c1,
- int&nbsp;c2)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#digits()" class="member-name-link">digits</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1"><code>static <a href="CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#digits()" class="member-name-link">digits</a>()</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#is(int)" class="member-name-link">is</a><wbr>(int&nbsp;c)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#letters()" class="member-name-link">letters</a>()</code></div>
@@ -116,6 +115,10 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code>default <a href="CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#or(com.github.mizosoft.methanol.internal.text.CharMatcher)" class="member-name-link">or</a><wbr>(<a href="CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a>&nbsp;other)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5">&nbsp;</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#withinClosedRange(int,int)" class="member-name-link">withinClosedRange</a><wbr>(int&nbsp;c1,
+ int&nbsp;c2)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1">&nbsp;</div>
 </div>
 </div>
 </div>
@@ -173,10 +176,16 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="closedRange(int,int)">
-<h3>closedRange</h3>
-<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></span>&nbsp;<span class="element-name">closedRange</span><wbr><span class="parameters">(int&nbsp;c1,
+<section class="detail" id="withinClosedRange(int,int)">
+<h3>withinClosedRange</h3>
+<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></span>&nbsp;<span class="element-name">withinClosedRange</span><wbr><span class="parameters">(int&nbsp;c1,
  int&nbsp;c2)</span></div>
+</section>
+</li>
+<li>
+<section class="detail" id="is(int)">
+<h3>is</h3>
+<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></span>&nbsp;<span class="element-name">is</span><wbr><span class="parameters">(int&nbsp;c)</span></div>
 </section>
 </li>
 </ul>

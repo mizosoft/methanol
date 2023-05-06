@@ -80,7 +80,7 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public class </span><span class="element-name type-name-label">MoreBodySubscribers</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">Provides additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
+<div class="block">Factory for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -112,13 +112,15 @@ S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#ofDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">ofDeferredObject</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>BodySubscriber</code> of <code>Supplier&lt;T&gt;</code> as specified by <a href="BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.Decoder.toDeferredObject(TypeRef, MediaType)</code></a> using an installed decoder.</div>
+<div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
+ type using an installed <a href="BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>decoder</code></a>.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#ofObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">ofObject</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>BodySubscriber</code> of <code>T</code> as specified by <a href="BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.Decoder.toObject(TypeRef, MediaType)</code></a> using an installed decoder.</div>
+<div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
+ type using an installed <a href="BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>decoder</code></a>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Reader.html" title="class or interface in java.io" class="external-link">Reader</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#ofReader(java.nio.charset.Charset)" class="member-name-link">ofReader</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;charset)</code></div>
@@ -130,14 +132,14 @@ S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)" class="member-name-link">withReadTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>BodySubscriber&lt;T&gt;</code> that completes the given downstream with <a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpReadTimeoutException</code></a> if a requested signal is not received within the given timeout.</div>
+<div class="block">Returns a <code>BodySubscriber</code> that completes the given downstream with <a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpReadTimeoutException</code></a> if a requested signal is not received within the given timeout.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)" class="member-name-link">withReadTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>BodySubscriber&lt;T&gt;</code> that completes the given downstream with <a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpReadTimeoutException</code></a> if a requested signal is not received within the given timeout.</div>
+<div class="block">Returns a <code>BodySubscriber</code> that completes the given downstream with <a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpReadTimeoutException</code></a> if a requested signal is not received within the given timeout.</div>
 </div>
 </div>
 </div>
@@ -164,18 +166,10 @@ S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/
 <span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span>&nbsp;<span class="element-name">fromAsyncSubscriber</span><wbr><span class="parameters">(S&nbsp;downstream,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Function.html" title="class or interface in java.util.function" class="external-link">Function</a>&lt;? super S,<wbr>? extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletionStage.html" title="class or interface in java.util.concurrent" class="external-link">CompletionStage</a>&lt;T&gt;&gt;&nbsp;asyncFinisher)</span></div>
 <div class="block">Returns a <code>BodySubscriber</code> that forwards the response body to the given downstream. The
- body's completion depends on the completion of the <code>CompletionStage</code> returned by the
- given function. Unlike <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscribers.html#fromSubscriber(S,java.util.function.Function)" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscribers.fromSubscriber(Subscriber, Function)</code></a>, the given
- subscriber's <code>onComplete</code> or <code>onError</code> need not be called for the body to complete.</div>
-<dl class="notes">
-<dt>Type Parameters:</dt>
-<dd><code>T</code> - the type of the body</dd>
-<dd><code>S</code> - the type of the subscriber</dd>
-<dt>Parameters:</dt>
-<dd><code>downstream</code> - the receiver of the response body</dd>
-<dd><code>asyncFinisher</code> - a function that maps the subscriber to an async task upon which the body
-     completion is dependant</dd>
-</dl>
+ response body's completion depends on the completion of the <code>CompletionStage</code> returned by
+ the given function. Unlike <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscribers.html#fromSubscriber(S,java.util.function.Function)" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscribers.fromSubscriber(Subscriber, Function)</code></a>, the
+ given subscriber's <code>onComplete</code> or <code>onError</code> need not be called for the body to
+ complete.</div>
 </section>
 </li>
 <li>
@@ -183,7 +177,7 @@ S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/
 <h3>withReadTimeout</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span>&nbsp;<span class="element-name">withReadTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout)</span></div>
-<div class="block">Returns a <code>BodySubscriber&lt;T&gt;</code> that completes the given downstream with <a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpReadTimeoutException</code></a> if a requested signal is not received within the given timeout. A
+<div class="block">Returns a <code>BodySubscriber</code> that completes the given downstream with <a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpReadTimeoutException</code></a> if a requested signal is not received within the given timeout. A
  system-wide scheduler is used to schedule timeout events.</div>
 <dl class="notes">
 <dt>Throws:</dt>
@@ -197,7 +191,7 @@ S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span>&nbsp;<span class="element-name">withReadTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</span></div>
-<div class="block">Returns a <code>BodySubscriber&lt;T&gt;</code> that completes the given downstream with <a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpReadTimeoutException</code></a> if a requested signal is not received within the given timeout. The
+<div class="block">Returns a <code>BodySubscriber</code> that completes the given downstream with <a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpReadTimeoutException</code></a> if a requested signal is not received within the given timeout. The
  given <code>ScheduledExecutorService</code> is used to schedule timeout events.</div>
 <dl class="notes">
 <dt>Throws:</dt>
@@ -214,8 +208,8 @@ S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/
 
  <p>To ensure proper release of resources, the channel should be fully consumed until EOF is
  reached. If such consumption cannot be guaranteed, either the channel should be eventually
- closed or the thread which is blocked on reading the channel should be interrupted. Note
- however that doing so will render the underlying connection unusable for subsequent requests.</div>
+ closed or the thread which is blocked on reading the channel should be interrupted. Note,
+ however, that doing so will render the underlying connection unusable for subsequent requests.</div>
 </section>
 </li>
 <li>
@@ -226,12 +220,9 @@ S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/
  stream of characters decoded using the given charset.
 
  <p>To ensure proper release of resources, the reader should be fully consumed until EOF is
- reached. If such consumption cannot be guaranteed, the reader should be eventually closed. Note
- however that doing so will render the underlying connection unusable for subsequent requests.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>charset</code> - the charset with which the response bytes are decoded</dd>
-</dl>
+ reached. If such consumption cannot be guaranteed, the reader should be eventually closed.
+ Note, however, that doing so will render the underlying connection unusable for subsequent
+ requests.</div>
 </section>
 </li>
 <li>
@@ -239,16 +230,12 @@ S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/
 <h3>ofObject</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span>&nbsp;<span class="element-name">ofObject</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Returns a <code>BodySubscriber</code> of <code>T</code> as specified by <a href="BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.Decoder.toObject(TypeRef, MediaType)</code></a> using an installed decoder.</div>
+<div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
+ type using an installed <a href="BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>decoder</code></a>.</div>
 <dl class="notes">
-<dt>Type Parameters:</dt>
-<dd><code>T</code> - the response body type</dd>
-<dt>Parameters:</dt>
-<dd><code>type</code> - a <code>TypeRef</code> representing <code>T</code></dd>
-<dd><code>mediaType</code> - the media type</dd>
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if no <code>Decoder</code> that supports the given type or
-     media type is installed</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if no <a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that supports the given object type
+     or media type is installed</dd>
 </dl>
 </section>
 </li>
@@ -258,16 +245,12 @@ S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>
 <span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Supplier.html" title="class or interface in java.util.function" class="external-link">Supplier</a>&lt;T&gt;&gt;</span>&nbsp;<span class="element-name">ofDeferredObject</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Returns a <code>BodySubscriber</code> of <code>Supplier&lt;T&gt;</code> as specified by <a href="BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.Decoder.toDeferredObject(TypeRef, MediaType)</code></a> using an installed decoder.</div>
+<div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
+ type using an installed <a href="BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>decoder</code></a>.</div>
 <dl class="notes">
-<dt>Type Parameters:</dt>
-<dd><code>T</code> - the response body type</dd>
-<dt>Parameters:</dt>
-<dd><code>type</code> - a <code>TypeRef</code> representing <code>T</code></dd>
-<dd><code>mediaType</code> - the media type</dd>
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if no <code>Decoder</code> that supports the given type or
-     media type is installed</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if no <a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that supports the given object type
+     or media type is installed</dd>
 </dl>
 </section>
 </li>

@@ -129,7 +129,7 @@ implements <a href="../../../../../../methanol/com/github/mizosoft/methanol/Body
 <div class="block">Returns <code>true</code> if this adapter supports the given type.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toObject</a><wbr>(<a href="../../../../../../methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type,
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toObject</a><wbr>(<a href="../../../../../../methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;objectType,
  @Nullable <a href="../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
@@ -184,28 +184,21 @@ implements <a href="../../../../../../methanol/com/github/mizosoft/methanol/Body
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)">supportsType</a></code>&nbsp;in interface&nbsp;<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></code></dd>
-<dt>Parameters:</dt>
-<dd><code>type</code> - the object type</dd>
 </dl>
 </section>
 </li>
 <li>
 <section class="detail" id="toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
 <h3>toObject</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span>&nbsp;<span class="element-name">toObject</span><wbr><span class="parameters">(<a href="../../../../../../methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;type,
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span>&nbsp;<span class="element-name">toObject</span><wbr><span class="parameters">(<a href="../../../../../../methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;objectType,
  @Nullable <a href="../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block"><span class="descfrm-type-label">Description copied from interface:&nbsp;<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">BodyAdapter.Decoder</a></code></span></div>
 <div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
  type using the format specified by the given media type. If <code>mediaType</code> is <code>
- null</code>, the decoders's default format settings will be used.</div>
+ null</code>, the decoder's default format parameters (e.g. charset) are used.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">toObject</a></code>&nbsp;in interface&nbsp;<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></dd>
-<dt>Type Parameters:</dt>
-<dd><code>T</code> - the type represent by <code>type</code></dd>
-<dt>Parameters:</dt>
-<dd><code>type</code> - the object type</dd>
-<dd><code>mediaType</code> - the media type</dd>
 </dl>
 </section>
 </li>

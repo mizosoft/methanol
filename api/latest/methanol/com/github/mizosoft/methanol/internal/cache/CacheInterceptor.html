@@ -85,9 +85,9 @@ loadScripts(document, 'script');</script>
 <div class="type-signature"><span class="modifiers">public final class </span><span class="element-name type-name-label">CacheInterceptor</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>
 implements <a href="../../Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a></span></div>
-<div class="block">An <a href="../../Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol"><code>Methanol.Interceptor</code></a> that serves incoming requests from cache, network, both, or none (in case
- of unsatisfiable requests). The interceptor also updates, populates and invalidates cache entries
- as necessary.</div>
+<div class="block">An <a href="../../Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol"><code>Methanol.Interceptor</code></a> that serves incoming requests from cache, network, both (in case of
+ successful/failed revalidation), or none (in case of unsatisfiable requests). The interceptor
+ also updates, populates and invalidates cache entries as necessary.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -110,7 +110,7 @@ implements <a href="../../Methanol.Interceptor.html" title="interface in com.git
 <div class="table-header col-last">Description</div>
 <div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.github.mizosoft.methanol.internal.cache.LocalCache,com.github.mizosoft.methanol.HttpCache.Listener,java.util.concurrent.Executor,java.time.Clock)" class="member-name-link">CacheInterceptor</a><wbr>(<a href="LocalCache.html" title="interface in com.github.mizosoft.methanol.internal.cache">LocalCache</a>&nbsp;cache,
  <a href="../../HttpCache.Listener.html" title="interface in com.github.mizosoft.methanol">HttpCache.Listener</a>&nbsp;listener,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;handlerExecutor,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</code></div>
 <div class="col-last even-row-color">&nbsp;</div>
 </div>
@@ -127,22 +127,17 @@ implements <a href="../../Methanol.Interceptor.html" title="interface in com.git
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="RawResponse.html" title="class in com.github.mizosoft.methanol.internal.cache">RawResponse</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#exchange(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain,boolean)" class="member-name-link">exchange</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
- <a href="../../Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a>&lt;?&gt;&nbsp;chain,
- boolean&nbsp;async)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.html" title="class or interface in java.net.http" class="external-link">HttpResponse</a>&lt;T&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#intercept(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain)" class="member-name-link">intercept</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.html" title="class or interface in java.net.http" class="external-link">HttpResponse</a>&lt;T&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#intercept(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain)" class="member-name-link">intercept</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
  <a href="../../Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a>&lt;T&gt;&nbsp;chain)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Intercepts given request and returns the resulting response, usually by forwarding to the
  given chain.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.html" title="class or interface in java.net.http" class="external-link">HttpResponse</a>&lt;T&gt;&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#interceptAsync(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain)" class="member-name-link">interceptAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.html" title="class or interface in java.net.http" class="external-link">HttpResponse</a>&lt;T&gt;&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#interceptAsync(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain)" class="member-name-link">interceptAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
  <a href="../../Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a>&lt;T&gt;&nbsp;chain)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Intercepts the given request and returns a <code>CompletableFuture</code> for the resulting
  response, usually by forwarding to the given chain.</div>
 </div>
@@ -168,7 +163,7 @@ implements <a href="../../Methanol.Interceptor.html" title="interface in com.git
 <h3>CacheInterceptor</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">CacheInterceptor</span><wbr><span class="parameters">(<a href="LocalCache.html" title="interface in com.github.mizosoft.methanol.internal.cache">LocalCache</a>&nbsp;cache,
  <a href="../../HttpCache.Listener.html" title="interface in com.github.mizosoft.methanol">HttpCache.Listener</a>&nbsp;listener,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;handlerExecutor,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</span></div>
 </section>
 </li>
@@ -211,14 +206,6 @@ implements <a href="../../Methanol.Interceptor.html" title="interface in com.git
 <dt>Specified by:</dt>
 <dd><code><a href="../../Methanol.Interceptor.html#interceptAsync(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain)">interceptAsync</a></code>&nbsp;in interface&nbsp;<code><a href="../../Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a></code></dd>
 </dl>
-</section>
-</li>
-<li>
-<section class="detail" id="exchange(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain,boolean)">
-<h3>exchange</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;<a href="RawResponse.html" title="class in com.github.mizosoft.methanol.internal.cache">RawResponse</a>&gt;</span>&nbsp;<span class="element-name">exchange</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
- <a href="../../Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a>&lt;?&gt;&nbsp;chain,
- boolean&nbsp;async)</span></div>
 </section>
 </li>
 </ul>

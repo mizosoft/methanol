@@ -79,12 +79,12 @@ loadScripts(document, 'script');</script>
 <section class="class-description" id="class-description">
 <dl class="notes">
 <dt>All Implemented Interfaces:</dt>
-<dd><code>org.junit.jupiter.api.extension.AfterAllCallback</code>, <code>org.junit.jupiter.api.extension.AfterEachCallback</code>, <code>org.junit.jupiter.api.extension.Extension</code>, <code>org.junit.jupiter.api.extension.ParameterResolver</code>, <code>org.junit.jupiter.params.provider.ArgumentsProvider</code></dd>
+<dd><code>org.junit.jupiter.api.extension.Extension</code>, <code>org.junit.jupiter.api.extension.ParameterResolver</code>, <code>org.junit.jupiter.params.provider.ArgumentsProvider</code></dd>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public final class </span><span class="element-name type-name-label">ExecutorExtension</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>
-implements org.junit.jupiter.api.extension.AfterEachCallback, org.junit.jupiter.api.extension.AfterAllCallback, org.junit.jupiter.params.provider.ArgumentsProvider, org.junit.jupiter.api.extension.ParameterResolver</span></div>
+implements org.junit.jupiter.params.provider.ArgumentsProvider, org.junit.jupiter.api.extension.ParameterResolver</span></div>
 <div class="block"><code>Extension</code> that provides <code>Executors</code> and terminates them after tests.</div>
 </section>
 <section class="summary">
@@ -137,12 +137,6 @@ implements org.junit.jupiter.api.extension.AfterEachCallback, org.junit.jupiter.
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#afterAll(org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">afterAll</a><wbr>(org.junit.jupiter.api.extension.ExtensionContext&nbsp;context)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#afterEach(org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">afterEach</a><wbr>(org.junit.jupiter.api.extension.ExtensionContext&nbsp;context)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/stream/Stream.html" title="class or interface in java.util.stream" class="external-link">Stream</a>&lt;? extends org.junit.jupiter.params.provider.Arguments&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#provideArguments(org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">provideArguments</a><wbr>(org.junit.jupiter.api.extension.ExtensionContext&nbsp;context)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
@@ -185,32 +179,6 @@ implements org.junit.jupiter.api.extension.AfterEachCallback, org.junit.jupiter.
 <section class="method-details" id="method-detail">
 <h2>Method Details</h2>
 <ul class="member-list">
-<li>
-<section class="detail" id="afterEach(org.junit.jupiter.api.extension.ExtensionContext)">
-<h3>afterEach</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">afterEach</span><wbr><span class="parameters">(org.junit.jupiter.api.extension.ExtensionContext&nbsp;context)</span>
-               throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a></span></div>
-<dl class="notes">
-<dt>Specified by:</dt>
-<dd><code>afterEach</code>&nbsp;in interface&nbsp;<code>org.junit.jupiter.api.extension.AfterEachCallback</code></dd>
-<dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a></code></dd>
-</dl>
-</section>
-</li>
-<li>
-<section class="detail" id="afterAll(org.junit.jupiter.api.extension.ExtensionContext)">
-<h3>afterAll</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">afterAll</span><wbr><span class="parameters">(org.junit.jupiter.api.extension.ExtensionContext&nbsp;context)</span>
-              throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a></span></div>
-<dl class="notes">
-<dt>Specified by:</dt>
-<dd><code>afterAll</code>&nbsp;in interface&nbsp;<code>org.junit.jupiter.api.extension.AfterAllCallback</code></dd>
-<dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Exception.html" title="class or interface in java.lang" class="external-link">Exception</a></code></dd>
-</dl>
-</section>
-</li>
 <li>
 <section class="detail" id="provideArguments(org.junit.jupiter.api.extension.ExtensionContext)">
 <h3>provideArguments</h3>

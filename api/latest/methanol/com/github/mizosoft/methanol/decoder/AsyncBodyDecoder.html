@@ -78,10 +78,6 @@ loadScripts(document, 'script');</script>
 </div>
 <section class="class-description" id="class-description">
 <dl class="notes">
-<dt>Type Parameters:</dt>
-<dd><code>T</code> - the body type</dd>
-</dl>
-<dl class="notes">
 <dt>All Implemented Interfaces:</dt>
 <dd><code><a href="../BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;T&gt;</code>, <code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</code>, <code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;</code></dd>
 </dl>
@@ -196,11 +192,6 @@ implements <a href="../BodyDecoder.html" title="interface in com.github.mizosoft
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">AsyncBodyDecoder</span><wbr><span class="parameters">(<a href="AsyncDecoder.html" title="interface in com.github.mizosoft.methanol.decoder">AsyncDecoder</a>&nbsp;decoder,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="AsyncBodyDecoder.html" title="type parameter in AsyncBodyDecoder">T</a>&gt;&nbsp;downstream)</span></div>
 <div class="block">Creates an <code>AsyncBodyDecoder</code> in sync mode.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>decoder</code> - the decoder</dd>
-<dd><code>downstream</code> - the downstream subscriber</dd>
-</dl>
 </section>
 </li>
 <li>
@@ -210,12 +201,6 @@ implements <a href="../BodyDecoder.html" title="interface in com.github.mizosoft
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="AsyncBodyDecoder.html" title="type parameter in AsyncBodyDecoder">T</a>&gt;&nbsp;downstream,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
 <div class="block">Creates an <code>AsyncBodyDecoder</code> that supplies downstream items in the given executor.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>decoder</code> - the decoder</dd>
-<dd><code>downstream</code> - the downstream subscriber</dd>
-<dd><code>executor</code> - the executor</dd>
-</dl>
 </section>
 </li>
 </ul>

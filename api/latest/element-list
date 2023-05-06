@@ -13,6 +13,7 @@ com.github.mizosoft.methanol.internal.flow
 com.github.mizosoft.methanol.internal.function
 com.github.mizosoft.methanol.internal.spi
 com.github.mizosoft.methanol.internal.text
+com.github.mizosoft.methanol.internal.util
 module:methanol.adapter.gson
 com.github.mizosoft.methanol.adapter.gson
 module:methanol.adapter.jackson

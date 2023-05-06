@@ -89,7 +89,7 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public static interface </span><span class="element-name type-name-label">BodyAdapter.Encoder</span><span class="extends-implements">
 extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></span></div>
-<div class="block"><code>BodyAdapter</code> specialization for converting objects into request bodies.</div>
+<div class="block">A <code>BodyAdapter</code> that encodes objects into request bodies.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -114,7 +114,7 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#getEncoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">getEncoder</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;type,
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#getEncoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">getEncoder</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;objectType,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1">
 <div class="block">Returns an <code>Optional</code> containing an <code>Encoder</code> that supports the given object type
@@ -156,14 +156,11 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Returns a <code>BodyPublisher</code> that encodes the given object into a request body using the
  format specified by the given media type. If <code>mediaType</code> is <code>null</code>, the encoder's
- default format settings will be used.</div>
+ default format parameters (e.g. charset) are be used.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>object</code> - the object</dd>
-<dd><code>mediaType</code> - the media type</dd>
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if the given object's type or the given media type are
-     not supported</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if the given object's runtime type or the given media
+     type are not supported</dd>
 </dl>
 </section>
 </li>
@@ -177,16 +174,11 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <li>
 <section class="detail" id="getEncoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
 <h3>getEncoder</h3>
-<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>&gt;</span>&nbsp;<span class="element-name">getEncoder</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;type,
+<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>&gt;</span>&nbsp;<span class="element-name">getEncoder</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;objectType,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Returns an <code>Optional</code> containing an <code>Encoder</code> that supports the given object type
- and media type. If <code>mediaType</code> is <code>null</code>, any encoder supporting the given type
- will be returned.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>type</code> - the object type</dd>
-<dd><code>mediaType</code> - an optional media type defining the serialization format</dd>
-</dl>
+ and media type. If <code>mediaType</code> is <code>null</code>, any encoder supporting the given object
+ type is returned</div>
 </section>
 </li>
 </ul>

@@ -80,7 +80,7 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public class </span><span class="element-name type-name-label">MoreBodyPublishers</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">Provides additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> implementations.</div>
+<div class="block">Factory for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> implementations.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -106,8 +106,8 @@ loadScripts(document, 'script');</script>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#ofObject(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">ofObject</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;object,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>BodyPublisher</code> as specified by <a href="BodyAdapter.Encoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.Encoder.toBody(Object, MediaType)</code></a> using
- an installed encoder.</div>
+<div class="block">Returns a <code>BodyPublisher</code> that encodes the given object into a request body using an
+ installed <a href="BodyAdapter.Encoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)"><code>encoder</code></a>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#ofOutputStream(com.github.mizosoft.methanol.function.ThrowingConsumer,java.util.concurrent.Executor)" class="member-name-link">ofOutputStream</a><wbr>(<a href="function/ThrowingConsumer.html" title="interface in com.github.mizosoft.methanol.function">ThrowingConsumer</a>&lt;? super <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html" title="class or interface in java.io" class="external-link">OutputStream</a>&gt;&nbsp;writerTask,
@@ -169,11 +169,6 @@ loadScripts(document, 'script');</script>
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Adapts the given <code>BodyPublisher</code> into a <a href="MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a> with the given media
  type.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>bodyPublisher</code> - the publisher</dd>
-<dd><code>mediaType</code> - the body's media type</dd>
-</dl>
 </section>
 </li>
 <li>
@@ -181,15 +176,12 @@ loadScripts(document, 'script');</script>
 <h3>ofObject</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">ofObject</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;object,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Returns a <code>BodyPublisher</code> as specified by <a href="BodyAdapter.Encoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.Encoder.toBody(Object, MediaType)</code></a> using
- an installed encoder.</div>
+<div class="block">Returns a <code>BodyPublisher</code> that encodes the given object into a request body using an
+ installed <a href="BodyAdapter.Encoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)"><code>encoder</code></a>.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>object</code> - the object</dd>
-<dd><code>mediaType</code> - the media type</dd>
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if no  that supports the runtime type of the
-     given object or the given media type is installed</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if no <a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that supports the given object's
+     runtime type or the given media type is installed</dd>
 </dl>
 </section>
 </li>

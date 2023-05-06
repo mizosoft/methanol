@@ -47,13 +47,13 @@ loadScripts(document, 'script');</script>
 <li>Summary:&nbsp;</li>
 <li>Nested&nbsp;|&nbsp;</li>
 <li>Field&nbsp;|&nbsp;</li>
-<li>Constr&nbsp;|&nbsp;</li>
+<li><a href="#constructor-summary">Constr</a>&nbsp;|&nbsp;</li>
 <li><a href="#method-summary">Method</a></li>
 </ul>
 <ul class="sub-nav-list">
 <li>Detail:&nbsp;</li>
 <li>Field&nbsp;|&nbsp;</li>
-<li>Constr&nbsp;|&nbsp;</li>
+<li><a href="#constructor-detail">Constr</a>&nbsp;|&nbsp;</li>
 <li><a href="#method-detail">Method</a></li>
 </ul>
 </div>
@@ -92,6 +92,19 @@ loadScripts(document, 'script');</script>
 </section>
 <section class="summary">
 <ul class="summary-list">
+<!-- ======== CONSTRUCTOR SUMMARY ======== -->
+<li>
+<section class="constructor-summary" id="constructor-summary">
+<h2>Constructor Summary</h2>
+<div class="caption"><span>Constructors</span></div>
+<div class="summary-table two-column-summary">
+<div class="table-header col-first">Constructor</div>
+<div class="table-header col-last">Description</div>
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E()" class="member-name-link">Builder</a>()</code></div>
+<div class="col-last even-row-color">&nbsp;</div>
+</div>
+</section>
+</li>
 <!-- ========== METHOD SUMMARY =========== -->
 <li>
 <section class="method-summary" id="method-summary">
@@ -111,7 +124,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#build()" class="member-name-link">build</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Creates and returns a new <code>MultipartBodyPublisher</code> with a snapshot of the added parts.</div>
+<div class="block">Returns a new <code>MultipartBodyPublisher</code>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#filePart(java.lang.String,java.nio.file.Path)" class="member-name-link">filePart</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
@@ -134,34 +147,42 @@ loadScripts(document, 'script');</script>
 <div class="block">Adds a form field with the given name, filename and body.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#formPart(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">formPart</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#formPart(java.lang.String,java.lang.String,java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)" class="member-name-link">formPart</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;filename,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;body,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Adds a form field with the given name, filename, body and media type.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#formPart(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">formPart</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Adds a form field with the given name and body.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#mediaType(com.github.mizosoft.methanol.MediaType)" class="member-name-link">mediaType</a><wbr>(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#mediaType(com.github.mizosoft.methanol.MediaType)" class="member-name-link">mediaType</a><wbr>(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Sets the media type of the multipart body.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#part(com.github.mizosoft.methanol.MultipartBodyPublisher.Part)" class="member-name-link">part</a><wbr>(<a href="MultipartBodyPublisher.Part.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Part</a>&nbsp;part)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#part(com.github.mizosoft.methanol.MultipartBodyPublisher.Part)" class="member-name-link">part</a><wbr>(<a href="MultipartBodyPublisher.Part.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Part</a>&nbsp;part)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Adds the given part.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#textPart(java.lang.String,java.lang.Object)" class="member-name-link">textPart</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#textPart(java.lang.String,java.lang.Object)" class="member-name-link">textPart</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;value)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Adds a <code>text/plain</code> form field with the given name and value.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#textPart(java.lang.String,java.lang.Object,java.nio.charset.Charset)" class="member-name-link">textPart</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#textPart(java.lang.String,java.lang.Object,java.nio.charset.Charset)" class="member-name-link">textPart</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;value,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;charset)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Adds a <code>text/plain</code> form field with the given name and value using the given charset
- for encoding the field's body.</div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Adds a <code>text/plain</code> form field with the given name and value, using the given charset
+ for encoding the field's value.</div>
 </div>
 </div>
 </div>
@@ -175,6 +196,20 @@ loadScripts(document, 'script');</script>
 </section>
 <section class="details">
 <ul class="details-list">
+<!-- ========= CONSTRUCTOR DETAIL ======== -->
+<li>
+<section class="constructor-details" id="constructor-detail">
+<h2>Constructor Details</h2>
+<ul class="member-list">
+<li>
+<section class="detail" id="&lt;init&gt;()">
+<h3>Builder</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">Builder</span>()</div>
+</section>
+</li>
+</ul>
+</section>
+</li>
 <!-- ============ METHOD DETAIL ========== -->
 <li>
 <section class="method-details" id="method-detail">
@@ -195,11 +230,9 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="mediaType(com.github.mizosoft.methanol.MediaType)">
 <h3>mediaType</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></span>&nbsp;<span class="element-name">mediaType</span><wbr><span class="parameters">(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Sets the media type of the multipart body. If the given media type has a boundary parameter
- then it will be used as the body's boundary.</div>
+<div class="block">Sets the media type of the multipart body. If the given media type has a boundary parameter,
+ it will be used as the body's boundary.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>mediaType</code> - the multipart media type</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the given media type is not a multipart type or if it has
      an invalid boundary parameter</dd>
@@ -211,10 +244,6 @@ loadScripts(document, 'script');</script>
 <h3>part</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></span>&nbsp;<span class="element-name">part</span><wbr><span class="parameters">(<a href="MultipartBodyPublisher.Part.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Part</a>&nbsp;part)</span></div>
 <div class="block">Adds the given part.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>part</code> - the part</dd>
-</dl>
 </section>
 </li>
 <li>
@@ -223,11 +252,6 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></span>&nbsp;<span class="element-name">formPart</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</span></div>
 <div class="block">Adds a form field with the given name and body.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>name</code> - the field's name</dd>
-<dd><code>bodyPublisher</code> - the field's body publisher</dd>
-</dl>
 </section>
 </li>
 <li>
@@ -237,12 +261,16 @@ loadScripts(document, 'script');</script>
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;filename,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;body)</span></div>
 <div class="block">Adds a form field with the given name, filename and body.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>name</code> - the field's name</dd>
-<dd><code>filename</code> - the field's filename</dd>
-<dd><code>body</code> - the field's body publisher</dd>
-</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="formPart(java.lang.String,java.lang.String,java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)">
+<h3>formPart</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></span>&nbsp;<span class="element-name">formPart</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;filename,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;body,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Adds a form field with the given name, filename, body and media type.</div>
 </section>
 </li>
 <li>
@@ -252,11 +280,6 @@ loadScripts(document, 'script');</script>
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;value)</span></div>
 <div class="block">Adds a <code>text/plain</code> form field with the given name and value. <code>UTF-8</code> is used for
  encoding the field's body.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>name</code> - the field's name</dd>
-<dd><code>value</code> - an object whose string representation is used as the value</dd>
-</dl>
 </section>
 </li>
 <li>
@@ -265,14 +288,8 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></span>&nbsp;<span class="element-name">textPart</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;value,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;charset)</span></div>
-<div class="block">Adds a <code>text/plain</code> form field with the given name and value using the given charset
- for encoding the field's body.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>name</code> - the field's name</dd>
-<dd><code>value</code> - an object whose string representation is used as the value</dd>
-<dd><code>charset</code> - the charset for encoding the field's body</dd>
-</dl>
+<div class="block">Adds a <code>text/plain</code> form field with the given name and value, using the given charset
+ for encoding the field's value.</div>
 </section>
 </li>
 <li>
@@ -282,14 +299,11 @@ loadScripts(document, 'script');</script>
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;file)</span>
                                         throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/FileNotFoundException.html" title="class or interface in java.io" class="external-link">FileNotFoundException</a></span></div>
 <div class="block">Adds a file form field with the given name and file. The field's filename property will be
- that of the given path's <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html#getFileName()" title="class or interface in java.nio.file" class="external-link"><code>filename compontent</code></a>. The given path will
- be used to <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Files.html#probeContentType(java.nio.file.Path)" title="class or interface in java.nio.file" class="external-link"><code>probe</code></a> the part's media type. If the probing
- operation fails, either by throwing an exception or returning <code>null</code>, <code>
+ that of the given path's <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html#getFileName()" title="class or interface in java.nio.file" class="external-link"><code>filename component</code></a>. The given path will
+ be used to <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Files.html#probeContentType(java.nio.file.Path)" title="class or interface in java.nio.file" class="external-link"><code>probe</code></a> the part's media type. If probing
+ fails, either by throwing an exception or returning <code>null</code>, <code>
  application/octet-stream</code> will be used.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>name</code> - the field's name</dd>
-<dd><code>file</code> - the file's path</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/FileNotFoundException.html" title="class or interface in java.io" class="external-link">FileNotFoundException</a></code> - if a file with the given path cannot be found</dd>
 </dl>
@@ -305,10 +319,6 @@ loadScripts(document, 'script');</script>
 <div class="block">Adds a file form field with given name, file and media type. The field's filename property
  will be that of the given path's <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html#getFileName()" title="class or interface in java.nio.file" class="external-link"><code>filename compontent</code></a>.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>name</code> - the field's name</dd>
-<dd><code>file</code> - the file's path</dd>
-<dd><code>mediaType</code> - the part's media type</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/FileNotFoundException.html" title="class or interface in java.io" class="external-link">FileNotFoundException</a></code> - if a file with the given path cannot be found</dd>
 </dl>
@@ -318,8 +328,8 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="build()">
 <h3>build</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MultipartBodyPublisher.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a></span>&nbsp;<span class="element-name">build</span>()</div>
-<div class="block">Creates and returns a new <code>MultipartBodyPublisher</code> with a snapshot of the added parts.
- If no boundary was previously set, a randomly generated one is used.</div>
+<div class="block">Returns a new <code>MultipartBodyPublisher</code>. If no boundary has been set, a randomly
+ generated one is used.</div>
 <dl class="notes">
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalStateException.html" title="class or interface in java.lang" class="external-link">IllegalStateException</a></code> - if no part was added</dd>

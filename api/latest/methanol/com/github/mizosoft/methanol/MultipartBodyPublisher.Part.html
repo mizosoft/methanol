@@ -102,18 +102,18 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#bodyPublisher()" class="member-name-link">bodyPublisher</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the <code>BodyPublisher</code> that publishes this part's content.</div>
+<div class="block">Returns the <code>BodyPublisher</code> of this part's content.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MultipartBodyPublisher.Part.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Part</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#create(java.net.http.HttpHeaders,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">create</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Creates and returns a new <code>Part</code> with the given headers and body publisher.</div>
+<div class="block">Returns a new <code>Part</code> with the given headers and body publisher.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#headers()" class="member-name-link">headers</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns the headers of this part.</div>
+<div class="block">Returns this part's headers.</div>
 </div>
 </div>
 </div>
@@ -136,14 +136,14 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="headers()">
 <h3>headers</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a></span>&nbsp;<span class="element-name">headers</span>()</div>
-<div class="block">Returns the headers of this part.</div>
+<div class="block">Returns this part's headers.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="bodyPublisher()">
 <h3>bodyPublisher</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">bodyPublisher</span>()</div>
-<div class="block">Returns the <code>BodyPublisher</code> that publishes this part's content.</div>
+<div class="block">Returns the <code>BodyPublisher</code> of this part's content.</div>
 </section>
 </li>
 <li>
@@ -151,14 +151,11 @@ loadScripts(document, 'script');</script>
 <h3>create</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="MultipartBodyPublisher.Part.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Part</a></span>&nbsp;<span class="element-name">create</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</span></div>
-<div class="block">Creates and returns a new <code>Part</code> with the given headers and body publisher.</div>
+<div class="block">Returns a new <code>Part</code> with the given headers and body publisher.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>headers</code> - the part's headers</dd>
-<dd><code>bodyPublisher</code> - the part's body publisher</dd>
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the name of any of the given headers is invalid or if a
-     <code>Content-Type</code> header is present but the given publisher is a <a href="MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if any of the given headers' names is invalid or if a <code>
+     Content-Type</code> header is present but the given publisher is a <a href="MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a></dd>
 </dl>
 </section>
 </li>

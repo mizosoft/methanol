@@ -100,18 +100,28 @@ loadScripts(document, 'script');</script>
 <div class="summary-table two-column-summary" aria-labelledby="class-summary-tab0">
 <div class="table-header col-first">Class</div>
 <div class="table-header col-last">Description</div>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="block">A group of <a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>adapters</code></a>, typically targeting different mapping formats, that
+ facilitates creating <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> and <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a>
+ implementations based on these adapters.</div>
+</div>
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="block">A builder of <code>AdapterCodec</code>.</div>
+</div>
 <div class="col-first even-row-color class-summary class-summary-tab1"><a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab1">
-<div class="block">An object that uses a defined format for converting high level objects to or from request or
- response <code>ByteBuffer</code> streams.</div>
+<div class="block">An object that converts high objects to or from request or response bodies respectively, using a
+ defined format.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab1"><a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab1">
-<div class="block"><code>BodyAdapter</code> specialization for converting response bodies into objects.</div>
+<div class="block">A <code>BodyAdapter</code> that decodes response bodies into objects.</div>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab1"><a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab1">
-<div class="block"><code>BodyAdapter</code> specialization for converting objects into request bodies.</div>
+<div class="block">A <code>BodyAdapter</code> that encodes objects into request bodies.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab1"><a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;T&gt;</div>
 <div class="col-last odd-row-color class-summary class-summary-tab1">
@@ -219,19 +229,19 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MoreBodyHandlers.html" title="class in com.github.mizosoft.methanol">MoreBodyHandlers</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
-<div class="block">Provides additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> implementations.</div>
+<div class="block">Factory for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> implementations.</div>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab2"><a href="MoreBodyPublishers.html" title="class in com.github.mizosoft.methanol">MoreBodyPublishers</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
-<div class="block">Provides additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> implementations.</div>
+<div class="block">Factory for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> implementations.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MoreBodySubscribers.html" title="class in com.github.mizosoft.methanol">MoreBodySubscribers</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
-<div class="block">Provides additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
+<div class="block">Factory for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab2"><a href="MultipartBodyPublisher.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
-<div class="block">A <code>BodyPublisher</code> implementing the multipart request type.</div>
+<div class="block">A <code>BodyPublisher</code> for <a href="https://tools.ietf.org/html/rfc2046#section-5.1">multipart</a> bodies.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
@@ -295,7 +305,8 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab2"><a href="WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
-<div class="block">A <code>BodyPublisher</code> that exposes a sink for writing the body's content.</div>
+<div class="block">A <code>BodyPublisher</code> that allows streaming the body's content through an <code>OutputStream</code>
+ or a <code>WritableByteChannel</code>.</div>
 </div>
 </div>
 </div>

@@ -84,15 +84,13 @@ loadScripts(document, 'script');</script>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public interface </span><span class="element-name type-name-label">BodyAdapter</span></div>
-<div class="block">An object that uses a defined format for converting high level objects to or from request or
- response <code>ByteBuffer</code> streams. The two specializations are <a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> and <a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a>, implementations of which are normally registered as service-providers by means
- described in the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/ServiceLoader.html" title="class or interface in java.util" class="external-link"><code>ServiceLoader</code></a> class.
+<div class="block">An object that converts high objects to or from request or response bodies respectively, using a
+ defined format. The two specialized subtypes are <a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> and <a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a>.
 
  <p>A <code>BodyAdapter</code> communicates the format it uses and the set of types it supports through
  <a href="#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>isCompatibleWith(MediaType)</code></a> and <a href="#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supportsType(TypeRef)</code></a> respectively. For
- example, a <code>BodyAdapter</code> that uses the JSON format is compatible with any <code>
- application/json</code> media type, and supports any object type supported by the underlying
- serializer/deserializer.</div>
+ example, a <code>BodyAdapter</code> that uses JSON is compatible with any <code>application/json</code>
+ media type, and supports any object type supported by the underlying serializer/deserializer.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -108,12 +106,12 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color"><code>static interface&nbsp;</code></div>
 <div class="col-second even-row-color"><code><a href="BodyAdapter.Decoder.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
 <div class="col-last even-row-color">
-<div class="block"><code>BodyAdapter</code> specialization for converting response bodies into objects.</div>
+<div class="block">A <code>BodyAdapter</code> that decodes response bodies into objects.</div>
 </div>
 <div class="col-first odd-row-color"><code>static interface&nbsp;</code></div>
 <div class="col-second odd-row-color"><code><a href="BodyAdapter.Encoder.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
 <div class="col-last odd-row-color">
-<div class="block"><code>BodyAdapter</code> specialization for converting objects into request bodies.</div>
+<div class="block">A <code>BodyAdapter</code> that encodes objects into request bodies.</div>
 </div>
 </div>
 </section>
@@ -158,10 +156,6 @@ loadScripts(document, 'script');</script>
 <h3>isCompatibleWith</h3>
 <div class="member-signature"><span class="return-type">boolean</span>&nbsp;<span class="element-name">isCompatibleWith</span><wbr><span class="parameters">(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Returns <code>true</code> if the format this adapter uses is <a href="MediaType.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>compatible</code></a> with the given media type.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>mediaType</code> - the media type</dd>
-</dl>
 </section>
 </li>
 <li>
@@ -169,10 +163,6 @@ loadScripts(document, 'script');</script>
 <h3>supportsType</h3>
 <div class="member-signature"><span class="return-type">boolean</span>&nbsp;<span class="element-name">supportsType</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;type)</span></div>
 <div class="block">Returns <code>true</code> if this adapter supports the given type.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>type</code> - the object type</dd>
-</dl>
 </section>
 </li>
 </ul>
