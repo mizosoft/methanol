@@ -47,7 +47,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  * and the like.
  */
 public class TestSubscriber<T> implements Subscriber<T> {
-  private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(4);
+  private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(2);
 
   private final Lock lock = new ReentrantLock();
   private final Condition subscriptionReceived = lock.newCondition();

@@ -23,12 +23,11 @@
 package com.github.mizosoft.methanol.internal.flow;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
-import java.util.concurrent.Flow.Subscription;
+import com.github.mizosoft.methanol.testing.TestSubscription;
 import org.junit.jupiter.api.Test;
 
 class ForwardingSubscriberTest {
@@ -61,24 +60,13 @@ class ForwardingSubscriberTest {
   }
 
   @Test
-  void callOnSubscribeTwice() {
+  void moreThanOneCallToOnSubscribe() {
     var subscriber = new TestForwardingSubscriber();
-    var subscription =
-        new Subscription() {
-          int cancels;
-
-          @Override
-          public void request(long n) {}
-
-          @Override
-          public void cancel() {
-            cancels++;
-          }
-        };
+    var subscription = new TestSubscription();
     subscriber.onSubscribe(subscription);
     subscriber.onSubscribe(subscription);
     subscriber.onSubscribe(subscription);
-    assertEquals(2, subscription.cancels);
+    assertThat(subscription.cancellationCount()).isEqualTo(2);
   }
 
   private static final class TestForwardingSubscriber extends ForwardingSubscriber<Integer> {

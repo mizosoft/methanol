@@ -46,6 +46,7 @@ import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscription;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import java.io.BufferedReader;
@@ -63,7 +64,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
-import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -71,7 +71,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -118,16 +117,18 @@ class MoreBodySubscribersTest {
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     var readLatch = new CountDownLatch(1);
     var readerThread = Thread.currentThread();
-    executor.execute(() -> {
-      awaitUninterruptibly(readLatch);
-      readerThread.interrupt();
-    });
+    executor.execute(
+        () -> {
+          awaitUninterruptibly(readLatch);
+          readerThread.interrupt();
+        });
 
     assertThatExceptionOfType(ClosedByInterruptException.class)
-        .isThrownBy(() -> {
-          readLatch.countDown();
-          channel.read(ByteBuffer.allocate(1));
-        });
+        .isThrownBy(
+            () -> {
+              readLatch.countDown();
+              channel.read(ByteBuffer.allocate(1));
+            });
   }
 
   @Test
@@ -136,10 +137,11 @@ class MoreBodySubscribersTest {
     var oneByte = ByteBuffer.wrap(new byte[] {'b'});
     var subscriber = ofByteChannel();
     var channel = getBody(subscriber);
-    executor.execute(() -> {
-      subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-      subscriber.onNext(List.of(oneByte.duplicate()));
-    });
+    executor.execute(
+        () -> {
+          subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
+          subscriber.onNext(List.of(oneByte.duplicate()));
+        });
 
     var buffer = ByteBuffer.allocate(2);
     channel.read(buffer);
@@ -148,20 +150,20 @@ class MoreBodySubscribersTest {
 
   @Test
   void ofByteChannel_cancelsUpstreamWhenClosed() throws IOException {
-    var subscription = new ToBeCancelledSubscription();
+    var subscription = new TestSubscription();
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(subscription);
 
     var channel = getBody(subscriber);
     channel.close();
-    subscription.assertCancelled();
+    assertThat(subscription.isCancelled()).isTrue();
     assertThatExceptionOfType(ClosedChannelException.class)
         .isThrownBy(() -> channel.read(ByteBuffer.allocate(1)));
   }
 
   @Test
   void ofByteChannel_cancelsUpstreamWhenReaderIsInterrupted() {
-    var subscription = new ToBeCancelledSubscription();
+    var subscription = new TestSubscription();
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(subscription);
 
@@ -169,7 +171,7 @@ class MoreBodySubscribersTest {
     Thread.currentThread().interrupt();
     assertThatExceptionOfType(ClosedByInterruptException.class)
         .isThrownBy(() -> channel.read(ByteBuffer.allocate(1)));
-    subscription.assertCancelled();
+    assertThat(subscription.isCancelled()).isTrue();
   }
 
   @Test
@@ -177,9 +179,9 @@ class MoreBodySubscribersTest {
     var subscriber = ofByteChannel();
     getBody(subscriber).close();
 
-    var subscription = new ToBeCancelledSubscription();
+    var subscription = new TestSubscription();
     subscriber.onSubscribe(subscription);
-    subscription.assertCancelled();
+    assertThat(subscription.isCancelled()).isTrue();
   }
 
   @Test
@@ -209,24 +211,19 @@ class MoreBodySubscribersTest {
 
   @Test
   void ofByteChannel_handlesQueueOverflowGracefully() {
-    var demand = new AtomicInteger();
-    var subscription = new ToBeCancelledSubscription() {
-      @Override
-      public void request(long n) {
-        demand.set(Math.toIntExact(n));
-      }
-    };
+    var subscription = new TestSubscription();
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(subscription);
 
+    int request = Math.toIntExact(subscription.awaitRequest());
     var buffer = UTF_8.encode("abc");
-    for (int i = 0, d = demand.get(); i < d; i++) {
+    for (int i = 0; i < request; i++) {
       subscriber.onNext(List.of(buffer.duplicate()));
     }
     // Add 1 more item than demanded
     subscriber.onNext(List.of(buffer.duplicate()));
 
-    subscription.assertCancelled();
+    assertThat(subscription.isCancelled()).isTrue();
 
     var channel = getBody(subscriber);
     assertThatIOException()
@@ -255,16 +252,17 @@ class MoreBodySubscribersTest {
   @Test
   void fromAsyncSubscriber_completedToUncompleted() {
     var completedSubscriber = ofByteChannel();
-    var uncompletedSubscriber = fromAsyncSubscriber(
-        completedSubscriber, __ -> new CompletableFuture<>());
+    var uncompletedSubscriber =
+        fromAsyncSubscriber(completedSubscriber, __ -> new CompletableFuture<>());
     assertThat(uncompletedSubscriber.getBody()).isNotCompleted();
   }
 
   @Test
   void fromAsyncSubscriber_uncompletedToCompleted() {
     var uncompletedSubscriber = ofString(US_ASCII);
-    var subscriber = fromAsyncSubscriber(
-        uncompletedSubscriber, __ -> CompletableFuture.completedFuture("Baby yoda"));
+    var subscriber =
+        fromAsyncSubscriber(
+            uncompletedSubscriber, __ -> CompletableFuture.completedFuture("Baby yoda"));
     assertThat(subscriber.getBody()).isCompletedWithValue("Baby yoda");
   }
 
@@ -278,9 +276,7 @@ class MoreBodySubscribersTest {
     var publisher = publisherOf(body, buffSize, buffsPerList, executor);
     var timeoutSubscriber = withReadTimeout(ofString(UTF_8), Duration.ofMillis(Long.MAX_VALUE));
     publisher.subscribe(timeoutSubscriber);
-    assertThat(timeoutSubscriber.getBody())
-        .succeedsWithin(Duration.ofSeconds(20))
-        .isEqualTo(body);
+    assertThat(timeoutSubscriber.getBody()).succeedsWithin(Duration.ofSeconds(20)).isEqualTo(body);
   }
 
   @Test
@@ -305,8 +301,8 @@ class MoreBodySubscribersTest {
   @ExecutorConfig(SCHEDULER)
   void withReadTimeout_timeoutAfterOnNextWithCustomScheduler(ScheduledExecutorService scheduler) {
     var timeoutMillis = 100L;
-    var timeoutSubscriber = withReadTimeout(
-        ofString(UTF_8), Duration.ofMillis(timeoutMillis), scheduler);
+    var timeoutSubscriber =
+        withReadTimeout(ofString(UTF_8), Duration.ofMillis(timeoutMillis), scheduler);
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
@@ -317,8 +313,8 @@ class MoreBodySubscribersTest {
   void withReadTimeout_racyOnError() throws InterruptedException {
     var timeoutMillis = 20L;
     var baseSubscriber = new TestSubscriber<List<ByteBuffer>>();
-    var timeoutSubscriber = withReadTimeout(
-        fromSubscriber(baseSubscriber), Duration.ofMillis(timeoutMillis));
+    var timeoutSubscriber =
+        withReadTimeout(fromSubscriber(baseSubscriber), Duration.ofMillis(timeoutMillis));
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     // Race with background timeout task on completing the subscriber exceptionally
@@ -338,54 +334,59 @@ class MoreBodySubscribersTest {
   void withReadTimeout_subscriptionIsCancelledOnTimeout() {
     var timeoutMillis = 50L;
     var baseSubscriber = new TestSubscriber<List<ByteBuffer>>();
-    var timeoutSubscriber = withReadTimeout(
-        fromSubscriber(baseSubscriber), Duration.ofMillis(timeoutMillis));
-    var subscription = new ToBeCancelledSubscription();
+    var timeoutSubscriber =
+        withReadTimeout(fromSubscriber(baseSubscriber), Duration.ofMillis(timeoutMillis));
+    var subscription = new TestSubscription();
     timeoutSubscriber.onSubscribe(subscription);
     assertThat(baseSubscriber.awaitError()).isInstanceOf(HttpReadTimeoutException.class);
-    subscription.assertCancelled();
+    subscription.awaitCancellation(); // Cancellation happens concurrently.
     assertReadTimeout(timeoutSubscriber, 1, timeoutMillis);
   }
 
   @Test
   void withReadTimeout_rethrowsRejectionFromSubscriptionRequest() {
-    var superBusyScheduler = new ScheduledThreadPoolExecutor(0) {
-      @Override
-      public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        throw new RejectedExecutionException();
-      }
-    };
+    var superBusyScheduler =
+        new ScheduledThreadPoolExecutor(0) {
+          @Override
+          public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            throw new RejectedExecutionException();
+          }
+        };
     var baseSubscriber = new TestSubscriber<>().autoRequest(0); // Request manually.
-    var timeoutSubscriber = withReadTimeout(
-        fromSubscriber(baseSubscriber), Duration.ofSeconds(Long.MAX_VALUE), superBusyScheduler);
-    var subscription = new ToBeCancelledSubscription();
+    var timeoutSubscriber =
+        withReadTimeout(
+            fromSubscriber(baseSubscriber), Duration.ofSeconds(Long.MAX_VALUE), superBusyScheduler);
+    var subscription = new TestSubscription();
     timeoutSubscriber.onSubscribe(subscription);
     baseSubscriber.awaitSubscription();
     assertThatExceptionOfType(RejectedExecutionException.class)
         .isThrownBy(() -> baseSubscriber.requestItems(1));
-    subscription.assertCancelled();
+    assertThat(subscription.isCancelled()).isTrue();
   }
 
   @Test
   @ExecutorConfig(SCHEDULER)
   void withReadTimeout_handlesRejectionFromOnNextGracefully(ScheduledExecutorService scheduler) {
     var scheduledFuture = new AtomicReference<ScheduledFuture<?>>();
-    var busyScheduler = new ScheduledThreadPoolExecutor(0) {
-      final AtomicBoolean firstSchedule = new AtomicBoolean();
-      @Override
-      public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        if (firstSchedule.getAndSet(true)) {
-          throw new RejectedExecutionException();
-        }
-        var future = scheduler.schedule(command, delay, unit);
-        scheduledFuture.set(future);
-        return future;
-      }
-    };
+    var busyScheduler =
+        new ScheduledThreadPoolExecutor(0) {
+          final AtomicBoolean firstSchedule = new AtomicBoolean();
+
+          @Override
+          public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            if (firstSchedule.getAndSet(true)) {
+              throw new RejectedExecutionException();
+            }
+            var future = scheduler.schedule(command, delay, unit);
+            scheduledFuture.set(future);
+            return future;
+          }
+        };
     var baseSubscriber = new TestSubscriber<>().autoRequest(0);
-    var timeoutSubscriber = withReadTimeout(
-        fromSubscriber(baseSubscriber), Duration.ofSeconds(Long.MAX_VALUE), busyScheduler);
-    var subscription = new ToBeCancelledSubscription();
+    var timeoutSubscriber =
+        withReadTimeout(
+            fromSubscriber(baseSubscriber), Duration.ofSeconds(Long.MAX_VALUE), busyScheduler);
+    var subscription = new TestSubscription();
 
     timeoutSubscriber.onSubscribe(subscription);
 
@@ -397,7 +398,7 @@ class MoreBodySubscribersTest {
     timeoutSubscriber.onComplete();
     assertThat(baseSubscriber.awaitError()).isInstanceOf(RejectedExecutionException.class);
     assertThat(baseSubscriber.nextCount()).isEqualTo(1); // First item is received
-    subscription.assertCancelled();
+    assertThat(subscription.isCancelled()).isTrue();
     assertThat(scheduledFuture)
         .withFailMessage("First ScheduledFuture isn't cancelled after rejection")
         .hasValueMatching(ScheduledFuture::isCancelled);
@@ -456,8 +457,9 @@ class MoreBodySubscribersTest {
 
   private Publisher<List<ByteBuffer>> publisherOf(
       String str, int buffSize, int buffsPerList, Executor executor) {
-    return FlowAdapters.toFlowPublisher(new AsyncIterablePublisher<>(
-        iterableOf(UTF_8.encode(str), buffSize, buffsPerList), executor));
+    return FlowAdapters.toFlowPublisher(
+        new AsyncIterablePublisher<>(
+            iterableOf(UTF_8.encode(str), buffSize, buffsPerList), executor));
   }
 
   private static void assertReadTimeout(
@@ -489,24 +491,5 @@ class MoreBodySubscribersTest {
   private static Iterable<List<ByteBuffer>> iterableOf(
       ByteBuffer buffer, int buffSize, int buffsPerList) {
     return () -> new ByteBufferListIterator(buffer, buffSize, buffsPerList);
-  }
-
-  /** A subscription that is expected to be cancelled. */
-  private static class ToBeCancelledSubscription implements Subscription {
-    private volatile boolean cancelled;
-
-    ToBeCancelledSubscription() {}
-
-    @Override
-    public void request(long n) {}
-
-    @Override
-    public void cancel() {
-      cancelled = true;
-    }
-
-    void assertCancelled() {
-      assertThat(cancelled).withFailMessage("Expected subscription to be cancelled").isTrue();
-    }
   }
 }
