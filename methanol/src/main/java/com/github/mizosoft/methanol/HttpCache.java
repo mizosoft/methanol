@@ -302,13 +302,9 @@ public final class HttpCache implements AutoCloseable, Flushable {
     store.close();
   }
 
-  /**
-   * Returns an interceptor that serves responses from this cache if applicable. Called by {@code
-   * Methanol} when building the interceptor chain.
-   */
-  Interceptor interceptor(@Nullable Executor clientExecutor) {
-    return new CacheInterceptor(
-        localCache, listener, requireNonNullElse(clientExecutor, executor), clock);
+  /** Returns an interceptor that serves responses from this cache if applicable. */
+  Interceptor interceptor() {
+    return new CacheInterceptor(localCache, listener, executor, clock);
   }
 
   static String toStoreKey(HttpRequest request) {

@@ -62,8 +62,6 @@ import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension.UseHttps;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
@@ -123,7 +121,7 @@ import org.junit.jupiter.params.provider.CsvFileSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @Timeout(10)
-@ExtendWith({MockWebServerExtension.class, StoreExtension.class, ExecutorExtension.class})
+@ExtendWith(StoreExtension.class)
 class HttpCacheTest extends AbstractHttpCacheTest {
   static {
     Logging.disable(HttpCache.class, DiskStore.class, CacheWritingPublisher.class);
@@ -1475,9 +1473,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
     // Don't let the cache intercept redirects
     clientBuilder =
-        Methanol.newBuilder()
-            .interceptor(cache.interceptor(executor))
-            .followRedirects(Redirect.ALWAYS);
+        Methanol.newBuilder().interceptor(cache.interceptor()).followRedirects(Redirect.ALWAYS);
     client = clientBuilder.build();
 
     // The cache only sees the second response

@@ -159,8 +159,8 @@ abstract class AbstractHttpCacheTest {
   HttpResponse<String> send(Methanol client, HttpRequest request)
       throws IOException, InterruptedException {
     var response = client.send(request, BodyHandlers.ofString());
-    editAwaiter.await();
     executor.await();
+    editAwaiter.await();
     return response;
   }
 
@@ -180,8 +180,8 @@ abstract class AbstractHttpCacheTest {
                 BodyHandlers.ofString(),
                 PushPromiseHandler.of(__ -> BodyHandlers.ofString(), new ConcurrentHashMap<>()))
             .join();
-    editAwaiter.await();
     executor.await();
+    editAwaiter.await();
     return response;
   }
 

@@ -27,7 +27,6 @@ import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyTha
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 
 import com.github.mizosoft.methanol.internal.cache.InternalStorageExtension;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig;
 import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
@@ -39,7 +38,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith({MockWebServerExtension.class, ExecutorExtension.class})
+@ExtendWith(MockWebServerExtension.class)
 class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   private CacheSetup memoryCacheSetup;
   private CacheSetup diskCacheSetup;

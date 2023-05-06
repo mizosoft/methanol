@@ -152,7 +152,7 @@ public final class Methanol extends HttpClient {
     if (!caches.isEmpty()) {
       mergedInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
     }
-    caches.forEach(cache -> mergedInterceptors.add(cache.interceptor(executor)));
+    caches.forEach(cache -> mergedInterceptors.add(cache.interceptor()));
 
     mergedInterceptors.addAll(backendInterceptors);
     return Collections.unmodifiableList(mergedInterceptors);

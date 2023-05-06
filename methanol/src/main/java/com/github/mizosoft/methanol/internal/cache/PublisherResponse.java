@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,9 +22,9 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
-import com.github.mizosoft.methanol.ResponseBuilder;
 import java.net.http.HttpResponse.BodyHandler;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -43,7 +43,7 @@ abstract class PublisherResponse extends RawResponse {
   @Override
   public <T> CompletableFuture<TrackedResponse<T>> handleAsync(
       BodyHandler<T> handler, Executor executor) {
-    // Result will be a TrackedResponse as source response is itself tracked
+    // Result will be a TrackedResponse<T> similar to the original response.
     return Handlers.handleAsync(response, publisher, handler, executor)
         .thenApply(response -> (TrackedResponse<T>) response);
   }
