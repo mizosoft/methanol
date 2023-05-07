@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
@@ -46,6 +47,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.nio.ByteBuffer;
@@ -57,7 +59,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
@@ -66,6 +67,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.QueueDispatcher;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -142,10 +144,7 @@ abstract class AbstractHttpCacheTest {
   }
 
   HttpResponse<String> send(HttpRequest request) throws IOException, InterruptedException {
-    var response = client.send(request, BodyHandlers.ofString());
-    editAwaiter.await();
-    executor.await();
-    return response;
+    return send(client, request);
   }
 
   HttpResponse<String> send(Methanol client) throws IOException, InterruptedException {
@@ -153,12 +152,24 @@ abstract class AbstractHttpCacheTest {
   }
 
   HttpResponse<String> send(Methanol client, URI uri) throws IOException, InterruptedException {
-    return send(client, MutableRequest.GET(uri));
+    return send(client, GET(uri));
   }
 
   HttpResponse<String> send(Methanol client, HttpRequest request)
       throws IOException, InterruptedException {
-    var response = client.send(request, BodyHandlers.ofString());
+    return send(client, request, BodyHandlers.ofString(), null);
+  }
+
+  HttpResponse<String> send(
+      Methanol client,
+      HttpRequest request,
+      BodyHandler<String> bodyHandler,
+      @Nullable PushPromiseHandler<String> pushPromiseHandler)
+      throws IOException, InterruptedException {
+    var response =
+        pushPromiseHandler != null
+            ? Utils.get(client.sendAsync(request, bodyHandler, pushPromiseHandler))
+            : client.send(request, bodyHandler);
     executor.await();
     editAwaiter.await();
     return response;
@@ -170,19 +181,6 @@ abstract class AbstractHttpCacheTest {
     } catch (IOException | InterruptedException e) {
       return Assertions.fail(e);
     }
-  }
-
-  HttpResponse<String> sendWithPushPromiseHandler(URI uri) {
-    var response =
-        client
-            .sendAsync(
-                GET(uri),
-                BodyHandlers.ofString(),
-                PushPromiseHandler.of(__ -> BodyHandlers.ofString(), new ConcurrentHashMap<>()))
-            .join();
-    executor.await();
-    editAwaiter.await();
-    return response;
   }
 
   static LocalDateTime toUtcDateTime(Instant instant) {

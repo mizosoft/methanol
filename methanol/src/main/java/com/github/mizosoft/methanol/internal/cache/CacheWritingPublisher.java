@@ -165,9 +165,6 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     @Override
     public void onWriteFailure(Throwable exception) {}
-
-    @Override
-    public void onWriteDiscard() {}
   }
 
   private static final class CacheWritingSubscriber implements Subscriber<List<ByteBuffer>> {
@@ -405,7 +402,14 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
                     }
                   });
         } catch (Throwable t) {
-          listener.onWriteFailure(t);
+          // Make sure the editor is closed.
+          try {
+            editor.close();
+          } catch (Throwable x) {
+            t.addSuppressed(x);
+          }
+
+          logger.log(Level.ERROR, "exception while committing edit", t);
         }
       }
     }
@@ -416,7 +420,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         try {
           editor.close();
         } catch (Throwable t) {
-          logger.log(Level.WARNING, "exception when closing the editor");
+          logger.log(Level.WARNING, "exception when closing the editor", t);
         }
       }
     }

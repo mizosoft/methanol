@@ -487,14 +487,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public void onReadSuccess(HttpRequest request) {
-      // TODO
-      // statsRecorder.recordReadSuccess(request.uri());
+      statsRecorder.recordReadSuccess(request.uri());
     }
 
     @Override
     public void onReadFailure(HttpRequest request, Throwable exception) {
-      // TODO
-      // statsRecorder.recordReadFailure(request.uri());
+      statsRecorder.recordReadFailure(request.uri());
     }
 
     @Override
@@ -569,13 +567,21 @@ public final class HttpCache implements AutoCloseable, Flushable {
     /** Returns the number of times the cache had to use the network. */
     long networkUseCount();
 
+    /** Returns the number of times a response was successfully read from cache. */
+    default long readSuccessCount() {
+      return 0;
+    }
+
+    /** Returns the number of times a response wasn't read from cache due to a read failure. */
+    default long readFailureCount() {
+      return 0;
+    }
+
     /** Returns the number of times a response was successfully written to cache. */
     long writeSuccessCount();
 
     /** Returns the number of times a response wasn't written to cache due to a write failure. */
     long writeFailureCount();
-
-    // TODO add read success/failure count & write discard count.
 
     /**
      * Returns a value between {@code 0.0} and {@code 1.0} representing the ratio between the hit
@@ -629,10 +635,16 @@ public final class HttpCache implements AutoCloseable, Flushable {
     /** Called when the cache is about to use the network. */
     void recordNetworkUse(URI uri);
 
+    /** Called when a response is successfully read from cache. */
+    default void recordReadSuccess(URI uri) {}
+
+    /** Called when a failure is encountered while reading a response from cache. */
+    default void recordReadFailure(URI uri) {}
+
     /** Called when a response is successfully written to cache. */
     void recordWriteSuccess(URI uri);
 
-    /** Called when a write failure is encountered while writing a response to cache. */
+    /** Called when a failure is encountered while writing a response to cache. */
     void recordWriteFailure(URI uri);
 
     /** Returns a {@code Stats} snapshot for the recorded statistics for all {@code URIs}. */
@@ -674,6 +686,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
     private final LongAdder hitCounter = new LongAdder();
     private final LongAdder missCounter = new LongAdder();
     private final LongAdder networkUseCounter = new LongAdder();
+    private final LongAdder readSuccessCounter = new LongAdder();
+    private final LongAdder readFailureCounter = new LongAdder();
     private final LongAdder writeSuccessCounter = new LongAdder();
     private final LongAdder writeFailureCounter = new LongAdder();
 
@@ -704,6 +718,18 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
+    public void recordReadSuccess(URI uri) {
+      requireNonNull(uri);
+      readSuccessCounter.increment();
+    }
+
+    @Override
+    public void recordReadFailure(URI uri) {
+      requireNonNull(uri);
+      readFailureCounter.increment();
+    }
+
+    @Override
     public void recordWriteSuccess(URI uri) {
       requireNonNull(uri);
       writeSuccessCounter.increment();
@@ -722,6 +748,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
           hitCounter.sum(),
           missCounter.sum(),
           networkUseCounter.sum(),
+          readSuccessCounter.sum(),
+          readFailureCounter.sum(),
           writeSuccessCounter.sum(),
           writeFailureCounter.sum());
     }
@@ -761,6 +789,22 @@ public final class HttpCache implements AutoCloseable, Flushable {
       perUriRecorders
           .computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder())
           .recordNetworkUse(uri);
+    }
+
+    @Override
+    public void recordReadSuccess(URI uri) {
+      super.recordReadSuccess(uri);
+      perUriRecorders
+          .computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder())
+          .recordReadSuccess(uri);
+    }
+
+    @Override
+    public void recordReadFailure(URI uri) {
+      super.recordReadFailure(uri);
+      perUriRecorders
+          .computeIfAbsent(uri, __ -> new ConcurrentStatsRecorder())
+          .recordReadFailure(uri);
     }
 
     @Override
@@ -819,12 +863,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   private static final class StatsSnapshot implements Stats {
-    static final Stats EMPTY = new StatsSnapshot(0L, 0L, 0L, 0L, 0L, 0L);
+    static final Stats EMPTY = new StatsSnapshot(0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L);
 
     private final long requestCount;
     private final long hitCount;
     private final long missCount;
     private final long networkUseCount;
+    private final long readSuccessCount;
+    private final long readFailureCounter;
     private final long writeSuccessCount;
     private final long writeFailureCount;
 
@@ -833,12 +879,16 @@ public final class HttpCache implements AutoCloseable, Flushable {
         long hitCount,
         long missCount,
         long networkUseCount,
+        long readSuccessCount,
+        long readFailureCounter,
         long writeSuccessCount,
         long writeFailureCount) {
       this.requestCount = requestCount;
       this.hitCount = hitCount;
       this.missCount = missCount;
       this.networkUseCount = networkUseCount;
+      this.readSuccessCount = readSuccessCount;
+      this.readFailureCounter = readFailureCounter;
       this.writeSuccessCount = writeSuccessCount;
       this.writeFailureCount = writeFailureCount;
     }
@@ -864,6 +914,16 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
+    public long readSuccessCount() {
+      return readSuccessCount;
+    }
+
+    @Override
+    public long readFailureCount() {
+      return readFailureCounter;
+    }
+
+    @Override
     public long writeSuccessCount() {
       return writeSuccessCount;
     }
@@ -876,7 +936,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
     @Override
     public int hashCode() {
       return Objects.hash(
-          requestCount, hitCount, missCount, networkUseCount, writeSuccessCount, writeFailureCount);
+          requestCount,
+          hitCount,
+          missCount,
+          networkUseCount,
+          readSuccessCount,
+          readFailureCounter,
+          writeSuccessCount,
+          writeFailureCount);
     }
 
     @Override
@@ -890,6 +957,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
           && hitCount == other.hitCount()
           && missCount == other.missCount()
           && networkUseCount == other.networkUseCount()
+          && readSuccessCount == other.readSuccessCount()
+          && readFailureCounter == other.readFailureCount()
           && writeSuccessCount == other.writeSuccessCount()
           && writeFailureCount == other.writeFailureCount();
     }
@@ -897,8 +966,15 @@ public final class HttpCache implements AutoCloseable, Flushable {
     @Override
     public String toString() {
       return String.format(
-          "Stats[requestCount=%d, hitCount=%d, missCount=%d, networkUseCount=%d, writeSuccessCount=%d, writeFailureCount=%d]",
-          requestCount, hitCount, missCount, networkUseCount, writeSuccessCount, writeFailureCount);
+          "Stats[requestCount=%d, hitCount=%d, missCount=%d, networkUseCount=%d, readSuccessCount=%d, readFailureCount=%d, writeSuccessCount=%d, writeFailureCount=%d]",
+          requestCount,
+          hitCount,
+          missCount,
+          networkUseCount,
+          readSuccessCount,
+          readFailureCounter,
+          writeSuccessCount,
+          writeFailureCount);
     }
   }
 

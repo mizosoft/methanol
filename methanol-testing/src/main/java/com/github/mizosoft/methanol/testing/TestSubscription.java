@@ -36,7 +36,7 @@ public class TestSubscription implements Subscription {
   private static final int TIMEOUT_SECONDS = 2;
 
   private final BlockingQueue<Long> requests = new LinkedBlockingQueue<>();
-  private final CountDownLatch cancelled = new CountDownLatch(1);
+  private final CountDownLatch cancellationLatch = new CountDownLatch(1);
   private final AtomicInteger requestCount = new AtomicInteger();
   private final AtomicInteger cancellationCount = new AtomicInteger();
 
@@ -49,7 +49,7 @@ public class TestSubscription implements Subscription {
   @Override
   public void cancel() {
     cancellationCount.incrementAndGet();
-    cancelled.countDown();
+    cancellationLatch.countDown();
   }
 
   public long awaitRequest() {
@@ -66,7 +66,7 @@ public class TestSubscription implements Subscription {
 
   public void awaitCancellation() {
     try {
-      assertThat(cancelled.await(TIMEOUT_SECONDS, TimeUnit.SECONDS))
+      assertThat(cancellationLatch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS))
           .withFailMessage(() -> "expected cancellation within " + TIMEOUT_SECONDS + " seconds")
           .isTrue();
     } catch (InterruptedException e) {
