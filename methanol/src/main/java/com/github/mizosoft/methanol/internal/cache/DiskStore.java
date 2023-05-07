@@ -1586,7 +1586,7 @@ public final class DiskStore implements Store {
       }
     }
 
-    boolean commit(
+    void commit(
         DiskEditor editor,
         String key,
         ByteBuffer metadata,
@@ -1597,11 +1597,7 @@ public final class DiskStore implements Store {
       long sizeDifference;
       lock.lock();
       try {
-        if (currentEditor == null) {
-          return false; // The edit to be committed has been discarded.
-        }
-
-        requireState(currentEditor == editor, "committing from unexpected editor");
+        requireState(currentEditor == editor, "edit discarded");
         currentEditor = null;
 
         requireState(writable, "committing a non-discarded edit to a non-writable entry");
@@ -1668,14 +1664,13 @@ public final class DiskStore implements Store {
       // Don't bother with the entry if it'll cause everything to be evicted.
       if (newSize > maxSize) {
         removeEntry(this);
-        return false;
+        return;
       }
 
       if (newStoreSize > maxSize) {
         evictionScheduler.schedule();
       }
       indexWriteScheduler.trySchedule();
-      return true;
     }
 
     /**
@@ -1973,10 +1968,10 @@ public final class DiskStore implements Store {
     }
 
     @Override
-    public boolean commit(ByteBuffer metadata) throws IOException {
+    public void commit(ByteBuffer metadata) throws IOException {
       requireNonNull(metadata);
       requireState(closed.compareAndSet(false, true), "closed");
-      return entry.commit(this, key, metadata, writer.dataSizeIfWritten(), channel);
+      entry.commit(this, key, metadata, writer.dataSizeIfWritten(), channel);
     }
 
     @Override

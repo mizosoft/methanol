@@ -179,9 +179,7 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
     }
 
     @Override
-    public boolean commit(ByteBuffer metadata) {
-      return false;
-    }
+    public void commit(ByteBuffer metadata) {}
 
     @Override
     public void close() {}

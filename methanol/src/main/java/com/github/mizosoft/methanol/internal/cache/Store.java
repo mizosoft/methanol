@@ -154,9 +154,9 @@ public interface Store extends Closeable, Flushable {
     /**
      * Commits the changes made so far.
      *
-     * @throws IllegalStateException if the editor is closed
+     * @throws IllegalStateException if the edit is invalidated
      */
-    boolean commit(ByteBuffer metadata) throws IOException;
+    void commit(ByteBuffer metadata) throws IOException;
 
     /**
      * Closes this editor. If {@link #commit(ByteBuffer)} hasn't been called prior to this method,

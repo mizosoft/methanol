@@ -617,20 +617,26 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     }
 
     @Override
-    public boolean commit(ByteBuffer metadata) {
+    public void commit(ByteBuffer metadata) {
       requireNonNull(metadata);
       requireState(closed.compareAndSet(false, true), "closed");
-      return Script.COMMIT
-          .evalOn(commands())
-          .asBoolean(
-              List.of(entryKey, editorLockKey, wipDataKey),
-              List.of(
-                  UTF_8.encode(editorId),
-                  metadata,
-                  encodeLong(writer.dataSizeIfWritten()), // clientDataSize
-                  encodeLong(staleEntryTtlSeconds),
-                  encodeLong(1), // commit
-                  UTF_8.encode(clockKey)));
+
+      var response =
+          Script.COMMIT
+              .evalOn(commands())
+              .asMulti(
+                  List.of(entryKey, editorLockKey, wipDataKey),
+                  List.of(
+                      UTF_8.encode(editorId),
+                      metadata,
+                      encodeLong(writer.dataSizeIfWritten()), // clientDataSize
+                      encodeLong(staleEntryTtlSeconds),
+                      encodeLong(1), // commit
+                      UTF_8.encode(clockKey)));
+
+      if ("0".equals(response.get(0).toString())) {
+        throw new IllegalStateException(response.get(1).toString());
+      }
     }
 
     @Override
@@ -672,13 +678,13 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
           long serverTotalBytesWritten = append(src);
           if (serverTotalBytesWritten < 0) {
             RedisEditor.this.close();
-            throw new IllegalStateException("Editor lock expired");
+            throw new IllegalStateException("editor lock expired");
           }
 
           totalBytesWritten += remaining;
           if (totalBytesWritten != serverTotalBytesWritten) {
             RedisEditor.this.close();
-            throw new IllegalStateException("Editor data inconsistency");
+            throw new IllegalStateException("editor data inconsistency");
           }
           isWritten = true;
           return remaining;

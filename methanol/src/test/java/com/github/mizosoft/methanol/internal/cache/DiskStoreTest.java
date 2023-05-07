@@ -719,8 +719,7 @@ class DiskStoreTest {
       autoAdvanceClock = false,
       dispatchEagerly = false,
       indexUpdateDelaySeconds = 1)
-  void indexUpdatesAreTimeLimited(DiskStore store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void indexUpdatesAreTimeLimited(DiskStore store) throws IOException, InterruptedException {
     var delayer = (MockDelayer) store.delayer();
     var clock = (MockClock) store.clock();
     int indexWriteCount = 0;
@@ -819,9 +818,7 @@ class DiskStoreTest {
     assertThat(store.size()).isEqualTo(5);
 
     // 6 bytes -> e3 is ignored & e2 remains untouched.
-    try (var editor = edit(store, "e3")) {
-      assertThat(commit(editor, "123", "abc")).isFalse();
-    }
+    write(store, "e3", "123", "abc");
     assertAbsent(store, context, "e3");
     assertEntryEquals(store, "e2", "12", "abc");
     assertThat(store.size()).isEqualTo(5);
@@ -833,9 +830,9 @@ class DiskStoreTest {
   void exceedMaxSizeByExpandingData(Store store, DiskStoreContext context)
       throws IOException, InterruptedException {
     write(store, "e1", "12", "ab");
-    try (var editor = edit(store, "e1")) {
-      assertThat(commit(editor, "12", "abc")).isFalse();
-    }
+    assertEntryEquals(store, "e1", "12", "ab");
+
+    write(store, "e1", "12", "abc");
     assertAbsent(store, context, "e1");
     assertThat(store.size()).isZero();
     new MockDiskStore(context).assertDirtyEntryFileDoesNotExist("e1");
@@ -846,9 +843,9 @@ class DiskStoreTest {
   void exceedMaxSizeByExpandingMetadata(Store store, DiskStoreContext context)
       throws IOException, InterruptedException {
     write(store, "e1", "12", "ab");
-    try (var editor = edit(store, "e1")) {
-      assertThat(commit(editor, "123", "ab")).isFalse();
-    }
+    assertEntryEquals(store, "e1", "12", "ab");
+
+    write(store, "e1", "123", "ab");
     assertAbsent(store, context, "e1");
     assertThat(store.size()).isZero();
     new MockDiskStore(context).assertDirtyEntryFileDoesNotExist("e1");

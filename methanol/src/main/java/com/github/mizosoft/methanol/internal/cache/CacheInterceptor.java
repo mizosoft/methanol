@@ -616,15 +616,13 @@ public final class CacheInterceptor implements Interceptor {
         networkResponse.discard(executor);
 
         var updatedCacheResponse = updateCacheResponse(cacheResponse, networkResponse);
-        Unchecked.supplyAsync(() -> cache.update(updatedCacheResponse), executor)
+        Unchecked.runAsync(() -> cache.update(updatedCacheResponse), executor)
             .whenComplete(
-                (updated, ex) -> {
+                (__, ex) -> {
                   if (ex != null) {
                     listener.onWriteFailure(request, ex);
-                  } else if (updated) {
-                    listener.onWriteSuccess(request);
                   } else {
-                    // TODO listener.onWriteDiscard();
+                    listener.onWriteSuccess(request);
                   }
                 });
         return CompletableFuture.completedFuture(withCacheResponse(updatedCacheResponse));

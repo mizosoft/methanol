@@ -71,9 +71,7 @@ public class DiskStoreState {
       if ((written = editor.writer().write(src.data())) != DATA_SIZE) {
         throw new AssertionError(written);
       }
-      if (!editor.commit(src.metadata())) {
-        throw new AssertionError("couldn't commit");
-      }
+      editor.commit(src.metadata());
     }
   }
 

@@ -327,8 +327,8 @@ abstract class AbstractHttpCacheTest {
     }
 
     @Override
-    public boolean commit(ByteBuffer metadata) throws IOException {
-      return delegate.commit(metadata);
+    public void commit(ByteBuffer metadata) throws IOException {
+      delegate.commit(metadata);
     }
 
     @Override
@@ -373,8 +373,8 @@ abstract class AbstractHttpCacheTest {
       }
 
       @Override
-      public boolean commit(ByteBuffer metadata) throws IOException {
-        return super.commit(metadata);
+      public void commit(ByteBuffer metadata) throws IOException {
+        super.commit(metadata);
       }
 
       @Override

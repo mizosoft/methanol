@@ -3423,9 +3423,9 @@ class HttpCacheTest extends AbstractHttpCacheTest {
       }
 
       @Override
-      public boolean commit(ByteBuffer metadata) throws IOException {
+      public void commit(ByteBuffer metadata) throws IOException {
         committed = true;
-        return super.commit(metadata);
+        super.commit(metadata);
       }
 
       @Override

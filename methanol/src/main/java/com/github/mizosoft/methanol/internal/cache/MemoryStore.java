@@ -284,21 +284,21 @@ public final class MemoryStore implements Store {
       }
     }
 
-    boolean commit(
+    void commit(
         MemoryEditor editor, @Nullable ByteBuffer newMetadata, @Nullable ByteBuffer newData) {
       long entrySizeDifference;
       boolean evictAfterDiscardedFirstEdit = false;
       lock.lock();
       try {
         if (currentEditor == null) {
-          return false;
+          return;
         }
 
         assert currentEditor == editor;
         currentEditor = null;
         if ((newMetadata == null && newData == null) || evicted) {
           evictAfterDiscardedFirstEdit = version == 0 && !evicted;
-          return false;
+          return;
         }
 
         long oldEntrySize = (long) metadata.remaining() + data.remaining();
@@ -333,7 +333,6 @@ public final class MemoryStore implements Store {
       if (size.addAndGet(entrySizeDifference) > maxSize) {
         evictExcessiveEntries();
       }
-      return true;
     }
   }
 
@@ -457,8 +456,8 @@ public final class MemoryStore implements Store {
     }
 
     @Override
-    public boolean commit(ByteBuffer metadata) {
-      return entry.commit(this, metadata, dataIfWritten());
+    public void commit(ByteBuffer metadata) {
+      entry.commit(this, metadata, dataIfWritten());
     }
 
     private @Nullable ByteBuffer dataIfWritten() {

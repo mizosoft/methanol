@@ -38,7 +38,7 @@ public interface LocalCache {
   Optional<CacheResponse> get(HttpRequest request) throws IOException, InterruptedException;
 
   @CanIgnoreReturnValue
-  boolean update(CacheResponse cacheResponse) throws IOException, InterruptedException;
+  void update(CacheResponse cacheResponse) throws IOException, InterruptedException;
 
   Optional<NetworkResponse> put(
       HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse)

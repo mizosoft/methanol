@@ -118,7 +118,7 @@ class StoreTesting {
       throws IOException, InterruptedException {
     try (var editor = edit(store, key)) {
       write(editor, data);
-      assertThat(commit(editor, metadata)).isTrue();
+      commit(editor, metadata);
     }
   }
 
@@ -129,21 +129,21 @@ class StoreTesting {
   static void setMetadata(Store store, String key, String metadata)
       throws IOException, InterruptedException {
     try (var editor = edit(store, key)) {
-      assertThat(commit(editor, metadata)).isTrue();
+      commit(editor, metadata);
     }
   }
 
-  static boolean commit(Editor editor, String metadata, String data)
+  static void commit(Editor editor, String metadata, String data)
       throws IOException, InterruptedException {
     write(editor, data);
-    return commit(editor, metadata);
+    commit(editor, metadata);
   }
 
-  static boolean commit(Editor editor, String metadata) {
+  static void commit(Editor editor, String metadata) {
     try {
-      return editor.commit(UTF_8.encode(metadata));
+      editor.commit(UTF_8.encode(metadata));
     } catch (IOException e) {
-      return fail("unexpected exception", e);
+      fail("unexpected exception", e);
     }
   }
 

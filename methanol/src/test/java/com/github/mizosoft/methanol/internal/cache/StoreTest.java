@@ -35,7 +35,6 @@ import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.Execu
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
-import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
@@ -109,7 +108,7 @@ class StoreTest {
   @StoreParameterizedTest
   void writeMetadataWithoutData(Store store) throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
-      assertThat(commit(editor, "abc")).isTrue();
+      commit(editor, "abc");
     }
     assertEntryEquals(store, "e1", "abc", "");
   }
@@ -126,7 +125,7 @@ class StoreTest {
   void updateMetadataOnSecondEdit(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Mew", "Pickachu");
     try (var editor = edit(store, "e1")) {
-      assertThat(commit(editor, "Mewtwo")).isTrue();
+      commit(editor, "Mewtwo");
     }
     assertEntryEquals(store, "e1", "Mewtwo", "Pickachu");
     assertThat(store.size()).isEqualTo(sizeOf("Mewtwo", "Pickachu"));
@@ -136,7 +135,7 @@ class StoreTest {
   void clearMetadataOnSecondEdit(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Mr Mime", "Ditto");
     try (var editor = edit(store, "e1")) {
-      assertThat(commit(editor, "")).isTrue();
+      commit(editor, "");
     }
     assertEntryEquals(store, "e1", "", "Ditto");
     assertThat(store.size()).isEqualTo(sizeOf("", "Ditto"));
@@ -146,7 +145,7 @@ class StoreTest {
   void clearDataOnSecondEdit(Store store) throws IOException, InterruptedException {
     write(store, "e1", "Jynx", "Charmander");
     try (var editor = edit(store, "e1")) {
-      assertThat(commit(editor, "Jynx", "")).isTrue();
+      commit(editor, "Jynx", "");
     }
     assertEntryEquals(store, "e1", "Jynx", "");
     assertThat(store.size()).isEqualTo(sizeOf("Jynx"));
@@ -200,26 +199,67 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void editAfterRemove(Store store, StoreContext context) throws IOException, InterruptedException {
+  void commitAfterRemove(Store store, StoreContext context)
+      throws IOException, InterruptedException {
     try (var editor = edit(store, "e1")) {
       write(editor, "Mew");
       assertThat(store.remove("e1")).isTrue();
-      switch (context.config().storeType()) {
-        case DISK:
-          // As all editors are local, DiskStore can close the current editor of an entry on
-          // removal.
+      if (context.config().storeType() == StoreType.MEMORY) {
+        commit(editor, "Ditto");
+      } else {
+        assertThatIllegalStateException().isThrownBy((() -> commit(editor, "Ditto")));
+      }
+    }
+    assertAbsent(store, context, "e1");
+  }
+
+  @StoreParameterizedTest
+  void commitAfterRemoveOnSecondEdit(Store store, StoreContext context)
+      throws IOException, InterruptedException {
+    write(store, "e1", "Pikachu", "Mewtwo");
+    try (var editor = edit(store, "e1")) {
+      write(editor, "Mew");
+      assertThat(store.remove("e1")).isTrue();
+      if (context.config().storeType() == StoreType.MEMORY) {
+        commit(editor, "Ditto");
+      } else {
+        assertThatIllegalStateException().isThrownBy((() -> commit(editor, "Ditto")));
+      }
+    }
+    assertAbsent(store, context, "e1");
+  }
+
+  @StoreParameterizedTest
+  void commitFromViewerAfterRemove(Store store, StoreContext context)
+      throws IOException, InterruptedException {
+    write(store, "e1", "Pikachu", "Mewtwo");
+    try (var viewer = view(store, "e1")) {
+      try (var editor = edit(viewer)) {
+        write(editor, "Mew");
+        assertThat(store.remove("e1")).isTrue();
+        if (context.config().storeType() == StoreType.MEMORY) {
+          commit(editor, "Ditto");
+        } else {
+          assertThatIllegalStateException().isThrownBy((() -> commit(editor, "Ditto")));
+        }
+      }
+    }
+    assertAbsent(store, context, "e1");
+  }
+
+  @StoreParameterizedTest
+  void commitFromViewerAfterRemoveFromViewer(Store store, StoreContext context)
+      throws IOException, InterruptedException {
+    write(store, "e1", "Pikachu", "Mewtwo");
+    try (var viewer = view(store, "e1")) {
+      try (var editor = edit(viewer)) {
+        write(editor, "Mew");
+        assertThat(viewer.removeEntry()).isTrue();
+        if (context.config().storeType() == StoreType.MEMORY) {
+          commit(editor, "Ditto");
+        } else {
           assertThatIllegalStateException().isThrownBy(() -> commit(editor, "Ditto"));
-          break;
-        case MEMORY:
-          // MemoryStore doesn't support closure, so it just discards the edit.
-        case REDIS_STANDALONE:
-        case REDIS_CLUSTER:
-          // RedisStore supports closure, but can't reliably close the current entry's editor as
-          // it may reside in another instance/machine, so it similarly just discards the edit.
-          assertThat(commit(editor, "Ditto")).isFalse();
-          break;
-        default:
-          fail("unknown store type: %s", context.config().storeType());
+        }
       }
     }
     assertAbsent(store, context, "e1");
@@ -256,7 +296,7 @@ class StoreTest {
                       try (localEditor) {
                         // Keep ownership of the editor (if owned) till all threads finish.
                         awaitUninterruptibly(endLatch);
-                        assertThat(commit(localEditor, "Jigglypuff")).isTrue();
+                        commit(localEditor, "Jigglypuff");
                       }
                     });
               },
@@ -274,7 +314,7 @@ class StoreTest {
       assertUnreadable(store, "e1");
       write(editor, "Squirtle");
       assertUnreadable(store, "e1");
-      assertThat(commit(editor, "Snorlax")).isTrue();
+      commit(editor, "Snorlax");
     }
     assertEntryEquals(store, "e1", "Snorlax", "Squirtle");
     assertThat(store.size()).isEqualTo(sizeOf("Snorlax", "Squirtle"));
@@ -288,7 +328,7 @@ class StoreTest {
       assertEntryEquals(store, "e1", "Mew", "Eevee");
       write(editor, "Meowth");
       assertEntryEquals(store, "e1", "Mew", "Eevee");
-      assertThat(commit(editor, "Mewtwo")).isTrue();
+      commit(editor, "Mewtwo");
 
       // commit(...) takes effect before closing the editor.
       assertEntryEquals(store, "e1", "Mewtwo", "Meowth");
@@ -345,7 +385,7 @@ class StoreTest {
     write(store, "e1", "Pickachu", "Psyduck");
     try (var viewer = view(store, "e1")) {
       try (var editor = edit(store, "e1")) {
-        assertThat(commit(editor, "Raichu")).isTrue();
+        commit(editor, "Raichu");
         assertEntryEquals(viewer, "Pickachu", "Psyduck");
       }
       assertEntryEquals(store, "e1", "Raichu", "Psyduck");
@@ -358,7 +398,7 @@ class StoreTest {
     write(store, "e1", "Pickachu", "Snorlax");
     try (var viewer = view(store, "e1")) {
       try (var editor = edit(viewer)) {
-        assertThat(commit(editor, "Mewtwo", "Squirtle")).isTrue();
+        commit(editor, "Mewtwo", "Squirtle");
         assertEntryEquals(viewer, "Pickachu", "Snorlax");
       }
       assertEntryEquals(store, "e1", "Mewtwo", "Squirtle");
@@ -385,7 +425,7 @@ class StoreTest {
     write(store, "e1", "Pickachu", "Mewtwo");
     try (var viewer = view(store, "e1")) {
       try (var editor = edit(viewer)) {
-        assertThat(commit(editor, "Jigglypuff", "Mew")).isTrue();
+        commit(editor, "Jigglypuff", "Mew");
         assertThat(store.remove("e1")).isTrue();
       }
 
@@ -418,21 +458,10 @@ class StoreTest {
       try (var editor = edit(viewer)) {
         write(editor, "Mew");
         assertThat(viewer.removeEntry()).isTrue();
-        switch (context.config().storeType()) {
-          case DISK:
-            // As all editors are local, DiskStore can close the current editor of a removed entry.
-            assertThatIllegalStateException().isThrownBy(() -> commit(editor, "Ditto"));
-            break;
-          case MEMORY:
-            // MemoryStore doesn't support closure, so it just discards the edit.
-          case REDIS_STANDALONE:
-          case REDIS_CLUSTER:
-            // RedisStore supports closure, but can't reliably close the current entry's editor as
-            // it may reside in another instance/machine.
-            assertThat(commit(editor, "Ditto")).isFalse();
-            break;
-          default:
-            fail("unknown store type: %s", context.config().storeType());
+        if (context.config().storeType() == StoreType.MEMORY) {
+          commit(editor, "Ditto");
+        } else {
+          assertThatIllegalStateException().isThrownBy((() -> commit(editor, "Ditto")));
         }
       }
       assertAbsent(store, context, "e1");
@@ -608,7 +637,7 @@ class StoreTest {
       editor.commit(UTF_8.encode("Ditto"));
       assertThatIllegalStateException()
           .isThrownBy(() -> editor.writer().write(ByteBuffer.allocate(0)));
-      assertThatIllegalStateException().isThrownBy(() -> editor.commit(ByteBuffer.allocate(0)));
+      assertThatIllegalStateException().isThrownBy(() -> editor.commit(ByteBuffer.allocate(1)));
     }
   }
 

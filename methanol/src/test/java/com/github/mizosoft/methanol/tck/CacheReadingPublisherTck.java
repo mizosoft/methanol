@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
@@ -121,7 +120,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
         for (var buffer : generateData(elements)) {
           editor.writer().write(buffer);
         }
-        assertThat(editor.commit(ByteBuffer.allocate(1))).isTrue();
+        editor.commit(ByteBuffer.allocate(1));
       }
       return store.view(entryName).orElseThrow();
     } catch (IOException | InterruptedException e) {

@@ -389,21 +389,19 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private void commitEdit() {
       if (STATE.getAndSet(this, WritingState.DONE) != WritingState.DONE) {
         try {
-          Unchecked.supplyAsync(
+          Unchecked.runAsync(
                   () -> {
                     try (editor) {
-                      return editor.commit(metadata);
+                      editor.commit(metadata);
                     }
                   },
                   executor)
               .whenComplete(
-                  (committed, ex) -> {
+                  (__, ex) -> {
                     if (ex != null) {
                       listener.onWriteFailure(ex);
-                    } else if (committed) {
-                      listener.onWriteSuccess();
                     } else {
-                      listener.onWriteDiscard();
+                      listener.onWriteSuccess();
                     }
                   });
         } catch (Throwable t) {

@@ -389,13 +389,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public boolean update(CacheResponse cacheResponse) throws IOException, InterruptedException {
+    public void update(CacheResponse cacheResponse) throws IOException, InterruptedException {
       try (var editor = cacheResponse.edit().orElse(null)) {
         if (editor != null) {
-          return editor.commit(CacheResponseMetadata.from(cacheResponse.get()).encode());
+          editor.commit(CacheResponseMetadata.from(cacheResponse.get()).encode());
         }
       }
-      return false;
     }
 
     @Override

@@ -13,14 +13,14 @@ local commitData = clientDataSize >= 0
 if redis.call('get', editorLockKey) ~= editorId then
   redis.call('unlink', wipDataKey)
   redis.log(redis.LOG_WARNING, 'editor lock expired')
-  return false
+  return { 0, 'editor lock expired' }
 end
 redis.call('unlink', editorLockKey)
 
 if commit == '0' then
   redis.call('unlink', wipDataKey)
   redis.log(redis.LOG_NOTICE, 'edit discarded by client')
-  return false
+  return { 0, 'edit discarded by client' }
 end
 
 -- Make sure client & server agree on written data size.
@@ -28,7 +28,7 @@ local wipDataSize = redis.call('strlen', wipDataKey)
 if wipDataSize ~= clientDataSize and (commitData or wipDataSize ~= 0) then
   redis.call('unlink', wipDataKey)
   redis.log(redis.LOG_WARNING, 'client & server disagree on written data size')
-  return false
+  return { 0, "entry size inconsistency" }
 end
 
 local nextVersion
@@ -38,7 +38,8 @@ if (clockKey ~= '') then
   end
 else
   -- Rely on milliseconds in current day for versioning. This can still cause an ABA problem in two scenarios:
-  --   A entry is created, opened for reading, deleted, then created again all in 1 ms.
+  --   A entry is created, opened for reading, deleted, then created again, while the reader is
+  --   still active, all in 1 ms.
   --   A reader is opened, then the entry is deleted and created again a day later, while the
   --   reader is still active.
   -- Both cases can hardly occur in practice.
@@ -89,4 +90,4 @@ redis.call(
     'entryVersion', newEntryVersion,
     'dataVersion', newDataVersion,
     'dataSize', newDataSize)
-return true
+return { 1 }

@@ -355,14 +355,13 @@ class CacheWritingPublisherTest {
     }
 
     @Override
-    public boolean commit(ByteBuffer metadata) {
+    public void commit(ByteBuffer metadata) {
       lock.lock();
       try {
         this.metadata = requireNonNull(metadata);
         committed = true;
         closed = true;
         closedCondition.signalAll();
-        return true;
       } finally {
         lock.unlock();
       }
