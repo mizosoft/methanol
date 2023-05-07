@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -148,10 +148,12 @@ public class Utils {
     }
 
     try {
-      return throwableClass
-          .getConstructor(String.class)
-          .newInstance(message)
-          .initCause(throwableToClone);
+      var cloned = throwableClass.getConstructor(String.class).newInstance(message);
+      try {
+        return cloned.initCause(throwableToClone);
+      } catch (IllegalStateException ignored) {
+        return null;
+      }
     } catch (ReflectiveOperationException ignored) {
       // Try cause-only constructor.
     }
@@ -163,7 +165,12 @@ public class Utils {
     }
 
     try {
-      return throwableClass.getConstructor().newInstance().initCause(throwableToClone);
+      var cloned = throwableClass.getConstructor().newInstance();
+      try {
+        return cloned.initCause(throwableToClone);
+      } catch (IllegalStateException ignored) {
+        return null;
+      }
     } catch (ReflectiveOperationException ignored) {
       // Make caller fallback to wrapping in an IOException.
     }
