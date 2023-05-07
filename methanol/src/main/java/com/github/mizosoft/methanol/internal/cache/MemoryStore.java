@@ -436,23 +436,25 @@ public final class MemoryStore implements Store {
       } finally {
         lock.unlock();
       }
-      return src -> {
-        requireNonNull(src);
-        lock.lock();
-        try {
-          int remaining = src.remaining();
-          if (src.hasArray()) {
-            data.write(src.array(), src.arrayOffset() + src.position(), src.remaining());
-          } else {
-            var srcCopy = new byte[src.remaining()];
-            src.get(srcCopy);
-            data.write(srcCopy, 0, srcCopy.length);
-          }
-          return remaining;
-        } finally {
-          lock.unlock();
+      return this::write;
+    }
+
+    private int write(ByteBuffer src) {
+      requireNonNull(src);
+      lock.lock();
+      try {
+        int remaining = src.remaining();
+        if (src.hasArray()) {
+          data.write(src.array(), src.arrayOffset() + src.position(), src.remaining());
+        } else {
+          var srcCopy = new byte[src.remaining()];
+          src.get(srcCopy);
+          data.write(srcCopy, 0, srcCopy.length);
         }
-      };
+        return remaining;
+      } finally {
+        lock.unlock();
+      }
     }
 
     @Override
