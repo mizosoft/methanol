@@ -52,7 +52,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * midway transmission. Forwarding downstream items is advanced independently of writing them.
  * Consequently, writing may lag behind downstream consumption, and may proceed after downstream has
  * been completed. This affords the downstream not having to unnecessarily wait for the entire body
- * to be cached. If an error occurs while writing, the entry is silently discarded.
+ * to be cached. If an error occurs while writing, the edit is silently discarded.
  */
 public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> {
   private static final Logger logger = System.getLogger(CacheWritingPublisher.class.getName());
@@ -126,9 +126,6 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     void onWriteSuccess();
 
     void onWriteFailure(Throwable exception);
-
-    // TODO add event to HttpCache.Listener
-    default void onWriteDiscard() {}
 
     default Listener guarded() {
       return new Listener() {
