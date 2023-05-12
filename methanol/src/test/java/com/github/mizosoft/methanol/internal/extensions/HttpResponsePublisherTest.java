@@ -32,8 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.Assertions.from;
 
-import com.github.mizosoft.methanol.HttpClientStub;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.testing.HttpClientStub;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
