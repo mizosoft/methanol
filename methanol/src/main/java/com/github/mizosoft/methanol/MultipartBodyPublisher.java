@@ -152,7 +152,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     return new Builder();
   }
 
-  /** Represents a part in a multipart request body. */
+  /** A part in a multipart request body. */
   public static final class Part {
     private final HttpHeaders headers;
     private final BodyPublisher bodyPublisher;

@@ -26,10 +26,7 @@ import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.util.concurrent.CompletionException;
 import java.util.function.Consumer;
 
-/**
- * A {@link java.util.function.Consumer Consumer<T>} that permits throwing a checked {@code
- * Exception}.
- */
+/** A consumer that permits throwing a checked {@code Exception}. */
 public interface ThrowingConsumer<T> {
   void accept(T t) throws Exception;
 

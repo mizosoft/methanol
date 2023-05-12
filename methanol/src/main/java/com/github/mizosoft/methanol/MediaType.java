@@ -68,16 +68,16 @@ public final class MediaType {
 
   /*---Media Ranges---*/
 
-  /** Matches any type ({@code *}{@code /*}). */
+  /** {@code *}{@code /*} */
   public static final MediaType ANY = new MediaType("*", "*");
 
-  /** Matches any application type ({@code application}{@code /*}). */
+  /** {@code application}{@code /*} */
   public static final MediaType APPLICATION_ANY = new MediaType(APPLICATION_TYPE, "*");
 
-  /** Matches any image type ({@code image}{@code /*}). */
+  /** {@code image}{@code /*} */
   public static final MediaType IMAGE_ANY = new MediaType(IMAGE_TYPE, "*");
 
-  /** Matches any text type ({@code text}{@code /*}). */
+  /** {@code text}{@code /*} */
   public static final MediaType TEXT_ANY = new MediaType(TEXT_TYPE, "*");
 
   /*---Application Types---*/
