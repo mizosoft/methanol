@@ -1,4 +1,0 @@
-application {
-  mainModule.set 'methanol.samples.progress.download'
-  mainClass.set 'com.github.mizosoft.methanol.samples.progress.download.DownloadProgress'
-}

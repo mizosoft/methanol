@@ -1,6 +1,0 @@
-dependencies {
-  api project(':methanol')
-  api libs.gson
-
-  testImplementation project(':methanol-testing')
-}

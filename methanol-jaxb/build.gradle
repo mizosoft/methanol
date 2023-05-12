@@ -1,7 +1,0 @@
-dependencies {
-  api project(':methanol')
-  api libs.jaxb.api
-
-  testImplementation project(':methanol-testing')
-  testImplementation libs.moxy
-}

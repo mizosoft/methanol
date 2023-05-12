@@ -1,4 +1,0 @@
-application {
-  mainModule.set 'methanol.samples.progress.upload'
-  mainClass.set 'com.github.mizosoft.methanol.samples.progress.upload.MultipartUploadProgress'
-}
