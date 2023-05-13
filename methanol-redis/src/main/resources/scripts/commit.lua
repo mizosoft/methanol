@@ -37,16 +37,16 @@ if (clockKey ~= '') then
     return redis.call('incr', clockKey)
   end
 else
-  -- Rely on milliseconds in current day for versioning. This can still cause an ABA problem in two scenarios:
+  -- Rely on microseconds in current day for versioning. Still, this may cause an ABA problem in two scenarios:
   --   A entry is created, opened for reading, deleted, then created again, while the reader is
-  --   still active, all in 1 ms.
-  --   A reader is opened, then the entry is deleted and created again a day later, while the
+  --   still active, all in 1 microsecond.
+  --   A reader is opened, then the entry is deleted and created again exactly a day later, while the
   --   reader is still active.
   -- Both cases can hardly occur in practice.
   nextVersion = function()
     local time = redis.call('time')
     local secondsInDay = time[1] % (60 * 60 * 24)
-    local millisInDay = secondsInDay * 1000 + math.floor(time[2] / 1000)
+    local millisInDay = secondsInDay * 1000000 + time[2]
     return millisInDay
   end
 end
