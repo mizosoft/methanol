@@ -33,9 +33,11 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
+import org.testng.annotations.Test;
 
-public class AbstractSubscriptionTck extends FlowPublisherVerification<Long> {
-  public AbstractSubscriptionTck() {
+@Test
+public class AbstractSubscriptionTest extends FlowPublisherVerification<Long> {
+  public AbstractSubscriptionTest() {
     super(TckUtils.testEnvironment());
   }
 

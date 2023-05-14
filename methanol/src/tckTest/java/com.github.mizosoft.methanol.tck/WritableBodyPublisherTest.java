@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,12 +31,14 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.Flow.Publisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
+import org.testng.annotations.Test;
 
-public class WritableBodyPublisherTck extends FlowPublisherVerification<ByteBuffer> {
+@Test
+public class WritableBodyPublisherTest extends FlowPublisherVerification<ByteBuffer> {
   private static final int BUFFER_SIZE = 64;
   private static final ByteBuffer DUMMY_ELEMENT = US_ASCII.encode("5".repeat(BUFFER_SIZE));
 
-  public WritableBodyPublisherTck() {
+  public WritableBodyPublisherTest() {
     super(TckUtils.testEnvironment());
   }
 

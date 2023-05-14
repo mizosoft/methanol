@@ -28,10 +28,10 @@ checkerFramework {
   }
 }
 
-tasks.compileJava {
-  options.errorprone {
-    isEnabled.set(project.hasProperty("enableErrorprone"))
+tasks.withType<JavaCompile> {
+  options.errorprone.isEnabled.set(project.hasProperty("enableErrorprone"))
 
+  options.errorprone {
     nullaway {
       annotatedPackages.add("com.github.mizosoft.methanol")
       excludedFieldAnnotations.set(

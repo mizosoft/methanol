@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,12 +27,13 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
 
-public class AbstractSubscriptionWithExecutorTck extends AbstractSubscriptionTck {
-
+@Test
+public class AbstractSubscriptionWithExecutorTest extends AbstractSubscriptionTest {
   private Executor executor;
 
-  public AbstractSubscriptionWithExecutorTck() {}
+  public AbstractSubscriptionWithExecutorTest() {}
 
   @Override
   Executor executor() {

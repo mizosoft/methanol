@@ -28,7 +28,7 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.tck.HttpResponsePublisherTck.ResponseHandle;
+import com.github.mizosoft.methanol.tck.HttpResponsePublisherTest.ResponseHandle;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -52,8 +52,10 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
+import org.testng.annotations.Test;
 
-public class HttpResponsePublisherTck extends FlowPublisherVerification<ResponseHandle> {
+@Test
+public class HttpResponsePublisherTest extends FlowPublisherVerification<ResponseHandle> {
   private final Supplier<Executor> executorFactory;
 
   private HttpClient client;
@@ -61,7 +63,7 @@ public class HttpResponsePublisherTck extends FlowPublisherVerification<Response
   private Executor executor;
 
   @Factory(dataProvider = "provider")
-  public HttpResponsePublisherTck(Supplier<Executor> executorFactory) {
+  public HttpResponsePublisherTest(Supplier<Executor> executorFactory) {
     super(TckUtils.testEnvironmentWithTimeout(1_000));
     this.executorFactory = executorFactory;
   }

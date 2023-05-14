@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@ import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTck.BufferListHandle;
+import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTest.BufferListHandle;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
@@ -56,14 +56,13 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 @Test
-public class AsyncBodyDecoderTck extends IdentityFlowProcessorVerification<BufferListHandle> {
-
+public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<BufferListHandle> {
   private static final int BUFFERS_PER_LIST = 5;
   private static final int BUFFER_SIZE = 64;
 
   private ExecutorService publisherExecutorService; // used by test publisher
 
-  public AsyncBodyDecoderTck() {
+  public AsyncBodyDecoderTest() {
     super(TckUtils.testEnvironment());
   }
 

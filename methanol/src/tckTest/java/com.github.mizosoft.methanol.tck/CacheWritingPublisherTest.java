@@ -59,8 +59,10 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
+import org.testng.annotations.Test;
 
-public class CacheWritingPublisherTck extends FlowPublisherVerification<List<ByteBuffer>> {
+@Test
+public class CacheWritingPublisherTest extends FlowPublisherVerification<List<ByteBuffer>> {
   static {
     Logging.disable(CacheWritingPublisher.class);
   }
@@ -74,7 +76,7 @@ public class CacheWritingPublisherTck extends FlowPublisherVerification<List<Byt
   private Store store;
 
   @Factory(dataProvider = "provider")
-  public CacheWritingPublisherTck(StoreType storeType) {
+  public CacheWritingPublisherTest(StoreType storeType) {
     super(TckUtils.testEnvironment());
     storeConfig = StoreConfig.createDefault(storeType);
   }

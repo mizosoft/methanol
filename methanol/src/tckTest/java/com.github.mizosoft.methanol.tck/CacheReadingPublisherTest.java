@@ -53,8 +53,10 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
+import org.testng.annotations.Test;
 
-public class CacheReadingPublisherTck extends FlowPublisherVerification<List<ByteBuffer>> {
+@Test
+public class CacheReadingPublisherTest extends FlowPublisherVerification<List<ByteBuffer>> {
   private static final int BUFFER_SIZE = 8 * 1024;
   private static final int MAX_BATCH_SIZE = 4;
 
@@ -76,7 +78,7 @@ public class CacheReadingPublisherTck extends FlowPublisherVerification<List<Byt
   private final List<Viewer> openedViewers = new ArrayList<>();
 
   @Factory(dataProvider = "provider")
-  public CacheReadingPublisherTck(ExecutorType executorType, StoreType storeType) {
+  public CacheReadingPublisherTest(ExecutorType executorType, StoreType storeType) {
     super(TckUtils.testEnvironmentWithTimeout(1000));
     this.executorType = executorType;
     this.storeConfig = StoreConfig.createDefault(storeType);

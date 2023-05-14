@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,11 +32,10 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 @Test
-public class AsyncBodyDecoderWithExecutorTck extends AsyncBodyDecoderTck {
-
+public class AsyncBodyDecoderWithExecutorTest extends AsyncBodyDecoderTest {
   private Executor executor;
 
-  public AsyncBodyDecoderWithExecutorTck() {}
+  public AsyncBodyDecoderWithExecutorTest() {}
 
   @Override
   Executor decoderExecutor() {

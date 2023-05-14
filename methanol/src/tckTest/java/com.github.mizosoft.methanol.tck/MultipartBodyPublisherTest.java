@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,15 +46,14 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 @Test
-public class MultipartBodyPublisherTck extends FlowPublisherVerification<ByteBuffer> {
-
+public class MultipartBodyPublisherTest extends FlowPublisherVerification<ByteBuffer> {
   private static final int MIN_BATCHES = 2; // Can at least pass a part's heading and last boundary
   private static final ByteBuffer BATCH = US_ASCII.encode("something");
   private static final HttpHeaders HEADERS = headers("Content-Type", "text/plain; charset=ascii");
 
   private Executor executor;
 
-  public MultipartBodyPublisherTck() {
+  public MultipartBodyPublisherTest() {
     super(TckUtils.testEnvironment());
   }
 
