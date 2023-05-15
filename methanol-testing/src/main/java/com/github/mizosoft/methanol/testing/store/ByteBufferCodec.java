@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,10 +20,37 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
-public final class MemoryStoreConfig extends StoreConfig {
-  public MemoryStoreConfig(long maxSize) {
-    super(StoreType.MEMORY, maxSize, -1);
+import com.github.mizosoft.methanol.internal.Utils;
+import io.lettuce.core.codec.RedisCodec;
+import java.nio.ByteBuffer;
+
+public enum ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
+  INSTANCE;
+
+  @Override
+  public ByteBuffer decodeKey(ByteBuffer bytes) {
+    return copy(bytes);
+  }
+
+  @Override
+  public ByteBuffer decodeValue(ByteBuffer bytes) {
+    return copy(bytes);
+  }
+
+  @Override
+  public ByteBuffer encodeKey(ByteBuffer key) {
+    return copy(key);
+  }
+
+  @Override
+  public ByteBuffer encodeValue(ByteBuffer value) {
+    return copy(value);
+  }
+
+  private static ByteBuffer copy(ByteBuffer source) {
+    // Copy the buffer without consuming it.
+    return Utils.copy(source.duplicate());
   }
 }

@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.nio.charset.StandardCharsets.UTF_8;

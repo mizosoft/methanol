@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.testing.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -40,7 +42,7 @@ class ForwardingPath implements Path, ForwardingObject<Path> {
   private final Path delegate;
 
   ForwardingPath(Path delegate) {
-    this.delegate = delegate;
+    this.delegate = requireNonNull(delegate);
   }
 
   @Override

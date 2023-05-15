@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,8 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.TestUtils.headers;
-import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,11 +33,11 @@ import static org.assertj.core.api.Assertions.from;
 import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.FailingPublisher;
 import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
 import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.http.HttpRequest.BodyPublishers;

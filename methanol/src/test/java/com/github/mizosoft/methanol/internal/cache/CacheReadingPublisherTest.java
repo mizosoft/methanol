@@ -31,16 +31,16 @@ import static org.assertj.core.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorParameterizedTest;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
-import com.github.mizosoft.methanol.testing.junit.StoreExtension;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.store.StoreExtension;
+import com.github.mizosoft.methanol.testing.store.StoreSpec;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -63,20 +63,20 @@ class CacheReadingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(store = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
+  @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
   void cacheStringInMemory(Executor executor, Store store)
       throws IOException, InterruptedException {
     testCachingAsString(executor, store);
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(store = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
+  @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void cacheStringOnDisk(Executor executor, Store store) throws IOException, InterruptedException {
     testCachingAsString(executor, store);
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(store = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
+  @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisStandaloneStoreContext#isAvailable")
   void cacheStringOnRedisStandalone(Executor executor, Store store)
       throws IOException, InterruptedException {
@@ -84,7 +84,7 @@ class CacheReadingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(store = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
+  @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisClusterStoreContext#isAvailable")
   void cacheStringOnRedisCluster(Executor executor, Store store)
       throws IOException, InterruptedException {

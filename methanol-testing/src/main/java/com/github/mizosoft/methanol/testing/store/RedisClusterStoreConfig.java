@@ -20,18 +20,27 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
-import com.github.mizosoft.methanol.internal.cache.MemoryStore;
-import com.github.mizosoft.methanol.internal.cache.Store;
+import java.util.OptionalInt;
 
-public final class MemoryStoreContext extends StoreContext {
-  MemoryStoreContext(MemoryStoreConfig config) {
-    super(config);
+public class RedisClusterStoreConfig extends AbstractRedisStoreConfig {
+  public RedisClusterStoreConfig(
+      int appVersion, int editorLockTimeToLiveSeconds, int staleEntryTimeToLiveSeconds) {
+    super(
+        RedisStoreType.CLUSTER,
+        appVersion,
+        editorLockTimeToLiveSeconds,
+        staleEntryTimeToLiveSeconds);
   }
 
   @Override
-  Store createStore() {
-    return new MemoryStore(config().maxSize());
+  public OptionalInt editorLockTtlSeconds() {
+    return super.editorLockTtlSeconds();
+  }
+
+  @Override
+  public OptionalInt staleEntryTtlSeconds() {
+    return super.staleEntryTtlSeconds();
   }
 }

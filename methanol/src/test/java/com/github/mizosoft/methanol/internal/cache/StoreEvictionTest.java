@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,11 +31,11 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.testing.Logging;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
-import com.github.mizosoft.methanol.testing.junit.StoreContext;
-import com.github.mizosoft.methanol.testing.junit.StoreExtension.StoreParameterizedTest;
-import com.github.mizosoft.methanol.testing.junit.StoreSpec;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.store.StoreContext;
+import com.github.mizosoft.methanol.testing.store.StoreExtension.StoreParameterizedTest;
+import com.github.mizosoft.methanol.testing.store.StoreSpec;
 import java.io.IOException;
 
 class StoreEvictionTest {

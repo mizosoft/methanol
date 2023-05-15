@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,29 +20,26 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
-import com.github.mizosoft.methanol.internal.cache.DiskStore;
-import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
-import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
+import java.io.IOException;
 
-/** {@code DiskStore.Hasher} allowing to explicitly set fake hash codes for some keys. */
-public final class MockHasher implements DiskStore.Hasher {
-  private final Map<String, Hash> mockHashCodes = new ConcurrentHashMap<>();
+public final class RedisStandaloneStoreContext
+    extends AbstractRedisStoreContext<RedisStandaloneSession> {
+  private static final RedisSessionSingletonPool<RedisStandaloneSession> serverPool =
+      new RedisSessionSingletonPool<>(RedisStandaloneSession::start);
 
-  MockHasher() {}
-
-  @Override
-  public Hash hash(String key) {
-    // Fallback to default hasher if a fake hash is not set.
-    var mockHash = mockHashCodes.get(key);
-    return mockHash != null ? mockHash : TRUNCATED_SHA_256.hash(key);
+  RedisStandaloneStoreContext(RedisStandaloneStoreConfig config) {
+    super(config, serverPool);
   }
 
-  public void setHash(String key, long upperHashBits) {
-    mockHashCodes.put(
-        key, new Hash(ByteBuffer.allocate(80).putLong(upperHashBits).putShort((short) 0).flip()));
+  @Override
+  void configure(RedisStorageExtension.Builder builder) throws IOException {
+    builder.standalone(getSession().uri());
+  }
+
+  public static boolean isAvailable() {
+    return RedisSupport.isRedisStandaloneAvailable();
   }
 }

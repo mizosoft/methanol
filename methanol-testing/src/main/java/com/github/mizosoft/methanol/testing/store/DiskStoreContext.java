@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
@@ -34,7 +34,7 @@ import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.MockExecutor;
 import com.github.mizosoft.methanol.testing.file.LeakDetectingFileSystem;
 import com.github.mizosoft.methanol.testing.file.WindowsEmulatingFileSystem;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
 import java.io.IOException;
 import java.nio.file.ClosedFileSystemException;
 import java.nio.file.FileSystem;

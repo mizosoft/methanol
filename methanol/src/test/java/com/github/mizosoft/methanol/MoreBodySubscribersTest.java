@@ -28,10 +28,10 @@ import static com.github.mizosoft.methanol.MoreBodySubscribers.ofDeferredObject;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofReader;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.withReadTimeout;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static com.github.mizosoft.methanol.testing.TestUtils.toByteArray;
-import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.FIXED_POOL;
-import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.SCHEDULER;
 import static java.net.http.HttpResponse.BodySubscribers.discarding;
 import static java.net.http.HttpResponse.BodySubscribers.fromSubscriber;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
@@ -44,11 +44,11 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
 import com.github.mizosoft.methanol.testing.TestSubscription;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

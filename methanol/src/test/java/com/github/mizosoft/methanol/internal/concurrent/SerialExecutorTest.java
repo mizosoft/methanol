@@ -22,16 +22,16 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
-import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.MockExecutor;
 import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;

@@ -29,8 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.ProgressTracker.Progress;
 import com.github.mizosoft.methanol.testing.BodyCollector;
+import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
-import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension;
 import java.net.URI;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.ByteBuffer;

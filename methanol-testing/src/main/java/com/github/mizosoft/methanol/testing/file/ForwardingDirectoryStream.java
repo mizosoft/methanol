@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.testing.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.util.Iterator;
@@ -33,7 +35,7 @@ class ForwardingDirectoryStream<T>
   private final DirectoryStream<T> delegate;
 
   ForwardingDirectoryStream(DirectoryStream<T> delegate) {
-    this.delegate = delegate;
+    this.delegate = requireNonNull(delegate);
   }
 
   @Override

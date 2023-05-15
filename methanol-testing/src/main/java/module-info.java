@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ module methanol.testing {
   exports com.github.mizosoft.methanol.testing.decoder;
   exports com.github.mizosoft.methanol.testing.file;
   exports com.github.mizosoft.methanol.testing.verifiers;
-  exports com.github.mizosoft.methanol.testing.junit;
+  exports com.github.mizosoft.methanol.testing.store;
 
   uses com.github.mizosoft.methanol.testing.MemoryFileSystemProvider;
 }

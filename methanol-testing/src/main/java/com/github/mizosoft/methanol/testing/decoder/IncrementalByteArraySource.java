@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,10 @@ import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.nio.ByteBuffer;
 
-/** A ByteSource that reads from a byte array up to a limit that can be incremented each round. */
+/**
+ * A {@code ByteSource} that reads from a byte array up to a limit that can be incremented each
+ * round.
+ */
 final class IncrementalByteArraySource implements AsyncDecoder.ByteSource {
   private final ByteBuffer source;
   private final ByteBuffer buffer;

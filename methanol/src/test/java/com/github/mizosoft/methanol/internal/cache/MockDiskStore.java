@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hasher;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import com.github.mizosoft.methanol.testing.junit.DiskStoreContext;
+import com.github.mizosoft.methanol.testing.store.DiskStoreContext;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;

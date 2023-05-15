@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,13 +20,13 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockDelayer;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -36,7 +36,7 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface StoreSpec {
-  StoreType[] store() default {
+  StoreType[] tested() default {
     StoreType.MEMORY, StoreType.DISK, StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER
   };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,10 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
-import java.util.OptionalInt;
-
-public class RedisClusterStoreConfig extends AbstractRedisStoreConfig {
-  public RedisClusterStoreConfig(
-      int appVersion, int editorLockTimeToLiveSeconds, int staleEntryTimeToLiveSeconds) {
-    super(
-        RedisStoreType.CLUSTER,
-        appVersion,
-        editorLockTimeToLiveSeconds,
-        staleEntryTimeToLiveSeconds);
-  }
-
-  @Override
-  public OptionalInt editorLockTtlSeconds() {
-    return super.editorLockTtlSeconds();
-  }
-
-  @Override
-  public OptionalInt staleEntryTtlSeconds() {
-    return super.staleEntryTtlSeconds();
+public final class MemoryStoreConfig extends StoreConfig {
+  public MemoryStoreConfig(long maxSize) {
+    super(StoreType.MEMORY, maxSize, -1);
   }
 }

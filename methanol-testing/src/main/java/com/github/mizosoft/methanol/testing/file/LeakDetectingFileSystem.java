@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,18 +34,17 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.spi.FileSystemProvider;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * A {@code FileSystem} that wraps another to detect unclosed resources when the file system is
- * closed. Tracked resources are {@code FileChannels}, {@code AsynchronousFileChannels} and {@code
- * DirectoryStreams}. An {@code IllegalStateException} is thrown when at least one of such resources
- * isn't closed prior to closing this file system.
+ * A {@code ForwardingFileSystem} that detects unclosed resources when closed. Tracked resources are
+ * instances of {@code FileChannel}, {@code AsynchronousFileChannel} and {@code DirectoryStream}. An
+ * {@code IllegalStateException} is thrown when at least one of such resources isn't closed prior to
+ * closing this file system.
  */
 public final class LeakDetectingFileSystem extends FileSystemWrapper {
   private final Map<Closeable, ResourceRecord> resources;
@@ -68,11 +67,7 @@ public final class LeakDetectingFileSystem extends FileSystemWrapper {
         };
     try (delegateCloseable) {
       if (closed.compareAndSet(false, true)) {
-        Set<ResourceRecord> leakedResources;
-        synchronized (resources) {
-          leakedResources = Set.copyOf(resources.values());
-        }
-
+        var leakedResources = Set.copyOf(resources.values()); // Take a snapshot.
         if (!leakedResources.isEmpty()) {
           var leaksDetected =
               new IllegalStateException(
@@ -91,10 +86,9 @@ public final class LeakDetectingFileSystem extends FileSystemWrapper {
     return new LeakDetectingFileSystemProvider(delegate.provider()).wrap(delegate);
   }
 
-  /** A {@code FileSystemProvider} that tracks created resources. */
+  /** A {@code ForwardingFileSystemProvider} that tracks created resources. */
   private static final class LeakDetectingFileSystemProvider extends FileSystemProviderWrapper {
-    final Map<Closeable, ResourceRecord> resources =
-        Collections.synchronizedMap(new LinkedHashMap<>());
+    final Map<Closeable, ResourceRecord> resources = new ConcurrentHashMap<>();
 
     LeakDetectingFileSystemProvider(FileSystemProvider delegate) {
       super(delegate);
@@ -135,10 +129,8 @@ public final class LeakDetectingFileSystem extends FileSystemWrapper {
             @Override
             public void close() throws IOException {
               try (var ignored = delegate()) {
-                if (closed.compareAndSet(false, true)) {
-                  if (resources.remove(this) == null) {
-                    throw new IllegalStateException("closing an untracked channel");
-                  }
+                if (closed.compareAndSet(false, true) && resources.remove(this) == null) {
+                  throw new IllegalStateException("closing an untracked FileChannel");
                 }
               }
             }
@@ -157,10 +149,8 @@ public final class LeakDetectingFileSystem extends FileSystemWrapper {
             @Override
             public void close() throws IOException {
               try (var ignored = delegate()) {
-                if (closed.compareAndSet(false, true)) {
-                  if (resources.remove(this) == null) {
-                    throw new IllegalStateException("closing an untracked directory stream");
-                  }
+                if (closed.compareAndSet(false, true) && resources.remove(this) == null) {
+                  throw new IllegalStateException("closing an untracked DirectoryStream");
                 }
               }
             }

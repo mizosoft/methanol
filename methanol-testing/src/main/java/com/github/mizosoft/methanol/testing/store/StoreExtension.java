@@ -20,15 +20,15 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -161,7 +161,7 @@ public final class StoreExtension
   private static Stream<StoreConfig> resolveSpec(StoreSpec spec) {
     return cartesianProduct(
             List.of(
-                difference(Set.of(spec.store()), Set.of(spec.skipped())),
+                difference(Set.of(spec.tested()), Set.of(spec.skipped())),
                 Set.of(spec.maxSize()),
                 Set.of(spec.appVersion()),
                 Set.of(spec.fileSystem()),

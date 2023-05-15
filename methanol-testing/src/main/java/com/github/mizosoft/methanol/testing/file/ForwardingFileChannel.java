@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.testing.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -34,7 +36,7 @@ public class ForwardingFileChannel extends FileChannel implements ForwardingObje
   private final FileChannel delegate;
 
   public ForwardingFileChannel(FileChannel delegate) {
-    this.delegate = delegate;
+    this.delegate = requireNonNull(delegate);
   }
 
   @Override

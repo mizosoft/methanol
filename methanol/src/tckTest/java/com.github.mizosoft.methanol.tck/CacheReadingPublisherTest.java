@@ -22,17 +22,16 @@
 
 package com.github.mizosoft.methanol.tck;
 
-
 import com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.junit.RedisClusterStoreContext;
-import com.github.mizosoft.methanol.testing.junit.RedisStandaloneStoreContext;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
-import com.github.mizosoft.methanol.testing.junit.StoreContext;
+import com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext;
+import com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext;
+import com.github.mizosoft.methanol.testing.store.StoreConfig;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.store.StoreContext;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

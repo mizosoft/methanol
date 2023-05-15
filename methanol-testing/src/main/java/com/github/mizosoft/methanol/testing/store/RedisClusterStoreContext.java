@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
 import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import java.io.IOException;

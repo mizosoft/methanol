@@ -27,10 +27,10 @@ import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyTha
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 
 import com.github.mizosoft.methanol.internal.cache.InternalStorageExtension;
-import com.github.mizosoft.methanol.testing.junit.MockWebServerExtension;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.StoreType;
-import com.github.mizosoft.methanol.testing.junit.StoreContext;
+import com.github.mizosoft.methanol.testing.MockWebServerExtension;
+import com.github.mizosoft.methanol.testing.store.StoreConfig;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
+import com.github.mizosoft.methanol.testing.store.StoreContext;
 import java.io.IOException;
 import mockwebserver3.MockResponse;
 import org.junit.jupiter.api.AfterEach;

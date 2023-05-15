@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,6 +47,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
+/**
+ * A {@code ForwardingFileSystemProvider} that adds behavior to an existing {@code
+ * FileSystemProvider}, and ensures all created objects refer to this provider.
+ */
 abstract class FileSystemProviderWrapper extends ForwardingFileSystemProvider {
   FileSystemProviderWrapper(FileSystemProvider delegate) {
     super(delegate);
@@ -212,9 +216,10 @@ abstract class FileSystemProviderWrapper extends ForwardingFileSystemProvider {
   abstract FileSystemWrapper wrap(FileSystem fileSystem);
 
   /**
-   * Creates a new PathWrapper possibly with a provider-specific subclass. Even though PathWrapper
-   * is concrete, having each provider implementation have its own PathWrapper type (even if it just
-   * forwards to PathWrapper's constructor) makes Path::equal more predictable and less awkward.
+   * Creates a new {@link PathWrapper}, possibly with a provider-specific subclass. Even though
+   * {@code PathWrapper} is concrete, having each provider implementation have its own {@code
+   * PathWrapper} type (even if it just forwards to PathWrapper's constructor) makes Path::equal
+   * more predictable and less awkward.
    */
   abstract PathWrapper newPathWrapper(Path path, FileSystemWrapper fileSystem);
 }

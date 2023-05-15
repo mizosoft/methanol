@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,20 +27,10 @@ public interface ForwardingObject<T> {
   T delegate();
 
   @SuppressWarnings("unchecked")
-  public static <T> T delegate(T obj) {
+  static <T> T delegate(T obj) {
     if (!(obj instanceof ForwardingObject<?>)) {
       throw new IllegalArgumentException("not a forwarding object: ");
     }
     return ((ForwardingObject<T>) obj).delegate();
-  }
-
-  /** Returns the inner most delegate in a chain of one or more forwarding objects. */
-  @SuppressWarnings("unchecked")
-  static <T> T rootDelegate(T object) {
-    T delegate = object;
-    while (delegate instanceof ForwardingObject<?>) {
-      delegate = (T) ((ForwardingObject<?>) delegate).delegate();
-    }
-    return delegate;
   }
 }

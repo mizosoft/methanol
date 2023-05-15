@@ -23,10 +23,10 @@
 package com.github.mizosoft.methanol.benchmarks;
 
 import com.github.mizosoft.methanol.internal.cache.Store;
-import com.github.mizosoft.methanol.testing.junit.DiskStoreConfig;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.Execution;
-import com.github.mizosoft.methanol.testing.junit.StoreConfig.FileSystemType;
-import com.github.mizosoft.methanol.testing.junit.StoreContext;
+import com.github.mizosoft.methanol.testing.store.DiskStoreConfig;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.Execution;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.store.StoreContext;
 import java.nio.ByteBuffer;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;

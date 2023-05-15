@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,42 +20,27 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.junit;
+package com.github.mizosoft.methanol.testing.store;
 
 import java.io.IOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.util.List;
 
-class Directories {
-  private Directories() {}
+/** A session with a Redis Standalone or Cluster setup. */
+public interface RedisSession extends AutoCloseable {
 
-  static void deleteRecursively(Path directory) throws IOException {
-    try {
-      Files.walkFileTree(
-          directory,
-          new SimpleFileVisitor<>() {
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-                throws IOException {
-              Files.deleteIfExists(file);
-              return FileVisitResult.CONTINUE;
-            }
+  /** Returns the log files attached to this session. */
+  List<Path> logFiles();
 
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc)
-                throws IOException {
-              if (exc != null) {
-                throw exc;
-              }
-              Files.deleteIfExists(dir);
-              return FileVisitResult.CONTINUE;
-            }
-          });
-    } catch (NoSuchFileException ignored) {
-    }
-  }
+  /**
+   * Resets this session to its initial state. Returns {@code true} if the session is operable after
+   * being reset.
+   */
+  boolean reset();
+
+  /** Returns {@code true} if this session is operable. */
+  boolean isHealthy();
+
+  @Override
+  void close() throws IOException;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,9 +44,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A {@code FileSystem} that wraps another to emulate Windows' behaviour regarding deletion of files
- * with open handles. Only file handles acquired through {@code FileChannels} and {@code
- * AsynchronousFileChannels} are tracked.
+ * A {@code ForwardingFileSystem} that emulates Windows' behaviour regarding the deletion of files
+ * with open handles. Only file handles acquired through {@code FileChannel} and {@code
+ * AsynchronousFileChannel} are tracked.
  *
  * <p>On Windows, deleting files while they're open isn't allowed by default. One has to open the
  * file with FILE_SHARE_DELETE for that to work. Luckily, NIO opens file channels as such. The
@@ -56,7 +56,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * (https://devblogs.microsoft.com/oldnewthing/20040607-00/?p=38993), the deleted file name is hence
  * retained till all handles to that file are closed. Things like creating a new file with the name
  * of a file marked for deletion, renaming another file to such name or opening any sort of channel
- * to such file all throw {@code AccessDeniedException}. This file system emulates that behavior so
+ * to such file all throw {@code AccessDeniedException}. This file system emulates that behavior, so
  * we're sure these cases are covered when interacting with files on Windows.
  */
 public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
@@ -111,8 +111,8 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
 
                 @Override
                 public void close() throws IOException {
-                  if (closed.compareAndSet(false, true)) {
-                    try (Closeable ignored = super::close) {
+                  try (Closeable ignored = super::close) {
+                    if (closed.compareAndSet(false, true)) {
                       onClose.accept(this);
                     }
                   }

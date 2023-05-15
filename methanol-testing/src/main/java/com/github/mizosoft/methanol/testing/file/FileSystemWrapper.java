@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,12 +22,14 @@
 
 package com.github.mizosoft.methanol.testing.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
 
 /**
- * A {@code FileSystem} wrapper that ensures created {@code Paths} and {@code FileSystems} are all
- * associated with a wrapped {@code FileSystemProvider}.
+ * A {@code ForwardingFileSystem} that ensures created {@code Path} and {@code FileSystem} objects
+ * are all associated with the same {@link FileSystemProviderWrapper}.
  */
 abstract class FileSystemWrapper extends ForwardingFileSystem {
   /*
@@ -42,7 +44,7 @@ abstract class FileSystemWrapper extends ForwardingFileSystem {
 
   FileSystemWrapper(FileSystem delegate, FileSystemProviderWrapper provider) {
     super(delegate);
-    this.provider = provider;
+    this.provider = requireNonNull(provider);
   }
 
   @Override

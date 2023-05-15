@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorType.FIXED_POOL;
+import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,10 +33,10 @@ import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
 import com.github.mizosoft.methanol.testing.EmptyPublisher;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.FailingPublisher;
 import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.junit.ExecutorExtension.ExecutorConfig;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
