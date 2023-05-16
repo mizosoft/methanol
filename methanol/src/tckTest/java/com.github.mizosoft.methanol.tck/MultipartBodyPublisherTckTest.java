@@ -75,7 +75,7 @@ public class MultipartBodyPublisherTckTest extends FlowPublisherVerification<Byt
       partPublisher =
           FlowAdapters.toFlowPublisher(
               new AsyncIterablePublisher<>(
-                  () -> Stream.generate(() -> TckUtils.generateData()).limit(remaining).iterator(),
+                  () -> Stream.generate(TckUtils::generateData).limit(remaining).iterator(),
                   executorContext.createExecutor(executorType)));
     } else {
       partPublisher = EmptyPublisher.instance();

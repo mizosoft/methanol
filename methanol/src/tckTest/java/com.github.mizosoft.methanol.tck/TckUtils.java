@@ -38,14 +38,8 @@ import java.util.stream.Stream;
 import org.reactivestreams.tck.TestEnvironment;
 
 public class TckUtils {
-  private static final long DEFAULT_TIMEOUT_MILLIS = 200L;
-
-  private static final long TIMEOUT_MILLIS =
-      getTimeout("TCK_TIMEOUT_MILLIS", DEFAULT_TIMEOUT_MILLIS);
-  private static final long NO_SIGNAL_TIMEOUT_MILLIS =
-      getTimeout("TCK_NO_SIGNAL_TIMEOUT_MILLIS", TIMEOUT_MILLIS);
-  private static final long POLL_TIMEOUT_MILLIS =
-      getTimeout("TCK_POLL_TIMEOUT_MILLIS", TIMEOUT_MILLIS);
+  private static final long TIMEOUT_MILLIS = 1000L;
+  private static final long NO_SIGNAL_TIMEOUT_MILLIS = 200L;
 
   static final int BUFFER_SIZE = 1024;
 
@@ -66,23 +60,7 @@ public class TckUtils {
   private TckUtils() {}
 
   static TestEnvironment testEnvironment() {
-    return new TestEnvironment(TIMEOUT_MILLIS, NO_SIGNAL_TIMEOUT_MILLIS, POLL_TIMEOUT_MILLIS);
-  }
-
-  static TestEnvironment testEnvironmentWithTimeout(long timeoutMillis) {
-    return new TestEnvironment(timeoutMillis, NO_SIGNAL_TIMEOUT_MILLIS, timeoutMillis);
-  }
-
-  private static long getTimeout(String prop, long defaultVal) {
-    var value = System.getProperty(prop);
-    if (value == null) {
-      return defaultVal;
-    }
-    try {
-      return Long.parseLong(value);
-    } catch (NumberFormatException ex) {
-      throw new RuntimeException("unable to parse <" + value + "> for property <" + prop + ">", ex);
-    }
+    return new TestEnvironment(TIMEOUT_MILLIS, NO_SIGNAL_TIMEOUT_MILLIS, TIMEOUT_MILLIS);
   }
 
   static <T, R> Publisher<R> map(Publisher<T> publisher, Function<? super T, ? extends R> mapper) {

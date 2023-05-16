@@ -43,10 +43,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.AfterMethod;
@@ -118,23 +118,9 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
   }
 
   private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {
-    return new Iterator<>() {
-      private int generated;
-
-      @Override
-      public boolean hasNext() {
-        return generated < elements;
-      }
-
-      @Override
-      public List<ByteBuffer> next() {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
-        generated++;
-        return List.of(TckUtils.generateData(), TckUtils.generateData());
-      }
-    };
+    return Stream.generate(() -> List.of(TckUtils.generateData(), TckUtils.generateData()))
+        .limit(elements)
+        .iterator();
   }
 
   @DataProvider
