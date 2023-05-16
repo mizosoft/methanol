@@ -22,6 +22,12 @@
 
 package com.github.mizosoft.methanol.tck;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.concurrent.Flow;
+import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscriber;
+import java.util.function.Function;
 import org.reactivestreams.tck.TestEnvironment;
 
 public class TckUtils {
@@ -61,5 +67,35 @@ public class TckUtils {
     } catch (NumberFormatException ex) {
       throw new RuntimeException("unable to parse <" + value + "> for property <" + prop + ">", ex);
     }
+  }
+
+  static <T, R> Publisher<R> map(Publisher<T> publisher, Function<? super T, ? extends R> mapper) {
+    return subscriber -> publisher.subscribe(subscriber != null ? map(subscriber, mapper) : null);
+  }
+
+  static <T, R> Subscriber<T> map(
+      Subscriber<R> subscriber, Function<? super T, ? extends R> mapper) {
+    return new Subscriber<>() {
+      @Override
+      public void onSubscribe(Flow.Subscription subscription) {
+        subscriber.onSubscribe(subscription);
+      }
+
+      @Override
+      public void onNext(T item) {
+        requireNonNull(item);
+        subscriber.onNext(mapper.apply(item));
+      }
+
+      @Override
+      public void onError(Throwable throwable) {
+        subscriber.onError(throwable);
+      }
+
+      @Override
+      public void onComplete() {
+        subscriber.onComplete();
+      }
+    };
   }
 }

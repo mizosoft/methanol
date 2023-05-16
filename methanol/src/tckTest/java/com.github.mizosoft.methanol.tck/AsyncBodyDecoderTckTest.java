@@ -23,13 +23,13 @@
 package com.github.mizosoft.methanol.tck;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTckTest.BufferListHandle;
 import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.io.IOException;
@@ -53,7 +53,8 @@ import org.testng.SkipException;
 import org.testng.annotations.*;
 
 @Test
-public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<BufferListHandle> {
+public class AsyncBodyDecoderTckTest
+    extends IdentityFlowProcessorVerification<List<AsyncBodyDecoderTckTest.ByteBufferHandle>> {
   private static final int BUFFERS_PER_LIST = 4;
 
   private final ExecutorType executorType;
@@ -77,17 +78,17 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
   }
 
   @Override
-  protected Publisher<BufferListHandle> createFailedFlowPublisher() {
+  protected Publisher<List<ByteBufferHandle>> createFailedFlowPublisher() {
     var processor =
         new ProcessorView(BadDecoder.INSTANCE, executorContext.createExecutor(executorType));
     processor.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    processor.onNext(new BufferListHandle(List.of(US_ASCII.encode("Test buffer"))));
+    processor.onNext(List.of(new ByteBufferHandle(US_ASCII.encode("abc"))));
     processor.onComplete();
     return processor;
   }
 
   @Override
-  protected Processor<BufferListHandle, BufferListHandle> createIdentityFlowProcessor(
+  protected Processor<List<ByteBufferHandle>, List<ByteBufferHandle>> createIdentityFlowProcessor(
       int bufferSize) {
     return new ProcessorView(
         IdentityDecoder.INSTANCE, executorContext.createExecutor(executorType));
@@ -99,18 +100,17 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
   }
 
   @Override
-  public BufferListHandle createElement(int element) {
+  public List<ByteBufferHandle> createElement(int element) {
+    var data = UTF_8.encode(Integer.toHexString(element));
     var batch = ByteBuffer.allocate(Utils.BUFFER_SIZE);
-    var data = US_ASCII.encode(Integer.toHexString(element));
     while (batch.hasRemaining()) {
       Utils.copyRemaining(data.rewind(), batch);
     }
     batch.flip();
-    // Just duplicate buffers to get a list
-    return new BufferListHandle(
-        Stream.generate(batch::duplicate)
-            .limit(BUFFERS_PER_LIST)
-            .collect(Collectors.toUnmodifiableList()));
+    return Stream.generate(batch::duplicate)
+        .map(ByteBufferHandle::new)
+        .limit(BUFFERS_PER_LIST)
+        .collect(Collectors.toUnmodifiableList());
   }
 
   @Override
@@ -119,9 +119,9 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
   }
 
   /**
-   * A {@code BodyDecoder} is bound to its downstream, and it's a part of a subscriber chain to the
-   * HTTP client. Where it is the responsibility of the client itself to drop references to the tip
-   * of the chain, allowing the rest of the chain to be GCed.
+   * A {@code BodyDecoder} is bound to its downstream, all constituting part of the subscriber chain
+   * up to the HTTP client. It is the responsibility of the client itself to drop references to the
+   * top of the chain, allowing the rest of the chain to be GCed.
    */
   @Override
   public void
@@ -170,98 +170,70 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
     public void close() {}
   }
 
-  // The tck uses Object::equals which won't work on ByteBuffers as upstream buffers
-  // become empty after consumption. So this class is used instead of List<ByteBuffer>
-  // to rewind buffers before comparison.
-  static final class BufferListHandle {
-    final List<ByteBuffer> buffers;
+  /**
+   * Implements equivalence regardless of buffer position. This allows equating buffers before and
+   * after being consumed.
+   */
+  static final class ByteBufferHandle {
+    final ByteBuffer buffer;
 
-    BufferListHandle(List<ByteBuffer> buffers) {
-      this.buffers = buffers;
+    ByteBufferHandle(ByteBuffer buffer) {
+      this.buffer = requireNonNull(buffer);
     }
 
     @Override
     public boolean equals(Object obj) {
-      if (!(obj instanceof BufferListHandle)) {
-        return false;
-      }
-      var thisList = buffers;
-      var thatList = ((BufferListHandle) obj).buffers;
-      thisList.forEach(ByteBuffer::rewind);
-      thatList.forEach(ByteBuffer::rewind);
-      return thisList.equals(thatList);
+      return obj instanceof ByteBufferHandle
+          && buffer.rewind().equals(((ByteBufferHandle) obj).buffer.rewind());
     }
   }
 
   /** Adapts a {@code AsyncBodyDecoder} into a processor. */
   private static final class ProcessorView
-      implements Processor<BufferListHandle, BufferListHandle> {
+      implements Processor<List<ByteBufferHandle>, List<ByteBufferHandle>> {
     private final AsyncDecoder decoder;
     private final Executor executor;
-    private final AtomicReference<AsyncBodyDecoder<Void>> bodyDecoderRef;
-    private final Queue<Consumer<AsyncBodyDecoder<Void>>> signals;
+    private final AtomicReference<AsyncBodyDecoder<Void>> bodyDecoderRef = new AtomicReference<>();
+    private final Queue<Consumer<AsyncBodyDecoder<Void>>> signals = new LinkedList<>();
 
     ProcessorView(AsyncDecoder decoder, Executor executor) {
       this.decoder = decoder;
       this.executor = executor;
-      bodyDecoderRef = new AtomicReference<>();
-      signals = new LinkedList<>();
     }
 
     @Override
-    public void subscribe(Subscriber<? super BufferListHandle> subscriber) {
+    public void subscribe(Subscriber<? super List<ByteBufferHandle>> subscriber) {
       requireNonNull(subscriber);
-      var mappingSubscriber =
-          new Subscriber<List<ByteBuffer>>() {
-            @Override
-            public void onSubscribe(Subscription subscription) {
-              subscriber.onSubscribe(subscription);
-            }
-
-            @Override
-            public void onNext(List<ByteBuffer> item) {
-              subscriber.onNext(new BufferListHandle(item));
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-              subscriber.onError(throwable);
-            }
-
-            @Override
-            public void onComplete() {
-              subscriber.onComplete();
-            }
-          };
-      var downstream = BodySubscribers.fromSubscriber(mappingSubscriber);
+      var downstream =
+          BodySubscribers.fromSubscriber(
+              TckUtils.map(
+                  subscriber,
+                  buffers ->
+                      buffers.stream().map(ByteBufferHandle::new).collect(Collectors.toList())));
       var bodyDecoder = new AsyncBodyDecoder<>(decoder, downstream, executor, Utils.BUFFER_SIZE);
       if (bodyDecoderRef.compareAndSet(null, bodyDecoder)) {
         drainSignals();
       } else {
-        Throwable error = new IllegalStateException("Already subscribed");
-        try {
-          subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-        } catch (Throwable t) {
-          error.addSuppressed(t);
-        } finally {
-          subscriber.onError(error);
-        }
+        FlowSupport.rejectMulticast(subscriber);
       }
     }
 
     @Override
     public void onSubscribe(Subscription subscription) {
-      putSignal(dec -> dec.onSubscribe(subscription));
+      putSignal(bodyDecoder -> bodyDecoder.onSubscribe(subscription));
     }
 
     @Override
-    public void onNext(BufferListHandle item) {
-      putSignal(dec -> dec.onNext(item.buffers));
+    public void onNext(List<ByteBufferHandle> item) {
+      putSignal(
+          bodyDecoder ->
+              bodyDecoder.onNext(
+                  item.stream().map(handle -> handle.buffer).collect(Collectors.toList())));
     }
 
     @Override
     public void onError(Throwable throwable) {
-      putSignal(dec -> dec.onError(throwable));
+      putSignal(bodyDecoder -> bodyDecoder.onError(throwable));
     }
 
     @Override
@@ -275,11 +247,11 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
     }
 
     private synchronized void drainSignals() {
-      var dec = bodyDecoderRef.get();
-      if (dec != null) {
+      var bodyDecoder = bodyDecoderRef.get();
+      if (bodyDecoder != null) {
         Consumer<AsyncBodyDecoder<Void>> signal;
         while ((signal = signals.poll()) != null) {
-          signal.accept(dec);
+          signal.accept(bodyDecoder);
         }
       }
     }
