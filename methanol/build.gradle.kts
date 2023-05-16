@@ -18,7 +18,6 @@ dependencies {
     testImplementation(project(":methanol-testing"))
     testImplementation(libs.junit.params)
     testImplementation(libs.mockwebserver)
-    testImplementation(libs.reactivestreams.examples)
     testImplementation(libs.reactivestreams)
     testImplementation(libs.jimfs)
 }
@@ -50,7 +49,6 @@ dependencies {
     tckTestImplementation(project(":methanol-testing"))
     tckTestImplementation(libs.testng)
     tckTestImplementation(libs.reactivestreams.tck.flow)
-    tckTestImplementation(libs.reactivestreams.examples)
     tckTestImplementation(libs.mockwebserver)
 }
 

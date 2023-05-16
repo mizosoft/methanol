@@ -24,7 +24,6 @@ package com.github.mizosoft.methanol.tck;
 
 import static com.github.mizosoft.methanol.testing.TestUtils.EMPTY_BUFFER;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listener;
@@ -47,7 +46,6 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -94,10 +92,9 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
   public Publisher<List<ByteBuffer>> createFlowPublisher(long elements) {
     try {
       return new CacheWritingPublisher(
-          toFlowPublisher(
-              new AsyncIterablePublisher<>(
-                  () -> elementGenerator(elements),
-                  executorContext.createExecutor(ExecutorType.CACHED_POOL))),
+          new IterablePublisher<>(
+              () -> elementGenerator(elements),
+              executorContext.createExecutor(ExecutorType.CACHED_POOL)),
           store.edit("test-entry-" + entryId.getAndIncrement()).orElseThrow(),
           UTF_8.encode("abc"),
           executorContext.createExecutor(executorType),

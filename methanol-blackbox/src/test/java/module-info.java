@@ -26,7 +26,6 @@ open module methanol.blackbox {
   requires okio;
   requires reactor.core;
   requires org.reactivestreams;
-  requires org.reactivestreams.examples;
   requires org.eclipse.persistence.moxy;
   requires java.sql; // Required by org.eclipse.persistence.moxy
   requires static org.checkerframework.checker.qual;

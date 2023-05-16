@@ -29,12 +29,11 @@ import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
 import com.github.mizosoft.methanol.testing.EmptyPublisher;
 import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
+import com.github.mizosoft.methanol.testing.IterablePublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Flow.Publisher;
 import java.util.stream.Stream;
-import org.reactivestreams.FlowAdapters;
-import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
 import org.testng.annotations.*;
@@ -73,10 +72,9 @@ public class MultipartBodyPublisherTckTest extends FlowPublisherVerification<Byt
     long remaining = elements - MIN_BATCHES;
     if (remaining > 0) {
       partPublisher =
-          FlowAdapters.toFlowPublisher(
-              new AsyncIterablePublisher<>(
-                  () -> Stream.generate(TckUtils::generateData).limit(remaining).iterator(),
-                  executorContext.createExecutor(executorType)));
+          new IterablePublisher<>(
+              () -> Stream.generate(TckUtils::generateData).limit(remaining).iterator(),
+              executorContext.createExecutor(executorType));
     } else {
       partPublisher = EmptyPublisher.instance();
     }

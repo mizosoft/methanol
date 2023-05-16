@@ -29,15 +29,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.from;
-import static org.reactivestreams.FlowAdapters.toFlowPublisher;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.*;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.FailingPublisher;
-import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
-import com.github.mizosoft.methanol.testing.TestException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -48,7 +44,6 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
 @ExtendWith(ExecutorExtension.class)
 class MultipartBodyPublisherTest {
@@ -242,10 +237,8 @@ class MultipartBodyPublisherTest {
     var encodedToken = US_ASCII.encode(token);
     var repeatCount = 10000;
     var asyncPublisher =
-        toFlowPublisher(
-            new AsyncIterablePublisher<>(
-                Stream.generate(encodedToken::duplicate).limit(repeatCount)::iterator, executor));
-
+        new IterablePublisher<>(
+            Stream.generate(encodedToken::duplicate).limit(repeatCount)::iterator, executor);
     var body =
         MultipartBodyPublisher.newBuilder()
             .boundary("my_boundary")

@@ -30,13 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
-import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
-import com.github.mizosoft.methanol.testing.EmptyPublisher;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.*;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.FailingPublisher;
-import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
@@ -51,8 +47,6 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.reactivestreams.FlowAdapters;
-import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
 @ExtendWith(ExecutorExtension.class)
 class RawResponseTest {
@@ -166,9 +160,8 @@ class RawResponseTest {
 
   private static Publisher<List<ByteBuffer>> strPublisher(
       String str, Charset charset, Executor executor) {
-    return FlowAdapters.toFlowPublisher(
-        new AsyncIterablePublisher<>(
-            () -> new ByteBufferListIterator(charset.encode(str), 10, 1), executor));
+    return new IterablePublisher<>(
+        () -> new ByteBufferListIterator(charset.encode(str), 10, 1), executor);
   }
 
   private static void assertEqualResponses(TrackedResponse<?> expected, TrackedResponse<?> actual) {

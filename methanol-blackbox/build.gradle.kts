@@ -19,7 +19,6 @@ dependencies {
   testImplementation(libs.mockwebserver)
   testImplementation(libs.brotli.dec)
   testImplementation(libs.reactivestreams)
-  testImplementation(libs.reactivestreams.examples)
   testImplementation(libs.moxy)
 }
 

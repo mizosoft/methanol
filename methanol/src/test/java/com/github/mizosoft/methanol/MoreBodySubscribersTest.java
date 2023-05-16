@@ -42,13 +42,9 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.*;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.TestSubscriber;
-import com.github.mizosoft.methanol.testing.TestSubscription;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -75,8 +71,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.reactivestreams.FlowAdapters;
-import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 
 @Timeout(5)
 @ExtendWith(ExecutorExtension.class)
@@ -457,9 +451,7 @@ class MoreBodySubscribersTest {
 
   private Publisher<List<ByteBuffer>> publisherOf(
       String str, int buffSize, int buffsPerList, Executor executor) {
-    return FlowAdapters.toFlowPublisher(
-        new AsyncIterablePublisher<>(
-            iterableOf(UTF_8.encode(str), buffSize, buffsPerList), executor));
+    return new IterablePublisher<>(iterableOf(UTF_8.encode(str), buffSize, buffsPerList), executor);
   }
 
   private static void assertReadTimeout(

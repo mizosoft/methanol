@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -64,12 +64,8 @@ import com.github.mizosoft.methanol.WritableBodyPublisher;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
 import com.github.mizosoft.methanol.blackbox.support.JacksonMapper;
-import com.github.mizosoft.methanol.testing.ByteBufferIterator;
-import com.github.mizosoft.methanol.testing.Logging;
-import com.github.mizosoft.methanol.testing.MockGzipMember;
+import com.github.mizosoft.methanol.testing.*;
 import com.github.mizosoft.methanol.testing.MockGzipMember.CorruptionMode;
-import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
-import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -119,8 +115,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
-import org.reactivestreams.FlowAdapters;
-import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 import reactor.core.publisher.Flux;
 
 @Timeout(60)
@@ -673,9 +667,8 @@ class IntegrationTest {
             .build();
     var attachment = load(getClass(), "/payload/alice.txt");
     var attachmentPublisher =
-        FlowAdapters.toFlowPublisher(
-            new AsyncIterablePublisher<>(
-                () -> new ByteBufferIterator(ByteBuffer.wrap(attachment), 1024), executor));
+        new IterablePublisher<>(
+            () -> new ByteBufferIterator(ByteBuffer.wrap(attachment), 1024), executor);
     var multipartMixed =
         MultipartBodyPublisher.newBuilder()
             .mediaType(MediaType.of("multipart", "mixed"))
