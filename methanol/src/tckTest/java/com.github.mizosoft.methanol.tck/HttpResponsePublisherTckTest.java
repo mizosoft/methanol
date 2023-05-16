@@ -36,9 +36,6 @@ import java.net.http.HttpClient.Version;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.concurrent.Flow.Publisher;
-import java.util.concurrent.Flow.Subscriber;
-import java.util.concurrent.Flow.Subscription;
-import java.util.function.Function;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.PushPromise;
@@ -89,7 +86,7 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
     }
 
     server.enqueue(buildMockResponseWithPushPromises((int) elements - 1));
-    return map(
+    return TckUtils.map(
         new HttpResponsePublisher<>(
             client,
             MutableRequest.GET(server.url("/").uri()),
@@ -121,35 +118,6 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
     return response;
   }
 
-  private static <T, R> Publisher<R> map(
-      Publisher<T> publisher, Function<? super T, ? extends R> mapper) {
-    return subscriber ->
-        publisher.subscribe(
-            subscriber != null
-                ? new Subscriber<>() {
-                  @Override
-                  public void onSubscribe(Subscription subscription) {
-                    subscriber.onSubscribe(subscription);
-                  }
-
-                  @Override
-                  public void onNext(T item) {
-                    subscriber.onNext(mapper.apply(item));
-                  }
-
-                  @Override
-                  public void onError(Throwable throwable) {
-                    subscriber.onError(throwable);
-                  }
-
-                  @Override
-                  public void onComplete() {
-                    subscriber.onComplete();
-                  }
-                }
-                : null);
-  }
-
   @DataProvider
   public static Object[][] provider() {
     return new Object[][] {{ExecutorType.CACHED_POOL}, {ExecutorType.SAME_THREAD}};
@@ -176,7 +144,7 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
 
     @Override
     public String toString() {
-      return "ResponseHandle[" + response.toString() + "]";
+      return "ResponseHandle{" + response.toString() + "}";
     }
   }
 }

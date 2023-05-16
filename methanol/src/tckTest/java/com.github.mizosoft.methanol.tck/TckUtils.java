@@ -22,12 +22,19 @@
 
 package com.github.mizosoft.methanol.tck;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
+import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.reactivestreams.tck.TestEnvironment;
 
 public class TckUtils {
@@ -40,12 +47,21 @@ public class TckUtils {
   private static final long POLL_TIMEOUT_MILLIS =
       getTimeout("TCK_POLL_TIMEOUT_MILLIS", TIMEOUT_MILLIS);
 
+  static final int BUFFER_SIZE = 1024;
+
   /**
    * An arbitrary max for the # of elements needed to be precomputed for creating the test
    * publisher. This avoids OMEs when createFlowPublisher() is called with a large # of elements
    * (currently happens with required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue).
    */
-  static final int MAX_PRECOMPUTED_ELEMENTS = 1 << 16;
+  static final int MAX_PRECOMPUTED_ELEMENTS = 1 << 10;
+
+  private static final List<ByteBuffer> dataItems =
+      Stream.of("Lorem ipsum dolor sit amet".split("\\s"))
+          .map(UTF_8::encode)
+          .collect(Collectors.toUnmodifiableList());
+
+  private static final AtomicInteger index = new AtomicInteger();
 
   private TckUtils() {}
 
@@ -97,5 +113,14 @@ public class TckUtils {
         subscriber.onComplete();
       }
     };
+  }
+
+  static ByteBuffer generateData() {
+    var data = ByteBuffer.allocate(TckUtils.BUFFER_SIZE);
+    while (data.hasRemaining()) {
+      Utils.copyRemaining(
+          dataItems.get(index.getAndIncrement() % dataItems.size()).duplicate(), data);
+    }
+    return data.flip();
   }
 }

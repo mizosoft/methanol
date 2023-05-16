@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
@@ -41,10 +40,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
@@ -71,7 +67,7 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
    * The list of viewers opened during a test method execution. CacheReadingPublisher closes the
    * viewer when the body is consumed or an error is signalled amid transmission. However, some
    * tests don't lead to either (e.g. trying to subscribe with a null subscriber). So we make sure
-   * opened viewer are closed after each test.
+   * opened viewers are closed after each test.
    */
   private final List<Viewer> openedViewers = new ArrayList<>();
 
@@ -105,7 +101,12 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
     openedViewers.add(viewer);
 
     // Limit published items to `elements`.
-    var publisher = new CacheReadingPublisher(viewer, executorContext.createExecutor(executorType));
+    var publisher =
+        new CacheReadingPublisher(
+            viewer,
+            executorContext.createExecutor(executorType),
+            CacheReadingPublisher.Listener.disabled(),
+            TckUtils.BUFFER_SIZE);
     return subscriber ->
         publisher.subscribe(
             subscriber != null ? new LimitingSubscriber<>(subscriber, elements) : null);
@@ -115,8 +116,9 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
     try {
       var entryName = "test-entry-" + entryId.getAndIncrement();
       try (var editor = store.edit(entryName).orElseThrow()) {
-        for (var buffer : generateData(elements)) {
-          editor.writer().write(buffer);
+        long itemCount = elements * MAX_BATCH_SIZE; // Product `elements` items at minimum.
+        for (int i = 0; i < itemCount; i++) {
+          editor.writer().write(TckUtils.generateData());
         }
         editor.commit(ByteBuffer.allocate(1));
       }
@@ -124,19 +126,6 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
     } catch (IOException | InterruptedException e) {
       throw new CompletionException(e);
     }
-  }
-
-  private List<ByteBuffer> generateData(long elements) {
-    var buffer = ByteBuffer.allocate(Utils.BUFFER_SIZE);
-    ThreadLocalRandom.current()
-        .ints(buffer.remaining(), 0x20, 0x7f) // ASCII VCHARS.
-        .forEach(i -> buffer.put((byte) i));
-    buffer.flip();
-    return elements > 0
-        ? Stream.generate(buffer::duplicate)
-            .limit(MAX_BATCH_SIZE * elements) // Produce `elements` items at minimum.
-            .collect(Collectors.toUnmodifiableList())
-        : List.of();
   }
 
   @Override
@@ -176,8 +165,8 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
 
   // The following tests don't apply to our unicast publisher. They're explicitly skipped as they
   // otherwise cause AbstractSubscription to spam the log with RejectedExecutionExceptions when
-  // the second subscriber creation fails while there are still ongoing reads for the first
-  // subscriber.
+  // the second subscriber creation fails (leading to closing the store), while there are still
+  // ongoing reads for the first subscriber that trigger a drain task when finished.
 
   @Override
   public void optional_spec111_maySupportMultiSubscribe() {

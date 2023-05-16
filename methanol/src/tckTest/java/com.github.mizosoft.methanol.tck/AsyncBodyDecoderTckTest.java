@@ -23,12 +23,10 @@
 package com.github.mizosoft.methanol.tck;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
-import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
@@ -101,13 +99,8 @@ public class AsyncBodyDecoderTckTest
 
   @Override
   public List<ByteBufferHandle> createElement(int element) {
-    var data = UTF_8.encode(Integer.toHexString(element));
-    var batch = ByteBuffer.allocate(Utils.BUFFER_SIZE);
-    while (batch.hasRemaining()) {
-      Utils.copyRemaining(data.rewind(), batch);
-    }
-    batch.flip();
-    return Stream.generate(batch::duplicate)
+    var data = TckUtils.generateData();
+    return Stream.generate(data::duplicate)
         .map(ByteBufferHandle::new)
         .limit(BUFFERS_PER_LIST)
         .collect(Collectors.toUnmodifiableList());
@@ -209,8 +202,10 @@ public class AsyncBodyDecoderTckTest
               TckUtils.map(
                   subscriber,
                   buffers ->
-                      buffers.stream().map(ByteBufferHandle::new).collect(Collectors.toList())));
-      var bodyDecoder = new AsyncBodyDecoder<>(decoder, downstream, executor, Utils.BUFFER_SIZE);
+                      buffers.stream()
+                          .map(ByteBufferHandle::new)
+                          .collect(Collectors.toUnmodifiableList())));
+      var bodyDecoder = new AsyncBodyDecoder<>(decoder, downstream, executor, TckUtils.BUFFER_SIZE);
       if (bodyDecoderRef.compareAndSet(null, bodyDecoder)) {
         drainSignals();
       } else {
@@ -228,7 +223,9 @@ public class AsyncBodyDecoderTckTest
       putSignal(
           bodyDecoder ->
               bodyDecoder.onNext(
-                  item.stream().map(handle -> handle.buffer).collect(Collectors.toList())));
+                  item.stream()
+                      .map(handle -> handle.buffer)
+                      .collect(Collectors.toUnmodifiableList())));
     }
 
     @Override

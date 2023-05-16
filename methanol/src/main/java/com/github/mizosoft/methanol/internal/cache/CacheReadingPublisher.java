@@ -109,6 +109,10 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         }
       };
     }
+
+    static Listener disabled() {
+      return DisabledListener.INSTANCE;
+    }
   }
 
   private enum DisabledListener implements Listener {

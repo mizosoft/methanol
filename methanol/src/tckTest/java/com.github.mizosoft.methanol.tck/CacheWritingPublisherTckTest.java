@@ -47,8 +47,6 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.AfterMethod;
@@ -101,7 +99,7 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
                   () -> elementGenerator(elements),
                   executorContext.createExecutor(ExecutorType.CACHED_POOL))),
           store.edit("test-entry-" + entryId.getAndIncrement()).orElseThrow(),
-          EMPTY_BUFFER,
+          UTF_8.encode("abc"),
           executorContext.createExecutor(executorType),
           Listener.disabled(),
           true);
@@ -121,12 +119,6 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
 
   private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {
     return new Iterator<>() {
-      private final List<ByteBuffer> items =
-          Stream.of("Lorem ipsum dolor sit amet".split("\\s"))
-              .map(UTF_8::encode)
-              .collect(Collectors.toUnmodifiableList());
-
-      private int index;
       private int generated;
 
       @Override
@@ -140,11 +132,7 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
           throw new NoSuchElementException();
         }
         generated++;
-        return List.of(item(index++), item(index++));
-      }
-
-      private ByteBuffer item(int index) {
-        return items.get(index % items.size());
+        return List.of(TckUtils.generateData(), TckUtils.generateData());
       }
     };
   }

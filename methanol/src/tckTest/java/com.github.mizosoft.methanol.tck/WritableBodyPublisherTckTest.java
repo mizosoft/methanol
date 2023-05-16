@@ -22,8 +22,6 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
-
 import com.github.mizosoft.methanol.WritableBodyPublisher;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
@@ -35,20 +33,18 @@ import org.testng.annotations.Test;
 
 @Test
 public class WritableBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
-  private static final int BUFFER_SIZE = 64;
-  private static final ByteBuffer DUMMY_ELEMENT = US_ASCII.encode("5".repeat(BUFFER_SIZE));
-
   public WritableBodyPublisherTckTest() {
     super(TckUtils.testEnvironment());
   }
 
   @Override
   public Publisher<ByteBuffer> createFlowPublisher(long elements) {
-    var publisher = WritableBodyPublisher.create(BUFFER_SIZE);
+    var publisher = WritableBodyPublisher.create(TckUtils.BUFFER_SIZE);
     try (var channel = publisher.byteChannel()) {
       for (int i = 0; i < elements; i++) {
-        int w = channel.write(DUMMY_ELEMENT.duplicate());
-        assert w == BUFFER_SIZE;
+        var data = TckUtils.generateData();
+        int w = channel.write(data);
+        assert w == data.limit();
       }
     } catch (IOException e) {
       throw new AssertionError(e);
@@ -70,7 +66,7 @@ public class WritableBodyPublisherTckTest extends FlowPublisherVerification<Byte
 
   /**
    * A {@code WritableBodyPublisher} is married to only one subscriber, so it's harmless to keep its
-   * reference around.
+   * reference around until the publisher is dropped by the HTTP client.
    */
   @Override
   public void

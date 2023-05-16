@@ -23,14 +23,12 @@
 package com.github.mizosoft.methanol.tck;
 
 import static com.github.mizosoft.methanol.testing.TestUtils.headers;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
 import com.github.mizosoft.methanol.testing.EmptyPublisher;
 import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
-import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Flow.Publisher;
@@ -43,9 +41,7 @@ import org.testng.annotations.*;
 
 @Test
 public class MultipartBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
-  private static final int MIN_BATCHES = 2; // Can at least pass a part's heading and last boundary
-  private static final ByteBuffer BATCH = US_ASCII.encode("something");
-  private static final HttpHeaders HEADERS = headers("Content-Type", "text/plain; charset=ascii");
+  private static final int MIN_BATCHES = 2; // Can at least pass a part's heading and last boundary.
 
   private final ExecutorType executorType;
 
@@ -70,30 +66,31 @@ public class MultipartBodyPublisherTckTest extends FlowPublisherVerification<Byt
   @Override
   public Publisher<ByteBuffer> createFlowPublisher(long elements) {
     if (elements < MIN_BATCHES) {
-      throw new SkipException("Number of items cannot be <= : " + elements);
+      throw new SkipException("Number of items cannot be <= " + elements);
     }
 
     Publisher<ByteBuffer> partPublisher;
     long remaining = elements - MIN_BATCHES;
     if (remaining > 0) {
-      // Make a part submitting `remaining` items
       partPublisher =
           FlowAdapters.toFlowPublisher(
               new AsyncIterablePublisher<>(
-                  () -> Stream.generate(BATCH::duplicate).limit(remaining).iterator(),
+                  () -> Stream.generate(() -> TckUtils.generateData()).limit(remaining).iterator(),
                   executorContext.createExecutor(executorType)));
     } else {
-      // Empty part
       partPublisher = EmptyPublisher.instance();
     }
     return MultipartBodyPublisher.newBuilder()
-        .part(Part.create(HEADERS, BodyPublishers.fromPublisher(partPublisher)))
+        .part(
+            Part.create(
+                headers("Content-Type", "text/plain; charset=utf-8"),
+                BodyPublishers.fromPublisher(partPublisher)))
         .build();
   }
 
   @Override
   public Publisher<ByteBuffer> createFailedFlowPublisher() {
-    // Can at least submit a part's heading before failing so skip
+    // Must at least submit a part's metadata before failing.
     throw new SkipException("Cannot fail unless at least one item is submitted");
   }
 
