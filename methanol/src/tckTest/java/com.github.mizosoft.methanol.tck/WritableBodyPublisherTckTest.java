@@ -34,11 +34,11 @@ import org.testng.SkipException;
 import org.testng.annotations.Test;
 
 @Test
-public class WritableBodyPublisherTest extends FlowPublisherVerification<ByteBuffer> {
+public class WritableBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
   private static final int BUFFER_SIZE = 64;
   private static final ByteBuffer DUMMY_ELEMENT = US_ASCII.encode("5".repeat(BUFFER_SIZE));
 
-  public WritableBodyPublisherTest() {
+  public WritableBodyPublisherTckTest() {
     super(TckUtils.testEnvironment());
   }
 

@@ -29,7 +29,7 @@ import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTest.BufferListHandle;
+import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTckTest.BufferListHandle;
 import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.io.IOException;
@@ -54,7 +54,7 @@ import org.testng.SkipException;
 import org.testng.annotations.*;
 
 @Test
-public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<BufferListHandle> {
+public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<BufferListHandle> {
   private static final int BUFFERS_PER_LIST = 5;
   private static final int BUFFER_SIZE = 64;
 
@@ -63,18 +63,18 @@ public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<Buff
   private ExecutorContext executorContext;
 
   @Factory(dataProvider = "provider")
-  public AsyncBodyDecoderTest(ExecutorType executorType) {
+  public AsyncBodyDecoderTckTest(ExecutorType executorType) {
     super(TckUtils.testEnvironment());
     this.executorType = executorType;
   }
 
   @BeforeMethod
-  public void setUp() {
+  public void setMeUp() {
     executorContext = new ExecutorContext();
   }
 
   @AfterMethod
-  public void tearDown() throws Exception {
+  public void tearMeDown() throws Exception {
     executorContext.close();
   }
 

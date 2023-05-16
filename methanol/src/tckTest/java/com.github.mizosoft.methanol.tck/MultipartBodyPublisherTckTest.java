@@ -42,7 +42,7 @@ import org.testng.SkipException;
 import org.testng.annotations.*;
 
 @Test
-public class MultipartBodyPublisherTest extends FlowPublisherVerification<ByteBuffer> {
+public class MultipartBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
   private static final int MIN_BATCHES = 2; // Can at least pass a part's heading and last boundary
   private static final ByteBuffer BATCH = US_ASCII.encode("something");
   private static final HttpHeaders HEADERS = headers("Content-Type", "text/plain; charset=ascii");
@@ -52,18 +52,18 @@ public class MultipartBodyPublisherTest extends FlowPublisherVerification<ByteBu
   private ExecutorContext executorContext;
 
   @Factory(dataProvider = "provider")
-  public MultipartBodyPublisherTest(ExecutorType executorType) {
+  public MultipartBodyPublisherTckTest(ExecutorType executorType) {
     super(TckUtils.testEnvironment());
     this.executorType = executorType;
   }
 
-  @BeforeClass
-  public void setUpState() {
+  @BeforeMethod
+  public void setMeUp() {
     executorContext = new ExecutorContext();
   }
 
-  @AfterClass
-  public void tearDownState() throws Exception {
+  @AfterMethod
+  public void tearMeDown() throws Exception {
     executorContext.close();
   }
 

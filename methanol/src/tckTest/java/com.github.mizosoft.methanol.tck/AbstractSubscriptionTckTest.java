@@ -37,24 +37,24 @@ import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.*;
 
 @Test
-public class AbstractSubscriptionTest extends FlowPublisherVerification<Long> {
+public class AbstractSubscriptionTckTest extends FlowPublisherVerification<Long> {
   private final ExecutorType executorType;
 
   private ExecutorContext executorContext;
 
   @Factory(dataProvider = "provider")
-  public AbstractSubscriptionTest(ExecutorType executorType) {
+  public AbstractSubscriptionTckTest(ExecutorType executorType) {
     super(TckUtils.testEnvironment());
     this.executorType = executorType;
   }
 
   @BeforeMethod
-  public void setUp() {
+  public void setMeUp() {
     executorContext = new ExecutorContext();
   }
 
   @AfterMethod
-  public void tearDown() throws Exception {
+  public void tearMeDown() throws Exception {
     executorContext.close();
   }
 

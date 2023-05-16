@@ -58,7 +58,7 @@ import org.testng.annotations.Factory;
 import org.testng.annotations.Test;
 
 @Test
-public class CacheWritingPublisherTest extends FlowPublisherVerification<List<ByteBuffer>> {
+public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List<ByteBuffer>> {
   static {
     Logging.disable(CacheWritingPublisher.class);
   }
@@ -73,21 +73,21 @@ public class CacheWritingPublisherTest extends FlowPublisherVerification<List<By
   private Store store;
 
   @Factory(dataProvider = "provider")
-  public CacheWritingPublisherTest(ExecutorType executorType, StoreType storeType) {
+  public CacheWritingPublisherTckTest(ExecutorType executorType, StoreType storeType) {
     super(TckUtils.testEnvironment());
     this.executorType = executorType;
     this.storeConfig = StoreConfig.createDefault(storeType);
   }
 
   @BeforeMethod
-  public void setUpExecutor() throws IOException {
+  public void setMeUp() throws IOException {
     executorContext = new ExecutorContext();
     storeContext = StoreContext.from(storeConfig);
     store = storeContext.createAndRegisterStore();
   }
 
   @AfterMethod
-  public void tearDown() throws Exception {
+  public void tearMeDown() throws Exception {
     executorContext.close();
     storeContext.close();
   }

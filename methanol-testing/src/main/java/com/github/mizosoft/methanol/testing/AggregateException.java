@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol.testing;
 
 public class AggregateException extends Exception {
-  public AggregateException(String message, Iterable<Throwable> exceptions) {
+  public AggregateException(String message, Iterable<? extends Throwable> exceptions) {
     super(message);
     exceptions.forEach(this::addSuppressed);
   }

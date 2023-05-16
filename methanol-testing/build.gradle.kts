@@ -12,7 +12,6 @@ dependencies {
   implementation(platform(libs.junit.bom))
   implementation(libs.okhttp.tls)
   implementation(libs.assertj)
-  implementation(libs.junit.jupiter)
   implementation(libs.junit.params)
   implementation(libs.mockwebserver)
 }
