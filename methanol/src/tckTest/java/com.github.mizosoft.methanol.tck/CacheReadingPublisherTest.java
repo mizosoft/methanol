@@ -25,8 +25,8 @@ package com.github.mizosoft.methanol.tck;
 import com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
+import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext;
 import com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext;
 import com.github.mizosoft.methanol.testing.store.StoreConfig;
@@ -37,7 +37,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -64,7 +63,7 @@ public class CacheReadingPublisherTest extends FlowPublisherVerification<List<By
   private final ExecutorType executorType;
   private final StoreConfig storeConfig;
 
-  private Executor executor;
+  private ExecutorContext executorContext;
   private StoreContext storeContext;
   private Store store;
 
@@ -85,21 +84,19 @@ public class CacheReadingPublisherTest extends FlowPublisherVerification<List<By
 
   @BeforeMethod
   public void setUpExecutor() throws IOException {
-    executor = executorType.createExecutor();
+    executorContext = new ExecutorContext();
     storeContext = StoreContext.from(storeConfig);
     store = storeContext.createAndRegisterStore();
   }
 
   @AfterMethod
   public void tearDown() throws Exception {
-    TestUtils.shutdown(executor);
+    executorContext.close();
     for (var viewer : openedViewers) {
       viewer.close();
     }
     openedViewers.clear();
-    if (storeContext != null) {
-      storeContext.close();
-    }
+    storeContext.close();
   }
 
   @Override
@@ -108,7 +105,7 @@ public class CacheReadingPublisherTest extends FlowPublisherVerification<List<By
     openedViewers.add(viewer);
 
     // Limit published items to `elements`.
-    var publisher = new CacheReadingPublisher(viewer, executor);
+    var publisher = new CacheReadingPublisher(viewer, executorContext.createExecutor(executorType));
     return subscriber ->
         publisher.subscribe(
             subscriber != null ? new LimitingSubscriber<>(subscriber, elements) : null);
@@ -159,20 +156,20 @@ public class CacheReadingPublisherTest extends FlowPublisherVerification<List<By
         new ArrayList<>(
             List.of(
                 new Object[] {ExecutorType.SAME_THREAD, StoreType.MEMORY},
-                new Object[] {ExecutorType.FIXED_POOL, StoreType.MEMORY},
+                new Object[] {ExecutorType.CACHED_POOL, StoreType.MEMORY},
                 new Object[] {ExecutorType.SAME_THREAD, StoreType.DISK},
-                new Object[] {ExecutorType.FIXED_POOL, StoreType.DISK}));
+                new Object[] {ExecutorType.CACHED_POOL, StoreType.DISK}));
     if (RedisStandaloneStoreContext.isAvailable()) {
       parameters.addAll(
           List.of(
               new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS_STANDALONE},
-              new Object[] {ExecutorType.FIXED_POOL, StoreType.REDIS_STANDALONE}));
+              new Object[] {ExecutorType.CACHED_POOL, StoreType.REDIS_STANDALONE}));
     }
     if (RedisClusterStoreContext.isAvailable()) {
       parameters.addAll(
           List.of(
               new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS_CLUSTER},
-              new Object[] {ExecutorType.FIXED_POOL, StoreType.REDIS_CLUSTER}));
+              new Object[] {ExecutorType.CACHED_POOL, StoreType.REDIS_CLUSTER}));
     }
     return parameters.toArray(Object[][]::new);
   }

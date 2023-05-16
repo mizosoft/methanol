@@ -31,10 +31,8 @@ import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listene
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
-import com.github.mizosoft.methanol.testing.FailingPublisher;
-import com.github.mizosoft.methanol.testing.Logging;
-import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.TestUtils;
+import com.github.mizosoft.methanol.testing.*;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext;
 import com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext;
 import com.github.mizosoft.methanol.testing.store.StoreConfig;
@@ -47,8 +45,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -70,40 +66,43 @@ public class CacheWritingPublisherTest extends FlowPublisherVerification<List<By
   private static final AtomicInteger entryId = new AtomicInteger();
 
   private final StoreConfig storeConfig;
+  private final ExecutorType executorType;
 
-  private Executor executor;
+  private ExecutorContext executorContext;
   private StoreContext storeContext;
   private Store store;
 
   @Factory(dataProvider = "provider")
-  public CacheWritingPublisherTest(StoreType storeType) {
+  public CacheWritingPublisherTest(ExecutorType executorType, StoreType storeType) {
     super(TckUtils.testEnvironment());
-    storeConfig = StoreConfig.createDefault(storeType);
+    this.executorType = executorType;
+    this.storeConfig = StoreConfig.createDefault(storeType);
   }
 
   @BeforeMethod
   public void setUpExecutor() throws IOException {
-    executor = Executors.newCachedThreadPool();
+    executorContext = new ExecutorContext();
     storeContext = StoreContext.from(storeConfig);
     store = storeContext.createAndRegisterStore();
   }
 
   @AfterMethod
   public void tearDown() throws Exception {
-    TestUtils.shutdown(executor);
-    if (storeContext != null) {
-      storeContext.close();
-    }
+    executorContext.close();
+    storeContext.close();
   }
 
   @Override
   public Publisher<List<ByteBuffer>> createFlowPublisher(long elements) {
     try {
       return new CacheWritingPublisher(
-          toFlowPublisher(new AsyncIterablePublisher<>(() -> elementGenerator(elements), executor)),
+          toFlowPublisher(
+              new AsyncIterablePublisher<>(
+                  () -> elementGenerator(elements),
+                  executorContext.createExecutor(ExecutorType.CACHED_POOL))),
           store.edit("test-entry-" + entryId.getAndIncrement()).orElseThrow(),
           EMPTY_BUFFER,
-          executor,
+          executorContext.createExecutor(executorType),
           Listener.disabled(),
           true);
     } catch (IOException | InterruptedException e) {
@@ -117,7 +116,7 @@ public class CacheWritingPublisherTest extends FlowPublisherVerification<List<By
         new FailingPublisher<>(TestException::new),
         DisabledEditor.INSTANCE,
         EMPTY_BUFFER,
-        executor);
+        executorContext.createExecutor(executorType));
   }
 
   private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {
@@ -153,12 +152,23 @@ public class CacheWritingPublisherTest extends FlowPublisherVerification<List<By
   @DataProvider
   public static Object[][] provider() {
     var parameters =
-        new ArrayList<>(List.of(new Object[] {StoreType.DISK}, new Object[] {StoreType.MEMORY}));
+        new ArrayList<>(
+            List.of(
+                new Object[] {ExecutorType.SAME_THREAD, StoreType.MEMORY},
+                new Object[] {ExecutorType.CACHED_POOL, StoreType.MEMORY},
+                new Object[] {ExecutorType.SAME_THREAD, StoreType.DISK},
+                new Object[] {ExecutorType.CACHED_POOL, StoreType.DISK}));
     if (RedisStandaloneStoreContext.isAvailable()) {
-      parameters.add(new Object[] {StoreType.REDIS_STANDALONE});
+      parameters.addAll(
+          List.of(
+              new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS_STANDALONE},
+              new Object[] {ExecutorType.CACHED_POOL, StoreType.REDIS_STANDALONE}));
     }
     if (RedisClusterStoreContext.isAvailable()) {
-      parameters.add(new Object[] {StoreType.REDIS_CLUSTER});
+      parameters.addAll(
+          List.of(
+              new Object[] {ExecutorType.SAME_THREAD, StoreType.REDIS_CLUSTER},
+              new Object[] {ExecutorType.CACHED_POOL, StoreType.REDIS_CLUSTER}));
     }
     return parameters.toArray(Object[][]::new);
   }

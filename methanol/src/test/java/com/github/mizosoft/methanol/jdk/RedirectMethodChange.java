@@ -23,12 +23,12 @@
 package com.github.mizosoft.methanol.jdk;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static org.testng.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
@@ -173,7 +173,7 @@ class RedirectMethodChange {
   // -- Infrastructure
 
   @BeforeEach
-  @ExecutorConfig(ExecutorType.FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   public void setUp(
       Executor handlerExecutor,
       MockWebServer httpTestServer,

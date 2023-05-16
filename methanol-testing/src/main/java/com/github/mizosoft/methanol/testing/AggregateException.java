@@ -20,35 +20,11 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.tck;
+package com.github.mizosoft.methanol.testing;
 
-import static java.util.Objects.requireNonNull;
-
-import com.github.mizosoft.methanol.testing.TestUtils;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
-
-@Test
-public class AsyncBodyDecoderWithExecutorTest extends AsyncBodyDecoderTest {
-  private Executor executor;
-
-  public AsyncBodyDecoderWithExecutorTest() {}
-
-  @Override
-  Executor decoderExecutor() {
-    return requireNonNull(executor);
-  }
-
-  @BeforeClass
-  public void setUpDecoderExecutor() {
-    executor = Executors.newFixedThreadPool(8);
-  }
-
-  @AfterClass
-  public void shutdownDecoderExecutor() {
-    TestUtils.shutdown(executor);
+public class AggregateException extends Exception {
+  public AggregateException(String message, Iterable<Throwable> exceptions) {
+    super(message);
+    exceptions.forEach(this::addSuppressed);
   }
 }

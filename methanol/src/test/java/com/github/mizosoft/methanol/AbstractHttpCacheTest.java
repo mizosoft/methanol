@@ -39,7 +39,7 @@ import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
@@ -86,7 +86,7 @@ abstract class AbstractHttpCacheTest {
   Methanol client; // Must be set by subclass to apply cache setup.
 
   @BeforeEach
-  @ExecutorConfig(ExecutorType.CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void setUp(Executor executor, Methanol.Builder builder, MockWebServer server) {
     this.executor = new AwaitableExecutor(executor);
     this.server = server;

@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,7 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockExecutor;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -47,7 +47,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(ExecutorExtension.class)
 class ExecutorServiceAdapterTest {
   @Test
-  @ExecutorConfig(CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void adaptOnlyWrapsIfNotExecutorService(ExecutorService service) {
     assertSame(service, ExecutorServiceAdapter.adapt(service));
   }
@@ -90,7 +90,7 @@ class ExecutorServiceAdapterTest {
   }
 
   @Test
-  @ExecutorConfig(CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void termination(Executor threadPool) throws InterruptedException {
     var service = new ExecutorServiceAdapter(threadPool);
 
@@ -99,10 +99,11 @@ class ExecutorServiceAdapterTest {
     var beginLatch = new CountDownLatch(1);
     var calls = new AtomicInteger();
     for (int i = 0; i < threadCount; i++) {
-      service.execute(() -> {
-        awaitUninterruptibly(beginLatch);
-        calls.incrementAndGet();
-      });
+      service.execute(
+          () -> {
+            awaitUninterruptibly(beginLatch);
+            calls.incrementAndGet();
+          });
     }
 
     service.shutdown();
@@ -129,7 +130,7 @@ class ExecutorServiceAdapterTest {
   }
 
   @Test
-  @ExecutorConfig(CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void shutdownNowRunningTasks(Executor threadPool) throws InterruptedException {
     var service = new ExecutorServiceAdapter(threadPool);
 
@@ -144,22 +145,24 @@ class ExecutorServiceAdapterTest {
     var waitersExitLatch = new CountDownLatch(waiterTaskCount);
     var interruptedCalls = new AtomicInteger();
     for (int i = 0; i < nonWaiterTaskCount; i++) {
-      service.execute(() -> {
-        nonWaiterThreads.add(Thread.currentThread());
-        nonWaitersExitLatch.countDown();
-      });
+      service.execute(
+          () -> {
+            nonWaiterThreads.add(Thread.currentThread());
+            nonWaitersExitLatch.countDown();
+          });
     }
     var toBeInterruptedLatch = new CountDownLatch(1);
     for (int i = 0; i < waiterTaskCount; i++) {
-      service.execute(() -> {
-        waitersArrivalLatch.countDown();
-        try {
-          assertThrows(InterruptedException.class, toBeInterruptedLatch::await);
-          interruptedCalls.incrementAndGet();
-        } finally {
-          waitersExitLatch.countDown();
-        }
-      });
+      service.execute(
+          () -> {
+            waitersArrivalLatch.countDown();
+            try {
+              assertThrows(InterruptedException.class, toBeInterruptedLatch::await);
+              interruptedCalls.incrementAndGet();
+            } finally {
+              waitersExitLatch.countDown();
+            }
+          });
     }
 
     try {

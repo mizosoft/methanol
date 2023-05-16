@@ -28,7 +28,6 @@ import static com.github.mizosoft.methanol.MoreBodySubscribers.ofDeferredObject;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofReader;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.withReadTimeout;
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static com.github.mizosoft.methanol.testing.TestUtils.toByteArray;
@@ -45,7 +44,8 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
 import com.github.mizosoft.methanol.testing.TestSubscription;
@@ -87,7 +87,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofByteChannel_readsBody(Executor executor) throws IOException {
     int buffSize = 100;
     int buffsPerList = 5;
@@ -108,7 +108,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofByteChannel_isInterruptible(Executor executor) {
     var subscriber = ofByteChannel();
     var channel = getBody(subscriber);
@@ -132,7 +132,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofByteChannel_blocksForAtLeastOneByte(Executor executor) throws IOException {
     var oneByte = ByteBuffer.wrap(new byte[] {'b'});
     var subscriber = ofByteChannel();
@@ -267,7 +267,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void withReadTimeout_infiniteTimeout(Executor executor) {
     int buffSize = 100;
     int buffsPerList = 5;
@@ -298,7 +298,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  @ExecutorConfig(SCHEDULER)
+  @ExecutorSpec(SCHEDULER)
   void withReadTimeout_timeoutAfterOnNextWithCustomScheduler(ScheduledExecutorService scheduler) {
     var timeoutMillis = 100L;
     var timeoutSubscriber =
@@ -365,7 +365,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  @ExecutorConfig(SCHEDULER)
+  @ExecutorSpec(SCHEDULER)
   void withReadTimeout_handlesRejectionFromOnNextGracefully(ScheduledExecutorService scheduler) {
     var scheduledFuture = new AtomicReference<ScheduledFuture<?>>();
     var busyScheduler =
@@ -405,7 +405,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  @ExecutorConfig(SCHEDULER)
+  @ExecutorSpec(SCHEDULER)
   void withReadTimeout_illegalTimeout(ScheduledExecutorService scheduler) {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> withReadTimeout(discarding(), Duration.ofSeconds(0)));
@@ -418,7 +418,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofObject_stringBody(Executor executor) {
     var publisher = publisherOf("Pikachu", "Pikachu".length(), 1, executor);
     var subscriber = ofObject(TypeRef.from(String.class), MediaType.TEXT_PLAIN);
@@ -427,7 +427,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofDeferredObject_stringBody(Executor executor) {
     var publisher = publisherOf("Pikachu", "Pikachu".length(), 1, executor);
     var subscriber = ofDeferredObject(TypeRef.from(String.class), MediaType.parse("text/plain"));

@@ -44,7 +44,7 @@ import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexCorruption
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexEntry;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.MockClock;
@@ -437,7 +437,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  @ExecutorConfig(ExecutorType.CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void concurrentRemovals(Store store, Executor executor) throws IOException, InterruptedException {
     write(store, "e1", "Ditto", "Eevee");
 
@@ -505,7 +505,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK, maxSize = 4, execution = Execution.SAME_THREAD)
-  @ExecutorConfig(ExecutorType.CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void evictionRaces(Store store, Executor executor) throws Exception {
     int writerCount = 16;
     var arrival = new CyclicBarrier(writerCount);
@@ -935,7 +935,7 @@ class DiskStoreTest {
       indexUpdateDelaySeconds = 0,
       autoAdvanceClock = false,
       dispatchEagerly = false)
-  @ExecutorConfig(ExecutorType.CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void indexWriteDisposeRaces_systemFileSystem(
       DiskStore store, DiskStoreContext context, Executor executor)
       throws IOException, InterruptedException {
@@ -949,7 +949,7 @@ class DiskStoreTest {
       indexUpdateDelaySeconds = 0,
       autoAdvanceClock = false,
       dispatchEagerly = false)
-  @ExecutorConfig(ExecutorType.CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void indexWriteDisposeRaces_windowsEmulatingFilesystem(
       DiskStore store, DiskStoreContext context, Executor executor)
       throws IOException, InterruptedException {

@@ -24,7 +24,6 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.MutableRequest.POST;
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
 import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
@@ -34,7 +33,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
@@ -263,7 +263,7 @@ class MethanolClientTest {
   }
 
   @Test
-  @ExecutorConfig(SCHEDULER)
+  @ExecutorSpec(ExecutorType.SCHEDULER)
   void readTimeoutWithCustomScheduler(ScheduledExecutorService scheduler) {
     var client = clientBuilder.readTimeout(Duration.ofMillis(50), scheduler).build();
 

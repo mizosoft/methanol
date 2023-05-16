@@ -26,34 +26,55 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription;
 import com.github.mizosoft.methanol.internal.flow.AbstractSubscription;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.testing.ExecutorContext;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 
 @Test
 public class AbstractSubscriptionTest extends FlowPublisherVerification<Long> {
-  public AbstractSubscriptionTest() {
+  private final ExecutorType executorType;
+
+  private ExecutorContext executorContext;
+
+  @Factory(dataProvider = "provider")
+  public AbstractSubscriptionTest(ExecutorType executorType) {
     super(TckUtils.testEnvironment());
+    this.executorType = executorType;
   }
 
-  // Overridden by AsyncAbstractSubscriptionTck for async tests
-  Executor executor() {
-    return FlowSupport.SYNC_EXECUTOR;
+  @BeforeMethod
+  public void setUp() {
+    executorContext = new ExecutorContext();
+  }
+
+  @AfterMethod
+  public void tearDown() throws Exception {
+    executorContext.close();
   }
 
   @Override
   public Publisher<Long> createFlowPublisher(long elements) {
-    return d -> new RangeSubscription(d, executor(), 0, elements).fireOrKeepAlive();
+    return subscriber ->
+        new RangeSubscription(subscriber, executorContext.createExecutor(executorType), 0, elements)
+            .fireOrKeepAlive();
   }
 
   @Override
   public Publisher<Long> createFailedFlowPublisher() {
-    return d -> new FailedSubscription(d, executor()).fireOrKeepAlive();
+    return subscriber ->
+        new FailedSubscription(subscriber, executorContext.createExecutor(executorType))
+            .fireOrKeepAlive();
+  }
+
+  @DataProvider
+  public static Object[][] provider() {
+    return new Object[][] {{ExecutorType.SAME_THREAD}, {ExecutorType.CACHED_POOL}};
   }
 
   private static final class RangeSubscription extends AbstractPollableSubscription<Long> {

@@ -22,14 +22,14 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockExecutor;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.util.ArrayList;
@@ -168,7 +168,7 @@ class SerialExecutorTest {
 
   @RepeatedTest(10)
   @ExtendWith(ExecutorExtension.class)
-  @ExecutorConfig(CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void executionFromMultipleThreads(Executor threadPool) {
     executor = new SerialExecutor(threadPool);
 

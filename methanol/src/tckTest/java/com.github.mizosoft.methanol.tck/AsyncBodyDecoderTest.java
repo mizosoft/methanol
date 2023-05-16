@@ -30,7 +30,8 @@ import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.tck.AsyncBodyDecoderTest.BufferListHandle;
-import com.github.mizosoft.methanol.testing.TestUtils;
+import com.github.mizosoft.methanol.testing.ExecutorContext;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -39,7 +40,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Processor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
@@ -51,46 +51,46 @@ import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 
 @Test
 public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<BufferListHandle> {
   private static final int BUFFERS_PER_LIST = 5;
   private static final int BUFFER_SIZE = 64;
 
-  private ExecutorService publisherExecutorService; // used by test publisher
+  private final ExecutorType executorType;
 
-  public AsyncBodyDecoderTest() {
+  private ExecutorContext executorContext;
+
+  @Factory(dataProvider = "provider")
+  public AsyncBodyDecoderTest(ExecutorType executorType) {
     super(TckUtils.testEnvironment());
+    this.executorType = executorType;
   }
 
-  // Used by AsyncBodyDecoder, overridden by AsyncBodyDecoderWithExecutorTck for async version
-  Executor decoderExecutor() {
-    return null;
+  @BeforeMethod
+  public void setUp() {
+    executorContext = new ExecutorContext();
   }
 
-  @BeforeClass
-  public void setUpPublisherExecutor() {
-    publisherExecutorService = Executors.newFixedThreadPool(8);
-  }
-
-  @AfterClass
-  public void shutdownPublisherExecutor() {
-    TestUtils.shutdown(publisherExecutorService);
+  @AfterMethod
+  public void tearDown() throws Exception {
+    executorContext.close();
   }
 
   @BeforeClass
   public static void setUpBufferSize() {
     // Make sure AsyncBodyDecoder allocates same buffer sizes
-    System.setProperty("com.github.mizosoft.methanol.decoder.AsyncBodyDecoder.bufferSize",
+    System.setProperty(
+        "com.github.mizosoft.methanol.decoder.AsyncBodyDecoder.bufferSize",
         Integer.toString(BUFFER_SIZE));
   }
 
   @Override
   protected Publisher<BufferListHandle> createFailedFlowPublisher() {
-    var processor = new AsyncBodyDecoderProcessorView(BadDecoder.INSTANCE, decoderExecutor());
+    var processor =
+        new AsyncBodyDecoderProcessorView(
+            BadDecoder.INSTANCE, executorContext.createExecutor(executorType));
     processor.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     processor.onNext(new BufferListHandle(List.of(US_ASCII.encode("Test buffer"))));
     processor.onComplete();
@@ -100,12 +100,18 @@ public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<Buff
   @Override
   protected Processor<BufferListHandle, BufferListHandle> createIdentityFlowProcessor(
       int bufferSize) {
-    return new AsyncBodyDecoderProcessorView(IdentityDecoder.INSTANCE, decoderExecutor());
+    return new AsyncBodyDecoderProcessorView(
+        IdentityDecoder.INSTANCE, executorContext.createExecutor(executorType));
   }
 
   @Override
   public ExecutorService publisherExecutorService() {
-    return requireNonNull(publisherExecutorService);
+    return ((ExecutorService) executorContext.createExecutor(ExecutorType.CACHED_POOL));
+  }
+
+  @Override
+  public void required_createPublisher1MustProduceAStreamOfExactly1Element() throws Throwable {
+    super.required_createPublisher1MustProduceAStreamOfExactly1Element();
   }
 
   @Override
@@ -135,8 +141,13 @@ public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<Buff
    */
   @Override
   public void
-  required_spec313_cancelMustMakeThePublisherEventuallyDropAllReferencesToTheSubscriber() {
+      required_spec313_cancelMustMakeThePublisherEventuallyDropAllReferencesToTheSubscriber() {
     throw new SkipException("Out of implementation's scope");
+  }
+
+  @DataProvider
+  public static Object[][] provider() {
+    return new Object[][] {{ExecutorType.CACHED_POOL}, {ExecutorType.SAME_THREAD}};
   }
 
   private enum IdentityDecoder implements AsyncDecoder {
@@ -155,8 +166,7 @@ public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<Buff
     }
 
     @Override
-    public void close() {
-    }
+    public void close() {}
   }
 
   private enum BadDecoder implements AsyncDecoder {
@@ -173,8 +183,7 @@ public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<Buff
     }
 
     @Override
-    public void close() {
-    }
+    public void close() {}
   }
 
   // The tck uses Object::equals which won't work on ByteBuffers as upstream buffers
@@ -201,9 +210,7 @@ public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<Buff
     }
   }
 
-  /**
-   * Adapts a {@code AsyncBodyDecoder} into a processor.
-   */
+  /** Adapts a {@code AsyncBodyDecoder} into a processor. */
   private static final class AsyncBodyDecoderProcessorView
       implements Processor<BufferListHandle, BufferListHandle> {
 
@@ -212,9 +219,7 @@ public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<Buff
     private final AtomicReference<AsyncBodyDecoder<Void>> bodyDecoderRef;
     private final Queue<Consumer<AsyncBodyDecoder<Void>>> signals;
 
-    private AsyncBodyDecoderProcessorView(
-        AsyncDecoder decoder,
-        @Nullable Executor executor) {
+    private AsyncBodyDecoderProcessorView(AsyncDecoder decoder, @Nullable Executor executor) {
       this.decoder = decoder;
       this.executor = executor;
       bodyDecoderRef = new AtomicReference<>();
@@ -224,24 +229,33 @@ public class AsyncBodyDecoderTest extends IdentityFlowProcessorVerification<Buff
     @Override
     public void subscribe(Subscriber<? super BufferListHandle> subscriber) {
       requireNonNull(subscriber);
-      var mappingSubscriber = new Subscriber<List<ByteBuffer>>() {
-        @Override public void onSubscribe(Subscription subscription) {
-          subscriber.onSubscribe(subscription);
-        }
-        @Override public void onNext(List<ByteBuffer> item) {
-          subscriber.onNext(new BufferListHandle(item));
-        }
-        @Override public void onError(Throwable throwable) {
-          subscriber.onError(throwable);
-        }
-        @Override public void onComplete() {
-          subscriber.onComplete();
-        }
-      };
+      var mappingSubscriber =
+          new Subscriber<List<ByteBuffer>>() {
+            @Override
+            public void onSubscribe(Subscription subscription) {
+              subscriber.onSubscribe(subscription);
+            }
+
+            @Override
+            public void onNext(List<ByteBuffer> item) {
+              subscriber.onNext(new BufferListHandle(item));
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+              subscriber.onError(throwable);
+            }
+
+            @Override
+            public void onComplete() {
+              subscriber.onComplete();
+            }
+          };
       var downstream = BodySubscribers.fromSubscriber(mappingSubscriber);
-      var bodyDecoder = executor != null
-          ? new AsyncBodyDecoder<>(decoder, downstream, executor)
-          : new AsyncBodyDecoder<>(decoder, downstream);
+      var bodyDecoder =
+          executor != null
+              ? new AsyncBodyDecoder<>(decoder, downstream, executor)
+              : new AsyncBodyDecoder<>(decoder, downstream);
       if (bodyDecoderRef.compareAndSet(null, bodyDecoder)) {
         drainSignals();
       } else {

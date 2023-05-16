@@ -24,26 +24,22 @@ package com.github.mizosoft.methanol.tck;
 
 import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
 import com.github.mizosoft.methanol.testing.EmptyPublisher;
-import com.github.mizosoft.methanol.testing.TestUtils;
+import com.github.mizosoft.methanol.testing.ExecutorContext;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.ByteBuffer;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.stream.Stream;
 import org.reactivestreams.FlowAdapters;
 import org.reactivestreams.example.unicast.AsyncIterablePublisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
+import org.testng.annotations.*;
 
 @Test
 public class MultipartBodyPublisherTest extends FlowPublisherVerification<ByteBuffer> {
@@ -51,20 +47,24 @@ public class MultipartBodyPublisherTest extends FlowPublisherVerification<ByteBu
   private static final ByteBuffer BATCH = US_ASCII.encode("something");
   private static final HttpHeaders HEADERS = headers("Content-Type", "text/plain; charset=ascii");
 
-  private Executor executor;
+  private final ExecutorType executorType;
 
-  public MultipartBodyPublisherTest() {
+  private ExecutorContext executorContext;
+
+  @Factory(dataProvider = "provider")
+  public MultipartBodyPublisherTest(ExecutorType executorType) {
     super(TckUtils.testEnvironment());
+    this.executorType = executorType;
   }
 
   @BeforeClass
-  public void setUpExecutor() {
-    executor = Executors.newFixedThreadPool(8);
+  public void setUpState() {
+    executorContext = new ExecutorContext();
   }
 
   @AfterClass
-  public void shutdownExecutor() {
-    TestUtils.shutdown(executor);
+  public void tearDownState() throws Exception {
+    executorContext.close();
   }
 
   @Override
@@ -77,11 +77,11 @@ public class MultipartBodyPublisherTest extends FlowPublisherVerification<ByteBu
     long remaining = elements - MIN_BATCHES;
     if (remaining > 0) {
       // Make a part submitting `remaining` items
-      partPublisher = FlowAdapters.toFlowPublisher(new AsyncIterablePublisher<>(
-          () -> Stream.generate(BATCH::duplicate)
-              .limit(remaining)
-              .iterator(),
-          requireNonNull(executor)));
+      partPublisher =
+          FlowAdapters.toFlowPublisher(
+              new AsyncIterablePublisher<>(
+                  () -> Stream.generate(BATCH::duplicate).limit(remaining).iterator(),
+                  executorContext.createExecutor(executorType)));
     } else {
       // Empty part
       partPublisher = EmptyPublisher.instance();
@@ -95,5 +95,10 @@ public class MultipartBodyPublisherTest extends FlowPublisherVerification<ByteBu
   public Publisher<ByteBuffer> createFailedFlowPublisher() {
     // Can at least submit a part's heading before failing so skip
     throw new SkipException("Cannot fail unless at least one item is submitted");
+  }
+
+  @DataProvider
+  public static Object[][] provider() {
+    return new Object[][] {{ExecutorType.CACHED_POOL}, {ExecutorType.SAME_THREAD}};
   }
 }

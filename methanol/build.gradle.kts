@@ -18,6 +18,8 @@ dependencies {
   testImplementation(project(":methanol-testing"))
   testImplementation(libs.junit.params)
   testImplementation(libs.mockwebserver)
+  testImplementation(libs.reactivestreams.examples)
+  testImplementation(libs.reactivestreams)
   testImplementation(libs.jimfs)
 }
 

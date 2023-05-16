@@ -30,7 +30,6 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.CACHED_POOL;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,7 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.store.StoreContext;
@@ -86,7 +86,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @ExecutorConfig(CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void concurrentViewers(Store store, Executor executor) throws IOException, InterruptedException {
     write(store, "e1", "Pokemon", "Charmander");
 
@@ -266,7 +266,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @ExecutorConfig(CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void contendedEdit(Store store, Executor executor) throws IOException, InterruptedException {
     int threadCount = 10;
     var arrival = new CyclicBarrier(threadCount);

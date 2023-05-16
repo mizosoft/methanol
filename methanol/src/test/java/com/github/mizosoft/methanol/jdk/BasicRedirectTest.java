@@ -22,15 +22,12 @@
 
 package com.github.mizosoft.methanol.jdk;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
@@ -101,7 +98,7 @@ class BasicRedirectTest {
 
   @ParameterizedTest
   @MethodSource("positive")
-  @ExecutorConfig(ExecutorType.FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void test(Supplier<String> uriString, Redirect redirectPolicy, Executor handlerExecutor)
       throws Exception {
     //    out.printf("%n---- starting positive (%s, %s) ----%n", uriString, redirectPolicy);
@@ -187,7 +184,7 @@ class BasicRedirectTest {
 
   @ParameterizedTest
   @MethodSource("negative")
-  @ExecutorConfig(ExecutorType.FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void testNegatives(Supplier<String> uriString, Redirect redirectPolicy, Executor handlerExecutor)
       throws Exception {
     //    out.printf("%n---- starting negative (%s, %s) ----%n", uriString, redirectPolicy);

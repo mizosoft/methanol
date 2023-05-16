@@ -27,21 +27,18 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.tck.HttpResponsePublisherTest.ResponseHandle;
-import com.github.mizosoft.methanol.testing.TestUtils;
+import com.github.mizosoft.methanol.testing.ExecutorContext;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.PushPromise;
@@ -56,23 +53,22 @@ import org.testng.annotations.Test;
 
 @Test
 public class HttpResponsePublisherTest extends FlowPublisherVerification<ResponseHandle> {
-  private final Supplier<Executor> executorFactory;
+  private final ExecutorType executorType;
 
+  private ExecutorContext executorContext;
   private HttpClient client;
   private MockWebServer server;
-  private Executor executor;
 
   @Factory(dataProvider = "provider")
-  public HttpResponsePublisherTest(Supplier<Executor> executorFactory) {
+  public HttpResponsePublisherTest(ExecutorType executorType) {
     super(TckUtils.testEnvironmentWithTimeout(1_000));
-    this.executorFactory = executorFactory;
+    this.executorType = executorType;
   }
 
   @BeforeMethod
   public void setMeUp() throws IOException {
-    executor = executorFactory.get();
+    executorContext = new ExecutorContext();
 
-    // HttpClient restricts HTTP/2 to HTTPS.
     var sslContext = localhostSslContext();
     client = HttpClient.newBuilder().sslContext(sslContext).version(Version.HTTP_2).build();
     server = new MockWebServer();
@@ -81,9 +77,9 @@ public class HttpResponsePublisherTest extends FlowPublisherVerification<Respons
   }
 
   @AfterMethod
-  public void tearMeDown() throws IOException {
+  public void tearMeDown() throws Exception {
+    executorContext.close();
     server.shutdown();
-    TestUtils.shutdown(executor);
   }
 
   @Override
@@ -99,7 +95,7 @@ public class HttpResponsePublisherTest extends FlowPublisherVerification<Respons
             MutableRequest.GET(server.url("/").uri()),
             BodyHandlers.ofString(),
             __ -> BodyHandlers.ofString(),
-            executor),
+            executorContext.createExecutor(executorType)),
         ResponseHandle::new);
   }
 
@@ -156,10 +152,7 @@ public class HttpResponsePublisherTest extends FlowPublisherVerification<Respons
 
   @DataProvider
   public static Object[][] provider() {
-    return new Object[][] {
-      {(Supplier<Executor>) () -> FlowSupport.SYNC_EXECUTOR},
-      {(Supplier<Executor>) Executors::newCachedThreadPool}
-    };
+    return new Object[][] {{ExecutorType.CACHED_POOL}, {ExecutorType.SAME_THREAD}};
   }
 
   /**

@@ -22,14 +22,14 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.net.http.HttpRequest.BodyPublishers;
@@ -70,7 +70,7 @@ class MoreBodyPublishersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofOutputStream_basicWriting(Executor executor) {
     verifyThat(
             MoreBodyPublishers.ofOutputStream(
@@ -79,7 +79,7 @@ class MoreBodyPublishersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofOutputStream_exceptionalCompletion(Executor executor) {
     verifyThat(
             MoreBodyPublishers.ofOutputStream(
@@ -91,7 +91,7 @@ class MoreBodyPublishersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofWritableByteChannel_basicWriting(Executor executor) {
     verifyThat(
             MoreBodyPublishers.ofWritableByteChannel(
@@ -100,7 +100,7 @@ class MoreBodyPublishersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofWritableByteChannel_exceptionalCompletion(Executor executor) {
     verifyThat(
             MoreBodyPublishers.ofWritableByteChannel(
@@ -112,7 +112,7 @@ class MoreBodyPublishersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofOutputStream_onlySubmitsIfSubscribed(ExecutorService service) throws Exception {
     var inWriter = new AtomicBoolean();
     MoreBodyPublishers.ofOutputStream(out -> inWriter.set(true), service);
@@ -122,8 +122,9 @@ class MoreBodyPublishersTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
-  void ofOutputStream_onlySubmitsIfNotCancelledOnSubscribe(ExecutorService service) throws Exception {
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
+  void ofOutputStream_onlySubmitsIfNotCancelledOnSubscribe(ExecutorService service)
+      throws Exception {
     var inWriter = new AtomicBoolean();
     var publisher = MoreBodyPublishers.ofOutputStream(out -> inWriter.set(true), service);
     publisher.subscribe(

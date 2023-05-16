@@ -22,8 +22,6 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.reactivestreams.tck.TestEnvironment;
 
 public class TckUtils {
@@ -36,9 +34,6 @@ public class TckUtils {
   private static final long POLL_TIMEOUT_MILLIS =
       getTimeout("TCK_POLL_TIMEOUT_MILLIS", TIMEOUT_MILLIS);
 
-
-  private static final int FIXED_POOL_SIZE = 8;
-
   /**
    * An arbitrary max for the # of elements needed to be precomputed for creating the test
    * publisher. This avoids OMEs when createFlowPublisher() is called with a large # of elements
@@ -47,10 +42,6 @@ public class TckUtils {
   static final int MAX_PRECOMPUTED_ELEMENTS = 1 << 16;
 
   private TckUtils() {}
-
-  static ExecutorService fixedThreadPool() {
-    return Executors.newFixedThreadPool(FIXED_POOL_SIZE);
-  }
 
   static TestEnvironment testEnvironment() {
     return new TestEnvironment(TIMEOUT_MILLIS, NO_SIGNAL_TIMEOUT_MILLIS, POLL_TIMEOUT_MILLIS);

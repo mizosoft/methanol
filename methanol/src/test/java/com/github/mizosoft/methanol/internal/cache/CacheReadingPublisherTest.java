@@ -32,8 +32,8 @@ import static org.assertj.core.api.Assertions.fail;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
@@ -77,7 +77,7 @@ class CacheReadingPublisherTest {
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
-  @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisStandaloneStoreContext#isAvailable")
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
   void cacheStringOnRedisStandalone(Executor executor, Store store)
       throws IOException, InterruptedException {
     testCachingAsString(executor, store);
@@ -85,7 +85,7 @@ class CacheReadingPublisherTest {
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
-  @EnabledIf("com.github.mizosoft.methanol.testing.junit.RedisClusterStoreContext#isAvailable")
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
   void cacheStringOnRedisCluster(Executor executor, Store store)
       throws IOException, InterruptedException {
     testCachingAsString(executor, store);
@@ -129,7 +129,7 @@ class CacheReadingPublisherTest {
 
   /** No new reads should be scheduled after the subscription is cancelled. */
   @Test
-  @ExecutorConfig(ExecutorType.CACHED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void cancelSubscriptionWhileReadIsPending(Executor executor) {
     var firstReadLatch = new CountDownLatch(1);
     var endReadLatch = new CountDownLatch(1);

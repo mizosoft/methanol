@@ -30,16 +30,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
@@ -57,30 +48,28 @@ import org.junit.platform.commons.support.AnnotationSupport;
 public final class ExecutorExtension implements ArgumentsProvider, ParameterResolver {
   private static final Namespace EXTENSION_NAMESPACE = Namespace.create(ExecutorExtension.class);
 
-  private static final ExecutorConfig DEFAULT_EXECUTOR_CONFIG;
+  private static final ExecutorSpec DEFAULT_EXECUTOR_SPEC;
 
   static {
     try {
-      DEFAULT_EXECUTOR_CONFIG =
+      DEFAULT_EXECUTOR_SPEC =
           requireNonNull(
               ExecutorExtension.class
-                  .getDeclaredMethod("defaultExecutorConfigHolder")
-                  .getAnnotation(ExecutorConfig.class));
+                  .getDeclaredMethod("defaultExecutorSpecHolder")
+                  .getAnnotation(ExecutorSpec.class));
     } catch (NoSuchMethodException e) {
       throw new ExceptionInInitializerError(e);
     }
   }
 
-  private static final int FIXED_POOL_SIZE = 8;
-
   public ExecutorExtension() {}
 
   @Override
   public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-    var config = findExecutorConfig(context.getRequiredTestMethod());
+    var spec = findExecutorSpec(context.getRequiredTestMethod());
     var executors = ManagedExecutors.get(context);
-    return Stream.of(config.value())
-        .map(executorType -> Arguments.of(executors.newExecutor(executorType)));
+    return Stream.of(spec.value())
+        .map(executorType -> Arguments.of(executors.createExecutor(executorType)));
   }
 
   @Override
@@ -98,7 +87,7 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
       return false;
     }
 
-    return Stream.of(findExecutorConfig(parameterContext.getDeclaringExecutable()).value())
+    return Stream.of(findExecutorSpec(parameterContext.getDeclaringExecutable()).value())
         .anyMatch(executorType -> executorType.matches(parameterContext.getParameter().getType()));
   }
 
@@ -107,22 +96,22 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
     var executable = parameterContext.getDeclaringExecutable();
-    var config = findExecutorConfig(executable);
+    var spec = findExecutorSpec(executable);
     var executors = ManagedExecutors.get(extensionContext);
-    return Stream.of(config.value())
+    return Stream.of(spec.value())
         .filter(executorType -> executorType.matches(parameterContext.getParameter().getType()))
-        .map(executors::newExecutor)
+        .map(executors::createExecutor)
         .findFirst()
         .orElseThrow(UnsupportedOperationException::new);
   }
 
-  private static ExecutorConfig findExecutorConfig(AnnotatedElement element) {
-    return AnnotationSupport.findAnnotation(element, ExecutorConfig.class)
-        .orElse(DEFAULT_EXECUTOR_CONFIG);
+  private static ExecutorSpec findExecutorSpec(AnnotatedElement element) {
+    return AnnotationSupport.findAnnotation(element, ExecutorSpec.class)
+        .orElse(DEFAULT_EXECUTOR_SPEC);
   }
 
-  @ExecutorConfig
-  private static void defaultExecutorConfigHolder() {}
+  @ExecutorSpec
+  private static void defaultExecutorSpecHolder() {}
 
   @Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
@@ -137,41 +126,27 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
 
   @Target(ElementType.METHOD)
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface ExecutorConfig {
-    ExecutorType[] value() default {ExecutorType.FIXED_POOL, ExecutorType.SAME_THREAD};
+  public @interface ExecutorSpec {
+    ExecutorType[] value() default {ExecutorType.CACHED_POOL, ExecutorType.SAME_THREAD};
   }
 
   public enum ExecutorType {
     SAME_THREAD(Executor.class) {
       @Override
-      public Executor createExecutor() {
+      public Executor createExecutor(ThreadFactory ignored) {
         return FlowSupport.SYNC_EXECUTOR;
-      }
-    },
-    FIXED_POOL(ThreadPoolExecutor.class) {
-      private final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
-
-      @Override
-      public Executor createExecutor() {
-        return Executors.newFixedThreadPool(
-            FIXED_POOL_SIZE,
-            r -> {
-              var thread = defaultThreadFactory.newThread(r);
-              thread.setDaemon(true);
-              return thread;
-            });
       }
     },
     CACHED_POOL(ThreadPoolExecutor.class) {
       @Override
-      public Executor createExecutor() {
-        return Executors.newCachedThreadPool();
+      public Executor createExecutor(ThreadFactory threadFactory) {
+        return Executors.newCachedThreadPool(threadFactory);
       }
     },
     SCHEDULER(ScheduledThreadPoolExecutor.class) {
       @Override
-      public Executor createExecutor() {
-        return Executors.newScheduledThreadPool(FIXED_POOL_SIZE);
+      public Executor createExecutor(ThreadFactory threadFactory) {
+        return Executors.newScheduledThreadPool(1, threadFactory);
       }
     };
 
@@ -181,7 +156,7 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
       this.executorSubtype = executorSubtype;
     }
 
-    public abstract Executor createExecutor();
+    public abstract Executor createExecutor(ThreadFactory threadFactory);
 
     boolean matches(Class<?> paramType) {
       return paramType.isAssignableFrom(executorSubtype);
@@ -189,44 +164,23 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
   }
 
   private static final class ManagedExecutors implements CloseableResource {
-    private final List<Executor> executors = new ArrayList<>();
+    private final ExecutorContext context = new ExecutorContext();
 
     ManagedExecutors() {}
 
-    Executor newExecutor(ExecutorType type) {
-      var executor = type.createExecutor();
-      executors.add(executor);
-      return executor;
-    }
-
-    void shutdownAndTerminate() throws Exception {
-      for (var executor : executors) {
-        TestUtils.shutdown(executor);
-        // Clear interruption flag to not throw from awaitTermination if this thread is interrupted
-        // by some test.
-        boolean interrupted = Thread.interrupted();
-        try {
-          if (executor instanceof ExecutorService
-              && !((ExecutorService) executor).awaitTermination(5, TimeUnit.MINUTES)) {
-            throw new TimeoutException("timed out while waiting for pool termination: " + executor);
-          }
-        } finally {
-          if (interrupted) {
-            Thread.currentThread().interrupt();
-          }
-        }
-      }
-
-      executors.clear();
+    Executor createExecutor(ExecutorType type) {
+      return context.createExecutor(type);
     }
 
     @Override
     public void close() throws Throwable {
-      shutdownAndTerminate();
+      context.close();
     }
 
-    static ManagedExecutors get(ExtensionContext context) {
-      return context.getStore(EXTENSION_NAMESPACE).getOrComputeIfAbsent(ManagedExecutors.class);
+    static ManagedExecutors get(ExtensionContext extensionContext) {
+      return extensionContext
+          .getStore(EXTENSION_NAMESPACE)
+          .getOrComputeIfAbsent(ManagedExecutors.class);
     }
   }
 }

@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.FIXED_POOL;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,7 +33,8 @@ import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
 import com.github.mizosoft.methanol.testing.EmptyPublisher;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
-import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorConfig;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.FailingPublisher;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
@@ -67,11 +67,12 @@ class RawResponseTest {
           .buildTrackedResponse();
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void handleAsync(Executor threadPool) {
-    var response = ResponseBuilder.newBuilder(responseTemplate)
-        .body(strPublisher("Indiana Jones", UTF_8, threadPool))
-        .buildTrackedResponse();
+    var response =
+        ResponseBuilder.newBuilder(responseTemplate)
+            .body(strPublisher("Indiana Jones", UTF_8, threadPool))
+            .buildTrackedResponse();
     var rawResponse = NetworkResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
@@ -81,21 +82,26 @@ class RawResponseTest {
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void handleAsyncWithError(Executor threadPool) {
     var rawResponse = failingWith(TestException::new);
     var handledResponseFuture = rawResponse.handleAsync(BodyHandlers.ofString(), threadPool);
     var ex = assertThrows(CompletionException.class, handledResponseFuture::join);
-    assertThrows(TestException.class, () -> { throw ex.getCause(); });
+    assertThrows(
+        TestException.class,
+        () -> {
+          throw ex.getCause();
+        });
   }
 
   @Test
-  @ExecutorConfig(FIXED_POOL)
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
   void handleSync(Executor threadPool) throws IOException, InterruptedException {
-    var response = ResponseBuilder.newBuilder(responseTemplate)
-        .header("Content-Type", "text/plain; charset=UTF-16")
-        .body(strPublisher("Hans Solo", UTF_16, threadPool))
-        .buildTrackedResponse();
+    var response =
+        ResponseBuilder.newBuilder(responseTemplate)
+            .header("Content-Type", "text/plain; charset=UTF-16")
+            .body(strPublisher("Hans Solo", UTF_16, threadPool))
+            .buildTrackedResponse();
     var rawResponse = NetworkResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
@@ -106,16 +112,18 @@ class RawResponseTest {
 
   @Test
   void with() {
-    var response = ResponseBuilder.newBuilder(responseTemplate)
-        .body((Publisher<List<ByteBuffer>>) EmptyPublisher.<List<ByteBuffer>>instance())
-        .buildTrackedResponse();
+    var response =
+        ResponseBuilder.newBuilder(responseTemplate)
+            .body((Publisher<List<ByteBuffer>>) EmptyPublisher.<List<ByteBuffer>>instance())
+            .buildTrackedResponse();
     var rawResponse = NetworkResponse.from(response);
     var mutated =
         rawResponse.with(builder -> builder.statusCode(369).header("X-My-Header", "Hello!"));
-    var expected = ResponseBuilder.newBuilder(response)
-        .statusCode(369)
-        .header("X-My-Header", "Hello!")
-        .buildTrackedResponse();
+    var expected =
+        ResponseBuilder.newBuilder(response)
+            .statusCode(369)
+            .header("X-My-Header", "Hello!")
+            .buildTrackedResponse();
     assertEqualResponses(expected, mutated.get());
   }
 

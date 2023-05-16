@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol.internal.flow;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.testng.Assert.assertTrue;
 
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
@@ -54,8 +53,7 @@ class ForwardingSubscriberTest {
     subscriber.onNext(1);
     subscriber.onNext(2);
     subscriber.onError(new TestException());
-    assertTrue(
-        downstream.awaitError() instanceof TestException, String.valueOf(downstream.awaitError()));
+    assertThat(downstream.awaitError()).isInstanceOf(TestException.class);
     assertThat(downstream.nextCount()).isEqualTo(2);
   }
 
