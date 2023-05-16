@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.tck;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.CacheReadingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
@@ -55,7 +56,6 @@ import org.testng.annotations.Test;
 
 @Test
 public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List<ByteBuffer>> {
-  private static final int BUFFER_SIZE = 8 * 1024;
   private static final int MAX_BATCH_SIZE = 4;
 
   private static final AtomicLong entryId = new AtomicLong();
@@ -127,9 +127,9 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
   }
 
   private List<ByteBuffer> generateData(long elements) {
-    var buffer = ByteBuffer.allocate(BUFFER_SIZE);
+    var buffer = ByteBuffer.allocate(Utils.BUFFER_SIZE);
     ThreadLocalRandom.current()
-        .ints(BUFFER_SIZE, 0x20, 0x7f) // ASCII VCHARS.
+        .ints(buffer.remaining(), 0x20, 0x7f) // ASCII VCHARS.
         .forEach(i -> buffer.put((byte) i));
     buffer.flip();
     return elements > 0

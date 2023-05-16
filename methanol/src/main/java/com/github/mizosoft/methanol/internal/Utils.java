@@ -42,6 +42,17 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class Utils {
   private static final Clock SYSTEM_MILLIS_UTC = Clock.tickMillis(ZoneOffset.UTC);
 
+  private static final int DEFAULT_BUFFER_SIZE = 16 * 1024;
+  public static final int BUFFER_SIZE;
+
+  static {
+    int bufferSize = Integer.getInteger("jdk.httpclient.bufsize", DEFAULT_BUFFER_SIZE);
+    if (bufferSize <= 0) {
+      bufferSize = DEFAULT_BUFFER_SIZE;
+    }
+    BUFFER_SIZE = bufferSize;
+  }
+
   private Utils() {}
 
   public static boolean isValidToken(CharSequence token) {

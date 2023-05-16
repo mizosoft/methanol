@@ -22,8 +22,10 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription;
@@ -50,6 +52,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
   private final Viewer viewer;
   private final Executor executor;
   private final Listener listener;
+  private final int bufferSize;
   private final AtomicBoolean subscribed = new AtomicBoolean();
 
   public CacheReadingPublisher(Viewer viewer, Executor executor) {
@@ -57,16 +60,24 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
   }
 
   public CacheReadingPublisher(Viewer viewer, Executor executor, Listener listener) {
+    this(viewer, executor, listener, Utils.BUFFER_SIZE);
+  }
+
+  public CacheReadingPublisher(
+      Viewer viewer, Executor executor, Listener listener, int bufferSize) {
     this.viewer = requireNonNull(viewer);
     this.executor = requireNonNull(executor);
     this.listener = requireNonNull(listener);
+    this.bufferSize = bufferSize;
+    requireArgument(bufferSize > 0, "Expected a positive buffer size: %d", bufferSize);
   }
 
   @Override
   public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
     requireNonNull(subscriber);
     if (subscribed.compareAndSet(false, true)) {
-      new CacheReadingSubscription(subscriber, executor, viewer, listener).fireOrKeepAlive();
+      new CacheReadingSubscription(subscriber, executor, viewer, listener, bufferSize)
+          .fireOrKeepAlive();
     } else {
       FlowSupport.rejectMulticast(subscriber);
     }
@@ -126,8 +137,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
      */
     private static final int PREFETCH_THRESHOLD = 4;
 
-    // Note: these 2 fields are mirrored in CacheReadingPublisherTck.
-    private static final int BUFFER_SIZE = 8 * 1024;
+    // Note: this field is mirrored in CacheReadingPublisherTckTest.
     private static final int MAX_BATCH_SIZE = 4;
 
     private static final VarHandle STATE;
@@ -146,6 +156,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     private final Executor executor;
     private final EntryReader reader;
     private final Listener listener;
+    private final int bufferSize;
     private final ConcurrentLinkedQueue<ByteBuffer> readQueue = new ConcurrentLinkedQueue<>();
 
     private volatile State state = State.INITIAL;
@@ -163,12 +174,14 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         Subscriber<? super List<ByteBuffer>> downstream,
         Executor executor,
         Viewer viewer,
-        Listener listener) {
+        Listener listener,
+        int bufferSize) {
       super(downstream, executor);
       this.viewer = viewer;
       this.executor = executor;
       this.reader = viewer.newReader();
       this.listener = listener.guarded(); // Ensure the listener doesn't throw.
+      this.bufferSize = bufferSize;
     }
 
     @Override
@@ -225,7 +238,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       if (readQueue.size() < PREFETCH
           && ((maintainReadingState && state == State.READING)
               || STATE.compareAndSet(this, State.IDLE, State.READING))) {
-        var buffer = ByteBuffer.allocate(BUFFER_SIZE);
+        var buffer = ByteBuffer.allocate(bufferSize);
         try {
           Unchecked.supplyAsync(() -> reader.read(buffer), executor)
               .whenComplete((read, exception) -> onReadCompletion(buffer, read, exception));

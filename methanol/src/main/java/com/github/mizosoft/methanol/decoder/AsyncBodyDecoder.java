@@ -22,12 +22,14 @@
 
 package com.github.mizosoft.methanol.decoder;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.decoder.AsyncDecoder.ByteSink;
 import com.github.mizosoft.methanol.decoder.AsyncDecoder.ByteSource;
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;
@@ -52,13 +54,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * downstream with an {@code IOException} on such case. The decoder is closed on either normal or
  * exceptional completion or on cancellation from downstream.
  */
-@SuppressWarnings("ReferenceEquality") // ByteBuffer sentinel values
+@SuppressWarnings("ReferenceEquality") // ByteBuffer sentinels.
 public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
-  private static final String BUFFER_SIZE_PROP =
-      "com.github.mizosoft.methanol.decoder.AsyncBodyDecoder.bufferSize";
-  private static final int DEFAULT_BUFFER_SIZE = 8 * 1024; // 8Kb
-  private static final int BUFFER_SIZE = getBufferSize();
-
   private final AsyncDecoder decoder;
   private final BodySubscriber<T> downstream;
   private final Executor executor;
@@ -67,7 +64,7 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   private final Upstream upstream = new Upstream();
   private final Prefetcher prefetcher = new Prefetcher();
   private final QueueByteSource source = new QueueByteSource();
-  private final StackByteSink sink = new StackByteSink();
+  private final StackByteSink sink;
 
   private @MonotonicNonNull SubscriptionImpl downstreamSubscription;
 
@@ -80,23 +77,32 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
   /** Creates an {@code AsyncBodyDecoder} in sync mode. */
   public AsyncBodyDecoder(AsyncDecoder decoder, BodySubscriber<T> downstream) {
-    this(decoder, downstream, FlowSupport.SYNC_EXECUTOR, false);
+    this(decoder, downstream, FlowSupport.SYNC_EXECUTOR, false, Utils.BUFFER_SIZE);
   }
 
   /** Creates an {@code AsyncBodyDecoder} that supplies downstream items in the given executor. */
   public AsyncBodyDecoder(AsyncDecoder decoder, BodySubscriber<T> downstream, Executor executor) {
-    this(decoder, downstream, executor, true);
+    this(decoder, downstream, executor, true, Utils.BUFFER_SIZE);
+  }
+
+  /** Creates an {@code AsyncBodyDecoder} that supplies downstream items in the given executor. */
+  public AsyncBodyDecoder(
+      AsyncDecoder decoder, BodySubscriber<T> downstream, Executor executor, int bufferSize) {
+    this(decoder, downstream, executor, true, bufferSize);
   }
 
   private AsyncBodyDecoder(
       AsyncDecoder decoder,
       BodySubscriber<T> downstream,
       Executor executor,
-      boolean isDefaultExecutor) {
+      boolean isDefaultExecutor,
+      int bufferSize) {
     this.decoder = requireNonNull(decoder);
     this.downstream = requireNonNull(downstream);
     this.executor = requireNonNull(executor);
     this.isDefaultExecutor = isDefaultExecutor;
+    this.sink = new StackByteSink(bufferSize);
+    requireArgument(bufferSize > 0, "Expected a positive buffer size: %d", bufferSize);
   }
 
   /** Returns the underlying {@code AsyncDecoder}. */
@@ -195,14 +201,6 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
     return subscription;
   }
 
-  private static int getBufferSize() {
-    int bufferSize = Integer.getInteger(BUFFER_SIZE_PROP, DEFAULT_BUFFER_SIZE);
-    if (bufferSize <= 0) {
-      bufferSize = DEFAULT_BUFFER_SIZE;
-    }
-    return bufferSize;
-  }
-
   /** A {@code ByteSource} that maintains a queue of buffers consumed sequentially. */
   private static final class QueueByteSource implements ByteSource {
     private static final ByteBuffer NO_INPUT = ByteBuffer.allocate(0);
@@ -256,14 +254,18 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   private static final class StackByteSink implements ByteSink {
     private final List<ByteBuffer> sinkBuffers = new ArrayList<>();
 
-    StackByteSink() {}
+    private final int bufferSize;
+
+    StackByteSink(int bufferSize) {
+      this.bufferSize = bufferSize;
+    }
 
     @Override
     public ByteBuffer currentSink() {
       int size = sinkBuffers.size();
       var last = size > 0 ? sinkBuffers.get(size - 1) : null;
       if (last == null || !last.hasRemaining()) {
-        last = ByteBuffer.allocate(BUFFER_SIZE);
+        last = ByteBuffer.allocate(bufferSize);
         sinkBuffers.add(last);
       }
       return last;

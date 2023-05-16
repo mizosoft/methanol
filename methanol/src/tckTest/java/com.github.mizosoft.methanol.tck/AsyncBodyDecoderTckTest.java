@@ -48,15 +48,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 import org.testng.SkipException;
 import org.testng.annotations.*;
 
 @Test
 public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<BufferListHandle> {
-  private static final int BUFFERS_PER_LIST = 5;
-  private static final int BUFFER_SIZE = 64;
+  private static final int BUFFERS_PER_LIST = 4;
 
   private final ExecutorType executorType;
 
@@ -78,19 +76,10 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
     executorContext.close();
   }
 
-  @BeforeClass
-  public static void setUpBufferSize() {
-    // Make sure AsyncBodyDecoder allocates same buffer sizes
-    System.setProperty(
-        "com.github.mizosoft.methanol.decoder.AsyncBodyDecoder.bufferSize",
-        Integer.toString(BUFFER_SIZE));
-  }
-
   @Override
   protected Publisher<BufferListHandle> createFailedFlowPublisher() {
     var processor =
-        new AsyncBodyDecoderProcessorView(
-            BadDecoder.INSTANCE, executorContext.createExecutor(executorType));
+        new ProcessorView(BadDecoder.INSTANCE, executorContext.createExecutor(executorType));
     processor.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     processor.onNext(new BufferListHandle(List.of(US_ASCII.encode("Test buffer"))));
     processor.onComplete();
@@ -100,7 +89,7 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
   @Override
   protected Processor<BufferListHandle, BufferListHandle> createIdentityFlowProcessor(
       int bufferSize) {
-    return new AsyncBodyDecoderProcessorView(
+    return new ProcessorView(
         IdentityDecoder.INSTANCE, executorContext.createExecutor(executorType));
   }
 
@@ -110,16 +99,11 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
   }
 
   @Override
-  public void required_createPublisher1MustProduceAStreamOfExactly1Element() throws Throwable {
-    super.required_createPublisher1MustProduceAStreamOfExactly1Element();
-  }
-
-  @Override
   public BufferListHandle createElement(int element) {
-    var batch = ByteBuffer.allocate(BUFFER_SIZE);
-    var hint = US_ASCII.encode(Integer.toHexString(element));
+    var batch = ByteBuffer.allocate(Utils.BUFFER_SIZE);
+    var data = US_ASCII.encode(Integer.toHexString(element));
     while (batch.hasRemaining()) {
-      Utils.copyRemaining(hint.rewind(), batch);
+      Utils.copyRemaining(data.rewind(), batch);
     }
     batch.flip();
     // Just duplicate buffers to get a list
@@ -131,13 +115,13 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
 
   @Override
   public long maxSupportedSubscribers() {
-    return 1; // Only bound to one subscriber
+    return 1; // Only bound to one subscriber.
   }
 
   /**
-   * Skipped test. A {@code BodyDecoder} is bound to it's downstream, and it's a part of a
-   * subscriber chain to the HTTP client. Where it is the responsibility of the client itself to
-   * drop references to the tip of the chain, allowing the rest of the chain to be GCed.
+   * A {@code BodyDecoder} is bound to its downstream, and it's a part of a subscriber chain to the
+   * HTTP client. Where it is the responsibility of the client itself to drop references to the tip
+   * of the chain, allowing the rest of the chain to be GCed.
    */
   @Override
   public void
@@ -190,7 +174,6 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
   // become empty after consumption. So this class is used instead of List<ByteBuffer>
   // to rewind buffers before comparison.
   static final class BufferListHandle {
-
     final List<ByteBuffer> buffers;
 
     BufferListHandle(List<ByteBuffer> buffers) {
@@ -211,15 +194,14 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
   }
 
   /** Adapts a {@code AsyncBodyDecoder} into a processor. */
-  private static final class AsyncBodyDecoderProcessorView
+  private static final class ProcessorView
       implements Processor<BufferListHandle, BufferListHandle> {
-
     private final AsyncDecoder decoder;
-    private final @Nullable Executor executor;
+    private final Executor executor;
     private final AtomicReference<AsyncBodyDecoder<Void>> bodyDecoderRef;
     private final Queue<Consumer<AsyncBodyDecoder<Void>>> signals;
 
-    private AsyncBodyDecoderProcessorView(AsyncDecoder decoder, @Nullable Executor executor) {
+    ProcessorView(AsyncDecoder decoder, Executor executor) {
       this.decoder = decoder;
       this.executor = executor;
       bodyDecoderRef = new AtomicReference<>();
@@ -252,10 +234,7 @@ public class AsyncBodyDecoderTckTest extends IdentityFlowProcessorVerification<B
             }
           };
       var downstream = BodySubscribers.fromSubscriber(mappingSubscriber);
-      var bodyDecoder =
-          executor != null
-              ? new AsyncBodyDecoder<>(decoder, downstream, executor)
-              : new AsyncBodyDecoder<>(decoder, downstream);
+      var bodyDecoder = new AsyncBodyDecoder<>(decoder, downstream, executor, Utils.BUFFER_SIZE);
       if (bodyDecoderRef.compareAndSet(null, bodyDecoder)) {
         drainSignals();
       } else {
