@@ -81,7 +81,7 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
 
   @Override
   public Publisher<ResponseHandle> createFlowPublisher(long elements) {
-    if (elements <= 0) {
+    if (elements == 0) {
       throw new SkipException("can publish at least one response before completion");
     }
 
