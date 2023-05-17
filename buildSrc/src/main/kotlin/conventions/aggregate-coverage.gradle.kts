@@ -21,7 +21,7 @@ val jacocoAggregateReport by tasks.registering(JacocoReport::class) {
 }
 
 coveralls {
-  jacocoReportPath = jacocoAggregateReport.map { it.reports.xml.outputLocation }
+  jacocoReportPath = jacocoAggregateReport.flatMap { it.reports.xml.outputLocation }
 }
 
 tasks.named("coveralls") {
