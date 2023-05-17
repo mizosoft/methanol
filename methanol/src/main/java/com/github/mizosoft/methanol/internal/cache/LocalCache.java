@@ -30,14 +30,10 @@ import java.util.List;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * An {@link CacheResponse HTTP responses} cache that allows retrieval, metadata updates, insertion
- * and removal.
- */
+/** An HTTP response cache that allows retrieval, metadata updates, insertion and removal. */
 public interface LocalCache {
   Optional<CacheResponse> get(HttpRequest request) throws IOException, InterruptedException;
 
-  @CanIgnoreReturnValue
   void update(CacheResponse cacheResponse) throws IOException, InterruptedException;
 
   Optional<NetworkResponse> put(
