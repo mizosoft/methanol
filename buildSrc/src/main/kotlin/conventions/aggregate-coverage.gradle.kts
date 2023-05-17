@@ -10,11 +10,13 @@ plugins {
 
 val jacocoAggregateReport by tasks.registering(JacocoReport::class) {
   subprojects {
-    tasks.matching { it.extensions.findByType(JacocoPluginExtension::class) != null }
-      .configureEach {
-        executionData(this@configureEach)
-        dependsOn(this@configureEach)
-      }
+    project.plugins.withType<JacocoPlugin> {
+      project.tasks.matching { it.extensions.findByType(JacocoTaskExtension::class) != null }
+        .configureEach {
+          this@registering.executionData(this@configureEach)
+          this@registering.dependsOn(this@configureEach)
+        }
+    }
   }
 }
 
@@ -29,7 +31,6 @@ tasks.named("coveralls") {
 
 subprojects.filter { it.isIncludedInCoverageReport }
   .forEach { coveredProject ->
-    // Configure when the project's java-library plugin is applied.
     coveredProject.plugins.withType<JavaLibraryPlugin> {
       val sourceSets: SourceSetContainer by coveredProject.extensions
       jacocoAggregateReport {
@@ -40,4 +41,3 @@ subprojects.filter { it.isIncludedInCoverageReport }
       }
     }
   }
-

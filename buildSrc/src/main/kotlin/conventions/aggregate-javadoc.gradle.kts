@@ -17,7 +17,6 @@ val aggregateJavadoc by tasks.registering(Javadoc::class) {
   val moduleSourcePath = standardOptions.addMultilineStringsOption("-module-source-path")
   subprojects.filter { it.isIncludedInAggregateJavadoc }
     .forEach { documentedProject ->
-      // Configure when the project's java-library plugin is applied.
       documentedProject.plugins.withType<JavaLibraryPlugin> {
         val sourceSets: SourceSetContainer by documentedProject.extensions
         source(sourceSets["main"].allJava)
