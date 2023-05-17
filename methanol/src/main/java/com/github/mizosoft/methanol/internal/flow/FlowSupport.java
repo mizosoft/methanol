@@ -154,11 +154,12 @@ public class FlowSupport {
               .walk(
                   frames ->
                       frames
-                          .limit(10)
                           .map(StackWalker.StackFrame::toString)
                           .collect(Collectors.joining(System.lineSeparator() + "\tat ")));
       logger.log(
-          Level.WARNING, "dropped exception: " + System.lineSeparator() + "\tat " + stacktrace, exception);
+          Level.WARNING,
+          "dropped exception: " + System.lineSeparator() + "\tat " + stacktrace,
+          exception);
     }
   }
 }

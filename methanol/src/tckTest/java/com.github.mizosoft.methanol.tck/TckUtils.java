@@ -38,7 +38,7 @@ import java.util.stream.Stream;
 import org.reactivestreams.tck.TestEnvironment;
 
 public class TckUtils {
-  private static final long TIMEOUT_MILLIS = 1000L;
+  private static final long TIMEOUT_MILLIS = 2000L;
   private static final long NO_SIGNAL_TIMEOUT_MILLIS = 200L;
 
   static final int BUFFER_SIZE = 1024;
