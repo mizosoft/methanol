@@ -1,6 +1,6 @@
 # Methanol
 
-[![CI status](https://img.shields.io/github/workflow/status/mizosoft/methanol/CI?logo=github&style=flat-square)](https://github.com/mizosoft/methanol/actions)
+[![CI status](https://img.shields.io/github/actions/workflow/status/mizosoft/methanol/main.yml?branch=master&logo=github&style=flat-square)](https://github.com/mizosoft/methanol/actions)
 [![Coverage Status](https://img.shields.io/coveralls/github/mizosoft/methanol?style=flat-square)](https://coveralls.io/github/mizosoft/methanol?branch=master)
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.mizosoft.methanol/methanol?style=flat-square)](https://search.maven.org/search?q=g:%22com.github.mizosoft.methanol%22%20AND%20a:%22methanol%22)
 [![Javadoc](https://img.shields.io/maven-central/v/com.github.mizosoft.methanol/methanol?color=blueviolet&label=Javadoc&style=flat-square)](https://mizosoft.github.io/methanol/api/latest/)
