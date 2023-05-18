@@ -36,7 +36,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.*;
 
-@Test
 public class AbstractSubscriptionTckTest extends FlowPublisherVerification<Long> {
   private final ExecutorType executorType;
 
@@ -83,7 +82,7 @@ public class AbstractSubscriptionTckTest extends FlowPublisherVerification<Long>
 
     RangeSubscription(
         Subscriber<? super Long> downstream, Executor executor, long from, long toExclusive) {
-      super(requireNonNull(downstream), executor);
+      super(downstream, executor);
       this.from = from;
       this.toExclusive = toExclusive;
     }

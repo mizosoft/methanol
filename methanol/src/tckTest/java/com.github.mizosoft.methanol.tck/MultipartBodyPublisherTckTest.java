@@ -38,7 +38,6 @@ import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
 import org.testng.annotations.*;
 
-@Test
 public class MultipartBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
   private static final int MIN_BATCHES = 2; // Can at least pass a part's heading and last boundary.
 

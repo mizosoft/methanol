@@ -50,7 +50,7 @@ import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 import org.testng.SkipException;
 import org.testng.annotations.*;
 
-@Test
+@Slow
 public class AsyncBodyDecoderTckTest
     extends IdentityFlowProcessorVerification<List<AsyncBodyDecoderTckTest.ByteBufferHandle>> {
   private static final int BUFFERS_PER_LIST = 4;

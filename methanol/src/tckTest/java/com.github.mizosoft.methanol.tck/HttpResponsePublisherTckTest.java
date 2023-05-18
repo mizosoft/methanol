@@ -46,9 +46,8 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
-import org.testng.annotations.Test;
 
-@Test
+@Slow
 public class HttpResponsePublisherTckTest extends FlowPublisherVerification<ResponseHandle> {
   private final ExecutorType executorType;
 

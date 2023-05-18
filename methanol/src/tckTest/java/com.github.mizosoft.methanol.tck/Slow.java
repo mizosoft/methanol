@@ -22,29 +22,12 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import org.testng.IAnnotationTransformer;
-import org.testng.annotations.ITestAnnotation;
-import org.testng.annotations.Test;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public final class DefaultTimeoutTransformer implements IAnnotationTransformer {
-  private static final int DEFAULT_TIMEOUT_MILLIS = 5000;
-  private static final int DEFAULT_SLOW_TIMEOUT_MILLIS = 20000;
-
-  public DefaultTimeoutTransformer() {}
-
-  @Override
-  public void transform(
-      ITestAnnotation annotation, Class testClass, Constructor testConstructor, Method testMethod) {
-    if (testMethod != null
-        && testMethod.isAnnotationPresent(Test.class)
-        && annotation.getTimeOut() == 0) {
-      int timeoutMillis =
-          testMethod.getDeclaringClass().isAnnotationPresent(Slow.class)
-              ? DEFAULT_SLOW_TIMEOUT_MILLIS
-              : DEFAULT_TIMEOUT_MILLIS;
-      annotation.setTimeOut(timeoutMillis);
-    }
-  }
-}
+/** Marks a TCK test as slow, mostly due to IO-based workloads. */
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Slow {}
