@@ -149,10 +149,12 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
       if (exception != null) {
         fireOrKeepAliveOnError(exception);
       } else {
+        // TODO make comment more accurate
         // The testing order here is significant. After isInitialResponseBodyReceived is true, no
         // increments to ongoing are possible as all push promises would've been received (if we see
         // a zero, then it's the final state, and it is guaranteed that everything is done).
-        // However, had we checked if currentOngoing == 0 first, we might observe the following
+        // However, had we checked (decremented & checked) if currentOngoing == 0 first, we might
+        // observe the following
         // state transition (assuming currentOngoing is indeed 0):
         //   - Observe currentOngoing == 0 (first test succeeds).
         //   - The testing thread is suspended.
@@ -161,8 +163,9 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         //   - The testing thread wakes up.
         //   - Observe isInitialResponseBodyReceived == true (second test succeeds).
         //   - Downstream completes without waiting for received push promise(s).
+        boolean noMorePushPromises = isInitialResponseBodyReceived;
         int currentOngoing = (int) ONGOING.getAndAdd(this, -1) - 1;
-        if (isInitialResponseBodyReceived && currentOngoing == 0) {
+        if (noMorePushPromises && currentOngoing == 0) {
           submitAndComplete(response);
         } else {
           submit(response);
