@@ -29,4 +29,10 @@ tasks.withType<Test> {
     showStackTraces = true
     showStandardStreams = true
   }
+
+  reports {
+    html.required.set(true)
+    junitXml.required.set(true)
+    junitXml.isOutputPerTestCase = true
+  }
 }
