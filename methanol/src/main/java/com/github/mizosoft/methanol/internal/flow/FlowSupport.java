@@ -31,6 +31,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
+import java.util.stream.Collectors;
 
 /** Helpers for implementing reactive streams subscriptions and the like. */
 public class FlowSupport {
@@ -146,6 +147,21 @@ public class FlowSupport {
   // TODO allow the user to install a hook instead of always logging
 
   public static void onDroppedException(Throwable exception) {
-    logger.log(Level.WARNING, "dropped exception", exception);
+    if (logger.isLoggable(Level.WARNING)) {
+      logger.log(
+          Level.WARNING,
+          () ->
+              "dropped exception: "
+                  + System.lineSeparator()
+                  + "\tat "
+                  + StackWalker.getInstance()
+                      .walk(
+                          frames ->
+                              frames
+                                  .limit(15)
+                                  .map(StackWalker.StackFrame::toString)
+                                  .collect(Collectors.joining(System.lineSeparator() + "\tat "))),
+          exception);
+    }
   }
 }
