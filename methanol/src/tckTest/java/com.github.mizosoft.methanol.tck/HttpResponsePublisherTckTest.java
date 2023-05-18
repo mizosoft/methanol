@@ -76,7 +76,7 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
   @AfterMethod
   public void tearMeDown() throws Exception {
     executorContext.close();
-//    server.shutdown();
+    server.shutdown();
   }
 
   @Override
