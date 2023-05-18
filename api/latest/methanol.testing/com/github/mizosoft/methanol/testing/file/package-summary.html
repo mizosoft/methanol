@@ -11,7 +11,7 @@
 <link rel="stylesheet" type="text/css" href="../../../../../../../script-dir/jquery-ui.min.css" title="Style">
 <link rel="stylesheet" type="text/css" href="../../../../../../../jquery-ui.overrides.css" title="Style">
 <script type="text/javascript" src="../../../../../../../script.js"></script>
-<script type="text/javascript" src="../../../../../../../script-dir/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="../../../../../../../script-dir/jquery-3.6.1.min.js"></script>
 <script type="text/javascript" src="../../../../../../../script-dir/jquery-ui.min.js"></script>
 </head>
 <body class="package-declaration-page">
@@ -78,7 +78,7 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">&nbsp;</div>
 <div class="col-first odd-row-color"><a href="../decoder/package-summary.html">com.github.mizosoft.methanol.testing.decoder</a></div>
 <div class="col-last odd-row-color">&nbsp;</div>
-<div class="col-first even-row-color"><a href="../junit/package-summary.html">com.github.mizosoft.methanol.testing.junit</a></div>
+<div class="col-first even-row-color"><a href="../store/package-summary.html">com.github.mizosoft.methanol.testing.store</a></div>
 <div class="col-last even-row-color">&nbsp;</div>
 <div class="col-first odd-row-color"><a href="../verifiers/package-summary.html">com.github.mizosoft.methanol.testing.verifiers</a></div>
 <div class="col-last odd-row-color">&nbsp;</div>
@@ -104,12 +104,11 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color class-summary class-summary-tab2">&nbsp;</div>
 <div class="col-first even-row-color class-summary class-summary-tab2"><a href="LeakDetectingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">LeakDetectingFileSystem</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
-<div class="block">A <code>FileSystem</code> that wraps another to detect unclosed resources when the file system is
- closed.</div>
+<div class="block">A <code>ForwardingFileSystem</code> that detects unclosed resources when closed.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab2"><a href="WindowsEmulatingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">WindowsEmulatingFileSystem</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
-<div class="block">A <code>FileSystem</code> that wraps another to emulate Windows' behaviour regarding deletion of files
+<div class="block">A <code>ForwardingFileSystem</code> that emulates Windows' behaviour regarding the deletion of files
  with open handles.</div>
 </div>
 </div>

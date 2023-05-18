@@ -11,7 +11,7 @@
 <link rel="stylesheet" type="text/css" href="../../../../../../script-dir/jquery-ui.min.css" title="Style">
 <link rel="stylesheet" type="text/css" href="../../../../../../jquery-ui.overrides.css" title="Style">
 <script type="text/javascript" src="../../../../../../script.js"></script>
-<script type="text/javascript" src="../../../../../../script-dir/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="../../../../../../script-dir/jquery-3.6.1.min.js"></script>
 <script type="text/javascript" src="../../../../../../script-dir/jquery-ui.min.js"></script>
 </head>
 <body class="class-declaration-page">
@@ -120,6 +120,13 @@ implements <a href="../BodyDecoder.html" title="interface in com.github.mizosoft
 <div class="col-last odd-row-color">
 <div class="block">Creates an <code>AsyncBodyDecoder</code> that supplies downstream items in the given executor.</div>
 </div>
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(com.github.mizosoft.methanol.decoder.AsyncDecoder,java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor,int)" class="member-name-link">AsyncBodyDecoder</a><wbr>(<a href="AsyncDecoder.html" title="interface in com.github.mizosoft.methanol.decoder">AsyncDecoder</a>&nbsp;decoder,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="AsyncBodyDecoder.html" title="type parameter in AsyncBodyDecoder">T</a>&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
+ int&nbsp;bufferSize)</code></div>
+<div class="col-last even-row-color">
+<div class="block">Creates an <code>AsyncBodyDecoder</code> that supplies downstream items in the given executor.</div>
+</div>
 </div>
 </section>
 </li>
@@ -200,6 +207,16 @@ implements <a href="../BodyDecoder.html" title="interface in com.github.mizosoft
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">AsyncBodyDecoder</span><wbr><span class="parameters">(<a href="AsyncDecoder.html" title="interface in com.github.mizosoft.methanol.decoder">AsyncDecoder</a>&nbsp;decoder,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="AsyncBodyDecoder.html" title="type parameter in AsyncBodyDecoder">T</a>&gt;&nbsp;downstream,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
+<div class="block">Creates an <code>AsyncBodyDecoder</code> that supplies downstream items in the given executor.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="&lt;init&gt;(com.github.mizosoft.methanol.decoder.AsyncDecoder,java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor,int)">
+<h3>AsyncBodyDecoder</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">AsyncBodyDecoder</span><wbr><span class="parameters">(<a href="AsyncDecoder.html" title="interface in com.github.mizosoft.methanol.decoder">AsyncDecoder</a>&nbsp;decoder,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="AsyncBodyDecoder.html" title="type parameter in AsyncBodyDecoder">T</a>&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
+ int&nbsp;bufferSize)</span></div>
 <div class="block">Creates an <code>AsyncBodyDecoder</code> that supplies downstream items in the given executor.</div>
 </section>
 </li>

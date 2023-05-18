@@ -11,7 +11,7 @@
 <link rel="stylesheet" type="text/css" href="../../../../../../../script-dir/jquery-ui.min.css" title="Style">
 <link rel="stylesheet" type="text/css" href="../../../../../../../jquery-ui.overrides.css" title="Style">
 <script type="text/javascript" src="../../../../../../../script.js"></script>
-<script type="text/javascript" src="../../../../../../../script-dir/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="../../../../../../../script-dir/jquery-3.6.1.min.js"></script>
 <script type="text/javascript" src="../../../../../../../script-dir/jquery-ui.min.js"></script>
 </head>
 <body class="class-declaration-page">
@@ -86,9 +86,9 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public final class </span><span class="element-name type-name-label">WindowsEmulatingFileSystem</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileSystem.html" title="class or interface in java.nio.file" class="external-link">FileSystem</a></span></div>
-<div class="block">A <code>FileSystem</code> that wraps another to emulate Windows' behaviour regarding deletion of files
- with open handles. Only file handles acquired through <code>FileChannels</code> and <code>
- AsynchronousFileChannels</code> are tracked.
+<div class="block">A <code>ForwardingFileSystem</code> that emulates Windows' behaviour regarding the deletion of files
+ with open handles. Only file handles acquired through <code>FileChannel</code> and <code>
+ AsynchronousFileChannel</code> are tracked.
 
  <p>On Windows, deleting files while they're open isn't allowed by default. One has to open the
  file with FILE_SHARE_DELETE for that to work. Luckily, NIO opens file channels as such. The
@@ -98,7 +98,7 @@ loadScripts(document, 'script');</script>
  (https://devblogs.microsoft.com/oldnewthing/20040607-00/?p=38993), the deleted file name is hence
  retained till all handles to that file are closed. Things like creating a new file with the name
  of a file marked for deletion, renaming another file to such name or opening any sort of channel
- to such file all throw <code>AccessDeniedException</code>. This file system emulates that behavior so
+ to such file all throw <code>AccessDeniedException</code>. This file system emulates that behavior, so
  we're sure these cases are covered when interacting with files on Windows.</div>
 </section>
 <section class="summary">

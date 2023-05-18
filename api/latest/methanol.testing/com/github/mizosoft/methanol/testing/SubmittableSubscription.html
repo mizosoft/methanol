@@ -11,7 +11,7 @@
 <link rel="stylesheet" type="text/css" href="../../../../../../script-dir/jquery-ui.min.css" title="Style">
 <link rel="stylesheet" type="text/css" href="../../../../../../jquery-ui.overrides.css" title="Style">
 <script type="text/javascript" src="../../../../../../script.js"></script>
-<script type="text/javascript" src="../../../../../../script-dir/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="../../../../../../script-dir/jquery-3.6.1.min.js"></script>
 <script type="text/javascript" src="../../../../../../script-dir/jquery-ui.min.js"></script>
 </head>
 <body class="class-declaration-page">
@@ -74,9 +74,9 @@ loadScripts(document, 'script');</script>
 <h1 title="Class SubmittableSubscription" class="title">Class SubmittableSubscription&lt;T&gt;</h1>
 </div>
 <div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
-<div class="inheritance"><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.AbstractSubscription</a>&lt;T&gt;
-<div class="inheritance"><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractPollableSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription</a>&lt;T&gt;
-<div class="inheritance"><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription</a>&lt;T&gt;
+<div class="inheritance">com.github.mizosoft.methanol.internal.flow.AbstractSubscription&lt;T&gt;
+<div class="inheritance">com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription&lt;T&gt;
+<div class="inheritance">com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription&lt;T&gt;
 <div class="inheritance">com.github.mizosoft.methanol.testing.SubmittableSubscription&lt;T&gt;</div>
 </div>
 </div>
@@ -89,7 +89,7 @@ loadScripts(document, 'script');</script>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public final class </span><span class="element-name type-name-label">SubmittableSubscription&lt;T&gt;</span>
-<span class="extends-implements">extends <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractQueueSubscription</a>&lt;T&gt;</span></div>
+<span class="extends-implements">extends com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription&lt;T&gt;</span></div>
 <div class="block">A subscription that publishes submitted items.</div>
 </section>
 <section class="summary">
@@ -149,14 +149,14 @@ loadScripts(document, 'script');</script>
 </div>
 </div>
 <div class="inherited-list">
-<h3 id="methods-inherited-from-class-com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription">Methods inherited from class&nbsp;com.github.mizosoft.methanol.internal.flow.<a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractQueueSubscription</a></h3>
-<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html#isComplete()">isComplete</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html#poll()">poll</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html#submitAndComplete(T)">submitAndComplete</a></code></div>
+<h3 id="methods-inherited-from-class-com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription">Methods inherited from class&nbsp;com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription</h3>
+<code>isComplete, poll, submitAndComplete</code></div>
 <div class="inherited-list">
-<h3 id="methods-inherited-from-class-com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription">Methods inherited from class&nbsp;com.github.mizosoft.methanol.internal.flow.<a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractPollableSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractPollableSubscription</a></h3>
-<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractPollableSubscription.html#emit(java.util.concurrent.Flow.Subscriber,long)">emit</a></code></div>
+<h3 id="methods-inherited-from-class-com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription">Methods inherited from class&nbsp;com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription</h3>
+<code>emit</code></div>
 <div class="inherited-list">
-<h3 id="methods-inherited-from-class-com.github.mizosoft.methanol.internal.flow.AbstractSubscription">Methods inherited from class&nbsp;com.github.mizosoft.methanol.internal.flow.<a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractSubscription</a></h3>
-<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#cancel()">cancel</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#cancelOnComplete(java.util.concurrent.Flow.Subscriber)">cancelOnComplete</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#cancelOnError(java.util.concurrent.Flow.Subscriber,java.lang.Throwable,boolean)">cancelOnError</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#fireOrKeepAlive()">fireOrKeepAlive</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#fireOrKeepAliveOnError(java.lang.Throwable)">fireOrKeepAliveOnError</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#fireOrKeepAliveOnNext()">fireOrKeepAliveOnNext</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#hasPendingErrors()">hasPendingErrors</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#isCancelled()">isCancelled</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#request(long)">request</a>, <a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#submitOnNext(java.util.concurrent.Flow.Subscriber,T)">submitOnNext</a></code></div>
+<h3 id="methods-inherited-from-class-com.github.mizosoft.methanol.internal.flow.AbstractSubscription">Methods inherited from class&nbsp;com.github.mizosoft.methanol.internal.flow.AbstractSubscription</h3>
+<code>cancel, cancelOnComplete, cancelOnError, fireOrKeepAlive, fireOrKeepAliveOnError, fireOrKeepAliveOnNext, hasPendingErrors, isCancelled, request, submitOnNext</code></div>
 <div class="inherited-list">
 <h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
 <code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" title="class or interface in java.lang" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#hashCode()" title="class or interface in java.lang" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
@@ -190,14 +190,14 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="abort(boolean)">
 <h3>abort</h3>
 <div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">abort</span><wbr><span class="parameters">(boolean&nbsp;flowInterrupted)</span></div>
-<div class="block"><span class="descfrm-type-label">Description copied from class:&nbsp;<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#abort(boolean)">AbstractSubscription</a></code></span></div>
+<div class="block"><span class="descfrm-type-label">Description copied from class:&nbsp;<code>com.github.mizosoft.methanol.internal.flow.AbstractSubscription</code></span></div>
 <div class="block">Releases resources held by this subscription. <code>flowInterrupted</code> tells whether
  cancellation was due to flow interruption by downstream (e.g. calling <code>cancel()</code> or
  throwing from <code>onNext</code> or <code>onSubscribe</code>), or due to ending the normal flow of
  signals (onSubscribe -> onNext* -> (onError | onComplete)).</div>
 <dl class="notes">
 <dt>Overrides:</dt>
-<dd><code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html#abort(boolean)">abort</a></code>&nbsp;in class&nbsp;<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractQueueSubscription</a>&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
+<dd><code>abort</code>&nbsp;in class&nbsp;<code>com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
 </dl>
 </section>
 </li>
@@ -213,7 +213,7 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">submit</span><wbr><span class="parameters">(<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&nbsp;item)</span></div>
 <dl class="notes">
 <dt>Overrides:</dt>
-<dd><code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html#submit(T)">submit</a></code>&nbsp;in class&nbsp;<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractQueueSubscription</a>&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
+<dd><code>submit</code>&nbsp;in class&nbsp;<code>com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
 </dl>
 </section>
 </li>
@@ -223,7 +223,7 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">submitSilently</span><wbr><span class="parameters">(<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&nbsp;item)</span></div>
 <dl class="notes">
 <dt>Overrides:</dt>
-<dd><code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html#submitSilently(T)">submitSilently</a></code>&nbsp;in class&nbsp;<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractQueueSubscription</a>&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
+<dd><code>submitSilently</code>&nbsp;in class&nbsp;<code>com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
 </dl>
 </section>
 </li>
@@ -233,7 +233,7 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">complete</span>()</div>
 <dl class="notes">
 <dt>Overrides:</dt>
-<dd><code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html#complete()">complete</a></code>&nbsp;in class&nbsp;<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractQueueSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractQueueSubscription</a>&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
+<dd><code>complete</code>&nbsp;in class&nbsp;<code>com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
 </dl>
 </section>
 </li>
@@ -243,7 +243,7 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">long</span>&nbsp;<span class="element-name">currentDemand</span>()</div>
 <dl class="notes">
 <dt>Overrides:</dt>
-<dd><code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#currentDemand()">currentDemand</a></code>&nbsp;in class&nbsp;<code><a href="../../../../../../methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractSubscription</a>&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
+<dd><code>currentDemand</code>&nbsp;in class&nbsp;<code>com.github.mizosoft.methanol.internal.flow.AbstractSubscription&lt;<a href="SubmittableSubscription.html" title="type parameter in SubmittableSubscription">T</a>&gt;</code></dd>
 </dl>
 </section>
 </li>
