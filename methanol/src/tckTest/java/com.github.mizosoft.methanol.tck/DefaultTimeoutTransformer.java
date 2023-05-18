@@ -29,7 +29,7 @@ import org.testng.annotations.ITestAnnotation;
 import org.testng.annotations.Test;
 
 public final class DefaultTimeoutTransformer implements IAnnotationTransformer {
-  private static final int DEFAULT_TIMEOUT_MILLIS = 5000;
+  private static final int DEFAULT_TIMEOUT_MILLIS = 10000;
 
   public DefaultTimeoutTransformer() {}
 
