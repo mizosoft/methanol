@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,6 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -54,14 +53,14 @@ final class ResourceRecord {
     var stackTrace =
         StackWalker.getInstance(Option.RETAIN_CLASS_REFERENCE)
             .walk(stream -> stream.collect(Collectors.toList()));
-    // Discard this constructor's frame
+    // Discard this constructor's frame.
     if (!stackTrace.isEmpty() && stackTrace.get(0).getDeclaringClass() == ResourceRecord.class) {
       stackTrace.remove(0);
     }
     this.stackTrace = Collections.unmodifiableList(stackTrace);
   }
 
-  ResourceRecord(
+  private ResourceRecord(
       Path path,
       ResourceType type,
       Set<? extends OpenOption> openOptions,
@@ -90,11 +89,11 @@ final class ResourceRecord {
   @Override
   public String toString() {
     return String.format(
-        "<%s>: %s, trace: %n%s",
+        "<%s>: %s %n\tat %s",
         path,
         type,
         stackTrace.stream()
-            .map(Objects::toString)
-            .collect(Collectors.joining(System.lineSeparator(), "\tat ", "")));
+            .map(StackFrame::toString)
+            .collect(Collectors.joining(System.lineSeparator() + "\tat ")));
   }
 }
