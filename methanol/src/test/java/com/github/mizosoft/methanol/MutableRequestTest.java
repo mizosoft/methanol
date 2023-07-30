@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -18,6 +18,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
+ *
  */
 
 package com.github.mizosoft.methanol;
@@ -32,19 +33,21 @@ import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class MutableRequestTest {
   @Test
-  void settingFields() {
+  void setBasicFields() {
     var publisher = BodyPublishers.ofString("XYZ");
-    var request = MutableRequest.create()
-        .uri("https://example.com")
-        .method("PUT", publisher)
-        .header("Content-Type", "text/plain")
-        .timeout(Duration.ofSeconds(20))
-        .version(Version.HTTP_2)
-        .expectContinue(true);
+    var request =
+        MutableRequest.create()
+            .uri("https://example.com")
+            .method("PUT", publisher)
+            .header("Content-Type", "text/plain")
+            .timeout(Duration.ofSeconds(20))
+            .version(Version.HTTP_2)
+            .expectContinue(true);
     verifyThat(request)
         .hasUri("https://example.com")
         .isPUT()
@@ -56,16 +59,17 @@ class MutableRequestTest {
   }
 
   @Test
-  void settingFieldsBeforeSnapshot() {
+  void setBasicFieldsBeforeImmutableCopy() {
     var publisher = BodyPublishers.ofString("XYZ");
-    var request = MutableRequest.create()
-        .uri("https://example.com")
-        .method("PUT", publisher)
-        .header("Content-Type", "text/plain")
-        .timeout(Duration.ofSeconds(20))
-        .version(Version.HTTP_2)
-        .expectContinue(true)
-        .toImmutableRequest();
+    var request =
+        MutableRequest.create()
+            .uri("https://example.com")
+            .method("PUT", publisher)
+            .header("Content-Type", "text/plain")
+            .timeout(Duration.ofSeconds(20))
+            .version(Version.HTTP_2)
+            .expectContinue(true)
+            .toImmutableRequest();
     verifyThat(request)
         .hasUri("https://example.com")
         .isPUT()
@@ -86,10 +90,52 @@ class MutableRequestTest {
   }
 
   @Test
+  void addHeaders() {
+    var request =
+        MutableRequest.create().header("Content-Length", "1").header("Accept-Encoding", "gzip");
+    verifyThat(request)
+        .containsHeadersExactly(
+            "Content-Length", "1",
+            "Accept-Encoding", "gzip");
+
+    request.headers("Content-Type", "text/plain", "Accept-Language", "fr-FR");
+    verifyThat(request)
+        .containsHeadersExactly(
+            "Content-Length", "1",
+            "Accept-Encoding", "gzip",
+            "Content-Type", "text/plain",
+            "Accept-Language", "fr-FR");
+  }
+
+  @Test
+  void removeHeader() {
+    var request =
+        MutableRequest.create()
+            .header("Content-Length", "1")
+            .header("Accept-Encoding", "gzip")
+            .removeHeader("Content-Length");
+    verifyThat(request).containsHeadersExactly("Accept-Encoding", "gzip");
+  }
+
+  @Test
+  void removeHeaders() {
+    var request = MutableRequest.create().header("Content-Length", "1").removeHeaders();
+    verifyThat(request).hasEmptyHeaders();
+  }
+
+  @Test
+  void setHeader() {
+    var request = MutableRequest.create().header("Accept-Encoding", "gzip");
+    verifyThat(request).containsHeadersExactly("Accept-Encoding", "gzip");
+
+    request.setHeader("Accept-Encoding", "deflate");
+    verifyThat(request).containsHeadersExactly("Accept-Encoding", "deflate");
+  }
+
+  @Test
   void mutateHeaders() {
-    var request = MutableRequest.create()
-        .header("Content-Length", "1")
-        .header("Accept-Encoding", "gzip");
+    var request =
+        MutableRequest.create().header("Content-Length", "1").header("Accept-Encoding", "gzip");
     verifyThat(request)
         .containsHeadersExactly(
             "Content-Length", "1",
@@ -122,11 +168,12 @@ class MutableRequestTest {
   }
 
   @Test
-  void addHttpHeaders() {
-    var headers = headers(
-        "Accept", "text/html",
-        "Cookie", "sessionid=123",
-        "Cookie", "password=321");
+  void addPrebuiltHttpHeaders() {
+    var headers =
+        headers(
+            "Accept", "text/html",
+            "Cookie", "sessionid=123",
+            "Cookie", "password=321");
     var request = MutableRequest.create().headers(headers);
     verifyThat(request).containsHeadersExactly(headers);
 
@@ -140,21 +187,37 @@ class MutableRequestTest {
   }
 
   @Test
-  void copying() {
-    var request = MutableRequest.create()
-        .POST(BodyPublishers.ofString("something"))
-        .headers(
-            "Content-Length", "1",
-            "Accept-Encoding", "gzip")
-        .timeout(Duration.ofSeconds(20))
-        .version(Version.HTTP_1_1)
-        .expectContinue(true);
+  void mutableCopyForBasicFields() {
+    var request =
+        MutableRequest.create()
+            .POST(BodyPublishers.ofString("something"))
+            .headers(
+                "Content-Length", "1",
+                "Accept-Encoding", "gzip")
+            .timeout(Duration.ofSeconds(20))
+            .version(Version.HTTP_1_1)
+            .expectContinue(true);
     verifyThat(request.copy()).isDeeplyEqualTo(request);
-    verifyThat(request.copy().toImmutableRequest()).isDeeplyEqualTo(request);
-    verifyThat(request.toImmutableRequest()).isDeeplyEqualTo(request);
     verifyThat(MutableRequest.copyOf(request)).isDeeplyEqualTo(request);
-    verifyThat(MutableRequest.copyOf(request).toImmutableRequest()).isDeeplyEqualTo(request);
     verifyThat(MutableRequest.copyOf(request.toImmutableRequest())).isDeeplyEqualTo(request);
+  }
+
+  @Test
+  void immutableCopyForBasicFields() {
+    var request =
+        MutableRequest.create()
+            .POST(BodyPublishers.ofString("something"))
+            .headers(
+                "Content-Length", "1",
+                "Accept-Encoding", "gzip")
+            .timeout(Duration.ofSeconds(20))
+            .version(Version.HTTP_1_1)
+            .expectContinue(true);
+    verifyThat(request.toImmutableRequest()).isDeeplyEqualTo(request);
+    verifyThat(request.copy().toImmutableRequest()).isDeeplyEqualTo(request);
+    verifyThat(MutableRequest.copyOf(request).toImmutableRequest()).isDeeplyEqualTo(request);
+    verifyThat(MutableRequest.copyOf(request.toImmutableRequest()).toImmutableRequest())
+        .isDeeplyEqualTo(request);
   }
 
   @Test
@@ -169,7 +232,7 @@ class MutableRequestTest {
   }
 
   @Test
-  void defaultFields() {
+  void defaultValues() {
     verifyThat(MutableRequest.create())
         .isGET()
         .hasUri("")
@@ -188,7 +251,7 @@ class MutableRequestTest {
 
   @Test
   void testToString() {
-    assertThat(MutableRequest.GET("https://example.com"))
+    assertThat(MutableRequest.GET("https://example.com").header("Accept-Encoding", "gzip"))
         .hasToString("https://example.com GET")
         .extracting(MutableRequest::toImmutableRequest)
         .hasToString("https://example.com GET");
@@ -198,15 +261,9 @@ class MutableRequestTest {
   void staticFactories() {
     var uri = URI.create("https://example.com");
 
-    verifyThat(MutableRequest.create(uri))
-        .hasUri(uri)
-        .isGET()
-        .hasNoBody();
+    verifyThat(MutableRequest.create(uri)).hasUri(uri).isGET().hasNoBody();
 
-    verifyThat(MutableRequest.GET(uri))
-        .hasUri(uri)
-        .isGET()
-        .hasNoBody();
+    verifyThat(MutableRequest.GET(uri)).hasUri(uri).isGET().hasNoBody();
 
     var publisher = BodyPublishers.ofString("something");
     verifyThat(MutableRequest.POST(uri, publisher))
@@ -216,7 +273,7 @@ class MutableRequestTest {
   }
 
   @Test
-  void methodShortcuts() {
+  void httpMethodSetters() {
     var request = MutableRequest.create();
     var publisher = BodyPublishers.ofString("something");
 
@@ -235,12 +292,13 @@ class MutableRequestTest {
 
   @Test
   void removeHeadersIf() {
-    var request = MutableRequest.create()
-        .headers(
-            "X-My-First-Header", "val1",
-            "X-My-First-Header", "val2",
-            "X-My-Second-Header", "val1",
-            "X-My-Second-Header", "val2");
+    var request =
+        MutableRequest.create()
+            .headers(
+                "X-My-First-Header", "val1",
+                "X-My-First-Header", "val2",
+                "X-My-Second-Header", "val1",
+                "X-My-Second-Header", "val2");
 
     request.removeHeadersIf((name, __) -> "X-My-First-Header".equals(name));
     verifyThat(request)
@@ -257,26 +315,28 @@ class MutableRequestTest {
   }
 
   @Test
-  void tags() {
-    var request = MutableRequest.create()
-        .tag(Integer.class, 1)
-        .tag(new TypeRef<>() {}, List.of("a", "b"));
+  void addTags() {
+    var request =
+        MutableRequest.create().tag(Integer.class, 1).tag(new TypeRef<>() {}, List.of("a", "b"));
     verifyThat(request)
         .containsTag(Integer.class, 1)
         .containsTag(new TypeRef<>() {}, List.of("a", "b"))
         .doesNotContainTag(String.class);
     assertThat(request.tags()).containsValues(1, List.of("a", "b"));
-    
+
     var immutableRequest = request.toImmutableRequest();
     verifyThat(immutableRequest)
         .containsTag(Integer.class, 1)
         .containsTag(new TypeRef<>() {}, List.of("a", "b"))
         .doesNotContainTag(String.class);
-    assertThat(immutableRequest.tags()).containsValues(1, List.of("a", "b"));
+    assertThat(immutableRequest.tags())
+        .containsExactlyInAnyOrderEntriesOf(
+            Map.of(
+                new TypeRef<Integer>() {}, 1, new TypeRef<List<String>>() {}, List.of("a", "b")));
   }
 
   @Test
-  void copyWithTags() {
+  void copyAfterAddingTags() {
     var request = MutableRequest.create().tag(Integer.class, 1);
     verifyThat(request.copy()).containsTag(Integer.class, 1);
     verifyThat(MutableRequest.copyOf(request)).containsTag(Integer.class, 1);
@@ -287,8 +347,28 @@ class MutableRequestTest {
   void removeTag() {
     var request = MutableRequest.create().tag(1);
     verifyThat(request).containsTag(Integer.class, 1);
+
     request.removeTag(Integer.class);
     verifyThat(request).doesNotContainTag(Integer.class);
+  }
+
+  @Test
+  void setCacheControl() {
+    var request =
+        MutableRequest.GET("https://example.com")
+            .cacheControl(CacheControl.newBuilder().maxAge(Duration.ofSeconds(1)).build());
+    verifyThat(request)
+        .containsHeadersExactly("Cache-Control", "max-age=1");
+  }
+
+  @Test
+  void setCacheControlAfterSettingHeader() {
+    var request =
+        MutableRequest.GET("https://example.com")
+            .header("Cache-Control", "max-age=1")
+            .cacheControl(CacheControl.newBuilder().maxAge(Duration.ofSeconds(2)).build());
+    verifyThat(request)
+        .containsHeadersExactly("Cache-Control", "max-age=2");
   }
 
   @Test
