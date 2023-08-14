@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
+import com.github.mizosoft.methanol.internal.spi.ServiceCache;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodyHandler;
@@ -34,7 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
  * A group of {@link BodyAdapter adapters}, typically targeting different mapping formats, that
@@ -43,6 +44,17 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * and a {@link MediaType} specifying the desired format.
  */
 public final class AdapterCodec {
+  private static final ServiceCache<Encoder> encodersServiceCache =
+      new ServiceCache<>(Encoder.class);
+  private static final ServiceCache<Decoder> decodersServiceCache =
+      new ServiceCache<>(Decoder.class);
+
+  /**
+   * Codec for the installed encoders & decoders. This is lazily created in a racy manner, which is
+   * OK since ServiceCache makes sure we see a constant snapshot of the services.
+   */
+  private static @MonotonicNonNull AdapterCodec lazyInstalledCodec;
+
   private final List<Encoder> encoders;
   private final List<Decoder> decoders;
 
@@ -151,18 +163,19 @@ public final class AdapterCodec {
   }
 
   private static UnsupportedOperationException unsupportedConversionFrom(
-      TypeRef<?> objectType, @Nullable MediaType mediaType) {
+      TypeRef<?> objectType, MediaType mediaType) {
     var message =
         "unsupported conversion from an object type <"
             + objectType
-            + "> with media type <"
+            + "> with media "
+            + "type <"
             + mediaType
             + ">";
     return new UnsupportedOperationException(message);
   }
 
   private static UnsupportedOperationException unsupportedConversionTo(
-      TypeRef<?> objectType, @Nullable MediaType mediaType) {
+      TypeRef<?> objectType, MediaType mediaType) {
     var message =
         "unsupported conversion to an object of type <"
             + objectType
@@ -181,6 +194,17 @@ public final class AdapterCodec {
 
   private static MediaType mediaTypeOrAny(HttpHeaders headers) {
     return headers.firstValue("Content-Type").map(MediaType::parse).orElse(MediaType.ANY);
+  }
+
+  public static AdapterCodec installed() {
+    var installedCodec = lazyInstalledCodec;
+    if (installedCodec == null) {
+      installedCodec =
+          new AdapterCodec(
+              encodersServiceCache.getProviders(), decodersServiceCache.getProviders());
+      lazyInstalledCodec = installedCodec;
+    }
+    return installedCodec;
   }
 
   /** Returns a new {@code AdapterCodec.Builder}. */
