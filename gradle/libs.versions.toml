@@ -37,6 +37,7 @@ spring-dependency-management-plugin = "1.1.0"
 shadow-plugin = "8.1.1"
 extraJavaModuleInfo-plugin = "1.4"
 javafx-plugin = "0.0.14"
+mockito-version = "3.+"
 
 [libraries]
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
@@ -82,6 +83,7 @@ checkerframework-plugin = { module = "org.checkerframework:checkerframework-grad
 errorprone-plugin = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorprone-plugin" }
 nullaway-plugin = { module = "net.ltgt.gradle:gradle-nullaway-plugin", version.ref = "nullaway-plugin" }
 coveralls = { module = "gradle.plugin.org.kt3k.gradle.plugin:coveralls-gradle-plugin", version.ref = "coveralls" }
+mockito = { module = "org.mockito:mockito-core", version.ref = "mockito-version" }
 
 [plugins]
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }

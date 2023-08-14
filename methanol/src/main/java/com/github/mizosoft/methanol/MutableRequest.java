@@ -18,14 +18,13 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.isValidToken;
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
-import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static com.github.mizosoft.methanol.internal.Validate.*;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
@@ -34,22 +33,30 @@ import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A mutable {@code HttpRequest}. This class implements {@link HttpRequest.Builder} for setting the
- * request's fields. Querying a field before it's been set will return its default value. Invoking
- * the {@link #toImmutableRequest()} method will return an immutable {@code HttpRequest} copy that
- * is independent of this instance.
+ * A mutable {@link HttpRequest} that supports {@link TaggableRequest tags}, relative URIs & setting
+ * arbitrary objects as request bodies. This class implements {@link HttpRequest.Builder} for
+ * setting request fields. Querying a field before it's been set will return its default value.
+ * Invoking {@link #toImmutableRequest()} will return an immutable copy that is independent of this
+ * instance.
  *
- * <p>{@code MutableRequest} adds some convenience when the {@code HttpRequest} is used immediately
- * after creation:
+ * <p>{@code MutableRequest} accepts an arbitrary object, referred to as payloads, as the request
+ * body. The payload is resolved into a {@code BodyPublisher} only when {@link
+ * MutableRequest#bodyPublisher() one is requested}. Resolution is done by this request's {@link
+ * #adapterCodec(AdapterCodec) AdapterCodec}.
+ *
+ * <p>Additionally, this class allows setting a {@code URI} without a host or a scheme or not
+ * setting a {@code URI} at all. This is for the case when the request is used with a {@link
+ * Methanol} client that has a base URL, with which this request's URL is resolved.
+ *
+ * <p>{@code MutableRequest} also adds some convenience when the {@code HttpRequest} is used
+ * immediately after creation:
  *
  * <pre>{@code
  * client.send(
@@ -59,35 +66,49 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *     BodyHandlers.ofString());
  * }</pre>
  *
- * <p>Additionally, this class allows setting a {@code URI} without a host or a scheme or not
- * setting a {@code URI} entirely. This is for the case when the request is used with a {@link
- * Methanol} client that has a base URL, with which this request's URL is resolved.
+ * It is recommended, however, to use {@link #toImmutableRequest()} if the request is stored
+ * somewhere before it's sent in order to prevent accidental mutation, especially when the request
+ * is sent asynchronously.
  */
 public final class MutableRequest extends TaggableRequest implements TaggableRequest.Builder {
   private static final URI EMPTY_URI = URI.create("");
 
   private final Map<TypeRef<?>, Object> tags = new HashMap<>();
-
   private final HeadersBuilder headersBuilder = new HeadersBuilder();
-  private String method = "GET";
-  private URI uri = EMPTY_URI;
-  private @Nullable HttpHeaders cachedHeaders;
-  private @Nullable BodyPublisher bodyPublisher;
+
+  private String method;
+  private URI uri;
+
+  /**
+   * This request's body, which is either a {@link BodyPublisher} or an {@link UnresolvedBody}. The
+   * latter is lazily resolved into the former on calling {@link #bodyPublisher()}.
+   */
+  private @Nullable Object body;
+
   private @MonotonicNonNull Duration timeout;
   private @MonotonicNonNull Version version;
   private boolean expectContinue;
+  private @Nullable HttpHeaders cachedHeaders;
 
-  private MutableRequest() {}
+  /** The {@code AdapterCodec} for resolving this request's payload. */
+  private @MonotonicNonNull AdapterCodec adapterCodec;
+
+  private MutableRequest() {
+    method = "GET";
+    uri = EMPTY_URI;
+  }
 
   private MutableRequest(MutableRequest other) {
-    tags.putAll(other.tags);
-    headersBuilder.addAll(other.headersBuilder);
     method = other.method;
     uri = other.uri;
-    cachedHeaders = other.cachedHeaders;
-    bodyPublisher = other.bodyPublisher;
+    body = other.body;
     expectContinue = other.expectContinue;
-    // Unnecessary checks to respect MonotonicNonNull's contract
+    adapterCodec = other.adapterCodec;
+    cachedHeaders = other.cachedHeaders;
+    tags.putAll(other.tags);
+    headersBuilder.addAll(other.headersBuilder);
+
+    // Unnecessary checks to respect MonotonicNonNull's contract.
     if (other.timeout != null) {
       timeout = other.timeout;
     }
@@ -135,7 +156,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     return this;
   }
 
-  /** Sets the {@code Cache-Control} header. */
+  /** Sets the {@code Cache-Control} header to the given value. */
   public MutableRequest cacheControl(CacheControl cacheControl) {
     return setHeader("Cache-Control", cacheControl.toString());
   }
@@ -154,7 +175,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   Map<TypeRef<?>, Object> tags() {
-    return Map.copyOf(tags); // Make a defensive copy
+    return Map.copyOf(tags); // Make a defensive copy.
   }
 
   @SuppressWarnings("unchecked")
@@ -187,7 +208,23 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public Optional<BodyPublisher> bodyPublisher() {
-    return Optional.ofNullable(bodyPublisher);
+    return Optional.ofNullable(body)
+        .map(body -> resolve(body, adapterCodec != null ? adapterCodec : AdapterCodec.installed()));
+  }
+
+  /** Set's the {@link AdapterCodec} to be used for resolving this request's payload. */
+  public MutableRequest adapterCodec(AdapterCodec adapterCodec) {
+    this.adapterCodec = requireNonNull(adapterCodec);
+    if (body instanceof UnresolvedBody) {
+      // Invalidate resolved BodyPublisher, if any, to be resolved by the new codec.
+      ((UnresolvedBody) body).unresolve();
+    }
+    return this;
+  }
+
+  /** Returns the {@link AdapterCodec} to be used for resolving this request's payload. */
+  public Optional<AdapterCodec> adapterCodec() {
+    return Optional.ofNullable(adapterCodec);
   }
 
   @Override
@@ -293,9 +330,34 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     return setMethod("POST", requireNonNull(bodyPublisher));
   }
 
+  public MutableRequest POST(Object payload, MediaType mediaType) {
+    return setMethod("POST", toBody(payload, mediaType));
+  }
+
   @Override
   public MutableRequest PUT(BodyPublisher bodyPublisher) {
     return setMethod("PUT", requireNonNull(bodyPublisher));
+  }
+
+  /**
+   * Sets the request method to PUT and sets the payload to the given value. The media type defines
+   * the format used for resolving the payload.
+   */
+  public MutableRequest PUT(Object payload, MediaType mediaType) {
+    return setMethod("PUT", toBody(payload, mediaType));
+  }
+
+  /** Sets the request method to PATCH and sets the body publisher to the given value. */
+  public MutableRequest PATCH(BodyPublisher bodyPublisher) {
+    return setMethod("PATCH", bodyPublisher);
+  }
+
+  /**
+   * Sets the request method to PATCH and sets the payload to the given value. The media type
+   * defines the format used for resolving the payload.
+   */
+  public MutableRequest PATCH(Object payload, MediaType mediaType) {
+    return setMethod("PATCH", toBody(payload, mediaType));
   }
 
   @Override
@@ -309,7 +371,24 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     return setMethod(method, requireNonNull(bodyPublisher));
   }
 
-  /** Prefer {@link #toImmutableRequest()}. */
+  /**
+   * Sets the request method and sets the payload to the given value. The media type defines the
+   * format used for resolving this payload.
+   */
+  public MutableRequest method(String method, Object payload, MediaType mediaType) {
+    requireArgument(isValidToken(method), "illegal method name: '%s'", method);
+    return setMethod(method, toBody(payload, mediaType));
+  }
+
+  private Object toBody(Object payload, MediaType mediaType) {
+    requireNonNull(payload);
+    requireNonNull(mediaType);
+    return payload instanceof BodyPublisher
+        ? MoreBodyPublishers.ofMediaType((BodyPublisher) payload, mediaType)
+        : new UnresolvedBody(payload, mediaType);
+  }
+
+  /** Returns an immutable copy of this request. Prefer using {@link #toImmutableRequest()}. */
   @Override
   public TaggableRequest build() {
     return new ImmutableRequest(this);
@@ -331,30 +410,60 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     return uri + " " + method;
   }
 
-  private MutableRequest setMethod(String method, @Nullable BodyPublisher bodyPublisher) {
+  Optional<MediaType> bodyMediaType() {
+    return Optional.ofNullable(body)
+        .filter(MimeAware.class::isInstance)
+        .map(body -> ((MimeAware) body).mediaType());
+  }
+
+  private MutableRequest setMethod(String method, @Nullable Object body) {
     this.method = method;
-    this.bodyPublisher = bodyPublisher;
+    this.body = body;
     return this;
   }
 
-  private static MutableRequest createCopy(HttpRequest other) {
+  private static BodyPublisher resolve(Object body, AdapterCodec adapterCodec) {
+    if (body instanceof BodyPublisher) {
+      return (BodyPublisher) body;
+    } else if (body instanceof UnresolvedBody) {
+      return ((UnresolvedBody) body).resolve(adapterCodec);
+    } else {
+      throw new IllegalStateException("Unexpected request body: " + body);
+    }
+  }
+
+  /** Returns a new {@code MutableRequest} that is a copy of the given request. */
+  public static MutableRequest copyOf(HttpRequest other) {
+    return other instanceof MutableRequest
+        ? ((MutableRequest) other).copy()
+        : copyOfForeignRequest(other);
+  }
+
+  private static MutableRequest copyOfForeignRequest(HttpRequest other) {
+    assert !(other instanceof MutableRequest);
     return new MutableRequest()
         .uri(other.uri())
         .headers(other.headers())
-        .setMethod(other.method(), other.bodyPublisher().orElse(null))
         .expectContinue(other.expectContinue())
         .apply(
             self -> {
               other.timeout().ifPresent(self::timeout);
               other.version().ifPresent(self::version);
+
               if (other instanceof TaggableRequest) {
                 self.tags.putAll(((TaggableRequest) other).tags());
               }
-            });
-  }
 
-  public static MutableRequest copyOf(HttpRequest other) {
-    return other instanceof MutableRequest ? ((MutableRequest) other).copy() : createCopy(other);
+              if (other instanceof ImmutableRequest) {
+                var immutableOther = (ImmutableRequest) other;
+                immutableOther.adapterCodec().ifPresent(self::adapterCodec);
+                immutableOther
+                    .body()
+                    .ifPresent(body -> self.setMethod(immutableOther.method(), body));
+              } else {
+                self.setMethod(other.method(), other.bodyPublisher().orElse(null));
+              }
+            });
   }
 
   /** Returns a new {@code MutableRequest}. */
@@ -392,14 +501,68 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     return new MutableRequest().uri(uri).POST(bodyPublisher);
   }
 
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a POST method. */
+  public static MutableRequest POST(String uri, Object payload, MediaType mediaType) {
+    return new MutableRequest().uri(uri).POST(payload, mediaType);
+  }
+
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a POST method. */
+  public static MutableRequest POST(URI uri, Object payload, MediaType mediaType) {
+    return new MutableRequest().uri(uri).POST(payload, mediaType);
+  }
+
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PUT method. */
+  public static MutableRequest PUT(String uri, BodyPublisher bodyPublisher) {
+    return new MutableRequest().uri(uri).PUT(bodyPublisher);
+  }
+
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PUT method. */
+  public static MutableRequest PUT(URI uri, BodyPublisher bodyPublisher) {
+    return new MutableRequest().uri(uri).PUT(bodyPublisher);
+  }
+
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PUT method. */
+  public static MutableRequest PUT(String uri, Object payload, MediaType mediaType) {
+    return new MutableRequest().uri(uri).PUT(payload, mediaType);
+  }
+
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PUT method. */
+  public static MutableRequest PUT(URI uri, Object payload, MediaType mediaType) {
+    return new MutableRequest().uri(uri).PUT(payload, mediaType);
+  }
+
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PATCH method. */
+  public static MutableRequest PATCH(String uri, BodyPublisher bodyPublisher) {
+    return new MutableRequest().uri(uri).PATCH(bodyPublisher);
+  }
+
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PATCH method. */
+  public static MutableRequest PATCH(URI uri, BodyPublisher bodyPublisher) {
+    return new MutableRequest().uri(uri).PATCH(bodyPublisher);
+  }
+
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PATCH method. */
+  public static MutableRequest PATCH(String uri, Object payload, MediaType mediaType) {
+    return new MutableRequest().uri(uri).PATCH(payload, mediaType);
+  }
+
+  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PATCH method. */
+  public static MutableRequest PATCH(URI uri, Object payload, MediaType mediaType) {
+    return new MutableRequest().uri(uri).PATCH(payload, mediaType);
+  }
+
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private static final class ImmutableRequest extends TaggableRequest {
     private final String method;
     private final URI uri;
     private final HttpHeaders headers;
-    private final Optional<BodyPublisher> bodyPublisher;
+
+    /** See {@link MutableRequest#body}. */
+    private final Optional<Object> body;
+
     private final Optional<Duration> timeout;
     private final Optional<Version> version;
+    private final Optional<AdapterCodec> adapterCodec;
     private final boolean expectContinue;
     private final Map<TypeRef<?>, Object> tags;
 
@@ -407,11 +570,12 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
       method = other.method;
       uri = other.uri;
       headers = other.headers();
-      bodyPublisher = Optional.ofNullable(other.bodyPublisher);
+      body = Optional.ofNullable(other.body);
       timeout = Optional.ofNullable(other.timeout);
       version = Optional.ofNullable(other.version);
+      adapterCodec = Optional.ofNullable(other.adapterCodec);
       expectContinue = other.expectContinue;
-      tags = Map.copyOf(other.tags); // Make an immutable/defensive copy
+      tags = Map.copyOf(other.tags);
     }
 
     @SuppressWarnings("unchecked")
@@ -442,7 +606,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
     @Override
     public Optional<BodyPublisher> bodyPublisher() {
-      return bodyPublisher;
+      return body.map(body -> resolve(body, adapterCodec.orElseGet(AdapterCodec::installed)));
     }
 
     @Override
@@ -463,6 +627,44 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     @Override
     public String toString() {
       return uri + " " + method;
+    }
+
+    Optional<Object> body() {
+      return body;
+    }
+
+    Optional<AdapterCodec> adapterCodec() {
+      return adapterCodec;
+    }
+  }
+
+  private static final class UnresolvedBody implements MimeAware {
+    private final Object payload;
+    private final MediaType mediaType;
+
+    private @MonotonicNonNull BodyPublisher resolvedBodyPublisher;
+
+    UnresolvedBody(Object payload, MediaType mediaType) {
+      this.payload = requireNonNull(payload);
+      this.mediaType = requireNonNull(mediaType);
+    }
+
+    BodyPublisher resolve(AdapterCodec adapterCodec) {
+      var bodyPublisher = resolvedBodyPublisher;
+      if (bodyPublisher == null) {
+        bodyPublisher = adapterCodec.publisherOf(payload, mediaType);
+        resolvedBodyPublisher = bodyPublisher;
+      }
+      return bodyPublisher;
+    }
+
+    void unresolve() {
+      resolvedBodyPublisher = null;
+    }
+
+    @Override
+    public MediaType mediaType() {
+      return mediaType;
     }
   }
 }

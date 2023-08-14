@@ -18,7 +18,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 package com.github.mizosoft.methanol;
@@ -27,13 +26,18 @@ import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.net.http.HttpClient.Version;
+import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
 
 class MutableRequestTest {
@@ -81,12 +85,85 @@ class MutableRequestTest {
   }
 
   @Test
-  void setUriFromString() {
-    verifyThat(MutableRequest.create().uri("https://example.com")).hasUri("https://example.com");
-    verifyThat(MutableRequest.create("https://example.com")).hasUri("https://example.com");
-    verifyThat(MutableRequest.GET("https://example.com")).hasUri("https://example.com");
-    verifyThat(MutableRequest.POST("https://example.com", BodyPublishers.noBody()))
-        .hasUri("https://example.com");
+  void staticFactories() {
+    var uriString = "https://example.com";
+    var uri = URI.create(uriString);
+
+    verifyThat(MutableRequest.create(uriString)).hasUri(uri).isGET().hasNoBody();
+    verifyThat(MutableRequest.create(uri)).hasUri(uri).isGET().hasNoBody();
+
+    verifyThat(MutableRequest.GET(uriString)).hasUri(uri).isGET().hasNoBody();
+    verifyThat(MutableRequest.GET(uri)).hasUri(uri).isGET().hasNoBody();
+
+    var publisher = BodyPublishers.ofString("something");
+    verifyThat(MutableRequest.POST(uriString, publisher))
+        .hasUri(uri)
+        .isPOST()
+        .hasBodyPublisher(publisher);
+    verifyThat(MutableRequest.POST(uri, publisher))
+        .hasUri(uri)
+        .isPOST()
+        .hasBodyPublisher(publisher);
+
+    verifyThat(MutableRequest.PUT(uriString, publisher))
+        .hasUri(uri)
+        .isPUT()
+        .hasBodyPublisher(publisher);
+    verifyThat(MutableRequest.PUT(uri, publisher)) //
+        .hasUri(uri)
+        .isPUT()
+        .hasBodyPublisher(publisher);
+
+    verifyThat(MutableRequest.PATCH(uriString, publisher))
+        .hasUri(uri)
+        .isPATCH()
+        .hasBodyPublisher(publisher);
+    verifyThat(MutableRequest.PATCH(uri, publisher))
+        .hasUri(uri)
+        .isPATCH()
+        .hasBodyPublisher(publisher);
+  }
+
+  @Test
+  void staticFactoriesWithPayload() {
+    var payload = new Object();
+    var publisher = BodyPublishers.ofString("abc");
+    var encoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, publisher);
+
+    var uriString = "https://example.com";
+    var uri = URI.create(uriString);
+    var adapterCodec = AdapterCodec.newBuilder().encoder(encoder).build();
+    verifyThat(
+            MutableRequest.POST(uriString, payload, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPOST()
+        .hasBodyPublisher(publisher);
+    verifyThat(MutableRequest.POST(uri, payload, MediaType.TEXT_PLAIN).adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPOST()
+        .hasBodyPublisher(publisher);
+
+    verifyThat(
+            MutableRequest.PUT(uriString, payload, MediaType.TEXT_PLAIN).adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPUT()
+        .hasBodyPublisher(publisher);
+    verifyThat(MutableRequest.PUT(uri, payload, MediaType.TEXT_PLAIN).adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPUT()
+        .hasBodyPublisher(publisher);
+
+    verifyThat(
+            MutableRequest.PATCH(uriString, payload, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPATCH()
+        .hasBodyPublisher(publisher);
+    verifyThat(MutableRequest.PATCH(uri, payload, MediaType.TEXT_PLAIN).adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPATCH()
+        .hasBodyPublisher(publisher);
   }
 
   @Test
@@ -174,12 +251,18 @@ class MutableRequestTest {
             "Accept", "text/html",
             "Cookie", "sessionid=123",
             "Cookie", "password=321");
-    var request = MutableRequest.create().headers(headers);
-    verifyThat(request).containsHeadersExactly(headers);
+    var request = MutableRequest.create().header("X-My-Header", "oyy").headers(headers);
+    verifyThat(request)
+        .containsHeadersExactly(
+            "X-My-Header", "oyy",
+            "Accept", "text/html",
+            "Cookie", "sessionid=123",
+            "Cookie", "password=321");
 
     request.header("Accept-Encoding", "gzip");
     verifyThat(request)
         .containsHeadersExactly(
+            "X-My-Header", "oyy",
             "Accept", "text/html",
             "Cookie", "sessionid=123",
             "Cookie", "password=321",
@@ -187,7 +270,7 @@ class MutableRequestTest {
   }
 
   @Test
-  void mutableCopyForBasicFields() {
+  void mutableCopyOfBasicFields() {
     var request =
         MutableRequest.create()
             .POST(BodyPublishers.ofString("something"))
@@ -203,7 +286,7 @@ class MutableRequestTest {
   }
 
   @Test
-  void immutableCopyForBasicFields() {
+  void immutableCopyOfBasicFields() {
     var request =
         MutableRequest.create()
             .POST(BodyPublishers.ofString("something"))
@@ -258,18 +341,10 @@ class MutableRequestTest {
   }
 
   @Test
-  void staticFactories() {
-    var uri = URI.create("https://example.com");
-
-    verifyThat(MutableRequest.create(uri)).hasUri(uri).isGET().hasNoBody();
-
-    verifyThat(MutableRequest.GET(uri)).hasUri(uri).isGET().hasNoBody();
-
-    var publisher = BodyPublishers.ofString("something");
-    verifyThat(MutableRequest.POST(uri, publisher))
-        .hasUri(uri)
-        .isPOST()
-        .hasBodyPublisher(publisher);
+  void setAdapterCodec() {
+    var adapterCodec = AdapterCodec.newBuilder().build();
+    assertThat(MutableRequest.create().adapterCodec(adapterCodec).adapterCodec())
+        .hasValue(adapterCodec);
   }
 
   @Test
@@ -277,17 +352,32 @@ class MutableRequestTest {
     var request = MutableRequest.create();
     var publisher = BodyPublishers.ofString("something");
 
-    request.POST(publisher);
-    verifyThat(request).isPOST().hasBodyPublisher(publisher);
+    verifyThat(request.POST(publisher)).isPOST().hasBodyPublisher(publisher);
 
-    request.GET();
-    verifyThat(request).isGET().hasNoBody();
+    verifyThat(request.GET()).isGET().hasNoBody();
 
-    request.PUT(publisher);
-    verifyThat(request).isPUT().hasBodyPublisher(publisher);
+    verifyThat(request.PUT(publisher)).isPUT().hasBodyPublisher(publisher);
 
-    request.DELETE();
-    verifyThat(request).isDELETE().hasNoBody();
+    verifyThat(request.PATCH(publisher)).isPATCH().hasBodyPublisher(publisher);
+
+    verifyThat(request.DELETE()).isDELETE().hasNoBody();
+  }
+
+  @Test
+  void httpMethodSettersWithPayload() {
+    var payload = new Object();
+    var publisher = BodyPublishers.ofString("abc");
+    var encoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, publisher);
+    var request =
+        MutableRequest.create().adapterCodec(AdapterCodec.newBuilder().encoder(encoder).build());
+
+    verifyThat(request.POST(payload, MediaType.TEXT_PLAIN)).isPOST().hasBodyPublisher(publisher);
+
+    verifyThat(request.PUT(payload, MediaType.TEXT_PLAIN)).isPUT().hasBodyPublisher(publisher);
+
+    verifyThat(request.PATCH(payload, MediaType.TEXT_PLAIN)).isPATCH().hasBodyPublisher(publisher);
+
+    verifyThat(request.GET()).isGET().hasNoBody();
   }
 
   @Test
@@ -357,8 +447,7 @@ class MutableRequestTest {
     var request =
         MutableRequest.GET("https://example.com")
             .cacheControl(CacheControl.newBuilder().maxAge(Duration.ofSeconds(1)).build());
-    verifyThat(request)
-        .containsHeadersExactly("Cache-Control", "max-age=1");
+    verifyThat(request).containsHeadersExactly("Cache-Control", "max-age=1");
   }
 
   @Test
@@ -367,8 +456,93 @@ class MutableRequestTest {
         MutableRequest.GET("https://example.com")
             .header("Cache-Control", "max-age=1")
             .cacheControl(CacheControl.newBuilder().maxAge(Duration.ofSeconds(2)).build());
-    verifyThat(request)
-        .containsHeadersExactly("Cache-Control", "max-age=2");
+    verifyThat(request).containsHeadersExactly("Cache-Control", "max-age=2");
+  }
+
+  @Test
+  void bodyPublisherIsCreatedOnce() {
+    var payload = new Object();
+    var encoder =
+        mockEncoderWith(
+            payload,
+            MediaType.TEXT_PLAIN,
+            () -> BodyPublishers.ofString("xyz")); // Return a new publisher each call.
+
+    var request =
+        MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN)
+            .adapterCodec(AdapterCodec.newBuilder().encoder(encoder).build());
+    var firstPublisher = request.bodyPublisher().orElseThrow();
+    verifyThat(request).hasBodyPublisher(firstPublisher);
+    verifyThat(request.copy()).hasBodyPublisher(firstPublisher);
+    verifyThat(request.toImmutableRequest()).hasBodyPublisher(firstPublisher);
+    verifyThat(MutableRequest.copyOf(request.toImmutableRequest()))
+        .hasBodyPublisher(firstPublisher);
+  }
+
+  @Test
+  void copyingPreservesPayload() {
+    var payload = new Object();
+    var publisher = BodyPublishers.ofString("abc");
+    var encoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, publisher);
+    var adapterCodec = AdapterCodec.newBuilder().encoder(encoder).build();
+
+    verifyThat(
+            MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec)
+                .copy())
+        .hasBodyPublisher(publisher);
+
+    verifyThat(
+            MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec)
+                .toImmutableRequest())
+        .hasBodyPublisher(publisher);
+
+    verifyThat(
+            MutableRequest.copyOf(
+                MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN)
+                    .adapterCodec(adapterCodec)
+                    .toImmutableRequest()))
+        .hasBodyPublisher(publisher);
+
+    verifyThat(
+            MutableRequest.copyOf(
+                    MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN)
+                        .adapterCodec(adapterCodec)
+                        .toImmutableRequest())
+                .toImmutableRequest())
+        .hasBodyPublisher(publisher);
+  }
+
+  @Test
+  void setBodyPublisherAsPayload() {
+    var publisher = BodyPublishers.ofString("abc");
+    assertThat(
+            MutableRequest.POST("https://example.com", publisher, MediaType.TEXT_PLAIN)
+                .bodyPublisher())
+        .hasValueSatisfying(
+            requestPublisher ->
+                assertThat(requestPublisher)
+                    .asInstanceOf(InstanceOfAssertFactories.type(MimeBodyPublisher.class))
+                    .extracting(MimeBodyPublisher::mediaType)
+                    .isEqualTo(MediaType.TEXT_PLAIN));
+  }
+
+  @Test
+  void changeAdapterCodecAfterResolvingPayload() {
+    var payload = new Object();
+    var firstPublisher = BodyPublishers.ofString("abc");
+    var firstEncoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, firstPublisher);
+
+    var request = MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN);
+    verifyThat(request.adapterCodec(AdapterCodec.newBuilder().encoder(firstEncoder).build()))
+        .hasBodyPublisher(firstPublisher);
+
+    var secondPublisher = BodyPublishers.ofString("xyz");
+    var secondEncoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, secondPublisher);
+
+    verifyThat(request.adapterCodec(AdapterCodec.newBuilder().encoder(secondEncoder).build()))
+        .hasBodyPublisher(secondPublisher);
   }
 
   @Test
@@ -403,5 +577,23 @@ class MutableRequestTest {
   void illegalMethodName() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> MutableRequest.create().method("ba\r", BodyPublishers.noBody()));
+  }
+
+  private static BodyAdapter.Encoder mockEncoderWith(
+      Object payload, MediaType mediaType, BodyPublisher publisher) {
+    var encoder = mock(BodyAdapter.Encoder.class);
+    when(encoder.supportsType(TypeRef.from(Object.class))).thenReturn(true);
+    when(encoder.isCompatibleWith(mediaType)).thenReturn(true);
+    when(encoder.toBody(payload, mediaType)).thenReturn(publisher);
+    return encoder;
+  }
+
+  private static BodyAdapter.Encoder mockEncoderWith(
+      Object payload, MediaType mediaType, Supplier<BodyPublisher> publisherSupplier) {
+    var encoder = mock(BodyAdapter.Encoder.class);
+    when(encoder.supportsType(TypeRef.from(Object.class))).thenReturn(true);
+    when(encoder.isCompatibleWith(mediaType)).thenReturn(true);
+    when(encoder.toBody(payload, mediaType)).thenAnswer(__ -> publisherSupplier.get());
+    return encoder;
   }
 }

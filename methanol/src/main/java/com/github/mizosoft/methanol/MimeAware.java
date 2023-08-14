@@ -22,12 +22,9 @@
 
 package com.github.mizosoft.methanol;
 
-import java.net.http.HttpRequest.BodyPublisher;
+/** An object, typically representing a request body, that has a {@link MediaType}. */
+interface MimeAware {
 
-/** A {@code BodyPublisher} with a {@linkplain MediaType media type}. */
-public interface MimeBodyPublisher extends BodyPublisher, MimeAware {
-
-  /** Returns the body's media type. */
-  @Override
+  /** Returns this object's media type. */
   MediaType mediaType();
 }
