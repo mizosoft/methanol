@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -236,6 +236,7 @@ class AdapterCodecTest {
       @SuppressWarnings("unchecked")
       @Override
       public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
+        requireSupport(object.getClass());
         return attachMediaType(BodyPublishers.ofString(encode.apply((V) object)), mediaType);
       }
     }
@@ -251,6 +252,7 @@ class AdapterCodecTest {
       @SuppressWarnings("unchecked")
       @Override
       public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+        requireSupport(objectType);
         return (BodySubscriber<T>)
             BodySubscribers.mapping(BodySubscribers.ofString(charsetOrUtf8(mediaType)), decode);
       }
