@@ -118,30 +118,11 @@ public final class AdapterCodec {
    *
    * @throws UnsupportedOperationException if no decoder supporting the given object type is found
    */
-  public <T> BodyHandler<T> handlerOf(Class<T> clazz) {
-    return handlerOf(TypeRef.from(clazz));
-  }
-
-  /**
-   * Returns a {@code BodyHandler} that decodes the response body into an object of the given type.
-   *
-   * @throws UnsupportedOperationException if no decoder supporting the given object type is found
-   */
   public <T> BodyHandler<T> handlerOf(TypeRef<T> objectType) {
     requireDecoderSupport(decoders, objectType);
     return responseInfo -> subscriberOf(objectType, mediaTypeOrAny(responseInfo.headers()));
   }
-
-  /**
-   * Returns a {@code BodyHandler} that lazily decodes the response body into an object of the given
-   * type.
-   *
-   * @throws UnsupportedOperationException if no decoder supporting the given object type is found
-   */
-  public <T> BodyHandler<Supplier<T>> deferredHandlerOf(Class<T> clazz) {
-    return deferredHandlerOf(TypeRef.from(clazz));
-  }
-
+  
   /**
    * Returns a {@code BodyHandler} that lazily decodes the response body into an object of the given
    * type.

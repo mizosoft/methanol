@@ -87,9 +87,6 @@ class AdapterCodecTest {
   @Test
   void handleToInt() {
     var codec = AdapterCodec.newBuilder().decoder(new IntDecoder()).build();
-    verifyThat(codec.handlerOf(Integer.class).apply(responseInfoOf(X_NUMBER_INT)))
-        .publishing("1")
-        .succeedsWith(1);
     verifyThat(codec.handlerOf(TypeRef.from(Integer.class)).apply(responseInfoOf(X_NUMBER_INT)))
         .publishing("1")
         .succeedsWith(1);
@@ -98,10 +95,6 @@ class AdapterCodecTest {
   @Test
   void deferredHandleToInt() {
     var codec = AdapterCodec.newBuilder().decoder(new IntDecoder()).build();
-    verifyThat(codec.deferredHandlerOf(Integer.class).apply(responseInfoOf(X_NUMBER_INT)))
-        .publishing("1")
-        .completedBody()
-        .returns(1, from(Supplier::get));
     verifyThat(
             codec
                 .deferredHandlerOf(TypeRef.from(Integer.class))
@@ -161,10 +154,6 @@ class AdapterCodecTest {
         .isInstanceOf(UnsupportedOperationException.class);
 
     assertThatThrownBy(() -> codec.handlerOf(TypeRef.from(Double.class)))
-        .isInstanceOf(UnsupportedOperationException.class);
-
-    var handler = codec.handlerOf(Integer.class);
-    assertThatThrownBy(() -> handler.apply(responseInfoOf(TEXT_PLAIN)))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
