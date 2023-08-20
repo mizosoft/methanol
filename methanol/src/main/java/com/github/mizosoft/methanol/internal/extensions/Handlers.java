@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +25,7 @@ package com.github.mizosoft.methanol.internal.extensions;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandler;
-import java.net.http.HttpResponse.BodyHandlers;
-import java.net.http.HttpResponse.BodySubscriber;
-import java.net.http.HttpResponse.PushPromiseHandler;
+import java.net.http.HttpResponse.*;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -36,10 +33,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Function;
 
-/**
- * Utilities for handling an {@code HttpResponse<Publisher<List<ByteBuffer>>>} to obtain an {@code
- * HttpResponse<T>}.
- */
+/** Static functions for converting the response body into a usable body type. */
 public class Handlers {
   private Handlers() {}
 
@@ -52,24 +46,34 @@ public class Handlers {
 
   public static <T> CompletableFuture<HttpResponse<T>> handleAsync(
       HttpResponse<?> response,
-      Publisher<List<ByteBuffer>> bodyPublisher,
+      Publisher<List<ByteBuffer>> publisher,
       BodyHandler<T> handler,
       Executor executor) {
-    var subscriberFuture =
-        CompletableFuture.supplyAsync(
-            () -> handler.apply(ImmutableResponseInfo.from(response)), executor);
-    subscriberFuture.thenAcceptAsync(bodyPublisher::subscribe, executor);
-    return subscriberFuture
-        .thenComposeAsync(BodySubscriber::getBody, executor)
+    return handleAsync(ImmutableResponseInfo.from(response), publisher, handler, executor)
         .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).build());
   }
 
+  public static <T> CompletableFuture<T> handleAsync(
+      ResponseInfo responseInfo,
+      Publisher<List<ByteBuffer>> publisher,
+      BodyHandler<T> handler,
+      Executor executor) {
+    var subscriber = handler.apply(responseInfo);
+
+    // Publisher::subscribe can initiate body flow synchronously, which might block.
+    CompletableFuture.runAsync(() -> publisher.subscribe(subscriber), executor);
+
+    // BodySubscriber::getBody can block (see doc of BodySubscribers::mapping).
+    return CompletableFuture.supplyAsync(subscriber::getBody, executor)
+        .thenCompose(Function.identity());
+  }
+
   public static <T> Chain<Publisher<List<ByteBuffer>>> toPublisherChain(
-      Chain<T> chain, Executor handlerExecutor) {
+      Chain<T> chain, Executor executor) {
     var relayingPushPromiseHandler =
         chain
             .pushPromiseHandler()
-            .map(pushHandler -> toRelayingPushPromiseHandler(pushHandler, handlerExecutor))
+            .map(pushHandler -> toRelayingPushPromiseHandler(pushHandler, executor))
             .orElse(null);
     return chain.with(BodyHandlers.ofPublisher(), relayingPushPromiseHandler);
   }
@@ -78,8 +82,6 @@ public class Handlers {
    * Returns a publisher-based {@code PushPromiseHandler} that relays to the given downstream {@code
    * PushPromiseHandler} and handles the bodies of accepted push promises using the correct response
    * type.
-   *
-   * @param executor used to invoke the body handlers of accepted push promises
    */
   private static <T> PushPromiseHandler<Publisher<List<ByteBuffer>>> toRelayingPushPromiseHandler(
       PushPromiseHandler<T> downstreamPushPromiseHandler, Executor executor) {
