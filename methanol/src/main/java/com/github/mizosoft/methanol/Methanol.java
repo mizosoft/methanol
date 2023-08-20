@@ -23,9 +23,7 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
-import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
-import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static com.github.mizosoft.methanol.internal.flow.FlowSupport.SYNC_EXECUTOR;
+import static com.github.mizosoft.methanol.internal.Validate.*;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
@@ -36,6 +34,7 @@ import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
@@ -80,10 +79,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * <ul>
  *   <li>Specify a {@link BaseBuilder#baseUri(URI) base URI}.
  *   <li>Specify a default {@link HttpRequest#timeout() request timeout}.
+ *   <li>Specify a read timeout.
  *   <li>Add a set of default HTTP headers for inclusion in requests if absent.
  *   <li>Add an {@link HttpCache HTTP caching} layer.
  *   <li>{@link BaseBuilder#autoAcceptEncoding(boolean) Transparent} response decompression.
  *   <li>Intercept requests and responses going through this client.
+ *   <li>Specify an {@link AdapterCodec} to automatically convert to/from request/response bodies.
  *   <li>Get {@code Publisher<HttpResponse<T>>} for asynchronous requests.
  * </ul>
  *
@@ -106,6 +107,7 @@ public final class Methanol extends HttpClient {
   private final Optional<Duration> headersTimeout;
   private final Optional<Duration> requestTimeout;
   private final Optional<Duration> readTimeout;
+  private final Optional<AdapterCodec> adapterCodec;
   private final boolean autoAcceptEncoding;
   private final List<Interceptor> interceptors;
   private final List<Interceptor> backendInterceptors;
@@ -123,6 +125,7 @@ public final class Methanol extends HttpClient {
     headersTimeout = Optional.ofNullable(builder.headersTimeout);
     requestTimeout = Optional.ofNullable(builder.requestTimeout);
     readTimeout = Optional.ofNullable(builder.readTimeout);
+    adapterCodec = Optional.ofNullable(builder.adapterCodec);
     autoAcceptEncoding = builder.autoAcceptEncoding;
     interceptors = List.copyOf(builder.interceptors);
     backendInterceptors = List.copyOf(builder.backendInterceptors);
@@ -134,7 +137,7 @@ public final class Methanol extends HttpClient {
     var mergedInterceptors = new ArrayList<>(interceptors);
     mergedInterceptors.add(
         new RequestRewritingInterceptor(
-            baseUri, defaultHeaders, requestTimeout, autoAcceptEncoding));
+            baseUri, requestTimeout, adapterCodec, defaultHeaders, autoAcceptEncoding));
     if (autoAcceptEncoding) {
       mergedInterceptors.add(AutoDecompressingInterceptor.INSTANCE);
     }
@@ -164,7 +167,7 @@ public final class Methanol extends HttpClient {
    */
   public <T> Publisher<HttpResponse<T>> exchange(HttpRequest request, BodyHandler<T> bodyHandler) {
     return new HttpResponsePublisher<>(
-        this, request, bodyHandler, null, executor().orElse(SYNC_EXECUTOR));
+        this, request, bodyHandler, null, executor().orElse(FlowSupport.SYNC_EXECUTOR));
   }
 
   /**
@@ -182,7 +185,11 @@ public final class Methanol extends HttpClient {
       BodyHandler<T> bodyHandler,
       Function<HttpRequest, @Nullable BodyHandler<T>> pushPromiseMapper) {
     return new HttpResponsePublisher<>(
-        this, request, bodyHandler, pushPromiseMapper, executor().orElse(SYNC_EXECUTOR));
+        this,
+        request,
+        bodyHandler,
+        pushPromiseMapper,
+        executor().orElse(FlowSupport.SYNC_EXECUTOR));
   }
 
   /** Returns the underlying {@code HttpClient} used for sending requests. */
@@ -263,6 +270,10 @@ public final class Methanol extends HttpClient {
     return caches;
   }
 
+  public Optional<AdapterCodec> adapterCodec() {
+    return adapterCodec;
+  }
+
   @Override
   public Optional<CookieHandler> cookieHandler() {
     return backend.cookieHandler();
@@ -328,6 +339,33 @@ public final class Methanol extends HttpClient {
       @Nullable PushPromiseHandler<T> pushPromiseHandler) {
     return new InterceptorChain<>(backend, bodyHandler, pushPromiseHandler, mergedInterceptors)
         .forwardAsync(request);
+  }
+
+  public <T> HttpResponse<T> send(HttpRequest request, Class<T> bodyType)
+      throws IOException, InterruptedException {
+    return send(request, TypeRef.from(bodyType));
+  }
+
+  public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, Class<T> bodyType) {
+    return sendAsync(request, TypeRef.from(bodyType));
+  }
+
+  public <T> HttpResponse<T> send(HttpRequest request, TypeRef<T> bodyType)
+      throws IOException, InterruptedException {
+    return new InterceptorChain<>(
+            backend, adapterCodecOrInstalled().handlerOf(bodyType), null, mergedInterceptors)
+        .forward(request);
+  }
+
+  public <T> CompletableFuture<HttpResponse<T>> sendAsync(
+      HttpRequest request, TypeRef<T> bodyType) {
+    return new InterceptorChain<>(
+            backend, adapterCodecOrInstalled().handlerOf(bodyType), null, mergedInterceptors)
+        .forwardAsync(request);
+  }
+
+  private AdapterCodec adapterCodecOrInstalled() {
+    return adapterCodec.orElseGet(AdapterCodec::installed);
   }
 
   private static URI validateUri(URI uri) {
@@ -471,6 +509,7 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull Delayer headersTimeoutDelayer;
     @MonotonicNonNull Duration readTimeout;
     @MonotonicNonNull Delayer readTimeoutDelayer;
+    @MonotonicNonNull AdapterCodec adapterCodec;
     boolean autoAcceptEncoding = true;
 
     final List<Interceptor> interceptors = new ArrayList<>();
@@ -584,6 +623,12 @@ public final class Methanol extends HttpClient {
     private B readTimeout(Duration readTimeout, Delayer delayer) {
       this.readTimeout = requirePositiveDuration(readTimeout);
       this.readTimeoutDelayer = requireNonNull(delayer);
+      return self();
+    }
+
+    /** Specifies the {@code AdapterCodec} with which request and response payloads are mapped. */
+    public B adapterCodec(AdapterCodec adapterCodec) {
+      this.adapterCodec = requireNonNull(adapterCodec);
       return self();
     }
 
@@ -834,7 +879,7 @@ public final class Methanol extends HttpClient {
     public CompletableFuture<HttpResponse<T>> forwardAsync(HttpRequest request) {
       requireNonNull(request);
       if (currentInterceptorIndex >= interceptors.size()) {
-        // sendAsync accepts a nullable pushPromiseHandler
+        // sendAsync accepts a nullable pushPromiseHandler.
         return backend.sendAsync(request, bodyHandler, pushPromiseHandler);
       }
 
@@ -848,20 +893,23 @@ public final class Methanol extends HttpClient {
     }
   }
 
-  /** Rewrites requests as configured. */
+  /** An interceptor that rewrites requests as configured. */
   private static final class RequestRewritingInterceptor implements Interceptor {
     private final Optional<URI> baseUri;
     private final Optional<Duration> requestTimeout;
+    private final Optional<AdapterCodec> adapterCodec;
     private final HttpHeaders defaultHeaders;
     private final boolean autoAcceptEncoding;
 
     RequestRewritingInterceptor(
         Optional<URI> baseUri,
-        HttpHeaders defaultHeaders,
         Optional<Duration> requestTimeout,
+        Optional<AdapterCodec> adapterCodec,
+        HttpHeaders defaultHeaders,
         boolean autoAcceptEncoding) {
       this.baseUri = baseUri;
       this.requestTimeout = requestTimeout;
+      this.adapterCodec = adapterCodec;
       this.defaultHeaders = defaultHeaders;
       this.autoAcceptEncoding = autoAcceptEncoding;
     }
@@ -880,6 +928,7 @@ public final class Methanol extends HttpClient {
 
     private HttpRequest rewriteRequest(HttpRequest request) {
       var rewrittenRequest = MutableRequest.copyOf(request);
+      adapterCodec.ifPresent(rewrittenRequest::adapterCodec);
 
       baseUri.map(baseUri -> baseUri.resolve(request.uri())).ifPresent(rewrittenRequest::uri);
       validateUri(rewrittenRequest.uri());
@@ -903,11 +952,9 @@ public final class Methanol extends HttpClient {
         }
       }
 
-      // Overwrite Content-Type if request body is a MimeBodyPublisher.
-      request
-          .bodyPublisher()
-          .filter(MimeBodyPublisher.class::isInstance)
-          .map(body -> ((MimeBodyPublisher) body).mediaType())
+      // Overwrite Content-Type if the request body has a MediaType.
+      rewrittenRequest
+          .bodyMediaType()
           .ifPresent(mediaType -> rewrittenRequest.setHeader("Content-Type", mediaType.toString()));
 
       if (request.timeout().isEmpty()) {
@@ -984,7 +1031,8 @@ public final class Methanol extends HttpClient {
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
       var timeoutTrigger = new TimeoutTrigger();
-      var triggerFuture = delayer.delay(timeoutTrigger::trigger, headersTimeout, SYNC_EXECUTOR);
+      var triggerFuture =
+          delayer.delay(timeoutTrigger::trigger, headersTimeout, FlowSupport.SYNC_EXECUTOR);
       timeoutTrigger.onCancellation(() -> triggerFuture.cancel(false));
 
       var responseFuture = withHeadersTimeout(chain, timeoutTrigger).forwardAsync(request);

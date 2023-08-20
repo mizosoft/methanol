@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.from;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.testing.HttpClientStub;
 import com.github.mizosoft.methanol.testing.HttpResponseStub;
+import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.Authenticator;
 import java.net.CookieManager;
@@ -70,12 +71,16 @@ class MethanolTest {
     assertThat(client.backendInterceptors()).isEmpty();
     assertThat(client.defaultHeaders().map()).isEmpty();
     assertThat(client.autoAcceptEncoding()).isTrue();
+    assertThat(client.cache()).isEmpty();
+    assertThat(client.caches()).isEmpty();
+    assertThat(client.adapterCodec()).isEmpty();
   }
 
   @Test
-  void settingFields() {
+  void settingBasicExtensionFields() {
     var interceptor = Interceptor.create(UnaryOperator.identity());
     var backendInterceptor = Interceptor.create(UnaryOperator.identity());
+    var adapterCodec = AdapterCodec.newBuilder().build();
     var client =
         Methanol.newBuilder()
             .userAgent("Will Smith")
@@ -87,6 +92,7 @@ class MethanolTest {
             .autoAcceptEncoding(false)
             .interceptor(interceptor)
             .backendInterceptor(backendInterceptor)
+            .adapterCodec(adapterCodec)
             .build();
     assertThat(client.userAgent()).hasValue("Will Smith");
     assertThat(client.baseUri()).hasValue(URI.create("https://example.com"));
@@ -101,6 +107,7 @@ class MethanolTest {
     assertThat(client.autoAcceptEncoding()).isFalse();
     assertThat(client.interceptors()).containsExactly(interceptor);
     assertThat(client.backendInterceptors()).containsExactly(backendInterceptor);
+    assertThat(client.adapterCodec()).hasValue(adapterCodec);
   }
 
   @Test
@@ -341,6 +348,22 @@ class MethanolTest {
     var request = GET("https://example.com").tag(Integer.class, 1);
     client.send(request, BodyHandlers.discarding());
     verifyThat(backend.request).containsTag(Integer.class, 1);
+  }
+
+  @Test
+  void requestPayloadIsMappedToBodyPublisher() {
+    var payload = new Object();
+    var publisher = BodyPublishers.ofString("abc");
+    var encoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, publisher);
+    var backend = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(backend)
+            .adapterCodec(AdapterCodec.newBuilder().encoder(encoder).build())
+            .build();
+    client.sendAsync(
+        MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN),
+        BodyHandlers.discarding());
+    verifyThat(backend.lastCall().request()).hasBodyPublisher(publisher);
   }
 
   @Test

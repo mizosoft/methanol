@@ -28,16 +28,13 @@ import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.*;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
-import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.*;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
-import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
-import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
@@ -47,6 +44,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.net.http.HttpTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
@@ -56,11 +54,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
-import mockwebserver3.MockResponse;
-import mockwebserver3.MockWebServer;
-import mockwebserver3.PushPromise;
+import mockwebserver3.*;
 import okhttp3.Headers;
 import org.assertj.core.api.Assertions;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -427,6 +424,96 @@ class MethanolClientTest {
         .hasBody("Pikachu")
         .doesNotContainHeader("Content-Encoding")
         .doesNotContainHeader("Content-Length");
+  }
+
+  @Test
+  void postStringPayload() throws Exception {
+    var client =
+        clientBuilder
+            .adapterCodec(AdapterCodec.newBuilder().encoder(new CharSequenceEncoder()).build())
+            .build();
+
+    server.enqueue(new MockResponse());
+    client.send(
+        MutableRequest.POST(serverUri, "Pikachu", MediaType.TEXT_PLAIN), BodyHandlers.ofString());
+
+    assertThat(server.takeRequest())
+        .returns(
+            "Pikachu",
+            from(recordedRequest -> recordedRequest.getBody().readString(StandardCharsets.UTF_8)))
+        .returns("text/plain", from(recordedRequest -> recordedRequest.getHeader("Content-Type")));
+  }
+
+  @Test
+  void getStringPayload() throws Exception {
+    var client =
+        clientBuilder
+            .adapterCodec(AdapterCodec.newBuilder().decoder(new StringDecoder()).build())
+            .build();
+
+    server.enqueue(
+        new MockResponse()
+            .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
+            .addHeader("Content-Type", "text/plain"));
+    verifyThat(client.send(MutableRequest.GET(serverUri), String.class)).hasBody("Pikachu");
+
+    server.enqueue(
+        new MockResponse()
+            .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
+            .addHeader("Content-Type", "text/plain"));
+    verifyThat(client.send(MutableRequest.GET(serverUri), TypeRef.from(String.class)))
+        .hasBody("Pikachu");
+
+    server.enqueue(
+        new MockResponse()
+            .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
+            .addHeader("Content-Type", "text/plain"));
+    verifyThat(client.sendAsync(MutableRequest.GET(serverUri), String.class).join())
+        .hasBody("Pikachu");
+
+    server.enqueue(
+        new MockResponse()
+            .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
+            .addHeader("Content-Type", "text/plain"));
+    verifyThat(client.sendAsync(MutableRequest.GET(serverUri), TypeRef.from(String.class)).join())
+        .hasBody("Pikachu");
+  }
+
+  @Test
+  void stringPingPong() throws Exception {
+    var client =
+        clientBuilder
+            .adapterCodec(
+                AdapterCodec.newBuilder()
+                    .encoder(new CharSequenceEncoder())
+                    .decoder(new StringDecoder())
+                    .build())
+            .build();
+
+    server.setDispatcher(
+        new Dispatcher() {
+          @NotNull
+          @Override
+          public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
+            var response = new MockResponse().setBody(recordedRequest.getBody());
+            var contentType = recordedRequest.getHeader("Content-Type");
+            if (contentType != null) {
+              response.setHeader("Content-Type", contentType);
+            }
+            return response;
+          }
+        });
+
+    verifyThat(
+            client.send(
+                MutableRequest.POST(serverUri, "Pikachu", MediaType.TEXT_PLAIN), String.class))
+        .hasBody("Pikachu");
+
+    assertThat(server.takeRequest())
+        .returns(
+            "Pikachu",
+            from(recordedRequest -> recordedRequest.getBody().readString(StandardCharsets.UTF_8)))
+        .returns("text/plain", from(recordedRequest -> recordedRequest.getHeader("Content-Type")));
   }
 
   private static String acceptEncodingValue() {

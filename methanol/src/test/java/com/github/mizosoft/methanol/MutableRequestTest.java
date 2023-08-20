@@ -26,17 +26,13 @@ import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.net.http.HttpClient.Version;
-import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
 
@@ -128,7 +124,7 @@ class MutableRequestTest {
   void staticFactoriesWithPayload() {
     var payload = new Object();
     var publisher = BodyPublishers.ofString("abc");
-    var encoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, publisher);
+    var encoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, publisher);
 
     var uriString = "https://example.com";
     var uri = URI.create(uriString);
@@ -367,7 +363,7 @@ class MutableRequestTest {
   void httpMethodSettersWithPayload() {
     var payload = new Object();
     var publisher = BodyPublishers.ofString("abc");
-    var encoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, publisher);
+    var encoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, publisher);
     var request =
         MutableRequest.create().adapterCodec(AdapterCodec.newBuilder().encoder(encoder).build());
 
@@ -463,7 +459,7 @@ class MutableRequestTest {
   void bodyPublisherIsCreatedOnce() {
     var payload = new Object();
     var encoder =
-        mockEncoderWith(
+        AdapterMocker.mockEncoder(
             payload,
             MediaType.TEXT_PLAIN,
             () -> BodyPublishers.ofString("xyz")); // Return a new publisher each call.
@@ -483,7 +479,7 @@ class MutableRequestTest {
   void copyingPreservesPayload() {
     var payload = new Object();
     var publisher = BodyPublishers.ofString("abc");
-    var encoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, publisher);
+    var encoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, publisher);
     var adapterCodec = AdapterCodec.newBuilder().encoder(encoder).build();
 
     verifyThat(
@@ -532,14 +528,14 @@ class MutableRequestTest {
   void changeAdapterCodecAfterResolvingPayload() {
     var payload = new Object();
     var firstPublisher = BodyPublishers.ofString("abc");
-    var firstEncoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, firstPublisher);
+    var firstEncoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, firstPublisher);
 
     var request = MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN);
     verifyThat(request.adapterCodec(AdapterCodec.newBuilder().encoder(firstEncoder).build()))
         .hasBodyPublisher(firstPublisher);
 
     var secondPublisher = BodyPublishers.ofString("xyz");
-    var secondEncoder = mockEncoderWith(payload, MediaType.TEXT_PLAIN, secondPublisher);
+    var secondEncoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, secondPublisher);
 
     verifyThat(request.adapterCodec(AdapterCodec.newBuilder().encoder(secondEncoder).build()))
         .hasBodyPublisher(secondPublisher);
@@ -577,23 +573,5 @@ class MutableRequestTest {
   void illegalMethodName() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> MutableRequest.create().method("ba\r", BodyPublishers.noBody()));
-  }
-
-  private static BodyAdapter.Encoder mockEncoderWith(
-      Object payload, MediaType mediaType, BodyPublisher publisher) {
-    var encoder = mock(BodyAdapter.Encoder.class);
-    when(encoder.supportsType(TypeRef.from(Object.class))).thenReturn(true);
-    when(encoder.isCompatibleWith(mediaType)).thenReturn(true);
-    when(encoder.toBody(payload, mediaType)).thenReturn(publisher);
-    return encoder;
-  }
-
-  private static BodyAdapter.Encoder mockEncoderWith(
-      Object payload, MediaType mediaType, Supplier<BodyPublisher> publisherSupplier) {
-    var encoder = mock(BodyAdapter.Encoder.class);
-    when(encoder.supportsType(TypeRef.from(Object.class))).thenReturn(true);
-    when(encoder.isCompatibleWith(mediaType)).thenReturn(true);
-    when(encoder.toBody(payload, mediaType)).thenAnswer(__ -> publisherSupplier.get());
-    return encoder;
   }
 }
