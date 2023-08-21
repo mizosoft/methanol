@@ -53,7 +53,7 @@ public class Handlers {
         .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).build());
   }
 
-  public static <T> CompletableFuture<T> handleAsync(
+  private static <T> CompletableFuture<T> handleAsync(
       ResponseInfo responseInfo,
       Publisher<List<ByteBuffer>> publisher,
       BodyHandler<T> handler,
