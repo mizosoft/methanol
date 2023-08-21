@@ -361,8 +361,7 @@ class MethanolTest {
             .adapterCodec(AdapterCodec.newBuilder().encoder(encoder).build())
             .build();
     client.sendAsync(
-        MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN),
-        BodyHandlers.discarding());
+        POST("https://example.com", payload, MediaType.TEXT_PLAIN), BodyHandlers.discarding());
     verifyThat(backend.lastCall().request()).hasBodyPublisher(publisher);
   }
 
