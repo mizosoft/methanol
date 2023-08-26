@@ -38,15 +38,17 @@ import java.util.stream.Stream;
 import org.reactivestreams.tck.TestEnvironment;
 
 public class TckUtils {
-  private static final long TIMEOUT_MILLIS = 1000L;
-  private static final long NO_SIGNAL_TIMEOUT_MILLIS = 200L;
+  private static final long TIMEOUT_MILLIS = 200L;
+  private static final long NO_SIGNAL_TIMEOUT_MILLIS = 100L;
+
+  private static final long SLOW_TIMEOUT_MILLIS = 1500L;
+  private static final long SLOW_NO_SIGNAL_TIMEOUT_MILLIS = 200L;
 
   static final int BUFFER_SIZE = 1024;
 
   /**
    * An arbitrary max for the # of elements needed to be precomputed for creating the test
-   * publisher. This avoids OMEs when createFlowPublisher() is called with a large # of elements
-   * (currently happens with required_spec317_mustNotSignalOnErrorWhenPendingAboveLongMaxValue).
+   * publisher. This avoids OMEs when createFlowPublisher() is called with a large # of elements.
    */
   static final int MAX_PRECOMPUTED_ELEMENTS = 1 << 10;
 
@@ -59,8 +61,11 @@ public class TckUtils {
 
   private TckUtils() {}
 
-  static TestEnvironment testEnvironment() {
-    return new TestEnvironment(TIMEOUT_MILLIS, NO_SIGNAL_TIMEOUT_MILLIS, TIMEOUT_MILLIS);
+  static TestEnvironment newTestEnvironment(boolean isSlowTest) {
+    long timeoutMillis = isSlowTest ? SLOW_TIMEOUT_MILLIS : TIMEOUT_MILLIS;
+    long noSignalTimeoutMillis =
+        isSlowTest ? SLOW_NO_SIGNAL_TIMEOUT_MILLIS : NO_SIGNAL_TIMEOUT_MILLIS;
+    return new TestEnvironment(timeoutMillis, noSignalTimeoutMillis, timeoutMillis);
   }
 
   static <T, R> Publisher<R> map(Publisher<T> publisher, Function<? super T, ? extends R> mapper) {

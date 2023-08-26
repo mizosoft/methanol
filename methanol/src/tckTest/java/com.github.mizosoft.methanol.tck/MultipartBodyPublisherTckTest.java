@@ -50,7 +50,7 @@ public class MultipartBodyPublisherTckTest extends FlowPublisherVerification<Byt
 
   @Factory(dataProvider = "provider")
   public MultipartBodyPublisherTckTest(ExecutorType executorType) {
-    super(TckUtils.testEnvironment());
+    super(TckUtils.newTestEnvironment(false));
     this.executorType = executorType;
   }
 

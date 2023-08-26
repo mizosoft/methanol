@@ -53,7 +53,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
 
-@Slow
 public class AsyncBodyDecoderTckTest
     extends IdentityFlowProcessorVerification<List<AsyncBodyDecoderTckTest.ByteBufferHandle>> {
   private static final int BUFFERS_PER_LIST = 4;
@@ -64,7 +63,7 @@ public class AsyncBodyDecoderTckTest
 
   @Factory(dataProvider = "provider")
   public AsyncBodyDecoderTckTest(ExecutorType executorType) {
-    super(TckUtils.testEnvironment());
+    super(TckUtils.newTestEnvironment(false));
     this.executorType = executorType;
   }
 

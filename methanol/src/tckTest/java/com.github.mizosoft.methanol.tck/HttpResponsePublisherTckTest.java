@@ -57,7 +57,7 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
 
   @Factory(dataProvider = "provider")
   public HttpResponsePublisherTckTest(ExecutorType executorType) {
-    super(TckUtils.testEnvironment());
+    super(TckUtils.newTestEnvironment(true));
     this.executorType = executorType;
   }
 

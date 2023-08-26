@@ -46,7 +46,7 @@ public class AbstractSubscriptionTckTest extends FlowPublisherVerification<Long>
 
   @Factory(dataProvider = "provider")
   public AbstractSubscriptionTckTest(ExecutorType executorType) {
-    super(TckUtils.testEnvironment());
+    super(TckUtils.newTestEnvironment(false));
     this.executorType = executorType;
   }
 
