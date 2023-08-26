@@ -22,29 +22,28 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import org.testng.IAnnotationTransformer;
-import org.testng.annotations.ITestAnnotation;
-import org.testng.annotations.Test;
+import java.util.List;
+import org.testng.IMethodInstance;
+import org.testng.IMethodInterceptor;
+import org.testng.ITestContext;
 
-public final class DefaultTimeoutTransformer implements IAnnotationTransformer {
-  private static final int DEFAULT_TIMEOUT_MILLIS = 5000;
-  private static final int DEFAULT_SLOW_TIMEOUT_MILLIS = 20000;
+public final class DefaultTimeoutMethodInterceptor implements IMethodInterceptor {
+  private static final int DEFAULT_TIMEOUT_MILLIS = 2000;
+  private static final int DEFAULT_SLOW_TIMEOUT_MILLIS = 100000;
 
-  public DefaultTimeoutTransformer() {}
-
+  public DefaultTimeoutMethodInterceptor() {}
+  
   @Override
-  public void transform(
-      ITestAnnotation annotation, Class testClass, Constructor testConstructor, Method testMethod) {
-    if (testMethod != null
-        && testMethod.isAnnotationPresent(Test.class)
-        && annotation.getTimeOut() == 0) {
-      int timeoutMillis =
-          testMethod.getDeclaringClass().isAnnotationPresent(Slow.class)
-              ? DEFAULT_SLOW_TIMEOUT_MILLIS
-              : DEFAULT_TIMEOUT_MILLIS;
-      annotation.setTimeOut(timeoutMillis);
+  public List<IMethodInstance> intercept(List<IMethodInstance> methods, ITestContext context) {
+    for (var method : methods) {
+      if (method.getMethod().getTimeOut() == 0) { // Don't override timeout.
+        int timeoutMillis =
+            method.getInstance().getClass().isAnnotationPresent(Slow.class)
+                ? DEFAULT_SLOW_TIMEOUT_MILLIS
+                : DEFAULT_TIMEOUT_MILLIS;
+        method.getMethod().setTimeOut(timeoutMillis);
+      }
     }
+    return methods;
   }
 }
