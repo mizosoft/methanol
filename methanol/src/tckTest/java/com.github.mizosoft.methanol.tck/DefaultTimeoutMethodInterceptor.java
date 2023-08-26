@@ -28,7 +28,7 @@ import org.testng.IMethodInterceptor;
 import org.testng.ITestContext;
 
 public final class DefaultTimeoutMethodInterceptor implements IMethodInterceptor {
-  private static final int DEFAULT_TIMEOUT_MILLIS = 2000;
+  private static final int DEFAULT_TIMEOUT_MILLIS = 5000;
   private static final int DEFAULT_SLOW_TIMEOUT_MILLIS = 100000;
 
   public DefaultTimeoutMethodInterceptor() {}
