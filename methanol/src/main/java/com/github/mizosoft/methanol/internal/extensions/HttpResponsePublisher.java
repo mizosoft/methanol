@@ -26,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.http.HttpClient;
@@ -40,6 +41,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -83,13 +86,6 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
 
   private static final class SubscriptionImpl<V>
       extends AbstractQueueSubscription<HttpResponse<V>> {
-    /**
-     * Initial value for {@link #ongoing} indicating that the request/response(s) exchange hasn't
-     * been initiated yet. MUST be negative! So it is not confused with any next possible value for
-     * {@code ongoing}, which is always non-negative after the initial request.
-     */
-    private static final int IDLE = -1;
-
     private static final VarHandle ONGOING;
 
     static {
@@ -106,14 +102,28 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
     private final BodyHandler<V> handler;
     private final @Nullable PushPromiseHandler<V> pushPromiseHandler;
 
-    /**
-     * The number of currently ongoing requests (the original request plus push promises, if any),
-     * or {@link #IDLE} if the request hasn't been sent yet.
-     */
-    @SuppressWarnings({"unused", "FieldMayBeFinal"}) // VarHandle indirection.
-    private volatile int ongoing = IDLE;
+    private final Lock lock = new ReentrantLock();
 
-    private volatile boolean isInitialResponseBodyComplete;
+    /**
+     * The number of currently ongoing requests (original request plus push promises, if any). This
+     * starts with 1 to not have to acquire the lock in {@link #emit(Subscriber, long)} when the
+     * initial request is sent.
+     */
+    @GuardedBy("lock")
+    private int ongoing = 1;
+
+    /**
+     * Whether the main response body has been received. After which we won't be expecting any push
+     * promises.
+     */
+    @GuardedBy("lock")
+    private boolean isInitialResponseBodyComplete;
+
+    /**
+     * Whether we've sent the initial request, which is delayed till we receive positive demand for
+     * the first time. This doesn't need any synchronization as there's no contention.
+     */
+    private boolean isInitialRequestSent;
 
     SubscriptionImpl(
         Subscriber<? super HttpResponse<V>> downstream, HttpResponsePublisher<V> publisher) {
@@ -129,10 +139,8 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
 
     @Override
     protected long emit(Subscriber<? super HttpResponse<V>> downstream, long emit) {
-      if (emit > 0 && ongoing == IDLE) {
-        // No concurrent modification for 'ongoing' can be running at this point as nothing can be
-        // received yet.
-        ONGOING.getAndAdd(this, -IDLE + 1);
+      if (emit > 0 && !isInitialRequestSent) {
+        isInitialRequestSent = true;
         try {
           client
               .sendAsync(initialRequest, this::notifyOnBodyCompletion, pushPromiseHandler)
@@ -149,14 +157,16 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
       if (exception != null) {
         fireOrKeepAliveOnError(exception);
       } else {
-        // The order of reading here is significant. After isInitialResponseBodyComplete is true, no
-        // increments to ongoing are possible as all push promises would've been received (if we see
-        // a zero, then it's the final value). However, had we read ongoing first, we might miss
-        // potential concurrent increments up to reading isInitialResponseBodyComplete. If the
-        // latter is true, we'll complete downstream prematurely.
-        boolean noMorePushPromises = isInitialResponseBodyComplete;
-        int currentOngoing = (int) ONGOING.getAndAdd(this, -1) - 1;
-        if (noMorePushPromises && currentOngoing == 0) {
+        boolean isComplete;
+        lock.lock();
+        try {
+          int ongoingAfterDecrement = --ongoing;
+          isComplete = ongoingAfterDecrement == 0 && isInitialResponseBodyComplete;
+        } finally {
+          lock.unlock();
+        }
+
+        if (isComplete) {
           submitAndComplete(response);
         } else {
           submit(response);
@@ -165,8 +175,16 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
     }
 
     private void onInitialResponseBodyCompletion() {
-      isInitialResponseBodyComplete = true;
-      if (ongoing == 0) {
+      boolean isComplete;
+      lock.lock();
+      try {
+        isInitialResponseBodyComplete = true;
+        isComplete = ongoing == 0;
+      } finally {
+        lock.unlock();
+      }
+
+      if (isComplete) {
         complete();
       } else {
         fireOrKeepAlive();
@@ -190,7 +208,15 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
           HttpRequest initiatingRequest,
           HttpRequest pushPromiseRequest,
           Function<BodyHandler<V>, CompletableFuture<HttpResponse<V>>> acceptor) {
-        if (isInitialResponseBodyComplete) {
+        boolean localIsInitialResponseBodyComplete;
+        lock.lock();
+        try {
+          localIsInitialResponseBodyComplete = isInitialResponseBodyComplete;
+        } finally {
+          lock.unlock();
+        }
+
+        if (localIsInitialResponseBodyComplete) {
           fireOrKeepAliveOnError(
               new IllegalStateException(
                   "receiving push promise after initial response body has been received: "
