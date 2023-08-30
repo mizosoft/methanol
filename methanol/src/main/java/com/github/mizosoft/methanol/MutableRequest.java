@@ -40,9 +40,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A mutable {@link HttpRequest} that supports {@link TaggableRequest tags}, relative URIs & setting
- * arbitrary objects as request bodies. This class implements {@link HttpRequest.Builder} for
- * setting request fields. Querying a field before it's been set will return its default value.
+ * A mutable {@link HttpRequest} that supports {@link TaggableRequest tags}, relative URIs {@code &}
+ * setting arbitrary objects as request bodies. This class implements {@link HttpRequest.Builder}
+ * for setting request fields. Querying a field before it's been set will return its default value.
  * Invoking {@link #toImmutableRequest()} will return an immutable copy that is independent of this
  * instance.
  *
