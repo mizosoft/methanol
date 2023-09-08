@@ -519,6 +519,8 @@ public final class Methanol extends HttpClient {
     @MonotonicNonNull List<HttpCache> caches = List.of();
     @MonotonicNonNull Redirect redirectPolicy;
 
+    BaseBuilder() {}
+
     /** Calls the given consumer against this builder. */
     public final B apply(Consumer<? super B> consumer) {
       consumer.accept(self());
@@ -720,11 +722,14 @@ public final class Methanol extends HttpClient {
       return this;
     }
 
-    public Builder cache(HttpCache firstCache, HttpCache... otherCaches) {
-      var caches = new HttpCache[1 + otherCaches.length];
-      caches[0] = firstCache;
-      System.arraycopy(otherCaches, 0, caches, 1, otherCaches.length);
-      super.caches = List.of(caches);
+    /**
+     * Sets a chain of caches to be called, one after another, in the order specified by the given
+     * list. Each cache forwards to the other till a suitable response is found or the request is
+     * sent to network. Although not enforced, it is highly recommended for the caches to be sorted
+     * in the order of decreasing locality.
+     */
+    public Builder cacheChain(List<HttpCache> caches) {
+      this.caches = List.copyOf(caches);
       return this;
     }
 

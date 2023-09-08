@@ -32,6 +32,7 @@ import com.github.mizosoft.methanol.testing.store.StoreConfig;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.store.StoreContext;
 import java.io.IOException;
+import java.util.List;
 import mockwebserver3.MockResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +48,8 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   void setUp() throws IOException {
     memoryCacheSetup = createCacheSetup(StoreType.MEMORY);
     diskCacheSetup = createCacheSetup(StoreType.DISK);
-    client = clientBuilder.cache(memoryCacheSetup.cache, diskCacheSetup.cache).build();
+    client =
+        clientBuilder.cacheChain(List.of(memoryCacheSetup.cache, diskCacheSetup.cache)).build();
   }
 
   private CacheSetup createCacheSetup(StoreType storeType) throws IOException {
