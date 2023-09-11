@@ -25,7 +25,10 @@ package com.github.mizosoft.methanol.internal.extensions;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.*;
+import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.HttpResponse.PushPromiseHandler;
+import java.net.http.HttpResponse.ResponseInfo;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -53,7 +56,7 @@ public class Handlers {
         .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).build());
   }
 
-  private static <T> CompletableFuture<T> handleAsync(
+  public static <T> CompletableFuture<T> handleAsync(
       ResponseInfo responseInfo,
       Publisher<List<ByteBuffer>> publisher,
       BodyHandler<T> handler,
@@ -63,7 +66,7 @@ public class Handlers {
     // Publisher::subscribe can initiate body flow synchronously, which might block.
     CompletableFuture.runAsync(() -> publisher.subscribe(subscriber), executor);
 
-    // BodySubscriber::getBody can block (see doc of BodySubscribers::mapping).
+    // BodySubscriber::getBody can block (see BodySubscribers::mapping's javadoc).
     return CompletableFuture.supplyAsync(subscriber::getBody, executor)
         .thenCompose(Function.identity());
   }

@@ -28,13 +28,20 @@ import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
-import com.github.mizosoft.methanol.testing.*;
+import com.github.mizosoft.methanol.internal.extensions.ForwardingBodySubscriber;
+import com.github.mizosoft.methanol.testing.CharSequenceEncoder;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
+import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
+import com.github.mizosoft.methanol.testing.StringDecoder;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
@@ -54,7 +61,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
-import mockwebserver3.*;
+import mockwebserver3.Dispatcher;
+import mockwebserver3.MockResponse;
+import mockwebserver3.MockWebServer;
+import mockwebserver3.PushPromise;
+import mockwebserver3.RecordedRequest;
 import okhttp3.Headers;
 import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
@@ -63,7 +74,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(value = 1, unit = TimeUnit.MINUTES)
+@Timeout(10)
 @ExtendWith({ExecutorExtension.class, MockWebServerExtension.class})
 class MethanolClientTest {
   static {
@@ -445,8 +456,7 @@ class MethanolClientTest {
             .build();
 
     server.enqueue(new MockResponse());
-    client.send(
-        POST(serverUri, "Pikachu", MediaType.TEXT_PLAIN), BodyHandlers.ofString());
+    client.send(POST(serverUri, "Pikachu", MediaType.TEXT_PLAIN), BodyHandlers.ofString());
 
     assertThat(server.takeRequest())
         .returns(
@@ -472,15 +482,13 @@ class MethanolClientTest {
         new MockResponse()
             .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
             .addHeader("Content-Type", "text/plain"));
-    verifyThat(client.send(GET(serverUri), TypeRef.from(String.class)))
-        .hasBody("Pikachu");
+    verifyThat(client.send(GET(serverUri), TypeRef.from(String.class))).hasBody("Pikachu");
 
     server.enqueue(
         new MockResponse()
             .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
             .addHeader("Content-Type", "text/plain"));
-    verifyThat(client.sendAsync(GET(serverUri), String.class).join())
-        .hasBody("Pikachu");
+    verifyThat(client.sendAsync(GET(serverUri), String.class).join()).hasBody("Pikachu");
 
     server.enqueue(
         new MockResponse()
@@ -515,9 +523,7 @@ class MethanolClientTest {
           }
         });
 
-    verifyThat(
-            client.send(
-                POST(serverUri, "Pikachu", MediaType.TEXT_PLAIN), String.class))
+    verifyThat(client.send(POST(serverUri, "Pikachu", MediaType.TEXT_PLAIN), String.class))
         .hasBody("Pikachu");
 
     assertThat(server.takeRequest())
@@ -525,6 +531,181 @@ class MethanolClientTest {
             "Pikachu",
             from(recordedRequest -> recordedRequest.getBody().readString(StandardCharsets.UTF_8)))
         .returns("text/plain", from(recordedRequest -> recordedRequest.getHeader("Content-Type")));
+  }
+
+  @Test
+  void deferredResponsePayload() throws Exception {
+    var client =
+        clientBuilder
+            .adapterCodec(AdapterCodec.newBuilder().decoder(new StringDecoder()).build())
+            .build();
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.send(GET(serverUri)).body()) {
+      assertThat(body.as(String.class)).isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.send(GET(serverUri)).body()) {
+      assertThat(body.asAsync(String.class))
+          .succeedsWithin(Duration.ofSeconds(1))
+          .isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.send(GET(serverUri)).body()) {
+      assertThat(body.as(new TypeRef<String>() {})).isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.send(GET(serverUri)).body()) {
+      assertThat(body.asAsync(new TypeRef<String>() {}))
+          .succeedsWithin(Duration.ofSeconds(1))
+          .isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.send(GET(serverUri)).body()) {
+      assertThat(body.with(BodyHandlers.ofString())).isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.send(GET(serverUri)).body()) {
+      assertThat(body.withAsync(BodyHandlers.ofString()))
+          .succeedsWithin(Duration.ofSeconds(1))
+          .isEqualTo("Pikachu");
+    }
+  }
+
+  @Test
+  void deferredResponsePayloadWithSendAsync() throws Exception {
+    var client =
+        clientBuilder
+            .adapterCodec(AdapterCodec.newBuilder().decoder(new StringDecoder()).build())
+            .build();
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+      assertThat(body.as(String.class)).isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+      assertThat(body.asAsync(String.class))
+          .succeedsWithin(Duration.ofSeconds(1))
+          .isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+      assertThat(body.as(new TypeRef<String>() {})).isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+      assertThat(body.asAsync(new TypeRef<String>() {}))
+          .succeedsWithin(Duration.ofSeconds(1))
+          .isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+      assertThat(body.with(BodyHandlers.ofString())).isEqualTo("Pikachu");
+    }
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+      assertThat(body.withAsync(BodyHandlers.ofString()))
+          .succeedsWithin(Duration.ofSeconds(1))
+          .isEqualTo("Pikachu");
+    }
+  }
+
+  @Test
+  void deferredBodyIsConsumedOnClosure() throws Exception {
+    // CompletableFuture<Void> that completes when the body is completed.
+    var bodyCompletion = new CompletableFuture<>();
+    var client =
+        clientBuilder
+            .backendInterceptor(
+                new Interceptor() {
+                  @Override
+                  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+                      throws IOException, InterruptedException {
+                    return chain
+                        .with(
+                            bodyHandler ->
+                                responseInfo ->
+                                    new ForwardingBodySubscriber<>(
+                                        bodyHandler.apply(responseInfo)) {
+                                      @Override
+                                      public void onError(Throwable throwable) {
+                                        bodyCompletion.completeExceptionally(throwable);
+                                      }
+
+                                      @Override
+                                      public void onComplete() {
+                                        bodyCompletion.complete(null);
+                                      }
+                                    })
+                        .forward(request);
+                  }
+
+                  @Override
+                  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+                      HttpRequest request, Chain<T> chain) {
+                    throw new UnsupportedOperationException();
+                  }
+                })
+            .build();
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    var response = client.send(GET(serverUri));
+    response.body().close();
+    assertThat(bodyCompletion).succeedsWithin(Duration.ofSeconds(1));
+  }
+
+  @Test
+  void deferredBodyIsConsumedOnClosureWithSendAsync() throws Exception {
+    // CompletableFuture<Void> that completes when the body is completed.
+    var bodyCompletion = new CompletableFuture<>();
+    var client =
+        clientBuilder
+            .backendInterceptor(
+                new Interceptor() {
+                  @Override
+                  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain) {
+                    throw new UnsupportedOperationException();
+                  }
+
+                  @Override
+                  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+                      HttpRequest request, Chain<T> chain) {
+                    return chain
+                        .with(
+                            bodyHandler ->
+                                responseInfo ->
+                                    new ForwardingBodySubscriber<>(
+                                        bodyHandler.apply(responseInfo)) {
+                                      @Override
+                                      public void onError(Throwable throwable) {
+                                        bodyCompletion.completeExceptionally(throwable);
+                                      }
+
+                                      @Override
+                                      public void onComplete() {
+                                        bodyCompletion.complete(null);
+                                      }
+                                    })
+                        .forwardAsync(request);
+                  }
+                })
+            .build();
+
+    server.enqueue(new MockResponse().setBody("Pikachu"));
+    var response = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS);
+    response.body().close();
+    assertThat(bodyCompletion).succeedsWithin(Duration.ofSeconds(1));
   }
 
   private static String acceptEncodingValue() {
@@ -541,7 +722,7 @@ class MethanolClientTest {
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException {
-      HttpResponse<T> response = chain.forward(request);
+      var response = chain.forward(request);
       for (int retries = 0;
           response.statusCode() == HTTP_UNAVAILABLE && retries < maxRetryCount;
           retries++) {
@@ -553,13 +734,14 @@ class MethanolClientTest {
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      var responseCf = chain.forwardAsync(request);
+      var responseFuture = chain.forwardAsync(request);
       for (int i = 0; i < maxRetryCount; i++) {
-        final int _i = i;
-        responseCf =
-            responseCf.thenCompose(res -> handleRetry(res, () -> chain.forwardAsync(request), _i));
+        final int j = i;
+        responseFuture =
+            responseFuture.thenCompose(
+                res -> handleRetry(res, () -> chain.forwardAsync(request), j));
       }
-      return responseCf;
+      return responseFuture;
     }
 
     private <R> CompletableFuture<HttpResponse<R>> handleRetry(

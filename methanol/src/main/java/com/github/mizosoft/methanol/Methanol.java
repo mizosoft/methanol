@@ -23,7 +23,9 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
-import static com.github.mizosoft.methanol.internal.Validate.*;
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
@@ -32,6 +34,8 @@ import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
+import com.github.mizosoft.methanol.internal.concurrent.Lazy;
+import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -47,8 +51,11 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.BodySubscriber;
+import java.net.http.HttpResponse.BodySubscribers;
 import java.net.http.HttpResponse.PushPromiseHandler;
+import java.net.http.HttpResponse.ResponseInfo;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -59,11 +66,13 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
@@ -98,6 +107,16 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
   private static final Logger logger = System.getLogger(Methanol.class.getName());
+
+  private final Lazy<Executor> fallbackExecutorSupplier =
+      Lazy.of(
+          () ->
+              Executors.newCachedThreadPool(
+                  r -> {
+                    var t = new Thread(r);
+                    t.setDaemon(true);
+                    return t;
+                  }));
 
   private final HttpClient backend;
   private final Redirect redirectPolicy;
@@ -325,6 +344,47 @@ public final class Methanol extends HttpClient {
     return new InterceptorChain<>(backend, bodyHandler, null, mergedInterceptors).forward(request);
   }
 
+  /**
+   * Like {@link #send(HttpRequest, BodyHandler)} but defers handling the response body into the
+   * desired type using the provided {@link ResponsePayload}. The call completes as soon as the
+   * headers are received. Forgetting to close the returned payload (e.g. using try-with-resources)
+   * is a programming error.
+   */
+  public HttpResponse<ResponsePayload> send(HttpRequest request)
+      throws IOException, InterruptedException {
+    return send(
+        request,
+        responseInfo ->
+            BodySubscribers.mapping(
+                BodySubscribers.ofPublisher(),
+                publisher ->
+                    new ResponsePayloadImpl(
+                        responseInfo,
+                        publisher,
+                        () -> executor().orElseGet(fallbackExecutorSupplier),
+                        adapterCodecOrInstalled())));
+  }
+
+  /**
+   * Like {@link #send(HttpRequest, BodyHandler)} but defers handling the response body into the
+   * desired type using the provided {@link ResponsePayload}. The call completes as soon as the
+   * headers are received. Forgetting to close the returned payload (e.g. using try-with-resources)
+   * is a programming error.
+   */
+  public CompletableFuture<HttpResponse<ResponsePayload>> sendAsync(HttpRequest request) {
+    return sendAsync(
+        request,
+        responseInfo ->
+            BodySubscribers.mapping(
+                BodySubscribers.ofPublisher(),
+                publisher ->
+                    new ResponsePayloadImpl(
+                        responseInfo,
+                        publisher,
+                        () -> executor().orElseGet(fallbackExecutorSupplier),
+                        adapterCodecOrInstalled())));
+  }
+
   @Override
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(
       HttpRequest request, BodyHandler<T> bodyHandler) {
@@ -405,6 +465,66 @@ public final class Methanol extends HttpClient {
   /** Creates a default {@code Methanol} instance. */
   public static Methanol create() {
     return newBuilder().build();
+  }
+
+  private static final class ResponsePayloadImpl implements ResponsePayload {
+    private final ResponseInfo responseInfo;
+    private final Publisher<List<ByteBuffer>> publisher;
+    private final Supplier<Executor> executorSupplier;
+    private final AdapterCodec adapterCodec;
+
+    private boolean closed;
+
+    ResponsePayloadImpl(
+        ResponseInfo responseInfo,
+        Publisher<List<ByteBuffer>> publisher,
+        Supplier<Executor> executorSupplier,
+        AdapterCodec adapterCodec) {
+      this.responseInfo = responseInfo;
+      this.publisher = publisher;
+      this.executorSupplier = executorSupplier;
+      this.adapterCodec = adapterCodec;
+    }
+
+    @Override
+    public <T> T as(TypeRef<T> type) throws IOException, InterruptedException {
+      return Utils.get(handleAsync(adapterCodec.handlerOf(type), FlowSupport.SYNC_EXECUTOR));
+    }
+
+    @Override
+    public <T> T with(BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
+      return Utils.get(handleAsync(bodyHandler, FlowSupport.SYNC_EXECUTOR));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> asAsync(TypeRef<T> type) {
+      return handleAsync(adapterCodec.handlerOf(type), executorSupplier.get());
+    }
+
+    @Override
+    public <T> CompletableFuture<T> withAsync(BodyHandler<T> bodyHandler) {
+      return handleAsync(bodyHandler, executorSupplier.get());
+    }
+
+    private <T> CompletableFuture<T> handleAsync(BodyHandler<T> bodyHandler, Executor executor) {
+      requireState(!closed, "Closed");
+      closed = true;
+      return Handlers.handleAsync(responseInfo, publisher, bodyHandler, executor);
+    }
+
+    @Override
+    public void close() {
+      boolean wasOpen = !closed;
+      closed = true;
+      if (wasOpen) {
+        // Discard in background.
+        // TODO set a timeout so slow responses don't just hang in background.
+        // TODO we can optimize this for HTTP2 by cancelling the subscription directly, which sends
+        //      a RST_STREAM and keeps using the connection as per the current implementation.
+        Handlers.handleAsync(
+            responseInfo, publisher, BodyHandlers.discarding(), executorSupplier.get());
+      }
+    }
   }
 
   /** An object that intercepts requests being sent over a {@code Methanol} client. */

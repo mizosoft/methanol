@@ -285,7 +285,7 @@ class MethanolTest {
   }
 
   @Test
-  void sendMutableRequest() throws Exception {
+  void mutableRequestIsCopiedWhenSent() throws Exception {
     var backend = new RecordingClient();
     var client =
         Methanol.newBuilder(backend)
@@ -315,7 +315,7 @@ class MethanolTest {
   }
 
   @Test
-  void sendImmutableRequest() throws Exception {
+  void immutableRequestIsWhenSent() throws Exception {
     var backend = new RecordingClient();
     var client =
         Methanol.newBuilder(backend)
@@ -342,7 +342,7 @@ class MethanolTest {
   }
 
   @Test
-  void tagging() throws Exception {
+  void tagsArePassedOverSent() throws Exception {
     var backend = new RecordingClient();
     var client = Methanol.newBuilder(backend).build();
     var request = GET("https://example.com").tag(Integer.class, 1);
