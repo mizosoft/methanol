@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Utils.isValidToken;
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
-import static com.github.mizosoft.methanol.internal.Validate.*;
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
@@ -33,7 +33,9 @@ import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.time.Duration;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
