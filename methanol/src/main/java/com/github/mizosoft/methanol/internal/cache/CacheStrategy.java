@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2023 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,12 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toUtcDateTime;
-
 import com.github.mizosoft.methanol.CacheControl;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.util.Compare;
+
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.time.Duration;
@@ -37,6 +35,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
+
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.toUtcDateTime;
 
 /**
  * A strategy for determining whether a stored response is fresh enough for the cache to serve
@@ -192,7 +193,9 @@ class CacheStrategy {
     }
   }
 
-  /** A rule for relaxing a response's staleness. */
+  /**
+   * A rule for accepting stale responses upto a maximum staleness.
+   */
   enum StalenessRule {
     MAX_STALE {
       @Override
