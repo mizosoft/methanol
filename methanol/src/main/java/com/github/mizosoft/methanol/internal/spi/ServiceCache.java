@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.internal.spi;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.concurrent.Lazy;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
@@ -31,50 +32,31 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
-import java.util.concurrent.locks.ReentrantLock;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import java.util.function.Supplier;
 
 /** Utility class for loading/caching service providers. */
 public final class ServiceCache<S> {
   private static final Logger logger = System.getLogger(ServiceCache.class.getName());
 
-  private final Class<S> service;
-  private final ReentrantLock lock = new ReentrantLock();
-  private volatile @MonotonicNonNull List<S> providers;
+  private final Supplier<List<S>> providers;
 
   public ServiceCache(Class<S> service) {
-    this.service = requireNonNull(service);
+    requireNonNull(service);
+    providers = Lazy.of(() -> loadProviders(service));
   }
 
   public List<S> getProviders() {
-    List<S> cached = providers;
-    if (cached == null) {
-      // Prevent getProvider() from being called from a provider constructor/method
-      if (lock.isHeldByCurrentThread()) {
-        throw new ServiceConfigurationError("recursive loading of providers");
-      }
-      lock.lock();
-      try {
-        cached = providers;
-        if (cached == null) {
-          cached = loadProviders();
-          providers = cached;
-        }
-      } finally {
-        lock.unlock();
-      }
-    }
-    return cached;
+    return providers.get();
   }
 
-  private List<S> loadProviders() {
-    List<S> providers = new ArrayList<>();
+  private static <U> List<U> loadProviders(Class<U> service) {
+    var providers = new ArrayList<U>();
     ServiceLoader.load(service, service.getClassLoader()).stream()
         .forEach(provider -> addProviderLenient(provider, providers));
     return Collections.unmodifiableList(providers);
   }
 
-  private void addProviderLenient(ServiceLoader.Provider<S> provider, List<S> providers) {
+  private static <U> void addProviderLenient(ServiceLoader.Provider<U> provider, List<U> providers) {
     try {
       providers.add(provider.get());
     } catch (ServiceConfigurationError error) {

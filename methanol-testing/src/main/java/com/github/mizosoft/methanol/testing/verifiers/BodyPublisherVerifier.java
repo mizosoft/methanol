@@ -77,27 +77,27 @@ public final class BodyPublisherVerifier {
 
   public AbstractStringAssert<?> succeedsWith(String expected, Charset charset) {
     return Assertions.assertThat(BodyCollector.collectStringAsync(publisher, charset))
-        .succeedsWithin(Duration.ofSeconds(20))
+        .succeedsWithin(Duration.ofSeconds(5))
         .extracting(Function.identity(), Assertions.STRING)
         .isEqualTo(expected);
   }
 
   public AbstractObjectAssert<?, ByteBuffer> succeedsWith(ByteBuffer bytes) {
     return assertThat(BodyCollector.collectAsync(publisher))
-        .succeedsWithin(Duration.ofSeconds(20))
+        .succeedsWithin(Duration.ofSeconds(5))
         .isEqualTo(bytes);
   }
 
   public AbstractStringAssert<?> succeedsWithNormalizingLineEndings(String expected) {
     return assertThat(BodyCollector.collectStringAsync(publisher, UTF_8))
-        .succeedsWithin(Duration.ofSeconds(20))
+        .succeedsWithin(Duration.ofSeconds(5))
         .extracting(Function.identity(), Assertions.STRING)
         .isEqualToNormalizingNewlines(expected);
   }
 
   public ThrowableAssertAlternative<?> failsWith(Class<? extends Throwable> type) {
     return assertThat(BodyCollector.collectAsync(publisher))
-        .failsWithin(Duration.ofSeconds(20))
+        .failsWithin(Duration.ofSeconds(5))
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
         .isInstanceOf(type);

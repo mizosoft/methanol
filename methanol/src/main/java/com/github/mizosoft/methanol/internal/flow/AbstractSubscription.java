@@ -89,8 +89,24 @@ public abstract class AbstractSubscription<T> implements Subscription {
   @Override
   public final void request(long n) {
     if (n > 0) {
-      getAndAddDemand(this, DEMAND, n);
-      fireOrKeepAlive();
+      // We assume two things from implementors:
+      //  - emit(...) only returns on two cases: either demand or items have been exhausted.
+      //  - fireOrKeepAliveOnNext() or fireOrKeepAlive() are always called on receipt of items or
+      //    completion.
+      // Thus, if there was non-zero demand, there are four cases:
+      //  1 - There are no items, as emit must've returned after exhausting them.
+      //  2 - We'll get new items (or completion) any time (hopefully) soon.
+      //  3 - The drain loop is currently running.
+      //  4 - The subscription has been cancelled or completed.
+      // fireOrKeepAlive() need not be called in any of these cases:
+      //  1 - No need to fire as there are no items.
+      //  2 - fireOrKeepAliveOnNext() or fireOrKeepAlive() will be called then.
+      //  3 - The drain loop will eventually decrement demand and keep running.
+      //  4 - We're done anyway!
+      // So, we only need to fireOrKeepAlive() if demand was zero.
+      if (getAndAddDemand(this, DEMAND, n) == 0) {
+        fireOrKeepAlive();
+      }
     } else {
       fireOrKeepAliveOnError(FlowSupport.illegalRequest());
     }
@@ -112,6 +128,8 @@ public abstract class AbstractSubscription<T> implements Subscription {
   }
 
   public void fireOrKeepAliveOnNext() {
+    // If demand was zero, any future request() will surely fireOrKeepAlive(). Thus we only need to
+    // do so here on non-zero demand.
     if (demand > 0) {
       fireOrKeepAlive();
     }

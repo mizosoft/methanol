@@ -20,30 +20,45 @@
  * SOFTWARE.
  */
 
-rootProject.name = "methanol-parent"
+package com.github.mizosoft.methanol.internal.extensions;
 
-include("methanol")
-include("methanol-testing")
-include("methanol-gson")
-include("methanol-jackson")
-include("methanol-jackson-flux")
-include("methanol-protobuf")
-include("methanol-jaxb")
-include("methanol-brotli")
-include("methanol-blackbox")
-include("methanol-benchmarks")
-include("methanol-samples")
-include("methanol-samples:crawler")
-include("methanol-samples:download-progress")
-include("methanol-samples:upload-progress")
-include("spring-boot-test")
-include("methanol-redis")
-include("methanol-kotlin")
+import com.github.mizosoft.methanol.internal.flow.Upstream;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Flow;
 
-// Only include native brotli-jni project if explicitly requested.
-val includeBrotliJni: String? by settings
-if (includeBrotliJni != null
-  || settings.gradle.startParameter.taskNames.contains("installBrotli")
-) {
-  include("methanol-brotli:brotli-jni")
+public final class DiscardingSubscriber implements BodySubscriber<Void> {
+  private final Upstream upstream = new Upstream();
+
+  DiscardingSubscriber(Duration timeout) {
+    
+  }
+
+  @Override
+  public CompletionStage<Void> getBody() {
+    return null;
+  }
+
+  @Override
+  public void onSubscribe(Flow.Subscription subscription) {
+
+  }
+
+  @Override
+  public void onNext(List<ByteBuffer> item) {
+
+  }
+
+  @Override
+  public void onError(Throwable throwable) {
+
+  }
+
+  @Override
+  public void onComplete() {
+
+  }
 }

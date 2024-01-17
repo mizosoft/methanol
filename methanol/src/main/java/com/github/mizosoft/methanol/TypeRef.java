@@ -43,75 +43,81 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <T> the type this object represents
  */
 public abstract class TypeRef<T> {
-
-  private final Type type;
-  private @MonotonicNonNull Class<?> rawType;
+  private final Type genericType;
+  private @MonotonicNonNull Class<?> lazyRawType;
 
   /**
-   * Creates a new {@code TypeRef<T>} capturing the {@code Type} of {@code T}. It is usually the
-   * case that this constructor is invoked as an anonymous class expression (e.g. {@code new
-   * TypeRef<List<String>>() {}}).
+   * Creates a new {@code TypeRef<T>} capturing the {@link Type} of {@code T}. This constructor is
+   * meant to be invoked in an anonymous class expression (e.g. {@code new TypeRef<List<String>>()
+   * {}}).
    *
    * @throws IllegalStateException if the raw version of this class is used
    */
   protected TypeRef() {
-    Type superClass = getClass().getGenericSuperclass();
+    var superClass = getClass().getGenericSuperclass();
     requireState(superClass instanceof ParameterizedType, "not used in parameterized form");
-    this.type = ((ParameterizedType) superClass).getActualTypeArguments()[0];
+    this.genericType = ((ParameterizedType) superClass).getActualTypeArguments()[0];
   }
 
-  private TypeRef(Type type) {
-    this.type = type;
-    rawType = findRawType(type);
-  }
-
-  /** Returns the underlying Java {@link Type}. */
-  public final Type type() {
-    return type;
+  private TypeRef(Type genericType) {
+    this.genericType = genericType;
+    this.lazyRawType = findRawType(genericType);
   }
 
   /**
-   * Returns the {@code Class} object that represents the resolved raw type of {@code T}. The
-   * returned class is {@code Class<? super T>} because {@code T} can possibly be a generic type,
-   * and it is not semantically correct for a {@code Class} to be parameterized with such.
+   * Returns the underlying generic {@link Type}.
+   *
+   * @deprecated In favor of {@link #genericType()}.
+   */
+  public final Type type() {
+    return genericType;
+  }
+
+  /** Returns the underlying generic {@link Type}. */
+  public final Type genericType() {
+    return genericType;
+  }
+
+  /**
+   * Returns the raw type of {@code T}. The returned class is {@code Class<? super T>} because
+   * {@code T} can possibly be a generic type, and it is not semantically correct for a {@code
+   * Class} to be parameterized with such.
    *
    * @see #exactRawType()
    */
   @SuppressWarnings("unchecked")
   public final Class<? super T> rawType() {
-    Class<?> clz = rawType;
-    if (clz == null) {
+    var rawType = lazyRawType;
+    if (rawType == null) {
       try {
-        clz = findRawType(type);
+        rawType = findRawType(genericType);
       } catch (IllegalArgumentException e) {
-        // rawType is lazily initialized only if not user-provided and
-        // on that case findRawType shouldn't fail
-        throw new AssertionError("couldn't get raw type of: " + type, e);
+        // lazyRawType is lazily initialized only if not user-provided and on that case findRawType
+        // shouldn't fail.
+        throw new AssertionError("Couldn't get raw type of: " + genericType, e);
       }
-      rawType = clz;
+      lazyRawType = rawType;
     }
-    return (Class<? super T>) clz;
+    return (Class<? super T>) rawType;
   }
 
   /**
-   * Returns the underlying type as a {@code Class<T>} for when it is known that {@link T} is
-   * already raw. Similar to {@code (Class<T>) typeRef.type()}.
+   * Returns the underlying type as a {@code Class<T>} for when it is known that {@link T} is a raw
+   * type. Similar to {@code (Class<T>) typeRef.type()}.
    *
    * @throws UnsupportedOperationException if the underlying type is not a raw type
    */
   @SuppressWarnings("unchecked")
   public final Class<T> exactRawType() {
-    if (!(type instanceof Class<?>)) {
-      throw new UnsupportedOperationException("<" + type + "> is not a raw type");
+    if (!(genericType instanceof Class<?>)) {
+      throw new UnsupportedOperationException("<" + genericType + "> is not a raw type");
     }
-    return (Class<T>) type;
+    return (Class<T>) genericType;
   }
 
   /**
-   * Returns {@code true} if the given object is a {@code TypeRef} and both instances
-   * represent the same type.
-   *
-   * @param obj the object to test for equality
+   * Returns {@code true} if the given object is a {@code TypeRef} and both instances represent the
+   * same type.
    */
   @Override
   public boolean equals(@Nullable Object obj) {
@@ -121,25 +127,24 @@ public abstract class TypeRef<T> {
     if (!(obj instanceof TypeRef)) {
       return false;
     }
-    return type.equals(((TypeRef<?>) obj).type);
+    return genericType.equals(((TypeRef<?>) obj).genericType);
   }
 
   @Override
   public int hashCode() {
-    return 31 * type.hashCode();
+    return 31 * genericType.hashCode();
   }
 
-  /** Returns a string representation for the type. */
   @Override
   public String toString() {
-    return type.getTypeName();
+    return genericType.getTypeName();
   }
 
   private static Class<?> findRawType(Type type) {
-    if (type instanceof Class) {
+    if (type instanceof Class<?>) {
       return (Class<?>) type;
     } else if (type instanceof ParameterizedType) {
-      Type rawType = ((ParameterizedType) type).getRawType();
+      var rawType = ((ParameterizedType) type).getRawType();
       requireArgument(
           rawType instanceof Class,
           "ParameterizedType::getRawType of %s returned a non-raw type: %s",
@@ -147,8 +152,8 @@ public abstract class TypeRef<T> {
           rawType);
       return (Class<?>) rawType;
     } else if (type instanceof GenericArrayType) {
-      // Here, the raw type is the type of the array created with the generic-component's raw type
-      Class<?> rawComponentType = findRawType(((GenericArrayType) type).getGenericComponentType());
+      // Here, the raw type is the type of the array created with the generic-component's raw type.
+      var rawComponentType = findRawType(((GenericArrayType) type).getGenericComponentType());
       return Array.newInstance(rawComponentType, 0).getClass();
     } else if (type instanceof TypeVariable) {
       return rawUpperBound(((TypeVariable<?>) type).getBounds());
@@ -160,35 +165,41 @@ public abstract class TypeRef<T> {
   }
 
   private static Class<?> rawUpperBound(Type[] upperBounds) {
-    // Same behaviour as Method::getGenericReturnType vs Method::getReturnType
+    // Same behaviour as Method::getGenericReturnType vs Method::getReturnType.
     return upperBounds.length > 0 ? findRawType(upperBounds[0]) : Object.class;
   }
 
   /**
-   * Creates a new {@code TypeRef} from the given type.
+   * Creates a new {@code TypeRef} for the given generic type.
    *
-   * @param type the type
-   * @throws IllegalArgumentException if the given type is not a standard specialization of a java
+   * @throws IllegalArgumentException if the given type is not a standard specialization of a Java
    *     {@code Type}
    */
-  public static TypeRef<?> from(Type type) {
-    return new ExplicitTypeRef<>(type);
+  public static TypeRef<?> from(Type genericType) {
+    return new ExplicitTypeRef<>(genericType);
   }
 
   /**
-   * Creates a new {@code TypeRef} from the given class.
+   * Creates a new {@code TypeRef} for the given raw type.
    *
-   * @param rawType the class
-   * @param <U> the raw type that the given class represents
+   * @throws IllegalArgumentException if the given type is not a standard specialization of a Java
+   *     {@code Type}
    */
   public static <U> TypeRef<U> from(Class<U> rawType) {
     return new ExplicitTypeRef<>(rawType);
   }
 
-  private static final class ExplicitTypeRef<T> extends TypeRef<T> {
+  public static TypeRef<?> of(Type genericType) {
+    return new ExplicitTypeRef<>(genericType);
+  }
 
-    ExplicitTypeRef(Type type) {
-      super(requireNonNull(type));
+  public static <U> TypeRef<U> of(Class<U> rawType) {
+    return new ExplicitTypeRef<>(rawType);
+  }
+
+  private static final class ExplicitTypeRef<T> extends TypeRef<T> {
+    ExplicitTypeRef(Type genericType) {
+      super(requireNonNull(genericType));
     }
   }
 }

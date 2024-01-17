@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.internal.extensions;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.MediaType;
@@ -35,6 +36,10 @@ public final class MimeBodyPublisherAdapter extends ForwardingBodyPublisher
   public MimeBodyPublisherAdapter(BodyPublisher upstream, MediaType mediaType) {
     super(upstream);
     this.mediaType = requireNonNull(mediaType);
+    requireArgument(
+        !(upstream instanceof MimeBodyPublisher)
+            || mediaType.equals(((MimeBodyPublisher) upstream).mediaType()),
+        "Upstream already defines a different media type");
   }
 
   @Override

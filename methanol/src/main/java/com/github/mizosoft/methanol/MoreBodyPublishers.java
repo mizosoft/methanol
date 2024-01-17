@@ -111,11 +111,7 @@ public class MoreBodyPublishers {
               executor.execute(
                   () -> {
                     try (var out = extractor.apply(publisher)) {
-                      try {
-                        writerTask.accept(out);
-                      } catch (Throwable t) {
-                        publisher.closeExceptionally(t);
-                      }
+                      writerTask.accept(out);
                     } catch (Throwable t) {
                       publisher.closeExceptionally(t);
                     }

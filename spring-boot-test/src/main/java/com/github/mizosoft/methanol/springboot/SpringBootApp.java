@@ -22,8 +22,13 @@
 
 package com.github.mizosoft.methanol.springboot;
 
+import com.github.mizosoft.methanol.*;
+import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 
 @SpringBootApplication
 public class SpringBootApp {

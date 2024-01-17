@@ -26,7 +26,11 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 
 public final class ExecutorContext implements AutoCloseable {
   private final List<Executor> executors = new ArrayList<>();
@@ -75,8 +79,8 @@ public final class ExecutorContext implements AutoCloseable {
     executors.clear();
 
     var asyncExceptionsSnapshot = List.copyOf(asyncExceptions);
+    asyncExceptions.clear();
     if (!asyncExceptionsSnapshot.isEmpty()) {
-      asyncExceptions.clear();
       throw new AggregateException("uncaught asynchronous failures", asyncExceptionsSnapshot);
     }
   }
