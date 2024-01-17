@@ -22,18 +22,13 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.Utils.BUFFER_SIZE;
 import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDuration;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.READ;
-import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
-import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
@@ -45,6 +40,7 @@ import com.github.mizosoft.methanol.internal.function.ThrowingRunnable;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.internal.util.Compare;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
@@ -61,6 +57,8 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
@@ -77,10 +75,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadLocalRandom;
@@ -160,9 +160,12 @@ public final class DiskStore implements Store {
    * <entry-header> allows validating the entry file and knowing its key & metadata sizes in a
    * single read.
    *
-   * An effort is made to ensure store operations on disk are atomic. Index and entry writers first
-   * do their work on a temp file. After they're done, a channel::force is issued then the previous
-   * version of the file, if any, is atomically replaced. Viewers opened for an entry see a constant
+   * An effort is made to ensure store operations on disk are atomic. Index and entry writers
+   * first
+   * do their work on a temp file. After they're done, a channel::force is issued then the
+   * previous
+   * version of the file, if any, is atomically replaced. Viewers opened for an entry see a
+   * constant
    * snapshot of that entry's data even if the entry is removed or edited one or more times.
    */
 
@@ -209,7 +212,7 @@ public final class DiskStore implements Store {
    * monotonic, however, as the clock value can overflow. But a signed long gives us about 300 years
    * of monotonicity assuming the clock is incremented every 1 ns, which is not bad at all.
    */
-  private final AtomicLong lruClock = new AtomicLong();
+  private final AtomicLong clock = new AtomicLong();
 
   private final ReadWriteLock closeLock = new ReentrantReadWriteLock();
 
@@ -269,7 +272,7 @@ public final class DiskStore implements Store {
       maxLastUsed = Math.max(maxLastUsed, indexEntry.lastUsed);
     }
     size.set(totalSize);
-    lruClock.set(maxLastUsed + 1);
+    clock.set(maxLastUsed + 1);
 
     // Make sure we start within bounds.
     if (totalSize > maxSize) {
@@ -388,7 +391,8 @@ public final class DiskStore implements Store {
 
     try (directoryLock) {
       if (disposing) {
-        // Shutdown the scheduler to avoid overlapping an index write with store directory deletion.
+        // Shutdown the scheduler to avoid overlapping an index write with store directory
+        // deletion.
         indexWriteScheduler.shutdown();
         deleteStoreContent(directory);
       } else {
@@ -510,7 +514,7 @@ public final class DiskStore implements Store {
   }
 
   long lruTime() {
-    return lruClock.get();
+    return clock.get();
   }
 
   private static Executor toDebuggingIndexExecutorDelegate(Executor delegate) {
@@ -559,6 +563,12 @@ public final class DiskStore implements Store {
     return value;
   }
 
+  private static int getPositiveInt(ByteBuffer buffer) throws StoreCorruptionException {
+    int value = buffer.getInt();
+    checkValue(value > 0, "expected a positive value", value);
+    return value;
+  }
+
   private static @Nullable Hash entryFileToHash(String filename) {
     assert filename.endsWith(ENTRY_FILE_SUFFIX) || filename.endsWith(TEMP_ENTRY_FILE_SUFFIX);
     int suffixLength =
@@ -569,7 +579,7 @@ public final class DiskStore implements Store {
   }
 
   private static void replace(Path source, Path target) throws IOException {
-    Files.move(source, target, ATOMIC_MOVE, REPLACE_EXISTING);
+    Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
   }
 
   private static void deleteStoreContent(Path directory) throws IOException {
@@ -613,7 +623,8 @@ public final class DiskStore implements Store {
       var randomFilename =
           ISOLATED_FILE_PREFIX + Long.toHexString(ThreadLocalRandom.current().nextLong());
       try {
-        return Files.move(file, file.resolveSibling(randomFilename), ATOMIC_MOVE);
+        return Files.move(
+            file, file.resolveSibling(randomFilename), StandardCopyOption.ATOMIC_MOVE);
       } catch (FileAlreadyExistsException | AccessDeniedException filenameAlreadyInUse) {
         // We can then try again with a new random name. Note that an AccessDeniedException is
         // thrown on a name clash with another 'isolated' file that still has open handles.
@@ -829,7 +840,7 @@ public final class DiskStore implements Store {
     }
 
     Set<IndexEntry> readIndex() throws IOException {
-      try (var channel = FileChannel.open(indexFile, READ)) {
+      try (var channel = FileChannel.open(indexFile, StandardOpenOption.READ)) {
         var header = StoreIO.readNBytes(channel, INDEX_HEADER_SIZE);
         checkValue(INDEX_MAGIC, header.getLong(), "not in index format");
         checkValue(STORE_VERSION, header.getInt(), "unrecognized store version");
@@ -855,7 +866,12 @@ public final class DiskStore implements Store {
 
     void writeIndex(Set<IndexEntry> entries) throws IOException {
       requireArgument(entries.size() <= MAX_ENTRY_COUNT, "too many entries");
-      try (var channel = FileChannel.open(tempIndexFile, CREATE, WRITE, TRUNCATE_EXISTING)) {
+      try (var channel =
+          FileChannel.open(
+              tempIndexFile,
+              StandardOpenOption.CREATE,
+              StandardOpenOption.WRITE,
+              StandardOpenOption.TRUNCATE_EXISTING)) {
         var index =
             ByteBuffer.allocate(INDEX_HEADER_SIZE + INDEX_ENTRY_SIZE * entries.size())
                 .putLong(INDEX_MAGIC)
@@ -900,7 +916,8 @@ public final class DiskStore implements Store {
                     + file
                     + ">. "
                     + System.lineSeparator()
-                    + "It is generally not a good idea to let the store directory be used by other entities.");
+                    + "It is generally not a good idea to let the store directory be used by "
+                    + "other entities.");
           }
         }
       }
@@ -914,6 +931,576 @@ public final class DiskStore implements Store {
 
       EntryFiles() {}
     }
+  }
+
+  private static final class JournalRecovery {
+    final Journal journal;
+    final Set<IndexEntry> entries;
+
+    JournalRecovery(Journal journal, Set<IndexEntry> entries) {
+      this.journal = journal;
+      this.entries = entries;
+    }
+  }
+
+  private static final int UNKNOWN_SIZE = -1;
+  private static final int PENDING_REMOVAL = -2;
+
+  private static final class EntryState {
+    final Hash hash;
+    long lastRead;
+    long lastWritten;
+    long size = UNKNOWN_SIZE;
+
+    EntryState(Hash hash) {
+      this.hash = hash;
+    }
+  }
+
+  private static final class JournalState {
+    final Map<Hash, EntryState> entries = new HashMap<>();
+    long latestTick;
+
+    JournalState() {}
+  }
+
+  private static final class JournalReader {
+    private static final int EOF = -1;
+
+    private final ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+    private final FileChannel channel;
+
+    JournalReader(FileChannel channel) {
+      this.channel = channel;
+    }
+
+    @Nullable JournalOp readOpOrEof() throws IOException {
+      int code = readByteOrEof();
+      if (code == EOF) {
+        return null;
+      }
+
+      for (var op : JournalOp.values()) {
+        if (op.code == code) {
+          return op;
+        }
+      }
+      throw new StoreCorruptionException("Unrecognized code: " + code);
+    }
+
+    Hash readHash() throws IOException {
+      return new Hash(ensureBufferedAtLeast(Hash.BYTES));
+    }
+
+    long readLong() throws IOException {
+      return ensureBufferedAtLeast(Long.BYTES).getLong();
+    }
+
+    long readPositiveLong() throws IOException {
+      return getPositiveLong(ensureBufferedAtLeast(Long.BYTES));
+    }
+
+    int readInt() throws IOException {
+      return ensureBufferedAtLeast(Integer.BYTES).getInt();
+    }
+
+    int readPositiveInt() throws IOException {
+      return getPositiveInt(ensureBufferedAtLeast(Integer.BYTES));
+    }
+
+    private int readByteOrEof() throws IOException {
+      return buffer.hasRemaining() || StoreIO.readBytes(channel, buffer.clear()) > 0
+          ? buffer.get() & 0xff
+          : EOF;
+    }
+
+    ByteBuffer ensureBufferedAtLeast(int count) throws IOException {
+      if (buffer.remaining() < count && StoreIO.readBytes(channel, buffer) < count) {
+        throw new EOFException("Expected at least " + count + " bytes");
+      }
+      return buffer.flip();
+    }
+  }
+
+  private enum JournalOp {
+    READ(1) {
+      @Override
+      void update(JournalReader reader, JournalState state) throws IOException {
+        var hash = reader.readHash();
+        long readAt = reader.readLong();
+        var entry = state.entries.computeIfAbsent(hash, EntryState::new);
+        entry.lastRead = Math.max(entry.lastRead, readAt);
+      }
+    },
+
+    WRITE(2) {
+      @Override
+      void update(JournalReader reader, JournalState state) throws IOException {
+        var hash = reader.readHash();
+        long writtenAt = reader.readLong();
+        long size = reader.readPositiveLong();
+        var entry = state.entries.computeIfAbsent(hash, EntryState::new);
+        if (entry.size == PENDING_REMOVAL) {
+          state.entries.remove(hash);
+        } else {
+          entry.size = size;
+          entry.lastWritten = Math.max(entry.lastWritten, writtenAt);
+        }
+      }
+    },
+
+    REMOVE(3) {
+      @Override
+      void update(JournalReader reader, JournalState state) throws IOException {
+        var hash = reader.readHash();
+        if (state.entries.remove(hash) == null) {
+          state.entries.put(hash, new EntryState(hash));
+        }
+      }
+    },
+
+    CHECKPOINT(4) {
+      @Override
+      void update(JournalReader reader, JournalState state) throws IOException {
+        state.latestTick = reader.readLong();
+      }
+    };
+
+    static final int BYTES = Integer.BYTES;
+
+    final int code;
+
+    JournalOp(int code) {
+      this.code = code;
+    }
+
+    abstract void update(JournalReader reader, JournalState state) throws IOException;
+  }
+
+  private static final class JournalWriter {
+    private final FileChannel channel;
+    private final ByteBuffer buffer = ByteBuffer.allocate(Utils.BUFFER_SIZE);
+
+    JournalWriter(FileChannel channel) {
+      this.channel = channel;
+    }
+
+    void write(JournalOp op) throws IOException {
+      write(op.code);
+    }
+
+    void write(int value) throws IOException {
+      ensureBufferCapacity(Integer.BYTES).putInt(value);
+    }
+
+    void write(long value) throws IOException {
+      ensureBufferCapacity(Long.BYTES).putLong(value);
+    }
+
+    void write(Hash hash) throws IOException {
+      hash.writeTo(ensureBufferCapacity(Hash.BYTES));
+    }
+
+    ByteBuffer ensureBufferCapacity(int count) throws IOException {
+      assert count < buffer.capacity();
+      if (buffer.remaining() < count) {
+        StoreIO.writeBytes(channel, buffer.flip());
+      }
+      return buffer.clear();
+    }
+
+    void sync() throws IOException {
+      if (buffer.position() > 0) {
+        StoreIO.writeBytes(channel, buffer.flip());
+        buffer.clear();
+      }
+      channel.force(false);
+    }
+  }
+
+  private static final class Journal {
+    private final AtomicLong lruClock = new AtomicLong();
+    private final Queue<JournalEntry> buffer = new ConcurrentLinkedQueue<>();
+
+    private final AtomicInteger pendingWriteCount = new AtomicInteger();
+
+    private final Path indexFile;
+    private final Path tempIndexFile;
+    private final int appVersion;
+
+    private FileChannel channel;
+
+    private abstract static class JournalEntry {
+      final JournalOp op;
+      final @Nullable Hash hash;
+
+      JournalEntry(JournalOp op) {
+        this(op, null);
+      }
+
+      JournalEntry(JournalOp op, @Nullable Hash hash) {
+        this.op = op;
+        this.hash = hash;
+      }
+
+      final void writeTo(JournalWriter writer) throws IOException {
+        writer.write(op);
+        if (hash != null) {
+          writer.write(hash);
+        }
+        finishWrite(writer);
+      }
+
+      abstract void finishWrite(JournalWriter writer) throws IOException;
+
+      abstract int additionalSize();
+
+      final int size() {
+        return JournalOp.BYTES + Hash.BYTES + additionalSize();
+      }
+    }
+
+    private static final class Write extends JournalEntry {
+      private final long writtenAt;
+      private final long size;
+
+      Write(Hash hash, long writtenAt, long size) {
+        super(JournalOp.WRITE, hash);
+        this.writtenAt = writtenAt;
+        this.size = size;
+      }
+
+      @Override
+      void finishWrite(JournalWriter writer) throws IOException {
+        writer.write(writtenAt);
+        writer.write(size);
+      }
+
+      @Override
+      int additionalSize() {
+        return Long.BYTES + Long.BYTES;
+      }
+    }
+
+    private static final class Read extends JournalEntry {
+      private final long readAt;
+
+      Read(Hash hash, long readAt) {
+        super(JournalOp.WRITE, hash);
+        this.readAt = readAt;
+      }
+
+      @Override
+      void finishWrite(JournalWriter writer) throws IOException {
+        writer.write(readAt);
+      }
+
+      @Override
+      int additionalSize() {
+        return Long.BYTES;
+      }
+    }
+
+    private static final class Remove extends JournalEntry {
+      Remove(Hash hash) {
+        super(JournalOp.REMOVE, hash);
+      }
+
+      @Override
+      void finishWrite(JournalWriter writer) {}
+
+      @Override
+      int additionalSize() {
+        return 0;
+      }
+    }
+
+    private static final class Checkpoint extends JournalEntry {
+      private final long checkpointAt;
+
+      Checkpoint(long checkpointAt) {
+        super(JournalOp.CHECKPOINT);
+        this.checkpointAt = checkpointAt;
+      }
+
+      @Override
+      void finishWrite(JournalWriter writer) throws IOException {
+        writer.write(checkpointAt);
+      }
+
+      @Override
+      int additionalSize() {
+        return Long.BYTES;
+      }
+    }
+
+    Clock clock;
+
+    Journal(
+        Path indexFile,
+        Path tempIndexFile,
+        FileChannel channel,
+        Executor journalExecutor,
+        Duration checkpointCooldown,
+        Delayer delayer,
+        int appVersion,
+        long lruClock,
+        Clock clock) {
+      this.indexFile = indexFile;
+      this.tempIndexFile = tempIndexFile;
+      this.channel = channel;
+      this.appVersion = appVersion;
+      this.lruClock.set(lruClock);
+      this.journalExecutor = journalExecutor;
+      this.checkpointCooldown = checkpointCooldown;
+      this.delayer = delayer;
+      this.clock = clock;
+    }
+
+    long onRead(Hash hash) {
+      long readAt = lruClock.incrementAndGet();
+      buffer.add(new Read(hash, readAt));
+      tryCheckpoint();
+      return readAt;
+    }
+
+    long onWrite(Hash hash, long size) {
+      long writtenAt = lruClock.incrementAndGet();
+      buffer.add(new Write(hash, writtenAt, size));
+      pendingWriteCount.incrementAndGet();
+      tryCheckpoint();
+      return writtenAt;
+    }
+
+    void onRemove(Hash hash) {
+      buffer.add(new Remove(hash));
+      tryCheckpoint();
+    }
+
+    private final AtomicInteger pendingReadOrRemoveCount = new AtomicInteger();
+    private static final int FLUSH_AFTER_WRITES = 8;
+    private static final int FLUSH_AFTER_READS_AND_REMOVES = 64;
+
+    private void tryCheckpoint() {
+      // TODO fix magic numbers (may make pendingWrites constraint variable to store size)
+      if (pendingReadOrRemoveCount.get() >= FLUSH_AFTER_READS_AND_REMOVES
+          || pendingWriteCount.get() >= FLUSH_AFTER_WRITES) {
+        scheduleCheckpoint();
+      }
+    }
+
+    /** Terminal marker that is set when no more writes are to be scheduled. */
+    private static final WriteTask TOMBSTONE =
+        new WriteTask() {
+          @Override
+          Instant fireTime() {
+            return Instant.MIN;
+          }
+
+          @Override
+          void cancel() {}
+        };
+
+    private final Executor journalExecutor;
+    private final Duration checkpointCooldown;
+    private final Delayer delayer;
+    private final AtomicReference<WriteTask> scheduledCheckpointTask = new AtomicReference<>();
+
+    /**
+     * A barrier for shutdowns to await the currently running task. Scheduled WriteTasks have the
+     * following transitions:
+     *
+     * <pre>{@code
+     * T1 -> T2 -> .... -> Tn
+     * }</pre>
+     *
+     * <p>Where Tn is the currently scheduled and hence the only referenced task, and the time
+     * between two consecutive Ts is generally the specified period, or less if there are immediate
+     * flushes (note that Ts don't overlap since the executor is serialized). Ensuring no Ts are
+     * running after shutdown entails awaiting the currently running task (if any) to finish then
+     * preventing ones following it from starting. If the update delay is small enough, or if the
+     * executor and/or the system-wide scheduler are busy, the currently running task might be
+     * lagging behind Tn by multiple Ts, so it's not ideal to somehow keep a reference to it in
+     * order to await it when needed. This Phaser solves this issue by having the currently running
+     * T to register itself then arriveAndDeregister when finished. During shutdown, the scheduler
+     * de-registers from, then attempts to await, the phaser, where it is only awaited if there is
+     * still one registered party (a running T). When registerers reach 0, the phaser is terminated,
+     * preventing yet to arrive tasks from registering, so they can choose not to run.
+     */
+    private final Phaser runningTaskAwaiter = new Phaser(1); // Register self.
+
+    Clock clock() {
+      return clock;
+    }
+
+    Delayer delayer() {
+      return delayer;
+    }
+
+    void scheduleCheckpoint() {
+      // Decide whether to schedule and when as follows:
+      //   - If TOMBSTONE is set, don't schedule anything.
+      //   - If scheduledWriteTask is null, then this is the first call, so schedule immediately.
+      //   - If scheduledWriteTask is set to run in the future, then it'll see the changes made so
+      //     far and there's no need to schedule.
+      //   - If less than INDEX_UPDATE_DELAY time has passed since the last write, then
+      //   schedule the
+      //     writer to run when the period evaluates from the last write.
+      //   - Otherwise, a timeslot is available, so schedule immediately.
+      //
+      // This is retried in case of contention.
+
+      var now = clock.instant();
+      while (true) {
+        var currentTask = scheduledCheckpointTask.get();
+        var nextFireTime = currentTask != null ? currentTask.fireTime() : null;
+        Duration delay;
+        if (nextFireTime == null) {
+          delay = Duration.ZERO;
+        } else if (currentTask == TOMBSTONE || nextFireTime.isAfter(now)) {
+          return; // No writes are needed.
+        } else {
+          var idleness = Duration.between(nextFireTime, now);
+          delay = Compare.max(checkpointCooldown.minus(idleness), Duration.ZERO);
+        }
+
+        var newTask = new RunnableWriteTask(now.plus(delay));
+        if (scheduledCheckpointTask.compareAndSet(currentTask, newTask)) {
+          delayer.delay(newTask.logOnFailure(), delay, journalExecutor);
+          return;
+        }
+      }
+    }
+
+    /** Forcibly submits an index write to the index executor, ignoring the time rate. */
+    void forceCheckpoint() throws IOException {
+      try {
+        Utils.get(forceCheckpointAsync());
+      } catch (InterruptedException e) {
+        throw (IOException) new InterruptedIOException().initCause(e);
+      }
+    }
+
+    private CompletableFuture<Void> forceCheckpointAsync() {
+      var now = clock.instant();
+      while (true) {
+        var currentTask = scheduledCheckpointTask.get();
+        requireState(currentTask != TOMBSTONE, "shutdown");
+
+        var newTask = new RunnableWriteTask(now);
+        if (scheduledCheckpointTask.compareAndSet(currentTask, newTask)) {
+          if (currentTask != null) {
+            currentTask.cancel();
+          }
+          return Unchecked.runAsync(newTask, journalExecutor);
+        }
+      }
+    }
+
+    private static final int MAX_BATCH_COUNT = 1024;
+
+    void checkpoint() throws IOException {
+      // TODO we can remove redundant writes within some window (e.g. repeated reads).
+      var batch = new ArrayList<JournalEntry>();
+      long batchSize = 0;
+      JournalEntry entry = null;
+      for (int i = 0; i < MAX_BATCH_COUNT && (entry = buffer.poll()) != null; i++) {
+        batch.add(entry);
+        batchSize += entry.size();
+      }
+
+    }
+
+    void shutdown() throws InterruptedIOException {
+      scheduledCheckpointTask.set(TOMBSTONE);
+      try {
+        runningTaskAwaiter.awaitAdvanceInterruptibly(runningTaskAwaiter.arriveAndDeregister());
+        assert runningTaskAwaiter.isTerminated();
+      } catch (InterruptedException e) {
+        throw new InterruptedIOException();
+      }
+    }
+
+    private abstract static class WriteTask {
+      abstract Instant fireTime();
+
+      abstract void cancel();
+    }
+
+    private final class RunnableWriteTask extends WriteTask implements ThrowingRunnable {
+      private final Instant fireTime;
+      private volatile boolean cancelled;
+
+      RunnableWriteTask(Instant fireTime) {
+        this.fireTime = fireTime;
+      }
+
+      @Override
+      Instant fireTime() {
+        return fireTime;
+      }
+
+      @Override
+      void cancel() {
+        cancelled = true;
+      }
+
+      @Override
+      public void run() throws IOException {
+        if (!cancelled && runningTaskAwaiter.register() >= 0) {
+          try {
+            checkpoint();
+          } finally {
+            runningTaskAwaiter.arriveAndDeregister();
+          }
+        }
+      }
+
+      Runnable logOnFailure() {
+        // TODO consider disabling the store if failure happens too often.
+        return () -> {
+          try {
+            run();
+          } catch (IOException e) {
+            logger.log(Level.ERROR, "Exception thrown when writing the index", e);
+          }
+        };
+      }
+    }
+  }
+
+  static JournalRecovery recoverJournal(Path directory, int appVersion) throws IOException {
+    var indexFile = directory.resolve(INDEX_FILENAME);
+    var channel =
+        FileChannel.open(
+            indexFile,
+            StandardOpenOption.READ,
+            StandardOpenOption.WRITE,
+            StandardOpenOption.CREATE);
+
+    var reader = new JournalReader(channel);
+    checkValue(INDEX_MAGIC, reader.readLong(), "not in index format");
+    checkValue(STORE_VERSION, reader.readInt(), "unrecognized store version");
+    checkValue(appVersion, reader.readInt(), "unrecognized app version");
+
+    var state = new JournalState();
+    for (JournalOp op; (op = reader.readOpOrEof()) != null; ) {
+      op.update(reader, state);
+    }
+
+    long clock = state.latestTick + 1; // Advance time.
+    var entries = new HashSet<IndexEntry>();
+    for (var entry : state.entries.values()) {
+      if (entry.size > 0 && entry.lastWritten < clock) {
+        entry.lastRead = Math.min(entry.lastRead, clock);
+        entries.add(
+            new IndexEntry(entry.hash, Math.max(entry.lastRead, entry.lastWritten), entry.size));
+      }
+    }
+    //      return new JournalRecovery(new Journal(indexFile,
+    // directory.resolve(TEMP_INDEX_FILENAME),
+    //          channel, appVersion, clock), entries);
+    throw new UnsupportedOperationException();
   }
 
   private static final class DebugIndexOperator extends IndexOperator {
@@ -1007,17 +1594,17 @@ public final class DiskStore implements Store {
      * T1 -> T2 -> .... -> Tn
      * }</pre>
      *
-     * Where Tn is the currently scheduled and hence the only referenced task, and the time between
-     * two consecutive Ts is generally the specified period, or less if there are immediate flushes
-     * (note that Ts don't overlap since the executor is serialized). Ensuring no Ts are running
-     * after shutdown entails awaiting the currently running task (if any) to finish then preventing
-     * ones following it from starting. If the update delay is small enough, or if the executor
-     * and/or the system-wide scheduler are busy, the currently running task might be lagging behind
-     * Tn by multiple Ts, so it's not ideal to somehow keep a reference to it in order to await it
-     * when needed. This Phaser solves this issue by having the currently running T to register
-     * itself then arriveAndDeregister when finished. During shutdown, the scheduler de-registers
-     * from, then attempts to await, the phaser, where it is only awaited if there is still one
-     * registered party (a running T). When registerers reach 0, the phaser is terminated,
+     * <p>Where Tn is the currently scheduled and hence the only referenced task, and the time
+     * between two consecutive Ts is generally the specified period, or less if there are immediate
+     * flushes (note that Ts don't overlap since the executor is serialized). Ensuring no Ts are
+     * running after shutdown entails awaiting the currently running task (if any) to finish then
+     * preventing ones following it from starting. If the update delay is small enough, or if the
+     * executor and/or the system-wide scheduler are busy, the currently running task might be
+     * lagging behind Tn by multiple Ts, so it's not ideal to somehow keep a reference to it in
+     * order to await it when needed. This Phaser solves this issue by having the currently running
+     * T to register itself then arriveAndDeregister when finished. During shutdown, the scheduler
+     * de-registers from, then attempts to await, the phaser, where it is only awaited if there is
+     * still one registered party (a running T). When registerers reach 0, the phaser is terminated,
      * preventing yet to arrive tasks from registering, so they can choose not to run.
      */
     private final Phaser runningTaskAwaiter = new Phaser(1); // Register self.
@@ -1051,7 +1638,8 @@ public final class DiskStore implements Store {
       //   - If scheduledWriteTask is null, then this is the first call, so schedule immediately.
       //   - If scheduledWriteTask is set to run in the future, then it'll see the changes made so
       //     far and there's no need to schedule.
-      //   - If less than INDEX_UPDATE_DELAY time has passed since the last write, then schedule the
+      //   - If less than INDEX_UPDATE_DELAY time has passed since the last write, then
+      //   schedule the
       //     writer to run when the period evaluates from the last write.
       //   - Otherwise, a timeslot is available, so schedule immediately.
       //
@@ -1248,7 +1836,12 @@ public final class DiskStore implements Store {
 
     static DirectoryLock acquire(Path directory) throws IOException {
       var lockFile = directory.resolve(LOCK_FILENAME);
-      var channel = FileChannel.open(lockFile, READ, WRITE, CREATE);
+      var channel =
+          FileChannel.open(
+              lockFile,
+              StandardOpenOption.READ,
+              StandardOpenOption.WRITE,
+              StandardOpenOption.CREATE);
       try {
         var fileLock = channel.tryLock();
         if (fileLock == null) {
@@ -1326,8 +1919,10 @@ public final class DiskStore implements Store {
         return null;
       }
       try {
-        // There's no Short.parseShort that accepts a CharSequence region, so use downcast result of
-        // Integer.parseInt. This will certainly fit in a short since exactly 32 hex characters are
+        // There's no Short.parseShort that accepts a CharSequence region, so use downcast
+        // result of
+        // Integer.parseInt. This will certainly fit in a short since exactly 32 hex characters
+        // are
         // parsed, and we don't care about the sign.
         return new Hash(
             Long.parseUnsignedLong(hex, 0, Long.BYTES << 1, 16),
@@ -1491,7 +2086,7 @@ public final class DiskStore implements Store {
           return null;
         }
 
-        var channel = FileChannel.open(entryFile(), READ);
+        var channel = FileChannel.open(entryFile(), StandardOpenOption.READ);
         try {
           var descriptor = readDescriptorForKey(channel, expectedKey);
           if (descriptor != null) {
@@ -1508,8 +2103,10 @@ public final class DiskStore implements Store {
           throw e;
         }
       } catch (NoSuchFileException missingEntryFile) {
-        // Our file disappeared! We'll handle this gracefully by making the store lose track of us.
-        // This is done after releasing the lock to not incur a potential index write while holding
+        // Our file disappeared! We'll handle this gracefully by making the store lose track of
+        // us.
+        // This is done after releasing the lock to not incur a potential index write while
+        // holding
         // it.
         logger.log(Level.WARNING, "Dropping entry with missing file", missingEntryFile);
       } finally {
@@ -1566,7 +2163,7 @@ public final class DiskStore implements Store {
     private Viewer createViewer(FileChannel channel, int version, EntryDescriptor descriptor) {
       var viewer = new DiskViewer(this, version, descriptor, channel);
       viewerCount++;
-      lastUsed = lruClock.getAndIncrement();
+      lastUsed = clock.getAndIncrement();
       return viewer;
     }
 
@@ -1578,7 +2175,12 @@ public final class DiskStore implements Store {
             || (targetVersion != ANY_VERSION && targetVersion != version)) {
           return null;
         }
-        var editor = new DiskEditor(this, key, FileChannel.open(tempEntryFile(), WRITE, CREATE));
+        var editor =
+            new DiskEditor(
+                this,
+                key,
+                FileChannel.open(
+                    tempEntryFile(), StandardOpenOption.WRITE, StandardOpenOption.CREATE));
         currentEditor = editor;
         return editor;
       } finally {
@@ -1606,7 +2208,10 @@ public final class DiskStore implements Store {
         boolean editInPlace = dataSize < 0 && readable;
         try (editorChannel;
             var existingEntryChannel =
-                editInPlace ? FileChannel.open(entryFile(), READ, WRITE) : null) {
+                editInPlace
+                    ? FileChannel.open(
+                        entryFile(), StandardOpenOption.READ, StandardOpenOption.WRITE)
+                    : null) {
           var targetChannel = editorChannel;
           EntryDescriptor existingDescriptor = null;
           if (existingEntryChannel != null
@@ -1653,7 +2258,7 @@ public final class DiskStore implements Store {
         sizeDifference = newSize - size;
         size = newSize;
         readable = true;
-        lastUsed = lruClock.getAndIncrement();
+        lastUsed = clock.getAndIncrement();
         cachedDescriptor = committedDescriptor;
       } finally {
         lock.unlock();
@@ -1720,7 +2325,8 @@ public final class DiskStore implements Store {
     @GuardedBy("lock")
     private void discardCurrentEdit(DiskEditor editor) {
       if (!readable) {
-        // Remove the entry as it could never be readable. It's safe to directly remove it from the
+        // Remove the entry as it could never be readable. It's safe to directly remove it from
+        // the
         // map since it's not visible to the outside world at this point (no views/edits) and
         // doesn't contribute to store size.
         entries.remove(hash, this);

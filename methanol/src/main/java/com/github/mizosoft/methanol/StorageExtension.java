@@ -22,9 +22,6 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static java.util.Objects.requireNonNull;
-
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.InternalStorageExtension;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
@@ -35,6 +32,9 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static java.util.Objects.requireNonNull;
 
 /** An extension that provides a storage backend for an {@link HttpCache}. */
 public interface StorageExtension {
