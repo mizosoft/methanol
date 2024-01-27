@@ -250,8 +250,8 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
-<div class="block">A mutable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a> that supports <a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol"><code>tags</code></a>, relative URIs &amp; setting
- arbitrary objects as request bodies.</div>
+<div class="block">A mutable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a> that supports <a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol"><code>tags</code></a>, relative URIs <code>&amp;</code>
+ setting arbitrary objects as request bodies.</div>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab2"><a href="ProgressTracker.html" title="class in com.github.mizosoft.methanol">ProgressTracker</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
@@ -281,28 +281,32 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A builder of <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse</code></a> instances.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></div>
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="block">A response body that is yet to be handled into the desirable type (see <a href="Methanol.html#send(java.net.http.HttpRequest)"><code>Methanol.send(HttpRequest)</code></a>).</div>
+</div>
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">An extension that provides a storage backend for an <a href="HttpCache.html" title="class in com.github.mizosoft.methanol"><code>HttpCache</code></a>.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">An <code>HttpRequest</code> that can carry arbitrary values, referred to as tags.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">An <code>HttpRequest.Builder</code> that allows attaching tags.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="TrackedResponse.html" title="interface in com.github.mizosoft.methanol">TrackedResponse</a>&lt;T&gt;</div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="TrackedResponse.html" title="interface in com.github.mizosoft.methanol">TrackedResponse</a>&lt;T&gt;</div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">A response with recorded send/receive timestamps.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;</div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;</div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">An object that represents the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/Type.html" title="class or interface in java.lang.reflect" class="external-link"><code>Type</code></a> of the generic argument <code>T</code>.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">A <code>BodyPublisher</code> that allows streaming the body's content through an <code>OutputStream</code>
  or a <code>WritableByteChannel</code>.</div>
 </div>

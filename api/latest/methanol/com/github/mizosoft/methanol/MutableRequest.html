@@ -89,9 +89,9 @@ loadScripts(document, 'script');</script>
 <div class="type-signature"><span class="modifiers">public final class </span><span class="element-name type-name-label">MutableRequest</span>
 <span class="extends-implements">extends <a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a>
 implements <a href="TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></span></div>
-<div class="block">A mutable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a> that supports <a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol"><code>tags</code></a>, relative URIs &amp; setting
- arbitrary objects as request bodies. This class implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.Builder</code></a> for
- setting request fields. Querying a field before it's been set will return its default value.
+<div class="block">A mutable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a> that supports <a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol"><code>tags</code></a>, relative URIs <code>&amp;</code>
+ setting arbitrary objects as request bodies. This class implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.Builder</code></a>
+ for setting request fields. Querying a field before it's been set will return its default value.
  Invoking <a href="#toImmutableRequest()"><code>toImmutableRequest()</code></a> will return an immutable copy that is independent of this
  instance.
 

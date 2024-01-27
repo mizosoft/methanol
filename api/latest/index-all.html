@@ -168,6 +168,22 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreSpec.html#appVersion()" class="member-name-link">appVersion()</a> - Element in annotation interface com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreSpec.html" title="annotation interface in com.github.mizosoft.methanol.testing.store">StoreSpec</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html#as(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">as(TypeRef&lt;T&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></dt>
+<dd>
+<div class="block">Converts this payload into an object of (possibly generic) type <code>T</code>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html#as(java.lang.Class)" class="member-name-link">as(Class&lt;T&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></dt>
+<dd>
+<div class="block">Converts this payload into an object of type <code>T</code>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html#asAsync(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">asAsync(TypeRef&lt;T&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></dt>
+<dd>
+<div class="block">Asynchronously converts this payload into an object of (possibly generic) type <code>T</code>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html#asAsync(java.lang.Class)" class="member-name-link">asAsync(Class&lt;T&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></dt>
+<dd>
+<div class="block">Asynchronously converts this payload into an object of type <code>T</code>.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.ObjectConversionStep.html#asBodyPublisher()" class="member-name-link">asBodyPublisher()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.ObjectConversionStep.html" title="class in com.github.mizosoft.methanol.testing.verifiers">EncoderVerifier.ObjectConversionStep</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html#assertIsCacheAware()" class="member-name-link">assertIsCacheAware()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a></dt>
@@ -280,8 +296,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns an immutable list of this client's <a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#backendInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)"><code>backend interceptors</code></a>.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#%3Cinit%3E()" class="member-name-link">BaseBuilder()</a> - Constructor for class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#baseUri()" class="member-name-link">baseUri()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>
 <div class="block">Returns this client's base <code>URI</code>.</div>
@@ -449,8 +463,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Sets the <a href="methanol/com/github/mizosoft/methanol/HttpCache.html" title="class in com.github.mizosoft.methanol"><code>HttpCache</code></a> to be used by the client.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/Methanol.Builder.html#cache(com.github.mizosoft.methanol.HttpCache,com.github.mizosoft.methanol.HttpCache...)" class="member-name-link">cache(HttpCache, HttpCache...)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.Builder.html" title="class in com.github.mizosoft.methanol">Methanol.Builder</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheAwareResponse.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">CacheAwareResponse</a>&lt;<a href="methanol/com/github/mizosoft/methanol/CacheAwareResponse.html" title="type parameter in CacheAwareResponse">T</a>&gt; - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">A <code>TrackedResponse</code> that knows it may have been generated from an HTTP cache.</div>
@@ -458,6 +470,11 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheAwareResponse.CacheStatus.html" class="type-name-link" title="enum class in com.github.mizosoft.methanol">CacheAwareResponse.CacheStatus</a> - Enum Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">The status of an attempt to retrieve an HTTP response from cache.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/Methanol.Builder.html#cacheChain(java.util.List)" class="member-name-link">cacheChain(List&lt;HttpCache&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.Builder.html" title="class in com.github.mizosoft.methanol">Methanol.Builder</a></dt>
+<dd>
+<div class="block">Sets a chain of caches to be called, one after another, in the order specified by the given
+ list.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#cacheControl(com.github.mizosoft.methanol.CacheControl)" class="member-name-link">cacheControl(CacheControl)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
@@ -542,6 +559,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpCache.html#close()" class="member-name-link">close()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></dt>
 <dd>
 <div class="block">Closes this cache.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html#close()" class="member-name-link">close()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></dt>
+<dd>
+<div class="block">Makes sure the resources held by this payload are released.</div>
 </dd>
 <dt><a href="methanol.redis/com/github/mizosoft/methanol/store/redis/RedisConnectionProvider.html#close()" class="member-name-link">close()</a> - Method in interface com.github.mizosoft.methanol.store.redis.<a href="methanol.redis/com/github/mizosoft/methanol/store/redis/RedisConnectionProvider.html" title="interface in com.github.mizosoft.methanol.store.redis">RedisConnectionProvider</a></dt>
 <dd>
@@ -650,7 +671,7 @@ loadScripts(document, 'script');</script>
 <div class="block">The response was constructed from cache but a conditional <code>GET</code> had to be made to
  validate it with the server.</div>
 </dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisClusterStoreContext.html#config()" class="member-name-link">config()</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisClusterStoreContext.html" title="class in com.github.mizosoft.methanol.testing.store">RedisClusterStoreContext</a></dt>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisStandaloneStoreContext.html#config()" class="member-name-link">config()</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisStandaloneStoreContext.html" title="class in com.github.mizosoft.methanol.testing.store">RedisStandaloneStoreContext</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/DiskStoreContext.html#config()" class="member-name-link">config()</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/DiskStoreContext.html" title="class in com.github.mizosoft.methanol.testing.store">DiskStoreContext</a></dt>
 <dd>&nbsp;</dd>
@@ -2289,8 +2310,8 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" class="type-name-link" title="class in com.github.mizosoft.methanol">MutableRequest</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">A mutable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a> that supports <a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html" title="class in com.github.mizosoft.methanol"><code>tags</code></a>, relative URIs &amp; setting
- arbitrary objects as request bodies.</div>
+<div class="block">A mutable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a> that supports <a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html" title="class in com.github.mizosoft.methanol"><code>tags</code></a>, relative URIs <code>&amp;</code>
+ setting arbitrary objects as request bodies.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:N">N</h2>
@@ -3023,6 +3044,10 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#%3Cinit%3E()" class="member-name-link">ResponseBuilder()</a> - Constructor for class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">ResponsePayload</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
+<dd>
+<div class="block">A response body that is yet to be handled into the desirable type (see <a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest)"><code>Methanol.send(HttpRequest)</code></a>).</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt; - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/package-summary.html">com.github.mizosoft.methanol.testing.verifiers</a></dt>
 <dd>
 <div class="block">A small DSL for testing <code>HttpResponses</code>.</div>
@@ -3044,6 +3069,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorExtension.ExecutorType.html#SCHEDULER" class="member-name-link">SCHEDULER</a> - Enum constant in enum class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorExtension.ExecutorType.html" title="enum class in com.github.mizosoft.methanol.testing">ExecutorExtension.ExecutorType</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest)" class="member-name-link">send(HttpRequest)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
+<dd>
+<div class="block">Like <a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)"><code>Methanol.send(HttpRequest, BodyHandler)</code></a> but defers handling the response body into the
+ desired type using the provided <a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol"><code>ResponsePayload</code></a>.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,com.github.mizosoft.methanol.TypeRef)" class="member-name-link">send(HttpRequest, TypeRef&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,java.lang.Class)" class="member-name-link">send(HttpRequest, Class&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
@@ -3054,6 +3084,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">send(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest)" class="member-name-link">sendAsync(HttpRequest)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
+<dd>
+<div class="block">Like <a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)"><code>Methanol.send(HttpRequest, BodyHandler)</code></a> but defers handling the response body into the
+ desired type using the provided <a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol"><code>ResponsePayload</code></a>.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest,com.github.mizosoft.methanol.TypeRef)" class="member-name-link">sendAsync(HttpRequest, TypeRef&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest,java.lang.Class)" class="member-name-link">sendAsync(HttpRequest, Class&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
@@ -3740,6 +3775,10 @@ the order they are declared.</div>
 <div class="block">A <code>ForwardingFileSystem</code> that emulates Windows' behaviour regarding the deletion of files
  with open handles.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html#with(java.net.http.HttpResponse.BodyHandler)" class="member-name-link">with(HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></dt>
+<dd>
+<div class="block">Converts this payload using the given body handler.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html#with(java.net.http.HttpResponse.BodyHandler,java.net.http.HttpResponse.PushPromiseHandler)" class="member-name-link">with(HttpResponse.BodyHandler&lt;U&gt;, HttpResponse.PushPromiseHandler&lt;U&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a></dt>
 <dd>
 <div class="block">Returns a new chain that uses given handlers, possibly targeting another response type.</div>
@@ -3752,6 +3791,10 @@ the order they are declared.</div>
 <dd>
 <div class="block">Returns a new chain after applying the given functions to this chain's body and push
  promise handlers.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html#withAsync(java.net.http.HttpResponse.BodyHandler)" class="member-name-link">withAsync(HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></dt>
+<dd>
+<div class="block">Asynchronously this payload using the given body handler.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodyConversionStep.html#withBody(java.lang.String)" class="member-name-link">withBody(String)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodyConversionStep.html" title="class in com.github.mizosoft.methanol.testing.verifiers">DecoderVerifier.BodyConversionStep</a></dt>
 <dd>&nbsp;</dd>

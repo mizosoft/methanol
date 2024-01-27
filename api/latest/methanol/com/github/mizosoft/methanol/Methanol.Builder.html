@@ -124,9 +124,11 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.
 <div class="block">Sets the <a href="HttpCache.html" title="class in com.github.mizosoft.methanol"><code>HttpCache</code></a> to be used by the client.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.Builder.html" title="class in com.github.mizosoft.methanol">Methanol.Builder</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cache(com.github.mizosoft.methanol.HttpCache,com.github.mizosoft.methanol.HttpCache...)" class="member-name-link">cache</a><wbr>(<a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a>&nbsp;firstCache,
- <a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a>...&nbsp;otherCaches)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cacheChain(java.util.List)" class="member-name-link">cacheChain</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a>&gt;&nbsp;caches)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Sets a chain of caches to be called, one after another, in the order specified by the given
+ list.</div>
+</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.Builder.html" title="class in com.github.mizosoft.methanol">Methanol.Builder</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#connectTimeout(java.time.Duration)" class="member-name-link">connectTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;duration)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
@@ -185,10 +187,13 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.
 </section>
 </li>
 <li>
-<section class="detail" id="cache(com.github.mizosoft.methanol.HttpCache,com.github.mizosoft.methanol.HttpCache...)">
-<h3>cache</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.Builder.html" title="class in com.github.mizosoft.methanol">Methanol.Builder</a></span>&nbsp;<span class="element-name">cache</span><wbr><span class="parameters">(<a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a>&nbsp;firstCache,
- <a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a>...&nbsp;otherCaches)</span></div>
+<section class="detail" id="cacheChain(java.util.List)">
+<h3>cacheChain</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.Builder.html" title="class in com.github.mizosoft.methanol">Methanol.Builder</a></span>&nbsp;<span class="element-name">cacheChain</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a>&gt;&nbsp;caches)</span></div>
+<div class="block">Sets a chain of caches to be called, one after another, in the order specified by the given
+ list. Each cache forwards to the other till a suitable response is found or the request is
+ sent to network. Although not enforced, it is highly recommended for the caches to be sorted
+ in the order of decreasing locality.</div>
 </section>
 </li>
 <li>
