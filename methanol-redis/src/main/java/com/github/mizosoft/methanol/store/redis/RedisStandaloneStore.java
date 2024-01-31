@@ -23,10 +23,7 @@
 package com.github.mizosoft.methanol.store.redis;
 
 import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.sync.RedisHashCommands;
-import io.lettuce.core.api.sync.RedisKeyCommands;
-import io.lettuce.core.api.sync.RedisScriptingCommands;
-import io.lettuce.core.api.sync.RedisStringCommands;
+import io.lettuce.core.api.sync.RedisCommands;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -49,12 +46,8 @@ class RedisStandaloneStore extends AbstractRedisStore<StatefulRedisConnection<St
 
   @SuppressWarnings("unchecked")
   @Override
-  <
-          CMD extends
-              RedisHashCommands<String, ByteBuffer> & RedisScriptingCommands<String, ByteBuffer>
-                  & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>>
-      CMD commands() {
-    return (CMD) connection.sync();
+  RedisCommands<String, ByteBuffer> commands() {
+    return connection.sync();
   }
 
   @Override

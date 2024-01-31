@@ -26,11 +26,9 @@ import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 
 import io.lettuce.core.RedisException;
-import io.lettuce.core.api.sync.RedisHashCommands;
-import io.lettuce.core.api.sync.RedisKeyCommands;
 import io.lettuce.core.api.sync.RedisScriptingCommands;
-import io.lettuce.core.api.sync.RedisStringCommands;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
 import io.lettuce.core.cluster.models.partitions.Partitions;
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode.NodeFlag;
@@ -61,12 +59,8 @@ class RedisClusterStore
 
   @SuppressWarnings("unchecked")
   @Override
-  <
-          CMD extends
-              RedisHashCommands<String, ByteBuffer> & RedisScriptingCommands<String, ByteBuffer>
-                  & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>>
-      CMD commands() {
-    return (CMD) connection.sync();
+  RedisClusterCommands<String, ByteBuffer> commands() {
+    return connection.sync();
   }
 
   @Override
