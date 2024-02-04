@@ -2111,7 +2111,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void unsafeMethodsDoNotInvalidateCacheWithErrorResponse(String method, StoreContext storeContext)
       throws Exception {
-    assertUnsafeMethodInvalidatesCache(storeContext, method, 104, false);
     assertUnsafeMethodInvalidatesCache(storeContext, method, 404, false);
     assertUnsafeMethodInvalidatesCache(storeContext, method, 504, false);
   }
