@@ -1,6 +1,7 @@
 plugins {
   id("conventions.aggregate-coverage")
   id("conventions.aggregate-javadoc")
+  id("conventions.aggregate-testing")
   alias(libs.plugins.nexus.publish)
   alias(libs.plugins.versions)
 }
@@ -24,6 +25,6 @@ nexusPublishing {
   }
 }
 
-//tasks.register("clean") {
-//  delete(rootProject.buildDir)
-//}
+tasks.register("clean") {
+  delete(rootProject.layout.buildDirectory)
+}
