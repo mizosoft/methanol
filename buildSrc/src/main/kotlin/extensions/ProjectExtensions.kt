@@ -61,4 +61,3 @@ val Project.artifactId
   get() = project.name
 
 val Project.libs get() = the<LibrariesForLibs>()
-

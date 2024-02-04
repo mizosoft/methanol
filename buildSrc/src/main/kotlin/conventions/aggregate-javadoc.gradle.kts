@@ -9,7 +9,7 @@ import org.gradle.api.plugins.JavaLibraryPlugin
 /** This task generates an aggregate Javadoc for all published modules (except benchmarks). */
 val aggregateJavadoc by tasks.registering(Javadoc::class) {
   title = "Methanol $version API"
-  setDestinationDir(file("${rootProject.buildDir}/docs/javadoc"))
+  setDestinationDir(layout.buildDirectory.get().file("docs/aggregateJavadoc").asFile)
 
   // Exclude internal APIs.
   exclude("**/internal**")

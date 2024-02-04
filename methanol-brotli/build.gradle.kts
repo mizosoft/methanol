@@ -4,7 +4,7 @@ plugins {
   id("conventions.java-library")
   id("conventions.static-analysis")
   id("conventions.testing")
-  id("conventions.jacoco")
+  id("conventions.coverage")
   id("conventions.publishing")
 }
 

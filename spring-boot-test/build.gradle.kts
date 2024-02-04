@@ -2,7 +2,7 @@ plugins {
   id("conventions.java-library")
   id("conventions.static-analysis")
   id("conventions.testing")
-  id("conventions.jacoco")
+  id("conventions.coverage")
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dependency.management)
 }

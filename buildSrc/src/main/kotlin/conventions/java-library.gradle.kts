@@ -9,6 +9,7 @@ plugins {
 
 java {
   sourceCompatibility = JavaVersion.VERSION_11
+  targetCompatibility = JavaVersion.VERSION_11
 }
 
 tasks.compileJava {
@@ -18,7 +19,7 @@ tasks.compileJava {
 
 tasks.withType<JavaCompile> {
   options.encoding = StandardCharsets.UTF_8.name()
-  options.javaModuleVersion.set(project.version.toString())
+  options.javaModuleVersion.set(provider { project.version.toString() })
 }
 
 tasks.withType<Javadoc> {
