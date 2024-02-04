@@ -42,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
 import com.github.mizosoft.methanol.HttpCache.Listener;
@@ -123,12 +124,25 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.ThrowingConsumer;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvFileSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @Timeout(10)
 @ExtendWith(StoreExtension.class)
 class HttpCacheTest extends AbstractHttpCacheTest {
+  /**
+   * Status codes that are cacheable by default (i.e. heuristically cacheable). From rfc7231 section
+   * 6.1:
+   *
+   * <pre>{@code
+   * Responses with status codes that are defined as cacheable by default (e.g., 200, 203, 204, 206,
+   *   300, 301, 404, 405, 410, 414, and 501 in this specification) can be reused by a cache with
+   *   heuristic expiration unless otherwise indicated by the method definition or explicit cache
+   *   controls [RFC7234]; all other status codes are not cacheable by default.
+   * }</pre>
+   */
+  private static final Set<Integer> CACHEABLE_BY_DEFAULT_CODES =
+      Set.of(200, 203, 204, 206, 300, 301, 404, 405, 410, 414, 501);
+
   static {
     Logging.disable(HttpCache.class, DiskStore.class, CacheWritingPublisher.class);
   }
@@ -1860,21 +1874,39 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
   /**
    * Tests that status codes in rfc7231 6.1 without Cache-Control or Expires are only cached if
-   * defined as cacheable by default.
+   * defined as cacheable by default ({@link #CACHEABLE_BY_DEFAULT_CODES}).
    */
   @ParameterizedTest
-  @CsvFileSource(resources = "/default_cacheability.csv", numLinesToSkip = 1)
+  @ValueSource(
+      ints = {
+        100, 101, 200, 201, 202, 203, 204, 205, 206, 300, 301, 302, 303, 304, 305, 307, 400, 401,
+        402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 426, 500,
+        501, 502, 503, 504, 505
+      })
   @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
-  void defaultCacheability(int code, boolean cacheableByDefault, Store store) throws Exception {
+  void defaultCacheability(int code, Store store) throws Exception {
     setUpCache(store);
     client =
         clientBuilder
             .version(Version.HTTP_1_1) // HTTP_2 doesn't let 101 pass
             .followRedirects(Redirect.NEVER) // Disable redirections in case code is 3xx
             .build();
+
     if (code == HTTP_UNAVAILABLE) {
       failOnUnavailableResponses = false;
     }
+
+    // At least after Java 21, the HttpClient ignores 100 responses and never returns them (which is
+    // permitted by the spec). Testing cache behavior for 100 is not possible in such case as the
+    // client just hangs.
+    assumeTrue(code != 100, "HttpClient ignores status code");
+
+    // The HttpClient panics if the server tries to switch protocols without being explicitly asked
+    // to.
+    assumeTrue(code != 101, "HttpClient panics on unexpected protocol switch");
+
+    // Caching not supported.
+    assumeTrue(code != 206, "Caching partial content isn't supported");
 
     // Last-Modified:      20 seconds from date
     // Heuristic lifetime: 2 seconds
@@ -1882,20 +1914,20 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     clock.advanceSeconds(20);
     var dateInstant = clock.instant();
     var body =
-        code == 204 || code == 304 ? "" : "Cache me pls!"; // Body with 204 or 304 causes problems
+        code == 204 || code == 304 ? "" : "Cache me pls!"; // Body with 204 or 304 causes problems.
     server.enqueue(
         new MockResponse()
             .setResponseCode(code)
             .setHeader("Last-Modified", instantToHttpDateString(lastModifiedInstant))
             .setHeader("Date", instantToHttpDateString(dateInstant))
             .setBody(body));
-    verifyThat(send(serverUri)).isCacheMiss().hasBody(body);
+    verifyThat(send(serverUri)).hasCode(code).hasBody(body).isCacheMiss();
 
-    // Retrain heuristic freshness
+    // Retrain heuristic freshness.
     clock.advanceSeconds(1);
 
     ResponseVerifier<String> response;
-    if (cacheableByDefault) {
+    if (CACHEABLE_BY_DEFAULT_CODES.contains(code)) {
       response = verifyThat(send(serverUri)).isCacheHit();
     } else {
       server.enqueue(
