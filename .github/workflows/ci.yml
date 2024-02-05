@@ -1,6 +1,6 @@
-name: CI
+name: CI-2
 
-on: [ push, pull_request ]
+on: [ push, pull_request, workflow_dispatch ]
 
 env:
   BASE_JAVA: 11
