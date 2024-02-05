@@ -1,0 +1,79 @@
+name: CI
+
+on: [ push, pull_request ]
+
+env:
+  BASE_JAVA: 11
+  BASE_OS: ubuntu-latest
+
+jobs:
+  tests:
+    name: Build & test on ${{ matrix.os }} with Java ${{ matrix.java }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        java: [ 11, 21 ]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Redis
+        shell: bash
+        # It seems there's no straightforward way to install a recent redis version on Windows, so
+        # let's only consider macOS & Ubuntu for RedisStore tests.
+        run: |
+          if [[ "${{ matrix.os }}" == macos* ]]
+          then 
+            brew install redis
+          elif [[ "${{ matrix.os }}" == ubuntu* ]] 
+          then
+            chmod +x install-redis-ubuntu.sh
+            ./install-redis-ubuntu.sh
+          fi 
+
+      - name: Run tests
+        uses: .github/actions/run-gradle
+        if: !startsWith(matrix.os, 'macos')
+        with:
+          java: ${{ matrix.java }}
+          gradle-args: check
+
+        # Brotli is not currently supported on macOS so related tests are excluded there.
+      - name: Run tests
+        uses: .github/actions/run-gradle
+        if: startsWith(matrix.os, 'macos')
+        with:
+          java: ${{ matrix.java }}
+          gradle-args: check -x :methanol-brotli:test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.os }}-java-${{ matrix.java }}-test-results
+          path: |
+            '**/build/test-results/'
+            '**/build/**/*.exec'
+
+  coverage:
+    name: Upload coverage report
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASE_OS }}-java-${{ env.BASE_JAVA }}-test-results
+
+      - name: Generate coverage report
+        uses: .github/actions/run-gradle
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        with:
+          java: ${{ env.BASE_JAVA }}
+          gradle-args: coveralls
