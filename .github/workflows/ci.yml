@@ -32,7 +32,7 @@ jobs:
           then
             chmod +x install-redis-ubuntu.sh
             ./install-redis-ubuntu.sh
-          fi 
+          fi
 
       - name: Run tests
         uses: .github/actions/run-gradle
