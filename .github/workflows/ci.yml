@@ -35,7 +35,7 @@ jobs:
           fi
 
       - name: Run tests
-        uses: .github/actions/run-gradle
+        uses: ./.github/actions/run-gradle
         if: '!startsWith(matrix.os, "macos")'
         with:
           java: ${{ matrix.java }}
@@ -43,7 +43,7 @@ jobs:
 
         # Brotli is not currently supported on macOS so related tests are excluded there.
       - name: Run tests
-        uses: .github/actions/run-gradle
+        uses: ./.github/actions/run-gradle
         if: startsWith(matrix.os, "macos")
         with:
           java: ${{ matrix.java }}
@@ -71,7 +71,7 @@ jobs:
           name: ${{ env.BASE_OS }}-java-${{ env.BASE_JAVA }}-test-results
 
       - name: Generate coverage report
-        uses: .github/actions/run-gradle
+        uses: ./.github/actions/run-gradle
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
