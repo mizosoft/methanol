@@ -36,7 +36,7 @@ jobs:
 
       - name: Run tests
         uses: ./.github/actions/run-gradle
-        if: '!startsWith(matrix.os, "macos")'
+        if: "!startsWith(matrix.os, 'macos')"
         with:
           java: ${{ matrix.java }}
           gradle-args: check
@@ -44,7 +44,7 @@ jobs:
         # Brotli is not currently supported on macOS so related tests are excluded there.
       - name: Run tests
         uses: ./.github/actions/run-gradle
-        if: startsWith(matrix.os, "macos")
+        if: startsWith(matrix.os, 'macos')
         with:
           java: ${{ matrix.java }}
           gradle-args: check -x :methanol-brotli:test
