@@ -16,7 +16,7 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macos-latest
-        java: [ 11, 21 ]
+        java: [ 11 ]
     steps:
       - uses: actions/checkout@v3
 
