@@ -55,8 +55,8 @@ jobs:
         with:
           name: ${{ matrix.os }}-java-${{ matrix.java }}-test-results
           path: |
-            '**/build/test-results/'
-            '**/build/**/*.exec'
+            **/build/test-results/
+            **/build/**/*.exec
 
   coverage:
     name: Upload coverage report
