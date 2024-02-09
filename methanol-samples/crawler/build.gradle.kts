@@ -10,6 +10,6 @@ dependencies {
 }
 
 application {
-  mainModule.set("methanol.samples.crawler")
-  mainClass.set("com.github.mizosoft.methanol.samples.crawler.Crawler")
+  mainModule = "methanol.samples.crawler"
+  mainClass = "com.github.mizosoft.methanol.samples.crawler.Crawler"
 }
