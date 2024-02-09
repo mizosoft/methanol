@@ -40,9 +40,11 @@ import org.reactivestreams.tck.TestEnvironment;
 public class TckUtils {
   private static final long TIMEOUT_MILLIS = 300L;
   private static final long NO_SIGNAL_TIMEOUT_MILLIS = 100L;
+  private static final long POLL_TIMEOUT_MILLIS = 100L;
 
   private static final long SLOW_TIMEOUT_MILLIS = 15000L;
   private static final long SLOW_NO_SIGNAL_TIMEOUT_MILLIS = 200L;
+  private static final long SLOW_POLL_TIMEOUT_MILLIS = 200L;
 
   static final int BUFFER_SIZE = 1024;
 
@@ -52,7 +54,7 @@ public class TckUtils {
    */
   static final int MAX_PRECOMPUTED_ELEMENTS = 1 << 10;
 
-  private static final List<ByteBuffer> dataItems =
+  private static final List<ByteBuffer> DATA_ITEMS =
       Stream.of("Lorem ipsum dolor sit amet".split("\\s"))
           .map(UTF_8::encode)
           .collect(Collectors.toUnmodifiableList());
@@ -65,7 +67,8 @@ public class TckUtils {
     long timeoutMillis = isSlowTest ? SLOW_TIMEOUT_MILLIS : TIMEOUT_MILLIS;
     long noSignalTimeoutMillis =
         isSlowTest ? SLOW_NO_SIGNAL_TIMEOUT_MILLIS : NO_SIGNAL_TIMEOUT_MILLIS;
-    return new TestEnvironment(timeoutMillis, noSignalTimeoutMillis, timeoutMillis);
+    long pollTimeoutMillis = isSlowTest ? SLOW_POLL_TIMEOUT_MILLIS : POLL_TIMEOUT_MILLIS;
+    return new TestEnvironment(timeoutMillis, noSignalTimeoutMillis, pollTimeoutMillis);
   }
 
   static <T, R> Publisher<R> map(Publisher<T> publisher, Function<? super T, ? extends R> mapper) {
@@ -102,7 +105,7 @@ public class TckUtils {
     var data = ByteBuffer.allocate(TckUtils.BUFFER_SIZE);
     while (data.hasRemaining()) {
       Utils.copyRemaining(
-          dataItems.get(index.getAndIncrement() % dataItems.size()).duplicate(), data);
+          DATA_ITEMS.get(index.getAndIncrement() % DATA_ITEMS.size()).duplicate(), data);
     }
     return data.flip();
   }
