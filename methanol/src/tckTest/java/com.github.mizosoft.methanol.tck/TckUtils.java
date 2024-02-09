@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,12 +22,14 @@
 
 package com.github.mizosoft.methanol.tck;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
@@ -36,6 +38,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.reactivestreams.tck.TestEnvironment;
+import org.reactivestreams.tck.flow.FlowPublisherVerification;
+import org.reactivestreams.tck.flow.FlowSubscriberBlackboxVerification;
+import org.reactivestreams.tck.flow.FlowSubscriberWhiteboxVerification;
+import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 
 public class TckUtils {
   private static final long TIMEOUT_MILLIS = 300L;
@@ -59,11 +65,23 @@ public class TckUtils {
           .map(UTF_8::encode)
           .collect(Collectors.toUnmodifiableList());
 
+  private static final Set<Class<?>> TCK_SUITES =
+      Set.of(
+          FlowPublisherVerification.class,
+          IdentityFlowProcessorVerification.class,
+          FlowSubscriberBlackboxVerification.class,
+          FlowSubscriberWhiteboxVerification.class);
+
   private static final AtomicInteger index = new AtomicInteger();
 
   private TckUtils() {}
 
-  static TestEnvironment newTestEnvironment(boolean isSlowTest) {
+  static TestEnvironment newTestEnvironment(Class<?> testSuite) {
+    requireArgument(
+        TCK_SUITES.stream().anyMatch(suite -> suite.isAssignableFrom(testSuite)),
+        "Unknown test suite: %s",
+        testSuite);
+    boolean isSlowTest = testSuite.isAnnotationPresent(Slow.class);
     long timeoutMillis = isSlowTest ? SLOW_TIMEOUT_MILLIS : TIMEOUT_MILLIS;
     long noSignalTimeoutMillis =
         isSlowTest ? SLOW_NO_SIGNAL_TIMEOUT_MILLIS : NO_SIGNAL_TIMEOUT_MILLIS;

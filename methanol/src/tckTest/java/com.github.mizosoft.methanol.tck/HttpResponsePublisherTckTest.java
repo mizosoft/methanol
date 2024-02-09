@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -57,7 +57,7 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
 
   @Factory(dataProvider = "provider")
   public HttpResponsePublisherTckTest(ExecutorType executorType) {
-    super(TckUtils.newTestEnvironment(true));
+    super(TckUtils.newTestEnvironment(HttpResponsePublisherTckTest.class));
     this.executorType = executorType;
   }
 

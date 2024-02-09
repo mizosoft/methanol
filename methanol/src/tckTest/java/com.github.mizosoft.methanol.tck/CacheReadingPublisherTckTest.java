@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -72,7 +72,7 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
 
   @Factory(dataProvider = "provider")
   public CacheReadingPublisherTckTest(ExecutorType executorType, StoreType storeType) {
-    super(TckUtils.newTestEnvironment(true));
+    super(TckUtils.newTestEnvironment(CacheReadingPublisherTckTest.class));
     this.executorType = executorType;
     this.storeConfig = StoreConfig.createDefault(storeType);
   }
