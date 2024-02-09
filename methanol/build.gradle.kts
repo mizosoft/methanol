@@ -40,8 +40,8 @@ sourceSets {
   }
 }
 
-val tckTestImplementation by configurations.getting
-val tckTestCompileOnly by configurations.getting {
+val tckTestImplementation: Configuration by configurations.getting
+val tckTestCompileOnly: Configuration by configurations.getting {
   extendsFrom(configurations.compileOnly.get())
 }
 
