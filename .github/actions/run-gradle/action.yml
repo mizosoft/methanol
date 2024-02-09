@@ -6,7 +6,7 @@ inputs:
   java:
     default: '21'
     description: Java version
-  gralde-args:
+  gradle-args:
     required: true
     description: Gradle arguments
 
