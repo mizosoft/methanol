@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -197,7 +197,7 @@ public final class RedisClusterSession implements RedisSession {
 
     var cluster = new RedisClusterSession(nodes);
     try {
-      checkHealth(cluster, masterCount);
+      checkHealth(cluster);
       return cluster;
     } catch (RedisException | InterruptedException e) {
       try {
@@ -217,8 +217,7 @@ public final class RedisClusterSession implements RedisSession {
    * replication. In any case, we keep retrying key-related commands till the cluster is operable
    * before we return it.
    */
-  private static void checkHealth(RedisClusterSession cluster, int masterCount)
-      throws InterruptedException {
+  private static void checkHealth(RedisClusterSession cluster) throws InterruptedException {
     try (var client = RedisClusterClient.create(cluster.uris());
         var connection = client.connect()) {
       int retriesLeft = HEALTH_CHECK_MAX_RETRIES;
