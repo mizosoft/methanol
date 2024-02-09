@@ -25,12 +25,15 @@ package com.github.mizosoft.methanol.springboot;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.MoreBodyHandlers;
 import com.github.mizosoft.methanol.MoreBodyPublishers;
 import com.github.mizosoft.methanol.MutableRequest;
 import java.net.URI;
+import java.util.Objects;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
@@ -71,5 +74,32 @@ public class Controller {
         .body();
   }
 
-  public record Point(int x, int y) {}
+  public static final class Point {
+    public final int x;
+    public final int y;
+
+    @JsonCreator
+    public Point(@JsonProperty("x") int x, @JsonProperty("y") int y) {
+      this.x = x;
+      this.y = y;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof Point)) return false;
+
+      var that = (Point) obj;
+      return this.x == that.x && this.y == that.y;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(x, y);
+    }
+
+    @Override
+    public String toString() {
+      return "Point[" + "x=" + x + ", " + "y=" + y + ']';
+    }
+  }
 }

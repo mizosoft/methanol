@@ -23,8 +23,8 @@
 package com.github.mizosoft.methanol.testing.store;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.github.mizosoft.methanol.testing.TestUtils;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.io.IOException;
 import java.io.Reader;
@@ -92,7 +92,7 @@ class RedisSupport {
     try {
       var process =
           new ProcessBuilder().command(command, "--version").redirectErrorStream(true).start();
-      try (var reader = process.inputReader(UTF_8)) {
+      try (var reader = TestUtils.inputReaderOf(process)) {
         if (!process.waitFor(10, TimeUnit.SECONDS)) {
           reportUnavailability(command, "timed out", null, reader);
         }

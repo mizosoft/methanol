@@ -22,8 +22,7 @@
 
 package com.github.mizosoft.methanol.testing.store;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
+import com.github.mizosoft.methanol.testing.TestUtils;
 import io.lettuce.core.RedisCommandExecutionException;
 import io.lettuce.core.RedisException;
 import io.lettuce.core.RedisReadOnlyException;
@@ -171,18 +170,17 @@ public final class RedisClusterSession implements RedisSession {
     Collections.addAll(
         command, "--cluster-replicas", Integer.toString(replicasPerMaster), "--cluster-yes");
     var process = new ProcessBuilder(command).redirectErrorStream(true).start();
-    try {
+    try (var reader = TestUtils.inputReaderOf(process)) {
       if (!process.waitFor(CLUSTER_JOIN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
         throw new IOException(
-            "redis-cli timed out. Command output: "
-                + RedisSupport.dumpRemaining(process.inputReader(UTF_8)));
+            "redis-cli timed out. Command output: " + RedisSupport.dumpRemaining(reader));
       }
       if (process.exitValue() != 0) {
         throw new IOException(
             "Non-zero exit code: "
                 + process.exitValue()
                 + ". Command output: "
-                + RedisSupport.dumpRemaining(process.inputReader(UTF_8)));
+                + RedisSupport.dumpRemaining(reader));
       }
     } catch (IOException | InterruptedException e) {
       process.destroyForcibly();

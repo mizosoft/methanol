@@ -24,9 +24,11 @@ package com.github.mizosoft.methanol.testing;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.http.HttpHeaders;
@@ -195,5 +197,9 @@ public class TestUtils {
         .addTrustedCertificate(heldCertificate.certificate())
         .build()
         .sslContext();
+  }
+
+  public static BufferedReader inputReaderOf(Process process) {
+    return new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8));
   }
 }

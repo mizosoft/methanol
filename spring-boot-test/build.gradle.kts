@@ -7,18 +7,14 @@ plugins {
   alias(libs.plugins.spring.dependency.management)
 }
 
-java {
-  sourceCompatibility = JavaVersion.VERSION_17
-}
-
 dependencies {
   implementation(project(":methanol"))
   implementation(project(":methanol-jackson"))
   implementation(project(":methanol-testing"))
   implementation(libs.mockwebserver)
 
-  // Must explicitly declare okhttp dep to avoid a weird NoClassDefFoundError due to an old
-  // okhttp version spring-boot puts in the boot jar.
+  // Must explicitly declare okhttp dep to avoid a weird NoClassDefFoundError due to an old okhttp
+  // version spring-boot puts in the boot jar.
   implementation(libs.okhttp)
   implementation(libs.springboot.starter.web)
   implementation(libs.autoservice.annotations)

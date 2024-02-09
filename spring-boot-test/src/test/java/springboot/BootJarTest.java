@@ -22,7 +22,6 @@
 
 package springboot;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -65,7 +64,7 @@ class BootJarTest {
   void assumeJava() throws Exception {
     var process =
         new ProcessBuilder().command("java", "--version").redirectErrorStream(true).start();
-    try (var in = process.inputReader(UTF_8)) {
+    try (var in = TestUtils.inputReaderOf(process)) {
       assertThat(process.waitFor(10, TimeUnit.SECONDS))
           .withFailMessage("'java --version' timed out")
           .isTrue();
@@ -96,10 +95,10 @@ class BootJarTest {
             .start();
 
     // No need to close reader as the underlying InputStream will be closed when the process is
-    // destroyed. Additionally, closing may cause (have cause :')) deadlocks if an assertion fails
-    // while readLine is blocked indefinitely (BufferedReader's close & readLine access same lock).
+    // destroyed. Additionally, closing causes deadlocks if an assertion fails while readLine is
+    // blocked indefinitely (BufferedReader's close & readLine wait on the same lock).
     @SuppressWarnings("resource")
-    var in = bootJarProcess.inputReader(UTF_8);
+    var in = TestUtils.inputReaderOf(bootJarProcess);
     while (true) {
       String line;
       var lineFuture = executorService.submit(in::readLine);
@@ -156,12 +155,14 @@ class BootJarTest {
     } catch (IOException e) {
       // Spill what's remaining in stdout without blocking
       var sb = new StringBuilder();
-      var in = bootJarProcess.inputReader();
-      while (in.ready()) {
-        sb.append((char) in.read());
+      try (var in = TestUtils.inputReaderOf(bootJarProcess)) {
+        while (in.ready()) {
+          sb.append((char) in.read());
+        }
+        sb.toString().lines().forEach(processOutput::add);
+        fail(formatProcessOutput("Test failed (see cause)", processOutput), e);
       }
-      sb.toString().lines().forEach(processOutput::add);
-      fail(formatProcessOutput("Test failed (see cause)", processOutput), e);
+
       return; // Effectively unreachable
     }
 
