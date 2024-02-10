@@ -21,7 +21,7 @@ runs:
         distribution: temurin
 
     - name: Setup Gradle
-      uses: gradle/setup-gradle@v3
+      uses: gradle/actions/setup-gradle@v3
 
     - name: Make gradlew executable
       if: inputs.gradle-args != '' && (runner.os == 'linux' || runner.os == 'macOS')
