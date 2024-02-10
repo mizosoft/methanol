@@ -1,6 +1,6 @@
 package conventions
 
-import extensions.*
+import extensions.libs
 
 plugins {
   jacoco

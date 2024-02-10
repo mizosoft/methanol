@@ -34,13 +34,12 @@ tasks.withType<JavaCompile> {
   options.errorprone {
     nullaway {
       annotatedPackages.add("com.github.mizosoft.methanol")
-      excludedFieldAnnotations.set(
+      excludedFieldAnnotations =
         listOf("org.checkerframework.checker.nullness.qual.MonotonicNonNull")
-      )
     }
   }
 }
 
 tasks.compileTestJava {
-  options.errorprone.isEnabled.set(false)
+  options.errorprone.isEnabled = false
 }

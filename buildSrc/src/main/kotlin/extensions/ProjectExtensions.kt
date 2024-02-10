@@ -19,9 +19,9 @@ private fun Project.findModuleName() =
         parse(toPath()).result
           .flatMap { it.module }
           .map { it.name.toString() }
-          .orElseThrow { IllegalStateException("couldn't parse module-info.java") }
+          .orElseThrow { IllegalStateException("Couldn't parse module-info.java") }
       }
-    } ?: throw IllegalStateException("no module-info.java in " + this@findModuleName)
+    } ?: throw IllegalStateException("No module-info.java in " + this@findModuleName)
   }
 
 val Project.javaModuleName: String

@@ -31,8 +31,8 @@ tasks.withType<Test> {
   }
 
   reports {
-    html.required.set(true)
-    junitXml.required.set(true)
+    html.required = true
+    junitXml.required = true
     junitXml.isOutputPerTestCase = true
   }
 }
