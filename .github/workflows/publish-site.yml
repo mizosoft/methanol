@@ -2,7 +2,7 @@ name: Publish site
 
 on:
   push:
-    branches: [ master, refactor-workflows ]
+    branches: [ master ]
 
 env:
   BASE_JAVA: 11
