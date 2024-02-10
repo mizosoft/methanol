@@ -1,0 +1,35 @@
+name: Publish site
+
+on:
+  push:
+    branches: [ master ]
+
+env:
+  BASE_JAVA: 11
+
+jobs:
+  publish-site:
+    name: Publish site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # MkDocs needs python to run.
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11.1
+
+      - name: Setup Gradle
+        uses: ./.github/actions/gradle
+        with:
+          java: 21 # Javadoc generation needs Java >= 12.
+
+      - name: Generate docs
+        run: chmod +x ./generate-docs.sh && ./generate-docs.sh
+
+      - name: Deploy site
+        uses: JamesIves/github-pages-deploy-action@4.1.1
+        with:
+          branch: gh-pages
+          folder: site

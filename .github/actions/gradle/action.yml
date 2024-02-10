@@ -1,0 +1,36 @@
+name: Setup & run Gradle
+
+description: Setup Java & Gradle & optionally run a Gradle command
+
+inputs:
+  java:
+    default: '21'
+    description: Java version
+  gradle-args:
+    required: false
+    description: Arguments to Gradle command (optional)
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Java ${{ inputs.java }}
+      id: setup-java
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java }}
+        distribution: temurin
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
+    - name: Make gradlew executable
+      if: inputs.gradle-args != '' && (runner.os == 'linux' || runner.os == 'macOS')
+      shell: bash
+      run: chmod +x gradlew
+
+    - name: Run Gradle command
+      if: ${{ inputs.gradle-args }} != ''
+      env:
+        JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
+      shell: bash
+      run: ./gradlew ${{ inputs.gradle-args }}

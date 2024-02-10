@@ -29,18 +29,17 @@ checkerFramework {
 }
 
 tasks.withType<JavaCompile> {
-  options.errorprone.isEnabled.set(project.hasProperty("enableErrorprone"))
+  options.errorprone.isEnabled = project.hasProperty("enableErrorprone")
 
   options.errorprone {
     nullaway {
       annotatedPackages.add("com.github.mizosoft.methanol")
-      excludedFieldAnnotations.set(
+      excludedFieldAnnotations =
         listOf("org.checkerframework.checker.nullness.qual.MonotonicNonNull")
-      )
     }
   }
 }
 
 tasks.compileTestJava {
-  options.errorprone.isEnabled.set(false)
+  options.errorprone.isEnabled = false
 }

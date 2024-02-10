@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  release:
+    types: [ created ]
+
+env:
+  BASE_JAVA: 11
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish release artifacts
+        uses: ./github/actions/gradle
+        env:
+          ORG_GRADLE_PROJECT_nexusUsername: ${{ secrets.NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_nexusPassword: ${{ secrets.NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
+        with:
+          java: ${{ env.BASE_JAVA }}
+          gradle-args: publishToSonatype closeAndReleaseSonatypeStagingRepository -PfinalRelease

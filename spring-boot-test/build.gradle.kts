@@ -2,7 +2,7 @@ plugins {
   id("conventions.java-library")
   id("conventions.static-analysis")
   id("conventions.testing")
-  id("conventions.jacoco")
+  id("conventions.coverage")
   alias(libs.plugins.spring.boot)
   alias(libs.plugins.spring.dependency.management)
 }
@@ -16,7 +16,7 @@ dependencies {
   // Must explicitly declare okhttp dep to avoid a weird NoClassDefFoundError due to an old okhttp
   // version spring-boot puts in the boot jar.
   implementation(libs.okhttp)
-  implementation(libs.springboot.starter.web)
+  implementation(libs.spring.boot.starter.web)
   implementation(libs.autoservice.annotations)
   annotationProcessor(libs.autoservice.annprocess)
 }

@@ -1,6 +1,9 @@
+import extensions.Version
+
 plugins {
   id("conventions.aggregate-coverage")
   id("conventions.aggregate-javadoc")
+  id("conventions.aggregate-testing")
   alias(libs.plugins.nexus.publish)
   alias(libs.plugins.versions)
 }
@@ -8,7 +11,12 @@ plugins {
 allprojects {
   description = "Lightweight HTTP extensions for Java"
   group = "com.github.mizosoft.methanol"
-  version = "1.8.0-SNAPSHOT"
+  version = Version(
+    major = 1,
+    minor = 8,
+    patch = 0,
+    release = if (project.hasProperty("finalRelease")) Version.Release.FINAL else Version.Release.SNAPSHOT
+  )
 
   repositories {
     mavenCentral()
@@ -16,7 +24,7 @@ allprojects {
 }
 
 nexusPublishing {
-  this.repositories {
+  repositories {
     sonatype {
       username.set(project.findProperty("nexusUsername")?.toString())
       password.set(project.findProperty("nexusPassword")?.toString())
@@ -24,6 +32,6 @@ nexusPublishing {
   }
 }
 
-//tasks.register("clean") {
-//  delete(rootProject.buildDir)
-//}
+tasks.register("clean") {
+  delete(rootProject.layout.buildDirectory)
+}
