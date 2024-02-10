@@ -23,7 +23,7 @@ jobs:
       - name: Setup Gradle
         uses: ./.github/actions/gradle
         with:
-          java: ${{ env.BASE_JAVA }}
+          java: 21 # Javadoc generation needs Java >= 12.
 
       - name: Generate docs
         run: chmod +x ./generate-docs.sh && ./generate-docs.sh
