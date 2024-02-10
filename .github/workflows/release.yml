@@ -6,12 +6,11 @@ on:
 
 env:
   BASE_JAVA: 11
-  BASE_OS: ubuntu-latest
 
 jobs:
   release:
     name: Release
-    runs-on: ${{ env.BASE_OS }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 

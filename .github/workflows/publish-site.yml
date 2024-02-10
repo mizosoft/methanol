@@ -6,12 +6,11 @@ on:
 
 env:
   BASE_JAVA: 11
-  BASE_OS: ubuntu-latest
 
 jobs:
   publish-site:
     name: Publish site
-    runs-on: ${{ env.BASE_OS }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
