@@ -29,7 +29,7 @@ checkerFramework {
 }
 
 tasks.withType<JavaCompile> {
-  options.errorprone.isEnabled.set(project.hasProperty("enableErrorprone"))
+  options.errorprone.isEnabled = project.hasProperty("enableErrorprone")
 
   options.errorprone {
     nullaway {
