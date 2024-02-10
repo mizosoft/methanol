@@ -19,12 +19,12 @@ tasks.compileJava {
 
 tasks.withType<JavaCompile> {
   options.encoding = StandardCharsets.UTF_8.name()
-  options.javaModuleVersion.set(provider { project.version.toString() })
+  options.javaModuleVersion = provider { project.version.toString() }
 }
 
 tasks.withType<Javadoc> {
   standardOptions {
-    links("https://docs.oracle.com/en/java/javase/17/docs/api/")
+    links("https://docs.oracle.com/en/java/javase/11/docs/api/")
     addBooleanOption("Xdoclint:-missing", true)
   }
 }
