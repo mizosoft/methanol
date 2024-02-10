@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,8 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -42,7 +44,7 @@ class RedisSupport {
   static final String CLI_CMD = "redis-cli";
 
   @GuardedBy("RedisSupport.class")
-  private static @MonotonicNonNull Set<String> lazyAvailability = null;
+  private static @MonotonicNonNull Set<String> lazyAvailableCommands = null;
 
   private RedisSupport() {}
 
@@ -57,12 +59,12 @@ class RedisSupport {
   private static synchronized boolean isAvailable(String command) {
     requireArgument(
         command.equals(SERVER_CMD) || command.equals(CLI_CMD), "unrecognized command: %s", command);
-    var availability = lazyAvailability;
-    if (availability == null) {
-      availability = checkAvailability();
-      lazyAvailability = availability;
+    var availableCommands = lazyAvailableCommands;
+    if (availableCommands == null) {
+      availableCommands = checkAvailability();
+      lazyAvailableCommands = availableCommands;
     }
-    return availability.contains(command);
+    return availableCommands.contains(command);
   }
 
   private static Set<String> checkAvailability() {
@@ -88,7 +90,7 @@ class RedisSupport {
     }
   }
 
-  private static String versionOf(String command) {
+  private static String versionOf(String command) throws UnavailableCommandException {
     try {
       var process =
           new ProcessBuilder().command(command, "--version").redirectErrorStream(true).start();
@@ -113,7 +115,8 @@ class RedisSupport {
       String cmd,
       String unavailabilityReason,
       @Nullable Throwable exception,
-      @Nullable Reader reader) {
+      @Nullable Reader reader)
+      throws UnavailableCommandException {
     String output;
     try {
       if (reader != null) {
@@ -131,7 +134,13 @@ class RedisSupport {
     }
 
     throw new UnavailableCommandException(
-        String.format("Unavailable redis command <%s>: %s%n%s", cmd, unavailabilityReason, output),
+        String.format(
+            "Unavailable redis command <%s>: %s%n%s",
+            cmd,
+            unavailabilityReason,
+            Stream.of(output.split("\\r?\\n"))
+                .map(line -> "\t" + line)
+                .collect(Collectors.joining())),
         exception);
   }
 
@@ -145,7 +154,7 @@ class RedisSupport {
     return sb.toString();
   }
 
-  private static final class UnavailableCommandException extends IllegalStateException {
+  private static final class UnavailableCommandException extends IOException {
     UnavailableCommandException(String message, Throwable cause) {
       super(message, cause);
     }
