@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,8 +27,6 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -86,17 +84,6 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
 
   private static final class SubscriptionImpl<V>
       extends AbstractQueueSubscription<HttpResponse<V>> {
-    private static final VarHandle ONGOING;
-
-    static {
-      try {
-        var lookup = MethodHandles.lookup();
-        ONGOING = lookup.findVarHandle(SubscriptionImpl.class, "ongoing", int.class);
-      } catch (IllegalAccessException | NoSuchFieldException e) {
-        throw new ExceptionInInitializerError(e);
-      }
-    }
-
     private final HttpClient client;
     private final HttpRequest initialRequest;
     private final BodyHandler<V> handler;
@@ -238,7 +225,13 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         }
 
         if (pushedResponseBodyHandler != null) {
-          ONGOING.getAndAdd(SubscriptionImpl.this, 1);
+          lock.lock();
+          try {
+            ongoing += 1;
+          } finally {
+            lock.unlock();
+          }
+
           acceptor.apply(pushedResponseBodyHandler).whenComplete(SubscriptionImpl.this::onResponse);
         }
       }
