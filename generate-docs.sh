@@ -31,7 +31,7 @@ python -m mkdocs build
 
 # Copy generated Javadoc site to main site directory.
 mkdir -p site/$JAVADOC_SITE_PATH
-cp -rf build/docs/javadoc/* site/$JAVADOC_SITE_PATH
+cp -rf build/docs/aggregateJavadoc/* site/$JAVADOC_SITE_PATH
 
 # Remove copied files, which is desirable when the script is run locally.
 rm -rf docs/adapters
