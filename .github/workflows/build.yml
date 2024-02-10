@@ -1,4 +1,4 @@
-name: CI-2
+name: Build
 
 on: [ push, pull_request, workflow_dispatch ]
 
@@ -8,7 +8,7 @@ env:
 
 jobs:
   tests:
-    name: Build & test on ${{ matrix.os }} with Java ${{ matrix.java }}
+    name: Test on ${{ matrix.os }} with Java ${{ matrix.java }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -18,7 +18,7 @@ jobs:
           - macos-latest
         java: [ 11 ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Redis
         shell: bash
@@ -35,7 +35,7 @@ jobs:
           fi
 
       - name: Run tests
-        uses: ./.github/actions/run-gradle
+        uses: ./.github/actions/gradle
         if: "!startsWith(matrix.os, 'macos')"
         with:
           java: ${{ matrix.java }}
@@ -43,7 +43,7 @@ jobs:
 
         # Brotli is not currently supported on macOS so related tests are excluded there.
       - name: Run tests
-        uses: ./.github/actions/run-gradle
+        uses: ./.github/actions/gradle
         if: startsWith(matrix.os, 'macos')
         with:
           java: ${{ matrix.java }}
@@ -61,9 +61,9 @@ jobs:
   coverage:
     name: Upload coverage report
     needs: tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ env.BASE_OS }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download test results
         uses: actions/download-artifact@v4
@@ -71,9 +71,31 @@ jobs:
           name: ${{ env.BASE_OS }}-java-${{ env.BASE_JAVA }}-test-results
 
       - name: Generate coverage report
-        uses: ./.github/actions/run-gradle
+        uses: ./.github/actions/gradle
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
           java: ${{ env.BASE_JAVA }}
           gradle-args: coveralls
+
+  snapshot-release:
+    name: Release snapshot
+    if: |
+      github.event_name == 'push'
+      && github.ref_name == github.event.repository.default_branch
+    needs: tests
+    runs-on: ${{ env.BASE_OS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish snapshot release artifacts
+        uses: ./github/actions/gradle
+        env:
+          ORG_GRADLE_PROJECT_nexusUsername: ${{ secrets.NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_nexusPassword: ${{ secrets.NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
+        with:
+          java: ${{ env.BASE_JAVA }}
+          gradle-args: publishToSonatype
