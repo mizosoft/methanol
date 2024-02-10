@@ -27,7 +27,7 @@ python -m pip install mkdocs-material
 
 # Generate docs.
 python -m mkdocs build
-./gradlew clean aggregateJavadoc
+./gradlew aggregateJavadoc
 
 # Copy generated Javadoc site to main site directory.
 mkdir -p site/$JAVADOC_SITE_PATH

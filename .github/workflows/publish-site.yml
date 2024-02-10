@@ -1,0 +1,36 @@
+name: Publish site
+
+on:
+  push:
+    branches: [ master, refactor-workflows ]
+
+env:
+  BASE_JAVA: 11
+  BASE_OS: ubuntu-latest
+
+jobs:
+  publish-site:
+    name: Publish site
+    runs-on: ${{ env.BASE_OS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # MkDocs needs python to run.
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11.1
+
+      - name: Setup Gradle
+        uses: ./.github/actions/gradle
+        with:
+          java: ${{ env.BASE_JAVA }}
+
+      - name: Generate docs
+        run: chmod +x ./generate-docs.sh && ./generate-docs.sh
+
+      - name: Deploy site
+        uses: JamesIves/github-pages-deploy-action@4.1.1
+        with:
+          branch: gh-pages
+          folder: site
