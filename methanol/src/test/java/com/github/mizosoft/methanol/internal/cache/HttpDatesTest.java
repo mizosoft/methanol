@@ -1,8 +1,8 @@
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toDeltaSeconds;
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDate;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.parseDeltaSeconds;
 import static com.github.mizosoft.methanol.internal.cache.HttpDates.toUtcDateTime;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.tryParseHttpDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatObject;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,59 +20,66 @@ class HttpDatesTest {
 
   @Test
   void validDates() {
-    assertThat(toHttpDate("Fri, 09 Sep 2022 23:03:14 GMT")).isEqualTo("2022-09-09T23:03:14");
-    assertThat(toHttpDate("Friday, 09-Sep-22 23:03:14 GMT")).isEqualTo("2022-09-09T23:03:14");
-    assertThat(toHttpDate("Fri Sep  9 23:03:14 2022")).isEqualTo("2022-09-09T23:03:14");
+    assertThat(tryParseHttpDate("Fri, 09 Sep 2022 23:03:14 GMT").orElse(null))
+        .isEqualTo("2022-09-09T23:03:14");
+    assertThat(tryParseHttpDate("Friday, 09-Sep-22 23:03:14 GMT").orElse(null))
+        .isEqualTo("2022-09-09T23:03:14");
+    assertThat(tryParseHttpDate("Fri Sep  9 23:03:14 2022").orElse(null))
+        .isEqualTo("2022-09-09T23:03:14");
   }
 
   @Test
   void caseInsensitiveDate() {
-    assertThat(toHttpDate("fri, 09 sep 2022 23:03:14 gmt")).isEqualTo("2022-09-09T23:03:14");
+    assertThat(tryParseHttpDate("fri, 09 sep 2022 23:03:14 gmt").orElse(null))
+        .isEqualTo("2022-09-09T23:03:14");
   }
 
   @Test
   void dateWithOffset() {
-    assertThat(toHttpDate("Sat, 10 Sep 2022 01:03:14 +0200")).isEqualTo("2022-09-09T23:03:14");
+    assertThat(tryParseHttpDate("Sat, 10 Sep 2022 01:03:14 +0200").orElse(null))
+        .isEqualTo("2022-09-09T23:03:14");
   }
 
   @Test
   void dateWithZoneRegion() {
-    assertThat(toHttpDate("Sat, 10 Sep 2022 01:03:14 EGY")).isNull();
+    assertThat(tryParseHttpDate("Sat, 10 Sep 2022 01:03:14 EGY").orElse(null)).isNull();
   }
 
   @Test
   void dateWithUtcZoneLiteral() {
-    assertThat(toHttpDate("Fri, 09 Sep 2022 23:03:14 UTC")).isEqualTo("2022-09-09T23:03:14");
+    assertThat(tryParseHttpDate("Fri, 09 Sep 2022 23:03:14 UTC").orElse(null))
+        .isEqualTo("2022-09-09T23:03:14");
   }
 
   @Test
   void dateWithGmtZoneLiteral() {
-    assertThat(toHttpDate("Fri, 09 Sep 2022 23:03:14 GMT")).isEqualTo("2022-09-09T23:03:14");
+    assertThat(tryParseHttpDate("Fri, 09 Sep 2022 23:03:14 GMT").orElse(null))
+        .isEqualTo("2022-09-09T23:03:14");
   }
 
   @Test
   void deltaSeconds() {
-    assertThat(toDeltaSeconds("1")).isEqualTo(Duration.ofSeconds(1));
+    assertThat(parseDeltaSeconds("1")).isEqualTo(Duration.ofSeconds(1));
 
     // Long.MAX_VALUE delta seconds are truncated to Integer.MAX_VALUE to avoid overflows.
-    assertThat(toDeltaSeconds(Long.toString(Long.MAX_VALUE)))
+    assertThat(parseDeltaSeconds(Long.toString(Long.MAX_VALUE)))
         .isEqualTo(Duration.ofSeconds(Integer.MAX_VALUE));
 
-    assertThat(toDeltaSeconds("0")).isEqualTo(Duration.ZERO);
-    assertThatThrownBy(() -> toDeltaSeconds("-1")).isInstanceOf(IllegalArgumentException.class);
+    assertThat(parseDeltaSeconds("0")).isEqualTo(Duration.ZERO);
+    assertThatThrownBy(() -> parseDeltaSeconds("-1")).isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   void utcDateFromInstant() {
-    assertThatObject(toHttpDate("Fri, 09 Sep 2022 23:03:14 GMT"))
+    assertThatObject(tryParseHttpDate("Fri, 09 Sep 2022 23:03:14 GMT").orElse(null))
         .extracting(date -> toUtcDateTime(date.toInstant(ZoneOffset.UTC)), LOCAL_DATE_TIME)
         .isEqualTo("2022-09-09T23:03:14");
   }
 
   @Test
   void httpDateString() {
-    assertThatObject(toHttpDate("Fri, 09 Sep 2022 23:03:14 GMT"))
-        .extracting(HttpDates::toHttpDateString)
+    assertThatObject(tryParseHttpDate("Fri, 09 Sep 2022 23:03:14 GMT").orElse(null))
+        .extracting(HttpDates::formatHttpDate)
         .isEqualTo("Fri, 09 Sep 2022 23:03:14 GMT");
   }
 }

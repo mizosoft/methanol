@@ -35,7 +35,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.List;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.util.Optional;
 
 /** Helpers for parsing/formatting HTTP dates. */
 public class HttpDates {
@@ -69,19 +69,19 @@ public class HttpDates {
 
   private HttpDates() {}
 
-  public static String toHttpDateString(LocalDateTime dateTime) {
+  public static String formatHttpDate(LocalDateTime dateTime) {
     return PREFERRED_FORMATTER.format(dateTime);
   }
 
   public static boolean isHttpDate(String value) {
-    return toHttpDate0(value, false) != null;
+    return tryParseHttpDate0(value, false).isPresent();
   }
 
-  static @Nullable LocalDateTime toHttpDate(String value) {
-    return toHttpDate0(value, true);
+  static Optional<LocalDateTime> tryParseHttpDate(String value) {
+    return tryParseHttpDate0(value, true);
   }
 
-  private static @Nullable LocalDateTime toHttpDate0(String value, boolean logFailure) {
+  private static Optional<LocalDateTime> tryParseHttpDate0(String value, boolean logFailure) {
     TemporalAccessor parsedTemporal = null;
     for (var formatter : FORMATTERS) {
       try {
@@ -97,9 +97,10 @@ public class HttpDates {
       try {
         var dateTime = LocalDateTime.from(parsedTemporal);
         var offset = parsedTemporal.query(TemporalQueries.offset());
-        return (offset == null || offset.equals(ZoneOffset.UTC))
-            ? dateTime
-            : toUtcDateTime(dateTime.toInstant(offset));
+        return Optional.of(
+            (offset == null || offset.equals(ZoneOffset.UTC))
+                ? dateTime
+                : toUtcDateTime(dateTime.toInstant(offset)));
       } catch (DateTimeException e) {
         malformedHttpDate = e;
       }
@@ -109,11 +110,11 @@ public class HttpDates {
       logger.log(
           Level.WARNING, () -> "Malformed or unrecognized HTTP date: " + value, malformedHttpDate);
     }
-    return null;
+    return Optional.empty();
   }
 
   // TODO tolerate -ve values by truncating to 0?
-  public static Duration toDeltaSeconds(String value) {
+  public static Duration parseDeltaSeconds(String value) {
     long secondsLong = Long.parseLong(value);
     requireArgument(secondsLong >= 0, "delta seconds can't be negative");
 
@@ -122,11 +123,11 @@ public class HttpDates {
     return Duration.ofSeconds(secondsInt);
   }
 
-  static @Nullable Duration toDeltaSecondsOrNull(String value) {
+  static Optional<Duration> tryParseDeltaSeconds(String value) {
     try {
-      return toDeltaSeconds(value);
+      return Optional.of(parseDeltaSeconds(value));
     } catch (NumberFormatException ignored) {
-      return null;
+      return Optional.empty();
     }
   }
 

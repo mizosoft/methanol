@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.formatHttpDate;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 
@@ -206,7 +206,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
     server.enqueue(
         new MockResponse()
             .setHeader("Cache-Control", "max-age=1")
-            .setHeader("Last-Modified", toHttpDateString(lastModified))
+            .setHeader("Last-Modified", formatHttpDate(lastModified))
             .setHeader("X-Version", "1")
             .setBody("Pikachu"));
     verifyThat(send(client)).isCacheMiss().hasBody("Pikachu");
@@ -228,7 +228,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
         .hasBody("Pikachu")
         .networkResponse()
         .isExternallyConditionalCacheHit()
-        .containsRequestHeader("If-Modified-Since", toHttpDateString(lastModified))
+        .containsRequestHeader("If-Modified-Since", formatHttpDate(lastModified))
         .hasNoBody();
     verifyThat(send(client)).isCacheHit().containsHeader("X-Version", "2").hasBody("Pikachu");
   }

@@ -22,12 +22,14 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.formatHttpDate;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.toUtcDateTime;
+
 import com.github.mizosoft.methanol.CacheControl;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.util.Compare;
-
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.time.Duration;
@@ -35,9 +37,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
-
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toUtcDateTime;
 
 /**
  * A strategy for determining whether a stored response is fresh enough for the cache to serve
@@ -107,7 +106,7 @@ class CacheStrategy {
     etag.ifPresent(etag -> conditionalizedRequest.setHeader("If-None-Match", etag));
     lastModified.ifPresent(
         lastModified ->
-            conditionalizedRequest.setHeader("If-Modified-Since", toHttpDateString(lastModified)));
+            conditionalizedRequest.setHeader("If-Modified-Since", formatHttpDate(lastModified)));
     return conditionalizedRequest.toImmutableRequest();
   }
 
@@ -133,8 +132,9 @@ class CacheStrategy {
       requestCacheControl = CacheControl.parse(request.headers());
       responseCacheControl = CacheControl.parse(cacheResponse.headers());
       maxAge = requestCacheControl.maxAge().or(responseCacheControl::maxAge);
-      expires = cacheResponse.headers().firstValue("Expires").map(HttpDates::toHttpDate);
-      lastModified = cacheResponse.headers().firstValue("Last-Modified").map(HttpDates::toHttpDate);
+      expires = cacheResponse.headers().firstValue("Expires").flatMap(HttpDates::tryParseHttpDate);
+      lastModified =
+          cacheResponse.headers().firstValue("Last-Modified").flatMap(HttpDates::tryParseHttpDate);
 
       // As per rfc7231 Section 7.1.1.2, we must use the time the response was received as the value
       // of on absent Date field.
@@ -142,7 +142,7 @@ class CacheStrategy {
           cacheResponse
               .headers()
               .firstValue("Date")
-              .map(HttpDates::toHttpDate)
+              .flatMap(HttpDates::tryParseHttpDate)
               .orElseGet(() -> toUtcDateTime(timeResponseReceived));
     }
 
@@ -151,7 +151,7 @@ class CacheStrategy {
       var age =
           cacheResponseHeaders
               .firstValue("Age")
-              .map(HttpDates::toDeltaSecondsOrNull)
+              .flatMap(HttpDates::tryParseDeltaSeconds)
               .orElse(Duration.ZERO);
       var apparentAge =
           Compare.max(
@@ -193,9 +193,7 @@ class CacheStrategy {
     }
   }
 
-  /**
-   * A rule for accepting stale responses upto a maximum staleness.
-   */
+  /** A rule for accepting stale responses upto a maximum staleness. */
   enum StalenessRule {
     MAX_STALE {
       @Override
