@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,12 +30,9 @@ import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
 final class CachingJaxbBindingFactory implements JaxbBindingFactory {
+  private final ConcurrentMap<Class<?>, JAXBContext> cachedContexts = new ConcurrentHashMap<>();
 
-  private final ConcurrentMap<Class<?>, JAXBContext> cachedContexts;
-
-  CachingJaxbBindingFactory() {
-    cachedContexts = new ConcurrentHashMap<>();
-  }
+  CachingJaxbBindingFactory() {}
 
   @Override
   public Marshaller createMarshaller(Class<?> boundClass) throws JAXBException {
@@ -47,7 +44,7 @@ final class CachingJaxbBindingFactory implements JaxbBindingFactory {
     return getOrCreateContext(boundClass).createUnmarshaller();
   }
 
-  // not private for testing
+  // Visible for testing.
   JAXBContext getOrCreateContext(Class<?> boundClass) {
     return cachedContexts.computeIfAbsent(
         boundClass,

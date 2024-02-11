@@ -1,5 +1,5 @@
 import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.adapter.jaxb.JaxbAdapterFactory;
+import com.github.mizosoft.methanol.adapter.jaxb.jakarta.JaxbAdapterFactory;
 
 /**
  * Provides {@link BodyAdapter.Encoder} and {@link BodyAdapter.Decoder} implementations for XML
@@ -7,10 +7,10 @@ import com.github.mizosoft.methanol.adapter.jaxb.JaxbAdapterFactory;
  * default. You will need to explicitly declare service-providers that delegate to the instances
  * created by {@link JaxbAdapterFactory}.
  */
-module methanol.adapter.jaxb {
+module methanol.adapter.jaxb.jakarta {
   requires transitive methanol;
-  requires transitive java.xml.bind;
+  requires transitive jakarta.xml.bind;
   requires static org.checkerframework.checker.qual;
 
-  exports com.github.mizosoft.methanol.adapter.jaxb;
+  exports com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 }

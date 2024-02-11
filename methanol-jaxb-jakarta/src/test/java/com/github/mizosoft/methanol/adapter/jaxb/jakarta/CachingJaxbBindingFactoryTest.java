@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

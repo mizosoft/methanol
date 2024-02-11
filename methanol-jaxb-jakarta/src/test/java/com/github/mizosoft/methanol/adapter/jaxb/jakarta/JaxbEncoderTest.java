@@ -20,16 +20,16 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
-import static com.github.mizosoft.methanol.adapter.jaxb.JaxbAdapterFactory.createEncoder;
+import static com.github.mizosoft.methanol.adapter.jaxb.jakarta.JaxbAdapterFactory.createEncoder;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
 import org.junit.jupiter.api.Test;
 
 class JaxbEncoderTest {

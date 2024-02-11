@@ -20,9 +20,9 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
-import static com.github.mizosoft.methanol.adapter.jaxb.JaxbAdapterFactory.createDecoder;
+import static com.github.mizosoft.methanol.adapter.jaxb.jakarta.JaxbAdapterFactory.createDecoder;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
 
@@ -79,10 +79,10 @@ class JaxbDecoderTest {
         .converting(PointList.class)
         .withBody(
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-          + "<points>"
-          + "<point x=\"1\" y=\"2\"/>"
-          + "<point x=\"3\" y=\"4\"/>"
-          + "</points>")
+                + "<points>"
+                + "<point x=\"1\" y=\"2\"/>"
+                + "<point x=\"3\" y=\"4\"/>"
+                + "</points>")
         .succeedsWith(new PointList(new Point(1, 2), new Point(3, 4)));
   }
 
@@ -107,9 +107,7 @@ class JaxbDecoderTest {
   void deserializeWithUnsupportedType() {
     class NotAXmlRootElement {}
 
-    verifyThat(createDecoder())
-        .converting(NotAXmlRootElement.class)
-        .isNotSupported();
+    verifyThat(createDecoder()).converting(NotAXmlRootElement.class).isNotSupported();
   }
 
   @Test

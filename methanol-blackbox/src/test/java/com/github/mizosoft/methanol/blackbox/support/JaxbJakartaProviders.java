@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,35 +20,27 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.blackbox.support;
 
-import java.util.Map;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBContextFactory;
-import javax.xml.bind.JAXBException;
+import com.github.mizosoft.methanol.BodyAdapter;
+import com.github.mizosoft.methanol.adapter.jaxb.jakarta.JaxbAdapterFactory;
 
-class JaxbUtils {
-  static void registerImplementation() {
-    System.setProperty(JAXBContext.JAXB_CONTEXT_FACTORY, MoxyJaxbContextFactory.class.getName());
+public class JaxbJakartaProviders {
+  private JaxbJakartaProviders() {}
+
+  public static class EncoderProvider {
+    private EncoderProvider() {}
+
+    public static BodyAdapter.Encoder provider() {
+      return JaxbAdapterFactory.createEncoder();
+    }
   }
 
-  // Make the factory accessible to JAXB
-  public static final class MoxyJaxbContextFactory implements JAXBContextFactory {
-    public MoxyJaxbContextFactory() {}
+  public static class DecoderProvider {
+    private DecoderProvider() {}
 
-    @Override
-    public JAXBContext createContext(Class<?>[] classesToBeBound, Map<String, ?> properties)
-        throws JAXBException {
-      return org.eclipse.persistence.jaxb.JAXBContextFactory.createContext(
-          classesToBeBound, properties);
-    }
-
-    @Override
-    public JAXBContext createContext(
-        String contextPath, ClassLoader classLoader, Map<String, ?> properties)
-        throws JAXBException {
-      return org.eclipse.persistence.jaxb.JAXBContextFactory.createContext(
-          contextPath, classLoader, properties);
+    public static BodyAdapter.Decoder provider() {
+      return JaxbAdapterFactory.createDecoder();
     }
   }
 }

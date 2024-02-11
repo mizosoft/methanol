@@ -20,17 +20,27 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
 
-import org.junit.jupiter.api.Test;
+/**
+ * Creates new {@link Marshaller} or {@link Unmarshaller} objects on demand for use by an adapter.
+ */
+public interface JaxbBindingFactory {
+  /** Returns a new {@code Marshaller} for encoding an object of the given class. */
+  Marshaller createMarshaller(Class<?> boundClass) throws JAXBException;
 
-class CachingJaxbBindingFactoryTest {
-  @Test
-  void cachesContextsForSameType() {
-    var factory = new CachingJaxbBindingFactory();
-    assertThat(factory.getOrCreateContext(Point.class))
-        .isSameAs(factory.getOrCreateContext(Point.class));
+  /** Returns a new {@code Unmarshaller} for decoding to an object of the given class. */
+  Unmarshaller createUnmarshaller(Class<?> boundClass) throws JAXBException;
+
+  /**
+   * Returns a new {@code JaxbBindingFactory} that creates and caches {@code JAXBContexts} for each
+   * requested type.
+   */
+  static JaxbBindingFactory create() {
+    return new CachingJaxbBindingFactory();
   }
 }

@@ -20,17 +20,46 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import jakarta.xml.bind.annotation.XmlAttribute;
+import jakarta.xml.bind.annotation.XmlRootElement;
+import java.util.Objects;
 
-import org.junit.jupiter.api.Test;
+@XmlRootElement(name = "point")
+public class Point {
+  @XmlAttribute(required = true)
+  private final int x;
 
-class CachingJaxbBindingFactoryTest {
-  @Test
-  void cachesContextsForSameType() {
-    var factory = new CachingJaxbBindingFactory();
-    assertThat(factory.getOrCreateContext(Point.class))
-        .isSameAs(factory.getOrCreateContext(Point.class));
+  @XmlAttribute(required = true)
+  private final int y;
+
+  //  Provide a no-arg constructor for JAXB
+  public Point() {
+    this(0, 0);
+  }
+
+  public Point(int x, int y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof Point)) {
+      return false;
+    }
+    var other = (Point) obj;
+    return x == other.x && y == other.y;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(x, y);
+  }
+
+  @Override
+  public String toString() {
+    return "Point[" + x + ", " + y + "]";
   }
 }

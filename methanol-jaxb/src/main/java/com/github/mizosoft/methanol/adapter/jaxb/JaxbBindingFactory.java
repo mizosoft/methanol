@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,10 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
-/** Creates new {@link Marshaller} or {@link Unmarshaller} on demand for use by an adapter. */
+/**
+ * Creates new {@link Marshaller} or {@link Unmarshaller} objects on demand for use by an adapter.
+ */
 public interface JaxbBindingFactory {
-
   /** Returns a new {@code Marshaller} for encoding an object of the given class. */
   Marshaller createMarshaller(Class<?> boundClass) throws JAXBException;
 
@@ -36,8 +37,8 @@ public interface JaxbBindingFactory {
   Unmarshaller createUnmarshaller(Class<?> boundClass) throws JAXBException;
 
   /**
-   * Returns a default {@code JaxbBindingFactory} that creates and caches {@code JAXBContexts} for
-   * each requested type.
+   * Returns a new {@code JaxbBindingFactory} that creates and caches {@code JAXBContexts} for each
+   * requested type.
    */
   static JaxbBindingFactory create() {
     return new CachingJaxbBindingFactory();

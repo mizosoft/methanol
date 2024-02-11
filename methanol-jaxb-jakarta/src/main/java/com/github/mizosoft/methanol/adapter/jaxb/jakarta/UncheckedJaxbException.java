@@ -20,17 +20,19 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import jakarta.xml.bind.JAXBException;
 
-import org.junit.jupiter.api.Test;
+/** Unchecked wrapper over a {@link JAXBException}. */
+public class UncheckedJaxbException extends RuntimeException {
+  /** Creates a new {@code UncheckedJaxbException} with the given cause. */
+  public UncheckedJaxbException(JAXBException cause) {
+    super(cause);
+  }
 
-class CachingJaxbBindingFactoryTest {
-  @Test
-  void cachesContextsForSameType() {
-    var factory = new CachingJaxbBindingFactory();
-    assertThat(factory.getOrCreateContext(Point.class))
-        .isSameAs(factory.getOrCreateContext(Point.class));
+  @Override
+  public JAXBException getCause() {
+    return (JAXBException) super.getCause();
   }
 }

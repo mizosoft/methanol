@@ -5,6 +5,7 @@ import com.github.mizosoft.methanol.blackbox.support.CharSequenceEncoderProvider
 import com.github.mizosoft.methanol.blackbox.support.FailingBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.support.JacksonFluxProviders;
 import com.github.mizosoft.methanol.blackbox.support.JacksonProviders;
+import com.github.mizosoft.methanol.blackbox.support.JaxbJakartaProviders;
 import com.github.mizosoft.methanol.blackbox.support.JaxbProviders;
 import com.github.mizosoft.methanol.blackbox.support.MyBodyDecoderFactory;
 import com.github.mizosoft.methanol.blackbox.support.ProtobufProviders;
@@ -18,6 +19,7 @@ open module methanol.blackbox {
   requires methanol.adapter.jackson.flux;
   requires methanol.adapter.protobuf;
   requires methanol.adapter.jaxb;
+  requires methanol.adapter.jaxb.jakarta;
   requires methanol.brotli;
   requires methanol.testing;
   requires com.google.protobuf;
@@ -26,8 +28,11 @@ open module methanol.blackbox {
   requires okio;
   requires reactor.core;
   requires org.reactivestreams;
-  requires org.eclipse.persistence.moxy;
-  requires java.sql; // Required by org.eclipse.persistence.moxy
+  requires java.xml.bind;
+  requires jakarta.xml.bind;
+  requires org.eclipse.persistence.moxy; // Used for Javax JAXB.
+  requires com.sun.xml.bind; // Used for Jakarta JAXB.
+  requires java.sql; // Required by org.eclipse.persistence.moxy.
   requires static org.checkerframework.checker.qual;
 
   provides BodyDecoder.Factory with
@@ -40,12 +45,14 @@ open module methanol.blackbox {
       JacksonProviders.EncoderProvider,
       ProtobufProviders.EncoderProvider,
       JaxbProviders.EncoderProvider,
+      JaxbJakartaProviders.EncoderProvider,
       CharSequenceEncoderProvider;
   provides BodyAdapter.Decoder with
       JacksonFluxProviders.DecoderProvider,
       JacksonProviders.DecoderProvider,
       ProtobufProviders.DecoderProvider,
       JaxbProviders.DecoderProvider,
+      JaxbJakartaProviders.DecoderProvider,
       StringDecoderProvider;
   provides FileTypeDetector with
       RegistryFileTypeDetectorProvider;

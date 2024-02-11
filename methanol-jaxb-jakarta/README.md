@@ -1,13 +1,13 @@
-# methanol-jaxb
+# methanol-jaxb-jakarta
 
-Adapters for XML using Java EE's [JAXB][jaxb].
+Adapters for XML using Jakarta EE's [JAXB][jaxb].
 
 ## Installation
 
 ### Gradle
 
 ```gradle
-implementation 'com.github.mizosoft.methanol:methanol-jaxb:1.7.0'
+implementation 'com.github.mizosoft.methanol:methanol-jaxb-jakarta:1.7.0'
 ```
 
 ### Maven
@@ -15,12 +15,13 @@ implementation 'com.github.mizosoft.methanol:methanol-jaxb:1.7.0'
 ```xml
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
-   <artifactId>methanol-jaxb</artifactId>
+   <artifactId>methanol-jaxb-jakarta</artifactId>
    <version>1.7.0</version>
 </dependency>
 ```
 
-The adapters need to be registered as [service providers][serviceloader_javadoc] so Methanol knows they're there.
+The adapters need to be registered as [service providers][serviceloader_javadoc] so Methanol knows
+they're there.
 The way this is done depends on your project setup.
 
 ### Module Path
@@ -48,7 +49,7 @@ Follow these steps if your project uses the Java module system.
 2. Add the corresponding provider declarations in your `module-info.java` file.
 
     ```java
-    requires methanol.adapter.jaxb;   
+    requires methanol.adapter.jaxb.jakarta;   
    
     provides BodyAdapter.Encoder with JaxbProviders.EncoderProvider;
     provides BodyAdapter.Decoder with JaxbProviders.DecoderProvider;
@@ -56,12 +57,15 @@ Follow these steps if your project uses the Java module system.
 
 ### Classpath
 
-Registering adapters from the classpath requires declaring the implementation classes in provider-configuration
-files that are bundled with your JAR. You'll first need to implement delegating `Encoder` & `Decoder`
+Registering adapters from the classpath requires declaring the implementation classes in
+provider-configuration
+files that are bundled with your JAR. You'll first need to implement
+delegating `Encoder` & `Decoder`
 that forward to the instances created by `JaxbAdapterFactory`. Extending from `ForwardingEncoder` &
 `ForwardingDecoder` makes this easier.
 
-You can use Google's [AutoService][autoservice] to generate the provider-configuration files automatically,
+You can use Google's [AutoService][autoservice] to generate the provider-configuration files
+automatically,
 so you won't bother writing them.
 
 #### Using AutoService
@@ -171,7 +175,10 @@ and contains:
 com.example.JaxbAdapters$Decoder
 ```
 
-[jaxb]: https://javaee.github.io/jaxb-v2/
+[jaxb]: https://eclipse-ee4j.github.io/jaxb-ri/
+
 [autoservice]: https://github.com/google/auto/tree/master/service
+
 [autoservice_getting_started]: https://github.com/google/auto/tree/master/service#getting-started
+
 [serviceloader_javadoc]: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceLoader.html
