@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.cache.HttpDates.formatHttpDate;
 import static com.github.mizosoft.methanol.internal.cache.HttpDates.toUtcDateTime;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.tryParseHttpDate;
 
 import com.github.mizosoft.methanol.CacheControl;
 import com.github.mizosoft.methanol.MutableRequest;
@@ -48,22 +49,29 @@ class CacheStrategy {
 
   private final CacheControl requestCacheControl;
   private final CacheControl responseCacheControl;
+
+  /** The age of the cached response. */
   private final Duration age;
+
+  /** How much time the response stays fresh from when this strategy has been computed. */
   private final Duration freshness;
+
+  /** How much time the response has been stale since this strategy had been computed. */
   private final Duration staleness;
+
   private final Optional<LocalDateTime> lastModified;
   private final Optional<String> etag;
   private final boolean usesHeuristicFreshness;
 
-  CacheStrategy(Builder builder, Instant now) {
-    requestCacheControl = builder.requestCacheControl;
-    responseCacheControl = builder.responseCacheControl;
-    age = builder.computeAge(now);
-    freshness = builder.computeFreshnessLifetime().minus(age);
+  CacheStrategy(Factory factory, Instant now) {
+    requestCacheControl = factory.requestCacheControl;
+    responseCacheControl = factory.responseCacheControl;
+    age = factory.computeAge(now);
+    freshness = factory.computeFreshnessLifetime().minus(age);
     staleness = freshness.negated();
-    usesHeuristicFreshness = builder.usesHeuristicFreshness();
-    lastModified = builder.lastModified;
-    etag = builder.cacheResponseHeaders.firstValue("ETag");
+    usesHeuristicFreshness = factory.usesHeuristicFreshness();
+    lastModified = factory.lastModified;
+    etag = factory.cacheResponseHeaders.firstValue("ETag");
   }
 
   boolean canServeCacheResponse(StalenessRule stalenessRule) {
@@ -110,11 +118,11 @@ class CacheStrategy {
     return conditionalizedRequest.toImmutableRequest();
   }
 
-  static Builder newBuilder(HttpRequest request, TrackedResponse<?> cacheResponse) {
-    return new Builder(request, cacheResponse);
+  static CacheStrategy create(HttpRequest request, TrackedResponse<?> cacheResponse, Instant now) {
+    return new Factory(request, cacheResponse).create(now);
   }
 
-  static final class Builder {
+  static final class Factory {
     final Instant timeRequestSent;
     final Instant timeResponseReceived;
     final HttpHeaders cacheResponseHeaders;
@@ -125,14 +133,13 @@ class CacheStrategy {
     final Optional<LocalDateTime> expires;
     final Optional<LocalDateTime> lastModified;
 
-    Builder(HttpRequest request, TrackedResponse<?> cacheResponse) {
+    Factory(HttpRequest request, TrackedResponse<?> cacheResponse) {
       timeRequestSent = cacheResponse.timeRequestSent();
       timeResponseReceived = cacheResponse.timeResponseReceived();
       cacheResponseHeaders = cacheResponse.headers();
       requestCacheControl = CacheControl.parse(request.headers());
       responseCacheControl = CacheControl.parse(cacheResponse.headers());
       maxAge = requestCacheControl.maxAge().or(responseCacheControl::maxAge);
-      expires = cacheResponse.headers().firstValue("Expires").flatMap(HttpDates::tryParseHttpDate);
       lastModified =
           cacheResponse.headers().firstValue("Last-Modified").flatMap(HttpDates::tryParseHttpDate);
 
@@ -144,6 +151,23 @@ class CacheStrategy {
               .firstValue("Date")
               .flatMap(HttpDates::tryParseHttpDate)
               .orElseGet(() -> toUtcDateTime(timeResponseReceived));
+
+      // As per rfc7234 Section 5.3:
+      // ---
+      //   A cache recipient MUST interpret invalid date formats, especially the
+      //   value "0", as representing a time in the past (i.e., "already
+      //   expired").
+      // ---
+      //
+      // So if Expires is invalid, we fall back to the furthest time in the past LocalDateTime can
+      // represent. This has the advantage over approaches like falling back to an arbitrary amount
+      // of time before the response's date, say a minute, in that it won't accidentally pass even
+      // if the user passes in a 'max-stale=60', still satisfying the server's assumed intentions.
+      expires =
+          cacheResponse
+              .headers()
+              .firstValue("Expires")
+              .map(expiresValues -> tryParseHttpDate(expiresValues).orElse(LocalDateTime.MIN));
     }
 
     /** Computes response's age relative to {@code now} as specified by rfc7324 Section 4.2.3. */
@@ -188,7 +212,7 @@ class CacheStrategy {
       return maxAge.isEmpty() && expires.isEmpty();
     }
 
-    CacheStrategy build(Instant now) {
+    CacheStrategy create(Instant now) {
       return new CacheStrategy(this, now);
     }
   }

@@ -719,6 +719,38 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   }
 
   @StoreParameterizedTest
+  void invalidExpiresMakesResponseStale(Store store) throws Exception {
+    setUpCache(store);
+
+    var date = toUtcDateTime(clock.instant());
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Date", formatHttpDate(date))
+            .setHeader("Expires", -1)
+            .setBody("Pikachu"));
+    verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
+
+    // Negative freshness lifetime caused by invalid Expires triggers revalidation.
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Date", formatHttpDate(date))
+            .setHeader("Expires", -1)
+            .setBody("Psyduck"));
+    verifyThat(send(serverUri)).isConditionalMiss().hasBody("Psyduck");
+
+    clock.advanceSeconds(1);
+
+    // Staleness rules should still apply in case of invalid 'Expires'.
+    verifyThat(
+            send(
+                GET(serverUri)
+                    .cacheControl(
+                        CacheControl.newBuilder().maxStale(Duration.ofSeconds(1)).build())))
+        .isCacheHit()
+        .hasBody("Psyduck");
+  }
+
+  @StoreParameterizedTest
   void heuristicFreshnessWithFutureLastModified(Store store) throws Exception {
     setUpCache(store);
 
