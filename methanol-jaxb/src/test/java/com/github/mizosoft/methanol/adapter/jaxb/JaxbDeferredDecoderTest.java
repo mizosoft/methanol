@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,15 +27,9 @@ import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyTha
 import static java.nio.charset.StandardCharsets.UTF_16;
 
 import com.github.mizosoft.methanol.testing.TestException;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class JaxbDeferredDecoderTest {
-   @BeforeAll
-  static void registerJaxbImplementation() {
-    JaxbUtils.registerImplementation();
-  }
-
   @Test
   void deserialize() {
     verifyThat(createDecoder())

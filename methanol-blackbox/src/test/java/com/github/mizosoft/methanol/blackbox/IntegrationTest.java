@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -55,6 +55,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.HttpReadTimeoutException;
 import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.MoreBodyPublishers;
 import com.github.mizosoft.methanol.MultipartBodyPublisher;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
@@ -64,8 +65,13 @@ import com.github.mizosoft.methanol.WritableBodyPublisher;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
 import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
 import com.github.mizosoft.methanol.blackbox.support.JacksonMapper;
-import com.github.mizosoft.methanol.testing.*;
+import com.github.mizosoft.methanol.testing.ByteBufferIterator;
+import com.github.mizosoft.methanol.testing.IterablePublisher;
+import com.github.mizosoft.methanol.testing.Logging;
+import com.github.mizosoft.methanol.testing.MockGzipMember;
 import com.github.mizosoft.methanol.testing.MockGzipMember.CorruptionMode;
+import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -98,13 +104,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBContextFactory;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlRootElement;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import okio.Buffer;
@@ -117,21 +116,24 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Flux;
 
-@Timeout(60)
+@Timeout(10)
 class IntegrationTest {
   static {
     Logging.disable("com.github.mizosoft.methanol.internal.spi.ServiceCache");
   }
 
-  private static final Base64.Decoder BASE64_DEC = Base64.getDecoder();
+  private static final Base64.Decoder base64Decoder = Base64.getDecoder();
 
-  private static final String poem =
+  private static final String POEM =
       "Roses are red,\n"
           + "Violets are blue,\n"
           + "I hope my tests pass\n"
           + "I really hope they do";
 
-  private static final String epicArtCourseXmlUtf8 =
+  // There's a slight distinction between how moxy's implementation of JavaEE's JAXB & glassfish's
+  // implementation of Jakarta's JAXB generate the XML, particularly in the XML declaration.
+
+  private static final String EPIC_ART_COURSE_JAVAX_XML_UTF_8 =
       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
           + "<course type=\"ART\">"
           + "<enrolled-students>"
@@ -144,8 +146,28 @@ class IntegrationTest {
           + "</enrolled-students>"
           + "</course>";
 
-  private static final Course epicArtCourse =
-      new Course(Type.ART, List.of(new Student("Leonardo Da Vinci"), new Student("Michelangelo")));
+  private static final String EPIC_ART_COURSE_JAKARTA_XML_UTF_8 =
+      "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>"
+          + "<course type=\"ART\">"
+          + "<enrolled-students>"
+          + "<student>"
+          + "<name>Leonardo Da Vinci</name>"
+          + "</student>"
+          + "<student>"
+          + "<name>Michelangelo</name>"
+          + "</student>"
+          + "</enrolled-students>"
+          + "</course>";
+
+  private static final CourseJavax EPIC_ART_COURSE_JAVAX =
+      new CourseJavax(
+          Type.ART,
+          List.of(new StudentJavax("Leonardo Da Vinci"), new StudentJavax("Michelangelo")));
+
+  private static final CourseJakarta EPIC_ART_COURSE_JAKARTA =
+      new CourseJakarta(
+          Type.ART,
+          List.of(new StudentJakarta("Leonardo Da Vinci"), new StudentJakarta("Michelangelo")));
 
   private static String lotsOfText;
   private static Map<String, String> poemEncodings;
@@ -160,8 +182,8 @@ class IntegrationTest {
   private ScheduledExecutorService scheduler;
 
   @BeforeAll
-  static void readTestData() throws IOException {
-    Class<?> cls = IntegrationTest.class;
+  static void readTestData() {
+    var cls = IntegrationTest.class;
 
     lotsOfText = loadUtf8(cls, "/payload/alice.txt");
     lotsOfJson = loadUtf8(cls, "/payload/lots_of_json.json");
@@ -183,10 +205,12 @@ class IntegrationTest {
             "br", load(cls, "/payload/alice.br"),
             "badzip", new byte[0]);
 
-    var mapper = new JsonMapper();
-    var type = new TypeRef<List<Map<String, Object>>>() {};
     try {
-      lotsOfJsonDecoded = mapper.readerFor(mapper.constructType(type.type())).readValue(lotsOfJson);
+      var mapper = new JsonMapper();
+      lotsOfJsonDecoded =
+          mapper
+              .readerFor(mapper.constructType(new TypeRef<List<Map<String, Object>>>() {}.type()))
+              .readValue(lotsOfJson);
     } catch (IOException ioe) {
       throw new UncheckedIOException(ioe);
     }
@@ -201,15 +225,15 @@ class IntegrationTest {
 
   @BeforeAll
   static void registerJaxbImplementation() {
-    System.setProperty(JAXBContext.JAXB_CONTEXT_FACTORY, MoxyJaxbContextFactory.class.getName());
+    System.setProperty(
+        javax.xml.bind.JAXBContext.JAXB_CONTEXT_FACTORY, MoxyJaxbContextFactory.class.getName());
   }
 
   @BeforeEach
   void setUpLifecycle() throws IOException {
     server = new MockWebServer();
     server.start();
-    var builder = HttpClient.newBuilder();
-    client = builder.build();
+    client = Methanol.newBuilder().autoAcceptEncoding(false).build();
     executor = Executors.newFixedThreadPool(8);
     scheduler = Executors.newSingleThreadScheduledExecutor();
   }
@@ -229,11 +253,11 @@ class IntegrationTest {
   }
 
   private void assertDecodesSmall(String encoding) throws Exception {
-    var compressed = BASE64_DEC.decode(poemEncodings.get(encoding));
-    assertDecodes(encoding, poem, compressed);
+    var compressed = base64Decoder.decode(poemEncodings.get(encoding));
+    assertDecodes(encoding, POEM, compressed);
     // Test deflate body without zlib wrapping
     if (encoding.equals("deflate")) {
-      assertDecodes(encoding, poem, zlibUnwrap(compressed));
+      assertDecodes(encoding, POEM, zlibUnwrap(compressed));
     }
   }
 
@@ -268,7 +292,7 @@ class IntegrationTest {
   @Test
   void decoding_concatenatedGzip() throws Exception {
     var firstMember = lotsOfTextEncodings.get("gzip");
-    var secondMember = BASE64_DEC.decode(poemEncodings.get("gzip"));
+    var secondMember = base64Decoder.decode(poemEncodings.get("gzip"));
     var thirdMember =
         MockGzipMember.newBuilder()
             .addComment(55)
@@ -283,7 +307,7 @@ class IntegrationTest {
     server.enqueue(new MockResponse().setBody(buffer).setHeader("Content-Encoding", "gzip"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofString()));
-    assertLinesMatch(lines(lotsOfText + poem + lotsOfText), lines(response.body()));
+    assertLinesMatch(lines(lotsOfText + POEM + lotsOfText), lines(response.body()));
   }
 
   @Test
@@ -291,7 +315,7 @@ class IntegrationTest {
     var firstMember = lotsOfTextEncodings.get("gzip");
     var secondMember =
         MockGzipMember.newBuilder()
-            .data(poem.getBytes(US_ASCII))
+            .data(POEM.getBytes(US_ASCII))
             .corrupt(CorruptionMode.FLG, 0xE0) // add reserved flag
             .build()
             .getBytes();
@@ -325,7 +349,7 @@ class IntegrationTest {
   void decoding_nestedHandlerGetsNoLengthOrEncoding() throws Exception {
     server.enqueue(
         new MockResponse()
-            .setBody(okBuffer(BASE64_DEC.decode(poemEncodings.get("gzip"))))
+            .setBody(okBuffer(base64Decoder.decode(poemEncodings.get("gzip"))))
             .setHeader("Content-Encoding", "gzip"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var headers = new AtomicReference<HttpHeaders>();
@@ -337,7 +361,7 @@ class IntegrationTest {
                   headers.set(info.headers());
                   return BodyHandlers.ofString().apply(info);
                 }));
-    assertEquals(poem, response.body());
+    assertEquals(POEM, response.body());
     var headersMap = headers.get().map();
     assertFalse(headersMap.containsKey("Content-Encoding"));
     assertFalse(headersMap.containsKey("Content-Length"));
@@ -345,10 +369,10 @@ class IntegrationTest {
 
   @Test
   void decoding_noEncoding() throws Exception {
-    server.enqueue(new MockResponse().setBody(poem));
+    server.enqueue(new MockResponse().setBody(POEM));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofString()));
-    assertEquals(poem, response.body());
+    assertEquals(POEM, response.body());
   }
 
   @Test
@@ -475,10 +499,10 @@ class IntegrationTest {
 
   @Test
   void ofObject_stringDecoder() throws Exception {
-    server.enqueue(new MockResponse().setBody(poem).addHeader("Content-Type", "text/plain"));
+    server.enqueue(new MockResponse().setBody(POEM).addHeader("Content-Type", "text/plain"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, ofObject(String.class));
-    assertEquals(poem, response.body());
+    assertEquals(POEM, response.body());
   }
 
   @Test
@@ -515,12 +539,24 @@ class IntegrationTest {
   void ofObject_downloadXml() throws Exception {
     server.enqueue(
         new MockResponse()
-            .setBody(okBuffer(gzip(epicArtCourseXmlUtf8.getBytes(UTF_8))))
+            .setBody(okBuffer(gzip(EPIC_ART_COURSE_JAVAX_XML_UTF_8.getBytes(UTF_8))))
             .addHeader("Content-Encoding", "gzip")
             .addHeader("Content-Type", "application/xml"));
     var request = MutableRequest.GET(server.url("/").uri());
-    var response = client.send(request, decoding(ofObject(new TypeRef<Course>() {})));
-    assertEquals(epicArtCourse, response.body());
+    var response = client.send(request, decoding(ofObject(new TypeRef<CourseJavax>() {})));
+    assertEquals(EPIC_ART_COURSE_JAVAX, response.body());
+  }
+
+  @Test
+  void ofObject_downloadXmlJakarta() throws Exception {
+    server.enqueue(
+        new MockResponse()
+            .setBody(okBuffer(gzip(EPIC_ART_COURSE_JAKARTA_XML_UTF_8.getBytes(UTF_8))))
+            .addHeader("Content-Encoding", "gzip")
+            .addHeader("Content-Type", "application/xml"));
+    var request = MutableRequest.GET(server.url("/").uri());
+    var response = client.send(request, decoding(ofObject(new TypeRef<CourseJakarta>() {})));
+    assertEquals(EPIC_ART_COURSE_JAKARTA, response.body());
   }
 
   @Test
@@ -529,12 +565,28 @@ class IntegrationTest {
     var request =
         MutableRequest.POST(
             server.url("/").uri(),
-            MoreBodyPublishers.ofObject(epicArtCourse, MediaType.TEXT_XML.withCharset(UTF_8)));
+            MoreBodyPublishers.ofObject(
+                EPIC_ART_COURSE_JAVAX, MediaType.TEXT_XML.withCharset(UTF_8)));
     client.sendAsync(request, discarding());
 
     var recordedRequest = server.takeRequest();
     var uploaded = recordedRequest.getBody().readUtf8();
-    assertEquals(epicArtCourseXmlUtf8, uploaded);
+    assertEquals(EPIC_ART_COURSE_JAVAX_XML_UTF_8, uploaded);
+  }
+
+  @Test
+  void ofObject_uploadXmlJakarta() throws Exception {
+    server.enqueue(new MockResponse());
+    var request =
+        MutableRequest.POST(
+            server.url("/").uri(),
+            MoreBodyPublishers.ofObject(
+                EPIC_ART_COURSE_JAKARTA, MediaType.TEXT_XML.withCharset(UTF_8)));
+    client.sendAsync(request, discarding());
+
+    var recordedRequest = server.takeRequest();
+    var uploaded = recordedRequest.getBody().readUtf8();
+    assertEquals(EPIC_ART_COURSE_JAKARTA_XML_UTF_8, uploaded);
   }
 
   @Test
@@ -575,7 +627,7 @@ class IntegrationTest {
     var timeoutMillis = 50L;
     server.enqueue(
         new MockResponse()
-            .setBody(poem)
+            .setBody(POEM)
             .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response =
@@ -768,29 +820,83 @@ class IntegrationTest {
     public Tweet() {}
   }
 
-  @XmlRootElement(name = "course")
-  private static final class Course {
-    @XmlAttribute(required = true)
+  @jakarta.xml.bind.annotation.XmlRootElement(name = "course")
+  private static final class CourseJakarta {
+    @jakarta.xml.bind.annotation.XmlAttribute(required = true)
     private final Type type;
 
-    @XmlElementWrapper(name = "enrolled-students")
-    @XmlElement(name = "student")
-    private final List<Student> enrolledStudents;
+    @jakarta.xml.bind.annotation.XmlElementWrapper(name = "enrolled-students")
+    @jakarta.xml.bind.annotation.XmlElement(name = "student")
+    private final List<StudentJakarta> enrolledStudents;
 
-    private Course() {
+    CourseJakarta() {
       this(Type.UNKNOWN, new ArrayList<>());
     }
 
-    Course(Type type, List<Student> enrolledStudents) {
+    CourseJakarta(Type type, List<StudentJakarta> enrolledStudents) {
       this.type = type;
       this.enrolledStudents = enrolledStudents;
     }
 
     @Override
     public boolean equals(Object obj) {
-      return obj instanceof Course
-          && type == ((Course) obj).type
-          && enrolledStudents.equals(((Course) obj).enrolledStudents);
+      return obj instanceof CourseJakarta
+          && type == ((CourseJakarta) obj).type
+          && enrolledStudents.equals(((CourseJakarta) obj).enrolledStudents);
+    }
+
+    @Override
+    public String toString() {
+      return "CourseJakarta[type=" + type + ", enrolledStudents=" + enrolledStudents + "]";
+    }
+  }
+
+  private static final class StudentJakarta {
+    @jakarta.xml.bind.annotation.XmlElement(required = true)
+    private final String name;
+
+    StudentJakarta() {
+      this("");
+    }
+
+    StudentJakarta(String name) {
+      this.name = name;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof StudentJakarta && name.equals(((StudentJakarta) obj).name);
+    }
+
+    @Override
+    public String toString() {
+      return "StudentJakarta[" + name + "]";
+    }
+  }
+
+  @javax.xml.bind.annotation.XmlRootElement(name = "course")
+  private static final class CourseJavax {
+    @javax.xml.bind.annotation.XmlAttribute(required = true)
+    private final Type type;
+
+    @javax.xml.bind.annotation.XmlElementWrapper(name = "enrolled-students")
+    @javax.xml.bind.annotation.XmlElement(name = "student")
+    private final List<StudentJavax> enrolledStudents;
+
+    CourseJavax() {
+      this(Type.UNKNOWN, new ArrayList<>());
+    }
+
+    CourseJavax(Type type, List<StudentJavax> enrolledStudents) {
+      this.type = type;
+      this.enrolledStudents = enrolledStudents;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof CourseJavax
+          && type == ((CourseJavax) obj).type
+          && enrolledStudents.equals(((CourseJavax) obj).enrolledStudents);
     }
 
     @Override
@@ -799,21 +905,21 @@ class IntegrationTest {
     }
   }
 
-  private static final class Student {
-    @XmlElement(required = true)
+  private static final class StudentJavax {
+    @javax.xml.bind.annotation.XmlElement(required = true)
     private final String name;
 
-    private Student() {
+    StudentJavax() {
       this("");
     }
 
-    Student(String name) {
+    StudentJavax(String name) {
       this.name = name;
     }
 
     @Override
     public boolean equals(Object obj) {
-      return obj instanceof Student && name.equals(((Student) obj).name);
+      return obj instanceof StudentJavax && name.equals(((StudentJavax) obj).name);
     }
 
     @Override
@@ -828,20 +934,21 @@ class IntegrationTest {
     CALCULUS
   }
 
-  public static class MoxyJaxbContextFactory implements JAXBContextFactory {
+  public static final class MoxyJaxbContextFactory implements javax.xml.bind.JAXBContextFactory {
     public MoxyJaxbContextFactory() {}
 
     @Override
-    public JAXBContext createContext(Class<?>[] classesToBeBound, Map<String, ?> properties)
-        throws JAXBException {
+    public javax.xml.bind.JAXBContext createContext(
+        Class<?>[] classesToBeBound, Map<String, ?> properties)
+        throws javax.xml.bind.JAXBException {
       return org.eclipse.persistence.jaxb.JAXBContextFactory.createContext(
           classesToBeBound, properties);
     }
 
     @Override
-    public JAXBContext createContext(
+    public javax.xml.bind.JAXBContext createContext(
         String contextPath, ClassLoader classLoader, Map<String, ?> properties)
-        throws JAXBException {
+        throws javax.xml.bind.JAXBException {
       return org.eclipse.persistence.jaxb.JAXBContextFactory.createContext(
           contextPath, classLoader, properties);
     }

@@ -20,19 +20,40 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
-import javax.xml.bind.JAXBException;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
-/** Unchecked wrapper over a {@link JAXBException}. */
-public class UncheckedJaxbException extends RuntimeException {
-  /** Creates a new {@code UncheckedJaxbException} with the given cause. */
-  public UncheckedJaxbException(JAXBException cause) {
-    super(cause);
+final class CachingJaxbBindingFactory implements JaxbBindingFactory {
+  private final ConcurrentMap<Class<?>, JAXBContext> cachedContexts = new ConcurrentHashMap<>();
+
+  CachingJaxbBindingFactory() {}
+
+  @Override
+  public Marshaller createMarshaller(Class<?> boundClass) throws JAXBException {
+    return getOrCreateContext(boundClass).createMarshaller();
   }
 
   @Override
-  public JAXBException getCause() {
-    return (JAXBException) super.getCause();
+  public Unmarshaller createUnmarshaller(Class<?> boundClass) throws JAXBException {
+    return getOrCreateContext(boundClass).createUnmarshaller();
+  }
+
+  // Visible for testing.
+  JAXBContext getOrCreateContext(Class<?> boundClass) {
+    return cachedContexts.computeIfAbsent(
+        boundClass,
+        c -> {
+          try {
+            return JAXBContext.newInstance(c);
+          } catch (JAXBException e) {
+            throw new UncheckedJaxbException(e);
+          }
+        });
   }
 }

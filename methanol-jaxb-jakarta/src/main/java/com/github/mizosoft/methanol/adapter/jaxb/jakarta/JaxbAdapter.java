@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
 import static java.util.Objects.requireNonNull;
 
@@ -28,6 +28,12 @@ import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
+import jakarta.xml.bind.annotation.XmlEnum;
+import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlType;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -38,12 +44,6 @@ import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.charset.Charset;
 import java.util.function.Supplier;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.bind.annotation.XmlEnum;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class JaxbAdapter extends AbstractBodyAdapter {

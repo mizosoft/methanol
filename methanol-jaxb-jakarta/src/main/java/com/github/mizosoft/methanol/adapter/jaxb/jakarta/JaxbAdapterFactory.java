@@ -20,17 +20,32 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jaxb;
+package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.github.mizosoft.methanol.BodyAdapter.Decoder;
+import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 
-import org.junit.jupiter.api.Test;
+/** Creates {@link com.github.mizosoft.methanol.BodyAdapter} implementations for XML using JAXB. */
+public class JaxbAdapterFactory {
+  private JaxbAdapterFactory() {}
 
-class CachingJaxbBindingFactoryTest {
-  @Test
-  void cachesContextsForSameType() {
-    var factory = new CachingJaxbBindingFactory();
-    assertThat(factory.getOrCreateContext(Point.class))
-        .isSameAs(factory.getOrCreateContext(Point.class));
+  /** Returns a new {@code Encoder} using the default caching factory. */
+  public static Encoder createEncoder() {
+    return createEncoder(JaxbBindingFactory.create());
+  }
+
+  /** Returns a new {@code Encoder} using the given factory. */
+  public static Encoder createEncoder(JaxbBindingFactory jaxbFactory) {
+    return new JaxbAdapter.Encoder(jaxbFactory);
+  }
+
+  /** Returns a new {@code Decoder} using the default caching factory. */
+  public static Decoder createDecoder() {
+    return createDecoder(JaxbBindingFactory.create());
+  }
+
+  /** Returns a new {@code Decoder} using the given factory. */
+  public static Decoder createDecoder(JaxbBindingFactory jaxbFactory) {
+    return new JaxbAdapter.Decoder(jaxbFactory);
   }
 }

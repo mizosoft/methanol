@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,6 @@ import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 
 /** Creates {@link com.github.mizosoft.methanol.BodyAdapter} implementations for XML using JAXB. */
 public class JaxbAdapterFactory {
-
   private JaxbAdapterFactory() {}
 
   /** Returns a new {@code Encoder} using the default caching factory. */

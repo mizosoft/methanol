@@ -8,8 +8,8 @@ plugins {
 
 dependencies {
   api(project(":methanol"))
-  api(libs.jaxb.api)
+  api(libs.jaxb.jakarta.api)
 
   testImplementation(project(":methanol-testing"))
-  testImplementation(libs.jaxb.impl)
+  testImplementation(libs.jaxb.jakarta.impl)
 }

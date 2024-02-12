@@ -13,6 +13,7 @@ dependencies {
   testImplementation(project(":methanol-jackson-flux"))
   testImplementation(project(":methanol-protobuf"))
   testImplementation(project(":methanol-jaxb"))
+  testImplementation(project(":methanol-jaxb-jakarta"))
   testImplementation(project(":methanol-brotli"))
   testImplementation(project(":methanol-testing"))
   testImplementation(libs.reactor.core)
@@ -20,6 +21,7 @@ dependencies {
   testImplementation(libs.brotli.dec)
   testImplementation(libs.reactivestreams)
   testImplementation(libs.moxy)
+  testImplementation(libs.jaxb.jakarta.impl)
 }
 
 tasks.test {
@@ -30,7 +32,7 @@ tasks.test {
 }
 
 extraJavaModuleInfo {
-  failOnMissingModuleInfo.set(false)
+  failOnMissingModuleInfo = false
   automaticModule(libs.moxy.get().module.toString(), "org.eclipse.persistence.moxy")
 }
 
