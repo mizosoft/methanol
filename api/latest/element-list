@@ -11,6 +11,8 @@ module:methanol.adapter.jackson.flux
 com.github.mizosoft.methanol.adapter.jackson.flux
 module:methanol.adapter.jaxb
 com.github.mizosoft.methanol.adapter.jaxb
+module:methanol.adapter.jaxb.jakarta
+com.github.mizosoft.methanol.adapter.jaxb.jakarta
 module:methanol.adapter.protobuf
 com.github.mizosoft.methanol.adapter.protobuf
 module:methanol.redis
