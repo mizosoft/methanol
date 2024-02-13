@@ -56,7 +56,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
         response,
         new CacheReadingPublisher(viewer, executor, readListener),
         viewer,
-        CacheStrategy.newBuilder(request, response).build(now));
+        CacheStrategy.create(request, response, now));
   }
 
   private CacheResponse(

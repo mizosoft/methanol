@@ -27,7 +27,7 @@ import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDura
 import static com.github.mizosoft.methanol.internal.Utils.requireValidHeaderValue;
 import static com.github.mizosoft.methanol.internal.Utils.requireValidToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toDeltaSeconds;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.parseDeltaSeconds;
 import static java.lang.String.format;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
@@ -561,26 +561,26 @@ public final class CacheControl {
 
       switch (normalizedDirective) {
         case "max-age":
-          maxAge = toDeltaSeconds(argument);
+          maxAge = parseDeltaSeconds(argument);
           break;
         case "min-fresh":
-          minFresh = toDeltaSeconds(argument);
+          minFresh = parseDeltaSeconds(argument);
           break;
         case "s-maxage":
-          sMaxAge = toDeltaSeconds(argument);
+          sMaxAge = parseDeltaSeconds(argument);
           break;
         case "max-stale":
           if (argument.isEmpty()) {
             anyMaxStale = true;
           } else {
-            maxStale = toDeltaSeconds(argument);
+            maxStale = parseDeltaSeconds(argument);
           }
           break;
         case "stale-while-revalidate":
-          staleWhileRevalidate = toDeltaSeconds(argument);
+          staleWhileRevalidate = parseDeltaSeconds(argument);
           break;
         case "stale-if-error":
-          staleIfError = toDeltaSeconds(argument);
+          staleIfError = parseDeltaSeconds(argument);
           break;
         case "no-cache":
           noCache = true;

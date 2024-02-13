@@ -23,7 +23,7 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.formatHttpDate;
 import static com.github.mizosoft.methanol.testing.TestUtils.deflate;
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
@@ -233,7 +233,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     var timeResponseReceived = toUtcDateTime(clock.instant());
     server.enqueue(
         new MockResponse()
-            .setHeader("Expires", toHttpDateString(timeResponseReceived.plusDays(1)))
+            .setHeader("Expires", formatHttpDate(timeResponseReceived.plusDays(1)))
             .setBody("Pikachu"));
     verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
 
@@ -246,14 +246,14 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     clock.advance(Duration.ofMillis(1));
     server.enqueue(
         new MockResponse()
-            .setHeader("Expires", toHttpDateString(timeResponseReceived.plusDays(1)))
+            .setHeader("Expires", formatHttpDate(timeResponseReceived.plusDays(1)))
             .setBody("Eevee"));
     verifyThat(send(serverUri)).isConditionalMiss().hasBody("Eevee");
 
     clock.advance(Duration.ofDays(1).plusMillis(1));
     server.enqueue(
         new MockResponse()
-            .setHeader("Expires", toHttpDateString(timeResponseReceived.plusDays(1)))
+            .setHeader("Expires", formatHttpDate(timeResponseReceived.plusDays(1)))
             .setBody("Pikachu"));
     verifyThat(send(serverUri)).isConditionalMiss().hasBody("Pikachu");
   }
@@ -266,8 +266,8 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     clock.advance(Duration.ofHours(12));
     server.enqueue(
         new MockResponse()
-            .setHeader("Date", toHttpDateString(timeResponseGenerated))
-            .setHeader("Expires", toHttpDateString(timeResponseGenerated.plusDays(1)))
+            .setHeader("Date", formatHttpDate(timeResponseGenerated))
+            .setHeader("Expires", formatHttpDate(timeResponseGenerated.plusDays(1)))
             .setBody("Pikachu"));
     verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
 
@@ -280,16 +280,16 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     clock.advance(Duration.ofMillis(1));
     server.enqueue(
         new MockResponse()
-            .setHeader("Date", toHttpDateString(timeResponseGenerated))
-            .setHeader("Expires", toHttpDateString(timeResponseGenerated.plusDays(1)))
+            .setHeader("Date", formatHttpDate(timeResponseGenerated))
+            .setHeader("Expires", formatHttpDate(timeResponseGenerated.plusDays(1)))
             .setBody("Eevee"));
     verifyThat(send(serverUri)).isConditionalMiss().hasBody("Eevee");
 
     clock.advance(Duration.ofDays(1).plusMillis(1));
     server.enqueue(
         new MockResponse()
-            .setHeader("Date", toHttpDateString(timeResponseGenerated))
-            .setHeader("Expires", toHttpDateString(timeResponseGenerated.plusDays(1)))
+            .setHeader("Date", formatHttpDate(timeResponseGenerated))
+            .setHeader("Expires", formatHttpDate(timeResponseGenerated.plusDays(1)))
             .setBody("Pikachu"));
     verifyThat(send(serverUri)).isConditionalMiss().hasBody("Pikachu");
   }
@@ -704,18 +704,50 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     var date = toUtcDateTime(clock.instant());
     server.enqueue(
         new MockResponse()
-            .setHeader("Date", toHttpDateString(date))
-            .setHeader("Expires", toHttpDateString(date.minusSeconds(10)))
+            .setHeader("Date", formatHttpDate(date))
+            .setHeader("Expires", formatHttpDate(date.minusSeconds(10)))
             .setBody("Pikachu"));
     verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
 
     // Negative freshness lifetime caused by past Expires triggers revalidation
     server.enqueue(
         new MockResponse()
-            .setHeader("Date", toHttpDateString(date))
-            .setHeader("Expires", toHttpDateString(date.minusSeconds(10)))
+            .setHeader("Date", formatHttpDate(date))
+            .setHeader("Expires", formatHttpDate(date.minusSeconds(10)))
             .setBody("Psyduck"));
     verifyThat(send(serverUri)).isConditionalMiss().hasBody("Psyduck");
+  }
+
+  @StoreParameterizedTest
+  void invalidExpiresMakesResponseStale(Store store) throws Exception {
+    setUpCache(store);
+
+    var date = toUtcDateTime(clock.instant());
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Date", formatHttpDate(date))
+            .setHeader("Expires", -1)
+            .setBody("Pikachu"));
+    verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
+
+    // Negative freshness lifetime caused by invalid Expires triggers revalidation.
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Date", formatHttpDate(date))
+            .setHeader("Expires", -1)
+            .setBody("Psyduck"));
+    verifyThat(send(serverUri)).isConditionalMiss().hasBody("Psyduck");
+
+    clock.advanceSeconds(1);
+
+    // Staleness rules should still apply in case of invalid 'Expires'.
+    verifyThat(
+            send(
+                GET(serverUri)
+                    .cacheControl(
+                        CacheControl.newBuilder().maxStale(Duration.ofSeconds(1)).build())))
+        .isCacheHit()
+        .hasBody("Psyduck");
   }
 
   @StoreParameterizedTest
@@ -728,22 +760,22 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     // Don't include explicit freshness to trigger heuristics, which relies on Last-Modified
     server.enqueue(
         new MockResponse()
-            .setHeader("Date", toHttpDateString(date))
-            .setHeader("Last-Modified", toHttpDateString(lastModified))
+            .setHeader("Date", formatHttpDate(date))
+            .setHeader("Last-Modified", formatHttpDate(lastModified))
             .setBody("Pikachu"));
     verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
 
     // Negative heuristic lifetime caused by future Last-Modified triggers revalidation
     server.enqueue(
         new MockResponse()
-            .setHeader("Date", toHttpDateString(date))
-            .setHeader("Last-Modified", toHttpDateString(lastModified))
+            .setHeader("Date", formatHttpDate(date))
+            .setHeader("Last-Modified", formatHttpDate(lastModified))
             .setBody("Psyduck"));
     verifyThat(send(serverUri))
         .isConditionalMiss()
         .hasBody("Psyduck")
         .networkResponse()
-        .containsRequestHeader("If-Modified-Since", toHttpDateString(lastModified));
+        .containsRequestHeader("If-Modified-Since", formatHttpDate(lastModified));
   }
 
   @StoreParameterizedTest
@@ -2433,35 +2465,35 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         new MockResponse()
             .setBody("abc")
             .setHeader("Cache-Control", "max-age=1")
-            .setHeader("Date", toHttpDateString(date))
-            .setHeader("Last-Modified", toHttpDateString(lastModified)));
+            .setHeader("Date", formatHttpDate(date))
+            .setHeader("Last-Modified", formatHttpDate(lastModified)));
 
     verifyThat(
             send(
                 GET(serverUri)
-                    .header("If-Modified-Since", toHttpDateString(lastModified.plusSeconds(2)))))
+                    .header("If-Modified-Since", formatHttpDate(lastModified.plusSeconds(2)))))
         .isExternallyConditionalCacheHit()
         .hasBody("");
     verifyThat(
             send(
                 GET(serverUri)
-                    .header("If-Modified-Since", toHttpDateString(lastModified.plusSeconds(1)))))
+                    .header("If-Modified-Since", formatHttpDate(lastModified.plusSeconds(1)))))
         .isExternallyConditionalCacheHit()
         .hasBody("");
-    verifyThat(send(GET(serverUri).header("If-Modified-Since", toHttpDateString(lastModified))))
+    verifyThat(send(GET(serverUri).header("If-Modified-Since", formatHttpDate(lastModified))))
         .isExternallyConditionalCacheHit()
         .hasBody("");
 
     verifyThat(
             send(
                 GET(serverUri)
-                    .header("If-Modified-Since", toHttpDateString(lastModified.minusSeconds(1)))))
+                    .header("If-Modified-Since", formatHttpDate(lastModified.minusSeconds(1)))))
         .isCacheHit()
         .hasBody("abc");
     verifyThat(
             send(
                 GET(serverUri)
-                    .header("If-Modified-Since", toHttpDateString(lastModified.minusSeconds(2)))))
+                    .header("If-Modified-Since", formatHttpDate(lastModified.minusSeconds(2)))))
         .isCacheHit()
         .hasBody("abc");
 
@@ -2469,7 +2501,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
     // Preconditions are ignored when the response is stale.
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    verifyThat(send(GET(serverUri).header("If-Modified-Since", toHttpDateString(lastModified))))
+    verifyThat(send(GET(serverUri).header("If-Modified-Since", formatHttpDate(lastModified))))
         .hasCode(HTTP_OK)
         .isConditionalHit()
         .hasBody("abc");
@@ -2484,28 +2516,26 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         new MockResponse()
             .setBody("abc")
             .setHeader("Cache-Control", "max-age=1")
-            .setHeader("Date", toHttpDateString(date)));
+            .setHeader("Date", formatHttpDate(date)));
 
     verifyThat(
-            send(GET(serverUri).header("If-Modified-Since", toHttpDateString(date.plusSeconds(2)))))
+            send(GET(serverUri).header("If-Modified-Since", formatHttpDate(date.plusSeconds(2)))))
         .isExternallyConditionalCacheHit()
         .hasBody("");
     verifyThat(
-            send(GET(serverUri).header("If-Modified-Since", toHttpDateString(date.plusSeconds(1)))))
+            send(GET(serverUri).header("If-Modified-Since", formatHttpDate(date.plusSeconds(1)))))
         .isExternallyConditionalCacheHit()
         .hasBody("");
-    verifyThat(send(GET(serverUri).header("If-Modified-Since", toHttpDateString(date))))
+    verifyThat(send(GET(serverUri).header("If-Modified-Since", formatHttpDate(date))))
         .isExternallyConditionalCacheHit()
         .hasBody("");
 
     verifyThat(
-            send(
-                GET(serverUri).header("If-Modified-Since", toHttpDateString(date.minusSeconds(1)))))
+            send(GET(serverUri).header("If-Modified-Since", formatHttpDate(date.minusSeconds(1)))))
         .isCacheHit()
         .hasBody("abc");
     verifyThat(
-            send(
-                GET(serverUri).header("If-Modified-Since", toHttpDateString(date.minusSeconds(2)))))
+            send(GET(serverUri).header("If-Modified-Since", formatHttpDate(date.minusSeconds(2)))))
         .isCacheHit()
         .hasBody("abc");
 
@@ -2513,7 +2543,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
     // Preconditions are ignored when the response is stale.
     server.enqueue(new MockResponse().setResponseCode(HTTP_NOT_MODIFIED));
-    verifyThat(send(GET(serverUri).header("If-Modified-Since", toHttpDateString(date))))
+    verifyThat(send(GET(serverUri).header("If-Modified-Since", formatHttpDate(date))))
         .hasCode(HTTP_OK)
         .isConditionalHit()
         .hasBody("abc");
@@ -2591,8 +2621,8 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     putInCache(
         new MockResponse()
             .setHeader("ETag", "\"1\"")
-            .setHeader("date", toHttpDateString(date))
-            .setHeader("Last-Modified", toHttpDateString(lastModified))
+            .setHeader("date", formatHttpDate(date))
+            .setHeader("Last-Modified", formatHttpDate(lastModified))
             .setBody("abc"));
 
     // If-None-Match takes precedence over If-Modified-Since.
@@ -2600,7 +2630,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
             send(
                 GET(serverUri)
                     .header("If-None-Match", "\"1\"") // Satisfied.
-                    .header("If-Modified-Since", toHttpDateString(lastModified)))) // Unsatisfied.
+                    .header("If-Modified-Since", formatHttpDate(lastModified)))) // Unsatisfied.
         .isExternallyConditionalCacheHit()
         .hasBody("");
     verifyThat(
@@ -2609,7 +2639,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
                     .header("If-None-Match", "\"2\"") // Satisfied.
                     .header(
                         "If-Modified-Since",
-                        toHttpDateString(lastModified.minusSeconds(1))))) // Unsatisfied.
+                        formatHttpDate(lastModified.minusSeconds(1))))) // Unsatisfied.
         .isCacheHit()
         .hasBody("abc");
   }
@@ -2623,10 +2653,10 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     putInCache(
         new MockResponse()
             .setResponseCode(HTTP_MOVED_PERM)
-            .setHeader("Last-Modified", toHttpDateString(lastModified)));
+            .setHeader("Last-Modified", formatHttpDate(lastModified)));
 
     // If-Modified-Since isn't evaluated.
-    verifyThat(send(GET(serverUri).header("If-Modified-Since", toHttpDateString(lastModified))))
+    verifyThat(send(GET(serverUri).header("If-Modified-Since", formatHttpDate(lastModified))))
         .isCacheHit();
   }
 

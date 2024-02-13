@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static com.github.mizosoft.methanol.internal.cache.HttpDates.toHttpDateString;
+import static com.github.mizosoft.methanol.internal.cache.HttpDates.formatHttpDate;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -188,7 +188,7 @@ abstract class AbstractHttpCacheTest {
   }
 
   static String instantToHttpDateString(Instant instant) {
-    return toHttpDateString(toUtcDateTime(instant));
+    return formatHttpDate(toUtcDateTime(instant));
   }
 
   static class ForwardingStore implements Store {

@@ -408,7 +408,7 @@ public final class CacheInterceptor implements Interceptor {
     return request
         .headers()
         .firstValue("If-Modified-Since")
-        .map(HttpDates::toHttpDate)
+        .flatMap(HttpDates::tryParseHttpDate)
         .map(value -> isModifiedSince(cacheResponse, value));
   }
 
@@ -480,7 +480,7 @@ public final class CacheInterceptor implements Interceptor {
         .headers()
         .firstValue("Last-Modified")
         .or(() -> cacheResponse.headers().firstValue("Date"))
-        .map(HttpDates::toHttpDate)
+        .flatMap(HttpDates::tryParseHttpDate)
         .orElseGet(() -> HttpDates.toUtcDateTime(cacheResponse.timeResponseReceived()))
         .isAfter(dateTime);
   }
