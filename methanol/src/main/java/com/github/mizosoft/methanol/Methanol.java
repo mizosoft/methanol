@@ -594,11 +594,11 @@ public final class Methanol extends HttpClient {
 
       /**
        * Returns a new chain after applying the given functions to this chain's body and push
-       * promise handlers.
+       * promise handlers, and only to the latter if a push promise handler is present.
        */
       default Chain<T> with(
           UnaryOperator<BodyHandler<T>> bodyHandlerTransformer,
-          UnaryOperator<@Nullable PushPromiseHandler<T>> pushPromiseHandlerTransformer) {
+          UnaryOperator<PushPromiseHandler<T>> pushPromiseHandlerTransformer) {
         return with(
             bodyHandlerTransformer.apply(bodyHandler()),
             pushPromiseHandler().map(pushPromiseHandlerTransformer).orElse(null));
