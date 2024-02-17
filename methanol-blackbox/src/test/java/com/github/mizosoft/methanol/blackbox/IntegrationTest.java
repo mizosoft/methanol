@@ -68,8 +68,8 @@ import com.github.mizosoft.methanol.blackbox.support.JacksonMapper;
 import com.github.mizosoft.methanol.testing.ByteBufferIterator;
 import com.github.mizosoft.methanol.testing.IterablePublisher;
 import com.github.mizosoft.methanol.testing.Logging;
-import com.github.mizosoft.methanol.testing.MockGzipMember;
-import com.github.mizosoft.methanol.testing.MockGzipMember.CorruptionMode;
+import com.github.mizosoft.methanol.testing.MockGzipStream;
+import com.github.mizosoft.methanol.testing.MockGzipStream.CorruptionMode;
 import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.BufferedReader;
@@ -294,7 +294,7 @@ class IntegrationTest {
     var firstMember = lotsOfTextEncodings.get("gzip");
     var secondMember = base64Decoder.decode(poemEncodings.get("gzip"));
     var thirdMember =
-        MockGzipMember.newBuilder()
+        MockGzipStream.newBuilder()
             .addComment(55)
             .addFileName(555)
             .addExtraField(5555)
@@ -302,7 +302,7 @@ class IntegrationTest {
             .setText()
             .data(lotsOfText.getBytes(US_ASCII))
             .build()
-            .getBytes();
+            .toByteArray();
     var buffer = new Buffer().write(firstMember).write(secondMember).write(thirdMember);
     server.enqueue(new MockResponse().setBody(buffer).setHeader("Content-Encoding", "gzip"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
@@ -314,11 +314,11 @@ class IntegrationTest {
   void decoding_corruptConcatenatedGzip() {
     var firstMember = lotsOfTextEncodings.get("gzip");
     var secondMember =
-        MockGzipMember.newBuilder()
+        MockGzipStream.newBuilder()
             .data(POEM.getBytes(US_ASCII))
             .corrupt(CorruptionMode.FLG, 0xE0) // add reserved flag
             .build()
-            .getBytes();
+            .toByteArray();
     var buffer = new Buffer().write(firstMember).write(secondMember);
     server.enqueue(new MockResponse().setHeader("Content-Encoding", "gzip").setBody(buffer));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();

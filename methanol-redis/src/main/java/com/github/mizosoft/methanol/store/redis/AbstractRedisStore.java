@@ -549,8 +549,8 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
               readingFreshEntry
                   ? commands().getrange(dataKey, position, inclusiveLimit)
                   : getStaleRange(position, inclusiveLimit);
-          var range2 = fallbackToStaleEntryIfEmptyRange(range, position, inclusiveLimit);
-          int read = Utils.copyRemaining(range2, dst);
+          var correctedRange = fallbackToStaleEntryIfEmptyRange(range, position, inclusiveLimit);
+          int read = Utils.copyRemaining(correctedRange, dst);
           streamPosition += read;
           return read;
         } finally {

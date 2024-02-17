@@ -108,7 +108,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class Methanol extends HttpClient {
   private static final Logger logger = System.getLogger(Methanol.class.getName());
 
-  private final Lazy<Executor> fallbackExecutorSupplier =
+  private final Lazy<Executor> lazyFallbackExecutor =
       Lazy.of(
           () ->
               Executors.newCachedThreadPool(
@@ -174,6 +174,7 @@ public final class Methanol extends HttpClient {
     if (!caches.isEmpty()) {
       mergedInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
     }
+
     caches.forEach(cache -> mergedInterceptors.add(cache.interceptor()));
 
     mergedInterceptors.addAll(backendInterceptors);
@@ -361,7 +362,7 @@ public final class Methanol extends HttpClient {
                     new ResponsePayloadImpl(
                         responseInfo,
                         publisher,
-                        () -> executor().orElseGet(fallbackExecutorSupplier),
+                        () -> executor().orElseGet(lazyFallbackExecutor),
                         adapterCodecOrInstalled())));
   }
 
@@ -381,7 +382,7 @@ public final class Methanol extends HttpClient {
                     new ResponsePayloadImpl(
                         responseInfo,
                         publisher,
-                        () -> executor().orElseGet(fallbackExecutorSupplier),
+                        () -> executor().orElseGet(lazyFallbackExecutor),
                         adapterCodecOrInstalled())));
   }
 

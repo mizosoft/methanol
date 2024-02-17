@@ -34,17 +34,22 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 final class DeflateDecoder implements AsyncDecoder {
   static final String ENCODING = "deflate";
 
-  private static final int CM_MASK = 0x0F00; // Mask for CM half byte
-  private static final int CM_DEFLATE = 0x0800; // Deflate CM (8) shifted to CM half byte position
+  /** Mask for CM. */
+  private static final int CM_MASK = 0x0F00;
 
-  // A tombstone for inflaterReference indicating the decoder has been closed
+  /** Deflate CM (8) shifted to its position in the header. */
+  private static final int SHIFTED_CM_DEFLATE = 0x0800;
+
+  /** A tombstone for {@link #inflaterReference} indicating the decoder has been closed. */
   private static final Object CLOSED = new Object();
 
-  // Ideally, we'd have a final Inflater field created with nowrap set to false,
-  // as the `deflate` content encoding is defined to be in zlib format (zlib-wrapped).
-  // However, some broken servers send raw deflate bytes that aren't zlib-wrapped,
-  // so the first two bytes (zlib header) must be peeked first to know if the Inflater
-  // is to be created with nowrap set or not (see https://github.com/mizosoft/methanol/issues/25)
+  /**
+   * Ideally, we'd have a final {@code Inflater} field created with nowrap set to false, as the
+   * deflate content encoding is defined to be in zlib format (zlib-wrapped). However, some servers
+   * send raw deflate bytes that aren't zlib-wrapped, so the first two bytes (zlib header) must be
+   * peeked first to know if the inflater is to be created with nowrap set or not (see
+   * https://github.com/mizosoft/methanol/issues/25).
+   */
   private final AtomicReference<@MonotonicNonNull Object> inflaterReference =
       new AtomicReference<>();
 
@@ -70,30 +75,30 @@ final class DeflateDecoder implements AsyncDecoder {
       source.pullBytes(header);
       header.flip();
 
-      // Don't tell the Inflater to expect zlib wrapping if such wrapping couldn't be detected
+      // Tell the Inflater to not expect zlib wrapping if such wrapping couldn't be detected.
       boolean nowrap = !isProbablyZLibHeader(header.getShort());
       inflater = new Inflater(nowrap);
       if (!inflaterReference.compareAndSet(null, inflater)) {
-        inflater.end(); // The decoder was closed concurrently
+        inflater.end(); // The decoder was closed concurrently.
         return;
       }
 
-      // The inflater still has to consume the peeked header
+      // The inflater still has to consume the peeked header.
       inflater.setInput(header.rewind());
     } else if (source.finalSource()) {
-      throw new EOFException("unexpected end of deflate stream");
+      throw new EOFException("Unexpected end of deflate stream");
     } else {
-      return; // Expect more input
+      return; // Expect more input.
     }
 
     InflaterUtils.inflateSource(inflater, source, sink);
     if (inflater.finished()) {
       if (source.hasRemaining()) {
-        throw new IOException("deflate stream finished prematurely");
+        throw new IOException("Deflate stream finished prematurely");
       }
     } else if (source.finalSource()) {
       assert !source.hasRemaining();
-      throw new EOFException("unexpected end of deflate stream");
+      throw new EOFException("Unexpected end of deflate stream");
     }
   }
 
@@ -106,7 +111,7 @@ final class DeflateDecoder implements AsyncDecoder {
   }
 
   private static boolean isProbablyZLibHeader(short header) {
-    // See section 2.2 of https://tools.ietf.org/html/rfc1950
-    return (header & CM_MASK) == CM_DEFLATE && header % 31 == 0;
+    // See section 2.2 of https://tools.ietf.org/html/rfc1950.
+    return (header & CM_MASK) == SHIFTED_CM_DEFLATE && header % 31 == 0;
   }
 }

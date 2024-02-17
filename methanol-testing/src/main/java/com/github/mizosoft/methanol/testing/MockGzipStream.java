@@ -47,28 +47,28 @@ import java.util.zip.Deflater;
 import java.util.zip.DeflaterInputStream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A mock gzip member with configurable FLG related data and corruption modes. */
-public final class MockGzipMember {
+/** A mock gzip stream with configurable gzip stream fields & corruption modes. */
+public final class MockGzipStream {
   private static final int GZIP_MAGIC = 0x8B1F;
   private static final int CM_DEFLATE = 8;
   private static final int BYTE_MASK = 0xFF;
   private static final int SHORT_MASK = 0xFFFF;
-  private static final int INT_MASK = 0xFFFFFFFF;
+  private static final long INT_MASK = 0xFFFFFFFFL;
   private static final int TRAILER_SIZE = 8;
 
-  private final Map<FLG, Integer> flagMap;
+  private final Map<Flag, Integer> flags;
   private final byte[] data;
   private final Map<CorruptionMode, Integer> corruptions;
 
-  private MockGzipMember(Builder builder) {
-    flagMap = Map.copyOf(builder.flags);
+  private MockGzipStream(Builder builder) {
+    flags = Map.copyOf(builder.flags);
     data = builder.data;
     corruptions = Collections.unmodifiableMap(new EnumMap<>(builder.corruptions));
   }
 
   private InputStream openStream() {
     var dataCrc = new CRC32();
-    var def = new Deflater(Deflater.DEFAULT_COMPRESSION, true); // no deflate-wrapping
+    var def = new Deflater(Deflater.DEFAULT_COMPRESSION, true); // No deflate-wrapping.
     var ins =
         Stream.<Supplier<InputStream>>builder()
             .add(() -> new ByteArrayInputStream(getHeader()))
@@ -81,10 +81,11 @@ public final class MockGzipMember {
                     new ByteArrayInputStream(
                         getTrailer(dataCrc.getValue(), def.getBytesRead() & INT_MASK)))
             .build()
-            .map(Supplier::get) // Will be lazily evaluated
+            .map(Supplier::get) // Will be lazily evaluated.
             .iterator();
-    // SequenceInputStream only takes Enumerations (can't use Collections.enumeration(List)
-    // as impl relies on lazy evaluation of stream's iterator)
+
+    // SequenceInputStream only takes Enumerations (can't use Collections.enumeration(List) as the
+    // implementation relies on the lazy evaluation of the stream's iterator).
     @SuppressWarnings("JdkObsolete")
     var enumeration =
         new Enumeration<InputStream>() {
@@ -102,16 +103,13 @@ public final class MockGzipMember {
   }
 
   private byte[] getTrailer(long crc32, long isize) {
-    var corr = corruptions;
-    var outBuff = new ByteArrayOutputStream(TRAILER_SIZE);
-    writeInt(outBuff, corr.getOrDefault(CorruptionMode.CRC32, (int) crc32) & INT_MASK);
-    writeInt(
-        outBuff,
-        corr.getOrDefault(CorruptionMode.ISIZE, (int) isize) & INT_MASK); // long size % 2^32
-    return outBuff.toByteArray();
+    var outputBuffer = new ByteArrayOutputStream(TRAILER_SIZE);
+    writeInt(outputBuffer, corruptions.getOrDefault(CorruptionMode.CRC32, (int) crc32) & INT_MASK);
+    writeInt(outputBuffer, corruptions.getOrDefault(CorruptionMode.ISIZE, (int) isize));
+    return outputBuffer.toByteArray();
   }
 
-  public byte[] getBytes() {
+  public byte[] toByteArray() {
     try {
       return openStream().readAllBytes();
     } catch (IOException ioe) {
@@ -119,120 +117,116 @@ public final class MockGzipMember {
     }
   }
 
-  private static byte[] rndAscii(int len) {
+  private static byte[] randomZeroTerminatedAscii(int len) {
     var ascii =
         ThreadLocalRandom.current()
             .ints(len, 0x21, 0x7F) // 0x21 to 0x7E
             .collect(StringBuilder::new, (sb, ic) -> sb.append((char) ic), StringBuilder::append)
             .toString()
             .getBytes(US_ASCII);
-    return Arrays.copyOf(ascii, ascii.length + 1); // Zero terminated
+    return Arrays.copyOf(ascii, ascii.length + 1); // Make it zero terminated.
   }
 
   private byte[] getHeader() {
-    var outBuff = new ByteArrayOutputStream();
-    writeMainHeader(outBuff);
-    if (flagMap.containsKey(FLG.FHCRC)) {
+    var outputBuffer = new ByteArrayOutputStream();
+    writeHeader(outputBuffer);
+    if (flags.containsKey(Flag.HCRC)) {
       var crc32 = new CRC32();
-      crc32.update(outBuff.toByteArray());
-      writeFlagData(new CheckedOutputStream(outBuff, crc32), crc32);
+      crc32.update(outputBuffer.toByteArray());
+      writeFlagData(new CheckedOutputStream(outputBuffer, crc32), crc32);
     } else {
-      writeFlagData(outBuff, null);
+      writeFlagData(outputBuffer, null);
     }
-    return outBuff.toByteArray();
+    return outputBuffer.toByteArray();
   }
 
-  private void writeMainHeader(OutputStream out) {
+  private void writeHeader(OutputStream out) {
     var corr = corruptions;
     writeShort(out, corr.getOrDefault(CorruptionMode.MAGIC, GZIP_MAGIC));
     writeByte(out, corr.getOrDefault(CorruptionMode.CM, CM_DEFLATE));
-    writeByte(out, corr.getOrDefault(CorruptionMode.FLG, FLG.toFlgByte(flagMap.keySet())));
-    // MTIME default
-    writeInt(out, 0);
-    // Default XFL & OS
-    writeByte(out, 0);
+    writeByte(out, corr.getOrDefault(CorruptionMode.FLG, Flag.toFlagByte(flags.keySet())));
+    writeInt(out, 0); // MTIME default.
+    writeByte(out, 0); // Default XFL & OS.
     writeByte(out, 255);
   }
 
   private void writeFlagData(OutputStream out, @Nullable CRC32 crc32) {
     try {
-      if (flagMap.containsKey(FLG.FEXTRA)) {
-        // The extra field has a format (specific subfields),
-        // but this doesn't matter because it will be ignored
-        // anyways so the data is randomly generated
-        int len = flagMap.get(FLG.FEXTRA) & SHORT_MASK;
+      if (flags.containsKey(Flag.EXTRA)) {
+        // The extra field has a format (specific subfields), but this doesn't matter because it
+        // will be ignored anyway, so the data is randomly generated.
+        int len = flags.get(Flag.EXTRA) & SHORT_MASK;
         writeShort(out, len);
         var b = new byte[len];
         ThreadLocalRandom.current().nextBytes(b);
         out.write(b);
       }
-      if (flagMap.containsKey(FLG.FNAME)) {
-        int len = flagMap.get(FLG.FNAME);
-        out.write(Arrays.copyOf(rndAscii(len), len + 1));
+
+      if (flags.containsKey(Flag.NAME)) {
+        int len = flags.get(Flag.NAME);
+        out.write(Arrays.copyOf(randomZeroTerminatedAscii(len), len + 1));
       }
-      if (flagMap.containsKey(FLG.FCOMMENT)) {
-        int len = flagMap.get(FLG.FCOMMENT);
-        out.write(Arrays.copyOf(rndAscii(len), len + 1));
+
+      if (flags.containsKey(Flag.COMMENT)) {
+        int len = flags.get(Flag.COMMENT);
+        out.write(Arrays.copyOf(randomZeroTerminatedAscii(len), len + 1));
       }
     } catch (IOException ioe) {
       throw new UncheckedIOException(ioe);
     }
-    if (crc32 != null) { // FLG.HCRC
-      writeShort(out, crc32.getValue() & SHORT_MASK); // CRC16
+
+    if (crc32 != null) { // Flag.HCRC is set.
+      writeShort(out, crc32.getValue() & SHORT_MASK);
     }
   }
 
-  private enum FLG {
-    FTEXT(1),
-    FHCRC(2),
-    FEXTRA(4),
-    FNAME(8),
-    FCOMMENT(16);
+  private enum Flag {
+    TEXT(1),
+    HCRC(2),
+    EXTRA(4),
+    NAME(8),
+    COMMENT(16);
 
     final int value;
 
-    FLG(int value) {
+    Flag(int value) {
       this.value = value;
     }
 
-    static int toFlgByte(Set<FLG> flags) {
+    static int toFlagByte(Set<Flag> flags) {
       return flags.stream().mapToInt(f -> f.value).reduce((f, v) -> f | v).orElse(0) & BYTE_MASK;
     }
   }
 
   public static final class Builder {
-    private final Map<FLG, Integer> flags;
-    private final Map<CorruptionMode, Integer> corruptions;
-    private byte[] data;
+    private final Map<Flag, Integer> flags = new EnumMap<>(Flag.class);
+    private final Map<CorruptionMode, Integer> corruptions = new EnumMap<>(CorruptionMode.class);
+    private byte[] data = new byte[0];
 
-    Builder() {
-      flags = new EnumMap<>(FLG.class);
-      corruptions = new EnumMap<>(CorruptionMode.class);
-      data = new byte[0];
-    }
+    Builder() {}
 
     public Builder setText() {
-      flags.put(FLG.FTEXT, 0);
+      flags.put(Flag.TEXT, 0);
       return this;
     }
 
     public Builder addFileName(int len) {
-      flags.put(FLG.FNAME, len);
+      flags.put(Flag.NAME, len);
       return this;
     }
 
     public Builder addComment(int len) {
-      flags.put(FLG.FCOMMENT, len);
+      flags.put(Flag.COMMENT, len);
       return this;
     }
 
     public Builder addExtraField(int len) {
-      flags.put(FLG.FEXTRA, len);
+      flags.put(Flag.EXTRA, len);
       return this;
     }
 
     public Builder addHeaderChecksum() {
-      flags.put(FLG.FHCRC, 0);
+      flags.put(Flag.HCRC, 0);
       return this;
     }
 
@@ -246,8 +240,8 @@ public final class MockGzipMember {
       return this;
     }
 
-    public MockGzipMember build() {
-      return new MockGzipMember(this);
+    public MockGzipStream build() {
+      return new MockGzipStream(this);
     }
   }
 
@@ -255,7 +249,7 @@ public final class MockGzipMember {
     return new Builder();
   }
 
-  // LITTLE_ENDIAN ordered writes
+  // LITTLE_ENDIAN ordered writes.
 
   private static void writeByte(OutputStream out, long val) {
     try {

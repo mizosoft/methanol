@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.InstanceOfAssertFactories.THROWABLE;
 
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
-import com.github.mizosoft.methanol.testing.MockGzipMember;
-import com.github.mizosoft.methanol.testing.MockGzipMember.CorruptionMode;
+import com.github.mizosoft.methanol.testing.MockGzipStream;
+import com.github.mizosoft.methanol.testing.MockGzipStream.CorruptionMode;
 import com.github.mizosoft.methanol.testing.decoder.Decode;
 import com.github.mizosoft.methanol.testing.decoder.Decode.BufferSizeOption;
 import java.io.ByteArrayOutputStream;
@@ -76,9 +76,9 @@ class GzipDecoderTest extends ZLibDecoderTest {
 
   // gzip-specific tests
 
-  private void assertMemberDecodes(MockGzipMember member, BufferSizeOption sizeOption)
+  private void assertMemberDecodes(MockGzipStream member, BufferSizeOption sizeOption)
       throws IOException {
-    var compressed = member.getBytes();
+    var compressed = member.toByteArray();
     assertThat(Decode.decode(new GzipDecoder(), compressed, sizeOption))
         .isEqualTo(gunzip(compressed));
   }
@@ -124,42 +124,42 @@ class GzipDecoderTest extends ZLibDecoderTest {
   @Test
   void decodeWithAllFlags() throws IOException {
     for (var option : BufferSizeOption.inOptions()) {
-      var member = enableAllOptions(happyMember(), EXTRA_FIELD_SIZE).build();
+      var member = enableAllFlags(happyMember(), EXTRA_FIELD_SIZE).build();
       assertMemberDecodes(member, option);
     }
   }
 
   @Test
   void trailingGarbage10Bytes() {
-    var gzipBytes = happyMember().build().getBytes();
+    var gzipBytes = happyMember().build().toByteArray();
     var paddedGzipBytes = Arrays.copyOfRange(gzipBytes, 0, gzipBytes.length + 10);
     for (var option : BufferSizeOption.values()) {
       assertThatExceptionOfType(IOException.class)
           .isThrownBy(() -> Decode.decode(new GzipDecoder(), paddedGzipBytes, option))
-          .withMessageContaining("gzip stream finished prematurely");
+          .withMessageContaining("Gzip stream finished prematurely");
     }
   }
 
   @Test
   void trailingGarbage30Bytes() {
-    var gzipBytes = happyMember().build().getBytes();
+    var gzipBytes = happyMember().build().toByteArray();
     var paddedGzipBytes = Arrays.copyOfRange(gzipBytes, 0, gzipBytes.length + 30);
     for (var option : BufferSizeOption.values()) {
       assertThatIOException()
           .isThrownBy(() -> Decode.decode(new GzipDecoder(), paddedGzipBytes, option))
-          .withMessageContaining("gzip stream finished prematurely")
+          .withMessageContaining("Gzip stream finished prematurely")
           .asInstanceOf(THROWABLE)
           .hasSuppressedException(
-              new ZipException("not in gzip format; expected: 0x8b1f, found: 0x0"));
+              new ZipException("Not in gzip format; expected: 0x8b1f, found: 0x0"));
     }
   }
 
   @Test
   void decodesConcat() throws IOException {
     var outBuff = new ByteArrayOutputStream();
-    outBuff.write(happyMember().build().getBytes());
+    outBuff.write(happyMember().build().toByteArray());
     outBuff.write(BASE64_DEC.decode(good()));
-    outBuff.write(enableAllOptions(happyMember(), 100).build().getBytes());
+    outBuff.write(enableAllFlags(happyMember(), 100).build().toByteArray());
     //noinspection EmptyTryBlock
     try (var ignored = new GZIPOutputStream(outBuff)) {
       // Write empty member
@@ -181,8 +181,8 @@ class GzipDecoderTest extends ZLibDecoderTest {
     var member = happyMember().corrupt(CorruptionMode.MAGIC, 0xabcd).build();
     for (var option : BufferSizeOption.inOptions()) {
       assertThatExceptionOfType(ZipException.class)
-          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.getBytes(), option))
-          .withMessage("not in gzip format; expected: 0x8b1f, found: 0xabcd");
+          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.toByteArray(), option))
+          .withMessage("Not in gzip format; expected: 0x8b1f, found: 0xabcd");
     }
   }
 
@@ -194,8 +194,8 @@ class GzipDecoderTest extends ZLibDecoderTest {
             .build();
     for (var option : BufferSizeOption.inOptions()) {
       assertThatExceptionOfType(ZipException.class)
-          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.getBytes(), option))
-          .withMessage("unsupported compression method; expected: 0x8, found: 0x7");
+          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.toByteArray(), option))
+          .withMessage("Unsupported compression method; expected: 0x8, found: 0x7");
     }
   }
 
@@ -207,8 +207,8 @@ class GzipDecoderTest extends ZLibDecoderTest {
             .build();
     for (var option : BufferSizeOption.inOptions()) {
       assertThatExceptionOfType(ZipException.class)
-          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.getBytes(), option))
-          .withMessage("unsupported flags: 0xe0");
+          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.toByteArray(), option))
+          .withMessage("Unsupported flags: 0xe0");
     }
   }
 
@@ -221,8 +221,8 @@ class GzipDecoderTest extends ZLibDecoderTest {
     var member = happyMember().corrupt(CorruptionMode.CRC32, (int) badVal).build();
     for (var option : BufferSizeOption.inOptions()) {
       assertThatExceptionOfType(ZipException.class)
-          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.getBytes(), option))
-          .withMessage("corrupt gzip stream (CRC32); expected: %#x, found: %#x", goodVal, badVal);
+          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.toByteArray(), option))
+          .withMessage("Corrupt gzip stream (CRC32); expected: %#x, found: %#x", goodVal, badVal);
     }
   }
 
@@ -233,13 +233,13 @@ class GzipDecoderTest extends ZLibDecoderTest {
     var member = happyMember().corrupt(CorruptionMode.ISIZE, (int) badVal).build();
     for (var option : BufferSizeOption.inOptions()) {
       assertThatExceptionOfType(ZipException.class)
-          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.getBytes(), option))
-          .withMessage("corrupt gzip stream (ISIZE); expected: %#x, found: %#x", goodVal, badVal);
+          .isThrownBy(() -> Decode.decode(new GzipDecoder(), member.toByteArray(), option))
+          .withMessage("Corrupt gzip stream (ISIZE); expected: %#x, found: %#x", goodVal, badVal);
     }
   }
 
-  private static MockGzipMember.Builder enableAllOptions(
-      MockGzipMember.Builder builder, int extraFieldSize) {
+  private static MockGzipStream.Builder enableAllFlags(
+      MockGzipStream.Builder builder, int extraFieldSize) {
     return builder
         .addExtraField(extraFieldSize)
         .addComment(extraFieldSize)
@@ -248,7 +248,7 @@ class GzipDecoderTest extends ZLibDecoderTest {
         .setText();
   }
 
-  private static MockGzipMember.Builder happyMember() {
-    return MockGzipMember.newBuilder().data(HAPPY_TEXT.getBytes(US_ASCII));
+  private static MockGzipStream.Builder happyMember() {
+    return MockGzipStream.newBuilder().data(HAPPY_TEXT.getBytes(US_ASCII));
   }
 }

@@ -33,39 +33,49 @@ import java.util.zip.CRC32;
 import java.util.zip.Inflater;
 import java.util.zip.ZipException;
 
-/** {@code AsyncDecoder} for gzip. */
+/** {@code AsyncDecoder} for <a href="https://datatracker.ietf.org/doc/html/rfc1952">gzip</a>. */
 final class GzipDecoder implements AsyncDecoder {
   static final String ENCODING = "gzip";
 
-  private static final int GZIP_MAGIC = 0x8B1F; // ID1 and ID2 as a little-endian ordered short
+  /** ID1 and ID2 as a little-endian short. */
+  private static final int GZIP_MAGIC = 0x8B1F;
+
   private static final int CM_DEFLATE = 8;
   private static final int HEADER_SIZE = 10;
   private static final int HEADER_SKIPPED_SIZE = 6;
   private static final int TRAILER_SIZE = 8;
   private static final int TEMP_BUFFER_SIZE = 10;
-  private static final int MIN_GZIP_MEMBER_SIZE = HEADER_SIZE + TRAILER_SIZE + 2;
+  private static final int MIN_GZIP_STREAM_SIZE = HEADER_SIZE + TRAILER_SIZE + 2;
   private static final int BYTE_MASK = 0xFF;
   private static final int SHORT_MASK = 0xFFFF;
   private static final long INT_MASK = 0xFFFFFFFFL;
 
-  private final Inflater inflater = new Inflater(true); // gzip has it's own wrapping method
-  private final ByteBuffer tempBuffer;
-  private final CRC32 crc;
-  private boolean computeCrc; // Whether to compute crc (in case FHCRC is enabled)
-  private State state;
+  private final Inflater inflater = new Inflater(true); // Gzip has its own wrapping method.
 
-  // flag-related stuff
+  private final ByteBuffer tempBuffer =
+      ByteBuffer.allocate(TEMP_BUFFER_SIZE)
+          .order(ByteOrder.LITTLE_ENDIAN); // Multi-byte gzip values are little-endian.
+
+  private final CRC32 crc = new CRC32();
+
+  /**
+   * Whether to compute the CRC of data upto, but not including, the compressed stream, in case
+   * {@link Flag#HCRC} is set.
+   */
+  private boolean computeHcrc;
+
+  private State state = State.BEGIN;
+
+  /** The gzip stream flags. Set after the header is read. */
   private int flags;
+
+  /** The extra field length in bytes. Used if {@link Flag#EXTRA} is set. */
   private int fieldLength;
+
+  /** The current position in the extra field. Used if {@link Flag#EXTRA} is set. */
   private int fieldPosition;
 
-  GzipDecoder() {
-    tempBuffer =
-        ByteBuffer.allocate(TEMP_BUFFER_SIZE)
-            .order(ByteOrder.LITTLE_ENDIAN); // Multi-byte gzip values are little-endian/unsigned
-    crc = new CRC32();
-    state = State.BEGIN;
-  }
+  GzipDecoder() {}
 
   @Override
   public String encoding() {
@@ -74,44 +84,45 @@ final class GzipDecoder implements AsyncDecoder {
 
   @Override
   public void decode(ByteSource source, ByteSink sink) throws IOException {
+    // Whether an attempt to read trailing data after the current gzip stream as another
+    // concatenated gzip stream has failed.
+    IOException failedToReadConcatenatedHeader = null;
+
     outerLoop:
     while (state != State.END) {
       switch (state) {
         case BEGIN:
           state = State.HEADER.prepare(this);
-          // fallthrough
+          // Fallthrough.
 
         case HEADER:
           if (source.remaining() < HEADER_SIZE) {
             break outerLoop;
           }
           readHeader(source);
-          state = State.fromFlags(this);
+          state = State.fromNextFlag(this);
           break;
 
         case FLG_EXTRA_LEN:
-          // +---+---+
-          // | XLEN  |
-          // +---+---+
           if (source.remaining() < Short.BYTES) {
             break outerLoop;
           }
           fieldLength = getUShort(source);
           state = State.FLG_EXTRA_DATA.prepare(this);
-          // fallthrough
+          // Fallthrough.
 
         case FLG_EXTRA_DATA:
           if (!trySkipExtraField(source)) {
             break outerLoop;
           }
-          state = State.fromFlags(this);
+          state = State.fromNextFlag(this);
           break;
 
-        case FLG_ZERO_TERMINATED:
+        case FLG_ZERO_TERMINATED_FIELD:
           if (!tryConsumeToZeroByte(source)) {
             break outerLoop;
           }
-          state = State.fromFlags(this);
+          state = State.fromNextFlag(this);
           break;
 
         case FLG_HCRC:
@@ -121,7 +132,7 @@ final class GzipDecoder implements AsyncDecoder {
           long crc16 = crc.getValue() & SHORT_MASK; // Mask to get lower 16 bits
           checkValue(crc16, getUShort(source), "corrupt gzip header");
           state = State.DEFLATED.prepare(this);
-          // fallthrough
+          // Fallthrough.
 
         case DEFLATED:
           InflaterUtils.inflateSourceWithChecksum(inflater, source, sink, crc);
@@ -129,59 +140,59 @@ final class GzipDecoder implements AsyncDecoder {
             break outerLoop;
           }
           state = State.TRAILER.prepare(this);
-          // fallthrough
+          // Fallthrough.
 
         case TRAILER:
           if (source.remaining() < TRAILER_SIZE) {
             break outerLoop;
           }
           readTrailer(source);
-          state = State.CONCAT_INSPECTION;
-          // fallthrough
+          state = State.POSSIBLY_CONCATENATED_HEADER;
+          // Fallthrough.
 
-        case CONCAT_INSPECTION:
-          // Inspect on whether concatenated data has a chance of being
-          // another gzip member or this should be the end of the gzip stream.
+        case POSSIBLY_CONCATENATED_HEADER:
+          // Check whether there's more data that is to be regarded as a concatenated gzip stream,
+          // or this is the end of the current gzip stream.
           // TODO: allow ignoring trailing garbage via a system property
 
-          IOException failedToReadHeader = null;
-          if (source.remaining() < MIN_GZIP_MEMBER_SIZE) {
+          if (source.remaining() < MIN_GZIP_STREAM_SIZE) {
             if (!source.finalSource()) {
-              break outerLoop; // Expect more bytes to come
+              break outerLoop; // Expect either more bytes or end-of-stream to come.
             }
-            // Treat as end of gzip stream
+
+            // Treat as the end of the current gzip stream. We check at the end if we got any
+            // unexpected bytes.
             state = State.END;
           } else {
             State.HEADER.prepare(this);
             try {
+              // Rewind reading as another gzip stream.
               readHeader(source);
-              state = State.fromFlags(this);
-              // Keep reading as another gzip stream...
+              state = State.fromNextFlag(this);
             } catch (IOException e) {
-              failedToReadHeader = e;
+              failedToReadConcatenatedHeader = e;
               state = State.END;
             }
-          }
-
-          // Fail if reached end with data still available after inspection
-          if (state == State.END && source.hasRemaining()) {
-            IOException streamFinishedPrematurely =
-                new IOException("gzip stream finished prematurely");
-            if (failedToReadHeader != null) {
-              streamFinishedPrematurely.addSuppressed(failedToReadHeader);
-            }
-            throw streamFinishedPrematurely;
           }
           break;
 
         default:
-          throw new AssertionError("unexpected state: " + state);
+          throw new AssertionError("Unexpected state: " + state);
       }
     }
 
-    // Detect if source buffers end prematurely
+    // Fail if we reached the end of the current gzip stream and there's unexpected trailing data.
+    if (state == State.END && source.hasRemaining()) {
+      var streamFinishedPrematurely = new IOException("Gzip stream finished prematurely");
+      if (failedToReadConcatenatedHeader != null) {
+        streamFinishedPrematurely.addSuppressed(failedToReadConcatenatedHeader);
+      }
+      throw streamFinishedPrematurely;
+    }
+
+    // Fail if source buffers end prematurely.
     if (state != State.END && source.finalSource()) {
-      throw new EOFException("unexpected end of gzip stream");
+      throw new EOFException("Unexpected end of gzip stream");
     }
   }
 
@@ -190,54 +201,58 @@ final class GzipDecoder implements AsyncDecoder {
     inflater.end();
   }
 
-  private ByteBuffer fillTempBuffer(ByteSource source, int bytes) {
-    source.pullBytes(tempBuffer.rewind().limit(bytes));
-    assert !tempBuffer.hasRemaining();
-    if (computeCrc) {
+  private ByteBuffer read(ByteSource source, int byteCount) {
+    assert source.remaining() >= byteCount; // This is guaranteed by caller.
+
+    source.pullBytes(tempBuffer.rewind().limit(byteCount));
+    if (computeHcrc) {
       crc.update(tempBuffer.rewind());
     }
     return tempBuffer.rewind();
   }
 
   private int getUByte(ByteSource source) {
-    return fillTempBuffer(source, Byte.BYTES).get() & BYTE_MASK;
+    return read(source, Byte.BYTES).get() & BYTE_MASK;
   }
 
   private int getUShort(ByteSource source) {
-    return fillTempBuffer(source, Short.BYTES).getShort() & SHORT_MASK;
+    return read(source, Short.BYTES).getShort() & SHORT_MASK;
   }
 
   private long getUInt(ByteSource source) {
-    return fillTempBuffer(source, Integer.BYTES).getInt() & INT_MASK;
+    return read(source, Integer.BYTES).getInt() & INT_MASK;
   }
 
   private void readHeader(ByteSource source) throws IOException {
     // +---+---+---+---+---+---+---+---+---+---+
     // |ID1|ID2|CM |FLG|     MTIME     |XFL|OS | (more-->)
     // +---+---+---+---+---+---+---+---+---+---+
-    checkValue(GZIP_MAGIC, getUShort(source), "not in gzip format");
-    checkValue(CM_DEFLATE, getUByte(source), "unsupported compression method");
+    checkValue(GZIP_MAGIC, getUShort(source), "Not in gzip format");
+    checkValue(CM_DEFLATE, getUByte(source), "Unsupported compression method");
     int flags = getUByte(source);
-    if (FlagOption.RESERVED.isEnabled(flags)) {
-      throw new ZipException(format("unsupported flags: %#x", flags));
+    if (Flag.RESERVED.isEnabled(flags)) {
+      throw new ZipException(format("Unsupported flags: %#x", flags));
     }
-    if (!FlagOption.HCRC.isEnabled(flags)) {
-      computeCrc = false;
+    if (!Flag.HCRC.isEnabled(flags)) {
+      computeHcrc = false;
     }
-    this.flags = flags; // Save for subsequent states
-    // Other header fields are ignore
-    fillTempBuffer(source, HEADER_SKIPPED_SIZE);
+
+    // Save for subsequent states.
+    this.flags = flags;
+
+    // Other header fields are ignored.
+    read(source, HEADER_SKIPPED_SIZE);
   }
 
   private void readTrailer(ByteSource source) throws IOException {
     // +---+---+---+---+---+---+---+---+
     // |     CRC32     |     ISIZE     |
     // +---+---+---+---+---+---+---+---+
-    checkValue(crc.getValue(), getUInt(source), "corrupt gzip stream (CRC32)");
+    checkValue(crc.getValue(), getUInt(source), "Corrupt gzip stream (CRC32)");
     checkValue(
-        inflater.getBytesWritten() & INT_MASK, // Mask for modulo 2^32
+        inflater.getBytesWritten() & INT_MASK, // Mask for modulo 2^32.
         getUInt(source),
-        "corrupt gzip stream (ISIZE)");
+        "Corrupt gzip stream (ISIZE)");
   }
 
   private boolean trySkipExtraField(ByteSource source) {
@@ -245,15 +260,15 @@ final class GzipDecoder implements AsyncDecoder {
     // |...XLEN bytes of "extra field"...| (more-->)
     // +=================================+
     while (source.hasRemaining() && fieldPosition < fieldLength) {
-      ByteBuffer in = source.currentSource();
-      int skipped = Math.min(in.remaining(), fieldLength - fieldPosition);
-      int skipPosition = in.position() + skipped;
-      if (computeCrc) {
-        int originalLimit = in.limit();
-        crc.update(in.limit(skipPosition)); // Consumes to skipPosition
-        in.limit(originalLimit);
+      var buffer = source.currentSource();
+      int skipped = Math.min(buffer.remaining(), fieldLength - fieldPosition);
+      int updatedPosition = buffer.position() + skipped;
+      if (computeHcrc) {
+        int originalLimit = buffer.limit();
+        crc.update(buffer.limit(updatedPosition)); // Consumes to updatedPosition.
+        buffer.limit(originalLimit);
       } else {
-        in.position(skipPosition);
+        buffer.position(updatedPosition);
       }
       fieldPosition += skipped;
     }
@@ -266,15 +281,32 @@ final class GzipDecoder implements AsyncDecoder {
     // |...(file comment | original file name), zero-terminated...| (more-->)
     // +==========================================================+
     while (source.hasRemaining()) {
-      ByteBuffer in = source.currentSource();
-      while (in.hasRemaining()) {
-        byte currentByte = in.get();
-        if (computeCrc) {
-          crc.update(currentByte);
+      var buffer = source.currentSource();
+      if (computeHcrc) {
+        buffer.mark();
+      }
+
+      int zeroPosition = -1;
+      while (buffer.hasRemaining()) {
+        if (buffer.get() == 0) {
+          zeroPosition = buffer.position() - 1;
+          break;
         }
-        if (currentByte == 0) {
-          return true;
-        }
+      }
+
+      int originalLimit = -1;
+      if (zeroPosition >= 0) {
+        originalLimit = buffer.limit();
+        buffer.limit(zeroPosition + 1);
+      }
+
+      if (computeHcrc) {
+        crc.update(buffer.reset());
+      }
+
+      if (zeroPosition >= 0) {
+        buffer.limit(originalLimit);
+        return true;
       }
     }
     return false;
@@ -290,63 +322,65 @@ final class GzipDecoder implements AsyncDecoder {
     BEGIN,
     HEADER {
       @Override
-      void onPrepare(GzipDecoder dec) {
-        dec.crc.reset();
-        dec.computeCrc = true; // Assume FHCRC is enabled until the FLG byte is read
+      void onPrepare(GzipDecoder decoder) {
+        decoder.crc.reset();
+
+        // Assume FHCRC is enabled till we know for sure after reading the header.
+        decoder.computeHcrc = true;
       }
     },
     FLG_EXTRA_LEN {
       @Override
-      void onPrepare(GzipDecoder dec) {
-        dec.fieldLength = 0;
+      void onPrepare(GzipDecoder decoder) {
+        decoder.fieldLength = 0;
       }
     },
     FLG_EXTRA_DATA {
       @Override
-      void onPrepare(GzipDecoder dec) {
-        dec.fieldPosition = 0;
+      void onPrepare(GzipDecoder decoder) {
+        decoder.fieldPosition = 0;
       }
     },
-    FLG_ZERO_TERMINATED,
+    FLG_ZERO_TERMINATED_FIELD,
     FLG_HCRC {
       @Override
-      void onPrepare(GzipDecoder dec) {
-        dec.computeCrc = false;
+      void onPrepare(GzipDecoder decoder) {
+        decoder.computeHcrc = false;
       }
     },
     DEFLATED {
       @Override
-      void onPrepare(GzipDecoder dec) {
-        dec.inflater.reset();
-        dec.crc.reset();
+      void onPrepare(GzipDecoder decoder) {
+        decoder.inflater.reset();
+        decoder.crc.reset();
       }
     },
     TRAILER,
-    CONCAT_INSPECTION {
+    POSSIBLY_CONCATENATED_HEADER {
       @Override
-      void onPrepare(GzipDecoder dec) {
-        HEADER.onPrepare(dec);
+      void onPrepare(GzipDecoder decoder) {
+        HEADER.onPrepare(decoder);
       }
     },
     END;
 
-    void onPrepare(GzipDecoder dec) {}
+    void onPrepare(GzipDecoder decoder) {}
 
-    final State prepare(GzipDecoder dec) {
-      onPrepare(dec);
+    final State prepare(GzipDecoder decoder) {
+      onPrepare(decoder);
       return this;
     }
 
-    // Returns the next state from the FLG byte, clearing it's bit afterwards.
-    private static State fromFlags(GzipDecoder dec) {
-      FlagOption option = FlagOption.nextEnabled(dec.flags);
-      dec.flags = option.clear(dec.flags);
-      return option.forward(dec);
+    /** Returns the next state from as known from the flag byte & clears the corresponding bit. */
+    private static State fromNextFlag(GzipDecoder decoder) {
+      var flag = Flag.nextEnabled(decoder.flags);
+      decoder.flags = flag.clear(decoder.flags);
+      return flag.prepareState(decoder);
     }
   }
 
-  /** Options in the FLG byte. */
-  private enum FlagOption {
+  /** Flags in the FLG byte. */
+  private enum Flag {
     // Order of declaration is important!
 
     RESERVED(0xE0, State.END) { // 1110_0000
@@ -356,21 +390,16 @@ final class GzipDecoder implements AsyncDecoder {
       }
     },
     EXTRA(4, State.FLG_EXTRA_LEN),
-    NAME(8, State.FLG_ZERO_TERMINATED),
-    COMMENT(16, State.FLG_ZERO_TERMINATED),
+    NAME(8, State.FLG_ZERO_TERMINATED_FIELD),
+    COMMENT(16, State.FLG_ZERO_TERMINATED_FIELD),
     HCRC(2, State.FLG_HCRC),
     TEXT(1, State.DEFLATED), // Only a marker, doesn't have a dedicated state
-    NONE(0, State.DEFLATED) {
-      @Override
-      boolean isEnabled(int flags) {
-        return flags == value;
-      }
-    };
+    NONE(0, State.DEFLATED);
 
     final int value;
     final State state;
 
-    FlagOption(int value, State state) {
+    Flag(int value, State state) {
       this.value = value;
       this.state = state;
     }
@@ -383,18 +412,19 @@ final class GzipDecoder implements AsyncDecoder {
       return flags & ~value;
     }
 
-    State forward(GzipDecoder ctx) {
-      return state.prepare(ctx);
+    State prepareState(GzipDecoder decoder) {
+      return state.prepare(decoder);
     }
 
-    static FlagOption nextEnabled(int flags) {
-      for (FlagOption option : values()) {
-        if (option.isEnabled(flags)) {
-          return option;
+    static Flag nextEnabled(int flags) {
+      for (var flag : values()) {
+        if (flag.isEnabled(flags)) {
+          return flag;
         }
       }
-      // FlagOptions cover all possible cases for a byte so this shouldn't be possible
-      throw new AssertionError("couldn't get FlgOption for: " + Integer.toHexString(flags));
+
+      // Flags cover all possible cases for a byte so this shouldn't be possible
+      throw new AssertionError("Couldn't get next Flag for: " + Integer.toHexString(flags));
     }
   }
 }
