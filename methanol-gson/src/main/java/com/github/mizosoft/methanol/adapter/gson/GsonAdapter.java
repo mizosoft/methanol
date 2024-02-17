@@ -81,7 +81,7 @@ abstract class GsonAdapter extends AbstractBodyAdapter {
     @Override
     public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
       requireNonNull(object);
-      TypeRef<?> runtimeType = TypeRef.from(object.getClass());
+      TypeRef<?> runtimeType = TypeRef.of(object.getClass());
       requireSupport(runtimeType);
       requireCompatibleOrNull(mediaType);
       @SuppressWarnings("unchecked")

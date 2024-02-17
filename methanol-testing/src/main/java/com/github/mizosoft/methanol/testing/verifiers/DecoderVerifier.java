@@ -58,7 +58,7 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
   }
 
   public <T> BodyConversionStep<T> converting(Class<T> type) {
-    return converting(TypeRef.from(type));
+    return converting(TypeRef.of(type));
   }
 
   public static final class BodyConversionStep<T> {

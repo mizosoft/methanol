@@ -77,7 +77,7 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
    *     BodyAdapter#supportsType(TypeRef) support} the given raw type.
    */
   protected void requireSupport(Class<?> type) {
-    requireSupport(TypeRef.from(type));
+    requireSupport(TypeRef.of(type));
   }
 
   /**

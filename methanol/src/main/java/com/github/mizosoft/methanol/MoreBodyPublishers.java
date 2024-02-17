@@ -77,7 +77,7 @@ public class MoreBodyPublishers {
    *     runtime type or the given media type is installed
    */
   public static BodyPublisher ofObject(Object object, @Nullable MediaType mediaType) {
-    var runtimeType = TypeRef.from(object.getClass());
+    var runtimeType = TypeRef.of(object.getClass());
     return Encoder.getEncoder(runtimeType, mediaType)
         .orElseThrow(() -> unsupportedConversion(runtimeType, mediaType))
         .toBody(object, mediaType);

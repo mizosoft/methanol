@@ -56,7 +56,7 @@ class AvroTest {
   void encode() throws IOException {
     ObjectWriterFactory writerFactory =
         (mapper, type) -> {
-          assertThat(type).isEqualTo(TypeRef.from(Point.class));
+          assertThat(type).isEqualTo(TypeRef.of(Point.class));
           return mapper.writerFor(Point.class).with(POINT_SCHEMA);
         };
     var mapper = new AvroMapper();
@@ -70,7 +70,7 @@ class AvroTest {
   void decode() throws IOException {
     ObjectReaderFactory readerFactory =
         (mapper, type) -> {
-          assertThat(type).isEqualTo(TypeRef.from(Point.class));
+          assertThat(type).isEqualTo(TypeRef.of(Point.class));
           return mapper.readerFor(Point.class).with(POINT_SCHEMA);
         };
     var mapper = new AvroMapper();
@@ -84,7 +84,7 @@ class AvroTest {
   void deferredDecode() throws IOException {
     ObjectReaderFactory readerFactory =
         (mapper, type) -> {
-          assertThat(type).isEqualTo(TypeRef.from(Point.class));
+          assertThat(type).isEqualTo(TypeRef.of(Point.class));
           return mapper.readerFor(Point.class).with(POINT_SCHEMA);
         };
     var mapper = new AvroMapper();

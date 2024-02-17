@@ -36,42 +36,42 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An object that represents the {@link Type} of the generic argument {@code T}. This class utilizes
- * the supertype-token idiom, which is used to capture complex types (i.e. generic types) that are
- * otherwise impossible to represent using ordinary {@code Class} objects.
+ * A generic object that holds a reference to the {@link Type} of its generic argument {@code T}.
+ * This class utilizes the supertype-token idiom, which is used to capture complex types (e.g.
+ * {@code List<String>}) that are otherwise impossible to represent using ordinary {@code Class}
+ * objects.
  *
- * @param <T> the type this object represents
+ * @param <T> represents the type this object holds a reference to
  */
 public abstract class TypeRef<T> {
-
   private final Type type;
-  private @MonotonicNonNull Class<?> rawType;
+  private @MonotonicNonNull Class<?> lazyRawType;
 
   /**
-   * Creates a new {@code TypeRef<T>} capturing the {@code Type} of {@code T}. It is usually the
-   * case that this constructor is invoked as an anonymous class expression (e.g. {@code new
-   * TypeRef<List<String>>() {}}).
+   * Creates a new {@code TypeRef<T>} capturing the {@code Type} of {@code T}. This constructor is
+   * typically invoked as an anonymous class expression (e.g. {@code new TypeRef<List<String>>()
+   * {}}).
    *
    * @throws IllegalStateException if the raw version of this class is used
    */
   protected TypeRef() {
-    Type superClass = getClass().getGenericSuperclass();
-    requireState(superClass instanceof ParameterizedType, "not used in parameterized form");
-    this.type = ((ParameterizedType) superClass).getActualTypeArguments()[0];
+    var superclass = getClass().getGenericSuperclass();
+    requireState(superclass instanceof ParameterizedType, "not used in parameterized form");
+    this.type = ((ParameterizedType) superclass).getActualTypeArguments()[0];
   }
 
   private TypeRef(Type type) {
     this.type = type;
-    rawType = findRawType(type);
+    lazyRawType = findRawType(type);
   }
 
-  /** Returns the underlying Java {@link Type}. */
+  /** Returns the underlying {@link Type}. */
   public final Type type() {
     return type;
   }
 
   /**
-   * Returns the {@code Class} object that represents the resolved raw type of {@code T}. The
+   * Returns the {@code Class<? super T>} that represents the resolved raw type of {@code T}. The
    * returned class is {@code Class<? super T>} because {@code T} can possibly be a generic type,
    * and it is not semantically correct for a {@code Class} to be parameterized with such.
    *
@@ -79,18 +79,18 @@ public abstract class TypeRef<T> {
    */
   @SuppressWarnings("unchecked")
   public final Class<? super T> rawType() {
-    Class<?> clz = rawType;
-    if (clz == null) {
+    var rawType = lazyRawType;
+    if (rawType == null) {
       try {
-        clz = findRawType(type);
+        rawType = findRawType(type);
       } catch (IllegalArgumentException e) {
-        // rawType is lazily initialized only if not user-provided and
-        // on that case findRawType shouldn't fail
-        throw new AssertionError("couldn't get raw type of: " + type, e);
+        // lazyRawType is lazily initialized only if the type is not user-provided (obtained through
+        // reflection), and in that case findRawType shouldn't fail.
+        throw new AssertionError("Couldn't get raw type of <" + type + ">", e);
       }
-      rawType = clz;
+      lazyRawType = rawType;
     }
-    return (Class<? super T>) clz;
+    return (Class<? super T>) rawType;
   }
 
   /**
@@ -108,10 +108,8 @@ public abstract class TypeRef<T> {
   }
 
   /**
-   * Returns {@code true} if the given object is a {@code TypeRef} and both instances
-   * represent the same type.
-   *
-   * @param obj the object to test for equality
+   * Returns {@code true} if the given object is a {@code TypeRef} and both instances represent the
+   * same type.
    */
   @Override
   public boolean equals(@Nullable Object obj) {
@@ -139,7 +137,7 @@ public abstract class TypeRef<T> {
     if (type instanceof Class) {
       return (Class<?>) type;
     } else if (type instanceof ParameterizedType) {
-      Type rawType = ((ParameterizedType) type).getRawType();
+      var rawType = ((ParameterizedType) type).getRawType();
       requireArgument(
           rawType instanceof Class,
           "ParameterizedType::getRawType of %s returned a non-raw type: %s",
@@ -147,8 +145,8 @@ public abstract class TypeRef<T> {
           rawType);
       return (Class<?>) rawType;
     } else if (type instanceof GenericArrayType) {
-      // Here, the raw type is the type of the array created with the generic-component's raw type
-      Class<?> rawComponentType = findRawType(((GenericArrayType) type).getGenericComponentType());
+      // Here, the raw type is the type of the array created with the generic-component's raw type.
+      var rawComponentType = findRawType(((GenericArrayType) type).getGenericComponentType());
       return Array.newInstance(rawComponentType, 0).getClass();
     } else if (type instanceof TypeVariable) {
       return rawUpperBound(((TypeVariable<?>) type).getBounds());
@@ -156,37 +154,50 @@ public abstract class TypeRef<T> {
       return rawUpperBound(((WildcardType) type).getUpperBounds());
     }
     throw new IllegalArgumentException(
-        "unsupported specialization of java.lang.reflect.Type: " + type);
+        "Unsupported specialization of java.lang.reflect.Type: <" + type + ">");
   }
 
   private static Class<?> rawUpperBound(Type[] upperBounds) {
-    // Same behaviour as Method::getGenericReturnType vs Method::getReturnType
+    // Same behaviour as Method::getGenericReturnType vs Method::getReturnType.
     return upperBounds.length > 0 ? findRawType(upperBounds[0]) : Object.class;
   }
 
   /**
-   * Creates a new {@code TypeRef} from the given type.
+   * Creates a new {@code TypeRef} for the given type.
    *
-   * @param type the type
-   * @throws IllegalArgumentException if the given type is not a standard specialization of a java
-   *     {@code Type}
+   * @deprecated in favor of the better-named {@link #of(Type)}.
+   * @throws IllegalArgumentException if the given type is not a standard specialization of {@link
+   *     Type}
    */
   public static TypeRef<?> from(Type type) {
+    return of(type);
+  }
+
+  /**
+   * Creates a new {@code TypeRef} for the given type.
+   *
+   * @throws IllegalArgumentException if the given type is not a standard specialization of {@link
+   *     Type}
+   */
+  public static TypeRef<?> of(Type type) {
     return new ExplicitTypeRef<>(type);
   }
 
   /**
    * Creates a new {@code TypeRef} from the given class.
    *
-   * @param rawType the class
-   * @param <U> the raw type that the given class represents
+   * @deprecated in favor of the better-named {@link #of(Class)}
    */
   public static <U> TypeRef<U> from(Class<U> rawType) {
+    return of(rawType);
+  }
+
+  /** Creates a new {@code TypeRef} from the given class. */
+  public static <U> TypeRef<U> of(Class<U> rawType) {
     return new ExplicitTypeRef<>(rawType);
   }
 
   private static final class ExplicitTypeRef<T> extends TypeRef<T> {
-
     ExplicitTypeRef(Type type) {
       super(requireNonNull(type));
     }

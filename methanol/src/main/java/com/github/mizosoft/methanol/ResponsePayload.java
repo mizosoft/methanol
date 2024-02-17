@@ -51,22 +51,22 @@ import java.util.concurrent.CompletableFuture;
 public interface ResponsePayload extends AutoCloseable {
   /** Converts this payload into an object of type {@code T}. */
   default <T> T as(Class<T> type) throws IOException, InterruptedException {
-    return as(TypeRef.from(type));
+    return as(TypeRef.of(type));
   }
 
   /** Converts this payload into an object of (possibly generic) type {@code T}. */
-  <T> T as(TypeRef<T> type) throws IOException, InterruptedException;
+  <T> T as(TypeRef<T> typeRef) throws IOException, InterruptedException;
 
   /** Converts this payload using the given body handler. */
   <T> T with(BodyHandler<T> bodyHandler) throws IOException, InterruptedException;
 
   /** Asynchronously converts this payload into an object of type {@code T}. */
   default <T> CompletableFuture<T> asAsync(Class<T> type) {
-    return asAsync(TypeRef.from(type));
+    return asAsync(TypeRef.of(type));
   }
 
   /** Asynchronously converts this payload into an object of (possibly generic) type {@code T}. */
-  <T> CompletableFuture<T> asAsync(TypeRef<T> type);
+  <T> CompletableFuture<T> asAsync(TypeRef<T> typeRef);
 
   /** Asynchronously this payload using the given body handler. */
   <T> CompletableFuture<T> withAsync(BodyHandler<T> bodyHandler);

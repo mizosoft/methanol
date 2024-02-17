@@ -35,7 +35,7 @@ public class AdapterMocker {
   static Encoder mockEncoder(
       Object payload, MediaType mediaType, HttpRequest.BodyPublisher publisher) {
     var encoder = mock(Encoder.class);
-    when(encoder.supportsType(TypeRef.from(Object.class))).thenReturn(true);
+    when(encoder.supportsType(TypeRef.of(Object.class))).thenReturn(true);
     when(encoder.isCompatibleWith(mediaType)).thenReturn(true);
     when(encoder.toBody(payload, mediaType)).thenReturn(publisher);
     return encoder;
@@ -44,7 +44,7 @@ public class AdapterMocker {
   static Encoder mockEncoder(
       Object payload, MediaType mediaType, Supplier<HttpRequest.BodyPublisher> publisherSupplier) {
     var encoder = mock(Encoder.class);
-    when(encoder.supportsType(TypeRef.from(Object.class))).thenReturn(true);
+    when(encoder.supportsType(TypeRef.of(Object.class))).thenReturn(true);
     when(encoder.isCompatibleWith(mediaType)).thenReturn(true);
     when(encoder.toBody(payload, mediaType)).thenAnswer(__ -> publisherSupplier.get());
     return encoder;

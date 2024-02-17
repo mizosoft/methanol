@@ -403,11 +403,11 @@ public final class Methanol extends HttpClient {
 
   public <T> HttpResponse<T> send(HttpRequest request, Class<T> bodyType)
       throws IOException, InterruptedException {
-    return send(request, TypeRef.from(bodyType));
+    return send(request, TypeRef.of(bodyType));
   }
 
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, Class<T> bodyType) {
-    return sendAsync(request, TypeRef.from(bodyType));
+    return sendAsync(request, TypeRef.of(bodyType));
   }
 
   public <T> HttpResponse<T> send(HttpRequest request, TypeRef<T> bodyType)
@@ -487,8 +487,8 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    public <T> T as(TypeRef<T> type) throws IOException, InterruptedException {
-      return Utils.get(handleAsync(adapterCodec.handlerOf(type), FlowSupport.SYNC_EXECUTOR));
+    public <T> T as(TypeRef<T> typeRef) throws IOException, InterruptedException {
+      return Utils.get(handleAsync(adapterCodec.handlerOf(typeRef), FlowSupport.SYNC_EXECUTOR));
     }
 
     @Override
@@ -497,8 +497,8 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    public <T> CompletableFuture<T> asAsync(TypeRef<T> type) {
-      return handleAsync(adapterCodec.handlerOf(type), executorSupplier.get());
+    public <T> CompletableFuture<T> asAsync(TypeRef<T> typeRef) {
+      return handleAsync(adapterCodec.handlerOf(typeRef), executorSupplier.get());
     }
 
     @Override

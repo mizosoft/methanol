@@ -80,7 +80,7 @@ class TypeRefTest {
   void rawType_wildcardNoBounds() {
     var wildCard = ((ParameterizedType) new TypeRef<List<?>>() {}.type())
         .getActualTypeArguments()[0];
-    var ref = TypeRef.from(wildCard);
+    var ref = TypeRef.of(wildCard);
     assertThat(ref.type()).isInstanceOf(WildcardType.class);
     assertThat(ref.rawType()).isEqualTo(Object.class);
   }
@@ -89,7 +89,7 @@ class TypeRefTest {
   void rawType_wildcardOneBounds() {
     var wildCard = ((ParameterizedType) new TypeRef<List<? extends Dummy1>>() {}.type())
         .getActualTypeArguments()[0];
-    var ref = TypeRef.from(wildCard);
+    var ref = TypeRef.of(wildCard);
     assertThat(ref.type()).isInstanceOf(WildcardType.class);
     assertThat(ref.rawType()).isEqualTo(Dummy1.class);
   }
@@ -130,7 +130,7 @@ class TypeRefTest {
   void rawType_wildcardWithTypeVariableBound() {
     var wildCard = ((ParameterizedType) new TypeRef<List<? extends X>>() {}.type())
         .getActualTypeArguments()[0];
-    var ref = TypeRef.from(wildCard);
+    var ref = TypeRef.of(wildCard);
     assertThat(ref.type()).isInstanceOf(WildcardType.class);
     assertThat(ref.rawType()).isEqualTo(Dummy1.class);
   }
@@ -151,12 +151,12 @@ class TypeRefTest {
   @Test
   void equals_hashCode() {
     var ref1 = new TypeRef<List<String>>() {};
-    var ref2 = TypeRef.from(StringList.TYPE);
+    var ref2 = TypeRef.of(StringList.TYPE);
     assertThat(ref1)
         .isEqualTo(ref1)
         .isEqualTo(ref2)
         .hasSameHashCodeAs(ref2)
-        .isNotEqualTo(TypeRef.from(List.class))
+        .isNotEqualTo(TypeRef.of(List.class))
         .isNotEqualTo("I'm not a TypeRef, I'm a String!");
   }
 
@@ -180,7 +180,7 @@ class TypeRefTest {
 
   @Test
   void from_nonstandardTypeSpecialization() {
-    assertThatIllegalArgumentException().isThrownBy(() -> TypeRef.from(new Type() {}));
+    assertThatIllegalArgumentException().isThrownBy(() -> TypeRef.of(new Type() {}));
   }
 
   @Test
@@ -198,7 +198,7 @@ class TypeRefTest {
         return null;
       }
     };
-    assertThatIllegalArgumentException().isThrownBy(() -> TypeRef.from(fakeParameterizedType));
+    assertThatIllegalArgumentException().isThrownBy(() -> TypeRef.of(fakeParameterizedType));
   }
 
   @Test

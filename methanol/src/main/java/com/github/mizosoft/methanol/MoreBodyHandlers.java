@@ -127,7 +127,7 @@ public class MoreBodyHandlers {
    *     installed
    */
   public static <T> BodyHandler<T> ofObject(Class<T> type) {
-    return ofObject(TypeRef.from(type));
+    return ofObject(TypeRef.of(type));
   }
 
   /**
@@ -154,7 +154,7 @@ public class MoreBodyHandlers {
    *     installed
    */
   public static <T> BodyHandler<Supplier<T>> ofDeferredObject(Class<T> type) {
-    return ofDeferredObject(TypeRef.from(type));
+    return ofDeferredObject(TypeRef.of(type));
   }
 
   /**

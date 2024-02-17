@@ -415,7 +415,7 @@ class MoreBodySubscribersTest {
   @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofObject_stringBody(Executor executor) {
     var publisher = publisherOf("Pikachu", "Pikachu".length(), 1, executor);
-    var subscriber = ofObject(TypeRef.from(String.class), MediaType.TEXT_PLAIN);
+    var subscriber = ofObject(TypeRef.of(String.class), MediaType.TEXT_PLAIN);
     publisher.subscribe(subscriber);
     assertThat(getBody(subscriber)).isEqualTo("Pikachu");
   }
@@ -424,7 +424,7 @@ class MoreBodySubscribersTest {
   @ExecutorSpec(ExecutorType.CACHED_POOL)
   void ofDeferredObject_stringBody(Executor executor) {
     var publisher = publisherOf("Pikachu", "Pikachu".length(), 1, executor);
-    var subscriber = ofDeferredObject(TypeRef.from(String.class), MediaType.parse("text/plain"));
+    var subscriber = ofDeferredObject(TypeRef.of(String.class), MediaType.parse("text/plain"));
     assertThat(subscriber.getBody()).isCompleted();
 
     publisher.subscribe(subscriber);
@@ -437,16 +437,14 @@ class MoreBodySubscribersTest {
   void ofObject_unsupported() {
     class InconvertibleType {}
     assertThatExceptionOfType(UnsupportedOperationException.class)
-        .isThrownBy(() -> ofObject(TypeRef.from(InconvertibleType.class), null));
+        .isThrownBy(() -> ofObject(TypeRef.of(InconvertibleType.class), null));
+    assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(() -> ofObject(TypeRef.of(String.class), MediaType.parse("application/json")));
+    assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(() -> ofDeferredObject(TypeRef.of(InconvertibleType.class), null));
     assertThatExceptionOfType(UnsupportedOperationException.class)
         .isThrownBy(
-            () -> ofObject(TypeRef.from(String.class), MediaType.parse("application/json")));
-    assertThatExceptionOfType(UnsupportedOperationException.class)
-        .isThrownBy(() -> ofDeferredObject(TypeRef.from(InconvertibleType.class), null));
-    assertThatExceptionOfType(UnsupportedOperationException.class)
-        .isThrownBy(
-            () ->
-                ofDeferredObject(TypeRef.from(String.class), MediaType.parse("application/json")));
+            () -> ofDeferredObject(TypeRef.of(String.class), MediaType.parse("application/json")));
   }
 
   private Publisher<List<ByteBuffer>> publisherOf(

@@ -178,10 +178,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
         subscriber =
             MoreBodySubscribers.fromAsyncSubscriber(
                 new JacksonSubscriber<>(
-                    mapper,
-                    TypeRef.from(elementType),
-                    ObjectReaderFactory.getDefault(),
-                    asyncParser),
+                    mapper, TypeRef.of(elementType), ObjectReaderFactory.getDefault(), asyncParser),
                 s -> CompletableFuture.completedStage(Mono.fromCompletionStage(s.getBody())));
       } else {
         JacksonFluxSubscriber<?> fluxSubscriber =

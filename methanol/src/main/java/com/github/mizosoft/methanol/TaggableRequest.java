@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol;
 
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
@@ -40,11 +42,14 @@ public abstract class TaggableRequest extends HttpRequest {
 
   /** Returns the tag associated with the given type if present. */
   public <T> Optional<T> tag(Class<T> type) {
-    return tag(TypeRef.from(type));
+    return tag(TypeRef.of(type));
   }
 
   /** Returns the tag associated with the given type if present. */
-  public abstract <T> Optional<T> tag(TypeRef<T> type);
+  @SuppressWarnings("unchecked")
+  public <T> Optional<T> tag(TypeRef<T> typeRef) {
+    return Optional.ofNullable((T) tags().get(requireNonNull(typeRef)));
+  }
 
   abstract Map<TypeRef<?>, Object> tags();
 
@@ -68,13 +73,13 @@ public abstract class TaggableRequest extends HttpRequest {
     <T> Builder tag(Class<T> type, T value);
 
     /** Adds a tag mapped to the given type. */
-    <T> Builder tag(TypeRef<T> type, T value);
+    <T> Builder tag(TypeRef<T> typeRef, T value);
 
     /** Removes the tag associated with the given type. */
     Builder removeTag(Class<?> type);
 
     /** Removes the tag associated with the given type. */
-    Builder removeTag(TypeRef<?> type);
+    Builder removeTag(TypeRef<?> typeRef);
 
     @Override
     Builder uri(URI uri);

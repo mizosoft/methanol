@@ -59,7 +59,7 @@ public abstract class BodyAdapterVerifier<
   }
 
   public VERIFIER supports(Class<?> type) {
-    return supports(TypeRef.from(type));
+    return supports(TypeRef.of(type));
   }
 
   public VERIFIER supports(TypeRef<?> type) {
@@ -68,7 +68,7 @@ public abstract class BodyAdapterVerifier<
   }
 
   public VERIFIER doesNotSupport(Class<?> type) {
-    return doesNotSupport(TypeRef.from(type));
+    return doesNotSupport(TypeRef.of(type));
   }
 
   public VERIFIER doesNotSupport(TypeRef<?> type) {

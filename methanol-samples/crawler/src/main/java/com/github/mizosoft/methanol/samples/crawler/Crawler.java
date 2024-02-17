@@ -89,8 +89,9 @@ public class Crawler {
                     .firstValue("Content-Type")
                     .map(MediaType::parse)
                     .filter(TEXT_HTML::isCompatibleWith)
-                    .map(type -> MoreBodySubscribers.ofObject(TypeRef.from(Document.class), type))
-                    .orElseGet(() -> BodySubscribers.replacing(null))); // Ignore if not an HTML page
+                    .map(type -> MoreBodySubscribers.ofObject(TypeRef.of(Document.class), type))
+                    .orElseGet(
+                        () -> BodySubscribers.replacing(null))); // Ignore if not an HTML page.
 
     var document = response.body();
     if (document != null) { // Received an HTML page

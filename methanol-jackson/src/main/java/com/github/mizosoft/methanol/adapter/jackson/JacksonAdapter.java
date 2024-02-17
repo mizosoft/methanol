@@ -74,7 +74,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       requireSupport(object.getClass());
       requireCompatibleOrNull(mediaType);
       byte[] bytes;
-      var objWriter = writerFactory.createWriter(mapper, TypeRef.from(object.getClass()));
+      var objWriter = writerFactory.createWriter(mapper, TypeRef.of(object.getClass()));
       try {
         bytes = getBytes(objWriter, object, mediaType);
       } catch (IOException e) {

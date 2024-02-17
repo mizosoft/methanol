@@ -169,12 +169,6 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     return this;
   }
 
-  @SuppressWarnings("unchecked")
-  @Override
-  public <T> Optional<T> tag(TypeRef<T> type) {
-    return Optional.ofNullable((T) tags.get(requireNonNull(type)));
-  }
-
   @Override
   Map<TypeRef<?>, Object> tags() {
     return Map.copyOf(tags); // Make a defensive copy.
@@ -188,23 +182,23 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @Override
   public <T> MutableRequest tag(Class<T> type, T value) {
-    return tag(TypeRef.from(type), value);
+    return tag(TypeRef.of(type), value);
   }
 
   @Override
-  public <T> MutableRequest tag(TypeRef<T> type, T value) {
-    tags.put(requireNonNull(type), requireNonNull(value));
+  public <T> MutableRequest tag(TypeRef<T> typeRef, T value) {
+    tags.put(requireNonNull(typeRef), requireNonNull(value));
     return this;
   }
 
   @Override
   public MutableRequest removeTag(Class<?> type) {
-    return removeTag(TypeRef.from(type));
+    return removeTag(TypeRef.of(type));
   }
 
   @Override
-  public MutableRequest removeTag(TypeRef<?> type) {
-    tags.remove(requireNonNull(type));
+  public MutableRequest removeTag(TypeRef<?> typeRef) {
+    tags.remove(requireNonNull(typeRef));
     return this;
   }
 
@@ -578,12 +572,6 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
       adapterCodec = Optional.ofNullable(other.adapterCodec);
       expectContinue = other.expectContinue;
       tags = Map.copyOf(other.tags);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <T> Optional<T> tag(TypeRef<T> type) {
-      return Optional.ofNullable((T) tags.get(requireNonNull(type)));
     }
 
     @Override

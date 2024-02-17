@@ -80,7 +80,7 @@ public final class AdapterCodec {
    *     or the given media type is found
    */
   public BodyPublisher publisherOf(Object object, MediaType mediaType) {
-    var objectType = TypeRef.from(object.getClass());
+    var objectType = TypeRef.of(object.getClass());
     return lookup(encoders, objectType, mediaType)
         .orElseThrow(() -> unsupportedConversionFrom(objectType, mediaType))
         .toBody(object, mediaType);
@@ -122,7 +122,7 @@ public final class AdapterCodec {
     requireDecoderSupport(decoders, objectType);
     return responseInfo -> subscriberOf(objectType, mediaTypeOrAny(responseInfo.headers()));
   }
-  
+
   /**
    * Returns a {@code BodyHandler} that lazily decodes the response body into an object of the given
    * type.

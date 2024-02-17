@@ -74,11 +74,11 @@ class AdapterCodecTest {
         .hasMediaType(X_NUMBER_INT)
         .succeedsWith("1");
 
-    verifyThat(codec.subscriberOf(TypeRef.from(Integer.class), X_NUMBER_INT)) //
+    verifyThat(codec.subscriberOf(TypeRef.of(Integer.class), X_NUMBER_INT)) //
         .publishing("1")
         .succeedsWith(1);
 
-    verifyThat(codec.deferredSubscriberOf(TypeRef.from(Integer.class), X_NUMBER_INT)) //
+    verifyThat(codec.deferredSubscriberOf(TypeRef.of(Integer.class), X_NUMBER_INT)) //
         .publishing("1")
         .completedBody()
         .returns(1, from(Supplier::get));
@@ -87,7 +87,7 @@ class AdapterCodecTest {
   @Test
   void handleToInt() {
     var codec = AdapterCodec.newBuilder().decoder(new IntDecoder()).build();
-    verifyThat(codec.handlerOf(TypeRef.from(Integer.class)).apply(responseInfoOf(X_NUMBER_INT)))
+    verifyThat(codec.handlerOf(TypeRef.of(Integer.class)).apply(responseInfoOf(X_NUMBER_INT)))
         .publishing("1")
         .succeedsWith(1);
   }
@@ -96,9 +96,7 @@ class AdapterCodecTest {
   void deferredHandleToInt() {
     var codec = AdapterCodec.newBuilder().decoder(new IntDecoder()).build();
     verifyThat(
-            codec
-                .deferredHandlerOf(TypeRef.from(Integer.class))
-                .apply(responseInfoOf(X_NUMBER_INT)))
+            codec.deferredHandlerOf(TypeRef.of(Integer.class)).apply(responseInfoOf(X_NUMBER_INT)))
         .publishing("1")
         .completedBody()
         .returns(1, from(Supplier::get));
@@ -118,11 +116,11 @@ class AdapterCodecTest {
         .hasMediaType(X_NUMBER_INT)
         .succeedsWith("1");
 
-    verifyThat(codec.subscriberOf(TypeRef.from(Integer.class), X_NUMBER_INT)) //
+    verifyThat(codec.subscriberOf(TypeRef.of(Integer.class), X_NUMBER_INT)) //
         .publishing("1")
         .succeedsWith(1);
 
-    verifyThat(codec.deferredSubscriberOf(TypeRef.from(Integer.class), X_NUMBER_INT)) //
+    verifyThat(codec.deferredSubscriberOf(TypeRef.of(Integer.class), X_NUMBER_INT)) //
         .publishing("1")
         .completedBody()
         .returns(1, from(Supplier::get));
@@ -133,11 +131,11 @@ class AdapterCodecTest {
         .hasMediaType(TEXT_PLAIN)
         .succeedsWith("a");
 
-    verifyThat(codec.subscriberOf(TypeRef.from(String.class), TEXT_PLAIN)) //
+    verifyThat(codec.subscriberOf(TypeRef.of(String.class), TEXT_PLAIN)) //
         .publishing("a")
         .succeedsWith("a");
 
-    verifyThat(codec.deferredSubscriberOf(TypeRef.from(String.class), TEXT_PLAIN)) //
+    verifyThat(codec.deferredSubscriberOf(TypeRef.of(String.class), TEXT_PLAIN)) //
         .publishing("a")
         .completedBody()
         .returns("a", from(Supplier::get));
@@ -150,10 +148,10 @@ class AdapterCodecTest {
     assertThatThrownBy(() -> codec.publisherOf(12, TEXT_PLAIN))
         .isInstanceOf(UnsupportedOperationException.class);
 
-    assertThatThrownBy(() -> codec.subscriberOf(TypeRef.from(Integer.class), TEXT_PLAIN))
+    assertThatThrownBy(() -> codec.subscriberOf(TypeRef.of(Integer.class), TEXT_PLAIN))
         .isInstanceOf(UnsupportedOperationException.class);
 
-    assertThatThrownBy(() -> codec.handlerOf(TypeRef.from(Double.class)))
+    assertThatThrownBy(() -> codec.handlerOf(TypeRef.of(Double.class)))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -171,10 +169,10 @@ class AdapterCodecTest {
         .hasNoMediaType()
         .succeedsWith("1");
 
-    verifyThat(codec.subscriberOf(TypeRef.from(Integer.class), MediaType.ANY))
+    verifyThat(codec.subscriberOf(TypeRef.of(Integer.class), MediaType.ANY))
         .publishing("1")
         .succeedsWith(1);
-    verifyThat(codec.deferredSubscriberOf(TypeRef.from(Integer.class), MediaType.ANY))
+    verifyThat(codec.deferredSubscriberOf(TypeRef.of(Integer.class), MediaType.ANY))
         .publishing("1")
         .completedBody()
         .returns(1, from(Supplier::get));
@@ -185,10 +183,10 @@ class AdapterCodecTest {
         .hasNoMediaType()
         .succeedsWith("a");
 
-    verifyThat(codec.subscriberOf(TypeRef.from(String.class), MediaType.ANY))
+    verifyThat(codec.subscriberOf(TypeRef.of(String.class), MediaType.ANY))
         .publishing("a")
         .succeedsWith("a");
-    verifyThat(codec.deferredSubscriberOf(TypeRef.from(String.class), MediaType.ANY))
+    verifyThat(codec.deferredSubscriberOf(TypeRef.of(String.class), MediaType.ANY))
         .publishing("a")
         .completedBody()
         .returns("a", from(Supplier::get));
@@ -218,7 +216,7 @@ class AdapterCodecTest {
       private final Function<V, String> encode;
 
       Encoder(Class<V> clazz, Function<V, String> encode, MediaType... compatibleMediaTypes) {
-        super(TypeRef.from(clazz), compatibleMediaTypes);
+        super(TypeRef.of(clazz), compatibleMediaTypes);
         this.encode = encode;
       }
 
@@ -234,7 +232,7 @@ class AdapterCodecTest {
       private final Function<String, V> decode;
 
       Decoder(Class<V> clazz, Function<String, V> decode, MediaType... compatibleMediaTypes) {
-        super(TypeRef.from(clazz), compatibleMediaTypes);
+        super(TypeRef.of(clazz), compatibleMediaTypes);
         this.decode = decode;
       }
 

@@ -482,7 +482,7 @@ class MethanolClientTest {
         new MockResponse()
             .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
             .addHeader("Content-Type", "text/plain"));
-    verifyThat(client.send(GET(serverUri), TypeRef.from(String.class))).hasBody("Pikachu");
+    verifyThat(client.send(GET(serverUri), TypeRef.of(String.class))).hasBody("Pikachu");
 
     server.enqueue(
         new MockResponse()
@@ -494,7 +494,7 @@ class MethanolClientTest {
         new MockResponse()
             .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
             .addHeader("Content-Type", "text/plain"));
-    verifyThat(client.sendAsync(GET(serverUri), TypeRef.from(String.class)).join())
+    verifyThat(client.sendAsync(GET(serverUri), TypeRef.of(String.class)).join())
         .hasBody("Pikachu");
   }
 
