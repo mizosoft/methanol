@@ -25,7 +25,6 @@ package com.github.mizosoft.methanol.testing;
 import static com.github.mizosoft.methanol.testing.TestUtils.localhostSslContext;
 
 import com.github.mizosoft.methanol.Methanol;
-import com.github.mizosoft.methanol.Methanol.Builder;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -74,7 +73,7 @@ public final class MockWebServerExtension
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
     var type = parameterContext.getParameter().getType();
-    return type == MockWebServer.class || type == Builder.class;
+    return type == MockWebServer.class || type == Methanol.Builder.class;
   }
 
   @Override
@@ -93,7 +92,7 @@ public final class MockWebServerExtension
       } catch (IOException e) {
         throw new ParameterResolutionException("couldn't start server", e);
       }
-    } else if (type == Builder.class) {
+    } else if (type == Methanol.Builder.class) {
       return servers.newClientBuilder(executable, useHttps);
     } else {
       throw new UnsupportedOperationException("unsupported type: " + type.toString());
@@ -109,7 +108,7 @@ public final class MockWebServerExtension
    * SSLContext}.
    */
   private static final class ManagedServers implements CloseableResource {
-    private final Map<Object, Context> contexsts = new HashMap<>();
+    private final Map<Object, Context> contexts = new HashMap<>();
 
     ManagedServers() {}
 
@@ -117,19 +116,19 @@ public final class MockWebServerExtension
       return getContext(key).newServer(useHttps);
     }
 
-    Builder newClientBuilder(@Nullable Object key, boolean useHttps) {
+    Methanol.Builder newClientBuilder(@Nullable Object key, boolean useHttps) {
       return getContext(key).newClientBuilder(useHttps);
     }
 
     private Context getContext(Object key) {
-      return contexsts.computeIfAbsent(key, __ -> new Context());
+      return contexts.computeIfAbsent(key, __ -> new Context());
     }
 
     void shutdownAll() throws IOException {
-      for (var context : contexsts.values()) {
+      for (var context : contexts.values()) {
         context.shutdownServers();
       }
-      contexsts.clear();
+      contexts.clear();
     }
 
     @Override
@@ -156,7 +155,7 @@ public final class MockWebServerExtension
         return server;
       }
 
-      Builder newClientBuilder(boolean useHttps) {
+      Methanol.Builder newClientBuilder(boolean useHttps) {
         return Methanol.newBuilder()
             .apply(
                 builder -> {
