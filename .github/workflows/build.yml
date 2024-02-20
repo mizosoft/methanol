@@ -33,6 +33,13 @@ jobs:
             ./install-redis-ubuntu.sh
           fi
 
+      - name: Compile
+        uses: ./.github/actions/gradle
+        with:
+          java: ${{ matrix.java }}
+          gradle-args: check -x test -x tckTest
+          # TODO enable static analysis in this step.
+
       - name: Run tests
         uses: ./.github/actions/gradle
         if: "!startsWith(matrix.os, 'macos')"
