@@ -26,12 +26,8 @@ allprojects {
 nexusPublishing {
   repositories {
     sonatype {
-      username.set(project.findProperty("nexusUsername")?.toString())
-      password.set(project.findProperty("nexusPassword")?.toString())
+      username = project.findProperty("nexusUsername")?.toString()
+      password = project.findProperty("nexusPassword")?.toString()
     }
   }
-}
-
-tasks.register("clean") {
-  delete(rootProject.layout.buildDirectory)
 }

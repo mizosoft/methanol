@@ -27,10 +27,12 @@ subprojects.filter { it.isIncludedInCoverageReport }
       jacocoAggregateReport {
         sourceSets(sourceSets["main"])
         mustRunAfter(coveredProject.tasks.withType<Test>())
+      }
 
-        // Gather executionData when JacocoPlugin is applied.
-        coveredProject.plugins.withType<JacocoPlugin> {
-          this@jacocoAggregateReport.executionData(
+      // Gather executionData when JacocoPlugin is applied.
+      coveredProject.plugins.withType<JacocoPlugin> {
+        jacocoAggregateReport {
+          executionData(
             coveredProject.tasks.matching {
               it.extensions.findByType(JacocoTaskExtension::class) != null
             })

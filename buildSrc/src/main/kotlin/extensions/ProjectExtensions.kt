@@ -60,4 +60,13 @@ val Project.isIncludedInAggregateJavadoc
 val Project.artifactId
   get() = project.name
 
-val Project.libs get() = the<LibrariesForLibs>()
+val Project.libs
+  get() = the<LibrariesForLibs>()
+
+val Project.javaVersion: String?
+  get() =
+    project.findProperty("javaVersion")?.toString()
+
+val Project.javaVendor: String?
+  get() =
+    project.findProperty("javaVendor")?.toString()
