@@ -29,7 +29,7 @@ runs:
       run: chmod +x gradlew
 
     - name: Run Gradle command
-      if: ${{ inputs.gradle-args }} != ''
+      if: inputs.gradle-args != ''
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
       shell: bash

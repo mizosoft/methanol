@@ -64,9 +64,16 @@ val Project.libs
   get() = the<LibrariesForLibs>()
 
 val Project.javaVersion: String?
-  get() =
-    project.findProperty("javaVersion")?.toString()
+  get() = project.findProperty("javaVersion")?.toString()
 
 val Project.javaVendor: String?
-  get() =
-    project.findProperty("javaVendor")?.toString()
+  get() = project.findProperty("javaVendor")?.toString()
+
+val Project.enableNativeTests: Boolean
+  get() = project.hasProperty("enableNativeTests")
+
+val Project.enableErrorprone: Boolean
+  get() = project.hasProperty("enableErrorprone")
+
+val Project.enableCheckerframework: Boolean
+  get() = project.hasProperty("enableCheckerframework")

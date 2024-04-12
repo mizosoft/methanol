@@ -17,6 +17,19 @@ include("methanol-samples:download-progress")
 include("methanol-samples:upload-progress")
 include("spring-boot-test")
 include("methanol-redis")
+include("quarkus-native-test")
+
+pluginManagement {
+  val quarkusPluginVersion: String by settings
+  val quarkusPluginId: String by settings
+  repositories {
+    mavenCentral()
+    gradlePluginPortal()
+  }
+  plugins {
+    id(quarkusPluginId) version quarkusPluginVersion
+  }
+}
 
 // Only include native brotli-jni project if explicitly requested.
 val includeBrotliJni: String? by settings

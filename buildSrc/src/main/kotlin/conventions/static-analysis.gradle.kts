@@ -1,5 +1,7 @@
 package conventions
 
+import extensions.enableCheckerframework
+import extensions.enableErrorprone
 import extensions.libs
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
@@ -21,7 +23,7 @@ dependencies {
 
 checkerFramework {
   excludeTests = true
-  if (project.hasProperty("enableCheckerframework")) {
+  if (project.enableCheckerframework) {
     checkers = listOf(
       "org.checkerframework.checker.nullness.NullnessChecker"
     )
@@ -29,7 +31,7 @@ checkerFramework {
 }
 
 tasks.withType<JavaCompile> {
-  options.errorprone.isEnabled = project.hasProperty("enableErrorprone")
+  options.errorprone.isEnabled = project.enableErrorprone
 
   options.errorprone {
     nullaway {
