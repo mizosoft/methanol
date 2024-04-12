@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -169,6 +169,7 @@ public abstract class TypeRef<T> {
    * @throws IllegalArgumentException if the given type is not a standard specialization of {@link
    *     Type}
    */
+  @Deprecated
   public static TypeRef<?> from(Type type) {
     return of(type);
   }
@@ -179,6 +180,7 @@ public abstract class TypeRef<T> {
    * @throws IllegalArgumentException if the given type is not a standard specialization of {@link
    *     Type}
    */
+  @Deprecated
   public static TypeRef<?> of(Type type) {
     return new ExplicitTypeRef<>(type);
   }
@@ -188,6 +190,7 @@ public abstract class TypeRef<T> {
    *
    * @deprecated in favor of the better-named {@link #of(Class)}
    */
+  @Deprecated
   public static <U> TypeRef<U> from(Class<U> rawType) {
     return of(rawType);
   }
