@@ -325,11 +325,11 @@ class IntegrationTest {
     var ex = assertThrows(IOException.class, () -> client.send(request, decoding(ofString())));
     // If a concat member has a corrupt header, it is considered trailing garbage (end of gzip
     // stream)
-    assertEquals("gzip stream finished prematurely", ex.getMessage());
+    assertEquals("Gzip stream finished prematurely", ex.getMessage());
     // Will suppress read header failure
     var suppressedIoe = ex.getCause().getSuppressed()[0];
     assertTrue(suppressedIoe instanceof IOException);
-    assertEquals("unsupported flags: 0xe0", suppressedIoe.getMessage());
+    assertEquals("Unsupported flags: 0xe0", suppressedIoe.getMessage());
   }
 
   @Test
