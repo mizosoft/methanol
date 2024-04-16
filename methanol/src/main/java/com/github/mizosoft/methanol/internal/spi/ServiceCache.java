@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** An object that loads & caches service providers. */
+/** An object that loads {@literal &} caches service providers. */
 public final class ServiceCache<S> {
   private static final Logger logger = System.getLogger(ServiceCache.class.getName());
 
