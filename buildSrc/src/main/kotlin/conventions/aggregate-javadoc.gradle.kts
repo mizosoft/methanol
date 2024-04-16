@@ -27,8 +27,10 @@ val aggregateJavadoc by tasks.registering(Javadoc::class) {
   )
 
   // --module-source-path javadoc option is only supported on Java 12+.
-  onlyIf("aggregateJavadoc uses tool options that are available in Java 12 or higher.") {
-    java.toolchain.languageVersion.get() >= JavaLanguageVersion.of(12)
+  doFirst {
+    if (javadocTool.get().metadata.languageVersion <= JavaLanguageVersion.of(12)) {
+      throw GradleException("aggregateJavadoc uses tool options that are only available in Java 12 or higher.")
+    }
   }
 }
 
