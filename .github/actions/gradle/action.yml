@@ -5,20 +5,33 @@ description: Setup Java & Gradle & optionally run a Gradle command
 inputs:
   java:
     default: '21'
-    description: Java version
+    description: Java version. Set to 'GraalVM' for a GraalVM setup.
   gradle-args:
     required: false
-    description: Arguments to Gradle command (optional)
+    description: Arguments to Gradle command (optional).
 
 runs:
   using: composite
   steps:
     - name: Setup Java ${{ inputs.java }}
-      id: setup-java
+      if: inputs.java != 'GraalVM'
       uses: actions/setup-java@v4
       with:
         java-version: ${{ inputs.java }}
         distribution: temurin
+
+    - name: Setup Java ${{ inputs.java }}
+      if: inputs.java == 'GraalVM'
+      uses: graalvm/setup-graalvm@v1
+      with:
+        java-version: '21'
+        distribution: graalvm-community
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Verify GraalVM installation
+      if: inputs.java == 'GraalVM'
+      shell: bash
+      run: native-image --version
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
