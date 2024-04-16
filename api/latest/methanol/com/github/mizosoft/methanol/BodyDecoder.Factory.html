@@ -89,13 +89,17 @@ loadScripts(document, 'script');</script>
 </div>
 <section class="class-description" id="class-description">
 <dl class="notes">
+<dt>All Known Implementing Classes:</dt>
+<dd><code><a href="../../../../../methanol.brotli/com/github/mizosoft/methanol/brotli/internal/BrotliBodyDecoderFactory.html" title="class in com.github.mizosoft.methanol.brotli.internal">BrotliBodyDecoderFactory</a></code>, <code><a href="internal/decoder/DeflateBodyDecoderFactory.html" title="class in com.github.mizosoft.methanol.internal.decoder">DeflateBodyDecoderFactory</a></code>, <code><a href="internal/decoder/GzipBodyDecoderFactory.html" title="class in com.github.mizosoft.methanol.internal.decoder">GzipBodyDecoderFactory</a></code></dd>
+</dl>
+<dl class="notes">
 <dt>Enclosing interface:</dt>
 <dd><code><a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;<a href="BodyDecoder.html" title="type parameter in BodyDecoder">T</a>&gt;</code></dd>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public static interface </span><span class="element-name type-name-label">BodyDecoder.Factory</span></div>
 <div class="block">A factory of <code>BodyDecoders</code> for some defined encoding. <code>BodyDecoder.Factory</code>
- implementations are normally registered as service-providers by means described in the <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceLoader.html" title="class or interface in java.util" class="external-link"><code>ServiceLoader</code></a> class.</div>
+ implementations are normally registered as service-providers by means described in the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/ServiceLoader.html" title="class or interface in java.util" class="external-link"><code>ServiceLoader</code></a> class.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -111,33 +115,33 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;<a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a><wbr>&lt;T&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#create(java.net.http.HttpResponse.BodySubscriber)" class="member-name-link">create</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#create(java.net.http.HttpResponse.BodySubscriber)" class="member-name-link">create</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Creates and returns a <code>BodyDecoder</code> with the given downstream.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;<a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a><wbr>&lt;T&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)" class="member-name-link">create</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
- <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)" class="member-name-link">create</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Creates and returns a <code>BodyDecoder</code> with the given downstream and executor.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#encoding()" class="member-name-link">encoding</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Returns the encoding used by <code>BodyDecoders</code> created by this factory.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#getFactory(java.lang.String)" class="member-name-link">getFactory</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;encoding)</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#getFactory(java.lang.String)" class="member-name-link">getFactory</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;encoding)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1">
 <div class="block">Returns an <code>Optional</code> containing the factory registered for the given encoding.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a><wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a><wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#installedBindings()" class="member-name-link">installedBindings</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1">
 <div class="block">Returns an immutable map that case-insensitively maps encodings to their corresponding
  registered factories.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#installedFactories()" class="member-name-link">installedFactories</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1">
 <div class="block">Returns an immutable list of the registered factories.</div>
@@ -159,14 +163,14 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="encoding()">
 <h3>encoding</h3>
-<div class="member-signature"><span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></span>&nbsp;<span class="element-name">encoding</span>()</div>
+<div class="member-signature"><span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></span>&nbsp;<span class="element-name">encoding</span>()</div>
 <div class="block">Returns the encoding used by <code>BodyDecoders</code> created by this factory.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="create(java.net.http.HttpResponse.BodySubscriber)">
 <h3>create</h3>
-<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;T&gt;</span>&nbsp;<span class="element-name">create</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream)</span></div>
+<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;T&gt;</span>&nbsp;<span class="element-name">create</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream)</span></div>
 <div class="block">Creates and returns a <code>BodyDecoder</code> with the given downstream.</div>
 <dl class="notes">
 <dt>Type Parameters:</dt>
@@ -179,8 +183,8 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)">
 <h3>create</h3>
-<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;T&gt;</span>&nbsp;<span class="element-name">create</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
- <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
+<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;T&gt;</span>&nbsp;<span class="element-name">create</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
 <div class="block">Creates and returns a <code>BodyDecoder</code> with the given downstream and executor.</div>
 <dl class="notes">
 <dt>Type Parameters:</dt>
@@ -194,11 +198,11 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="installedFactories()">
 <h3>installedFactories</h3>
-<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</span>&nbsp;<span class="element-name">installedFactories</span>()</div>
+<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</span>&nbsp;<span class="element-name">installedFactories</span>()</div>
 <div class="block">Returns an immutable list of the registered factories.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceConfigurationError.html" title="class or interface in java.util" class="external-link">ServiceConfigurationError</a></code> - if an error occurs while loading the registered
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/ServiceConfigurationError.html" title="class or interface in java.util" class="external-link">ServiceConfigurationError</a></code> - if an error occurs while loading the registered
      factories</dd>
 </dl>
 </section>
@@ -206,7 +210,7 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="installedBindings()">
 <h3>installedBindings</h3>
-<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</span>&nbsp;<span class="element-name">installedBindings</span>()</div>
+<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</span>&nbsp;<span class="element-name">installedBindings</span>()</div>
 <div class="block">Returns an immutable map that case-insensitively maps encodings to their corresponding
  registered factories. If more than one factory is registered for a given encoding, it is
  unspecified which one ends up being in the map. However, decoders provided by this module are
@@ -216,7 +220,7 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="getFactory(java.lang.String)">
 <h3>getFactory</h3>
-<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</span>&nbsp;<span class="element-name">getFactory</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;encoding)</span></div>
+<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a>&gt;</span>&nbsp;<span class="element-name">getFactory</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;encoding)</span></div>
 <div class="block">Returns an <code>Optional</code> containing the factory registered for the given encoding. An
  empty optional is returned if no such factory exists.</div>
 <dl class="notes">
