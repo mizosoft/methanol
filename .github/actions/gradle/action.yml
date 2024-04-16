@@ -26,7 +26,7 @@ runs:
       with:
         java-version: '21'
         distribution: graalvm-community
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ github.token }}
 
     - name: Verify GraalVM installation
       if: inputs.java == 'GraalVM'
