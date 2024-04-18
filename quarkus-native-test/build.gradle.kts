@@ -1,5 +1,3 @@
-import extensions.enableNativeTests
-
 plugins {
   id("conventions.java-library")
   id("conventions.static-analysis")
@@ -60,17 +58,5 @@ quarkus {
         "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.configure=ALL-UNNAMED"
       ).joinToString(",")
     )
-  }
-}
-
-tasks.quarkusAppPartsBuild {
-  onlyIf("Not enabled by build. Run gradle with -PenableNativeTests to enable.") {
-    project.enableNativeTests
-  }
-}
-
-tasks.test {
-  onlyIf("Not enabled by build. Run gradle with -PenableNativeTests to enable.") {
-    project.enableNativeTests
   }
 }
