@@ -74,7 +74,7 @@ jobs:
         uses: ./.github/actions/gradle
         with:
           java: GraalVM
-          gradle-args: :quarkus-native-test:quarkusBuild -PincludeNativeTests
+          gradle-args: :quarkus-native-test:quarkusBuild :quarkus-native-test:test -PincludeNativeTests
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
