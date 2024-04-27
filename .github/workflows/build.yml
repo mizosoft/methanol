@@ -74,7 +74,11 @@ jobs:
         uses: ./.github/actions/gradle
         with:
           java: GraalVM
-          gradle-args: :quarkus-native-test:quarkusBuild :quarkus-native-test:test -PincludeNativeTests
+          cmd:
+            # For some reason, this never works with one command either by just running `build` or
+            # running `quarkusBuild` & `test` on one run.
+            ./gradlew :quarkus-native-test:quarkusBuild
+            ./gradlew :quarkus-native-test:test
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

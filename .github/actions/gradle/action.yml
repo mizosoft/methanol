@@ -9,6 +9,9 @@ inputs:
   gradle-args:
     required: false
     description: Arguments to Gradle command (optional).
+  cmd:
+    required: false
+    description: Command to run (optional). Runs after Gradle if gradle-args is set.
 
 runs:
   using: composite
@@ -47,3 +50,10 @@ runs:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
       shell: bash
       run: ./gradlew ${{ inputs.gradle-args }}
+
+    - name: Run  command
+      if: inputs.cmd != ''
+      env:
+        JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
+      shell: bash
+      run: ${{ inputs.cmd }}

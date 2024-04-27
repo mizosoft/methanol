@@ -27,7 +27,7 @@ import io.quarkus.test.junit.QuarkusIntegrationTest;
 import org.junit.jupiter.api.Test;
 
 @QuarkusIntegrationTest
-class NativeExecutableTest {
+class PointPingPongTest {
   @Test
   void pointPingPong() {
     given().when().get("/point?x=1&y=2").then().statusCode(200).body(is("{\"x\":1,\"y\":2}"));
