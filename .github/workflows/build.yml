@@ -77,8 +77,8 @@ jobs:
           cmd:
             # For some reason, this never works with one command either by just running `build` or
             # running `quarkusBuild` & `test` on one run.
-            ./gradlew :quarkus-native-test:quarkusBuild
-            ./gradlew :quarkus-native-test:test
+            ./gradlew :quarkus-native-test:quarkusBuild -PincludeNativeTests
+            ./gradlew :quarkus-native-test:test -PincludeNativeTests
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
