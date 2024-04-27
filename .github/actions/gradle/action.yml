@@ -51,9 +51,10 @@ runs:
       shell: bash
       run: ./gradlew ${{ inputs.gradle-args }}
 
-    - name: Run  command
+    - name: Run command
       if: inputs.cmd != ''
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
       shell: bash
-      run: ${{ inputs.cmd }}
+      run: |
+        ${{ inputs.cmd }}

@@ -74,7 +74,7 @@ jobs:
         uses: ./.github/actions/gradle
         with:
           java: GraalVM
-          cmd:
+          cmd: |
             # For some reason, this never works with one command either by just running `build` or
             # running `quarkusBuild` & `test` on one run.
             ./gradlew :quarkus-native-test:quarkusBuild -PincludeNativeTests
