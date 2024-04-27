@@ -49,12 +49,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * optionally accepting incoming push promises, if any.
  */
 public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>> {
+  private final AtomicBoolean subscribed = new AtomicBoolean();
+
   private final HttpClient client;
   private final HttpRequest request;
   private final BodyHandler<T> bodyHandler;
   private final @Nullable Function<HttpRequest, @Nullable BodyHandler<T>> pushPromiseHandler;
   private final Executor executor;
-  private final AtomicBoolean subscribed = new AtomicBoolean();
 
   /**
    * Creates a new {@code HttpResponsePublisher}. If {@code pushPromiseMapper} is {@code null}, all
@@ -84,20 +85,16 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
 
   private static final class SubscriptionImpl<V>
       extends AbstractQueueSubscription<HttpResponse<V>> {
+    private final Lock lock = new ReentrantLock();
+
     private final HttpClient client;
     private final HttpRequest initialRequest;
     private final BodyHandler<V> handler;
     private final @Nullable PushPromiseHandler<V> pushPromiseHandler;
 
-    private final Lock lock = new ReentrantLock();
-
-    /**
-     * The number of currently ongoing requests (original request plus push promises, if any). This
-     * starts with 1 to not have to acquire the lock in {@link #emit(Subscriber, long)} when the
-     * initial request is sent.
-     */
+    /** The number of currently ongoing requests (original request plus push promises, if any). */
     @GuardedBy("lock")
-    private int ongoing = 1;
+    private int ongoing;
 
     /**
      * Whether the main response body has been received. After which we won't be expecting any push
@@ -129,6 +126,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
       if (emit > 0 && !isInitialRequestSent) {
         isInitialRequestSent = true;
         try {
+          incrementOngoing();
           client
               .sendAsync(initialRequest, this::notifyOnBodyCompletion, pushPromiseHandler)
               .whenComplete(this::onResponse);
@@ -183,6 +181,15 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
           handler.apply(info), this::onInitialResponseBodyCompletion);
     }
 
+    private void incrementOngoing() {
+      lock.lock();
+      try {
+        ongoing++;
+      } finally {
+        lock.unlock();
+      }
+    }
+
     private class SubscriptionPushPromiseHandler implements PushPromiseHandler<V> {
       private final Function<HttpRequest, @Nullable BodyHandler<V>> acceptor;
 
@@ -206,7 +213,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         if (localIsInitialResponseBodyComplete) {
           fireOrKeepAliveOnError(
               new IllegalStateException(
-                  "receiving push promise after initial response body has been received: "
+                  "Receiving push promise after initial response body has been received: "
                       + pushPromiseRequest));
         } else if (!(isCancelled() || hasPendingErrors())) {
           applyPushPromise(pushPromiseRequest, acceptor);
@@ -225,13 +232,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         }
 
         if (pushedResponseBodyHandler != null) {
-          lock.lock();
-          try {
-            ongoing += 1;
-          } finally {
-            lock.unlock();
-          }
-
+          incrementOngoing();
           acceptor.apply(pushedResponseBodyHandler).whenComplete(SubscriptionImpl.this::onResponse);
         }
       }
