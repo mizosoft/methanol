@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,7 @@ import java.util.function.Consumer;
  * requested item isn't received within a timeout.
  */
 public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
-    extends SerializedSubscriber<T> {
+    extends SerializedForwardingSubscriber<T> {
   private static final Future<Void> COMPLETED_FUTURE = CompletableFuture.completedFuture(null);
 
   private static final VarHandle DEMAND;

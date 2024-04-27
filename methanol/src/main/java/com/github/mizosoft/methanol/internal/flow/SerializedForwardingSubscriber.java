@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,12 +27,12 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.internal.concurrent.SerialExecutor;
 import java.util.concurrent.Flow.Subscription;
 
-/** A forwarding subscriber that ensures signals aren't called concurrently. */
-public abstract class SerializedSubscriber<T> extends ForwardingSubscriber<T> {
+/** A forwarding subscriber that ensures the delegate isn't called concurrently. */
+public abstract class SerializedForwardingSubscriber<T> extends ForwardingSubscriber<T> {
   private final SerialExecutor serialExecutor = new SerialExecutor(FlowSupport.SYNC_EXECUTOR);
   private boolean done; // Visibility piggybacks on SerialExecutor's synchronization.
 
-  protected SerializedSubscriber() {}
+  protected SerializedForwardingSubscriber() {}
 
   @Override
   public void onSubscribe(Subscription subscription) {
