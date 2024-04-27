@@ -89,7 +89,7 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
 <div class="inheritance"><a href="ForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber</a>&lt;T&gt;
-<div class="inheritance"><a href="SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.SerializedSubscriber</a>&lt;T&gt;
+<div class="inheritance"><a href="SerializedForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">com.github.mizosoft.methanol.internal.flow.SerializedForwardingSubscriber</a>&lt;T&gt;
 <div class="inheritance">com.github.mizosoft.methanol.internal.flow.TimeoutSubscriber&lt;T,<wbr>S&gt;</div>
 </div>
 </div>
@@ -105,7 +105,7 @@ loadScripts(document, 'script');</script>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public abstract class </span><span class="element-name type-name-label">TimeoutSubscriber&lt;T,<wbr>S extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super T&gt;&gt;</span>
-<span class="extends-implements">extends <a href="SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a>&lt;T&gt;</span></div>
+<span class="extends-implements">extends <a href="SerializedForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedForwardingSubscriber</a>&lt;T&gt;</span></div>
 <div class="block">A subscriber that intercepts requests to upstream and schedules error completion if each
  requested item isn't received within a timeout.</div>
 </section>
@@ -220,7 +220,7 @@ loadScripts(document, 'script');</script>
 <dt>Specified by:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)" title="class or interface in java.util.concurrent" class="external-link">onSubscribe</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
 <dt>Overrides:</dt>
-<dd><code><a href="SerializedSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe</a></code>&nbsp;in class&nbsp;<code><a href="SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
+<dd><code><a href="SerializedForwardingSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)">onSubscribe</a></code>&nbsp;in class&nbsp;<code><a href="SerializedForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedForwardingSubscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
 </dl>
 </section>
 </li>
@@ -232,7 +232,7 @@ loadScripts(document, 'script');</script>
 <dt>Specified by:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html#onNext(T)" title="class or interface in java.util.concurrent" class="external-link">onNext</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
 <dt>Overrides:</dt>
-<dd><code><a href="SerializedSubscriber.html#onNext(T)">onNext</a></code>&nbsp;in class&nbsp;<code><a href="SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
+<dd><code><a href="SerializedForwardingSubscriber.html#onNext(T)">onNext</a></code>&nbsp;in class&nbsp;<code><a href="SerializedForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedForwardingSubscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
 </dl>
 </section>
 </li>
@@ -244,7 +244,7 @@ loadScripts(document, 'script');</script>
 <dt>Specified by:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html#onError(java.lang.Throwable)" title="class or interface in java.util.concurrent" class="external-link">onError</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
 <dt>Overrides:</dt>
-<dd><code><a href="SerializedSubscriber.html#onError(java.lang.Throwable)">onError</a></code>&nbsp;in class&nbsp;<code><a href="SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
+<dd><code><a href="SerializedForwardingSubscriber.html#onError(java.lang.Throwable)">onError</a></code>&nbsp;in class&nbsp;<code><a href="SerializedForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedForwardingSubscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
 </dl>
 </section>
 </li>
@@ -256,7 +256,7 @@ loadScripts(document, 'script');</script>
 <dt>Specified by:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html#onComplete()" title="class or interface in java.util.concurrent" class="external-link">onComplete</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
 <dt>Overrides:</dt>
-<dd><code><a href="SerializedSubscriber.html#onComplete()">onComplete</a></code>&nbsp;in class&nbsp;<code><a href="SerializedSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedSubscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
+<dd><code><a href="SerializedForwardingSubscriber.html#onComplete()">onComplete</a></code>&nbsp;in class&nbsp;<code><a href="SerializedForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedForwardingSubscriber</a>&lt;<a href="TimeoutSubscriber.html" title="type parameter in TimeoutSubscriber">T</a>&gt;</code></dd>
 </dl>
 </section>
 </li>
