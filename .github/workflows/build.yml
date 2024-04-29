@@ -64,6 +64,31 @@ jobs:
             **/build/test-results/
             **/build/**/*.exec
 
+  native-tests:
+    name: Test on GraalVM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run tests
+        uses: ./.github/actions/gradle
+        with:
+          java: GraalVM
+          cmd: |
+            # For some reason, this never works with one command either by just running `build` or
+            # running `quarkusBuild` & `test` on one run.
+            ./gradlew :quarkus-native-test:quarkusBuild -PincludeNativeTests
+            ./gradlew :quarkus-native-test:test -PincludeNativeTests
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ubuntu-java-native-test-results
+          path: |
+            **/build/test-results/
+            **/build/**/*.exec
+
   coverage:
     name: Upload coverage report
     needs: tests
