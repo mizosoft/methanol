@@ -145,8 +145,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         boolean isComplete;
         lock.lock();
         try {
-          int ongoingAfterDecrement = --ongoing;
-          isComplete = ongoingAfterDecrement == 0 && isInitialResponseBodyComplete;
+          isComplete = ongoing == 1 && isInitialResponseBodyComplete;
         } finally {
           lock.unlock();
         }
@@ -155,6 +154,19 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
           submitAndComplete(response);
         } else {
           submit(response);
+
+          boolean isCompleteAfterSubmit;
+          lock.lock();
+          try {
+            int ongoingAfterDecrement = --ongoing;
+            isCompleteAfterSubmit = ongoingAfterDecrement == 0 && isInitialResponseBodyComplete;
+          } finally {
+            lock.unlock();
+          }
+
+          if (isCompleteAfterSubmit) {
+            complete();
+          }
         }
       }
     }
