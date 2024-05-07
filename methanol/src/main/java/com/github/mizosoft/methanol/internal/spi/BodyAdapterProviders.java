@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,18 +27,17 @@ import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import java.util.List;
 
 /** Utility class for loading/caching {@code Encoder/Decoder} providers. */
-public class BodyAdapterFinder {
+public class BodyAdapterProviders {
+  private static final ServiceProviders<Encoder> encoders = new ServiceProviders<>(Encoder.class);
+  private static final ServiceProviders<Decoder> decoders = new ServiceProviders<>(Decoder.class);
 
-  private static final ServiceCache<Encoder> encodersServiceCache = new ServiceCache<>(Encoder.class);
-  private static final ServiceCache<Decoder> decodersServiceCache = new ServiceCache<>(Decoder.class);
+  private BodyAdapterProviders() {}
 
-  private BodyAdapterFinder() {} // non-instantiable
-
-  public static List<Encoder> findInstalledEncoders() {
-    return encodersServiceCache.getProviders();
+  public static List<Encoder> encoders() {
+    return encoders.get();
   }
 
-  public static List<Decoder> findInstalledDecoders() {
-    return decodersServiceCache.getProviders();
+  public static List<Decoder> decoders() {
+    return decoders.get();
   }
 }

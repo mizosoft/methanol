@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
-import com.github.mizosoft.methanol.internal.spi.ServiceCache;
+import com.github.mizosoft.methanol.internal.spi.BodyAdapterProviders;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodyHandler;
@@ -44,11 +44,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  * and a {@link MediaType} specifying the desired format.
  */
 public final class AdapterCodec {
-  private static final ServiceCache<Encoder> encodersServiceCache =
-      new ServiceCache<>(Encoder.class);
-  private static final ServiceCache<Decoder> decodersServiceCache =
-      new ServiceCache<>(Decoder.class);
-
   /**
    * Codec for the installed encoders & decoders. This is lazily created in a racy manner, which is
    * OK since ServiceCache makes sure we see a constant snapshot of the services.
@@ -181,8 +176,7 @@ public final class AdapterCodec {
     var installedCodec = lazyInstalledCodec;
     if (installedCodec == null) {
       installedCodec =
-          new AdapterCodec(
-              encodersServiceCache.getProviders(), decodersServiceCache.getProviders());
+          new AdapterCodec(BodyAdapterProviders.encoders(), BodyAdapterProviders.decoders());
       lazyInstalledCodec = installedCodec;
     }
     return installedCodec;
