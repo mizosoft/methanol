@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@ import java.util.concurrent.RejectedExecutionException;
 /** An executor that ensures submitted tasks are executed serially. */
 public final class SerialExecutor implements Executor {
   /** Drain task started or about to start execution. Retained till drain exits. */
-  private static final int RUNNING = 1;
+  private static final int RUN = 1;
 
   /** Drain task should keep running to recheck for incoming tasks it may have missed. */
   private static final int KEEP_ALIVE = 2;
@@ -77,12 +77,12 @@ public final class SerialExecutor implements Executor {
 
       // If drain has been asked to recheck for tasks, but hasn't yet rechecked after adding the
       // new task, then it will surely see the added task.
-      if (isKeepAliveBitSet()) {
+      if (isKeepAliveBitSet(s)) {
         return;
       }
 
-      if (!isRunningBitSet()) {
-        if (SYNC.compareAndSet(this, s, s | RUNNING)) {
+      if (!isRunningBitSet(s)) {
+        if (SYNC.compareAndSet(this, s, s | RUN)) {
           tryStart(decoratedTask);
           return;
         }
@@ -97,7 +97,7 @@ public final class SerialExecutor implements Executor {
     try {
       delegate.execute(this::drain);
     } catch (RuntimeException | Error e) {
-      SYNC.getAndBitwiseAnd(this, ~(RUNNING | KEEP_ALIVE));
+      SYNC.getAndBitwiseAnd(this, ~(RUN | KEEP_ALIVE));
       if (!(e instanceof RejectedExecutionException) || taskQueue.remove(task)) {
         throw e;
       }
@@ -120,7 +120,7 @@ public final class SerialExecutor implements Executor {
           // Before propagating, try to reschedule ourselves if we still have work. This is done
           // asynchronously in common FJ pool to rethrow immediately (delegate is not guaranteed to
           // execute tasks asynchronously).
-          SYNC.getAndBitwiseAnd(this, ~(RUNNING | KEEP_ALIVE));
+          SYNC.getAndBitwiseAnd(this, ~(RUN | KEEP_ALIVE));
           if (!taskQueue.isEmpty()) {
             try {
               ForkJoinPool.commonPool().execute(() -> execute(() -> {}));
@@ -135,8 +135,8 @@ public final class SerialExecutor implements Executor {
 
       // Exit or consume KEEP_ALIVE bit.
       int s = sync;
-      int unsetBit = (s & KEEP_ALIVE) != 0 ? KEEP_ALIVE : RUNNING;
-      if (SYNC.weakCompareAndSet(this, s, s & ~unsetBit) && unsetBit == RUNNING) {
+      int unsetBit = (s & KEEP_ALIVE) != 0 ? KEEP_ALIVE : RUN;
+      if (SYNC.weakCompareAndSet(this, s, s & ~unsetBit) && unsetBit == RUN) {
         if (interrupted) {
           Thread.currentThread().interrupt();
         }
@@ -146,15 +146,15 @@ public final class SerialExecutor implements Executor {
   }
 
   boolean isRunningBitSet() {
-    return (sync & RUNNING) != 0;
+    return isRunningBitSet(sync);
   }
 
   boolean isShutdownBitSet() {
-    return (sync & SHUTDOWN) != 0;
+    return isShutdownBitSet(sync);
   }
 
   boolean isKeepAliveBitSet() {
-    return (sync & KEEP_ALIVE) != 0;
+    return isKeepAliveBitSet(sync);
   }
 
   @Override
@@ -170,6 +170,18 @@ public final class SerialExecutor implements Executor {
         + ", shutdown="
         + isShutdownBitSet()
         + "}";
+  }
+
+  private static boolean isRunningBitSet(int s) {
+    return (s & RUN) != 0;
+  }
+
+  private static boolean isShutdownBitSet(int s) {
+    return (s & SHUTDOWN) != 0;
+  }
+
+  private static boolean isKeepAliveBitSet(int s) {
+    return (s & KEEP_ALIVE) != 0;
   }
 
   /**
