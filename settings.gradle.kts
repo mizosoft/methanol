@@ -1,3 +1,5 @@
+import java.util.*
+
 rootProject.name = "methanol-parent"
 
 include("methanol")
@@ -17,6 +19,20 @@ include("methanol-samples:download-progress")
 include("methanol-samples:upload-progress")
 include("spring-boot-test")
 include("methanol-redis")
+
+// Load local properties while giving precedence to properties defined through CLI.
+
+rootDir.resolve("local.properties")
+  .takeIf { it.exists() }
+  ?.inputStream()
+  ?.run { use { stream -> Properties().apply { load(stream) } } }
+  ?.filter { !gradle.startParameter.projectProperties.containsKey(it.key) }
+  ?.also { localProperties ->
+    localProperties.forEach { (name, value) -> settings.extra[name.toString()] = value }
+    gradle.rootProject {
+      localProperties.forEach { (name, value) -> project.extra[name.toString()] = value }
+    }
+  }
 
 val includeNativeTests: String? by settings
 if (includeNativeTests != null) {
