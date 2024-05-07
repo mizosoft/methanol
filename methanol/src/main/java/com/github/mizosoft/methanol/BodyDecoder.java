@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.internal.spi.DecoderFactoryFinder;
+import com.github.mizosoft.methanol.internal.spi.BodyDecoderFactoryProviders;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.List;
 import java.util.Map;
@@ -114,7 +114,7 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
      *     factories
      */
     static List<Factory> installedFactories() {
-      return DecoderFactoryFinder.findInstalledFactories();
+      return BodyDecoderFactoryProviders.factories();
     }
 
     /**
@@ -124,7 +124,7 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
      * overridable.
      */
     static Map<String, Factory> installedBindings() {
-      return DecoderFactoryFinder.getInstalledBindings();
+      return BodyDecoderFactoryProviders.bindings();
     }
 
     /**

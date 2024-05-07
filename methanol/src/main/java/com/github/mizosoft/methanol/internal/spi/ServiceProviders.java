@@ -32,23 +32,23 @@ import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** An object that loads {@literal &} caches service providers. */
-public final class ServiceCache<S> {
-  private static final Logger logger = System.getLogger(ServiceCache.class.getName());
+public final class ServiceProviders<S> {
+  private static final Logger logger = System.getLogger(ServiceProviders.class.getName());
 
   private final Lazy<List<S>> providers;
 
-  public ServiceCache(Class<S> service) {
+  public ServiceProviders(Class<S> service) {
     requireNonNull(service);
     this.providers = Lazy.of(() -> loadProviders(service));
   }
 
-  public List<S> getProviders() {
+  public List<S> get() {
     return providers.get();
   }
 
   private static <U> List<U> loadProviders(Class<U> service) {
     return ServiceLoader.load(service, service.getClassLoader()).stream()
-        .map(ServiceCache::tryGet)
+        .map(ServiceProviders::tryGet)
         .filter(Objects::nonNull)
         .collect(Collectors.toUnmodifiableList());
   }
@@ -59,7 +59,7 @@ public final class ServiceCache<S> {
     } catch (ServiceConfigurationError error) {
       logger.log(
           Level.WARNING,
-          "provider <" + provider.type() + "> will be ignored as it couldn't be instantiated",
+          "Provider <" + provider.type() + "> will be ignored as it couldn't be instantiated",
           error);
       return null;
     }
