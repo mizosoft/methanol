@@ -20,37 +20,31 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.quarkus.graal.test;
+package com.github.mizosoft.methanol.springboot.test;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Objects;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.mizosoft.methanol.BodyAdapter;
+import com.github.mizosoft.methanol.adapter.ForwardingDecoder;
+import com.github.mizosoft.methanol.adapter.ForwardingEncoder;
+import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
+import com.google.auto.service.AutoService;
 
-public final class Point {
-  public final int x;
-  public final int y;
+public class JacksonAdapters {
+  private static final ObjectMapper mapper = new ObjectMapper();
 
-  @JsonCreator
-  public Point(@JsonProperty("x") int x, @JsonProperty("y") int y) {
-    this.x = x;
-    this.y = y;
+  private JacksonAdapters() {}
+
+  @AutoService(BodyAdapter.Encoder.class)
+  public static class JacksonEncoder extends ForwardingEncoder {
+    public JacksonEncoder() {
+      super(JacksonAdapterFactory.createJsonEncoder(mapper));
+    }
   }
 
-  @Override
-  public boolean equals(Object obj) {
-    if (!(obj instanceof Point)) return false;
-
-    var that = (Point) obj;
-    return this.x == that.x && this.y == that.y;
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(x, y);
-  }
-
-  @Override
-  public String toString() {
-    return "Point(" + "x=" + x + ", " + "y=" + y + ")";
+  @AutoService(BodyAdapter.Decoder.class)
+  public static class JacksonDecoder extends ForwardingDecoder {
+    public JacksonDecoder() {
+      super(JacksonAdapterFactory.createJsonDecoder(mapper));
+    }
   }
 }

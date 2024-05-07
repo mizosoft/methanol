@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package springboot;
+package com.github.mizosoft.methanol.springboot.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -29,7 +29,6 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.MoreBodyHandlers;
 import com.github.mizosoft.methanol.MutableRequest;
-import com.github.mizosoft.methanol.springboot.Controller.Point;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.http.HttpResponse;

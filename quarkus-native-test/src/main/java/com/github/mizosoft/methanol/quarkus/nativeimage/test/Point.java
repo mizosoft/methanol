@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2021 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,37 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.springboot;
+package com.github.mizosoft.methanol.quarkus.nativeimage.test;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Objects;
 
-@SpringBootApplication
-public class SpringBootApp {
-  public static void main(String[] args) {
-    SpringApplication.run(SpringBootApp.class, args);
+public final class Point {
+  public final int x;
+  public final int y;
+
+  @JsonCreator
+  public Point(@JsonProperty("x") int x, @JsonProperty("y") int y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof Point)) return false;
+
+    var that = (Point) obj;
+    return this.x == that.x && this.y == that.y;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(x, y);
+  }
+
+  @Override
+  public String toString() {
+    return "Point(" + "x=" + x + ", " + "y=" + y + ")";
   }
 }

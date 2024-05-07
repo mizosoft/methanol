@@ -33,6 +33,7 @@ if (includeNativeTests != null) {
   }
 
   include("quarkus-native-test")
+  include("native-test")
 }
 
 // Only include native brotli-jni project if explicitly requested.

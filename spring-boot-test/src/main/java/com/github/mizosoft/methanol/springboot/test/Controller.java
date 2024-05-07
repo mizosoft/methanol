@@ -20,57 +20,50 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.quarkus.graal.test;
+package com.github.mizosoft.methanol.springboot.test;
 
+import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.MoreBodyHandlers;
-import com.github.mizosoft.methanol.MoreBodyPublishers;
 import com.github.mizosoft.methanol.MutableRequest;
-import com.github.mizosoft.methanol.testing.TestUtils;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
 import java.net.URI;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-@Path("/point")
-public class PointResource {
+@RestController
+public class Controller {
   private final Methanol client = Methanol.create();
   private final MockWebServer server = new MockWebServer();
   private final URI serverUri = server.url("/").uri();
 
-  public PointResource() {
+  public Controller() {
     server.setDispatcher(
         new Dispatcher() {
           @Override
           public MockResponse dispatch(RecordedRequest recordedRequest) {
             return new MockResponse()
-                .setBody(
-                    new okio.Buffer()
-                        .write(TestUtils.gzip(recordedRequest.getBody().readString(UTF_8))))
+                .setBody(new okio.Buffer().write(gzip(recordedRequest.getBody().readString(UTF_8))))
                 .setHeader("Content-Encoding", "gzip");
           }
         });
   }
 
-  @GET
-  @Produces(MediaType.APPLICATION_JSON)
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Point pointPingPong(@QueryParam("x") int x, @QueryParam("y") int y) throws Exception {
+  @GetMapping("/")
+  public Point pointPingPong(
+      @RequestParam(value = "x", defaultValue = "0") int x,
+      @RequestParam(value = "y", defaultValue = "0") int y)
+      throws Exception {
     return client
         .send(
-            MutableRequest.POST(
-                serverUri,
-                MoreBodyPublishers.ofObject(
-                    new Point(x, y), com.github.mizosoft.methanol.MediaType.APPLICATION_JSON)),
+            MutableRequest.POST(serverUri, new Point(x, y), MediaType.APPLICATION_JSON),
             MoreBodyHandlers.ofObject(Point.class))
         .body();
   }
