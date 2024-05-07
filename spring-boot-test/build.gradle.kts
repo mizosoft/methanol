@@ -21,10 +21,6 @@ dependencies {
   annotationProcessor(libs.autoservice.annprocess)
 }
 
-tasks.bootJar {
-  mainClass.set("com.github.mizosoft.methanol.springboot.SpringBootApp")
-}
-
 tasks.test {
   dependsOn(tasks.bootJar)
   doFirst {
