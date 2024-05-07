@@ -363,6 +363,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Sets the base <code>URI</code> with which each outgoing requests' <code>URI</code> is <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html#resolve(java.net.URI)" title="class or interface in java.net" class="external-link"><code>resolved</code></a>.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyDecoderFactoryProviders.html#bindings()" class="member-name-link">bindings()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyDecoderFactoryProviders.html" title="class in com.github.mizosoft.methanol.internal.spi">BodyDecoderFactoryProviders</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html#body()" class="member-name-link">body()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html" title="class in com.github.mizosoft.methanol.testing">HttpResponseStub</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#body(U)" class="member-name-link">body(U)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
@@ -380,7 +382,7 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">A <code>BodyAdapter</code> that encodes objects into request bodies.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterFinder.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.spi">BodyAdapterFinder</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/spi/package-summary.html">com.github.mizosoft.methanol.internal.spi</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.spi">BodyAdapterProviders</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/spi/package-summary.html">com.github.mizosoft.methanol.internal.spi</a></dt>
 <dd>
 <div class="block">Utility class for loading/caching <code>Encoder/Decoder</code> providers.</div>
 </dd>
@@ -402,6 +404,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">A factory of <code>BodyDecoders</code> for some defined encoding.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyDecoderFactoryProviders.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.spi">BodyDecoderFactoryProviders</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/spi/package-summary.html">com.github.mizosoft.methanol.internal.spi</a></dt>
+<dd>
+<div class="block">Utility class for finding decoder factories.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html#bodyHandler()" class="member-name-link">bodyHandler()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a></dt>
 <dd>
@@ -1307,14 +1313,12 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds the given decoder.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/DecoderFactoryFinder.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.spi">DecoderFactoryFinder</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/spi/package-summary.html">com.github.mizosoft.methanol.internal.spi</a></dt>
-<dd>
-<div class="block">Utility class for finding decoder factories.</div>
-</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#decoders()" class="member-name-link">decoders()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
 <dd>
 <div class="block">Returns the list of decoders in this codec.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html#decoders()" class="member-name-link">decoders()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html" title="class in com.github.mizosoft.methanol.internal.spi">BodyAdapterProviders</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing.verifiers">DecoderVerifier</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/package-summary.html">com.github.mizosoft.methanol.testing.verifiers</a></dt>
 <dd>
 <div class="block">A small DSL for testing <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> implementations.</div>
@@ -1621,6 +1625,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the list of encoders in this codec.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html#encoders()" class="member-name-link">encoders()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html" title="class in com.github.mizosoft.methanol.internal.spi">BodyAdapterProviders</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing.verifiers">EncoderVerifier</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/package-summary.html">com.github.mizosoft.methanol.testing.verifiers</a></dt>
 <dd>
 <div class="block">A small DSL for testing <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> implementations.</div>
@@ -1766,6 +1772,8 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:F">F</h2>
 <dl class="index">
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyDecoderFactoryProviders.html#factories()" class="member-name-link">factories()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyDecoderFactoryProviders.html" title="class in com.github.mizosoft.methanol.internal.spi">BodyDecoderFactoryProviders</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/FailingPublisher.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing">FailingPublisher&lt;T&gt;</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
 <dd>
 <div class="block">A publisher that fails immediately with a user-supplied error.</div>
@@ -1798,12 +1806,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns true if this source is final and no more decode operations are to be expected.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterFinder.html#findInstalledDecoders()" class="member-name-link">findInstalledDecoders()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterFinder.html" title="class in com.github.mizosoft.methanol.internal.spi">BodyAdapterFinder</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterFinder.html#findInstalledEncoders()" class="member-name-link">findInstalledEncoders()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterFinder.html" title="class in com.github.mizosoft.methanol.internal.spi">BodyAdapterFinder</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/DecoderFactoryFinder.html#findInstalledFactories()" class="member-name-link">findInstalledFactories()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/DecoderFactoryFinder.html" title="class in com.github.mizosoft.methanol.internal.spi">DecoderFactoryFinder</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#fireOrKeepAlive()" class="member-name-link">fireOrKeepAlive()</a> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractSubscription</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#fireOrKeepAliveOnError(java.lang.Throwable)" class="member-name-link">fireOrKeepAliveOnError(Throwable)</a> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractSubscription</a></dt>
@@ -1977,6 +1979,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/function/ThrowingSupplier.html#get()" class="member-name-link">get()</a> - Method in interface com.github.mizosoft.methanol.internal.function.<a href="methanol/com/github/mizosoft/methanol/internal/function/ThrowingSupplier.html" title="interface in com.github.mizosoft.methanol.internal.function">ThrowingSupplier</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceProviders.html#get()" class="member-name-link">get()</a> - Method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceProviders.html" title="class in com.github.mizosoft.methanol.internal.spi">ServiceProviders</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html#get()" class="member-name-link">get()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/LocalCache.html#get(java.net.http.HttpRequest)" class="member-name-link">get(HttpRequest)</a> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/LocalCache.html" title="interface in com.github.mizosoft.methanol.internal.cache">LocalCache</a></dt>
@@ -2045,8 +2049,6 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html#getFileStores()" class="member-name-link">getFileStores()</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">WindowsEmulatingFileSystem</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/DecoderFactoryFinder.html#getInstalledBindings()" class="member-name-link">getInstalledBindings()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/DecoderFactoryFinder.html" title="class in com.github.mizosoft.methanol.internal.spi">DecoderFactoryFinder</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/LeakDetectingFileSystem.html#getPath(java.lang.String,java.lang.String...)" class="member-name-link">getPath(String, String...)</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/LeakDetectingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">LeakDetectingFileSystem</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html#getPath(java.lang.String,java.lang.String...)" class="member-name-link">getPath(String, String...)</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">WindowsEmulatingFileSystem</a></dt>
@@ -2054,8 +2056,6 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/LeakDetectingFileSystem.html#getPathMatcher(java.lang.String)" class="member-name-link">getPathMatcher(String)</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/LeakDetectingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">LeakDetectingFileSystem</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html#getPathMatcher(java.lang.String)" class="member-name-link">getPathMatcher(String)</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">WindowsEmulatingFileSystem</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceCache.html#getProviders()" class="member-name-link">getProviders()</a> - Method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceCache.html" title="class in com.github.mizosoft.methanol.internal.spi">ServiceCache</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/LeakDetectingFileSystem.html#getRootDirectories()" class="member-name-link">getRootDirectories()</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/LeakDetectingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">LeakDetectingFileSystem</a></dt>
 <dd>&nbsp;</dd>
@@ -4073,11 +4073,11 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedForwardingSubscriber.html#%3Cinit%3E()" class="member-name-link">SerializedForwardingSubscriber()</a> - Constructor for class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/SerializedForwardingSubscriber.html" title="class in com.github.mizosoft.methanol.internal.flow">SerializedForwardingSubscriber</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceCache.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.spi">ServiceCache&lt;S&gt;</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/spi/package-summary.html">com.github.mizosoft.methanol.internal.spi</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceProviders.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.spi">ServiceProviders&lt;S&gt;</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/spi/package-summary.html">com.github.mizosoft.methanol.internal.spi</a></dt>
 <dd>
 <div class="block">An object that loads &amp; caches service providers.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceCache.html#%3Cinit%3E(java.lang.Class)" class="member-name-link">ServiceCache(Class&lt;S&gt;)</a> - Constructor for class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceCache.html" title="class in com.github.mizosoft.methanol.internal.spi">ServiceCache</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceProviders.html#%3Cinit%3E(java.lang.Class)" class="member-name-link">ServiceProviders(Class&lt;S&gt;)</a> - Constructor for class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/ServiceProviders.html" title="class in com.github.mizosoft.methanol.internal.spi">ServiceProviders</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#set(java.lang.String,java.lang.String)" class="member-name-link">set(String, String)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
 <dd>&nbsp;</dd>
