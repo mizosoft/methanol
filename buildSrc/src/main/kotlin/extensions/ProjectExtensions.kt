@@ -42,7 +42,9 @@ val Project.isIncludedInCoverageReport
     project(":methanol-samples:upload-progress"),
     project(":methanol-blackbox"),
     project(":spring-boot-test"),
-    projectOrNull(":methanol-brotli:brotli-jni") // Optionally included.
+    projectOrNull(":methanol-brotli:brotli-jni"), // Optionally included.
+    projectOrNull(":quarkus-native-test"), // Optionally included.
+    projectOrNull(":native-image-test") // Optionally included.
   )
 
 val Project.isIncludedInAggregateJavadoc
@@ -54,7 +56,9 @@ val Project.isIncludedInAggregateJavadoc
     project(":methanol-samples:upload-progress"),
     project(":methanol-blackbox"),
     project(":spring-boot-test"),
-    projectOrNull(":methanol-brotli:brotli-jni") // Optionally included.
+    projectOrNull(":methanol-brotli:brotli-jni"), // Optionally included.
+    projectOrNull(":quarkus-native-test"), // Optionally included.
+    projectOrNull(":native-image-test") // Optionally included.
   )
 
 val Project.artifactId
@@ -68,9 +72,6 @@ val Project.javaVersion: String?
 
 val Project.javaVendor: String?
   get() = project.findProperty("javaVendor")?.toString()
-
-val Project.enableNativeTests: Boolean
-  get() = project.hasProperty("enableNativeTests")
 
 val Project.enableErrorprone: Boolean
   get() = project.hasProperty("enableErrorprone")

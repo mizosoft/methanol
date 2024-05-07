@@ -20,31 +20,14 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.quarkus.graal.test;
+package com.github.mizosoft.methanol.springboot.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.adapter.ForwardingDecoder;
-import com.github.mizosoft.methanol.adapter.ForwardingEncoder;
-import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
-import com.google.auto.service.AutoService;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-public class JacksonAdapters {
-  private static final ObjectMapper mapper = new ObjectMapper();
-
-  private JacksonAdapters() {}
-
-  @AutoService(BodyAdapter.Encoder.class)
-  public static class JacksonEncoder extends ForwardingEncoder {
-    public JacksonEncoder() {
-      super(JacksonAdapterFactory.createJsonEncoder(mapper));
-    }
-  }
-
-  @AutoService(BodyAdapter.Decoder.class)
-  public static class JacksonDecoder extends ForwardingDecoder {
-    public JacksonDecoder() {
-      super(JacksonAdapterFactory.createJsonDecoder(mapper));
-    }
+@SpringBootApplication
+public class SpringBootApp {
+  public static void main(String[] args) {
+    SpringApplication.run(SpringBootApp.class, args);
   }
 }

@@ -75,10 +75,11 @@ jobs:
         with:
           java: GraalVM
           cmd: |
-            # For some reason, this never works with one command either by just running `build` or
-            # running `quarkusBuild` & `test` on one run.
+            # For some reason, testing quarkus never works with one command either by just running 
+            # `build` or running `quarkusBuild` & `test` on one run.
             ./gradlew :quarkus-native-test:quarkusBuild -PincludeNativeTests
             ./gradlew :quarkus-native-test:test -PincludeNativeTests
+            ./gradlew :native-test:build -PincludeNativeTests
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

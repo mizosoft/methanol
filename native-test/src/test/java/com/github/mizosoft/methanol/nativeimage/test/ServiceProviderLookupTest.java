@@ -20,16 +20,25 @@
  * SOFTWARE.
  */
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.core.Is.is;
+package com.github.mizosoft.methanol.nativeimage.test;
 
-import io.quarkus.test.junit.QuarkusIntegrationTest;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.github.mizosoft.methanol.BodyAdapter;
+import com.github.mizosoft.methanol.BodyDecoder;
 import org.junit.jupiter.api.Test;
 
-@QuarkusIntegrationTest
-class PointPingPongTest {
+class ServiceProviderLookupTest {
   @Test
-  void pointPingPong() {
-    given().when().get("/point?x=1&y=2").then().statusCode(200).body(is("{\"x\":1,\"y\":2}"));
+  void bodyDecoderServiceProvidersAreAccessible() {
+    assertThat(BodyDecoder.Factory.installedBindings().keySet()).contains("gzip", "deflate");
+  }
+
+  @Test
+  void bodyAdapterServiceProvidersAreAccessible() {
+    assertThat(BodyAdapter.Encoder.installed())
+        .anyMatch(encoder -> encoder.getClass().equals(JacksonAdapters.JacksonEncoder.class));
+    assertThat(BodyAdapter.Decoder.installed())
+        .anyMatch(encoder -> encoder.getClass().equals(JacksonAdapters.JacksonDecoder.class));
   }
 }
