@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
-import com.github.mizosoft.methanol.internal.spi.BodyAdapterFinder;
+import com.github.mizosoft.methanol.internal.spi.BodyAdapterProviders;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.List;
@@ -74,7 +74,7 @@ public interface BodyAdapter {
 
     /** Returns an immutable list containing the installed encoders. */
     static List<Encoder> installed() {
-      return BodyAdapterFinder.findInstalledEncoders();
+      return BodyAdapterProviders.encoders();
     }
 
     /**
@@ -119,7 +119,7 @@ public interface BodyAdapter {
 
     /** Returns an immutable list containing the installed decoders. */
     static List<Decoder> installed() {
-      return BodyAdapterFinder.findInstalledDecoders();
+      return BodyAdapterProviders.decoders();
     }
 
     /**

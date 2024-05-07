@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,44 +24,50 @@ package com.github.mizosoft.methanol.internal.spi;
 
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /** Utility class for finding decoder factories. */
-public class DecoderFactoryFinder {
+public class BodyDecoderFactoryProviders {
+  private static final ServiceProviders<BodyDecoder.Factory> factories =
+      new ServiceProviders<>(BodyDecoder.Factory.class);
 
-  private static final ServiceCache<BodyDecoder.Factory> CACHE =
-      new ServiceCache<>(BodyDecoder.Factory.class);
+  private static volatile @MonotonicNonNull Map<String, BodyDecoder.Factory> lazyBindings;
 
-  private static volatile @MonotonicNonNull Map<String, BodyDecoder.Factory> bindings;
+  private BodyDecoderFactoryProviders() {}
 
-  private DecoderFactoryFinder() {} // non-instantiable
-
-  public static List<BodyDecoder.Factory> findInstalledFactories() {
-    return CACHE.getProviders();
+  public static List<BodyDecoder.Factory> factories() {
+    return factories.get();
   }
 
-  public static Map<String, BodyDecoder.Factory> getInstalledBindings() {
-    // Locking is not necessary as CACHE itself is locked so the result never changes
-    Map<String, BodyDecoder.Factory> cached = bindings;
-    if (cached == null) {
-      cached = createBindings();
-      bindings = cached;
+  public static Map<String, BodyDecoder.Factory> bindings() {
+    // Locking is not necessary as the cache itself is locked so the result never changes.
+    var bindings = lazyBindings;
+    if (bindings == null) {
+      bindings = createBindings();
+      lazyBindings = bindings;
     }
-    return cached;
+    return bindings;
   }
 
   private static Map<String, BodyDecoder.Factory> createBindings() {
-    Map<String, BodyDecoder.Factory> bindings = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-    for (BodyDecoder.Factory f : findInstalledFactories()) {
-      String enc = f.encoding();
-      // Only override if default
-      bindings.merge(
-          enc, f, (f1, f2) -> f1.getClass().isAnnotationPresent(DefaultProvider.class) ? f2 : f1);
-    }
-    return Collections.unmodifiableMap(bindings);
+    return factories().stream()
+        .collect(
+            Collectors.toMap(
+                BodyDecoder.Factory::encoding,
+                Function.identity(),
+                (f1, f2) -> {
+                  // Allow overriding default providers.
+                  if (f1.getClass().isAnnotationPresent(DefaultProvider.class)) {
+                    return f2;
+                  } else if (f2.getClass().isAnnotationPresent(DefaultProvider.class)) {
+                    return f1;
+                  } else {
+                    return f2;
+                  }
+                }));
   }
 }
