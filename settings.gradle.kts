@@ -38,18 +38,6 @@ try {
 
 val includeNativeTests: String? by settings
 if (includeNativeTests != null) {
-  pluginManagement {
-    val quarkusPluginVersion: String by settings
-    val quarkusPluginId: String by settings
-    repositories {
-      mavenCentral()
-      gradlePluginPortal()
-    }
-    plugins {
-      id(quarkusPluginId) version quarkusPluginVersion
-    }
-  }
-
   include("quarkus-native-test")
   include("native-test")
 }

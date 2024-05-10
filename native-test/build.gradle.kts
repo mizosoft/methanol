@@ -3,7 +3,7 @@ plugins {
   id("conventions.static-analysis")
   id("conventions.testing")
   id("conventions.coverage")
-  id("org.graalvm.buildtools.native") version "0.10.1"
+  alias(libs.plugins.graalvm)
 }
 
 dependencies {

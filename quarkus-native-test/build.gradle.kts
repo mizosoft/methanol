@@ -3,7 +3,7 @@ plugins {
   id("conventions.static-analysis")
   id("conventions.testing")
   id("conventions.coverage")
-  id("io.quarkus")
+  alias(libs.plugins.quarkus)
 }
 
 dependencies {
@@ -14,15 +14,10 @@ dependencies {
   implementation(libs.mockwebserver)
   implementation(libs.autoservice.annotations)
   annotationProcessor(libs.autoservice.annprocess)
-
-  val quarkusPlatformGroupId: String by project
-  val quarkusPlatformArtifactId: String by project
-  val quarkusPlatformVersion: String by project
-  implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
-
-  implementation("io.quarkus:quarkus-rest-jackson")
-  testImplementation("io.quarkus:quarkus-junit5")
-  testImplementation("io.rest-assured:rest-assured")
+  implementation(enforcedPlatform(libs.quarkus.bom))
+  implementation(libs.quarkus.rest.jackson)
+  testImplementation(libs.quarkus.junit5)
+  testImplementation(libs.rest.assured)
 }
 
 tasks.withType<Test> {
