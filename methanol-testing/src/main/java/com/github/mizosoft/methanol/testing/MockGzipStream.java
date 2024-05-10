@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,7 @@ import java.util.zip.Deflater;
 import java.util.zip.DeflaterInputStream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A mock gzip stream with configurable gzip stream fields & corruption modes. */
+/** A mock gzip stream with configurable gzip stream fields {@code &} corruption modes. */
 public final class MockGzipStream {
   private static final int GZIP_MAGIC = 0x8B1F;
   private static final int CM_DEFLATE = 8;
