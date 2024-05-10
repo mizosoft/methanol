@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -163,6 +163,11 @@ class MultipartBodyPublisherTest {
                 MoreBodyPublishers.ofMediaType(
                     BodyPublishers.ofString("Hola Mundo"),
                     MediaType.parse("text/plain; charset=utf-8")))
+            .formPart(
+                "file_field_2",
+                "hola2.txt",
+                BodyPublishers.ofString("Hola de nuevo, Mundo"),
+                MediaType.parse("text/plain; charset=utf-8"))
             .build();
     verifyThat(body)
         .succeedsWith(
@@ -175,6 +180,11 @@ class MultipartBodyPublisherTest {
                 + "Content-Type: text/plain; charset=utf-8\r\n"
                 + "\r\n"
                 + "Hola Mundo\r\n"
+                + "--my_boundary\r\n"
+                + "Content-Disposition: form-data; name=\"file_field_2\"; filename=\"hola2.txt\"\r\n"
+                + "Content-Type: text/plain; charset=utf-8\r\n"
+                + "\r\n"
+                + "Hola de nuevo, Mundo\r\n"
                 + "--my_boundary--\r\n");
   }
 
