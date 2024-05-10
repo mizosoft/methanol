@@ -2,102 +2,102 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://mizosoft.github.io/methanol/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/CHANGELOG/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/CONTRIBUTING/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/benchmarks/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/brotli/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/caching/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/decompression/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/enhanced_httpclient/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/interceptors/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/interruptible_reading/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/media_types/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/multipart_and_forms/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/object_mapping/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/progress_tracking/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/writablebodypublisher/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/adapters/gson/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/adapters/jackson/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/adapters/jackson_flux/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/adapters/jaxb/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://mizosoft.github.io/methanol/adapters/protobuf/</loc>
-         <lastmod>2024-05-08</lastmod>
+         <lastmod>2024-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
