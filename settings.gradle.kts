@@ -1,3 +1,4 @@
+import java.io.FileNotFoundException
 import java.util.*
 
 rootProject.name = "methanol-parent"
@@ -21,33 +22,22 @@ include("spring-boot-test")
 include("methanol-redis")
 
 // Load local properties while giving precedence to properties defined through CLI.
-
-rootDir.resolve("local.properties")
-  .takeIf { it.exists() }
-  ?.inputStream()
-  ?.run { use { stream -> Properties().apply { load(stream) } } }
-  ?.filter { !gradle.startParameter.projectProperties.containsKey(it.key) }
-  ?.also { localProperties ->
-    localProperties.forEach { (name, value) -> settings.extra[name.toString()] = value }
-    gradle.rootProject {
-      localProperties.forEach { (name, value) -> project.extra[name.toString()] = value }
+try {
+  rootDir.resolve("local.properties")
+    .inputStream()
+    .run { use { stream -> Properties().apply { load(stream) } } }
+    .filter { !gradle.startParameter.projectProperties.containsKey(it.key) }
+    .also { localProperties ->
+      localProperties.forEach { (name, value) -> settings.extra[name.toString()] = value }
+      gradle.rootProject {
+        localProperties.forEach { (name, value) -> project.extra[name.toString()] = value }
+      }
     }
-  }
+} catch (_: FileNotFoundException) {
+}
 
 val includeNativeTests: String? by settings
 if (includeNativeTests != null) {
-  pluginManagement {
-    val quarkusPluginVersion: String by settings
-    val quarkusPluginId: String by settings
-    repositories {
-      mavenCentral()
-      gradlePluginPortal()
-    }
-    plugins {
-      id(quarkusPluginId) version quarkusPluginVersion
-    }
-  }
-
   include("quarkus-native-test")
   include("native-test")
 }
