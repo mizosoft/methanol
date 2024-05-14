@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -238,6 +238,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
      * @param maintainReadingState whether the read is to be scheduled directly after a previous
      *     read is completed, allowing to leave the READING state as is
      */
+    @SuppressWarnings("FutureReturnValueIgnored")
     private boolean tryScheduleRead(boolean maintainReadingState) {
       if (readQueue.size() < PREFETCH
           && ((maintainReadingState && state == State.READING)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -66,7 +66,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * RedisStandaloneStore} and {@link RedisClusterStore} for Redis Standalone and Redis Cluster setups
  * respectively.
  */
-abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffer>>
+abstract class AbstractRedisStore<
+        C extends StatefulConnection<String, ByteBuffer>,
+        CMD extends
+            RedisHashCommands<String, ByteBuffer> & RedisScriptingCommands<String, ByteBuffer>
+                & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>>
     implements Store {
   static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
 
@@ -128,11 +132,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     this.clockKey = requireNonNull(clockKey);
   }
 
-  abstract <
-          CMD extends
-              RedisHashCommands<String, ByteBuffer> & RedisScriptingCommands<String, ByteBuffer>
-                  & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>>
-      CMD commands();
+  abstract CMD commands();
 
   @Override
   public long maxSize() {
@@ -154,7 +154,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     var fields = commands().hmget(entryKey, "metadata", "dataSize", "entryVersion", "dataVersion");
     return fields.stream().allMatch(Predicate.not(KeyValue::isEmpty))
         ? Optional.of(
-            createViewer(key, entryKey, fields.stream().map(KeyValue::getValue)::iterator))
+            createViewer(key, entryKey, () -> fields.stream().map(KeyValue::getValue).iterator()))
         : Optional.empty();
   }
 
@@ -251,7 +251,9 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
   private void doClose(boolean dispose) {
     closeLock.lock();
     try {
-      if (closed) return;
+      if (closed) {
+        return;
+      }
       closed = true;
     } finally {
       closeLock.unlock();
@@ -260,7 +262,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     if (dispose) {
       try {
         removeAll();
-      } catch (IOException | RedisException e) {
+      } catch (RedisException e) {
         logger.log(Level.WARNING, "Exception thrown when clearing the store on closure", e);
       }
     }
@@ -270,7 +272,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
     }
   }
 
-  private void removeAll() throws IOException {
+  private void removeAll() {
     var cursor = ScanCursor.INITIAL;
     var scanArgs = ScanArgs.Builder.matches(toEntryKey("*")).limit(REMOVE_ALL_SCAN_LIMIT);
     do {
@@ -428,7 +430,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
       this.entries = entries;
     }
 
-    static ScanResult from(List<Object> cursorAndEntries) {
+    static ScanResult from(List<?> cursorAndEntries) {
       var cursor = UTF_8.decode((ByteBuffer) cursorAndEntries.get(0)).toString();
       @SuppressWarnings("unchecked")
       var entries = (List<List<ByteBuffer>>) cursorAndEntries.get(1);
@@ -634,7 +636,7 @@ abstract class AbstractRedisStore<C extends StatefulConnection<String, ByteBuffe
                       encodeLong(1), // commit
                       UTF_8.encode(clockKey)));
 
-      if ("0".equals(response.get(0).toString())) {
+      if (response.get(0).toString().equals("0")) {
         throw new IllegalStateException(response.get(1).toString());
       }
     }

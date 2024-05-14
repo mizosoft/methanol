@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.decoder;
 import static java.lang.String.format;
 
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -319,7 +320,10 @@ final class GzipDecoder implements AsyncDecoder {
   }
 
   private enum State {
-    BEGIN,
+    BEGIN {
+      @Override
+      void onPrepare(GzipDecoder decoder) {}
+    },
     HEADER {
       @Override
       void onPrepare(GzipDecoder decoder) {
@@ -341,7 +345,10 @@ final class GzipDecoder implements AsyncDecoder {
         decoder.fieldPosition = 0;
       }
     },
-    FLG_ZERO_TERMINATED_FIELD,
+    FLG_ZERO_TERMINATED_FIELD {
+      @Override
+      void onPrepare(GzipDecoder decoder) {}
+    },
     FLG_HCRC {
       @Override
       void onPrepare(GzipDecoder decoder) {
@@ -355,17 +362,24 @@ final class GzipDecoder implements AsyncDecoder {
         decoder.crc.reset();
       }
     },
-    TRAILER,
+    TRAILER {
+      @Override
+      void onPrepare(GzipDecoder decoder) {}
+    },
     POSSIBLY_CONCATENATED_HEADER {
       @Override
       void onPrepare(GzipDecoder decoder) {
         HEADER.onPrepare(decoder);
       }
     },
-    END;
+    END {
+      @Override
+      void onPrepare(GzipDecoder decoder) {}
+    };
 
-    void onPrepare(GzipDecoder decoder) {}
+    abstract void onPrepare(GzipDecoder decoder);
 
+    @CanIgnoreReturnValue
     final State prepare(GzipDecoder decoder) {
       onPrepare(decoder);
       return this;

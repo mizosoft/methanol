@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 
-class ForwardingPath implements Path, ForwardingObject<Path> {
+class ForwardingPath implements Path, ForwardingObject {
   private final Path delegate;
 
   ForwardingPath(Path delegate) {
@@ -189,16 +189,6 @@ class ForwardingPath implements Path, ForwardingObject<Path> {
   @Override
   public int compareTo(Path other) {
     return delegate.compareTo(other);
-  }
-
-  @Override
-  public boolean equals(Object other) {
-    return delegate.equals(other);
-  }
-
-  @Override
-  public int hashCode() {
-    return delegate.hashCode();
   }
 
   @Override

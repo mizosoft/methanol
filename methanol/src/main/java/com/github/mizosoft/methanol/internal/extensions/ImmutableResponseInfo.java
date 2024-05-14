@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,23 +24,21 @@ package com.github.mizosoft.methanol.internal.extensions;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.errorprone.annotations.Immutable;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.ResponseInfo;
 
-/** Basic implementation of {@code ResponseInfo}. */
+/** Implementation of {@code ResponseInfo}. */
 public final class ImmutableResponseInfo implements ResponseInfo {
-
   private final int statusCode;
   private final HttpHeaders headers;
   private final Version version;
 
   public ImmutableResponseInfo(int statusCode, HttpHeaders headers, Version version) {
     this.statusCode = statusCode;
-    this.headers = requireNonNull(headers, "headers");
-    this.version = requireNonNull(version, "version");
+    this.headers = requireNonNull(headers);
+    this.version = requireNonNull(version);
   }
 
   @Override

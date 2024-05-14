@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.time.Duration;
 import java.util.ArrayDeque;
@@ -110,6 +111,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
     }
   }
 
+  @CanIgnoreReturnValue
   public TestSubscriber<T> throwOnSubscribeAndOnNext(boolean on) {
     lock.lock();
     try {
@@ -121,6 +123,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
     }
   }
 
+  @CanIgnoreReturnValue
   public TestSubscriber<T> throwOnSubscribe(boolean on) {
     lock.lock();
     try {
@@ -131,6 +134,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
     }
   }
 
+  @CanIgnoreReturnValue
   public TestSubscriber<T> throwOnNext(boolean on) {
     lock.lock();
     try {
@@ -141,6 +145,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
     }
   }
 
+  @CanIgnoreReturnValue
   public TestSubscriber<T> autoRequest(long n) {
     lock.lock();
     try {

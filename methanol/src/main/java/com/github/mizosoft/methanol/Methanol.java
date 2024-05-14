@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,8 @@ import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.InlineMe;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
@@ -429,6 +431,7 @@ public final class Methanol extends HttpClient {
     return adapterCodec.orElseGet(AdapterCodec::installed);
   }
 
+  @CanIgnoreReturnValue
   private static URI validateUri(URI uri) {
     var scheme = uri.getScheme();
     requireArgument(scheme != null, "uri has no scheme: %s", uri);
@@ -514,6 +517,7 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void close() {
       boolean wasOpen = !closed;
       closed = true;
@@ -643,6 +647,7 @@ public final class Methanol extends HttpClient {
     BaseBuilder() {}
 
     /** Calls the given consumer against this builder. */
+    @CanIgnoreReturnValue
     public final B apply(Consumer<? super B> consumer) {
       consumer.accept(self());
       return self();
@@ -653,6 +658,7 @@ public final class Methanol extends HttpClient {
      *
      * @throws IllegalArgumentException if {@code userAgent} is an invalid header value
      */
+    @CanIgnoreReturnValue
     public B userAgent(String userAgent) {
       defaultHeadersBuilder.set("User-Agent", userAgent);
       this.userAgent = userAgent;
@@ -663,6 +669,7 @@ public final class Methanol extends HttpClient {
      * Sets the base {@code URI} with which each outgoing requests' {@code URI} is {@link
      * URI#resolve(URI) resolved}.
      */
+    @CanIgnoreReturnValue
     public B baseUri(String uri) {
       return baseUri(URI.create(uri));
     }
@@ -671,12 +678,14 @@ public final class Methanol extends HttpClient {
      * Sets the base {@code URI} with which each outgoing requests' {@code URI} is {@link
      * URI#resolve(URI) resolved}.
      */
+    @CanIgnoreReturnValue
     public B baseUri(URI uri) {
       this.baseUri = validateUri(uri);
       return self();
     }
 
     /** Adds the given default header. */
+    @CanIgnoreReturnValue
     public B defaultHeader(String name, String value) {
       defaultHeadersBuilder.add(name, value);
       if ("User-Agent".equalsIgnoreCase(name)) {
@@ -686,6 +695,7 @@ public final class Methanol extends HttpClient {
     }
 
     /** Adds each of the given default headers. */
+    @CanIgnoreReturnValue
     public B defaultHeaders(String... headers) {
       requireArgument(
           headers.length > 0 && headers.length % 2 == 0,
@@ -698,6 +708,7 @@ public final class Methanol extends HttpClient {
     }
 
     /** Sets a default request timeout to use when not explicitly by an {@code HttpRequest}. */
+    @CanIgnoreReturnValue
     public B requestTimeout(Duration requestTimeout) {
       this.requestTimeout = requirePositiveDuration(requestTimeout);
       return self();
@@ -708,6 +719,7 @@ public final class Methanol extends HttpClient {
      * aren't received within the timeout. Timeout events are scheduled using a system-wide {@code
      * ScheduledExecutorService}.
      */
+    @CanIgnoreReturnValue
     public B headersTimeout(Duration headersTimeout) {
       return headersTimeout(headersTimeout, Delayer.systemDelayer());
     }
@@ -716,10 +728,12 @@ public final class Methanol extends HttpClient {
      * Same as {@link #headersTimeout(Duration)} but specifies a {@code ScheduledExecutorService} to
      * use for scheduling timeout events.
      */
+    @CanIgnoreReturnValue
     public B headersTimeout(Duration headersTimeout, ScheduledExecutorService scheduler) {
       return headersTimeout(headersTimeout, Delayer.of(scheduler));
     }
 
+    @CanIgnoreReturnValue
     B headersTimeout(Duration headersTimeout, Delayer delayer) {
       this.headersTimeout = requirePositiveDuration(headersTimeout);
       this.headersTimeoutDelayer = requireNonNull(delayer);
@@ -730,6 +744,7 @@ public final class Methanol extends HttpClient {
      * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration) read
      * timeout}. Timeout events are scheduled using a system-wide {@code ScheduledExecutorService}.
      */
+    @CanIgnoreReturnValue
     public B readTimeout(Duration readTimeout) {
       return readTimeout(readTimeout, Delayer.systemDelayer());
     }
@@ -739,10 +754,12 @@ public final class Methanol extends HttpClient {
      * ScheduledExecutorService) readtimeout} using the given {@code ScheduledExecutorService} for
      * scheduling timeout events.
      */
+    @CanIgnoreReturnValue
     public B readTimeout(Duration readTimeout, ScheduledExecutorService scheduler) {
       return readTimeout(readTimeout, Delayer.of(scheduler));
     }
 
+    @CanIgnoreReturnValue
     private B readTimeout(Duration readTimeout, Delayer delayer) {
       this.readTimeout = requirePositiveDuration(readTimeout);
       this.readTimeoutDelayer = requireNonNull(delayer);
@@ -750,6 +767,7 @@ public final class Methanol extends HttpClient {
     }
 
     /** Specifies the {@code AdapterCodec} with which request and response payloads are mapped. */
+    @CanIgnoreReturnValue
     public B adapterCodec(AdapterCodec adapterCodec) {
       this.adapterCodec = requireNonNull(adapterCodec);
       return self();
@@ -763,6 +781,7 @@ public final class Methanol extends HttpClient {
      *
      * <p>This value is {@code true} by default.
      */
+    @CanIgnoreReturnValue
     public B autoAcceptEncoding(boolean autoAcceptEncoding) {
       this.autoAcceptEncoding = autoAcceptEncoding;
       return self();
@@ -773,6 +792,7 @@ public final class Methanol extends HttpClient {
      * interceptor receives the request before it is decorated (its {@code URI} resolved with the
      * base {@code URI}, default headers added, etc...) or handled by an {@link HttpCache}.
      */
+    @CanIgnoreReturnValue
     public B interceptor(Interceptor interceptor) {
       interceptors.add(requireNonNull(interceptor));
       return self();
@@ -787,6 +807,7 @@ public final class Methanol extends HttpClient {
      * normally due to the presence of an {@code HttpCache} that is capable of serving a stored
      * response.
      */
+    @CanIgnoreReturnValue
     public B backendInterceptor(Interceptor interceptor) {
       backendInterceptors.add(requireNonNull(interceptor));
       return self();
@@ -795,8 +816,10 @@ public final class Methanol extends HttpClient {
     /**
      * @deprecated Use {@link #backendInterceptor(Interceptor)}
      */
+    @CanIgnoreReturnValue
     @Deprecated(since = "1.5.0")
-    public B postDecorationInterceptor(Interceptor interceptor) {
+    @InlineMe(replacement = "this.backendInterceptor(interceptor)")
+    public final B postDecorationInterceptor(Interceptor interceptor) {
       return backendInterceptor(interceptor);
     }
 
@@ -838,6 +861,7 @@ public final class Methanol extends HttpClient {
     }
 
     /** Sets the {@link HttpCache} to be used by the client. */
+    @CanIgnoreReturnValue
     public Builder cache(HttpCache cache) {
       super.caches = List.of(cache);
       return this;
@@ -849,42 +873,49 @@ public final class Methanol extends HttpClient {
      * sent to network. Although not enforced, it is highly recommended for the caches to be sorted
      * in the order of decreasing locality.
      */
+    @CanIgnoreReturnValue
     public Builder cacheChain(List<HttpCache> caches) {
       this.caches = List.copyOf(caches);
       return this;
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder cookieHandler(CookieHandler cookieHandler) {
       backendBuilder.cookieHandler(cookieHandler);
       return this;
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder connectTimeout(Duration duration) {
       backendBuilder.connectTimeout(duration);
       return this;
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder sslContext(SSLContext sslContext) {
       backendBuilder.sslContext(sslContext);
       return this;
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder sslParameters(SSLParameters sslParameters) {
       backendBuilder.sslParameters(sslParameters);
       return this;
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder executor(Executor executor) {
       backendBuilder.executor(executor);
       return this;
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder followRedirects(Redirect policy) {
       // Don't apply policy to base client until build() is called to know whether
       // a RedirectingInterceptor is to be used instead in case a cache is installed.
@@ -893,24 +924,28 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder version(Version version) {
       backendBuilder.version(version);
       return this;
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder priority(int priority) {
       backendBuilder.priority(priority);
       return this;
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder proxy(ProxySelector proxySelector) {
       backendBuilder.proxy(proxySelector);
       return this;
     }
 
     @Override
+    @CanIgnoreReturnValue
     public Builder authenticator(Authenticator authenticator) {
       backendBuilder.authenticator(authenticator);
       return this;
@@ -1195,10 +1230,12 @@ public final class Methanol extends HttpClient {
         onTimeout.complete(null);
       }
 
+      @SuppressWarnings("FutureReturnValueIgnored")
       void onTimeout(Runnable action) {
         onTimeout.thenRun(action);
       }
 
+      @SuppressWarnings("FutureReturnValueIgnored")
       void onCancellation(Runnable action) {
         onTimeout.whenComplete(
             (__, e) -> {

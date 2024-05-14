@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
@@ -74,97 +75,116 @@ public final class ResponseBuilder<T> {
 
   public ResponseBuilder() {}
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> statusCode(int statusCode) {
     requireArgument(statusCode >= 0, "negative status code");
     this.statusCode = statusCode;
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> uri(URI uri) {
     this.uri = requireNonNull(uri);
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> version(Version version) {
     this.version = requireNonNull(version);
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> header(String name, String value) {
     headersBuilder.add(name, value);
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> setHeader(String name, String value) {
     headersBuilder.set(name, value);
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> headers(HttpHeaders headers) {
     headersBuilder.addAll(headers);
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> setHeaders(HttpHeaders headers) {
     headersBuilder.setAll(headers);
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> clearHeaders() {
     headersBuilder.clear();
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> removeHeader(String name) {
     headersBuilder.remove(name);
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> request(HttpRequest request) {
     this.request = requireNonNull(request);
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> timeRequestSent(Instant timeRequestSent) {
     this.timeRequestSent = requireNonNull(timeRequestSent);
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> timeResponseReceived(Instant timeResponseReceived) {
     this.timeResponseReceived = requireNonNull(timeResponseReceived);
     return this;
   }
 
+  @CanIgnoreReturnValue
   @SuppressWarnings("unchecked")
   public <U> ResponseBuilder<U> body(@Nullable U body) {
     this.body = body;
     return (ResponseBuilder<U>) this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> dropBody() {
     return body(null);
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> sslSession(@Nullable SSLSession sslSession) {
     this.sslSession = sslSession;
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> previousResponse(@Nullable HttpResponse<T> previousResponse) {
     this.previousResponse = previousResponse;
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> networkResponse(@Nullable TrackedResponse<?> networkResponse) {
     this.networkResponse = networkResponse;
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> cacheResponse(@Nullable TrackedResponse<?> cacheResponse) {
     this.cacheResponse = cacheResponse;
     return this;
   }
 
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> cacheStatus(CacheStatus cacheStatus) {
     this.cacheStatus = requireNonNull(cacheStatus);
     return this;
@@ -228,6 +248,7 @@ public final class ResponseBuilder<T> {
         ensureSet(cacheStatus, "cacheStatus"));
   }
 
+  @CanIgnoreReturnValue
   private ResponseBuilder<T> headers(HttpHeaders headers, boolean bypassHeaderValidation) {
     if (bypassHeaderValidation) {
       headersBuilder.addAllLenient(headers);

@@ -122,6 +122,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
     }
 
     @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
     protected long emit(Subscriber<? super HttpResponse<V>> downstream, long emit) {
       if (emit > 0 && !isInitialRequestSent) {
         isInitialRequestSent = true;
@@ -232,6 +233,7 @@ public final class HttpResponsePublisher<T> implements Publisher<HttpResponse<T>
         }
       }
 
+      @SuppressWarnings("FutureReturnValueIgnored")
       private void applyPushPromise(
           HttpRequest pushPromiseRequest,
           Function<BodyHandler<V>, CompletableFuture<HttpResponse<V>>> acceptor) {

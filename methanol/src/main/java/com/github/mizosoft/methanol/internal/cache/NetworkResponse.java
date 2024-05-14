@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,6 +53,7 @@ public final class NetworkResponse extends PublisherResponse {
   }
 
   /** Discards the response body in background. */
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void discard(Executor executor) {
     handleAsync(BodyHandlers.discarding(), executor);
   }

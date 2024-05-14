@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -162,17 +162,6 @@ public final class LeakDetectingFileSystem extends FileSystemWrapper {
     @Override
     LeakDetectingFileSystem wrap(FileSystem fileSystem) {
       return new LeakDetectingFileSystem(fileSystem, this);
-    }
-
-    @Override
-    PathWrapper newPathWrapper(Path path, FileSystemWrapper fileSystem) {
-      return new LeakDetectingPath(path, fileSystem);
-    }
-  }
-
-  private static final class LeakDetectingPath extends PathWrapper {
-    LeakDetectingPath(Path delegate, FileSystemWrapper fileSystem) {
-      super(delegate, fileSystem);
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -130,7 +130,8 @@ public class MockExecutor implements Executor {
         }
         try {
           remaining = notEmpty.awaitNanos(remaining);
-        } catch (InterruptedException ignored) {
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
         }
       }
       return true;

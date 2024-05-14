@@ -38,7 +38,9 @@ public final class Point {
 
   @Override
   public boolean equals(Object obj) {
-    if (!(obj instanceof Point)) return false;
+    if (!(obj instanceof Point)) {
+      return false;
+    }
 
     var that = (Point) obj;
     return this.x == that.x && this.y == that.y;

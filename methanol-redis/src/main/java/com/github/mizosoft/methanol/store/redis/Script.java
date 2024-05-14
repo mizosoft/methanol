@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -102,47 +102,53 @@ enum Script {
     private RunnableScript() {}
 
     long asLong(List<K> keys, List<V> values) {
-      return as(keys, values, ScriptOutputType.INTEGER);
+      return as(keys, values, ScriptOutputType.INTEGER, Long.class);
     }
 
     boolean asBoolean(List<K> keys, List<V> values) {
-      return as(keys, values, ScriptOutputType.BOOLEAN);
+      return as(keys, values, ScriptOutputType.BOOLEAN, Boolean.class);
     }
 
-    List<Object> asMulti(List<K> keys, List<V> values) {
-      return as(keys, values, ScriptOutputType.MULTI);
+    List<?> asMulti(List<K> keys, List<V> values) {
+      return as(keys, values, ScriptOutputType.MULTI, List.class);
     }
 
     ByteBuffer asValue(List<K> keys, List<V> values) {
-      return as(keys, values, ScriptOutputType.VALUE);
+      return as(keys, values, ScriptOutputType.VALUE, ByteBuffer.class);
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T as(List<K> keys, List<V> values, ScriptOutputType outputType) {
+    private <T> T as(
+        List<K> keys, List<V> values, ScriptOutputType outputType, Class<T> rawReturnType) {
       var keysArray = (K[]) keys.toArray();
       var valuesArray = (V[]) values.toArray();
       try {
-        return evalsha(keysArray, valuesArray, outputType);
+        return evalsha(keysArray, valuesArray, outputType, rawReturnType);
       } catch (RedisNoScriptException e) {
-        return eval(keysArray, valuesArray, outputType);
+        return eval(keysArray, valuesArray, outputType, rawReturnType);
       }
     }
 
-    abstract <T> T evalsha(K[] keysArray, V[] valuesArray, ScriptOutputType outputType);
+    abstract <T> T evalsha(
+        K[] keysArray, V[] valuesArray, ScriptOutputType outputType, Class<T> rawReturnType);
 
-    abstract <T> T eval(K[] keysArray, V[] valuesArray, ScriptOutputType outputType);
+    abstract <T> T eval(
+        K[] keysArray, V[] valuesArray, ScriptOutputType outputType, Class<T> rawReturnType);
 
     static <K, V> RunnableScript<K, V> of(Script script, RedisScriptingCommands<K, V> commands) {
       return new RunnableScript<>() {
         @Override
-        public <T> T evalsha(K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
-          return commands.evalsha(script.shaHex(), outputType, keysArray, valuesArray);
+        public <T> T evalsha(
+            K[] keysArray, V[] valuesArray, ScriptOutputType outputType, Class<T> rawReturnType) {
+          return rawReturnType.cast(
+              commands.evalsha(script.shaHex(), outputType, keysArray, valuesArray));
         }
 
         @Override
-        public <T> T eval(K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
-          return commands.eval(
-              script.content().getBytes(UTF_8), outputType, keysArray, valuesArray);
+        public <T> T eval(
+            K[] keysArray, V[] valuesArray, ScriptOutputType outputType, Class<T> rawReturnType) {
+          return rawReturnType.cast(
+              commands.eval(script.content().getBytes(UTF_8), outputType, keysArray, valuesArray));
         }
       };
     }
@@ -151,14 +157,18 @@ enum Script {
         Script script, RedisScriptingCommands<K, V> commands) {
       return new RunnableScript<>() {
         @Override
-        public <T> T evalsha(K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
-          return commands.evalshaReadOnly(script.shaHex(), outputType, keysArray, valuesArray);
+        public <T> T evalsha(
+            K[] keysArray, V[] valuesArray, ScriptOutputType outputType, Class<T> rawReturnType) {
+          return rawReturnType.cast(
+              commands.evalshaReadOnly(script.shaHex(), outputType, keysArray, valuesArray));
         }
 
         @Override
-        public <T> T eval(K[] keysArray, V[] valuesArray, ScriptOutputType outputType) {
-          return commands.evalReadOnly(
-              script.content().getBytes(UTF_8), outputType, keysArray, valuesArray);
+        public <T> T eval(
+            K[] keysArray, V[] valuesArray, ScriptOutputType outputType, Class<T> rawReturnType) {
+          return rawReturnType.cast(
+              commands.evalReadOnly(
+                  script.content().getBytes(UTF_8), outputType, keysArray, valuesArray));
         }
       };
     }

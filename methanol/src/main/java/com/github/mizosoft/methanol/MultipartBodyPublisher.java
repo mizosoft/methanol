@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ import com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Prefetcher;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.System.Logger;
@@ -81,7 +82,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     this.parts = requireNonNull(parts);
     this.mediaType = requireNonNull(mediaType);
     this.boundary = mediaType.parameters().get(BOUNDARY_ATTRIBUTE);
-    requireArgument(this.boundary != null, "missing boundary");
+    requireArgument(this.boundary != null, "Missing boundary");
   }
 
   /** Returns the boundary of this multipart body. */
@@ -212,8 +213,9 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      *
      * @throws IllegalArgumentException if the boundary is invalid
      */
+    @CanIgnoreReturnValue
     public Builder boundary(String boundary) {
-      mediaType = mediaType.withParameter(BOUNDARY_ATTRIBUTE, validateBoundary(boundary));
+      mediaType = mediaType.withParameter(BOUNDARY_ATTRIBUTE, requireValidBoundary(boundary));
       return this;
     }
 
@@ -224,28 +226,33 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      * @throws IllegalArgumentException if the given media type is not a multipart type or if it has
      *     an invalid boundary parameter
      */
+    @CanIgnoreReturnValue
     public Builder mediaType(MediaType mediaType) {
-      this.mediaType = checkMediaType(mediaType);
+      this.mediaType = requireValidMediaType(mediaType);
       return this;
     }
 
     /** Adds the given part. */
+    @CanIgnoreReturnValue
     public Builder part(Part part) {
       parts.add(requireNonNull(part));
       return this;
     }
 
     /** Adds a form field with the given name and body. */
+    @CanIgnoreReturnValue
     public Builder formPart(String name, BodyPublisher bodyPublisher) {
       return part(Part.create(getFormHeaders(name, null), bodyPublisher));
     }
 
     /** Adds a form field with the given name, filename and body. */
+    @CanIgnoreReturnValue
     public Builder formPart(String name, String filename, BodyPublisher body) {
       return part(Part.create(getFormHeaders(name, filename), body));
     }
 
     /** Adds a form field with the given name, filename, body and media type. */
+    @CanIgnoreReturnValue
     public Builder formPart(String name, String filename, BodyPublisher body, MediaType mediaType) {
       return formPart(name, filename, MoreBodyPublishers.ofMediaType(body, mediaType));
     }
@@ -254,6 +261,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      * Adds a {@code text/plain} form field with the given name and value. {@code UTF-8} is used for
      * encoding the field's body.
      */
+    @CanIgnoreReturnValue
     public Builder textPart(String name, Object value) {
       return textPart(name, value, UTF_8);
     }
@@ -262,6 +270,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      * Adds a {@code text/plain} form field with the given name and value, using the given charset
      * for encoding the field's value.
      */
+    @CanIgnoreReturnValue
     public Builder textPart(String name, Object value, Charset charset) {
       return formPart(name, BodyPublishers.ofString(value.toString(), charset));
     }
@@ -275,6 +284,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      *
      * @throws FileNotFoundException if a file with the given path cannot be found
      */
+    @CanIgnoreReturnValue
     public Builder filePart(String name, Path file) throws FileNotFoundException {
       return filePart(name, file, probeMediaType(file));
     }
@@ -285,6 +295,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
      *
      * @throws FileNotFoundException if a file with the given path cannot be found
      */
+    @CanIgnoreReturnValue
     public Builder filePart(String name, Path file, MediaType mediaType)
         throws FileNotFoundException {
       var filenameComponent = file.getFileName();
@@ -310,7 +321,8 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       return new MultipartBodyPublisher(partsCopy, localMediaType);
     }
 
-    private static String validateBoundary(String boundary) {
+    @CanIgnoreReturnValue
+    private static String requireValidBoundary(String boundary) {
       requireArgument(
           boundary.length() <= MAX_BOUNDARY_LENGTH && !boundary.isEmpty(),
           "illegal boundary length: %s",
@@ -322,12 +334,13 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       return boundary;
     }
 
-    private static MediaType checkMediaType(MediaType mediaType) {
+    @CanIgnoreReturnValue
+    private static MediaType requireValidMediaType(MediaType mediaType) {
       requireArgument(
-          "multipart".equals(mediaType.type()), "not a multipart type: %s", mediaType.type());
+          mediaType.type().equals("multipart"), "Not a multipart type: %s", mediaType.type());
       var boundary = mediaType.parameters().get(BOUNDARY_ATTRIBUTE);
       if (boundary != null) {
-        validateBoundary(boundary);
+        requireValidBoundary(boundary);
       }
       return mediaType;
     }

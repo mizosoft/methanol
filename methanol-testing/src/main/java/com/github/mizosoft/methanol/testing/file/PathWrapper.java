@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,9 @@
 
 package com.github.mizosoft.methanol.testing.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
-import java.nio.file.FileSystem;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Iterator;
@@ -36,13 +37,11 @@ class PathWrapper extends ForwardingPath {
 
   PathWrapper(Path delegate, FileSystemWrapper fileSystem) {
     super(delegate);
-    this.fileSystem = fileSystem;
-
-    assert delegate.getFileSystem().equals(fileSystem.delegate());
+    this.fileSystem = requireNonNull(fileSystem);
   }
 
   @Override
-  public FileSystem getFileSystem() {
+  public FileSystemWrapper getFileSystem() {
     return fileSystem;
   }
 
@@ -78,7 +77,7 @@ class PathWrapper extends ForwardingPath {
 
   @Override
   public Path resolve(Path other) {
-    return wrap(super.resolve(ForwardingObject.delegate(other)));
+    return wrap(super.resolve(fileSystem.provider().delegate(other)));
   }
 
   @Override
@@ -88,7 +87,7 @@ class PathWrapper extends ForwardingPath {
 
   @Override
   public Path resolveSibling(Path other) {
-    return wrap(super.resolveSibling(ForwardingObject.delegate(other)));
+    return wrap(super.resolveSibling(fileSystem.provider().delegate(other)));
   }
 
   @Override
@@ -98,7 +97,7 @@ class PathWrapper extends ForwardingPath {
 
   @Override
   public Path relativize(Path other) {
-    return wrap(super.relativize(ForwardingObject.delegate(other)));
+    return wrap(super.relativize(fileSystem.provider().delegate(other)));
   }
 
   @Override
@@ -123,25 +122,32 @@ class PathWrapper extends ForwardingPath {
 
   @Override
   public boolean startsWith(Path other) {
-    return super.startsWith(ForwardingObject.delegate(other));
+    return super.startsWith(fileSystem.provider().delegate(other));
   }
 
   @Override
   public boolean endsWith(Path other) {
-    return super.endsWith(ForwardingObject.delegate(other));
+    return super.endsWith(fileSystem.provider().delegate(other));
   }
 
   @Override
   public int compareTo(Path other) {
-    return super.compareTo(ForwardingObject.delegate(other));
+    return super.compareTo(fileSystem.provider().delegate(other));
   }
 
   @Override
   public boolean equals(Object other) {
-    if (other.getClass() == getClass()) {
-      other = ForwardingObject.delegate(other);
+    if (!(other instanceof Path) || !fileSystem.provider().matchesProvider((Path) other)) {
+      return false;
     }
-    return super.equals(other);
+
+    // Now we know the given path belongs to us, so we make sure the delegates are the same.
+    return ((PathWrapper) other).delegate().equals(delegate());
+  }
+
+  @Override
+  public int hashCode() {
+    return delegate().hashCode();
   }
 
   private Path wrap(@Nullable Path delegate) {

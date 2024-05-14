@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_VALUE_MATCHER;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
@@ -66,16 +67,19 @@ public class Utils {
         : isValidToken(name);
   }
 
+  @CanIgnoreReturnValue
   public static <S extends CharSequence> S requireValidToken(S token) {
     requireArgument(isValidToken(token), "illegal token: '%s'", token);
     return token;
   }
 
+  @CanIgnoreReturnValue
   public static String requireValidHeaderName(String name) {
     requireArgument(isValidHeaderName(name), "illegal header name: '%s'", name);
     return name;
   }
 
+  @CanIgnoreReturnValue
   public static String requireValidHeaderValue(String value) {
     requireArgument(FIELD_VALUE_MATCHER.allMatch(value), "illegal header value: '%s'", value);
     return value;
@@ -86,12 +90,14 @@ public class Utils {
     requireValidHeaderValue(value);
   }
 
+  @CanIgnoreReturnValue
   public static Duration requirePositiveDuration(Duration duration) {
     requireArgument(
         !(duration.isNegative() || duration.isZero()), "non-positive duration: %s", duration);
     return duration;
   }
 
+  @CanIgnoreReturnValue
   public static Duration requireNonNegativeDuration(Duration duration) {
     requireArgument(!duration.isNegative(), "negative duration: %s", duration);
     return duration;

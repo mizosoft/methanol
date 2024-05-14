@@ -27,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import com.github.mizosoft.methanol.internal.spi.BodyAdapterProviders;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodyHandler;
@@ -48,6 +49,7 @@ public final class AdapterCodec {
    * Codec for the installed encoders & decoders. This is lazily created in a racy manner, which is
    * OK since ServiceCache makes sure we see a constant snapshot of the services.
    */
+  @SuppressWarnings("NonFinalStaticField") // Lazily initialized.
   private static @MonotonicNonNull AdapterCodec lazyInstalledCodec;
 
   private final List<Encoder> encoders;
@@ -195,12 +197,14 @@ public final class AdapterCodec {
     Builder() {}
 
     /** Adds the given encoder. */
+    @CanIgnoreReturnValue
     public Builder encoder(Encoder encoder) {
       encoders.add(requireNonNull(encoder));
       return this;
     }
 
     /** Adds the given decoder. */
+    @CanIgnoreReturnValue
     public Builder decoder(Decoder decoder) {
       decoders.add(requireNonNull(decoder));
       return this;

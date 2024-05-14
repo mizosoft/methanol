@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@ import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Set;
 
-class ForwardingFileSystem extends FileSystem implements ForwardingObject<FileSystem> {
+class ForwardingFileSystem extends FileSystem implements ForwardingObject {
   private final FileSystem delegate;
 
   ForwardingFileSystem(FileSystem delegate) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,8 +48,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
-class ForwardingFileSystemProvider extends FileSystemProvider
-    implements ForwardingObject<FileSystemProvider> {
+class ForwardingFileSystemProvider extends FileSystemProvider implements ForwardingObject {
   private final FileSystemProvider delegate;
 
   ForwardingFileSystemProvider(FileSystemProvider delegate) {
@@ -137,7 +136,7 @@ class ForwardingFileSystemProvider extends FileSystemProvider
 
   @Override
   public void createLink(Path link, Path existing) throws IOException {
-    delegate.createLink(link, (existing));
+    delegate.createLink(link, existing);
   }
 
   @Override

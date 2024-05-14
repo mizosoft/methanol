@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -340,6 +340,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
      * @param maintainWritingState whether the write is to be scheduled directly after a previous
      *     write is completed, allowing to leave the WRITING state as is
      */
+    @SuppressWarnings("FutureReturnValueIgnored")
     private boolean tryScheduleWrite(boolean maintainWritingState) {
       var buffer = writeQueue.peek();
       if (buffer != null
@@ -380,6 +381,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       }
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     private void commitEdit() {
       if (STATE.getAndSet(this, WritingState.DONE) != WritingState.DONE) {
         try {

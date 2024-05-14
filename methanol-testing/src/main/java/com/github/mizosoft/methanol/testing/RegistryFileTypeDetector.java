@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.MediaType;
 import java.nio.file.Path;
 import java.nio.file.spi.FileTypeDetector;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -39,12 +40,12 @@ public final class RegistryFileTypeDetector extends FileTypeDetector {
 
   @Override
   public @Nullable String probeContentType(Path path) {
-    var mediaType = registry.get(getExtension(path).toLowerCase());
+    var mediaType = registry.get(getExtension(path).toLowerCase(Locale.ROOT));
     return mediaType != null ? mediaType.toString() : null;
   }
 
   public static void register(String ext, MediaType mediaType) {
-    registry.put(ext.toLowerCase(), requireNonNull(mediaType));
+    registry.put(ext.toLowerCase(Locale.ROOT), requireNonNull(mediaType));
   }
 
   private static String getExtension(Path path) {

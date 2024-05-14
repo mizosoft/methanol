@@ -35,6 +35,7 @@ public class BodyDecoderFactoryProviders {
   private static final ServiceProviders<BodyDecoder.Factory> factories =
       new ServiceProviders<>(BodyDecoder.Factory.class);
 
+  @SuppressWarnings("NonFinalStaticField") // Lazily initialized.
   private static volatile @MonotonicNonNull Map<String, BodyDecoder.Factory> lazyBindings;
 
   private BodyDecoderFactoryProviders() {}

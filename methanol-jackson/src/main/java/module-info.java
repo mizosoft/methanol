@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ module methanol.adapter.jackson {
   requires transitive methanol;
   requires transitive com.fasterxml.jackson.databind;
   requires static org.checkerframework.checker.qual;
+  requires static com.google.errorprone.annotations;
 
   exports com.github.mizosoft.methanol.adapter.jackson;
   exports com.github.mizosoft.methanol.adapter.jackson.internal to

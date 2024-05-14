@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -203,7 +203,7 @@ public final class MediaType {
    * Return {@code true} if this media type is {@code *}{@code /*} or if it has a wildcard subtype.
    */
   public boolean hasWildcard() {
-    return WILDCARD.equals(type) || WILDCARD.equals(subtype);
+    return type.equals(WILDCARD) || subtype.equals(WILDCARD);
   }
 
   /**
@@ -221,8 +221,8 @@ public final class MediaType {
   }
 
   private boolean includesType(String otherType, String otherSubtype) {
-    return WILDCARD.equals(type)
-        || (type.equals(otherType) && (WILDCARD.equals(subtype) || subtype.equals(otherSubtype)));
+    return type.equals(WILDCARD)
+        || (type.equals(otherType) && (subtype.equals(WILDCARD) || subtype.equals(otherSubtype)));
   }
 
   /**
@@ -350,19 +350,19 @@ public final class MediaType {
       String type,
       String subtype,
       Map<String, String> parameters,
-      LinkedHashMap<String, String> newParameters) {
+      Map<String, String> newParameters) {
     requireNonNull(type, "type");
     requireNonNull(subtype, "subtype");
     requireNonNull(parameters, "parameters");
     requireArgument(
-        !WILDCARD.equals(type) || WILDCARD.equals(subtype),
+        !type.equals(WILDCARD) || subtype.equals(WILDCARD),
         "cannot have a wildcard type with a concrete subtype");
     var normalizedType = validateAndNormalizeToken(type);
     var normalizedSubtype = validateAndNormalizeToken(subtype);
     for (var entry : parameters.entrySet()) {
       var normalizedAttribute = validateAndNormalizeToken(entry.getKey());
       String normalizedValue;
-      if (CHARSET_ATTRIBUTE.equals(normalizedAttribute)) {
+      if (normalizedAttribute.equals(CHARSET_ATTRIBUTE)) {
         normalizedValue = validateAndNormalizeToken(entry.getValue());
       } else {
         normalizedValue = entry.getValue();

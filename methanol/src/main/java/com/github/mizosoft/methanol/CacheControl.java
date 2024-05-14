@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@ import static com.github.mizosoft.methanol.internal.cache.HttpDates.parseDeltaSe
 import static java.lang.String.format;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.http.HttpHeaders;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -90,7 +91,7 @@ public final class CacheControl {
   private @MonotonicNonNull Map<String, String> directives;
 
   /**
-   * Map that contains unrecognized (non-standard) directives added via {@link Builder::directive}.
+   * Map that contains unrecognized (non-standard) directives added via {@link Builder#directive}.
    * Empty if this instance was parsed from a string or no unrecognized fields were added.
    */
   private final Map<String, String> unrecognizedAddedDirectives;
@@ -431,6 +432,7 @@ public final class CacheControl {
      *
      * @throws IllegalArgumentException if {@code directive} is invalid
      */
+    @CanIgnoreReturnValue
     public Builder directive(String directive) {
       return directive(directive, "");
     }
@@ -442,6 +444,7 @@ public final class CacheControl {
      * @throws IllegalArgumentException if either of {@code directive} or {@code argument} is
      *     invalid
      */
+    @CanIgnoreReturnValue
     public Builder directive(String directive, String argument) {
       setNormalizedDirective(
           requireValidToken(directive).toLowerCase(Locale.ROOT), requireValidHeaderValue(argument));
@@ -461,6 +464,7 @@ public final class CacheControl {
      * @throws IllegalArgumentException If {@code maxAge} doesn't contain a positive number of
      *     seconds
      */
+    @CanIgnoreReturnValue
     public Builder maxAge(Duration maxAge) {
       this.maxAge = checkAndTruncateDeltaSeconds(maxAge);
       return this;
@@ -472,6 +476,7 @@ public final class CacheControl {
      * @throws IllegalArgumentException If {@code minFresh} doesn't contain a positive number of
      *     seconds
      */
+    @CanIgnoreReturnValue
     public Builder minFresh(Duration minFresh) {
       this.minFresh = checkAndTruncateDeltaSeconds(minFresh);
       return this;
@@ -483,6 +488,7 @@ public final class CacheControl {
      * @throws IllegalArgumentException If {@code maxStale} doesn't contain a positive number of
      *     seconds
      */
+    @CanIgnoreReturnValue
     public Builder maxStale(Duration maxStale) {
       this.maxStale = checkAndTruncateDeltaSeconds(maxStale);
       anyMaxStale = false; // Invalidate any max-stale (if previously set)
@@ -490,6 +496,7 @@ public final class CacheControl {
     }
 
     /** Sets the {@code max-stale} directive to accept any stale response. */
+    @CanIgnoreReturnValue
     public Builder anyMaxStale() {
       this.maxStale = null; // Invalidate current max stale, if any
       anyMaxStale = true;
@@ -502,30 +509,35 @@ public final class CacheControl {
      * @throws IllegalArgumentException If {@code staleIfError} doesn't contain a positive number of
      *     seconds
      */
+    @CanIgnoreReturnValue
     public Builder staleIfError(Duration staleIfError) {
       this.staleIfError = checkAndTruncateDeltaSeconds(staleIfError);
       return this;
     }
 
     /** Sets the {@code no-cache} directive. */
+    @CanIgnoreReturnValue
     public Builder noCache() {
       noCache = true;
       return this;
     }
 
     /** Sets the {@code no-store} directive. */
+    @CanIgnoreReturnValue
     public Builder noStore() {
       noStore = true;
       return this;
     }
 
     /** Sets the {@code no-transform} directive. */
+    @CanIgnoreReturnValue
     public Builder noTransform() {
       noTransform = true;
       return this;
     }
 
     /** Sets the {@code only-if-cached} directive. */
+    @CanIgnoreReturnValue
     public Builder onlyIfCached() {
       onlyIfCached = true;
       return this;
@@ -546,11 +558,11 @@ public final class CacheControl {
     }
 
     private boolean mustHaveArgument(String normalizedDirective) {
-      return "max-age".equals(normalizedDirective)
-          || "min-fresh".equals(normalizedDirective)
-          || "s-maxage".equals(normalizedDirective)
-          || "stale-while-revalidate".equals(normalizedDirective)
-          || "stale-if-error".equals(normalizedDirective);
+      return normalizedDirective.equals("max-age")
+          || normalizedDirective.equals("min-fresh")
+          || normalizedDirective.equals("s-maxage")
+          || normalizedDirective.equals("stale-while-revalidate")
+          || normalizedDirective.equals("stale-if-error");
     }
 
     private boolean setStandardDirective(String normalizedDirective, String argument) {

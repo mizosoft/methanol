@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -437,7 +437,8 @@ public final class CacheInterceptor implements Interceptor {
           }
         } while (tokenizer.consumeDelimiter(','));
       }
-    } catch (IllegalArgumentException ignored) {
+    } catch (IllegalArgumentException e) {
+      logger.log(Level.WARNING, "Exception while parsing candidate E-Tags, assuming a no-match", e);
     }
     return false;
   }
@@ -578,6 +579,7 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     /** Evaluates this exchange and returns an exchange that's ready to serve the response. */
+    @SuppressWarnings("FutureReturnValueIgnored")
     CompletableFuture<Exchange> evaluate() {
       if (cacheResponse != null && cacheResponse.isServable()) {
         return CompletableFuture.completedFuture(this);
@@ -605,6 +607,7 @@ public final class CacheInterceptor implements Interceptor {
           .thenCompose(Exchange::updateCache);
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     private CompletableFuture<Exchange> updateCache() {
       if (networkResponse == null) {
         return CompletableFuture.completedFuture(this);
