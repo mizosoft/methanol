@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import javax.net.ssl.SSLContext;
 import mockwebserver3.MockWebServer;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -112,11 +111,11 @@ public final class MockWebServerExtension
 
     ManagedServers() {}
 
-    MockWebServer newServer(@Nullable Object key, boolean useHttps) throws IOException {
+    MockWebServer newServer(Object key, boolean useHttps) throws IOException {
       return getContext(key).newServer(useHttps);
     }
 
-    Methanol.Builder newClientBuilder(@Nullable Object key, boolean useHttps) {
+    Methanol.Builder newClientBuilder(Object key, boolean useHttps) {
       return getContext(key).newClientBuilder(useHttps);
     }
 

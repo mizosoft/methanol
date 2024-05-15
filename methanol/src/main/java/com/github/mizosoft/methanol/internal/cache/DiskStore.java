@@ -628,7 +628,8 @@ public final class DiskStore implements Store {
    * Files#deleteIfExists(Path)}.
    */
   private static void safeDeleteIfExists(Path file) throws IOException {
-    var filename = file.getFileName().toString();
+    var filenameComponent = file.getFileName();
+    var filename = filenameComponent != null ? filenameComponent.toString() : "";
     if (filename.endsWith(ENTRY_FILE_SUFFIX)) {
       isolatedDeleteIfExists(file);
     } else if (filename.startsWith(ISOLATED_FILE_PREFIX)) {
@@ -701,7 +702,7 @@ public final class DiskStore implements Store {
       requireState(viewer != null, "next() must be called before remove()");
       currentViewer = null;
       try {
-        viewer.removeEntry();
+        castNonNull(viewer).removeEntry();
       } catch (IOException e) {
         logger.log(Level.WARNING, "Exception thrown when removing entry", e);
       }
@@ -874,7 +875,8 @@ public final class DiskStore implements Store {
       var diskEntries = new HashMap<Hash, EntryFiles>();
       try (var stream = Files.newDirectoryStream(directory)) {
         for (var file : stream) {
-          var filename = file.getFileName().toString();
+          var filenameComponent = file.getFileName();
+          var filename = filenameComponent != null ? filenameComponent.toString() : "";
           if (filename.equals(INDEX_FILENAME)
               || filename.equals(TEMP_INDEX_FILENAME)
               || filename.equals(LOCK_FILENAME)) {
@@ -1305,7 +1307,7 @@ public final class DiskStore implements Store {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
       if (obj == this) {
         return true;
       }
@@ -1384,8 +1386,14 @@ public final class DiskStore implements Store {
     }
 
     @Override
-    public boolean equals(Object obj) {
-      return obj == this || (obj instanceof IndexEntry && hash.equals(((IndexEntry) obj).hash));
+    public boolean equals(@Nullable Object obj) {
+      if (obj == this) {
+        return true;
+      }
+      if (!(obj instanceof IndexEntry)) {
+        return false;
+      }
+      return hash.equals(((IndexEntry) obj).hash);
     }
   }
 

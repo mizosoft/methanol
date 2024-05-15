@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.BOUNDARY_MATCHER;
@@ -81,8 +82,10 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
   private MultipartBodyPublisher(List<Part> parts, MediaType mediaType) {
     this.parts = requireNonNull(parts);
     this.mediaType = requireNonNull(mediaType);
-    this.boundary = mediaType.parameters().get(BOUNDARY_ATTRIBUTE);
-    requireArgument(this.boundary != null, "Missing boundary");
+
+    var boundary = mediaType.parameters().get(BOUNDARY_ATTRIBUTE);
+    requireArgument(boundary != null, "Missing boundary");
+    this.boundary = castNonNull(boundary);
   }
 
   /** Returns the boundary of this multipart body. */

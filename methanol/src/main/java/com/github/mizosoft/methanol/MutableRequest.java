@@ -664,7 +664,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     private final Object payload;
     private final MediaType mediaType;
 
-    private @MonotonicNonNull BodyPublisher resolvedBodyPublisher;
+    private @Nullable BodyPublisher resolvedBodyPublisher;
 
     UnresolvedBody(Object payload, MediaType mediaType) {
       this.payload = requireNonNull(payload);

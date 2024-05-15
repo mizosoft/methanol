@@ -345,7 +345,7 @@ public final class ResponseBuilder<T> {
     }
 
     @Override
-    public T body() {
+    public @Nullable T body() {
       return body;
     }
 

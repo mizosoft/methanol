@@ -365,7 +365,7 @@ abstract class AbstractRedisStore<
       requireState(viewer != null, "next() must be called before remove()");
       currentViewer = null;
       try {
-        viewer.removeEntry();
+        castNonNull(viewer).removeEntry();
       } catch (IOException e) {
         // RedisViewer doesn't throw IOExceptions.
         throw new AssertionError(e);

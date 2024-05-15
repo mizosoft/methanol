@@ -48,13 +48,15 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A small DSL for testing {@code HttpResponses}. */
 @SuppressWarnings("UnusedReturnValue")
 public final class ResponseVerifier<T> {
   private final HttpResponse<T> response;
-  private final TrackedResponse<T> trackedResponse;
-  private final CacheAwareResponse<T> cacheAwareResponse;
+  private final @Nullable TrackedResponse<T> trackedResponse;
+  private final @Nullable CacheAwareResponse<T> cacheAwareResponse;
 
   public ResponseVerifier(HttpResponse<T> response) {
     this.response = response;
@@ -219,6 +221,7 @@ public final class ResponseVerifier<T> {
   }
 
   @CanIgnoreReturnValue
+  @EnsuresNonNull({"trackedResponse", "cacheAwareResponse"})
   public ResponseVerifier<T> hasNetworkResponse() {
     assertIsCacheAware();
     assertThat(cacheAwareResponse.networkResponse()).isPresent();
@@ -226,6 +229,7 @@ public final class ResponseVerifier<T> {
   }
 
   @CanIgnoreReturnValue
+  @EnsuresNonNull({"trackedResponse", "cacheAwareResponse"})
   public ResponseVerifier<T> hasCacheResponse() {
     assertIsCacheAware();
     assertThat(cacheAwareResponse.cacheResponse()).isPresent();
@@ -427,11 +431,14 @@ public final class ResponseVerifier<T> {
     return this;
   }
 
+  @EnsuresNonNull("trackedResponse")
   public void assertIsTracked() {
     assertThat(trackedResponse).isNotNull();
   }
 
+  @EnsuresNonNull({"trackedResponse", "cacheAwareResponse"})
   public void assertIsCacheAware() {
+    assertThat(trackedResponse).isNotNull();
     assertThat(cacheAwareResponse).isNotNull();
   }
 
@@ -445,10 +452,12 @@ public final class ResponseVerifier<T> {
   }
 
   public TrackedResponse<T> getTrackedResponse() {
+    assertIsTracked();
     return trackedResponse;
   }
 
   public CacheAwareResponse<T> getCacheAwareResponse() {
+    assertIsCacheAware();
     return cacheAwareResponse;
   }
 
@@ -460,7 +469,7 @@ public final class ResponseVerifier<T> {
     assertThat(headers.allValues(name)).as(name).singleElement().isEqualTo(value);
   }
 
-  private static Certificate[] getPeerCerts(SSLSession session) {
+  private static @Nullable Certificate[] getPeerCerts(SSLSession session) {
     try {
       return session.getPeerCertificates();
     } catch (SSLPeerUnverifiedException e) {

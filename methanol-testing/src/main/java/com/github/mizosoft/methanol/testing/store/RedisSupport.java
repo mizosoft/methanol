@@ -150,7 +150,7 @@ class RedisSupport {
   }
 
   private static final class UnavailableCommandException extends IOException {
-    UnavailableCommandException(String message, Throwable cause) {
+    UnavailableCommandException(String message, @Nullable Throwable cause) {
       super(message, cause);
     }
   }

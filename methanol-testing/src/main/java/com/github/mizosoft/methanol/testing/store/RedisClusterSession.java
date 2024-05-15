@@ -228,7 +228,9 @@ public final class RedisClusterSession implements RedisSession {
           break;
         } catch (RedisCommandExecutionException e) {
           retriesLeft--;
-          if (!e.getMessage().contains("CLUSTERDOWN") || retriesLeft <= 0) {
+
+          var message = e.getMessage();
+          if ((message != null && message.contains("CLUSTERDOWN")) || retriesLeft <= 0) {
             throw e;
           }
 

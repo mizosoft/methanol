@@ -37,6 +37,7 @@ import java.nio.file.WatchService;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.function.Consumer;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 class ForwardingPath implements Path, ForwardingObject {
   private final Path delegate;
@@ -61,17 +62,17 @@ class ForwardingPath implements Path, ForwardingObject {
   }
 
   @Override
-  public Path getRoot() {
+  public @Nullable Path getRoot() {
     return delegate.getRoot();
   }
 
   @Override
-  public Path getFileName() {
+  public @Nullable Path getFileName() {
     return delegate.getFileName();
   }
 
   @Override
-  public Path getParent() {
+  public @Nullable Path getParent() {
     return delegate.getParent();
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -218,12 +218,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   @Override
   public void flush() {
     requireState(!isClosed(), "closed");
-
-    // Notify downstream if flushing produced any signals.
-    State currentState;
-    if (flushBuffer() && (currentState = state.get()) instanceof Subscribed) {
-      ((Subscribed) currentState).subscription.fireOrKeepAliveOnNext();
-    }
+    fireOrKeepAliveOnNextIf(flushBuffer());
   }
 
   @Override
@@ -254,6 +249,14 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       }
     } else {
       FlowSupport.rejectMulticast(subscriber);
+    }
+  }
+
+  @SuppressWarnings("NullAway")
+  private void fireOrKeepAliveOnNextIf(boolean condition) {
+    State currentState;
+    if (condition && (currentState = state.get()) instanceof Subscribed) {
+      ((Subscribed) currentState).subscription.fireOrKeepAliveOnNext();
     }
   }
 
@@ -345,10 +348,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         writeLock.unlock();
       }
 
-      State currentState;
-      if (signalsAvailable && (currentState = state.get()) instanceof Subscribed) {
-        ((Subscribed) currentState).subscription.fireOrKeepAliveOnNext();
-      }
+      fireOrKeepAliveOnNextIf(signalsAvailable);
       return written;
     }
 

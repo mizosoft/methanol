@@ -258,6 +258,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       return false;
     }
 
+    @SuppressWarnings("NullAway")
     private void onReadCompletion(
         ByteBuffer buffer, @Nullable Integer read, @Nullable Throwable exception) {
       assert read != null || exception != null;

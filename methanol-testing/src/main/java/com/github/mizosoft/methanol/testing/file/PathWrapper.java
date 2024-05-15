@@ -46,18 +46,18 @@ class PathWrapper extends ForwardingPath {
   }
 
   @Override
-  public Path getRoot() {
-    return wrap(super.getRoot());
+  public @Nullable Path getRoot() {
+    return wrapNullable(super.getRoot());
   }
 
   @Override
-  public Path getFileName() {
-    return wrap(super.getFileName());
+  public @Nullable Path getFileName() {
+    return wrapNullable(super.getFileName());
   }
 
   @Override
-  public Path getParent() {
-    return wrap(super.getParent());
+  public @Nullable Path getParent() {
+    return wrapNullable(super.getParent());
   }
 
   @Override
@@ -137,7 +137,7 @@ class PathWrapper extends ForwardingPath {
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof Path) || !fileSystem.provider().matchesProvider((Path) other)) {
+    if (!(other instanceof Path) || fileSystem.provider().mismatchesProvider((Path) other)) {
       return false;
     }
 
@@ -150,8 +150,11 @@ class PathWrapper extends ForwardingPath {
     return delegate().hashCode();
   }
 
-  private Path wrap(@Nullable Path delegate) {
-    // Sometimes a resulted Path can be null (e.g. Path::getRoot).
-    return delegate != null ? fileSystem.provider().wrap(delegate) : null;
+  private @Nullable Path wrapNullable(@Nullable Path path) {
+    return path != null ? wrap(path) : null;
+  }
+
+  private Path wrap(Path path) {
+    return fileSystem.provider().wrap(path);
   }
 }

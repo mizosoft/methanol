@@ -121,28 +121,32 @@ public class Utils {
   }
 
   /**
-   * Tries to clone & rethrow {@code throwable} to capture the current stack trace, or throws an
-   * {@code IOException} with {@code throwable} as its cause if cloning is not possible. Return type
-   * is only declared for this method to be conveniently used in a {@code throw} statement.
+   * Tries to clone & rethrow the given {@code ExecutionException}'s cause to capture the current
+   * stack trace, or throws an {@code IOException} with the same cause as the given exception if
+   * cloning is not possible. Return type is only declared for this method to be conveniently used
+   * in a {@code throw} statement.
    */
-  private static RuntimeException rethrowAsyncThrowable(Throwable throwable)
+  private static RuntimeException rethrowExecutionExceptionCause(ExecutionException exception)
       throws IOException, InterruptedException {
-    var clonedThrowable = tryCloneThrowable(throwable);
-    if (clonedThrowable instanceof RuntimeException) {
-      throw (RuntimeException) clonedThrowable;
-    } else if (clonedThrowable instanceof Error) {
-      throw (Error) clonedThrowable;
-    } else if (clonedThrowable instanceof IOException) {
-      throw (IOException) clonedThrowable;
-    } else if (clonedThrowable instanceof InterruptedException) {
-      throw (InterruptedException) clonedThrowable;
+    var clonedCause = tryCloneThrowable(exception.getCause());
+    if (clonedCause instanceof RuntimeException) {
+      throw (RuntimeException) clonedCause;
+    } else if (clonedCause instanceof Error) {
+      throw (Error) clonedCause;
+    } else if (clonedCause instanceof IOException) {
+      throw (IOException) clonedCause;
+    } else if (clonedCause instanceof InterruptedException) {
+      throw (InterruptedException) clonedCause;
     } else {
-      assert clonedThrowable == null;
-      throw new IOException(throwable);
+      throw new IOException(clonedCause);
     }
   }
 
-  private static @Nullable Throwable tryCloneThrowable(Throwable t) {
+  private static @Nullable Throwable tryCloneThrowable(@Nullable Throwable t) {
+    if (t == null) {
+      return null;
+    }
+
     // Clone the main cause in a CompletionException|ExecutionException chain.
     var throwableToClone = getDeepCompletionCause(t);
 
@@ -210,7 +214,7 @@ public class Utils {
     try {
       return future.get();
     } catch (ExecutionException e) {
-      throw rethrowAsyncThrowable(e.getCause());
+      throw rethrowExecutionExceptionCause(e);
     }
   }
 

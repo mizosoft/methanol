@@ -35,11 +35,11 @@ tasks.withType<JavaCompile> {
 
   options.errorprone {
     nullaway {
-      disable()
       annotatedPackages.add("com.github.mizosoft.methanol")
       checkOptionalEmptiness = true
       suggestSuppressions = true
       isAssertsEnabled = true
+      handleTestAssertionLibraries = true
     }
   }
 }

@@ -22,17 +22,21 @@
 
 package com.github.mizosoft.methanol.adapter.jaxb;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
+import static java.util.Objects.requireNonNull;
+
 import javax.xml.bind.JAXBException;
 
 /** Unchecked wrapper over a {@link JAXBException}. */
 public class UncheckedJaxbException extends RuntimeException {
   /** Creates a new {@code UncheckedJaxbException} with the given cause. */
   public UncheckedJaxbException(JAXBException cause) {
-    super(cause);
+    super(requireNonNull(cause));
   }
 
   @Override
+  @SuppressWarnings("UnsynchronizedOverridesSynchronized")
   public JAXBException getCause() {
-    return (JAXBException) super.getCause();
+    return (JAXBException) castNonNull(super.getCause());
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,12 +27,12 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.internal.function.ThrowingSupplier;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A pool of a single {@link RedisSession} instance. */
 class RedisSessionSingletonPool<R extends RedisSession> {
   private final ThrowingSupplier<R> factory;
-  private @MonotonicNonNull R instance;
+  private @Nullable R instance;
 
   RedisSessionSingletonPool(ThrowingSupplier<R> factory) {
     this.factory = requireNonNull(factory);
