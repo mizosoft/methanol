@@ -345,7 +345,8 @@ public final class ResponseBuilder<T> {
     }
 
     @Override
-    public @Nullable T body() {
+    @SuppressWarnings("NullAway")
+    public T body() {
       return body;
     }
 
