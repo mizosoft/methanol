@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.adapter.jackson.flux;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class Point {
   public final int x;
@@ -37,10 +38,11 @@ public class Point {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (!(obj instanceof Point)) {
       return false;
     }
+
     var other = (Point) obj;
     return x == other.x && y == other.y;
   }
@@ -52,6 +54,6 @@ public class Point {
 
   @Override
   public String toString() {
-    return "Point[" + x + ", " + y + "]";
+    return "Point[x=" + x + ", y=" + y + "]";
   }
 }

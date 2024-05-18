@@ -285,11 +285,14 @@ public final class CacheControl {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (obj == this) {
       return true;
     }
-    return obj instanceof CacheControl && directives().equals(((CacheControl) obj).directives());
+    if (!(obj instanceof CacheControl)) {
+      return false;
+    }
+    return directives().equals(((CacheControl) obj).directives());
   }
 
   @Override

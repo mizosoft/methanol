@@ -40,6 +40,7 @@ import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.PushPromise;
 import okhttp3.Headers;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
 import org.testng.annotations.AfterMethod;
@@ -133,10 +134,11 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
       if (!(obj instanceof ResponseHandle)) {
         return false;
       }
+
       var other = ((ResponseHandle) obj).response;
       return response.request().equals(other.request()) && response.body().equals(other.body());
     }

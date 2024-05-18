@@ -107,6 +107,7 @@ import java.util.zip.GZIPOutputStream;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import okio.Buffer;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -839,10 +840,13 @@ class IntegrationTest {
     }
 
     @Override
-    public boolean equals(Object obj) {
-      return obj instanceof CourseJakarta
-          && type == ((CourseJakarta) obj).type
-          && enrolledStudents.equals(((CourseJakarta) obj).enrolledStudents);
+    public boolean equals(@Nullable Object obj) {
+      if (!(obj instanceof CourseJakarta)) {
+        return false;
+      }
+
+      var other = (CourseJakarta) obj;
+      return type == other.type && enrolledStudents.equals(other.enrolledStudents);
     }
 
     @Override
@@ -864,13 +868,16 @@ class IntegrationTest {
     }
 
     @Override
-    public boolean equals(Object obj) {
-      return obj instanceof StudentJakarta && name.equals(((StudentJakarta) obj).name);
+    public boolean equals(@Nullable Object obj) {
+      if (!(obj instanceof StudentJakarta)) {
+        return false;
+      }
+      return name.equals(((StudentJakarta) obj).name);
     }
 
     @Override
     public String toString() {
-      return "StudentJakarta[" + name + "]";
+      return "StudentJakarta[name=" + name + "]";
     }
   }
 
@@ -893,10 +900,13 @@ class IntegrationTest {
     }
 
     @Override
-    public boolean equals(Object obj) {
-      return obj instanceof CourseJavax
-          && type == ((CourseJavax) obj).type
-          && enrolledStudents.equals(((CourseJavax) obj).enrolledStudents);
+    public boolean equals(@Nullable Object obj) {
+      if (!(obj instanceof CourseJavax)) {
+        return false;
+      }
+
+      var other = (CourseJavax) obj;
+      return type == other.type && enrolledStudents.equals(other.enrolledStudents);
     }
 
     @Override
@@ -918,13 +928,16 @@ class IntegrationTest {
     }
 
     @Override
-    public boolean equals(Object obj) {
-      return obj instanceof StudentJavax && name.equals(((StudentJavax) obj).name);
+    public boolean equals(@Nullable Object obj) {
+      if (!(obj instanceof StudentJavax)) {
+        return false;
+      }
+      return name.equals(((StudentJavax) obj).name);
     }
 
     @Override
     public String toString() {
-      return "Student[" + name + "]";
+      return "Student[name=" + name + "]";
     }
   }
 

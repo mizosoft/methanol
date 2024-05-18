@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.reactivestreams.tck.flow.IdentityFlowProcessorVerification;
 import org.testng.SkipException;
 import org.testng.annotations.AfterMethod;
@@ -177,9 +178,11 @@ public class AsyncBodyDecoderTckTest
     }
 
     @Override
-    public boolean equals(Object obj) {
-      return obj instanceof ByteBufferHandle
-          && buffer.rewind().equals(((ByteBufferHandle) obj).buffer.rewind());
+    public boolean equals(@Nullable Object obj) {
+      if (!(obj instanceof ByteBufferHandle)) {
+        return false;
+      }
+      return buffer.rewind().equals(((ByteBufferHandle) obj).buffer.rewind());
     }
   }
 

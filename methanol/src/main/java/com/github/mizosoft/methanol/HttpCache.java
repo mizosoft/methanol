@@ -949,7 +949,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
       if (!(obj instanceof Stats)) {
         return false;
       }

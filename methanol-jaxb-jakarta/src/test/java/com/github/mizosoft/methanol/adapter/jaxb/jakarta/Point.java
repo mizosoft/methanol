@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 import jakarta.xml.bind.annotation.XmlAttribute;
 import jakarta.xml.bind.annotation.XmlRootElement;
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @XmlRootElement(name = "point")
 public class Point {
@@ -45,10 +46,11 @@ public class Point {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (!(obj instanceof Point)) {
       return false;
     }
+
     var other = (Point) obj;
     return x == other.x && y == other.y;
   }
@@ -60,6 +62,6 @@ public class Point {
 
   @Override
   public String toString() {
-    return "Point[" + x + ", " + y + "]";
+    return "Point[x=" + x + ", y=" + y + "]";
   }
 }

@@ -46,6 +46,7 @@ val tckTestCompileOnly: Configuration by configurations.getting {
 }
 
 dependencies {
+  tckTestCompileOnly(libs.checkerframework.qual)
   tckTestImplementation(project(":methanol-testing"))
   tckTestImplementation(libs.testng)
   tckTestImplementation(libs.reactivestreams.tck.flow)

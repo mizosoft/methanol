@@ -136,13 +136,14 @@ class PathWrapper extends ForwardingPath {
   }
 
   @Override
-  public boolean equals(Object other) {
-    if (!(other instanceof Path) || fileSystem.provider().mismatchesProvider((Path) other)) {
+  public boolean equals(@Nullable Object obj) {
+    if (!(obj instanceof PathWrapper)) {
       return false;
     }
 
     // Now we know the given path belongs to us, so we make sure the delegates are the same.
-    return ((PathWrapper) other).delegate().equals(delegate());
+    var other = (PathWrapper) obj;
+    return fileSystem.provider().matchesProvider(other) && delegate().equals(other.delegate());
   }
 
   @Override

@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.springboot.test;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class Point {
   public final int x;
@@ -37,13 +38,13 @@ public final class Point {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (!(obj instanceof Point)) {
       return false;
     }
 
-    var that = (Point) obj;
-    return this.x == that.x && this.y == that.y;
+    var other = (Point) obj;
+    return x == other.x && y == other.y;
   }
 
   @Override
@@ -53,6 +54,6 @@ public final class Point {
 
   @Override
   public String toString() {
-    return "Point[" + "x=" + x + ", " + "y=" + y + ']';
+    return "Point[x=" + x + ", y=" + y + "]";
   }
 }
