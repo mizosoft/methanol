@@ -104,10 +104,20 @@ public final class SubmittableSubscription<T> extends AbstractQueueSubscription<
   }
 
   public int abortCount() {
-    return abortCount;
+    abortLock.lock();
+    try {
+      return abortCount;
+    } finally {
+      abortLock.unlock();
+    }
   }
 
   public boolean flowInterrupted() {
-    return flowInterrupted;
+    abortLock.lock();
+    try {
+      return flowInterrupted;
+    } finally {
+      abortLock.unlock();
+    }
   }
 }
