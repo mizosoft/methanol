@@ -217,15 +217,11 @@ abstract class FileSystemProviderWrapper extends ForwardingFileSystemProvider {
 
   boolean matchesProvider(Path path) {
     return path instanceof PathWrapper
-        && (fileSystemProviderClass.isAssignableFrom(path.getFileSystem().provider().getClass())
-            || path.getFileSystem()
-                .provider()
-                .getClass()
-                .isAssignableFrom(fileSystemProviderClass));
+        && fileSystemProviderClass.isAssignableFrom(path.getFileSystem().provider().getClass());
   }
 
   Path delegate(Path path) {
-    if (matchesProvider(path)) {
+    if (!matchesProvider(path)) {
       throw new ProviderMismatchException();
     }
     return ((PathWrapper) path).delegate();
