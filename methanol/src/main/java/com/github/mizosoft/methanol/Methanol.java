@@ -151,10 +151,7 @@ public final class Methanol extends HttpClient {
     interceptors = List.copyOf(builder.interceptors);
     backendInterceptors = List.copyOf(builder.backendInterceptors);
     caches = builder.caches;
-    mergedInterceptors = mergeInterceptors(builder);
-  }
 
-  private List<Interceptor> mergeInterceptors(BaseBuilder<?> builder) {
     var mergedInterceptors = new ArrayList<>(interceptors);
     mergedInterceptors.add(
         new RequestRewritingInterceptor(
@@ -176,11 +173,10 @@ public final class Methanol extends HttpClient {
     if (!caches.isEmpty()) {
       mergedInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
     }
-
     caches.forEach(cache -> mergedInterceptors.add(cache.interceptor()));
 
     mergedInterceptors.addAll(backendInterceptors);
-    return Collections.unmodifiableList(mergedInterceptors);
+    this.mergedInterceptors = Collections.unmodifiableList(mergedInterceptors);
   }
 
   /**
@@ -640,8 +636,8 @@ public final class Methanol extends HttpClient {
     final List<Interceptor> interceptors = new ArrayList<>();
     final List<Interceptor> backendInterceptors = new ArrayList<>();
 
-    // These fields are put here for convenience, they're only writable by Builder
-    @MonotonicNonNull List<HttpCache> caches = List.of();
+    // These fields are put here for convenience, they're only writable by Builder.
+    List<HttpCache> caches = List.of();
     @MonotonicNonNull Redirect redirectPolicy;
 
     BaseBuilder() {}
