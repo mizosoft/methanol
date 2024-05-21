@@ -31,9 +31,8 @@ checkerFramework {
 }
 
 tasks.withType<JavaCompile> {
-  options.errorprone.isEnabled = project.enableErrorprone
-
   options.errorprone {
+    isEnabled = project.enableErrorprone
     nullaway {
       annotatedPackages.add("com.github.mizosoft.methanol")
       checkOptionalEmptiness = true
