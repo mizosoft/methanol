@@ -26,6 +26,9 @@ import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static java.util.Objects.requireNonNull;
 
 import jakarta.xml.bind.JAXBException;
+import java.io.IOException;
+import java.io.InvalidObjectException;
+import java.io.ObjectInputStream;
 
 /** Unchecked wrapper over a {@link JAXBException}. */
 public class UncheckedJaxbException extends RuntimeException {
@@ -38,5 +41,12 @@ public class UncheckedJaxbException extends RuntimeException {
   @SuppressWarnings("UnsynchronizedOverridesSynchronized")
   public JAXBException getCause() {
     return (JAXBException) castNonNull(super.getCause());
+  }
+
+  private void readObject(ObjectInputStream s) throws IOException, ClassNotFoundException {
+    s.defaultReadObject();
+    var cause = super.getCause();
+    if (!(cause instanceof JAXBException))
+      throw new InvalidObjectException("Cause must be a JAXBException");
   }
 }
