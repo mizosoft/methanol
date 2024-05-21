@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -224,9 +224,10 @@ public final class CacheInterceptor implements Interceptor {
         || "Proxy-Authorization".equalsIgnoreCase(name);
   }
 
+  @SuppressWarnings("NullAway")
   private static boolean isNetworkOrServerError(
-      @Nullable NetworkResponse networkResponse, @Nullable Throwable error) {
-    assert networkResponse != null || error != null;
+      @Nullable NetworkResponse networkResponse, @Nullable Throwable exception) {
+    assert networkResponse != null || exception != null;
     if (networkResponse != null) {
       return HttpStatus.isServerError(networkResponse.get());
     }
@@ -234,7 +235,7 @@ public final class CacheInterceptor implements Interceptor {
     // Situational errors for network usage are considered for stale-if-error treatment, as
     // they're similar to 5xx response codes (but on the client side), which are perfect candidates
     // for stale-if-error.
-    var cause = Utils.getDeepCompletionCause(error); // Might be a CompletionException.
+    var cause = Utils.getDeepCompletionCause(exception); // Might be a CompletionException.
     if (cause instanceof UncheckedIOException) {
       cause = cause.getCause();
     }
@@ -437,7 +438,8 @@ public final class CacheInterceptor implements Interceptor {
           }
         } while (tokenizer.consumeDelimiter(','));
       }
-    } catch (IllegalArgumentException ignored) {
+    } catch (IllegalArgumentException e) {
+      logger.log(Level.WARNING, "Exception while parsing candidate E-Tags, assuming a no-match", e);
     }
     return false;
   }
@@ -578,6 +580,7 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     /** Evaluates this exchange and returns an exchange that's ready to serve the response. */
+    @SuppressWarnings("FutureReturnValueIgnored")
     CompletableFuture<Exchange> evaluate() {
       if (cacheResponse != null && cacheResponse.isServable()) {
         return CompletableFuture.completedFuture(this);
@@ -605,6 +608,7 @@ public final class CacheInterceptor implements Interceptor {
           .thenCompose(Exchange::updateCache);
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     private CompletableFuture<Exchange> updateCache() {
       if (networkResponse == null) {
         return CompletableFuture.completedFuture(this);
@@ -751,6 +755,7 @@ public final class CacheInterceptor implements Interceptor {
      * Handles an error in a network exchange, falling back to the cache response if one that
      * satisfies stale-if-error is available.
      */
+    @SuppressWarnings("NullAway")
     private Exchange handleNetworkOrServerError(
         @Nullable Exchange networkExchange, @Nullable Throwable exception) {
       var networkResponse = networkExchange != null ? networkExchange.networkResponse : null;

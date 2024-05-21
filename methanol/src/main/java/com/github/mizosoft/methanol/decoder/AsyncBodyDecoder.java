@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -212,14 +212,11 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
     @Override
     public ByteBuffer currentSource() {
-      while (!sourceBuffers.isEmpty()) {
-        var head = sourceBuffers.peek();
-        if (head.hasRemaining()) {
-          return head;
-        }
-        sourceBuffers.poll();
+      ByteBuffer head;
+      while ((head = sourceBuffers.peek()) != null && !head.hasRemaining()) {
+        sourceBuffers.remove();
       }
-      return NO_INPUT;
+      return head != null ? head : NO_INPUT;
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,14 +23,6 @@
 package com.github.mizosoft.methanol.testing.file;
 
 /** An object that forwards calls to another and allows retrieving the delegate object. */
-public interface ForwardingObject<T> {
-  T delegate();
-
-  @SuppressWarnings("unchecked")
-  static <T> T delegate(T obj) {
-    if (!(obj instanceof ForwardingObject<?>)) {
-      throw new IllegalArgumentException("not a forwarding object: ");
-    }
-    return ((ForwardingObject<T>) obj).delegate();
-  }
+public interface ForwardingObject {
+  Object delegate();
 }

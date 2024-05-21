@@ -26,6 +26,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
+import com.google.errorprone.annotations.InlineMe;
 import java.lang.reflect.Array;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
@@ -108,6 +109,18 @@ public abstract class TypeRef<T> {
   }
 
   /**
+   * Performs an unchecked cast of the given object into {@code T}, at least ensuring that the given
+   * value's raw type is assignable to the {@link #rawType() raw type} of {@code T}. This method
+   * must be used with care when it comes to generics, where it is absolutely sure that {@code
+   * value} is of that said generic type. For raw types, prefer {@code
+   * typeRef.exactRawType().cast(value)}.
+   */
+  @SuppressWarnings("unchecked")
+  public T uncheckedCast(Object value) {
+    return (T) rawType().cast(value);
+  }
+
+  /**
    * Returns {@code true} if the given object is a {@code TypeRef} and both instances represent the
    * same type.
    */
@@ -170,6 +183,7 @@ public abstract class TypeRef<T> {
    *     Type}
    */
   @Deprecated
+  @InlineMe(replacement = "TypeRef.of(type)", imports = "com.github.mizosoft.methanol.TypeRef")
   public static TypeRef<?> from(Type type) {
     return of(type);
   }
@@ -180,7 +194,6 @@ public abstract class TypeRef<T> {
    * @throws IllegalArgumentException if the given type is not a standard specialization of {@link
    *     Type}
    */
-  @Deprecated
   public static TypeRef<?> of(Type type) {
     return new ExplicitTypeRef<>(type);
   }
@@ -191,6 +204,7 @@ public abstract class TypeRef<T> {
    * @deprecated in favor of the better-named {@link #of(Class)}
    */
   @Deprecated
+  @InlineMe(replacement = "TypeRef.of(rawType)", imports = "com.github.mizosoft.methanol.TypeRef")
   public static <U> TypeRef<U> from(Class<U> rawType) {
     return of(rawType);
   }

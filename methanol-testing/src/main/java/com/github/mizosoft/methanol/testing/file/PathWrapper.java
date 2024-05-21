@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,9 @@
 
 package com.github.mizosoft.methanol.testing.file;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
-import java.nio.file.FileSystem;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Iterator;
@@ -36,29 +37,27 @@ class PathWrapper extends ForwardingPath {
 
   PathWrapper(Path delegate, FileSystemWrapper fileSystem) {
     super(delegate);
-    this.fileSystem = fileSystem;
-
-    assert delegate.getFileSystem().equals(fileSystem.delegate());
+    this.fileSystem = requireNonNull(fileSystem);
   }
 
   @Override
-  public FileSystem getFileSystem() {
+  public FileSystemWrapper getFileSystem() {
     return fileSystem;
   }
 
   @Override
-  public Path getRoot() {
-    return wrap(super.getRoot());
+  public @Nullable Path getRoot() {
+    return wrapNullable(super.getRoot());
   }
 
   @Override
-  public Path getFileName() {
-    return wrap(super.getFileName());
+  public @Nullable Path getFileName() {
+    return wrapNullable(super.getFileName());
   }
 
   @Override
-  public Path getParent() {
-    return wrap(super.getParent());
+  public @Nullable Path getParent() {
+    return wrapNullable(super.getParent());
   }
 
   @Override
@@ -78,7 +77,7 @@ class PathWrapper extends ForwardingPath {
 
   @Override
   public Path resolve(Path other) {
-    return wrap(super.resolve(ForwardingObject.delegate(other)));
+    return wrap(super.resolve(fileSystem.provider().delegate(other)));
   }
 
   @Override
@@ -88,7 +87,7 @@ class PathWrapper extends ForwardingPath {
 
   @Override
   public Path resolveSibling(Path other) {
-    return wrap(super.resolveSibling(ForwardingObject.delegate(other)));
+    return wrap(super.resolveSibling(fileSystem.provider().delegate(other)));
   }
 
   @Override
@@ -98,7 +97,7 @@ class PathWrapper extends ForwardingPath {
 
   @Override
   public Path relativize(Path other) {
-    return wrap(super.relativize(ForwardingObject.delegate(other)));
+    return wrap(super.relativize(fileSystem.provider().delegate(other)));
   }
 
   @Override
@@ -123,29 +122,40 @@ class PathWrapper extends ForwardingPath {
 
   @Override
   public boolean startsWith(Path other) {
-    return super.startsWith(ForwardingObject.delegate(other));
+    return super.startsWith(fileSystem.provider().delegate(other));
   }
 
   @Override
   public boolean endsWith(Path other) {
-    return super.endsWith(ForwardingObject.delegate(other));
+    return super.endsWith(fileSystem.provider().delegate(other));
   }
 
   @Override
   public int compareTo(Path other) {
-    return super.compareTo(ForwardingObject.delegate(other));
+    return super.compareTo(fileSystem.provider().delegate(other));
   }
 
   @Override
-  public boolean equals(Object other) {
-    if (other.getClass() == getClass()) {
-      other = ForwardingObject.delegate(other);
+  public boolean equals(@Nullable Object obj) {
+    if (!(obj instanceof PathWrapper)) {
+      return false;
     }
-    return super.equals(other);
+
+    // Now we know the given path belongs to us, so we make sure the delegates are the same.
+    var other = (PathWrapper) obj;
+    return fileSystem.provider().matchesProvider(other) && delegate().equals(other.delegate());
   }
 
-  private Path wrap(@Nullable Path delegate) {
-    // Sometimes a resulted Path can be null (e.g. Path::getRoot).
-    return delegate != null ? fileSystem.provider().wrap(delegate) : null;
+  @Override
+  public int hashCode() {
+    return delegate().hashCode();
+  }
+
+  private @Nullable Path wrapNullable(@Nullable Path path) {
+    return path != null ? wrap(path) : null;
+  }
+
+  private Path wrap(Path path) {
+    return fileSystem.provider().wrap(path);
   }
 }

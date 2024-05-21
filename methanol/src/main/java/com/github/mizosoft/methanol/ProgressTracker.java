@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ import com.github.mizosoft.methanol.internal.extensions.ForwardingBodyPublisher;
 import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -249,6 +250,7 @@ public final class ProgressTracker {
 
     Builder() {}
 
+    @CanIgnoreReturnValue
     Builder clock(Clock clock) {
       this.clock = requireNonNull(clock);
       return this;
@@ -260,6 +262,7 @@ public final class ProgressTracker {
      *
      * @throws IllegalArgumentException if value is negative
      */
+    @CanIgnoreReturnValue
     public Builder bytesTransferredThreshold(long value) {
       requireArgument(value >= 0, "negative threshold: %s", value);
       this.bytesTransferredThreshold = value;
@@ -271,6 +274,7 @@ public final class ProgressTracker {
      *
      * @throws IllegalArgumentException if duration is not positive
      */
+    @CanIgnoreReturnValue
     public Builder timePassedThreshold(Duration duration) {
       requireNonNull(duration);
       requireNonNegativeDuration(duration);
@@ -282,6 +286,7 @@ public final class ProgressTracker {
      * If set to {@code true} (default), the sequence of progress events will be enclosed between
      * {@code 0%} and {@code 100%} progresses to detect begin and completion events respectively.
      */
+    @CanIgnoreReturnValue
     public Builder enclosedProgress(boolean enclosedProgress) {
       this.enclosedProgress = enclosedProgress;
       return this;
@@ -291,6 +296,7 @@ public final class ProgressTracker {
      * Sets the executor on which {@link Listener} methods are called. If not set, the listener will
      * be signalled inline with body receiver.
      */
+    @CanIgnoreReturnValue
     public Builder executor(Executor executor) {
       this.executor = requireNonNull(executor);
       return this;

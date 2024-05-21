@@ -22,17 +22,31 @@
 
 package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
+import static java.util.Objects.requireNonNull;
+
 import jakarta.xml.bind.JAXBException;
+import java.io.IOException;
+import java.io.InvalidObjectException;
+import java.io.ObjectInputStream;
 
 /** Unchecked wrapper over a {@link JAXBException}. */
 public class UncheckedJaxbException extends RuntimeException {
   /** Creates a new {@code UncheckedJaxbException} with the given cause. */
   public UncheckedJaxbException(JAXBException cause) {
-    super(cause);
+    super(requireNonNull(cause));
   }
 
   @Override
+  @SuppressWarnings("UnsynchronizedOverridesSynchronized")
   public JAXBException getCause() {
-    return (JAXBException) super.getCause();
+    return (JAXBException) castNonNull(super.getCause());
+  }
+
+  private void readObject(ObjectInputStream s) throws IOException, ClassNotFoundException {
+    s.defaultReadObject();
+    var cause = super.getCause();
+    if (!(cause instanceof JAXBException))
+      throw new InvalidObjectException("Cause must be a JAXBException");
   }
 }

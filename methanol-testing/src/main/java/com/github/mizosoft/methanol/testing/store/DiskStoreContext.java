@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -124,7 +124,7 @@ public final class DiskStoreContext extends StoreContext {
         var mockExecutor = mockExecutor();
         mockExecutor.executeDirectly(true); // Allow recursive task submission.
         mockExecutor.runAll();
-      } catch (Exception e) {
+      } catch (RuntimeException e) {
         exceptions.add(e);
       }
     }

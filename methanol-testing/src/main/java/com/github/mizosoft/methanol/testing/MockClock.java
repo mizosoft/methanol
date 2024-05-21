@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -71,7 +71,7 @@ public final class MockClock extends Clock {
   @Override
   public Instant instant() {
     var ticks = autoAdvance;
-    return ticks != null ? getAndAdvance(ticks) : now.get()[0];
+    return ticks != null ? getAndAdvance(ticks) : peekInstant();
   }
 
   public void onTick(@Nullable BiConsumer<Instant, Duration> listener) {
@@ -79,6 +79,7 @@ public final class MockClock extends Clock {
   }
 
   /** Returns the clock's time without advancing it. */
+  @SuppressWarnings("NullAway")
   public Instant peekInstant() {
     return now.get()[0];
   }
@@ -91,6 +92,7 @@ public final class MockClock extends Clock {
     getAndAdvance(ticks);
   }
 
+  @SuppressWarnings("NullAway")
   private Instant getAndAdvance(Duration ticks) {
     while (true) {
       var instant = now.get();

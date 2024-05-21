@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,13 +25,13 @@ package com.github.mizosoft.methanol.testing;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.checkerframework.checker.lock.qual.GuardedBy;
 
 /** A subscription that publishes submitted items. */
 public final class SubmittableSubscription<T> extends AbstractQueueSubscription<T> {
@@ -104,10 +104,20 @@ public final class SubmittableSubscription<T> extends AbstractQueueSubscription<
   }
 
   public int abortCount() {
-    return abortCount;
+    abortLock.lock();
+    try {
+      return abortCount;
+    } finally {
+      abortLock.unlock();
+    }
   }
 
   public boolean flowInterrupted() {
-    return flowInterrupted;
+    abortLock.lock();
+    try {
+      return flowInterrupted;
+    } finally {
+      abortLock.unlock();
+    }
   }
 }

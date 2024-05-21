@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@ import java.nio.channels.FileLock;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-public class ForwardingFileChannel extends FileChannel implements ForwardingObject<FileChannel> {
+public class ForwardingFileChannel extends FileChannel implements ForwardingObject {
   private final FileChannel delegate;
 
   public ForwardingFileChannel(FileChannel delegate) {

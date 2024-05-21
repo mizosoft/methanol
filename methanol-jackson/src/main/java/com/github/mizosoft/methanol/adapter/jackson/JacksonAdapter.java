@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -139,7 +139,8 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       requireCompatibleOrNull(mediaType);
       var objReader = readerFactory.createReader(mapper, objectType);
       return BodySubscribers.mapping(
-          BodySubscribers.ofByteArray(), bytes -> readValueUnchecked(objReader, bytes, mediaType));
+          BodySubscribers.ofByteArray(),
+          bytes -> readValueUnchecked(objReader, bytes, objectType, mediaType));
     }
 
     @Override
@@ -151,14 +152,17 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       var objReader = readerFactory.createReader(mapper, objectType);
       return BodySubscribers.mapping(
           BodySubscribers.ofInputStream(),
-          inputStream -> () -> readValueUnchecked(objReader, inputStream, mediaType));
+          inputStream -> () -> readValueUnchecked(objReader, inputStream, objectType, mediaType));
     }
 
     abstract <T> T readValueUnchecked(
-        ObjectReader reader, byte[] bytes, @Nullable MediaType mediaType);
+        ObjectReader reader, byte[] bytes, TypeRef<T> objectType, @Nullable MediaType mediaType);
 
     abstract <T> T readValueUnchecked(
-        ObjectReader reader, InputStream inputStream, @Nullable MediaType mediaType);
+        ObjectReader reader,
+        InputStream inputStream,
+        TypeRef<T> objectType,
+        @Nullable MediaType mediaType);
   }
 
   static final class TextFormatDecoder extends AbstractDecoder {
@@ -167,18 +171,28 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       super(mapper, readerFactory, mediaTypes);
     }
 
-    <T> T readValueUnchecked(ObjectReader objReader, byte[] bytes, @Nullable MediaType mediaType) {
+    @Override
+    <T> T readValueUnchecked(
+        ObjectReader objReader,
+        byte[] bytes,
+        TypeRef<T> objectType,
+        @Nullable MediaType mediaType) {
       try {
-        return objReader.readValue(new String(bytes, charsetOrUtf8(mediaType)));
+        return objectType.uncheckedCast(
+            objReader.readValue(new String(bytes, charsetOrUtf8(mediaType))));
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
     }
 
+    @Override
     <T> T readValueUnchecked(
-        ObjectReader objReader, InputStream inputStream, @Nullable MediaType mediaType) {
+        ObjectReader objReader,
+        InputStream inputStream,
+        TypeRef<T> objectType,
+        @Nullable MediaType mediaType) {
       try (var reader = new InputStreamReader(inputStream, charsetOrUtf8(mediaType))) {
-        return objReader.readValue(reader);
+        return objectType.uncheckedCast(objReader.readValue(reader));
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -192,9 +206,13 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     }
 
     @Override
-    <T> T readValueUnchecked(ObjectReader objReader, byte[] bytes, @Nullable MediaType mediaType) {
+    <T> T readValueUnchecked(
+        ObjectReader objReader,
+        byte[] bytes,
+        TypeRef<T> objectType,
+        @Nullable MediaType mediaType) {
       try {
-        return objReader.readValue(bytes);
+        return objectType.uncheckedCast(objReader.readValue(bytes));
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -202,9 +220,12 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
 
     @Override
     <T> T readValueUnchecked(
-        ObjectReader objReader, InputStream inputStream, @Nullable MediaType mediaType) {
+        ObjectReader objReader,
+        InputStream inputStream,
+        TypeRef<T> objectType,
+        @Nullable MediaType mediaType) {
       try {
-        return objReader.readValue(inputStream);
+        return objectType.uncheckedCast(objReader.readValue(inputStream));
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }

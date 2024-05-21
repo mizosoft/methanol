@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_VALUE_MATCHER;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
@@ -66,16 +67,19 @@ public class Utils {
         : isValidToken(name);
   }
 
+  @CanIgnoreReturnValue
   public static <S extends CharSequence> S requireValidToken(S token) {
     requireArgument(isValidToken(token), "illegal token: '%s'", token);
     return token;
   }
 
+  @CanIgnoreReturnValue
   public static String requireValidHeaderName(String name) {
     requireArgument(isValidHeaderName(name), "illegal header name: '%s'", name);
     return name;
   }
 
+  @CanIgnoreReturnValue
   public static String requireValidHeaderValue(String value) {
     requireArgument(FIELD_VALUE_MATCHER.allMatch(value), "illegal header value: '%s'", value);
     return value;
@@ -86,12 +90,14 @@ public class Utils {
     requireValidHeaderValue(value);
   }
 
+  @CanIgnoreReturnValue
   public static Duration requirePositiveDuration(Duration duration) {
     requireArgument(
         !(duration.isNegative() || duration.isZero()), "non-positive duration: %s", duration);
     return duration;
   }
 
+  @CanIgnoreReturnValue
   public static Duration requireNonNegativeDuration(Duration duration) {
     requireArgument(!duration.isNegative(), "negative duration: %s", duration);
     return duration;
@@ -115,28 +121,32 @@ public class Utils {
   }
 
   /**
-   * Tries to clone & rethrow {@code throwable} to capture the current stack trace, or throws an
-   * {@code IOException} with {@code throwable} as its cause if cloning is not possible. Return type
-   * is only declared for this method to be conveniently used in a {@code throw} statement.
+   * Tries to clone & rethrow the given {@code ExecutionException}'s cause to capture the current
+   * stack trace, or throws an {@code IOException} with the same cause as the given exception if
+   * cloning is not possible. Return type is only declared for this method to be conveniently used
+   * in a {@code throw} statement.
    */
-  private static RuntimeException rethrowAsyncThrowable(Throwable throwable)
+  private static RuntimeException rethrowExecutionExceptionCause(ExecutionException exception)
       throws IOException, InterruptedException {
-    var clonedThrowable = tryCloneThrowable(throwable);
-    if (clonedThrowable instanceof RuntimeException) {
-      throw (RuntimeException) clonedThrowable;
-    } else if (clonedThrowable instanceof Error) {
-      throw (Error) clonedThrowable;
-    } else if (clonedThrowable instanceof IOException) {
-      throw (IOException) clonedThrowable;
-    } else if (clonedThrowable instanceof InterruptedException) {
-      throw (InterruptedException) clonedThrowable;
+    var clonedCause = tryCloneThrowable(exception.getCause());
+    if (clonedCause instanceof RuntimeException) {
+      throw (RuntimeException) clonedCause;
+    } else if (clonedCause instanceof Error) {
+      throw (Error) clonedCause;
+    } else if (clonedCause instanceof IOException) {
+      throw (IOException) clonedCause;
+    } else if (clonedCause instanceof InterruptedException) {
+      throw (InterruptedException) clonedCause;
     } else {
-      assert clonedThrowable == null;
-      throw new IOException(throwable);
+      throw new IOException(clonedCause);
     }
   }
 
-  private static @Nullable Throwable tryCloneThrowable(Throwable t) {
+  private static @Nullable Throwable tryCloneThrowable(@Nullable Throwable t) {
+    if (t == null) {
+      return null;
+    }
+
     // Clone the main cause in a CompletionException|ExecutionException chain.
     var throwableToClone = getDeepCompletionCause(t);
 
@@ -204,7 +214,7 @@ public class Utils {
     try {
       return future.get();
     } catch (ExecutionException e) {
-      throw rethrowAsyncThrowable(e.getCause());
+      throw rethrowExecutionExceptionCause(e);
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -66,7 +66,9 @@ public class Crawler {
     URI nextUri;
     while (visits < maxVisits && (nextUri = toVisit.poll()) != null) {
       try {
-        if (visit(nextUri)) visits++;
+        if (visit(nextUri)) {
+          visits++;
+        }
       } catch (Exception e) {
         System.out.printf("%s -> (failed, %s)%n", nextUri, e);
       }
@@ -79,7 +81,9 @@ public class Crawler {
   boolean visit(URI uri) throws IOException, InterruptedException {
     if (uri == null
         || !("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
-        || !visited.add(uri)) return false;
+        || !visited.add(uri)) {
+      return false;
+    }
 
     var response =
         client.send(

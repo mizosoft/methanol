@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,6 +44,7 @@ import com.github.mizosoft.methanol.internal.concurrent.SerialExecutor;
 import com.github.mizosoft.methanol.internal.function.ThrowingRunnable;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.internal.util.Compare;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.io.EOFException;
@@ -293,7 +294,7 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public Optional<Viewer> view(String key) throws IOException, InterruptedException {
+  public Optional<Viewer> view(String key) throws IOException {
     requireNonNull(key);
     closeLock.readLock().lock();
     try {
@@ -319,12 +320,12 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public Iterator<Viewer> iterator() throws IOException {
+  public Iterator<Viewer> iterator() {
     return new ConcurrentViewerIterator();
   }
 
   @Override
-  public boolean remove(String key) throws IOException, InterruptedException {
+  public boolean remove(String key) throws IOException {
     requireNonNull(key);
     closeLock.readLock().lock();
     try {
@@ -357,7 +358,7 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public long size() throws IOException {
+  public long size() {
     return size.get();
   }
 
@@ -627,7 +628,8 @@ public final class DiskStore implements Store {
    * Files#deleteIfExists(Path)}.
    */
   private static void safeDeleteIfExists(Path file) throws IOException {
-    var filename = file.getFileName().toString();
+    var filenameComponent = file.getFileName();
+    var filename = filenameComponent != null ? filenameComponent.toString() : "";
     if (filename.endsWith(ENTRY_FILE_SUFFIX)) {
       isolatedDeleteIfExists(file);
     } else if (filename.startsWith(ISOLATED_FILE_PREFIX)) {
@@ -700,7 +702,7 @@ public final class DiskStore implements Store {
       requireState(viewer != null, "next() must be called before remove()");
       currentViewer = null;
       try {
-        viewer.removeEntry();
+        castNonNull(viewer).removeEntry();
       } catch (IOException e) {
         logger.log(Level.WARNING, "Exception thrown when removing entry", e);
       }
@@ -873,7 +875,8 @@ public final class DiskStore implements Store {
       var diskEntries = new HashMap<Hash, EntryFiles>();
       try (var stream = Files.newDirectoryStream(directory)) {
         for (var file : stream) {
-          var filename = file.getFileName().toString();
+          var filenameComponent = file.getFileName();
+          var filename = filenameComponent != null ? filenameComponent.toString() : "";
           if (filename.equals(INDEX_FILENAME)
               || filename.equals(TEMP_INDEX_FILENAME)
               || filename.equals(LOCK_FILENAME)) {
@@ -1045,6 +1048,7 @@ public final class DiskStore implements Store {
       return delayer;
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     void trySchedule() {
       // Decide whether to schedule and when as follows:
       //   - If TOMBSTONE is set, don't schedule anything.
@@ -1073,7 +1077,7 @@ public final class DiskStore implements Store {
 
         var newTask = new RunnableWriteTask(now.plus(delay));
         if (scheduledWriteTask.compareAndSet(currentTask, newTask)) {
-          delayer.delay(newTask.logOnFailure(), delay, indexExecutor);
+          delayer.delay(newTask::runUnchecked, delay, indexExecutor);
           return;
         }
       }
@@ -1149,15 +1153,13 @@ public final class DiskStore implements Store {
         }
       }
 
-      Runnable logOnFailure() {
+      void runUnchecked() {
         // TODO consider disabling the store if failure happens too often.
-        return () -> {
-          try {
-            run();
-          } catch (IOException e) {
-            logger.log(Level.ERROR, "Exception thrown when writing the index", e);
-          }
-        };
+        try {
+          run();
+        } catch (IOException e) {
+          logger.log(Level.ERROR, "Exception thrown when writing the index", e);
+        }
       }
     }
   }
@@ -1305,7 +1307,7 @@ public final class DiskStore implements Store {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
       if (obj == this) {
         return true;
       }
@@ -1384,8 +1386,14 @@ public final class DiskStore implements Store {
     }
 
     @Override
-    public boolean equals(Object obj) {
-      return obj == this || (obj instanceof IndexEntry && hash.equals(((IndexEntry) obj).hash));
+    public boolean equals(@Nullable Object obj) {
+      if (obj == this) {
+        return true;
+      }
+      if (!(obj instanceof IndexEntry)) {
+        return false;
+      }
+      return hash.equals(((IndexEntry) obj).hash);
     }
   }
 
@@ -1518,7 +1526,8 @@ public final class DiskStore implements Store {
 
       try {
         removeEntry(this);
-      } catch (IOException ignored) {
+      } catch (IOException e) {
+        logger.log(Level.WARNING, "Exception while deleting already non-existent entry");
       }
       return null;
     }
@@ -2062,42 +2071,50 @@ public final class DiskStore implements Store {
 
     Builder() {}
 
+    @CanIgnoreReturnValue
     public Builder directory(Path directory) {
       this.directory = requireNonNull(directory);
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder maxSize(long maxSize) {
       requireArgument(maxSize > 0, "expected a positive max size");
       this.maxSize = maxSize;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder executor(Executor executor) {
       this.executor = requireNonNull(executor);
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder appVersion(int appVersion) {
       this.appVersion = appVersion;
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder hasher(Hasher hasher) {
       this.hasher = requireNonNull(hasher);
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder clock(Clock clock) {
       this.clock = requireNonNull(clock);
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder delayer(Delayer delayer) {
       this.delayer = requireNonNull(delayer);
       return this;
     }
 
+    @CanIgnoreReturnValue
     public Builder indexUpdateDelay(Duration duration) {
       this.indexUpdateDelay = requireNonNegativeDuration(duration);
       return this;
@@ -2107,6 +2124,7 @@ public final class DiskStore implements Store {
      * If set, the store complains when the index is accessed or modified either concurrently or not
      * within the index executor.
      */
+    @CanIgnoreReturnValue
     public Builder debugIndexOps(boolean on) {
       this.debugIndexOps = on;
       return this;
@@ -2152,6 +2170,7 @@ public final class DiskStore implements Store {
       return requireNonNullElse(delayer, Delayer.systemDelayer());
     }
 
+    @CanIgnoreReturnValue
     private <T> T ensureSet(T property, String name) {
       requireState(property != null, "expected %s to bet set", name);
       return property;

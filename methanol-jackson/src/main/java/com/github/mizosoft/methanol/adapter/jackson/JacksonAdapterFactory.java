@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,7 @@ import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapter.BinaryFormatD
 import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapter.BinaryFormatEncoder;
 import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapter.TextFormatDecoder;
 import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapter.TextFormatEncoder;
+import com.google.errorprone.annotations.InlineMe;
 import java.io.IOException;
 import java.io.Writer;
 
@@ -48,6 +49,9 @@ public class JacksonAdapterFactory {
    * @deprecated Use {@link #createJsonEncoder()}.
    */
   @Deprecated
+  @InlineMe(
+      replacement = "JacksonAdapterFactory.createJsonEncoder()",
+      imports = "com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory")
   public static Encoder createEncoder() {
     return createJsonEncoder();
   }
@@ -59,6 +63,9 @@ public class JacksonAdapterFactory {
    * @deprecated Use {@link #createJsonEncoder(ObjectMapper)}.
    */
   @Deprecated
+  @InlineMe(
+      replacement = "JacksonAdapterFactory.createJsonEncoder(mapper)",
+      imports = "com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory")
   public static Encoder createEncoder(ObjectMapper mapper) {
     return createJsonEncoder(mapper);
   }
@@ -111,6 +118,9 @@ public class JacksonAdapterFactory {
    * @deprecated Use {@link #createJsonDecoder()}.
    */
   @Deprecated
+  @InlineMe(
+      replacement = "JacksonAdapterFactory.createJsonDecoder()",
+      imports = "com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory")
   public static Decoder createDecoder() {
     return createJsonDecoder();
   }
@@ -122,6 +132,9 @@ public class JacksonAdapterFactory {
    * @deprecated Use {@link #createJsonDecoder(ObjectMapper)}.
    */
   @Deprecated
+  @InlineMe(
+      replacement = "JacksonAdapterFactory.createJsonDecoder(mapper)",
+      imports = "com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory")
   public static Decoder createDecoder(ObjectMapper mapper) {
     return createJsonDecoder(mapper);
   }

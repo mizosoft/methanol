@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,6 @@ import static com.github.mizosoft.methanol.internal.Utils.escapeAndQuoteValueIfN
 import static com.github.mizosoft.methanol.internal.Utils.requireValidToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.QUOTED_PAIR_MATCHER;
-import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
@@ -135,7 +134,7 @@ public final class MediaType {
   private @MonotonicNonNull Charset lazyCharset;
   private boolean isCharsetParsed;
 
-  private @MonotonicNonNull String cachedToString;
+  private @MonotonicNonNull String lazyToString;
 
   private MediaType(String type, String subtype) {
     this.type = type;
@@ -203,7 +202,7 @@ public final class MediaType {
    * Return {@code true} if this media type is {@code *}{@code /*} or if it has a wildcard subtype.
    */
   public boolean hasWildcard() {
-    return WILDCARD.equals(type) || WILDCARD.equals(subtype);
+    return type.equals(WILDCARD) || subtype.equals(WILDCARD);
   }
 
   /**
@@ -221,8 +220,8 @@ public final class MediaType {
   }
 
   private boolean includesType(String otherType, String otherSubtype) {
-    return WILDCARD.equals(type)
-        || (type.equals(otherType) && (WILDCARD.equals(subtype) || subtype.equals(otherSubtype)));
+    return type.equals(WILDCARD)
+        || (type.equals(otherType) && (subtype.equals(WILDCARD) || subtype.equals(otherSubtype)));
   }
 
   /**
@@ -269,8 +268,7 @@ public final class MediaType {
    * @throws IllegalArgumentException if any of the given parameters is invalid
    */
   public MediaType withParameters(Map<String, String> parameters) {
-    requireNonNull(parameters);
-    return create(type, subtype, parameters, new LinkedHashMap<>(this.parameters));
+    return of(type, subtype, parameters, new LinkedHashMap<>(this.parameters));
   }
 
   /**
@@ -287,7 +285,8 @@ public final class MediaType {
     if (!(obj instanceof MediaType)) {
       return false;
     }
-    MediaType other = (MediaType) obj;
+
+    var other = (MediaType) obj;
     return type.equals(other.type)
         && subtype.equals(other.subtype)
         && parameters.equals(other.parameters);
@@ -305,17 +304,16 @@ public final class MediaType {
    */
   @Override
   public String toString() {
-    var result = cachedToString;
-    if (result == null) {
-      result = computeToString();
-      cachedToString = result;
+    var toString = lazyToString;
+    if (toString == null) {
+      toString = computeToString();
+      lazyToString = toString;
     }
-    return result;
+    return toString;
   }
 
   private String computeToString() {
-    var sb = new StringBuilder();
-    sb.append(type).append("/").append(subtype);
+    var sb = new StringBuilder().append(type).append("/").append(subtype);
     parameters.forEach(
         (name, value) ->
             sb.append("; ").append(name).append("=").append(escapeAndQuoteValueIfNeeded(value)));
@@ -343,36 +341,38 @@ public final class MediaType {
    *     invalid
    */
   public static MediaType of(String type, String subtype, Map<String, String> parameters) {
-    return create(type, subtype, parameters, new LinkedHashMap<>());
+    return of(type, subtype, parameters, new LinkedHashMap<>());
   }
 
-  private static MediaType create(
+  private static MediaType of(
       String type,
       String subtype,
-      Map<String, String> parameters,
-      LinkedHashMap<String, String> newParameters) {
-    requireNonNull(type, "type");
-    requireNonNull(subtype, "subtype");
-    requireNonNull(parameters, "parameters");
+      Map<String, String> untrustedParameters,
+      Map<String, String> trustedParameters) {
+    requireNonNull(type);
+    requireNonNull(subtype);
+    requireNonNull(untrustedParameters);
+    requireNonNull(trustedParameters);
     requireArgument(
-        !WILDCARD.equals(type) || WILDCARD.equals(subtype),
-        "cannot have a wildcard type with a concrete subtype");
+        !type.equals(WILDCARD) || subtype.equals(WILDCARD),
+        "Cannot have a wildcard type with a concrete subtype");
     var normalizedType = validateAndNormalizeToken(type);
     var normalizedSubtype = validateAndNormalizeToken(subtype);
-    for (var entry : parameters.entrySet()) {
+    var parameters = new LinkedHashMap<>(trustedParameters);
+    for (var entry : untrustedParameters.entrySet()) {
       var normalizedAttribute = validateAndNormalizeToken(entry.getKey());
       String normalizedValue;
-      if (CHARSET_ATTRIBUTE.equals(normalizedAttribute)) {
+      if (normalizedAttribute.equals(CHARSET_ATTRIBUTE)) {
         normalizedValue = validateAndNormalizeToken(entry.getValue());
       } else {
         normalizedValue = entry.getValue();
         requireArgument(
-            QUOTED_PAIR_MATCHER.allMatch(normalizedValue), "illegal value: '%s'", normalizedValue);
+            QUOTED_PAIR_MATCHER.allMatch(normalizedValue), "Illegal value: '%s'", normalizedValue);
       }
-      newParameters.put(normalizedAttribute, normalizedValue);
+      parameters.put(normalizedAttribute, normalizedValue);
     }
     return new MediaType(
-        normalizedType, normalizedSubtype, Collections.unmodifiableMap(newParameters));
+        normalizedType, normalizedSubtype, Collections.unmodifiableMap(parameters));
   }
 
   private static String validateAndNormalizeToken(String token) {
@@ -408,7 +408,7 @@ public final class MediaType {
       }
       return parameters != null ? of(type, subtype, parameters) : of(type, subtype);
     } catch (IllegalArgumentException | IllegalStateException e) {
-      throw new IllegalArgumentException(format("couldn't parse: '%s'", value), e);
+      throw new IllegalArgumentException("Couldn't parse: '" + value + "'", e);
     }
   }
 }

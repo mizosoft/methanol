@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /** A {@code Store} implementation backed by a Redis Cluster. */
 class RedisClusterStore
-    extends AbstractRedisStore<StatefulRedisClusterConnection<String, ByteBuffer>> {
+    extends AbstractRedisStore<
+        StatefulRedisClusterConnection<String, ByteBuffer>,
+        RedisClusterCommands<String, ByteBuffer>> {
   RedisClusterStore(
       StatefulRedisClusterConnection<String, ByteBuffer> connection,
       RedisConnectionProvider<StatefulRedisClusterConnection<String, ByteBuffer>>
@@ -57,7 +59,6 @@ class RedisClusterStore
         connection, connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion, "");
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   RedisClusterCommands<String, ByteBuffer> commands() {
     return connection.sync();

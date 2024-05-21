@@ -44,7 +44,7 @@ class RedisSupport {
   static final String CLI_CMD = "redis-cli";
 
   @GuardedBy("RedisSupport.class")
-  private static @MonotonicNonNull Set<String> lazyAvailableCommands = null;
+  private static final @MonotonicNonNull Set<String> AVAILABLE_COMMANDS = checkAvailability();
 
   private RedisSupport() {}
 
@@ -59,12 +59,7 @@ class RedisSupport {
   private static synchronized boolean isAvailable(String command) {
     requireArgument(
         command.equals(SERVER_CMD) || command.equals(CLI_CMD), "unrecognized command: %s", command);
-    var availableCommands = lazyAvailableCommands;
-    if (availableCommands == null) {
-      availableCommands = checkAvailability();
-      lazyAvailableCommands = availableCommands;
-    }
-    return availableCommands.contains(command);
+    return AVAILABLE_COMMANDS.contains(command);
   }
 
   private static Set<String> checkAvailability() {
@@ -105,7 +100,7 @@ class RedisSupport {
       }
     } catch (IOException e) {
       reportUnavailability(command, "exception when executing command", e, null);
-      return null; // Never reached.
+      throw new AssertionError("Unreachable");
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -155,7 +150,7 @@ class RedisSupport {
   }
 
   private static final class UnavailableCommandException extends IOException {
-    UnavailableCommandException(String message, Throwable cause) {
+    UnavailableCommandException(String message, @Nullable Throwable cause) {
       super(message, cause);
     }
   }

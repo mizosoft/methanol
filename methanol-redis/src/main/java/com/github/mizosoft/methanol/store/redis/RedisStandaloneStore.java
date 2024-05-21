@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,9 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 /** A {@code Store} implementation backed by a Redis Standalone instance. */
-class RedisStandaloneStore extends AbstractRedisStore<StatefulRedisConnection<String, ByteBuffer>> {
+class RedisStandaloneStore
+    extends AbstractRedisStore<
+        StatefulRedisConnection<String, ByteBuffer>, RedisCommands<String, ByteBuffer>> {
   RedisStandaloneStore(
       StatefulRedisConnection<String, ByteBuffer> connection,
       RedisConnectionProvider<StatefulRedisConnection<String, ByteBuffer>> connectionProvider,
@@ -44,7 +46,6 @@ class RedisStandaloneStore extends AbstractRedisStore<StatefulRedisConnection<St
         String.format("methanol:%d:%d:clock", STORE_VERSION, appVersion));
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   RedisCommands<String, ByteBuffer> commands() {
     return connection.sync();

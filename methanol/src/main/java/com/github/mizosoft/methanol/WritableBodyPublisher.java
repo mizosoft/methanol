@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -46,7 +47,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.checkerframework.checker.lock.qual.GuardedBy;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -218,12 +218,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   @Override
   public void flush() {
     requireState(!isClosed(), "closed");
-
-    // Notify downstream if flushing produced any signals.
-    State currentState;
-    if (flushBuffer() && (currentState = state.get()) instanceof Subscribed) {
-      ((Subscribed) currentState).subscription.fireOrKeepAliveOnNext();
-    }
+    fireOrKeepAliveOnNextIf(flushBuffer());
   }
 
   @Override
@@ -254,6 +249,14 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       }
     } else {
       FlowSupport.rejectMulticast(subscriber);
+    }
+  }
+
+  @SuppressWarnings("NullAway")
+  private void fireOrKeepAliveOnNextIf(boolean condition) {
+    State currentState;
+    if (condition && (currentState = state.get()) instanceof Subscribed) {
+      ((Subscribed) currentState).subscription.fireOrKeepAliveOnNext();
     }
   }
 
@@ -345,10 +348,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         writeLock.unlock();
       }
 
-      State currentState;
-      if (signalsAvailable && (currentState = state.get()) instanceof Subscribed) {
-        ((Subscribed) currentState).subscription.fireOrKeepAliveOnNext();
-      }
+      fireOrKeepAliveOnNextIf(signalsAvailable);
       return written;
     }
 

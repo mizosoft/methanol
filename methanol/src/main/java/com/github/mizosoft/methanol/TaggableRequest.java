@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
@@ -67,54 +68,71 @@ public abstract class TaggableRequest extends HttpRequest {
   public interface Builder extends HttpRequest.Builder {
 
     /** Adds a tag mapped to the given object's runtime type. */
+    @CanIgnoreReturnValue
     Builder tag(Object value);
 
     /** Adds a tag mapped to the given type. */
+    @CanIgnoreReturnValue
     <T> Builder tag(Class<T> type, T value);
 
     /** Adds a tag mapped to the given type. */
+    @CanIgnoreReturnValue
     <T> Builder tag(TypeRef<T> typeRef, T value);
 
     /** Removes the tag associated with the given type. */
+    @CanIgnoreReturnValue
     Builder removeTag(Class<?> type);
 
     /** Removes the tag associated with the given type. */
+    @CanIgnoreReturnValue
     Builder removeTag(TypeRef<?> typeRef);
 
     @Override
+    @CanIgnoreReturnValue
     Builder uri(URI uri);
 
     @Override
+    @CanIgnoreReturnValue
     Builder expectContinue(boolean enable);
 
     @Override
+    @CanIgnoreReturnValue
     Builder version(Version version);
 
     @Override
+    @CanIgnoreReturnValue
     Builder header(String name, String value);
 
     @Override
+    @CanIgnoreReturnValue
     Builder headers(String... headers);
 
     @Override
+    @CanIgnoreReturnValue
     Builder timeout(Duration duration);
 
     @Override
+    @CanIgnoreReturnValue
     Builder setHeader(String name, String value);
 
     @Override
+    @CanIgnoreReturnValue
     Builder GET();
 
     @Override
+    @CanIgnoreReturnValue
     Builder POST(BodyPublisher bodyPublisher);
 
     @Override
+    @CanIgnoreReturnValue
     Builder PUT(BodyPublisher bodyPublisher);
 
     @Override
+    @CanIgnoreReturnValue
     Builder DELETE();
 
     @Override
+    @CanIgnoreReturnValue
     Builder method(String method, BodyPublisher bodyPublisher);
 
     @Override

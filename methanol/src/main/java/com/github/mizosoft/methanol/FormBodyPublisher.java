@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.URLEncoder;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.ByteBuffer;
@@ -137,6 +138,7 @@ public final class FormBodyPublisher implements MimeBodyPublisher {
      * @param name the query's name
      * @param value the query's value
      */
+    @CanIgnoreReturnValue
     public Builder query(String name, String value) {
       requireNonNull(name, "name");
       requireNonNull(value, "value");

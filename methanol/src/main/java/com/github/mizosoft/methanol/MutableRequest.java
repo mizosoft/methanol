@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
@@ -124,11 +125,13 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
    *
    * @throws IllegalArgumentException if the uri's syntax is invalid
    */
+  @CanIgnoreReturnValue
   public MutableRequest uri(String uri) {
     return uri(URI.create(uri));
   }
 
   /** Removes all headers added so far. */
+  @CanIgnoreReturnValue
   public MutableRequest removeHeaders() {
     headersBuilder.clear();
     cachedHeaders = null;
@@ -136,6 +139,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   }
 
   /** Removes any header associated with the given name. */
+  @CanIgnoreReturnValue
   public MutableRequest removeHeader(String name) {
     if (headersBuilder.remove(name)) {
       cachedHeaders = null;
@@ -144,6 +148,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   }
 
   /** Removes all headers matched by the given predicate. */
+  @CanIgnoreReturnValue
   public MutableRequest removeHeadersIf(BiPredicate<String, String> filter) {
     if (headersBuilder.removeIf(filter)) {
       cachedHeaders = null;
@@ -152,6 +157,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   }
 
   /** Adds each of the given {@code HttpHeaders}. */
+  @CanIgnoreReturnValue
   public MutableRequest headers(HttpHeaders headers) {
     headersBuilder.addAll(headers);
     cachedHeaders = null;
@@ -159,11 +165,13 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   }
 
   /** Sets the {@code Cache-Control} header to the given value. */
+  @CanIgnoreReturnValue
   public MutableRequest cacheControl(CacheControl cacheControl) {
     return setHeader("Cache-Control", cacheControl.toString());
   }
 
   /** Calls the given consumer against this request. */
+  @CanIgnoreReturnValue
   public MutableRequest apply(Consumer<? super MutableRequest> consumer) {
     consumer.accept(this);
     return this;
@@ -176,27 +184,32 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   @SuppressWarnings("unchecked")
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest tag(Object value) {
     return tag((Class<Object>) value.getClass(), value);
   }
 
   @Override
+  @CanIgnoreReturnValue
   public <T> MutableRequest tag(Class<T> type, T value) {
     return tag(TypeRef.of(type), value);
   }
 
   @Override
+  @CanIgnoreReturnValue
   public <T> MutableRequest tag(TypeRef<T> typeRef, T value) {
     tags.put(requireNonNull(typeRef), requireNonNull(value));
     return this;
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest removeTag(Class<?> type) {
     return removeTag(TypeRef.of(type));
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest removeTag(TypeRef<?> typeRef) {
     tags.remove(requireNonNull(typeRef));
     return this;
@@ -209,6 +222,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   }
 
   /** Set's the {@link AdapterCodec} to be used for resolving this request's payload. */
+  @CanIgnoreReturnValue
   public MutableRequest adapterCodec(AdapterCodec adapterCodec) {
     this.adapterCodec = requireNonNull(adapterCodec);
     if (body instanceof UnresolvedBody) {
@@ -266,24 +280,28 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
 
   /** Sets this request's {@code URI}. Can be relative or without a host or a scheme. */
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest uri(URI uri) {
     this.uri = requireNonNull(uri);
     return this;
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest expectContinue(boolean enable) {
     expectContinue = enable;
     return this;
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest version(Version version) {
     this.version = requireNonNull(version);
     return this;
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest header(String name, String value) {
     headersBuilder.add(name, value);
     cachedHeaders = null;
@@ -291,6 +309,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest headers(String... headers) {
     requireArgument(
         headers.length > 0 && headers.length % 2 == 0,
@@ -304,12 +323,14 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest timeout(Duration timeout) {
     this.timeout = requirePositiveDuration(timeout);
     return this;
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest setHeader(String name, String value) {
     headersBuilder.set(name, value);
     cachedHeaders = null;
@@ -317,20 +338,24 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest GET() {
     return setMethod("GET", null);
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest POST(BodyPublisher bodyPublisher) {
     return setMethod("POST", requireNonNull(bodyPublisher));
   }
 
+  @CanIgnoreReturnValue
   public MutableRequest POST(Object payload, MediaType mediaType) {
     return setMethod("POST", toBody(payload, mediaType));
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest PUT(BodyPublisher bodyPublisher) {
     return setMethod("PUT", requireNonNull(bodyPublisher));
   }
@@ -339,11 +364,13 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
    * Sets the request method to PUT and sets the payload to the given value. The media type defines
    * the format used for resolving the payload.
    */
+  @CanIgnoreReturnValue
   public MutableRequest PUT(Object payload, MediaType mediaType) {
     return setMethod("PUT", toBody(payload, mediaType));
   }
 
   /** Sets the request method to PATCH and sets the body publisher to the given value. */
+  @CanIgnoreReturnValue
   public MutableRequest PATCH(BodyPublisher bodyPublisher) {
     return setMethod("PATCH", bodyPublisher);
   }
@@ -352,16 +379,19 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
    * Sets the request method to PATCH and sets the payload to the given value. The media type
    * defines the format used for resolving the payload.
    */
+  @CanIgnoreReturnValue
   public MutableRequest PATCH(Object payload, MediaType mediaType) {
     return setMethod("PATCH", toBody(payload, mediaType));
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest DELETE() {
     return setMethod("DELETE", null);
   }
 
   @Override
+  @CanIgnoreReturnValue
   public MutableRequest method(String method, BodyPublisher bodyPublisher) {
     requireArgument(isValidToken(method), "illegal method name: '%s'", method);
     return setMethod(method, requireNonNull(bodyPublisher));
@@ -371,6 +401,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
    * Sets the request method and sets the payload to the given value. The media type defines the
    * format used for resolving this payload.
    */
+  @CanIgnoreReturnValue
   public MutableRequest method(String method, Object payload, MediaType mediaType) {
     requireArgument(isValidToken(method), "illegal method name: '%s'", method);
     return setMethod(method, toBody(payload, mediaType));
@@ -412,6 +443,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
         .map(body -> ((MimeAware) body).mediaType());
   }
 
+  @CanIgnoreReturnValue
   private MutableRequest setMethod(String method, @Nullable Object body) {
     this.method = method;
     this.body = body;
@@ -632,7 +664,7 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     private final Object payload;
     private final MediaType mediaType;
 
-    private @MonotonicNonNull BodyPublisher resolvedBodyPublisher;
+    private @Nullable BodyPublisher resolvedBodyPublisher;
 
     UnresolvedBody(Object payload, MediaType mediaType) {
       this.payload = requireNonNull(payload);

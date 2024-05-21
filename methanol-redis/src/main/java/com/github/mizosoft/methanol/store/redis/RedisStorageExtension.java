@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@ import com.github.mizosoft.methanol.store.redis.AbstractRedisStorageExtension.Re
 import com.github.mizosoft.methanol.store.redis.AbstractRedisStorageExtension.RedisStandaloneStorageExtension;
 import com.github.mizosoft.methanol.store.redis.RedisClientConnectionProvider.RedisClusterConnectionProvider;
 import com.github.mizosoft.methanol.store.redis.RedisClientConnectionProvider.RedisStandaloneConnectionProvider;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -62,17 +63,20 @@ public interface RedisStorageExtension extends InternalStorageExtension {
     Builder() {}
 
     /** Specifies the URI of the Redis Standalone instance. */
+    @CanIgnoreReturnValue
     public Builder standalone(RedisURI redisUri) {
       return standalone(
           new RedisStandaloneConnectionProvider(redisUri, RedisClient.create(), true));
     }
 
     /** Specifies the URI of the Redis Standalone instance and the client used to connect to it. */
+    @CanIgnoreReturnValue
     public Builder standalone(RedisURI redisUri, RedisClient client) {
       return standalone(new RedisStandaloneConnectionProvider(redisUri, client, false));
     }
 
     /** Specifies the connection provider used to connect to the Redis Standalone instance */
+    @CanIgnoreReturnValue
     public Builder standalone(
         RedisConnectionProvider<StatefulRedisConnection<String, ByteBuffer>> connectionProvider) {
       requireNonNull(connectionProvider);
@@ -84,17 +88,20 @@ public interface RedisStorageExtension extends InternalStorageExtension {
     }
 
     /** Specifies one or more URIs for discovering the topology of the Redis Cluster instance. */
+    @CanIgnoreReturnValue
     public Builder cluster(Iterable<RedisURI> redisUris) {
       return cluster(
           new RedisClusterConnectionProvider(RedisClusterClient.create(redisUris), true));
     }
 
     /** Specifies the client used to connect to the Redis Cluster instance. */
+    @CanIgnoreReturnValue
     public Builder cluster(RedisClusterClient client) {
       return cluster(new RedisClusterConnectionProvider(client, false));
     }
 
     /** Specifies the connection provider used to connect to the Redis Cluster instance. */
+    @CanIgnoreReturnValue
     public Builder cluster(
         RedisConnectionProvider<StatefulRedisClusterConnection<String, ByteBuffer>>
             connectionProvider) {
@@ -114,6 +121,7 @@ public interface RedisStorageExtension extends InternalStorageExtension {
      *
      * @throws IllegalArgumentException if the given number of seconds is negative
      */
+    @CanIgnoreReturnValue
     public Builder editorLockTtlSeconds(int editorLockTtlSeconds) {
       requireArgument(editorLockTtlSeconds >= 0, "negative ttl: %d", editorLockTtlSeconds);
       this.editorLockTtlSeconds = editorLockTtlSeconds;
@@ -127,6 +135,7 @@ public interface RedisStorageExtension extends InternalStorageExtension {
      *
      * @throws IllegalArgumentException if the given number of seconds is negative
      */
+    @CanIgnoreReturnValue
     public Builder staleEntryTtlSeconds(int staleEntryTtlSeconds) {
       requireArgument(staleEntryTtlSeconds >= 0, "negative ttl: %d", staleEntryTtlSeconds);
       this.staleEntryTtlSeconds = staleEntryTtlSeconds;

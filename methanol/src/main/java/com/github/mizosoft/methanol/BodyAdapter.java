@@ -52,10 +52,10 @@ public interface BodyAdapter {
   boolean supportsType(TypeRef<?> type);
 
   private static <A extends BodyAdapter> Optional<A> lookupAdapter(
-      List<A> installed, TypeRef<?> objectType, @Nullable MediaType mediaType) {
+      List<A> installed, TypeRef<?> typeRef, @Nullable MediaType mediaType) {
     return installed.stream()
         .filter(
-            a -> a.supportsType(objectType) && (mediaType == null || a.isCompatibleWith(mediaType)))
+            a -> a.supportsType(typeRef) && (mediaType == null || a.isCompatibleWith(mediaType)))
         .findFirst();
   }
 
@@ -82,8 +82,8 @@ public interface BodyAdapter {
      * and media type. If {@code mediaType} is {@code null}, any encoder supporting the given object
      * type is returned
      */
-    static Optional<Encoder> getEncoder(TypeRef<?> objectType, @Nullable MediaType mediaType) {
-      return BodyAdapter.lookupAdapter(installed(), objectType, mediaType);
+    static Optional<Encoder> getEncoder(TypeRef<?> objectTypeRef, @Nullable MediaType mediaType) {
+      return BodyAdapter.lookupAdapter(installed(), objectTypeRef, mediaType);
     }
   }
 

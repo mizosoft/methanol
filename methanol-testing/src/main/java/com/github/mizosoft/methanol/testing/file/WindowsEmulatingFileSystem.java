@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.testing.file;
 
 import com.github.mizosoft.methanol.testing.file.ResourceRecord.ResourceType;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.AsynchronousFileChannel;
@@ -148,10 +149,12 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
 
     private void onClose(Closeable resourceObject) throws IOException {
       synchronized (openFiles) {
-        for (var openFile : openFiles.values()) {
+        for (var iter = openFiles.entrySet().iterator(); iter.hasNext(); ) {
+          var entry = iter.next();
+          var openFile = entry.getValue();
           if (openFile.removeResource(resourceObject)) {
             if (openFile.hasNoResources()) {
-              openFiles.remove(openFile.path);
+              iter.remove();
               if (openFile.markedForDeletion) {
                 super.delete(openFile.path);
               }
@@ -296,6 +299,7 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
         this.path = path;
       }
 
+      @CanIgnoreReturnValue
       <R extends Closeable> R addResource(ResourceRecord record, R resourceObject) {
         resources.add(new OpenFileResource(record, resourceObject));
         return resourceObject;
@@ -348,17 +352,6 @@ public final class WindowsEmulatingFileSystem extends FileSystemWrapper {
       OpenFileResource withPath(Path target) {
         return new OpenFileResource(record.withPath(target), resourceObject);
       }
-    }
-
-    @Override
-    PathWrapper newPathWrapper(Path path, FileSystemWrapper fileSystem) {
-      return new WindowsEmulatingPath(path, fileSystem);
-    }
-  }
-
-  private static final class WindowsEmulatingPath extends PathWrapper {
-    WindowsEmulatingPath(Path delegate, FileSystemWrapper fileSystem) {
-      super(delegate, fileSystem);
     }
   }
 }

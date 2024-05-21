@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,6 +42,7 @@ import com.github.mizosoft.methanol.internal.cache.LocalCache;
 import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -163,7 +164,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
    *     initialization, please use {@link Builder#buildAsync()}.
    */
   @Deprecated(since = "1.8.0", forRemoval = true)
-  public void initialize() throws IOException {}
+  public void initialize() {}
 
   /**
    * Asynchronously {@link #initialize() initializes} this cache
@@ -172,6 +173,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
    *     initialization, please use {@link Builder#buildAsync()}.
    */
   @Deprecated(since = "1.8.0", forRemoval = true)
+  @SuppressWarnings("InlineMeSuggester") // Inlining is meaningless.
   public CompletableFuture<Void> initializeAsync() {
     return CompletableFuture.completedFuture(null);
   }
@@ -947,7 +949,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
       if (!(obj instanceof Stats)) {
         return false;
       }
@@ -989,6 +991,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     Builder() {}
 
     /** Specifies that HTTP responses are to be cached on memory with the given size bound. */
+    @CanIgnoreReturnValue
     public Builder cacheOnMemory(long maxSize) {
       return cacheOn(StorageExtension.memory(maxSize));
     }
@@ -997,10 +1000,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
      * Specifies that HTTP responses are to be persisted on disk, under the given directory, with
      * the given size bound.
      */
+    @CanIgnoreReturnValue
     public Builder cacheOnDisk(Path directory, long maxSize) {
       return cacheOn(StorageExtension.disk(directory, maxSize));
     }
 
+    @CanIgnoreReturnValue
     public Builder cacheOn(StorageExtension storageExtension) {
       requireNonNull(storageExtension);
       requireArgument(
@@ -1012,23 +1017,27 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     /** Sets the executor to be used by the cache. */
+    @CanIgnoreReturnValue
     public Builder executor(Executor executor) {
       this.executor = requireNonNull(executor);
       return this;
     }
 
     /** Sets the cache's {@code StatsRecorder}. */
+    @CanIgnoreReturnValue
     public Builder statsRecorder(StatsRecorder statsRecorder) {
       this.statsRecorder = requireNonNull(statsRecorder);
       return this;
     }
 
     /** Sets the cache's {@code Listener}. */
+    @CanIgnoreReturnValue
     public Builder listener(Listener listener) {
       this.listener = requireNonNull(listener);
       return this;
     }
 
+    @CanIgnoreReturnValue
     Builder clock(Clock clock) {
       this.clock = requireNonNull(clock);
       return this;

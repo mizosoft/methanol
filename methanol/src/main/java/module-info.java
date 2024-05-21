@@ -55,7 +55,9 @@ module methanol {
       methanol.testing;
   exports com.github.mizosoft.methanol.internal to
       methanol.redis,
-      methanol.testing;
+      methanol.testing,
+      methanol.adapter.jaxb.jakarta,
+      methanol.adapter.jaxb;
 
   uses com.github.mizosoft.methanol.BodyDecoder.Factory;
   uses com.github.mizosoft.methanol.BodyAdapter.Encoder;

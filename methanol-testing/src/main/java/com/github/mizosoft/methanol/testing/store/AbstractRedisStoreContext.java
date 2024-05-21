@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreContext {
   private static final int MAX_TAIL_LENGTH = 15;
@@ -51,7 +51,7 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
   }
 
   private final RedisSessionSingletonPool<R> sessionPool;
-  private @MonotonicNonNull R lazySession;
+  private @Nullable R lazySession;
 
   AbstractRedisStoreContext(
       AbstractRedisStoreConfig config, RedisSessionSingletonPool<R> sessionPool) {
@@ -79,6 +79,7 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
     return builder.build().createStore(Runnable::run, config().appVersion());
   }
 
+  @Override
   public AbstractRedisStoreConfig config() {
     return (AbstractRedisStoreConfig) super.config();
   }

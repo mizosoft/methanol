@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,6 +53,7 @@ public final class BodyPublisherVerifier {
     return hasMediaType(MediaType.parse(mediaType));
   }
 
+  @SuppressWarnings("BadImport")
   public BodyPublisherVerifier hasMediaType(MediaType mediaType) {
     assertThat(publisher)
         .isInstanceOf(MimeBodyPublisher.class)

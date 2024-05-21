@@ -31,13 +31,14 @@ checkerFramework {
 }
 
 tasks.withType<JavaCompile> {
-  options.errorprone.isEnabled = project.enableErrorprone
-
   options.errorprone {
+    isEnabled = project.enableErrorprone
     nullaway {
       annotatedPackages.add("com.github.mizosoft.methanol")
-      excludedFieldAnnotations =
-        listOf("org.checkerframework.checker.nullness.qual.MonotonicNonNull")
+      checkOptionalEmptiness = true
+      suggestSuppressions = true
+      isAssertsEnabled = true
+      handleTestAssertionLibraries = true
     }
   }
 }
