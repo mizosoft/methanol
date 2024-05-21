@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -110,7 +110,6 @@ public final class HeaderValueTokenizer {
 
   public boolean consumeDelimiter(char delimiter, boolean requireDelimiter) {
     // 1*( OWS <delimiter> OWS ) | <empty-string> | OWS ; Last OWS if requireDelimiter is false
-    // TODO first consume OWS
     if (hasRemaining()) {
       consumeCharsMatching(OWS_MATCHER);
       if (requireDelimiter) {
