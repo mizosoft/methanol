@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,6 @@ package com.github.mizosoft.methanol;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Thrown when a body subscriber doesn't receive a requested signal within a timeout.
@@ -35,7 +34,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class HttpReadTimeoutException extends HttpTimeoutException {
 
   /** Creates a new {@code HttpReadTimeoutException}. */
-  public HttpReadTimeoutException(@Nullable String message) {
+  public HttpReadTimeoutException(String message) {
     super(message);
   }
 }
