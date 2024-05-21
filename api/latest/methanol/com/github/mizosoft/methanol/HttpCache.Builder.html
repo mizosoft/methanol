@@ -108,8 +108,8 @@ loadScripts(document, 'script');</script>
 <h2>Method Summary</h2>
 <div id="method-summary-table">
 <div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab2" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab2', 3)" class="table-tab">Instance Methods</button><button id="method-summary-table-tab4" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab4', 3)" class="table-tab">Concrete Methods</button></div>
-<div id="method-summary-table.tabpanel" role="tabpanel">
-<div class="summary-table three-column-summary" aria-labelledby="method-summary-table-tab0">
+<div id="method-summary-table.tabpanel" role="tabpanel" aria-labelledby="method-summary-table-tab0">
+<div class="summary-table three-column-summary">
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
@@ -173,14 +173,16 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="cacheOnMemory(long)">
 <h3>cacheOnMemory</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">cacheOnMemory</span><wbr><span class="parameters">(long&nbsp;maxSize)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">cacheOnMemory</span><wbr><span class="parameters">(long&nbsp;maxSize)</span></div>
 <div class="block">Specifies that HTTP responses are to be cached on memory with the given size bound.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="cacheOnDisk(java.nio.file.Path,long)">
 <h3>cacheOnDisk</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">cacheOnDisk</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;directory,
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">cacheOnDisk</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;directory,
  long&nbsp;maxSize)</span></div>
 <div class="block">Specifies that HTTP responses are to be persisted on disk, under the given directory, with
  the given size bound.</div>
@@ -189,27 +191,31 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="cacheOn(com.github.mizosoft.methanol.StorageExtension)">
 <h3>cacheOn</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">cacheOn</span><wbr><span class="parameters">(<a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a>&nbsp;storageExtension)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">cacheOn</span><wbr><span class="parameters">(<a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a>&nbsp;storageExtension)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="executor(java.util.concurrent.Executor)">
 <h3>executor</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">executor</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">executor</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
 <div class="block">Sets the executor to be used by the cache.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="statsRecorder(com.github.mizosoft.methanol.HttpCache.StatsRecorder)">
 <h3>statsRecorder</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">statsRecorder</span><wbr><span class="parameters">(<a href="HttpCache.StatsRecorder.html" title="interface in com.github.mizosoft.methanol">HttpCache.StatsRecorder</a>&nbsp;statsRecorder)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">statsRecorder</span><wbr><span class="parameters">(<a href="HttpCache.StatsRecorder.html" title="interface in com.github.mizosoft.methanol">HttpCache.StatsRecorder</a>&nbsp;statsRecorder)</span></div>
 <div class="block">Sets the cache's <code>StatsRecorder</code>.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="listener(com.github.mizosoft.methanol.HttpCache.Listener)">
 <h3>listener</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">listener</span><wbr><span class="parameters">(<a href="HttpCache.Listener.html" title="interface in com.github.mizosoft.methanol">HttpCache.Listener</a>&nbsp;listener)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></span>&nbsp;<span class="element-name">listener</span><wbr><span class="parameters">(<a href="HttpCache.Listener.html" title="interface in com.github.mizosoft.methanol">HttpCache.Listener</a>&nbsp;listener)</span></div>
 <div class="block">Sets the cache's <code>Listener</code>.</div>
 </section>
 </li>

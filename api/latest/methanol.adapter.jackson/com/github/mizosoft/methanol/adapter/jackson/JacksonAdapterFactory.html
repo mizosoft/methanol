@@ -104,8 +104,8 @@ loadScripts(document, 'script');</script>
 <h2>Method Summary</h2>
 <div id="method-summary-table">
 <div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab1" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab1', 3)" class="table-tab">Static Methods</button><button id="method-summary-table-tab4" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab4', 3)" class="table-tab">Concrete Methods</button><button id="method-summary-table-tab6" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab6', 3)" class="table-tab">Deprecated Methods</button></div>
-<div id="method-summary-table.tabpanel" role="tabpanel">
-<div class="summary-table three-column-summary" aria-labelledby="method-summary-table-tab0">
+<div id="method-summary-table.tabpanel" role="tabpanel" aria-labelledby="method-summary-table-tab0">
+<div class="summary-table three-column-summary">
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
@@ -216,6 +216,8 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="createEncoder()">
 <h3>createEncoder</h3>
 <div class="member-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>
+@InlineMe(replacement="JacksonAdapterFactory.createJsonEncoder()",
+          imports="com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory")
 </span><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span>()</div>
 <div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
 <div class="deprecation-comment">Use <a href="#createJsonEncoder()"><code>createJsonEncoder()</code></a>.</div>
@@ -228,6 +230,8 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="createEncoder(com.fasterxml.jackson.databind.ObjectMapper)">
 <h3>createEncoder</h3>
 <div class="member-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>
+@InlineMe(replacement="JacksonAdapterFactory.createJsonEncoder(mapper)",
+          imports="com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory")
 </span><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span><wbr><span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
 <div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
 <div class="deprecation-comment">Use <a href="#createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)"><code>createJsonEncoder(ObjectMapper)</code></a>.</div>
@@ -277,6 +281,8 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="createDecoder()">
 <h3>createDecoder</h3>
 <div class="member-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>
+@InlineMe(replacement="JacksonAdapterFactory.createJsonDecoder()",
+          imports="com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory")
 </span><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span>()</div>
 <div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
 <div class="deprecation-comment">Use <a href="#createJsonDecoder()"><code>createJsonDecoder()</code></a>.</div>
@@ -289,6 +295,8 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="createDecoder(com.fasterxml.jackson.databind.ObjectMapper)">
 <h3>createDecoder</h3>
 <div class="member-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>
+@InlineMe(replacement="JacksonAdapterFactory.createJsonDecoder(mapper)",
+          imports="com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory")
 </span><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span><wbr><span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
 <div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
 <div class="deprecation-comment">Use <a href="#createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)"><code>createJsonDecoder(ObjectMapper)</code></a>.</div>

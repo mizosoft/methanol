@@ -108,8 +108,8 @@ loadScripts(document, 'script');</script>
 <h2>Method Summary</h2>
 <div id="method-summary-table">
 <div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab2" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab2', 3)" class="table-tab">Instance Methods</button><button id="method-summary-table-tab4" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab4', 3)" class="table-tab">Concrete Methods</button></div>
-<div id="method-summary-table.tabpanel" role="tabpanel">
-<div class="summary-table three-column-summary" aria-labelledby="method-summary-table-tab0">
+<div id="method-summary-table.tabpanel" role="tabpanel" aria-labelledby="method-summary-table-tab0">
+<div class="summary-table three-column-summary">
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
@@ -180,14 +180,16 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="standalone(io.lettuce.core.RedisURI)">
 <h3>standalone</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">standalone</span><wbr><span class="parameters">(io.lettuce.core.RedisURI&nbsp;redisUri)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">standalone</span><wbr><span class="parameters">(io.lettuce.core.RedisURI&nbsp;redisUri)</span></div>
 <div class="block">Specifies the URI of the Redis Standalone instance.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="standalone(io.lettuce.core.RedisURI,io.lettuce.core.RedisClient)">
 <h3>standalone</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">standalone</span><wbr><span class="parameters">(io.lettuce.core.RedisURI&nbsp;redisUri,
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">standalone</span><wbr><span class="parameters">(io.lettuce.core.RedisURI&nbsp;redisUri,
  io.lettuce.core.RedisClient&nbsp;client)</span></div>
 <div class="block">Specifies the URI of the Redis Standalone instance and the client used to connect to it.</div>
 </section>
@@ -195,35 +197,40 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="standalone(com.github.mizosoft.methanol.store.redis.RedisConnectionProvider)">
 <h3>standalone</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">standalone</span><wbr><span class="parameters">(<a href="RedisConnectionProvider.html" title="interface in com.github.mizosoft.methanol.store.redis">RedisConnectionProvider</a>&lt;io.lettuce.core.api.StatefulRedisConnection&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;&nbsp;connectionProvider)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">standalone</span><wbr><span class="parameters">(<a href="RedisConnectionProvider.html" title="interface in com.github.mizosoft.methanol.store.redis">RedisConnectionProvider</a>&lt;io.lettuce.core.api.StatefulRedisConnection&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;&nbsp;connectionProvider)</span></div>
 <div class="block">Specifies the connection provider used to connect to the Redis Standalone instance</div>
 </section>
 </li>
 <li>
 <section class="detail" id="cluster(java.lang.Iterable)">
 <h3>cluster</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">cluster</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Iterable.html" title="class or interface in java.lang" class="external-link">Iterable</a>&lt;io.lettuce.core.RedisURI&gt;&nbsp;redisUris)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">cluster</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Iterable.html" title="class or interface in java.lang" class="external-link">Iterable</a>&lt;io.lettuce.core.RedisURI&gt;&nbsp;redisUris)</span></div>
 <div class="block">Specifies one or more URIs for discovering the topology of the Redis Cluster instance.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="cluster(io.lettuce.core.cluster.RedisClusterClient)">
 <h3>cluster</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">cluster</span><wbr><span class="parameters">(io.lettuce.core.cluster.RedisClusterClient&nbsp;client)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">cluster</span><wbr><span class="parameters">(io.lettuce.core.cluster.RedisClusterClient&nbsp;client)</span></div>
 <div class="block">Specifies the client used to connect to the Redis Cluster instance.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="cluster(com.github.mizosoft.methanol.store.redis.RedisConnectionProvider)">
 <h3>cluster</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">cluster</span><wbr><span class="parameters">(<a href="RedisConnectionProvider.html" title="interface in com.github.mizosoft.methanol.store.redis">RedisConnectionProvider</a>&lt;io.lettuce.core.cluster.api.StatefulRedisClusterConnection&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;&nbsp;connectionProvider)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">cluster</span><wbr><span class="parameters">(<a href="RedisConnectionProvider.html" title="interface in com.github.mizosoft.methanol.store.redis">RedisConnectionProvider</a>&lt;io.lettuce.core.cluster.api.StatefulRedisClusterConnection&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;&nbsp;connectionProvider)</span></div>
 <div class="block">Specifies the connection provider used to connect to the Redis Cluster instance.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="editorLockTtlSeconds(int)">
 <h3>editorLockTtlSeconds</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">editorLockTtlSeconds</span><wbr><span class="parameters">(int&nbsp;editorLockTtlSeconds)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">editorLockTtlSeconds</span><wbr><span class="parameters">(int&nbsp;editorLockTtlSeconds)</span></div>
 <div class="block">Specifies the number of seconds an active entry editor (writer) remains valid. If the given
  number of seconds passes with no signals from the editor (either because of a crash, or it
  was suspended for some reason), any data written by the editor is discarded and the older
@@ -237,7 +244,8 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="staleEntryTtlSeconds(int)">
 <h3>staleEntryTtlSeconds</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">staleEntryTtlSeconds</span><wbr><span class="parameters">(int&nbsp;staleEntryTtlSeconds)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">staleEntryTtlSeconds</span><wbr><span class="parameters">(int&nbsp;staleEntryTtlSeconds)</span></div>
 <div class="block">Specifies the number of seconds a stale entry remains valid for already active readers after
  being deleted or replaced with a new entry by an editor (writer). This gives said readers a
  chance to finish reading the older entry.</div>

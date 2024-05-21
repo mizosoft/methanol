@@ -117,8 +117,8 @@ loadScripts(document, 'script');</script>
 <h2>Method Summary</h2>
 <div id="method-summary-table">
 <div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab2" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab2', 3)" class="table-tab">Instance Methods</button><button id="method-summary-table-tab4" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab4', 3)" class="table-tab">Concrete Methods</button></div>
-<div id="method-summary-table.tabpanel" role="tabpanel">
-<div class="summary-table three-column-summary" aria-labelledby="method-summary-table-tab0">
+<div id="method-summary-table.tabpanel" role="tabpanel" aria-labelledby="method-summary-table-tab0">
+<div class="summary-table three-column-summary">
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
@@ -296,173 +296,203 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="hasUri(java.net.URI)">
 <h3>hasUri</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasUri</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasUri</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasCode(int)">
 <h3>hasCode</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasCode</span><wbr><span class="parameters">(int&nbsp;code)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasCode</span><wbr><span class="parameters">(int&nbsp;code)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasBody(T)">
 <h3 id="hasBody(java.lang.Object)">hasBody</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasBody</span><wbr><span class="parameters">(<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&nbsp;body)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasBody</span><wbr><span class="parameters">(<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&nbsp;body)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasNoBody()">
 <h3>hasNoBody</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasNoBody</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasNoBody</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="containsHeader(java.lang.String,java.lang.String)">
 <h3>containsHeader</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="containsHeader(java.lang.String,long)">
 <h3>containsHeader</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  long&nbsp;value)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="containsHeader(java.lang.String,java.util.List)">
 <h3>containsHeader</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;values)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="doesNotContainHeader(java.lang.String)">
 <h3>doesNotContainHeader</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">doesNotContainHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">doesNotContainHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="containsHeaders(java.util.Map)">
 <h3>containsHeaders</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeaders</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;&nbsp;headers)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeaders</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&gt;&nbsp;headers)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="containsHeadersExactly(java.net.http.HttpHeaders)">
 <h3>containsHeadersExactly</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeadersExactly</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeadersExactly</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="containsHeadersExactlyDiscardingStrippedContentEncoding(java.net.http.HttpHeaders)">
 <h3>containsHeadersExactlyDiscardingStrippedContentEncoding</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeadersExactlyDiscardingStrippedContentEncoding</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsHeadersExactlyDiscardingStrippedContentEncoding</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="containsRequestHeader(java.lang.String,java.lang.String)">
 <h3>containsRequestHeader</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsRequestHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsRequestHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="doesNotContainRequestHeader(java.lang.String)">
 <h3>doesNotContainRequestHeader</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">doesNotContainRequestHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">doesNotContainRequestHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="containsRequestHeadersExactly(java.lang.String...)">
 <h3>containsRequestHeadersExactly</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsRequestHeadersExactly</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>...&nbsp;headers)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsRequestHeadersExactly</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>...&nbsp;headers)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="containsRequestHeadersExactly(java.net.http.HttpHeaders)">
 <h3>containsRequestHeadersExactly</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsRequestHeadersExactly</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">containsRequestHeadersExactly</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="isSecure()">
 <h3>isSecure</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isSecure</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isSecure</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="isNotSecure()">
 <h3>isNotSecure</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isNotSecure</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isNotSecure</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasSslSession(javax.net.ssl.SSLSession)">
 <h3>hasSslSession</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasSslSession</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/javax/net/ssl/SSLSession.html" title="class or interface in javax.net.ssl" class="external-link">SSLSession</a>&nbsp;expected)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasSslSession</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/javax/net/ssl/SSLSession.html" title="class or interface in javax.net.ssl" class="external-link">SSLSession</a>&nbsp;expected)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasSslSession(java.util.Optional)">
 <h3>hasSslSession</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasSslSession</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/javax/net/ssl/SSLSession.html" title="class or interface in javax.net.ssl" class="external-link">SSLSession</a>&gt;&nbsp;expected)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasSslSession</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/javax/net/ssl/SSLSession.html" title="class or interface in javax.net.ssl" class="external-link">SSLSession</a>&gt;&nbsp;expected)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="requestWasSentAt(java.time.Instant)">
 <h3>requestWasSentAt</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">requestWasSentAt</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;expected)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">requestWasSentAt</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;expected)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="responseWasReceivedAt(java.time.Instant)">
 <h3>responseWasReceivedAt</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">responseWasReceivedAt</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;expected)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">responseWasReceivedAt</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;expected)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasCacheStatus(com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus)">
 <h3>hasCacheStatus</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasCacheStatus</span><wbr><span class="parameters">(<a href="../../../../../../../methanol/com/github/mizosoft/methanol/CacheAwareResponse.CacheStatus.html" title="enum class in com.github.mizosoft.methanol">CacheAwareResponse.CacheStatus</a>&nbsp;expected)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasCacheStatus</span><wbr><span class="parameters">(<a href="../../../../../../../methanol/com/github/mizosoft/methanol/CacheAwareResponse.CacheStatus.html" title="enum class in com.github.mizosoft.methanol">CacheAwareResponse.CacheStatus</a>&nbsp;expected)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasNetworkResponse()">
 <h3>hasNetworkResponse</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasNetworkResponse</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+@EnsuresNonNull({"trackedResponse","cacheAwareResponse"})
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasNetworkResponse</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasCacheResponse()">
 <h3>hasCacheResponse</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasCacheResponse</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+@EnsuresNonNull({"trackedResponse","cacheAwareResponse"})
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasCacheResponse</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasNoNetworkResponse()">
 <h3>hasNoNetworkResponse</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasNoNetworkResponse</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasNoNetworkResponse</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasNoCacheResponse()">
 <h3>hasNoCacheResponse</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasNoCacheResponse</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasNoCacheResponse</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="isCacheHit()">
 <h3>isCacheHit</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCacheHit</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCacheHit</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="isExternallyConditionalCacheHit()">
 <h3>isExternallyConditionalCacheHit</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isExternallyConditionalCacheHit</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isExternallyConditionalCacheHit</span>()</div>
 <div class="block">Tests if this is a conditional cache hit resulting from a request that is conditionalized by
  the client and evaluated by the cache, rather than conditionalized by the cache and evaluated
  by the origin. The latter is checked with <a href="#isConditionalHit()"><code>isConditionalHit()</code></a>.</div>
@@ -471,37 +501,43 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="isConditionalHit()">
 <h3>isConditionalHit</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isConditionalHit</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isConditionalHit</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="isConditionalMiss()">
 <h3>isConditionalMiss</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isConditionalMiss</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isConditionalMiss</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="isCacheMiss()">
 <h3>isCacheMiss</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCacheMiss</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCacheMiss</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="isCacheMissWithCacheResponse()">
 <h3>isCacheMissWithCacheResponse</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCacheMissWithCacheResponse</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCacheMissWithCacheResponse</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="isCacheUnsatisfaction()">
 <h3>isCacheUnsatisfaction</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCacheUnsatisfaction</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCacheUnsatisfaction</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="isCachedWithSsl()">
 <h3>isCachedWithSsl</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCachedWithSsl</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">isCachedWithSsl</span>()</div>
 </section>
 </li>
 <li>
@@ -525,19 +561,22 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="hasPreviousResponse()">
 <h3>hasPreviousResponse</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasPreviousResponse</span>()</div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a>&lt;<a href="ResponseVerifier.html" title="type parameter in ResponseVerifier">T</a>&gt;</span>&nbsp;<span class="element-name">hasPreviousResponse</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="assertIsTracked()">
 <h3>assertIsTracked</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">assertIsTracked</span>()</div>
+<div class="member-signature"><span class="annotations">@EnsuresNonNull("trackedResponse")
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">assertIsTracked</span>()</div>
 </section>
 </li>
 <li>
 <section class="detail" id="assertIsCacheAware()">
 <h3>assertIsCacheAware</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">assertIsCacheAware</span>()</div>
+<div class="member-signature"><span class="annotations">@EnsuresNonNull({"trackedResponse","cacheAwareResponse"})
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">assertIsCacheAware</span>()</div>
 </section>
 </li>
 <li>

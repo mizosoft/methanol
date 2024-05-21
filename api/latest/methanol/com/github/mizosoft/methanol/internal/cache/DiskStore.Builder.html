@@ -107,8 +107,8 @@ loadScripts(document, 'script');</script>
 <h2>Method Summary</h2>
 <div id="method-summary-table">
 <div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab2" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab2', 3)" class="table-tab">Instance Methods</button><button id="method-summary-table-tab4" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab4', 3)" class="table-tab">Concrete Methods</button></div>
-<div id="method-summary-table.tabpanel" role="tabpanel">
-<div class="summary-table three-column-summary" aria-labelledby="method-summary-table-tab0">
+<div id="method-summary-table.tabpanel" role="tabpanel" aria-labelledby="method-summary-table-tab0">
+<div class="summary-table three-column-summary">
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
@@ -165,55 +165,64 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="directory(java.nio.file.Path)">
 <h3>directory</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">directory</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;directory)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">directory</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;directory)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="maxSize(long)">
 <h3>maxSize</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">maxSize</span><wbr><span class="parameters">(long&nbsp;maxSize)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">maxSize</span><wbr><span class="parameters">(long&nbsp;maxSize)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="executor(java.util.concurrent.Executor)">
 <h3>executor</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">executor</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">executor</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="appVersion(int)">
 <h3>appVersion</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">appVersion</span><wbr><span class="parameters">(int&nbsp;appVersion)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">appVersion</span><wbr><span class="parameters">(int&nbsp;appVersion)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="hasher(com.github.mizosoft.methanol.internal.cache.DiskStore.Hasher)">
 <h3>hasher</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">hasher</span><wbr><span class="parameters">(<a href="DiskStore.Hasher.html" title="interface in com.github.mizosoft.methanol.internal.cache">DiskStore.Hasher</a>&nbsp;hasher)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">hasher</span><wbr><span class="parameters">(<a href="DiskStore.Hasher.html" title="interface in com.github.mizosoft.methanol.internal.cache">DiskStore.Hasher</a>&nbsp;hasher)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="clock(java.time.Clock)">
 <h3>clock</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">clock</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">clock</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Clock.html" title="class or interface in java.time" class="external-link">Clock</a>&nbsp;clock)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="delayer(com.github.mizosoft.methanol.internal.concurrent.Delayer)">
 <h3>delayer</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">delayer</span><wbr><span class="parameters">(<a href="../concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a>&nbsp;delayer)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">delayer</span><wbr><span class="parameters">(<a href="../concurrent/Delayer.html" title="interface in com.github.mizosoft.methanol.internal.concurrent">Delayer</a>&nbsp;delayer)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="indexUpdateDelay(java.time.Duration)">
 <h3>indexUpdateDelay</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">indexUpdateDelay</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;duration)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">indexUpdateDelay</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;duration)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="debugIndexOps(boolean)">
 <h3>debugIndexOps</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">debugIndexOps</span><wbr><span class="parameters">(boolean&nbsp;on)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></span>&nbsp;<span class="element-name">debugIndexOps</span><wbr><span class="parameters">(boolean&nbsp;on)</span></div>
 <div class="block">If set, the store complains when the index is accessed or modified either concurrently or not
  within the index executor.</div>
 </section>

@@ -112,8 +112,8 @@ loadScripts(document, 'script');</script>
 <h2>Method Summary</h2>
 <div id="method-summary-table">
 <div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab2" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab2', 3)" class="table-tab">Instance Methods</button><button id="method-summary-table-tab4" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab4', 3)" class="table-tab">Concrete Methods</button><button id="method-summary-table-tab6" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab6', 3)" class="table-tab">Deprecated Methods</button></div>
-<div id="method-summary-table.tabpanel" role="tabpanel">
-<div class="summary-table three-column-summary" aria-labelledby="method-summary-table-tab0">
+<div id="method-summary-table.tabpanel" role="tabpanel" aria-labelledby="method-summary-table-tab0">
+<div class="summary-table three-column-summary">
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
@@ -183,7 +183,7 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Adds an interceptor that is invoked right after the client receives a request.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6"><code>final <a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6"><code><a href="#postDecorationInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)" class="member-name-link">postDecorationInterceptor</a><wbr>(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6">
 <div class="block"><span class="deprecated-label">Deprecated.</span>
@@ -233,14 +233,16 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="apply(java.util.function.Consumer)">
 <h3>apply</h3>
-<div class="member-signature"><span class="modifiers">public final</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">apply</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Consumer.html" title="class or interface in java.util.function" class="external-link">Consumer</a>&lt;? super <a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a>&gt;&nbsp;consumer)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public final</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">apply</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Consumer.html" title="class or interface in java.util.function" class="external-link">Consumer</a>&lt;? super <a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a>&gt;&nbsp;consumer)</span></div>
 <div class="block">Calls the given consumer against this builder.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="userAgent(java.lang.String)">
 <h3>userAgent</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">userAgent</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;userAgent)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">userAgent</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;userAgent)</span></div>
 <div class="block">Sets a default <code>User-Agent</code> header to use when sending requests.</div>
 <dl class="notes">
 <dt>Throws:</dt>
@@ -251,21 +253,24 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="baseUri(java.lang.String)">
 <h3>baseUri</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">baseUri</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">baseUri</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri)</span></div>
 <div class="block">Sets the base <code>URI</code> with which each outgoing requests' <code>URI</code> is <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html#resolve(java.net.URI)" title="class or interface in java.net" class="external-link"><code>resolved</code></a>.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="baseUri(java.net.URI)">
 <h3>baseUri</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">baseUri</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">baseUri</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri)</span></div>
 <div class="block">Sets the base <code>URI</code> with which each outgoing requests' <code>URI</code> is <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html#resolve(java.net.URI)" title="class or interface in java.net" class="external-link"><code>resolved</code></a>.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="defaultHeader(java.lang.String,java.lang.String)">
 <h3>defaultHeader</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">defaultHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">defaultHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</span></div>
 <div class="block">Adds the given default header.</div>
 </section>
@@ -273,21 +278,24 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="defaultHeaders(java.lang.String...)">
 <h3>defaultHeaders</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">defaultHeaders</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>...&nbsp;headers)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">defaultHeaders</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>...&nbsp;headers)</span></div>
 <div class="block">Adds each of the given default headers.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="requestTimeout(java.time.Duration)">
 <h3>requestTimeout</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">requestTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;requestTimeout)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">requestTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;requestTimeout)</span></div>
 <div class="block">Sets a default request timeout to use when not explicitly by an <code>HttpRequest</code>.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="headersTimeout(java.time.Duration)">
 <h3>headersTimeout</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">headersTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">headersTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout)</span></div>
 <div class="block">Sets a timeout that will raise an <a href="HttpHeadersTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpHeadersTimeoutException</code></a> if all response headers
  aren't received within the timeout. Timeout events are scheduled using a system-wide <code>
  ScheduledExecutorService</code>.</div>
@@ -296,7 +304,8 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="headersTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)">
 <h3>headersTimeout</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">headersTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout,
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">headersTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</span></div>
 <div class="block">Same as <a href="#headersTimeout(java.time.Duration)"><code>headersTimeout(Duration)</code></a> but specifies a <code>ScheduledExecutorService</code> to
  use for scheduling timeout events.</div>
@@ -305,7 +314,8 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="readTimeout(java.time.Duration)">
 <h3>readTimeout</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">readTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">readTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout)</span></div>
 <div class="block">Sets a default <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)"><code>read
  timeout</code></a>. Timeout events are scheduled using a system-wide <code>ScheduledExecutorService</code>.</div>
 </section>
@@ -313,7 +323,8 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="readTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)">
 <h3>readTimeout</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">readTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout,
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">readTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</span></div>
 <div class="block">Sets a default <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)"><code>readtimeout</code></a> using the given <code>ScheduledExecutorService</code> for
  scheduling timeout events.</div>
@@ -322,14 +333,16 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="adapterCodec(com.github.mizosoft.methanol.AdapterCodec)">
 <h3>adapterCodec</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">adapterCodec</span><wbr><span class="parameters">(<a href="AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a>&nbsp;adapterCodec)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">adapterCodec</span><wbr><span class="parameters">(<a href="AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a>&nbsp;adapterCodec)</span></div>
 <div class="block">Specifies the <code>AdapterCodec</code> with which request and response payloads are mapped.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="autoAcceptEncoding(boolean)">
 <h3>autoAcceptEncoding</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">autoAcceptEncoding</span><wbr><span class="parameters">(boolean&nbsp;autoAcceptEncoding)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">autoAcceptEncoding</span><wbr><span class="parameters">(boolean&nbsp;autoAcceptEncoding)</span></div>
 <div class="block">If enabled, each request will have an <code>Accept-Encoding</code> header appended, the value of
  which is the set of <a href="BodyDecoder.Factory.html#installedBindings()"><code>supported encodings</code></a>. Additionally,
  each received response will be transparently decompressed by wrapping its <code>BodyHandler</code>
@@ -341,7 +354,8 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="interceptor(com.github.mizosoft.methanol.Methanol.Interceptor)">
 <h3>interceptor</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">interceptor</span><wbr><span class="parameters">(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">interceptor</span><wbr><span class="parameters">(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</span></div>
 <div class="block">Adds an interceptor that is invoked right after the client receives a request. The
  interceptor receives the request before it is decorated (its <code>URI</code> resolved with the
  base <code>URI</code>, default headers added, etc...) or handled by an <a href="HttpCache.html" title="class in com.github.mizosoft.methanol"><code>HttpCache</code></a>.</div>
@@ -350,7 +364,8 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="backendInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)">
 <h3>backendInterceptor</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">backendInterceptor</span><wbr><span class="parameters">(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">backendInterceptor</span><wbr><span class="parameters">(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</span></div>
 <div class="block">Adds an interceptor that is invoked right before the request is forwarded to the client's
  backend. The interceptor receives the request after it is handled by all <a href="#interceptor(com.github.mizosoft.methanol.Methanol.Interceptor)"><code>client interceptors</code></a>, is decorated (its <code>URI</code> resolved with
  the base <code>URI</code>, default headers added, etc...) and finally handled by an <a href="HttpCache.html" title="class in com.github.mizosoft.methanol"><code>HttpCache</code></a>. This implies that backend interceptors aren't called if network isn't used,
@@ -361,8 +376,10 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="postDecorationInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)">
 <h3>postDecorationInterceptor</h3>
-<div class="member-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Deprecated.html#since()" title="class or interface in java.lang" class="external-link">since</a>="1.5.0")
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">postDecorationInterceptor</span><wbr><span class="parameters">(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</span></div>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Deprecated.html" title="class or interface in java.lang" class="external-link">@Deprecated</a>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Deprecated.html#since()" title="class or interface in java.lang" class="external-link">since</a>="1.5.0")
+@InlineMe(replacement="this.backendInterceptor(interceptor)")
+</span><span class="modifiers">public final</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">postDecorationInterceptor</span><wbr><span class="parameters">(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</span></div>
 <div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
 <div class="deprecation-comment">Use <a href="#backendInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)"><code>backendInterceptor(Interceptor)</code></a></div>
 </div>
