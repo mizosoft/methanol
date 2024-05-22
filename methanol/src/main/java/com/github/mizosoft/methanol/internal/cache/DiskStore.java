@@ -1907,7 +1907,8 @@ public final class DiskStore implements Store {
     /**
      * A reader that uses scattering API for bulk reads. This reader relies on the file's native
      * position (scattering API doesn't take a position argument). As such, it must only be created
-     * once.
+     * once. Note that this restriction makes scattering reads inefficient, or not as efficient, for
+     * readers created after the first reader.
      */
     private final class ScatteringDiskEntryReader extends DiskEntryReader {
       ScatteringDiskEntryReader() {}
@@ -1929,12 +1930,12 @@ public final class DiskStore implements Store {
           }
 
           var boundedDsts = new ArrayList<ByteBuffer>(dsts.size());
-          long maxReadable = 0;
+          long maxReadableSoFar = 0;
           for (var dst : dsts) {
-            int dstMaxReadable = (int) Math.min(dst.remaining(), available - maxReadable);
+            int dstMaxReadable = (int) Math.min(dst.remaining(), available - maxReadableSoFar);
             boundedDsts.add(dst.duplicate().limit(dst.position() + dstMaxReadable));
-            maxReadable = Math.addExact(maxReadable, dstMaxReadable);
-            if (maxReadable >= available) {
+            maxReadableSoFar = Math.addExact(maxReadableSoFar, dstMaxReadable);
+            if (maxReadableSoFar >= available) {
               break;
             }
           }
