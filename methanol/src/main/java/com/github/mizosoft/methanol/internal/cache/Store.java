@@ -218,10 +218,12 @@ public interface Store extends Closeable, Flushable {
         int read;
         while (dst.hasRemaining()) {
           read = read(dst);
-          if (read != -1) {
+          if (read >= 0) {
             totalRead = Math.addExact(totalRead, read);
-          } else {
+          } else if (totalRead > 0) {
             break outerLoop;
+          } else {
+            return -1;
           }
         }
       }
