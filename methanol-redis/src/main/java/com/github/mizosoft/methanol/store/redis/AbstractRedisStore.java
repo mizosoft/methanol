@@ -184,9 +184,7 @@ abstract class AbstractRedisStore<
             .asBoolean(
                 List.of(entryKey, editorLockKey, wipDataKey),
                 List.of(
-                    encodeLong(targetEntryVersion),
-                    UTF_8.encode(editorId),
-                    encodeLong(editorLockTtlSeconds)));
+                    encode(editorId), encode(targetEntryVersion), encode(editorLockTtlSeconds)));
     return isLockAcquired
         ? Optional.of(new RedisEditor(key, entryKey, editorLockKey, wipDataKey, editorId))
         : Optional.empty();
@@ -217,8 +215,7 @@ abstract class AbstractRedisStore<
     return Script.REMOVE
         .evalOn(commands())
         .asBoolean(
-            List.of(entryKey),
-            List.of(encodeLong(targetEntryVersion), encodeLong(staleEntryTtlSeconds)));
+            List.of(entryKey), List.of(encode(targetEntryVersion), encode(staleEntryTtlSeconds)));
   }
 
   @Override
@@ -294,8 +291,16 @@ abstract class AbstractRedisStore<
     requireState(!closed, "Store is closed");
   }
 
-  static ByteBuffer encodeLong(long value) {
+  static ByteBuffer encode(int value) {
+    return UTF_8.encode(Integer.toString(value));
+  }
+
+  static ByteBuffer encode(long value) {
     return UTF_8.encode(Long.toString(value));
+  }
+
+  static ByteBuffer encode(String value) {
+    return UTF_8.encode(value);
   }
 
   static long decodeLong(ByteBuffer value) {
@@ -414,10 +419,7 @@ abstract class AbstractRedisStore<
               .evalOn(commands)
               .asMulti(
                   List.of(),
-                  List.of(
-                      UTF_8.encode(cursor),
-                      UTF_8.encode(pattern),
-                      encodeLong(ITERATOR_SCAN_LIMIT))));
+                  List.of(encode(cursor), encode(pattern), encode(ITERATOR_SCAN_LIMIT))));
     }
   }
 
@@ -565,10 +567,7 @@ abstract class AbstractRedisStore<
             .evalOn(commands())
             .asValue(
                 List.of(dataKey),
-                List.of(
-                    encodeLong(position),
-                    encodeLong(inclusiveLimit),
-                    encodeLong(staleEntryTtlSeconds)));
+                List.of(encode(position), encode(inclusiveLimit), encode(staleEntryTtlSeconds)));
       }
 
       private ByteBuffer fallbackToStaleEntryIfEmptyRange(
@@ -629,12 +628,12 @@ abstract class AbstractRedisStore<
               .asMulti(
                   List.of(entryKey, editorLockKey, wipDataKey),
                   List.of(
-                      UTF_8.encode(editorId),
+                      encode(editorId),
                       metadata,
-                      encodeLong(writer.dataSizeIfWritten()), // clientDataSize
-                      encodeLong(staleEntryTtlSeconds),
-                      encodeLong(1), // commit
-                      UTF_8.encode(clockKey)));
+                      encode(writer.dataSizeIfWritten()), // clientDataSize
+                      encode(staleEntryTtlSeconds),
+                      encode(1), // commit
+                      encode(clockKey)));
 
       if (response.get(0).toString().equals("0")) {
         throw new IllegalStateException(response.get(1).toString());
@@ -649,12 +648,12 @@ abstract class AbstractRedisStore<
             .asBoolean(
                 List.of(entryKey, editorLockKey, wipDataKey),
                 List.of(
-                    UTF_8.encode(editorId),
+                    encode(editorId),
                     EMPTY_BUFFER, // metadata
-                    encodeLong(-1), // clientDataSize
-                    encodeLong(staleEntryTtlSeconds),
-                    encodeLong(0), // commit
-                    UTF_8.encode(clockKey)));
+                    encode(-1), // clientDataSize
+                    encode(staleEntryTtlSeconds),
+                    encode(0), // commit
+                    encode(clockKey)));
       }
     }
 
@@ -700,7 +699,7 @@ abstract class AbstractRedisStore<
             .evalOn(commands())
             .asLong(
                 List.of(editorLockKey, wipDataKey),
-                List.of(src, UTF_8.encode(editorId), encodeLong(editorLockTtlSeconds)));
+                List.of(src, encode(editorId), encode(editorLockTtlSeconds)));
       }
 
       long dataSizeIfWritten() {
