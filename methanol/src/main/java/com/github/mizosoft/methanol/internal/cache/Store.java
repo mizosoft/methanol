@@ -49,6 +49,7 @@ import java.util.concurrent.Executor;
  * <p>{@code Store} is thread-safe and is suitable for concurrent use.
  */
 public interface Store extends Closeable, Flushable {
+
   /** Returns this store's max size in bytes. */
   long maxSize();
 
@@ -219,7 +220,7 @@ public interface Store extends Closeable, Flushable {
         while (dst.hasRemaining()) {
           read = read(dst);
           if (read >= 0) {
-            totalRead = Math.addExact(totalRead, read);
+            totalRead += read;
           } else if (totalRead > 0) {
             break outerLoop;
           } else {
@@ -248,8 +249,7 @@ public interface Store extends Closeable, Flushable {
       long totalWritten = 0;
       for (var src : srcs) {
         while (src.hasRemaining()) {
-          int written = write(src);
-          totalWritten = Math.addExact(totalWritten, written);
+          totalWritten += write(src);
         }
       }
       return totalWritten;
