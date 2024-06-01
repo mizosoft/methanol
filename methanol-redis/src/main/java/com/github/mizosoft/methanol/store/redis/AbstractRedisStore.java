@@ -45,6 +45,8 @@ import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -121,9 +123,9 @@ abstract class AbstractRedisStore<
       int appVersion,
       String clockKey) {
     requireArgument(
-        editorLockTtlSeconds > 0, "expected a positive ttl, got: %s", editorLockTtlSeconds);
+        editorLockTtlSeconds > 0, "Expected a positive ttl, got: %s", editorLockTtlSeconds);
     requireArgument(
-        staleEntryTtlSeconds > 0, "expected a positive ttl, got: %s", staleEntryTtlSeconds);
+        staleEntryTtlSeconds > 0, "Expected a positive ttl, got: %s", staleEntryTtlSeconds);
     this.connection = requireNonNull(connection);
     this.connectionProvider = requireNonNull(connectionProvider);
     this.editorLockTtlSeconds = editorLockTtlSeconds;
@@ -283,7 +285,7 @@ abstract class AbstractRedisStore<
   public void flush() {}
 
   String toEntryKey(String key) {
-    requireArgument(key.indexOf('}') == -1, "key contains a right brace");
+    requireArgument(key.indexOf('}') == -1, "Malformed key");
     return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, key);
   }
 
@@ -329,8 +331,8 @@ abstract class AbstractRedisStore<
 
     /**
      * The set of keys seen so far, tracked to avoid returning duplicate entries. This may happen
-     * when the SCAN command returns iterates over the same key multiple times, which is possible if
-     * the keyspace changes due to how SCAN is implemented.
+     * when the SCAN command iterates over the same key multiple times, which is possible if the
+     * keyspace changes due to how SCAN is implemented.
      */
     private final Set<String> seenKeys;
 
@@ -468,11 +470,12 @@ abstract class AbstractRedisStore<
 
     /**
      * Whether the data we're currently reading is expected to be fresh. Data becomes stale when it
-     * is edited or removed. On such case, the data key is renamed and set to expire. If we detect
+     * is edited or removed. In such case, the data key is renamed and set to expire. If we detect
      * that while reading, this field's value is set to {@code false} and never changes. After which
      * reading is always directed to the stale data entry.
      */
-    private volatile boolean readingFreshEntry = true;
+    @GuardedBy("lock")
+    private boolean readingFreshEntry = true;
 
     RedisViewer(
         @Nullable String key,
@@ -529,34 +532,55 @@ abstract class AbstractRedisStore<
     public void close() {}
 
     private final class RedisEntryReader implements EntryReader {
+      /**
+       * A conservative value for the maximum length to create an array with that won't result in an
+       * OutOfMemoryException. Taken from JDK's ArraysSupport.SOFT_MAX_ARRAY_LENGTH.
+       */
+      private static final int SOFT_MAX_ARRAY_LENGTH = Integer.MAX_VALUE - 8;
+
       private final Lock lock = new ReentrantLock();
 
       @GuardedBy("lock")
-      private long streamPosition;
+      private long position;
 
       RedisEntryReader() {}
 
       @Override
       public int read(ByteBuffer dst) {
-        requireNonNull(dst);
-        requireState(!closed.get(), "closed");
+        return (int) read(List.of(dst));
+      }
 
+      @Override
+      public long read(List<ByteBuffer> dsts) {
+        requireNonNull(dsts);
+        requireState(!closed.get(), "Closed");
         lock.lock();
         try {
-          long position = streamPosition;
+          long position = this.position;
           if (position >= dataSize) {
             return -1;
           }
 
-          long inclusiveLimit = position + dst.remaining() - 1;
-          var range =
-              readingFreshEntry
-                  ? commands().getrange(dataKey, position, inclusiveLimit)
-                  : getStaleRange(position, inclusiveLimit);
-          var correctedRange = fallbackToStaleEntryIfEmptyRange(range, position, inclusiveLimit);
-          int read = Utils.copyRemaining(correctedRange, dst);
-          streamPosition += read;
-          return read;
+          // We have to be careful when calling GETRANGE with `long` arguments as the returned value
+          // is a ByteBuffer, which has an `int` capacity. Thus, we break readableByteCount into
+          // chunks that can be stored in a ByteBuffer.
+          long totalRead = 0;
+          long readableByteCount = Utils.remaining(dsts);
+          while (readableByteCount > 0) {
+            int safelyReadableByteCount = (int) Math.min(readableByteCount, SOFT_MAX_ARRAY_LENGTH);
+            long inclusiveLimit = position + safelyReadableByteCount - 1;
+            var range =
+                readingFreshEntry
+                    ? commands().getrange(dataKey, position, inclusiveLimit)
+                    : getStaleRange(position, inclusiveLimit);
+            var correctedRange = fallbackToStaleEntryIfEmptyRange(range, position, inclusiveLimit);
+            for (var dst : dsts) {
+              totalRead += Utils.copyRemaining(correctedRange, dst);
+            }
+            this.position += totalRead;
+            readableByteCount -= safelyReadableByteCount;
+          }
+          return totalRead;
         } finally {
           lock.unlock();
         }
@@ -570,15 +594,16 @@ abstract class AbstractRedisStore<
                 List.of(encode(position), encode(inclusiveLimit), encode(staleEntryTtlSeconds)));
       }
 
+      @GuardedBy("lock")
       private ByteBuffer fallbackToStaleEntryIfEmptyRange(
           ByteBuffer range, long position, long inclusiveLimit) {
         if (range.hasRemaining()) {
           return range;
         }
 
-        requireState(readingFreshEntry, "stale entry data expired");
+        requireState(readingFreshEntry, "Stale entry data expired");
         var staleRange = getStaleRange(position, inclusiveLimit);
-        requireState(staleRange.hasRemaining(), "entry data removed");
+        requireState(staleRange.hasRemaining(), "Entry data removed");
         readingFreshEntry = false;
         return staleRange;
       }
@@ -620,8 +645,7 @@ abstract class AbstractRedisStore<
     @Override
     public void commit(ByteBuffer metadata) {
       requireNonNull(metadata);
-      requireState(closed.compareAndSet(false, true), "closed");
-
+      requireState(closed.compareAndSet(false, true), "Closed");
       var response =
           Script.COMMIT
               .evalOn(commands())
@@ -670,36 +694,49 @@ abstract class AbstractRedisStore<
 
       @Override
       public int write(ByteBuffer src) {
-        requireNonNull(src);
-        requireState(!closed.get(), "closed");
+        return (int) write(List.of(src));
+      }
 
+      @Override
+      public long write(List<ByteBuffer> srcs) {
+        requireNonNull(srcs);
+        requireState(!closed.get(), "closed");
         lock.lock();
         try {
-          int remaining = src.remaining();
-          long serverTotalBytesWritten = append(src);
-          if (serverTotalBytesWritten < 0) {
+          long serverBytesWritten = append(srcs);
+          if (serverBytesWritten < 0) {
             RedisEditor.this.close();
-            throw new IllegalStateException("editor lock expired");
+            throw new IllegalStateException("Editor lock expired");
           }
 
-          totalBytesWritten += remaining;
-          if (totalBytesWritten != serverTotalBytesWritten) {
+          long written = 0;
+          for (var src : srcs) {
+            int position = src.position();
+            int limit = src.limit();
+            src.position(limit);
+            written += position <= limit ? limit - position : 0;
+          }
+
+          totalBytesWritten += written;
+          if (totalBytesWritten != serverBytesWritten) {
             RedisEditor.this.close();
-            throw new IllegalStateException("editor data inconsistency");
+            throw new IllegalStateException("Server/client data inconsistency");
           }
           isWritten = true;
-          return remaining;
+          return written;
         } finally {
           lock.unlock();
         }
       }
 
-      private long append(ByteBuffer src) {
+      private long append(List<ByteBuffer> srcs) {
+        var args =
+            new ArrayList<>(
+                List.of(encode(editorId), encode(editorLockTtlSeconds), encode(srcs.size())));
+        args.addAll(srcs);
         return Script.APPEND
             .evalOn(commands())
-            .asLong(
-                List.of(editorLockKey, wipDataKey),
-                List.of(src, encode(editorId), encode(editorLockTtlSeconds)));
+            .asLong(List.of(editorLockKey, wipDataKey), Collections.unmodifiableList(args));
       }
 
       long dataSizeIfWritten() {
