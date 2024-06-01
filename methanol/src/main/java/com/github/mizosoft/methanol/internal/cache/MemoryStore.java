@@ -414,7 +414,7 @@ public final class MemoryStore implements Store {
   private static final class MemoryEditor implements Editor {
     private final Entry entry;
     private final Lock lock = new ReentrantLock();
-    private final ByteArrayOutputStream data = new ByteArrayOutputStream();
+    private final MemoryBuffer data = new MemoryBuffer();
 
     @GuardedBy("lock")
     private boolean isDataWritten;
@@ -430,12 +430,6 @@ public final class MemoryStore implements Store {
 
     @Override
     public EntryWriter writer() {
-      lock.lock();
-      try {
-        isDataWritten = true;
-      } finally {
-        lock.unlock();
-      }
       return this::write;
     }
 
@@ -443,15 +437,8 @@ public final class MemoryStore implements Store {
       requireNonNull(src);
       lock.lock();
       try {
-        int remaining = src.remaining();
-        if (src.hasArray()) {
-          data.write(src.array(), src.arrayOffset() + src.position(), src.remaining());
-        } else {
-          var srcCopy = new byte[src.remaining()];
-          src.get(srcCopy);
-          data.write(srcCopy, 0, srcCopy.length);
-        }
-        return remaining;
+        isDataWritten = true;
+        return data.write(src);
       } finally {
         lock.unlock();
       }
@@ -474,6 +461,28 @@ public final class MemoryStore implements Store {
     @Override
     public void close() {
       entry.commit(this, null, null);
+    }
+
+    private static final class MemoryBuffer extends ByteArrayOutputStream {
+      MemoryBuffer() {}
+
+      int write(ByteBuffer src) {
+        int position = src.position();
+        int limit = src.limit();
+        int remaining = position <= limit ? limit - position : 0;
+        if (remaining <= buf.length - count) {
+          // Fast path, copy to buf directly.
+          src.get(buf, count, remaining);
+          count += remaining;
+        } else {
+          // Unfortunately, we can't call super.ensureCapacity(remaining) as it's private, so we'll
+          // have to pass the data to super as a byte[] copy.
+          var srcCopy = new byte[remaining];
+          src.get(srcCopy);
+          super.write(srcCopy, 0, srcCopy.length);
+        }
+        return remaining;
+      }
     }
   }
 }
