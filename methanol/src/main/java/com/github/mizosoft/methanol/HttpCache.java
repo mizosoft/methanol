@@ -42,6 +42,7 @@ import com.github.mizosoft.methanol.internal.cache.LocalCache;
 import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
+import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutor;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.Flushable;
 import java.io.IOException;
@@ -61,7 +62,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -1043,18 +1043,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return this;
     }
 
-    private Executor getOrCreateExecutor(boolean[] isDefaultExecutor) {
+    private Executor getExecutor(boolean[] isDefaultExecutor) {
       var executor = this.executor;
       if (executor != null) {
         isDefaultExecutor[0] = false;
       } else {
-        executor =
-            Executors.newCachedThreadPool(
-                r -> {
-                  var t = new Thread(r);
-                  t.setDaemon(true);
-                  return t;
-                });
+        executor = FallbackExecutor.get();
         isDefaultExecutor[0] = true;
       }
       return executor;
@@ -1069,7 +1063,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     /** Creates a new {@code HttpCache}. */
     public HttpCache build() {
       var isDefaultExecutor = new boolean[1];
-      var executor = getOrCreateExecutor(isDefaultExecutor);
+      var executor = getExecutor(isDefaultExecutor);
       var store = storageExtension().createStore(executor, CACHE_VERSION);
       return new HttpCache(store, executor, isDefaultExecutor[0], this);
     }
@@ -1077,7 +1071,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     /** Asynchronously creates a new {@code HttpCache}. */
     public CompletableFuture<HttpCache> buildAsync() {
       var isDefaultExecutor = new boolean[1];
-      var executor = getOrCreateExecutor(isDefaultExecutor);
+      var executor = getExecutor(isDefaultExecutor);
       return storageExtension()
           .createStoreAsync(executor, CACHE_VERSION)
           .thenApply(store -> new HttpCache(store, executor, isDefaultExecutor[0], this));
