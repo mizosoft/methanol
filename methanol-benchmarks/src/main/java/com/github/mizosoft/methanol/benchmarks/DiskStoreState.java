@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,7 @@ public class DiskStoreState {
 
   void setupStore(long maxSize) throws Exception {
     context =
-        StoreContext.from(
+        StoreContext.of(
             new DiskStoreConfig(
                 maxSize, 1, FileSystemType.SYSTEM, Execution.ASYNC, 1, false, false, false));
     store = context.createAndRegisterStore();

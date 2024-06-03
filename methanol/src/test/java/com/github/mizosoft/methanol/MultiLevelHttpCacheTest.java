@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,6 +44,8 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   private CacheSetup memoryCacheSetup;
   private CacheSetup diskCacheSetup;
 
+  // TODO add redis cacheSetup
+
   @BeforeEach
   void setUp() throws IOException {
     memoryCacheSetup = createCacheSetup(StoreType.MEMORY);
@@ -53,7 +55,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   }
 
   private CacheSetup createCacheSetup(StoreType storeType) throws IOException {
-    var storeContext = StoreContext.from(StoreConfig.createDefault(storeType));
+    var storeContext = StoreContext.of(StoreConfig.createDefault(storeType));
     var cache =
         HttpCache.newBuilder()
             .executor(executor)

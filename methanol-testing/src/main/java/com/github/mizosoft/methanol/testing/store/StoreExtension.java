@@ -310,7 +310,7 @@ public final class StoreExtension
     ManagedStores() {}
 
     StoreContext createContext(Object key, StoreConfig config) throws IOException {
-      var context = StoreContext.from(config);
+      var context = StoreContext.of(config);
       contexts.computeIfAbsent(key, __ -> new ArrayList<>()).add(context);
       return context;
     }
@@ -326,7 +326,7 @@ public final class StoreExtension
     StoreContext getOrCreateContext(Object key, StoreConfig config) throws IOException {
       var contexts = this.contexts.computeIfAbsent(key, __ -> new ArrayList<>());
       if (contexts.isEmpty()) {
-        contexts.add(StoreContext.from(config));
+        contexts.add(StoreContext.of(config));
       }
       return contexts.get(0);
     }

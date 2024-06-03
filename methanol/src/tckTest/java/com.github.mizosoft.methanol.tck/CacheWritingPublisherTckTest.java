@@ -81,7 +81,7 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
   @BeforeMethod
   public void setMeUp() throws IOException {
     executorContext = new ExecutorContext();
-    storeContext = StoreContext.from(storeConfig);
+    storeContext = StoreContext.of(storeConfig);
     store = storeContext.createAndRegisterStore();
   }
 
