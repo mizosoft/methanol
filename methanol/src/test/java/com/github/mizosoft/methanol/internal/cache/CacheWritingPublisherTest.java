@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +43,7 @@ import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittablePublisher;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -236,6 +237,8 @@ class CacheWritingPublisherTest {
     upstream.submit(List.of(ByteBuffer.allocate(1)));
     upstream.close();
     failingEditor.awaitDiscard();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.errorCount()).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -301,7 +304,7 @@ class CacheWritingPublisherTest {
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher =
         new CacheWritingPublisher(
-            upstream, new TestEditor(), EMPTY_BUFFER, executor, Listener.disabled(), true);
+            upstream, new TestEditor(), EMPTY_BUFFER, executor, Listener.disabled(), true, false);
     var subscriber = new TestSubscriber<List<ByteBuffer>>().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(2);
@@ -314,8 +317,117 @@ class CacheWritingPublisherTest {
     assertThat(upstream.firstSubscription().currentDemand()).isEqualTo(2);
   }
 
+  // TODO replace ForkJoinPool
+
+  @ExecutorParameterizedTest
+  void waitForCommitToCompleteDownstreamWithWrite_stochasticWithAsyncExecutors(Executor executor) {
+    var calledWrite = new CountDownLatch(1);
+    var editor =
+        new TestEditor() {
+          @Override
+          int write(ByteBuffer src) {
+            calledWrite.countDown();
+            return super.write(src);
+          }
+        };
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher =
+        new CacheWritingPublisher(
+            upstream,
+            editor,
+            EMPTY_BUFFER,
+            ForkJoinPool.commonPool(),
+            Listener.disabled(),
+            false,
+            true);
+    var subscriber = new StringSubscriber();
+    publisher.subscribe(subscriber);
+    upstream.submitAll(toResponseBody("Pikachu"));
+    upstream.close();
+    awaitUninterruptibly(calledWrite);
+    assertThat(subscriber.completionCount()).isZero();
+
+    editor.awaitCommit();
+    subscriber.awaitCompletion();
+    assertThat(editor.writtenString()).isEqualTo("Pikachu");
+    assertThat(subscriber.completionCount()).isOne();
+    assertThat(subscriber.bodyToString()).isEqualTo("Pikachu");
+  }
+
+  @ExecutorParameterizedTest
+  void waitForCommitWithFailedWrite_stochasticWithAsyncExecutors(Executor executor) {
+    var calledWrite = new CountDownLatch(1);
+    var editor =
+        new TestEditor() {
+          @Override
+          int write(ByteBuffer src) {
+            calledWrite.countDown();
+            throw new TestException();
+          }
+        };
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher =
+        new CacheWritingPublisher(
+            upstream,
+            editor,
+            EMPTY_BUFFER,
+            ForkJoinPool.commonPool(),
+            Listener.disabled(),
+            false,
+            true);
+    var subscriber = new StringSubscriber();
+    publisher.subscribe(subscriber);
+    upstream.submitAll(toResponseBody("Pikachu"));
+    awaitUninterruptibly(calledWrite);
+    assertThat(subscriber.completionCount()).isZero();
+
+    editor.awaitDiscard();
+
+    upstream.close();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.errorCount()).isZero();
+    assertThat(subscriber.bodyToString()).isEqualTo("Pikachu");
+  }
+
+  @ExecutorParameterizedTest
+  void waitForCommitWithDelayedFailedWrite_stochasticWithAsyncExecutors(Executor executor) {
+    var calledWrite = new CountDownLatch(1);
+    var leaveWrite = new CountDownLatch(1);
+    var editor =
+        new TestEditor() {
+          @Override
+          int write(ByteBuffer src) {
+            calledWrite.countDown();
+            awaitUninterruptibly(leaveWrite);
+            throw new TestException();
+          }
+        };
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher =
+        new CacheWritingPublisher(
+            upstream,
+            editor,
+            EMPTY_BUFFER,
+            ForkJoinPool.commonPool(),
+            Listener.disabled(),
+            false,
+            true);
+    var subscriber = new StringSubscriber();
+    publisher.subscribe(subscriber);
+    upstream.submitAll(toResponseBody("Pikachu"));
+    upstream.close();
+    awaitUninterruptibly(calledWrite);
+    assertThat(subscriber.completionCount()).isZero();
+
+    leaveWrite.countDown();
+    editor.awaitDiscard();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.errorCount()).isZero();
+    assertThat(subscriber.bodyToString()).isEqualTo("Pikachu");
+  }
+
   private static Iterable<List<ByteBuffer>> toResponseBody(String str) {
-    return () -> new ByteBufferListIterator(UTF_8.encode(str), 2, 2);
+    return () -> new ByteBufferListIterator(UTF_8.encode(str), 1, TestUtils.BUFFERS_PER_LIST);
   }
 
   private static class TestEditor implements Editor {
@@ -417,6 +529,12 @@ class CacheWritingPublisherTest {
     }
 
     String writtenString() {
+      lock.lock();
+      try {
+        assertThat(committed).withFailMessage("Not commited").isTrue();
+      } finally {
+        lock.unlock();
+      }
       return UTF_8.decode(writtenBytes()).toString();
     }
   }
