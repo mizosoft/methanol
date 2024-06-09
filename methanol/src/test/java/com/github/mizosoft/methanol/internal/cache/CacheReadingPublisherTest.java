@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.cache;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -64,43 +65,82 @@ class CacheReadingPublisherTest {
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
-  void cacheStringInMemory(Executor executor, Store store)
+  void readSmallStringFromMemory(Executor executor, Store store)
       throws IOException, InterruptedException {
-    testCachingAsString(executor, store);
+    testReadingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
-  void cacheStringOnDisk(Executor executor, Store store) throws IOException, InterruptedException {
-    testCachingAsString(executor, store);
+  void readSmallStringFromDisk(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testReadingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
-  void cacheStringOnRedisStandalone(Executor executor, Store store)
+  void readSmallStringFromRedisStandalone(Executor executor, Store store)
       throws IOException, InterruptedException {
-    testCachingAsString(executor, store);
+    testReadingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
-  void cacheStringOnRedisCluster(Executor executor, Store store)
+  void readSmallStringFromRedisCluster(Executor executor, Store store)
       throws IOException, InterruptedException {
-    testCachingAsString(executor, store);
+    testReadingSmallString(store, executor);
   }
 
-  private void testCachingAsString(Executor executor, Store store)
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
+  void readLargeStringFromMemory(Executor executor, Store store)
       throws IOException, InterruptedException {
-    write(store, "e1", "", "Cache me please!");
+    testReadingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
+  void readLargeStringFromDisk(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testReadingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
+  void readLargeStringFromRedisStandalone(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testReadingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
+  void readLargeStringFromRedisCluster(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testReadingLargeString(store, executor);
+  }
+
+  private void testReadingSmallString(Store store, Executor executor)
+      throws IOException, InterruptedException {
+    testReadingString("Cache me please!", store, executor);
+  }
+
+  private void testReadingLargeString(Store store, Executor executor)
+      throws IOException, InterruptedException {
+    testReadingString("Cache me please!".repeat(100_000), store, executor);
+  }
+
+  private void testReadingString(String str, Store store, Executor executor)
+      throws IOException, InterruptedException {
+    write(store, "e1", "", str);
 
     var publisher = new CacheReadingPublisher(view(store, "e1"), executor);
     var subscriber = BodySubscribers.ofString(UTF_8);
     publisher.subscribe(subscriber);
-    assertThat(subscriber.getBody())
-        .succeedsWithin(Duration.ofSeconds(20))
-        .isEqualTo("Cache me please!");
+    verifyThat(subscriber).succeedsWith(str);
   }
 
   @ExecutorParameterizedTest

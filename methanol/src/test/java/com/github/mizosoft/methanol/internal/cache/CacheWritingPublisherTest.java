@@ -22,8 +22,11 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
+import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
 import static com.github.mizosoft.methanol.testing.TestUtils.EMPTY_BUFFER;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,7 +47,12 @@ import com.github.mizosoft.methanol.testing.SubmittablePublisher;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
 import com.github.mizosoft.methanol.testing.TestUtils;
+import com.github.mizosoft.methanol.testing.store.StoreConfig;
+import com.github.mizosoft.methanol.testing.store.StoreExtension;
+import com.github.mizosoft.methanol.testing.store.StoreSpec;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import java.io.IOException;
+import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,12 +66,111 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(ExecutorExtension.class)
+@ExtendWith({ExecutorExtension.class, StoreExtension.class})
 class CacheWritingPublisherTest {
   static {
     Logging.disable(CacheWritingPublisher.class);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreConfig.StoreType.MEMORY, fileSystem = StoreConfig.FileSystemType.NONE)
+  void writeSmallStringToMemory(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testWritingSmallString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreConfig.StoreType.DISK, fileSystem = StoreConfig.FileSystemType.SYSTEM)
+  void writeSmallStringToDisk(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testWritingSmallString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(
+      tested = StoreConfig.StoreType.REDIS_STANDALONE,
+      fileSystem = StoreConfig.FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
+  void writeSmallStringToRedisStandalone(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testWritingSmallString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(
+      tested = StoreConfig.StoreType.REDIS_CLUSTER,
+      fileSystem = StoreConfig.FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
+  void writeSmallStringToRedisCluster(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testWritingSmallString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreConfig.StoreType.MEMORY, fileSystem = StoreConfig.FileSystemType.NONE)
+  void writeLargeStringToMemory(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testWritingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreConfig.StoreType.DISK, fileSystem = StoreConfig.FileSystemType.SYSTEM)
+  void writeLargeStringToDisk(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testWritingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(
+      tested = StoreConfig.StoreType.REDIS_STANDALONE,
+      fileSystem = StoreConfig.FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
+  void writeLargeStringToRedisStandalone(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testWritingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(
+      tested = StoreConfig.StoreType.REDIS_CLUSTER,
+      fileSystem = StoreConfig.FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
+  void writeLargeStringToRedisCluster(Executor executor, Store store)
+      throws IOException, InterruptedException {
+    testWritingLargeString(store, executor);
+  }
+
+  private void testWritingSmallString(Store store, Executor executor)
+      throws IOException, InterruptedException {
+    testWritingString("Cache me if you can!", store, executor);
+  }
+
+  private void testWritingLargeString(Store store, Executor executor)
+      throws IOException, InterruptedException {
+    testWritingString("Cache me if you can!".repeat(100_000), store, executor);
+  }
+
+  private void testWritingString(String str, Store store, Executor executor)
+      throws IOException, InterruptedException {
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher =
+        new CacheWritingPublisher(
+            upstream,
+            edit(store, "e1"),
+            UTF_8.encode("abc"),
+            executor,
+            Listener.disabled(),
+            false,
+            true); // Make sure the entry is written when downstream completes.
+    var subscriber = BodySubscribers.ofString(UTF_8);
+    publisher.subscribe(subscriber);
+    upstream.submitAll(toResponseBodyIterable(str, Utils.BUFFER_SIZE));
+    upstream.close();
+    verifyThat(subscriber).succeedsWith(str);
+    assertEntryEquals(store, "e1", "abc", str);
   }
 
   @ExecutorParameterizedTest
@@ -73,7 +180,7 @@ class CacheWritingPublisherTest {
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
-    upstream.submitAll(toResponseBody("Cache me if you can!"));
+    upstream.submitAll(toResponseBodyIterable("Cache me if you can!"));
     upstream.close();
     assertThat(subscriber.bodyToString()).isEqualTo("Cache me if you can!");
 
@@ -128,7 +235,7 @@ class CacheWritingPublisherTest {
 
     // Cancel before submitting items.
     subscriber.awaitSubscription().cancel();
-    upstream.submitAll(toResponseBody("Cancel me if you can!"));
+    upstream.submitAll(toResponseBodyIterable("Cancel me if you can!"));
     upstream.close();
 
     // Writing completes successfully and cancellation is not propagated.
@@ -254,7 +361,7 @@ class CacheWritingPublisherTest {
     var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER, executor);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
-    upstream.submitAll(toResponseBody("Cache me if you can!"));
+    upstream.submitAll(toResponseBodyIterable("Cache me if you can!"));
     upstream.close();
     failingEditor.awaitDiscard();
     assertThat(subscriber.bodyToString()).isEqualTo("Cache me if you can!");
@@ -287,7 +394,7 @@ class CacheWritingPublisherTest {
     subscriber.awaitSubscription();
     executor.execute(
         () -> {
-          upstream.submitAll(toResponseBody("Cyberpunk"));
+          upstream.submitAll(toResponseBodyIterable("Cyberpunk"));
           upstream.close();
         });
 
@@ -342,7 +449,7 @@ class CacheWritingPublisherTest {
             true);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
-    upstream.submitAll(toResponseBody("Pikachu"));
+    upstream.submitAll(toResponseBodyIterable("Pikachu"));
     upstream.close();
     awaitUninterruptibly(calledWrite);
     assertThat(subscriber.completionCount()).isZero();
@@ -377,7 +484,7 @@ class CacheWritingPublisherTest {
             true);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
-    upstream.submitAll(toResponseBody("Pikachu"));
+    upstream.submitAll(toResponseBodyIterable("Pikachu"));
     awaitUninterruptibly(calledWrite);
     assertThat(subscriber.completionCount()).isZero();
 
@@ -414,7 +521,7 @@ class CacheWritingPublisherTest {
             true);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
-    upstream.submitAll(toResponseBody("Pikachu"));
+    upstream.submitAll(toResponseBodyIterable("Pikachu"));
     upstream.close();
     awaitUninterruptibly(calledWrite);
     assertThat(subscriber.completionCount()).isZero();
@@ -426,8 +533,13 @@ class CacheWritingPublisherTest {
     assertThat(subscriber.bodyToString()).isEqualTo("Pikachu");
   }
 
-  private static Iterable<List<ByteBuffer>> toResponseBody(String str) {
-    return () -> new ByteBufferListIterator(UTF_8.encode(str), 1, TestUtils.BUFFERS_PER_LIST);
+  private static Iterable<List<ByteBuffer>> toResponseBodyIterable(String str) {
+    return toResponseBodyIterable(str, 2);
+  }
+
+  private static Iterable<List<ByteBuffer>> toResponseBodyIterable(String str, int bufferSize) {
+    return () ->
+        new ByteBufferListIterator(UTF_8.encode(str), bufferSize, TestUtils.BUFFERS_PER_LIST);
   }
 
   private static class TestEditor implements Editor {
