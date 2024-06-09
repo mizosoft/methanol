@@ -247,13 +247,13 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         try {
           Unchecked.supplyAsync(() -> reader.read(buffer), executor)
               .whenComplete((read, exception) -> onReadCompletion(buffer, read, exception));
+          return true;
         } catch (Throwable t) {
           state = State.DONE;
           listener.onReadFailure(t);
           fireOrKeepAliveOnError(t);
           return false;
         }
-        return true;
       }
       return false;
     }

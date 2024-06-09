@@ -156,7 +156,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
           try {
             Listener.this.onWriteSuccess();
           } catch (Throwable e) {
-            logger.log(Level.WARNING, "exception thrown by Listener::onWriteSuccess", e);
+            logger.log(Level.WARNING, "Exception thrown by Listener::onWriteSuccess", e);
           }
         }
 
@@ -165,7 +165,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
           try {
             Listener.this.onWriteFailure(exception);
           } catch (Throwable e) {
-            logger.log(Level.WARNING, "exception thrown by Listener::onWriteFailure", e);
+            logger.log(Level.WARNING, "Exception thrown by Listener::onWriteFailure", e);
           }
         }
       };
@@ -378,49 +378,56 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
      * @param maintainWritingState whether the write is to be scheduled directly after a previous
      *     write is completed, allowing to leave the WRITING state as is
      */
-    @SuppressWarnings("FutureReturnValueIgnored")
+    @SuppressWarnings({"FutureReturnValueIgnored", "StatementWithEmptyBody"})
     private boolean tryScheduleWrite(boolean maintainWritingState) {
-      var buffer = writeQueue.peek();
-      if (buffer != null
-          && ((maintainWritingState && state == WritingState.WRITING)
-              || STATE.compareAndSet(this, WritingState.IDLE, WritingState.WRITING))) {
-        writeQueue.poll(); // Consume
-        try {
-          Unchecked.supplyAsync(() -> writer.write(buffer), executor)
-              .whenComplete((__, ex) -> onWriteCompletion(ex));
+      ByteBuffer buffer;
+      boolean queueIsEmpty;
+      while (true) {
+        if ((buffer = writeQueue.peek()) != null
+            && ((maintainWritingState && state == WritingState.WRITING)
+                || STATE.compareAndSet(this, WritingState.IDLE, WritingState.WRITING))) {
+          writeQueue.poll(); // Consume
+          try {
+            var lambdaBuffer = buffer;
+            Unchecked.supplyAsync(() -> writer.write(lambdaBuffer), executor)
+                .whenComplete((__, ex) -> onWriteCompletion(ex));
+            return true;
+          } catch (Throwable t) {
+            listener.onWriteFailure(t);
+            discardEdit();
+            completeDownstreamOnDiscardedEdit();
+            return false;
+          }
+        } else if ((queueIsEmpty = (buffer == null))
+            && receivedBodyCompletion
+            && (buffer = writeQueue.peek()) == null // Might've missed items before completion.
+            && STATE.compareAndSet(
+                this,
+                maintainWritingState ? WritingState.WRITING : WritingState.IDLE,
+                WritingState.COMMITTING)) {
+          Unchecked.runAsync(
+                  () -> {
+                    try (editor) {
+                      editor.commit(metadata);
+                    }
+                  },
+                  executor)
+              .whenComplete(
+                  (__, ex) -> {
+                    state = WritingState.DONE;
+                    if (ex != null) {
+                      listener.onWriteFailure(ex);
+                    } else {
+                      listener.onWriteSuccess();
+                    }
+                    completeDownstreamOnCommittedEdit();
+                  });
           return true;
-        } catch (Throwable t) {
-          listener.onWriteFailure(t);
-          discardEdit();
-          completeDownstreamOnDiscardedEdit();
+        } else if (queueIsEmpty && buffer != null) {
+          // Picked up new buffers after perceiving completion, retry.
+        } else {
           return false;
         }
-      } else if (buffer == null
-          && receivedBodyCompletion
-          && STATE.compareAndSet(
-              this,
-              maintainWritingState ? WritingState.WRITING : WritingState.IDLE,
-              WritingState.COMMITTING)) {
-        Unchecked.runAsync(
-                () -> {
-                  try (editor) {
-                    editor.commit(metadata);
-                  }
-                },
-                executor)
-            .whenComplete(
-                (__, ex) -> {
-                  state = WritingState.DONE;
-                  if (ex != null) {
-                    listener.onWriteFailure(ex);
-                  } else {
-                    listener.onWriteSuccess();
-                  }
-                  completeDownstreamOnCommittedEdit();
-                });
-        return true;
-      } else {
-        return false;
       }
     }
 
