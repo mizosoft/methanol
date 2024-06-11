@@ -64,6 +64,8 @@ public class TestUtils {
    */
   public static final int BUFFERS_PER_LIST = 3;
 
+  public static final long RANDOM_SEED = 25;
+
   public static void awaitUninterruptibly(CountDownLatch latch) {
     while (true) {
       try {

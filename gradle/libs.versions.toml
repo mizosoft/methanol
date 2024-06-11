@@ -31,6 +31,7 @@ javaparser = "3.25.3"
 mockito = "5.11.0"
 javafx-platform = "17.0.10"
 quarkus = "3.10.0"
+commons-math3 = "3.6.1"
 versions-plugin = "0.51.0"
 nexus-publish = "2.0.0"
 coveralls-plugin = "2.12.2"
@@ -92,6 +93,7 @@ quarkus-rest-jackson = { module = "io.quarkus:quarkus-rest-jackson" }
 quarkus-junit5 = { module = "io.quarkus:quarkus-junit5" }
 rest-assured = { module = "io.rest-assured:rest-assured" }
 quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
+commons-math3 = { module = "org.apache.commons:commons-math3", version.ref = "commons-math3" }
 checkerframework-plugin = { module = "org.checkerframework:checkerframework-gradle-plugin", version.ref = "checkerframework-plugin" }
 errorprone-plugin = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorprone-plugin" }
 nullaway-plugin = { module = "net.ltgt.gradle:gradle-nullaway-plugin", version.ref = "nullaway-plugin" }

@@ -66,10 +66,12 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
+@Timeout(5)
 class CacheWritingPublisherTest {
   static {
     Logging.disable(CacheWritingPublisher.class);

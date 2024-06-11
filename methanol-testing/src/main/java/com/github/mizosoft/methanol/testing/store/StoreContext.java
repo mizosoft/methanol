@@ -83,7 +83,7 @@ public abstract class StoreContext implements AutoCloseable {
     if (config instanceof MemoryStoreConfig) {
       return new MemoryStoreContext((MemoryStoreConfig) config);
     } else if (config instanceof DiskStoreConfig) {
-      return DiskStoreContext.create((DiskStoreConfig) config);
+      return new DiskStoreContext((DiskStoreConfig) config);
     } else if (config instanceof RedisStandaloneStoreConfig) {
       return new RedisStandaloneStoreContext((RedisStandaloneStoreConfig) config);
     } else {
