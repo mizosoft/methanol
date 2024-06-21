@@ -37,12 +37,16 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Publisher for the response body as read from a cached entry's {@link Viewer}. */
@@ -128,21 +132,21 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
   @SuppressWarnings("unused") // VarHandle indirection.
   static final class CacheReadingSubscription
       extends AbstractPollableSubscription<List<ByteBuffer>> {
+
+    /**
+     * The maximum number of buffers to allocate in bulk (gathering) reads. This has to be big
+     * enough so that bulk reads are faster than single-buffer reads, taking into account that we
+     * pass lists of buffers downstream, but small enough so that each read doesn't take too long,
+     * and little allocation is wasted when the response size is small. The chosen number seems good
+     * enough considering the default buffer size of 16kB (see {@link Utils#BUFFER_SIZE}.
+     */
+    private static final int MAX_BULK_READ_SIZE = 4;
+
     /**
      * The number of buffers to fill readQueue with, without necessarily being requested by
      * downstream.
      */
-    private static final int PREFETCH = 8;
-
-    /**
-     * The maximum number of buffers remaining in readQueue, after consumption by downstream, that
-     * cause the publisher to trigger a readQueue refill. This allows reading and processing of
-     * earlier items to occur simultaneously.
-     */
-    private static final int PREFETCH_THRESHOLD = 4;
-
-    // Note: this field is mirrored in CacheReadingPublisherTckTest.
-    private static final int MAX_BATCH_SIZE = 4;
+    private static final int PREFETCH = 2 * MAX_BULK_READ_SIZE;
 
     private static final VarHandle STATE;
 
@@ -161,7 +165,8 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     private final EntryReader reader;
     private final Listener listener;
     private final int bufferSize;
-    private final ConcurrentLinkedQueue<ByteBuffer> readQueue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<List<ByteBuffer>> readQueue = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger buffersPromised = new AtomicInteger();
 
     private volatile State state = State.INITIAL;
 
@@ -180,7 +185,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         Viewer viewer,
         Listener listener,
         int bufferSize) {
-      super(downstream, executor);
+      super(downstream, executor); // TODO maybe run subscriber inline?
       this.viewer = viewer;
       this.executor = executor;
       this.reader = viewer.newReader();
@@ -190,21 +195,11 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
 
     @Override
     protected @Nullable List<ByteBuffer> poll() {
-      List<ByteBuffer> batch = null;
-      do {
-        var buffer = readQueue.poll();
-        if (buffer == null) {
-          break;
-        }
-
-        if (batch == null) {
-          batch = new ArrayList<>();
-        }
-        batch.add(buffer);
-      } while (batch.size() < MAX_BATCH_SIZE);
-
-      // Refill readQueue if enough buffers are consumed.
-      if (!exhausted && readQueue.size() <= PREFETCH_THRESHOLD) {
+      var batch = readQueue.poll();
+      if (batch != null) {
+        buffersPromised.getAndAdd(-batch.size());
+      }
+      if (!exhausted) {
         tryScheduleRead(false);
       }
       return batch;
@@ -230,7 +225,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       try {
         viewer.close();
       } catch (Throwable t) {
-        logger.log(Level.WARNING, "exception thrown by Viewer::close", t);
+        logger.log(Level.WARNING, "Exception while closing viewer", t);
       }
     }
 
@@ -240,13 +235,20 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
      */
     @SuppressWarnings("FutureReturnValueIgnored")
     private boolean tryScheduleRead(boolean maintainReadingState) {
-      if (readQueue.size() < PREFETCH
+      if (buffersPromised.get() < PREFETCH
           && ((maintainReadingState && state == State.READING)
               || STATE.compareAndSet(this, State.IDLE, State.READING))) {
-        var buffer = ByteBuffer.allocate(bufferSize);
+        // Re-read buffersPromised twice as it can only decrease if we're here, and if so we want
+        // that decrease to be reflected.
+        int buffersNeeded = Math.min(PREFETCH - buffersPromised.get(), MAX_BULK_READ_SIZE);
+        var buffers =
+            Stream.generate(() -> ByteBuffer.allocate(bufferSize))
+                .limit(buffersNeeded)
+                .collect(Collectors.toUnmodifiableList());
+        buffersPromised.getAndAdd(buffersNeeded);
         try {
-          Unchecked.supplyAsync(() -> reader.read(buffer), executor)
-              .whenComplete((read, exception) -> onReadCompletion(buffer, read, exception));
+          Unchecked.supplyAsync(() -> reader.read(buffers), executor)
+              .whenComplete((read, exception) -> onReadCompletion(buffers, read, exception));
           return true;
         } catch (Throwable t) {
           state = State.DONE;
@@ -254,20 +256,15 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
           fireOrKeepAliveOnError(t);
           return false;
         }
+      } else {
+        return false;
       }
-      return false;
     }
 
     @SuppressWarnings("NullAway")
     private void onReadCompletion(
-        ByteBuffer buffer, @Nullable Integer read, @Nullable Throwable exception) {
+        List<ByteBuffer> buffers, @Nullable Long read, @Nullable Throwable exception) {
       assert read != null || exception != null;
-
-      // The subscription could've been cancelled while this read was in progress.
-      if (state == State.DONE) {
-        return;
-      }
-
       if (exception != null) {
         state = State.DONE;
         listener.onReadFailure(exception);
@@ -278,15 +275,32 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         listener.onReadSuccess();
         fireOrKeepAlive();
       } else {
-        if (read > 0) {
-          readQueue.offer(buffer.flip().asReadOnlyBuffer());
-        }
+        assert !buffers.isEmpty();
+
+        readQueue.add(
+            sliceNonEmptyBuffers(
+                buffers.stream()
+                    .map(buffer -> buffer.flip().asReadOnlyBuffer())
+                    .collect(Collectors.toUnmodifiableList())));
         if (!tryScheduleRead(true) && STATE.compareAndSet(this, State.READING, State.IDLE)) {
           // There might've been missed signals just before CASing to IDLE.
           tryScheduleRead(false);
         }
         fireOrKeepAliveOnNext();
       }
+    }
+
+    /** Removes empty buffers from the end of the list, which can exist at the end of the stream. */
+    private List<ByteBuffer> sliceNonEmptyBuffers(List<ByteBuffer> buffers) {
+      if (buffers.get(buffers.size() - 1).hasRemaining()) {
+        return buffers;
+      }
+
+      var nonEmptyBuffers = new ArrayList<>(buffers);
+      for (int i = buffers.size() - 1; i >= 0 && !buffers.get(i).hasRemaining(); i--) {
+        nonEmptyBuffers.remove(i);
+      }
+      return Collections.unmodifiableList(nonEmptyBuffers);
     }
   }
 }

@@ -157,6 +157,20 @@ class CacheWritingPublisherTest {
 
   private void testWritingString(String str, Store store, Executor executor)
       throws IOException, InterruptedException {
+    var listener =
+        new CacheWritingPublisher.Listener() {
+          private Object result;
+
+          @Override
+          public void onWriteSuccess() {
+            result = Boolean.TRUE;
+          }
+
+          @Override
+          public void onWriteFailure(Throwable exception) {
+            result = exception;
+          }
+        };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher =
         new CacheWritingPublisher(
@@ -164,7 +178,7 @@ class CacheWritingPublisherTest {
             edit(store, "e1"),
             UTF_8.encode("abc"),
             executor,
-            Listener.disabled(),
+            listener,
             false,
             true); // Make sure the entry is written when downstream completes.
     var subscriber = BodySubscribers.ofString(UTF_8);
@@ -172,6 +186,10 @@ class CacheWritingPublisherTest {
     upstream.submitAll(toResponseBodyIterable(str, Utils.BUFFER_SIZE));
     upstream.close();
     verifyThat(subscriber).succeedsWith(str);
+    if (listener.result instanceof Throwable) {
+      fail((Throwable) listener.result);
+    }
+    assertThat(listener.result).isEqualTo(true);
     assertEntryEquals(store, "e1", "abc", str);
   }
 
@@ -260,7 +278,7 @@ class CacheWritingPublisherTest {
             try {
               Thread.sleep(50);
             } catch (InterruptedException e) {
-              return fail("unexpected exception", e);
+              throw new RuntimeException(e);
             }
             throw new TestException();
           }
@@ -577,7 +595,17 @@ class CacheWritingPublisherTest {
 
     @Override
     public EntryWriter writer() {
-      return this::write;
+      return new EntryWriter() {
+        @Override
+        public int write(ByteBuffer src) {
+          return TestEditor.this.write(src);
+        }
+
+        @Override
+        public long write(List<ByteBuffer> srcs) {
+          return srcs.stream().mapToInt(this::write).sum();
+        }
+      };
     }
 
     @Override

@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
@@ -35,6 +34,8 @@ import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -51,8 +52,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * downstream. The publisher prefers writing the whole stream if downstream cancels the subscription
  * midway transmission. Forwarding downstream items is advanced independently of writing them.
  * Consequently, writing may lag behind downstream consumption, and may proceed after downstream has
- * been completed. This affords the downstream not having to unnecessarily wait for the entire body
- * to be cached. If an error occurs while writing, the edit is silently discarded.
+ * been completed (or optionally block downstream completion). This affords the downstream not
+ * having to unnecessarily wait for the entire body to be cached. If an error occurs while writing,
+ * the edit is silently discarded.
  */
 public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> {
   private static final Logger logger = System.getLogger(CacheWritingPublisher.class.getName());
@@ -63,6 +65,8 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
   private static final boolean DEFAULT_WAIT_FOR_COMMIT =
       Boolean.getBoolean(
           "com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.waitForCommit");
+
+  private static final int BULK_WRITE_POLL_LIMIT = 16;
 
   private final Publisher<List<ByteBuffer>> upstream;
   private final Editor editor;
@@ -255,7 +259,8 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private final boolean propagateCancellation;
     private final boolean waitForCommit;
     private final Upstream upstream = new Upstream();
-    private final ConcurrentLinkedQueue<ByteBuffer> writeQueue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<List<ByteBuffer>> writeQueue =
+        new ConcurrentLinkedQueue<>();
 
     @SuppressWarnings("FieldMayBeFinal") // VarHandle indirection.
     private volatile WritingState state = WritingState.IDLE;
@@ -296,11 +301,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     @Override
     public void request(long n) {
-      // Only forward the request if downstream is not disposed.
-      if (downstream != null) {
-        assert upstream.isSet();
-        upstream.request(n);
-      }
+      upstream.request(n);
     }
 
     @Override
@@ -320,15 +321,21 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     void onSubscribe(Subscription subscription) {
       if (upstream.setOrCancel(subscription)) {
-        // Downstream can't be null now since it couldn't have been disposed.
-        castNonNull(downstream).onSubscribe(this);
+        var subscriber = downstream;
+        if (subscriber != null) {
+          subscriber.onSubscribe(this);
+        } else {
+          logger.log(
+              Level.WARNING,
+              "Bad reactive-streams implementation: downstream is disposed (completed, errored) before calling onSubscribe");
+        }
       }
     }
 
     void onNext(List<ByteBuffer> buffers) {
       if (state != WritingState.DONE) {
-        // Create independent buffers for writing.
-        writeQueue.addAll(
+        // Create independent buffers for writing to cache.
+        writeQueue.add(
             buffers.stream().map(ByteBuffer::duplicate).collect(Collectors.toUnmodifiableList()));
         tryScheduleWrite(false);
       }
@@ -342,9 +349,8 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     void onError(Throwable exception) {
       upstream.clear();
       writeQueue.clear();
-      listener.onWriteFailure(exception);
       discardEdit();
-
+      listener.onWriteFailure(exception);
       var subscriber = getAndClearDownstream();
       if (subscriber != null) {
         subscriber.onError(exception);
@@ -380,27 +386,42 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
      */
     @SuppressWarnings({"FutureReturnValueIgnored", "StatementWithEmptyBody"})
     private boolean tryScheduleWrite(boolean maintainWritingState) {
-      ByteBuffer buffer;
-      boolean queueIsEmpty;
+      List<ByteBuffer> buffers = null;
+      boolean queueWasEmpty;
       while (true) {
-        if ((buffer = writeQueue.peek()) != null
+        if ((buffers != null || (buffers = writeQueue.peek()) != null)
             && ((maintainWritingState && state == WritingState.WRITING)
                 || STATE.compareAndSet(this, WritingState.IDLE, WritingState.WRITING))) {
-          writeQueue.poll(); // Consume
+          writeQueue.poll(); // Consume.
+
+          // Take this chance to write as much as we can up to a limit.
+          List<ByteBuffer> moreBuffers;
+          int polledCount = 1; // We've just polled one list.
+          while (polledCount < BULK_WRITE_POLL_LIMIT && (moreBuffers = writeQueue.poll()) != null) {
+            if (polledCount == 1) {
+              buffers = new ArrayList<>(buffers);
+            }
+            buffers.addAll(moreBuffers);
+            polledCount++;
+          }
+          if (polledCount > 1) {
+            buffers = Collections.unmodifiableList(buffers);
+          }
+
           try {
-            var lambdaBuffer = buffer;
-            Unchecked.supplyAsync(() -> writer.write(lambdaBuffer), executor)
+            var lambdaBuffers = buffers;
+            Unchecked.supplyAsync(() -> writer.write(lambdaBuffers), executor)
                 .whenComplete((__, ex) -> onWriteCompletion(ex));
             return true;
           } catch (Throwable t) {
-            listener.onWriteFailure(t);
             discardEdit();
+            listener.onWriteFailure(t);
             completeDownstreamOnDiscardedEdit();
             return false;
           }
-        } else if ((queueIsEmpty = (buffer == null))
+        } else if ((queueWasEmpty = (buffers == null))
             && receivedBodyCompletion
-            && (buffer = writeQueue.peek()) == null // Might've missed items before completion.
+            && (buffers = writeQueue.peek()) == null // Might've missed items before completion.
             && STATE.compareAndSet(
                 this,
                 maintainWritingState ? WritingState.WRITING : WritingState.IDLE,
@@ -423,7 +444,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
                     completeDownstreamOnCommittedEdit();
                   });
           return true;
-        } else if (queueIsEmpty && buffer != null) {
+        } else if (queueWasEmpty && buffers != null) {
           // Picked up new buffers after perceiving completion, retry.
         } else {
           return false;
@@ -433,13 +454,14 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     private void onWriteCompletion(@Nullable Throwable exception) {
       if (exception != null) {
-        // Cancel upstream if downstream was disposed and we were only writing the body.
-        if (downstream == null) {
-          upstream.cancel();
-        }
-        listener.onWriteFailure(exception);
         discardEdit();
-        completeDownstreamOnDiscardedEdit();
+        listener.onWriteFailure(exception);
+        if (downstream == null) {
+          // Just cancel upstream if downstream was disposed and we were only writing the body.
+          upstream.cancel();
+        } else {
+          completeDownstreamOnDiscardedEdit();
+        }
       } else if (!tryScheduleWrite(true)
           && STATE.compareAndSet(this, WritingState.WRITING, WritingState.IDLE)) {
         // There might be signals missed just before CASing to IDLE.
@@ -457,7 +479,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
           try {
             editor.close();
           } catch (Throwable t) {
-            logger.log(Level.WARNING, "Exception when closing the editor", t);
+            logger.log(Level.WARNING, "Exception thrown when closing the editor", t);
           }
           return;
         }

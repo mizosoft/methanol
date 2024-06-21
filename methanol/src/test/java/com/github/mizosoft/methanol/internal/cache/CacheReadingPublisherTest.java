@@ -25,10 +25,10 @@ package com.github.mizosoft.methanol.internal.cache;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
-import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
@@ -54,10 +54,12 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
+@Timeout(5)
 class CacheReadingPublisherTest {
   static {
     Awaitility.setDefaultTimeout(Duration.ofSeconds(30));
@@ -140,7 +142,10 @@ class CacheReadingPublisherTest {
     var publisher = new CacheReadingPublisher(view(store, "e1"), executor);
     var subscriber = BodySubscribers.ofString(UTF_8);
     publisher.subscribe(subscriber);
-    verifyThat(subscriber).succeedsWith(str);
+    assertThat(subscriber.getBody())
+        .succeedsWithin(Duration.ofSeconds(5))
+        .returns(str.length(), from(String::length))
+        .isEqualTo(str);
   }
 
   @ExecutorParameterizedTest
