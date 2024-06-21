@@ -33,6 +33,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -367,15 +368,28 @@ public final class MemoryStore implements Store {
         @Override
         public int read(ByteBuffer dst) {
           requireNonNull(dst);
-          return copyRemaining(dst);
+          synchronized (data) {
+            return data.hasRemaining() ? Utils.copyRemaining(data, dst) : -1;
+          }
         }
 
-        private int copyRemaining(ByteBuffer dst) {
+        @Override
+        public long read(List<ByteBuffer> dsts) {
+          requireNonNull(dsts);
           synchronized (data) {
             if (!data.hasRemaining()) {
               return -1;
             }
-            return Utils.copyRemaining(data, dst);
+
+            int totalRead = 0;
+            for (var dst : dsts) {
+              int read = Utils.copyRemaining(data, dst);
+              if (read == 0) {
+                break;
+              }
+              totalRead += read;
+            }
+            return totalRead;
           }
         }
       };
@@ -411,7 +425,7 @@ public final class MemoryStore implements Store {
     public void close() {}
   }
 
-  private static final class MemoryEditor implements Editor {
+  private static final class MemoryEditor implements Editor, EntryWriter {
     private final Entry entry;
     private final Lock lock = new ReentrantLock();
     private final MemoryBuffer data = new MemoryBuffer();
@@ -430,15 +444,28 @@ public final class MemoryStore implements Store {
 
     @Override
     public EntryWriter writer() {
-      return this::write;
+      return this;
     }
 
-    private int write(ByteBuffer src) {
+    @Override
+    public int write(ByteBuffer src) {
       requireNonNull(src);
       lock.lock();
       try {
         isDataWritten = true;
         return data.write(src);
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    @Override
+    public long write(List<ByteBuffer> srcs) {
+      requireNonNull(srcs);
+      lock.lock();
+      try {
+        isDataWritten = true;
+        return data.write(srcs);
       } finally {
         lock.unlock();
       }
@@ -482,6 +509,32 @@ public final class MemoryStore implements Store {
           super.write(srcCopy, 0, srcCopy.length);
         }
         return remaining;
+      }
+
+      int write(List<ByteBuffer> srcs) {
+        int totalRemaining = Math.toIntExact(Utils.remaining(srcs));
+        if (totalRemaining <= buf.length - count) {
+          // Fast path, copy to buf directly.
+          for (var src : srcs) {
+            int remaining = src.remaining();
+            src.get(buf, count, remaining);
+            count += remaining;
+          }
+        } else {
+          int i = 0;
+          int size = srcs.size();
+          for (; i < size && totalRemaining > buf.length - count; i++) {
+            totalRemaining -= write(srcs.get(i)); // Increments count.
+          }
+          // Continue with fast path.
+          for (; i < size; i++) {
+            var src = srcs.get(i);
+            int remaining = src.remaining();
+            src.get(buf, count, remaining);
+            count += remaining;
+          }
+        }
+        return totalRemaining;
       }
     }
   }
