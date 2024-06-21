@@ -26,6 +26,7 @@ import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_SEE_OTHER;
+import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElseGet;
 
 import com.github.mizosoft.methanol.HttpStatus;
@@ -33,6 +34,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutor;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
@@ -49,7 +51,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -75,17 +76,8 @@ public final class RedirectingInterceptor implements Interceptor {
   private final Executor handlerExecutor;
 
   public RedirectingInterceptor(Redirect policy, @Nullable Executor handlerExecutor) {
-    this.policy = policy;
-    this.handlerExecutor =
-        requireNonNullElseGet(
-            handlerExecutor,
-            () ->
-                Executors.newCachedThreadPool(
-                    runnable -> {
-                      var thread = new Thread(runnable);
-                      thread.setDaemon(true);
-                      return thread;
-                    }));
+    this.policy = requireNonNull(policy);
+    this.handlerExecutor = requireNonNullElseGet(handlerExecutor, FallbackExecutor::get);
   }
 
   @Override

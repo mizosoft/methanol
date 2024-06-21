@@ -34,7 +34,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
-import com.github.mizosoft.methanol.internal.concurrent.Lazy;
+import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutor;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
@@ -68,7 +68,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.ScheduledExecutorService;
@@ -109,16 +108,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class Methanol extends HttpClient {
   private static final Logger logger = System.getLogger(Methanol.class.getName());
-
-  private final Lazy<Executor> lazyFallbackExecutor =
-      Lazy.of(
-          () ->
-              Executors.newCachedThreadPool(
-                  r -> {
-                    var t = new Thread(r);
-                    t.setDaemon(true);
-                    return t;
-                  }));
 
   private final HttpClient backend;
   private final Redirect redirectPolicy;
@@ -360,7 +349,7 @@ public final class Methanol extends HttpClient {
                     new ResponsePayloadImpl(
                         responseInfo,
                         publisher,
-                        () -> executor().orElseGet(lazyFallbackExecutor),
+                        () -> executor().orElseGet(FallbackExecutor::get),
                         adapterCodecOrInstalled())));
   }
 
@@ -380,7 +369,7 @@ public final class Methanol extends HttpClient {
                     new ResponsePayloadImpl(
                         responseInfo,
                         publisher,
-                        () -> executor().orElseGet(lazyFallbackExecutor),
+                        () -> executor().orElseGet(FallbackExecutor::get),
                         adapterCodecOrInstalled())));
   }
 
