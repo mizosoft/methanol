@@ -48,23 +48,19 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith({ExecutorExtension.class, StoreExtension.class})
 @Timeout(5)
+@ExtendWith({ExecutorExtension.class, StoreExtension.class})
 class CacheReadingPublisherTest {
-  static {
-    Awaitility.setDefaultTimeout(Duration.ofSeconds(30));
-  }
-
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
   void readSmallStringFromMemory(Executor executor, Store store)
@@ -268,11 +264,22 @@ class CacheReadingPublisherTest {
 
     @Override
     public Store.EntryReader newReader() {
-      return this::read;
+      return new Store.EntryReader() {
+        @Override
+        public CompletableFuture<Integer> read(ByteBuffer dst, Executor executor) {
+          return CompletableFuture.supplyAsync(() -> TestViewer.this.read(dst), executor);
+        }
+
+        @Override
+        public CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor executor) {
+          return CompletableFuture.supplyAsync(
+              () -> (long) dsts.stream().mapToInt(TestViewer.this::read).sum(), executor);
+        }
+      };
     }
 
     @Override
-    public Optional<Editor> edit() {
+    public CompletableFuture<Optional<Editor>> edit(Executor executor) {
       return fail("unexpected call");
     }
 

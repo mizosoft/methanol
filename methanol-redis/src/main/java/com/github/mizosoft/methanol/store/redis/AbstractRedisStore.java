@@ -37,6 +37,9 @@ import io.lettuce.core.RedisException;
 import io.lettuce.core.ScanArgs;
 import io.lettuce.core.ScanCursor;
 import io.lettuce.core.api.StatefulConnection;
+import io.lettuce.core.api.async.RedisHashAsyncCommands;
+import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
+import io.lettuce.core.api.async.RedisStringAsyncCommands;
 import io.lettuce.core.api.sync.RedisHashCommands;
 import io.lettuce.core.api.sync.RedisKeyCommands;
 import io.lettuce.core.api.sync.RedisScriptingCommands;
@@ -54,6 +57,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
@@ -72,7 +76,11 @@ abstract class AbstractRedisStore<
         C extends StatefulConnection<String, ByteBuffer>,
         CMD extends
             RedisHashCommands<String, ByteBuffer> & RedisScriptingCommands<String, ByteBuffer>
-                & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>>
+                & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>,
+        ASYNC_CMD extends
+            RedisHashAsyncCommands<String, ByteBuffer>
+                & RedisScriptingAsyncCommands<String, ByteBuffer>
+                & RedisStringAsyncCommands<String, ByteBuffer>>
     implements Store {
   static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
 
@@ -110,10 +118,7 @@ abstract class AbstractRedisStore<
    */
   final String clockKey;
 
-  volatile boolean closed;
-
-  /** A lock to ensure only one call to {@code close()} proceeds to closing underlying resources. */
-  final Lock closeLock = new ReentrantLock();
+  final AtomicBoolean closed = new AtomicBoolean();
 
   AbstractRedisStore(
       C connection,
@@ -136,28 +141,32 @@ abstract class AbstractRedisStore<
 
   abstract CMD commands();
 
+  abstract ASYNC_CMD asyncCommands();
+
   @Override
   public long maxSize() {
     return Long.MAX_VALUE;
   }
 
   @Override
-  public Optional<Executor> executor() {
-    return Optional.empty();
-  }
-
-  @Override
-  public Optional<Viewer> view(String key) throws IOException, InterruptedException {
+  public CompletableFuture<Optional<Viewer>> view(String key, Executor executor) {
     return view(key, toEntryKey(key));
   }
 
-  private Optional<Viewer> view(@Nullable String key, String entryKey) {
+  private CompletableFuture<Optional<Viewer>> view(@Nullable String key, String entryKey) {
     requireNotClosed();
-    var fields = commands().hmget(entryKey, "metadata", "dataSize", "entryVersion", "dataVersion");
-    return fields.stream().allMatch(Predicate.not(KeyValue::isEmpty))
-        ? Optional.of(
-            createViewer(key, entryKey, () -> fields.stream().map(KeyValue::getValue).iterator()))
-        : Optional.empty();
+    return asyncCommands()
+        .hmget(entryKey, "metadata", "dataSize", "entryVersion", "dataVersion")
+        .thenApply(
+            fields ->
+                fields.stream().allMatch(Predicate.not(KeyValue::isEmpty))
+                    ? Optional.of(
+                        createViewer(
+                            key,
+                            entryKey,
+                            () -> fields.stream().map(KeyValue::getValue).iterator()))
+                    : Optional.<Viewer>empty())
+        .toCompletableFuture();
   }
 
   private Viewer createViewer(@Nullable String key, String entryKey, Iterable<ByteBuffer> fields) {
@@ -171,25 +180,27 @@ abstract class AbstractRedisStore<
   }
 
   @Override
-  public Optional<Editor> edit(String key) throws IOException, InterruptedException {
+  public CompletableFuture<Optional<Editor>> edit(String key, Executor executor) {
     return edit(key, toEntryKey(key), ANY_ENTRY_VERSION);
   }
 
-  private Optional<Editor> edit(@Nullable String key, String entryKey, long targetEntryVersion) {
+  private CompletableFuture<Optional<Editor>> edit(
+      @Nullable String key, String entryKey, long targetEntryVersion) {
     requireNotClosed();
     var editorId = UUID.randomUUID().toString();
     var editorLockKey = entryKey + ":editor";
     var wipDataKey = entryKey + ":wip_data:" + editorId;
-    boolean isLockAcquired =
-        Script.EDIT
-            .evalOn(commands())
-            .asBoolean(
-                List.of(entryKey, editorLockKey, wipDataKey),
-                List.of(
-                    encode(editorId), encode(targetEntryVersion), encode(editorLockTtlSeconds)));
-    return isLockAcquired
-        ? Optional.of(new RedisEditor(key, entryKey, editorLockKey, wipDataKey, editorId))
-        : Optional.empty();
+    return Script.EDIT
+        .evalOn(asyncCommands())
+        .asBoolean(
+            List.of(entryKey, editorLockKey, wipDataKey),
+            List.of(encode(editorId), encode(targetEntryVersion), encode(editorLockTtlSeconds)))
+        .thenApply(
+            isLockAcquired ->
+                isLockAcquired
+                    ? Optional.of(
+                        new RedisEditor(key, entryKey, editorLockKey, wipDataKey, editorId))
+                    : Optional.empty());
   }
 
   @Override
@@ -199,7 +210,7 @@ abstract class AbstractRedisStore<
   }
 
   @Override
-  public boolean remove(String key) throws IOException, InterruptedException {
+  public boolean remove(String key) {
     requireNotClosed();
     return removeEntry(toEntryKey(key), ANY_ENTRY_VERSION);
   }
@@ -221,7 +232,7 @@ abstract class AbstractRedisStore<
   }
 
   @Override
-  public void clear() throws IOException {
+  public void clear() {
     requireNotClosed();
     removeAll();
   }
@@ -248,14 +259,8 @@ abstract class AbstractRedisStore<
   }
 
   private void doClose(boolean dispose) {
-    closeLock.lock();
-    try {
-      if (closed) {
-        return;
-      }
-      closed = true;
-    } finally {
-      closeLock.unlock();
+    if (!closed.compareAndSet(false, true)) {
+      return;
     }
 
     if (dispose) {
@@ -290,7 +295,7 @@ abstract class AbstractRedisStore<
   }
 
   void requireNotClosed() {
-    requireState(!closed, "Store is closed");
+    requireState(!closed.get(), "Store is closed");
   }
 
   static ByteBuffer encode(int value) {
@@ -398,7 +403,7 @@ abstract class AbstractRedisStore<
               nextViewer = createViewer(null, entry.key, entry.fields);
               return true;
             }
-          } else if ((!cursor.equals(INITIAL_CURSOR_VALUE) || isInitialScan) && !closed) {
+          } else if ((!cursor.equals(INITIAL_CURSOR_VALUE) || isInitialScan) && !closed.get()) {
             var scanResult = scan();
             cursor = scanResult.cursor;
             entryIterator = scanResult.entries.iterator();
@@ -468,15 +473,6 @@ abstract class AbstractRedisStore<
     private final long dataSize;
     private final AtomicBoolean closed = new AtomicBoolean();
 
-    /**
-     * Whether the data we're currently reading is expected to be fresh. Data becomes stale when it
-     * is edited or removed. In such case, the data key is renamed and set to expire. If we detect
-     * that while reading, this field's value is set to {@code false} and never changes. After which
-     * reading is always directed to the stale data entry.
-     */
-    @GuardedBy("lock")
-    private boolean readingFreshEntry = true;
-
     RedisViewer(
         @Nullable String key,
         String entryKey,
@@ -518,7 +514,7 @@ abstract class AbstractRedisStore<
     }
 
     @Override
-    public Optional<Editor> edit() {
+    public CompletableFuture<Optional<Editor>> edit(Executor executor) {
       return AbstractRedisStore.this.edit(null, entryKey, entryVersion);
     }
 
@@ -538,74 +534,96 @@ abstract class AbstractRedisStore<
        */
       private static final int SOFT_MAX_ARRAY_LENGTH = Integer.MAX_VALUE - 8;
 
-      private final Lock lock = new ReentrantLock();
+      private final AtomicBoolean readLatch = new AtomicBoolean();
 
-      @GuardedBy("lock")
+      /**
+       * Position of the next byte to read. This field can be accessed from multiple threads, but
+       * never simultaneously.
+       */
       private long position;
+
+      /**
+       * Whether the data we're currently reading is expected to be fresh. Data becomes stale when
+       * it is edited or removed. In such case, the data key is renamed and set to expire. If we
+       * detect that while reading, this field's value is set to {@code false} and never changes.
+       * After which reading is always directed to the stale data entry.
+       *
+       * <p>This field can be accessed from multiple threads, but never simultaneously.
+       */
+      private boolean readingFreshEntry = true;
 
       RedisEntryReader() {}
 
       @Override
-      public int read(ByteBuffer dst) {
-        return (int) read(List.of(dst));
+      public CompletableFuture<Integer> read(ByteBuffer dst, Executor executor) {
+        return read(List.of(dst), executor).thenApply(Long::intValue);
       }
 
       @Override
-      public long read(List<ByteBuffer> dsts) {
+      public CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor ignored) {
         requireNonNull(dsts);
         requireState(!closed.get(), "Closed");
-        lock.lock();
+        requireState(readLatch.compareAndSet(false, true), "Ongoing read");
         try {
           long position = this.position;
           if (position >= dataSize) {
-            return -1;
+            return CompletableFuture.completedFuture(-1L);
           }
 
-          // We have to be careful when calling GETRANGE with `long` arguments as the returned value
-          // is a ByteBuffer, which has an `int` capacity. Thus, we break readableByteCount into
-          // chunks that can be stored in a ByteBuffer.
-          long totalRead = 0;
+          // We must be careful not to call GETRANGE with `long` arguments as the returned value is
+          // a ByteBuffer, which has an `int` capacity.
           long readableByteCount = Utils.remaining(dsts);
-          while (readableByteCount > 0) {
-            int safelyReadableByteCount = (int) Math.min(readableByteCount, SOFT_MAX_ARRAY_LENGTH);
-            long inclusiveLimit = position + safelyReadableByteCount - 1;
-            var range =
-                readingFreshEntry
-                    ? commands().getrange(dataKey, position, inclusiveLimit)
-                    : getStaleRange(position, inclusiveLimit);
-            var correctedRange = fallbackToStaleEntryIfEmptyRange(range, position, inclusiveLimit);
-            for (var dst : dsts) {
-              totalRead += Utils.copyRemaining(correctedRange, dst);
-            }
-            this.position += totalRead;
-            readableByteCount -= safelyReadableByteCount;
-          }
-          return totalRead;
-        } finally {
-          lock.unlock();
+          requireArgument(
+              readableByteCount <= SOFT_MAX_ARRAY_LENGTH,
+              "Too many bytes requested: %d",
+              readableByteCount);
+          long inclusiveLimit = position + readableByteCount - 1;
+          var rangeFuture =
+              readingFreshEntry
+                  ? asyncCommands().getrange(dataKey, position, inclusiveLimit)
+                  : getStaleRange(position, inclusiveLimit);
+          return rangeFuture
+              .thenCompose(range -> recoverIfStale(range, position, inclusiveLimit))
+              .thenApply(
+                  range -> {
+                    long totalRead = 0;
+                    for (var dst : dsts) {
+                      totalRead += Utils.copyRemaining(range, dst);
+                    }
+                    this.position += totalRead;
+                    return totalRead;
+                  })
+              .whenComplete((__, ___) -> readLatch.compareAndSet(true, false))
+              .toCompletableFuture()
+              .copy(); // Defensively copy to make sure readLatch is always reset.
+        } catch (Throwable t) {
+          readLatch.compareAndSet(true, false);
+          throw t;
         }
       }
 
-      private ByteBuffer getStaleRange(long position, long inclusiveLimit) {
+      private CompletableFuture<ByteBuffer> getStaleRange(long position, long inclusiveLimit) {
         return Script.GET_STALE_RANGE
-            .evalOn(commands())
+            .evalOn(asyncCommands())
             .asValue(
                 List.of(dataKey),
                 List.of(encode(position), encode(inclusiveLimit), encode(staleEntryTtlSeconds)));
       }
 
-      @GuardedBy("lock")
-      private ByteBuffer fallbackToStaleEntryIfEmptyRange(
+      private CompletableFuture<ByteBuffer> recoverIfStale(
           ByteBuffer range, long position, long inclusiveLimit) {
         if (range.hasRemaining()) {
-          return range;
+          return CompletableFuture.completedFuture(range);
         }
 
         requireState(readingFreshEntry, "Stale entry data expired");
-        var staleRange = getStaleRange(position, inclusiveLimit);
-        requireState(staleRange.hasRemaining(), "Entry data removed");
-        readingFreshEntry = false;
-        return staleRange;
+        return getStaleRange(position, inclusiveLimit)
+            .thenApply(
+                staleRange -> {
+                  requireState(staleRange.hasRemaining(), "Entry data removed");
+                  readingFreshEntry = false;
+                  return staleRange;
+                });
       }
     }
   }
@@ -618,6 +636,7 @@ abstract class AbstractRedisStore<
     private final String editorId;
     private final RedisEntryWriter writer = new RedisEntryWriter();
     private final AtomicBoolean closed = new AtomicBoolean();
+    private final AtomicBoolean writeLatch = new AtomicBoolean();
 
     RedisEditor(
         @Nullable String key,
@@ -643,32 +662,37 @@ abstract class AbstractRedisStore<
     }
 
     @Override
-    public void commit(ByteBuffer metadata) {
+    public CompletableFuture<Void> commit(ByteBuffer metadata, Executor ignored) {
       requireNonNull(metadata);
       requireState(closed.compareAndSet(false, true), "Closed");
-      var response =
-          Script.COMMIT
-              .evalOn(commands())
-              .asMulti(
-                  List.of(entryKey, editorLockKey, wipDataKey),
-                  List.of(
-                      encode(editorId),
-                      metadata,
-                      encode(writer.dataSizeIfWritten()), // clientDataSize
-                      encode(staleEntryTtlSeconds),
-                      encode(1), // commit
-                      encode(clockKey)));
-
-      if (response.get(0).toString().equals("0")) {
-        throw new IllegalStateException(response.get(1).toString());
-      }
+      return Script.COMMIT
+          .evalOn(asyncCommands())
+          .asMulti(
+              List.of(entryKey, editorLockKey, wipDataKey),
+              List.of(
+                  encode(editorId),
+                  metadata,
+                  encode(writer.dataSizeIfWritten()), // clientDataSize
+                  encode(staleEntryTtlSeconds),
+                  encode(1), // commit
+                  encode(clockKey)))
+          .thenAccept(
+              response -> {
+                if (response.get(0).toString().equals("0")) {
+                  throw new IllegalStateException(response.get(1).toString());
+                }
+              });
     }
 
     @Override
     public void close() {
       if (closed.compareAndSet(false, true)) {
+        // We must run the command asynchronously as blocking risks deadlocks if close() is called
+        // from netty's NioEventLoop, which is single-threaded. This will cause us to wait for a
+        // command whose completion cannot be processed. We have no scruples not making sure the
+        // command has executed as even if it hasn't, redis will expire this editor's state anyhow.
         Script.COMMIT
-            .evalOn(commands())
+            .evalOn(asyncCommands())
             .asBoolean(
                 List.of(entryKey, editorLockKey, wipDataKey),
                 List.of(
@@ -677,7 +701,13 @@ abstract class AbstractRedisStore<
                     encode(-1), // clientDataSize
                     encode(staleEntryTtlSeconds),
                     encode(0), // commit
-                    encode(clockKey)));
+                    encode(clockKey)))
+            .whenComplete(
+                (__, ex) -> {
+                  if (ex != null) {
+                    logger.log(Level.WARNING, "Exception thrown by closing the editor");
+                  }
+                });
       }
     }
 
@@ -693,30 +723,51 @@ abstract class AbstractRedisStore<
       RedisEntryWriter() {}
 
       @Override
-      public int write(ByteBuffer src) {
-        return (int) write(List.of(src));
+      public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
+        return write(List.of(src), executor).thenApply(Long::intValue);
       }
 
-      @Override
-      public long write(List<ByteBuffer> srcs) {
+      public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor ignored) {
         requireNonNull(srcs);
-        requireState(!closed.get(), "closed");
+        requireState(!closed.get(), "Closed");
+        requireState(writeLatch.compareAndSet(false, true), "Ongoing write");
+        try {
+          return append(srcs)
+              .thenApply(serverBytesWritten -> onAppend(srcs, serverBytesWritten))
+              .whenComplete((__, ___) -> writeLatch.compareAndSet(true, false))
+              .copy(); // Defensively copy to make sure writeLatch is always reset.
+        } catch (Throwable t) {
+          writeLatch.compareAndSet(false, true);
+          throw t;
+        }
+      }
+
+      private CompletableFuture<Long> append(List<ByteBuffer> srcs) {
+        var args =
+            new ArrayList<>(
+                List.of(encode(editorId), encode(editorLockTtlSeconds), encode(srcs.size())));
+        args.addAll(srcs);
+        return Script.APPEND
+            .evalOn(asyncCommands())
+            .asLong(List.of(editorLockKey, wipDataKey), Collections.unmodifiableList(args));
+      }
+
+      private long onAppend(List<ByteBuffer> srcs, long serverBytesWritten) {
+        if (serverBytesWritten < 0) {
+          RedisEditor.this.close();
+          throw new IllegalStateException("Editor lock expired");
+        }
+
+        long written = 0;
+        for (var src : srcs) {
+          int position = src.position();
+          int limit = src.limit();
+          src.position(limit);
+          written += position <= limit ? limit - position : 0;
+        }
+
         lock.lock();
         try {
-          long serverBytesWritten = append(srcs);
-          if (serverBytesWritten < 0) {
-            RedisEditor.this.close();
-            throw new IllegalStateException("Editor lock expired");
-          }
-
-          long written = 0;
-          for (var src : srcs) {
-            int position = src.position();
-            int limit = src.limit();
-            src.position(limit);
-            written += position <= limit ? limit - position : 0;
-          }
-
           totalBytesWritten += written;
           if (totalBytesWritten != serverBytesWritten) {
             RedisEditor.this.close();
@@ -727,16 +778,6 @@ abstract class AbstractRedisStore<
         } finally {
           lock.unlock();
         }
-      }
-
-      private long append(List<ByteBuffer> srcs) {
-        var args =
-            new ArrayList<>(
-                List.of(encode(editorId), encode(editorLockTtlSeconds), encode(srcs.size())));
-        args.addAll(srcs);
-        return Script.APPEND
-            .evalOn(commands())
-            .asLong(List.of(editorLockKey, wipDataKey), Collections.unmodifiableList(args));
       }
 
       long dataSizeIfWritten() {

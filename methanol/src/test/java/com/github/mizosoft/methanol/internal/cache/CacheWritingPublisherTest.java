@@ -40,8 +40,10 @@ import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.BodyCollector;
 import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
+import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittablePublisher;
 import com.github.mizosoft.methanol.testing.TestException;
@@ -56,9 +58,9 @@ import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -70,8 +72,8 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith({ExecutorExtension.class, StoreExtension.class})
 @Timeout(5)
+@ExtendWith({ExecutorExtension.class, StoreExtension.class})
 class CacheWritingPublisherTest {
   static {
     Logging.disable(CacheWritingPublisher.class);
@@ -300,7 +302,8 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  void cancellationIsPropagatedLaterOnFailedWrite(Executor executor) {
+  void cancellationIsPropagatedLaterOnFailedWrite(
+      Executor executor, ExecutorContext executorContext) {
     var failOnWriteLatch = new CountDownLatch(1);
     var failingEditor =
         new TestEditor() {
@@ -317,7 +320,8 @@ class CacheWritingPublisherTest {
             upstream,
             failingEditor,
             EMPTY_BUFFER,
-            ForkJoinPool.commonPool()); // Use an async pool to avoid blocking indefinitely.
+            executorContext.createExecutor(
+                ExecutorType.CACHED_POOL)); // Use an async pool to avoid blocking indefinitely.
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
 
     // Cancel subscription eagerly.
@@ -392,7 +396,7 @@ class CacheWritingPublisherTest {
    * case, completion is forwarded downstream and writing continues on background.
    */
   @ExecutorParameterizedTest
-  void writeLaggingBehindBodyCompletion(Executor executor) {
+  void writeLaggingBehindBodyCompletion(Executor executor, ExecutorContext executorContext) {
     var bodyCompletionLatch = new CountDownLatch(1);
     var laggyEditor =
         new TestEditor() {
@@ -408,7 +412,8 @@ class CacheWritingPublisherTest {
             upstream,
             laggyEditor,
             EMPTY_BUFFER,
-            ForkJoinPool.commonPool()); // Use an async pool to avoid blocking indefinitely.
+            executorContext.createExecutor(
+                ExecutorType.CACHED_POOL)); // Use an async pool to avoid blocking indefinitely.
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
     subscriber.awaitSubscription();
@@ -444,17 +449,31 @@ class CacheWritingPublisherTest {
     assertThat(upstream.firstSubscription().currentDemand()).isEqualTo(2);
   }
 
-  // TODO replace ForkJoinPool
+  /*
+   * The tests blow exercise different paths to downstream completion if {@code waitForCommit} is
+   * true, which then instructs {@code CacheWritingPublisher} to not forward upstream's {@code
+   * onComplete} downstream until the edit is either committed or discarded. The tests that cause
+   * completion by committing or discarding the edit after upstream completion are "stochastic" if
+   * upstream operates asynchronously as it then cannot be guaranteed that {@code
+   * CacheWritingPublisher} has completely processed said completion and decided not to forward it.
+   */
 
   @ExecutorParameterizedTest
-  void waitForCommitToCompleteDownstreamWithWrite_stochasticWithAsyncExecutors(Executor executor) {
-    var calledWrite = new CountDownLatch(1);
+  void waitForCommitToCompleteDownstream_stochasticWithAsyncUpstream(
+      Executor executor, ExecutorContext executorContext) {
+    var calledCommit = new CountDownLatch(1);
+    var proceedWithCommit = new CountDownLatch(1);
     var editor =
         new TestEditor() {
           @Override
-          int write(ByteBuffer src) {
-            calledWrite.countDown();
-            return super.write(src);
+          public CompletableFuture<Void> commit(ByteBuffer metadata, Executor executor) {
+            return CompletableFuture.runAsync(
+                    () -> {
+                      calledCommit.countDown();
+                      awaitUninterruptibly(proceedWithCommit);
+                    },
+                    executor)
+                .thenCompose(__ -> super.commit(metadata, executor));
           }
         };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
@@ -463,7 +482,7 @@ class CacheWritingPublisherTest {
             upstream,
             editor,
             EMPTY_BUFFER,
-            ForkJoinPool.commonPool(),
+            executorContext.createExecutor(ExecutorType.CACHED_POOL),
             Listener.disabled(),
             false,
             true);
@@ -471,9 +490,11 @@ class CacheWritingPublisherTest {
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Pikachu"));
     upstream.close();
-    awaitUninterruptibly(calledWrite);
+    awaitUninterruptibly(calledCommit);
     assertThat(subscriber.completionCount()).isZero();
 
+    // Complete by committing edit.
+    proceedWithCommit.countDown();
     editor.awaitCommit();
     subscriber.awaitCompletion();
     assertThat(editor.writtenString()).isEqualTo("Pikachu");
@@ -482,13 +503,11 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  void waitForCommitWithFailedWrite_stochasticWithAsyncExecutors(Executor executor) {
-    var calledWrite = new CountDownLatch(1);
+  void waitForCommitWithFailedWrite(Executor executor, ExecutorContext executorContext) {
     var editor =
         new TestEditor() {
           @Override
           int write(ByteBuffer src) {
-            calledWrite.countDown();
             throw new TestException();
           }
         };
@@ -498,18 +517,17 @@ class CacheWritingPublisherTest {
             upstream,
             editor,
             EMPTY_BUFFER,
-            ForkJoinPool.commonPool(),
+            executorContext.createExecutor(ExecutorType.CACHED_POOL),
             Listener.disabled(),
             false,
             true);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Pikachu"));
-    awaitUninterruptibly(calledWrite);
+    editor.awaitDiscard();
     assertThat(subscriber.completionCount()).isZero();
 
-    editor.awaitDiscard();
-
+    // Complete by closing upstream. The edit is already discarded.
     upstream.close();
     subscriber.awaitCompletion();
     assertThat(subscriber.errorCount()).isZero();
@@ -517,15 +535,16 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  void waitForCommitWithDelayedFailedWrite_stochasticWithAsyncExecutors(Executor executor) {
+  void waitForCommitWithDelayedFailedWrite_stochasticWithAsyncUpstream(
+      Executor executor, ExecutorContext executorContext) {
     var calledWrite = new CountDownLatch(1);
-    var leaveWrite = new CountDownLatch(1);
+    var proceedWithWrite = new CountDownLatch(1);
     var editor =
         new TestEditor() {
           @Override
           int write(ByteBuffer src) {
             calledWrite.countDown();
-            awaitUninterruptibly(leaveWrite);
+            awaitUninterruptibly(proceedWithWrite);
             throw new TestException();
           }
         };
@@ -535,7 +554,7 @@ class CacheWritingPublisherTest {
             upstream,
             editor,
             EMPTY_BUFFER,
-            ForkJoinPool.commonPool(),
+            executorContext.createExecutor(ExecutorType.CACHED_POOL),
             Listener.disabled(),
             false,
             true);
@@ -546,7 +565,8 @@ class CacheWritingPublisherTest {
     awaitUninterruptibly(calledWrite);
     assertThat(subscriber.completionCount()).isZero();
 
-    leaveWrite.countDown();
+    // Complete by discarding the edit.
+    proceedWithWrite.countDown();
     editor.awaitDiscard();
     subscriber.awaitCompletion();
     assertThat(subscriber.errorCount()).isZero();
@@ -597,25 +617,30 @@ class CacheWritingPublisherTest {
     public EntryWriter writer() {
       return new EntryWriter() {
         @Override
-        public int write(ByteBuffer src) {
-          return TestEditor.this.write(src);
+        public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
+          return CompletableFuture.supplyAsync(() -> TestEditor.this.write(src), executor);
         }
 
         @Override
-        public long write(List<ByteBuffer> srcs) {
-          return srcs.stream().mapToInt(this::write).sum();
+        public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor) {
+          return CompletableFuture.supplyAsync(
+              () ->
+                  (long)
+                      srcs.stream().map(TestEditor.this::write).mapToInt(Integer::intValue).sum(),
+              executor);
         }
       };
     }
 
     @Override
-    public void commit(ByteBuffer metadata) {
+    public CompletableFuture<Void> commit(ByteBuffer metadata, Executor executor) {
       lock.lock();
       try {
         this.metadata = requireNonNull(metadata);
         committed = true;
         closed = true;
         closedCondition.signalAll();
+        return CompletableFuture.completedFuture(null);
       } finally {
         lock.unlock();
       }

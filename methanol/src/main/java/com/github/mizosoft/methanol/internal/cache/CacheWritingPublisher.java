@@ -28,7 +28,6 @@ import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.Upstream;
-import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
@@ -409,11 +408,9 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
           }
 
           try {
-            var lambdaBuffers = buffers;
-            Unchecked.supplyAsync(() -> writer.write(lambdaBuffers), executor)
-                .whenComplete((__, ex) -> onWriteCompletion(ex));
+            writer.write(buffers, executor).whenComplete((__, ex) -> onWriteCompletion(ex));
             return true;
-          } catch (Throwable t) {
+          } catch (Throwable t) { // write might throw.
             discardEdit();
             listener.onWriteFailure(t);
             completeDownstreamOnDiscardedEdit();
@@ -426,24 +423,27 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
                 this,
                 maintainWritingState ? WritingState.WRITING : WritingState.IDLE,
                 WritingState.COMMITTING)) {
-          Unchecked.runAsync(
-                  () -> {
-                    try (editor) {
-                      editor.commit(metadata);
-                    }
-                  },
-                  executor)
-              .whenComplete(
-                  (__, ex) -> {
-                    state = WritingState.DONE;
-                    if (ex != null) {
-                      listener.onWriteFailure(ex);
-                    } else {
-                      listener.onWriteSuccess();
-                    }
-                    completeDownstreamOnCommittedEdit();
-                  });
-          return true;
+          try {
+            editor
+                .commit(metadata, executor)
+                .whenComplete(
+                    (__, ex) -> {
+                      state = WritingState.DONE;
+                      closeEditor();
+                      if (ex != null) {
+                        listener.onWriteFailure(ex);
+                      } else {
+                        listener.onWriteSuccess();
+                      }
+                      completeDownstreamOnCommittedEdit();
+                    });
+            return true;
+          } catch (Throwable t) { // commit might throw.
+            discardEdit();
+            listener.onWriteFailure(t);
+            completeDownstreamOnDiscardedEdit();
+            return false;
+          }
         } else if (queueWasEmpty && buffers != null) {
           // Picked up new buffers after perceiving completion, retry.
         } else {
@@ -476,13 +476,17 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
           return;
         } else if (STATE.compareAndSet(this, currentState, WritingState.DONE)) {
           writeQueue.clear();
-          try {
-            editor.close();
-          } catch (Throwable t) {
-            logger.log(Level.WARNING, "Exception thrown when closing the editor", t);
-          }
+          closeEditor();
           return;
         }
+      }
+    }
+
+    private void closeEditor() {
+      try {
+        editor.close();
+      } catch (Throwable t) {
+        logger.log(Level.WARNING, "Exception thrown when closing the editor", t);
       }
     }
 

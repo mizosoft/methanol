@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -204,22 +204,27 @@ abstract class AbstractHttpCacheTest {
     }
 
     @Override
-    public Optional<Executor> executor() {
-      return delegate.executor();
-    }
-
-    @Override
-    public Optional<Viewer> view(String key) throws IOException, InterruptedException {
+    public Optional<Viewer> view(String key) throws IOException {
       return delegate.view(key);
     }
 
     @Override
-    public Optional<Editor> edit(String key) throws IOException, InterruptedException {
+    public CompletableFuture<Optional<Viewer>> view(String key, Executor executor) {
+      return delegate.view(key, executor);
+    }
+
+    @Override
+    public Optional<Editor> edit(String key) throws IOException {
       return delegate.edit(key);
     }
 
     @Override
-    public boolean removeAll(List<String> keys) throws IOException, InterruptedException {
+    public CompletableFuture<Optional<Editor>> edit(String key, Executor executor) {
+      return delegate.edit(key, executor);
+    }
+
+    @Override
+    public boolean removeAll(List<String> keys) throws IOException {
       return delegate.removeAll(keys);
     }
 
@@ -229,7 +234,7 @@ abstract class AbstractHttpCacheTest {
     }
 
     @Override
-    public boolean remove(String key) throws IOException, InterruptedException {
+    public boolean remove(String key) throws IOException {
       return delegate.remove(key);
     }
 
@@ -292,8 +297,13 @@ abstract class AbstractHttpCacheTest {
     }
 
     @Override
-    public Optional<Editor> edit() throws IOException, InterruptedException {
+    public Optional<Editor> edit() throws IOException {
       return delegate.edit();
+    }
+
+    @Override
+    public CompletableFuture<Optional<Editor>> edit(Executor executor) {
+      return delegate.edit(executor);
     }
 
     @Override
@@ -330,6 +340,11 @@ abstract class AbstractHttpCacheTest {
     }
 
     @Override
+    public CompletableFuture<Void> commit(ByteBuffer metadata, Executor executor) {
+      return delegate.commit(metadata, executor);
+    }
+
+    @Override
     public void close() {
       delegate.close();
     }
@@ -355,7 +370,7 @@ abstract class AbstractHttpCacheTest {
       try {
         phaser.awaitAdvanceInterruptibly(phaser.arrive(), 5, TimeUnit.SECONDS);
       } catch (InterruptedException | TimeoutException e) {
-        fail("timed out / interrupted while waiting for editors to be closed", e);
+        fail("Timed out / interrupted while waiting for editors to be closed", e);
       }
     }
 
@@ -367,12 +382,7 @@ abstract class AbstractHttpCacheTest {
       NotifyingEditor(Editor delegate, Phaser phaser) {
         super(delegate);
         this.phaser = phaser;
-        requireState(phaser.register() >= 0, "phaser terminated");
-      }
-
-      @Override
-      public void commit(ByteBuffer metadata) throws IOException {
-        super.commit(metadata);
+        requireState(phaser.register() >= 0, "Phaser terminated");
       }
 
       @Override
@@ -397,13 +407,23 @@ abstract class AbstractHttpCacheTest {
     }
 
     @Override
-    public Optional<Viewer> view(String key) throws IOException, InterruptedException {
+    public Optional<Viewer> view(String key) throws IOException {
       return super.view(key).map(EditAwaitableViewer::new);
     }
 
     @Override
-    public Optional<Editor> edit(String key) throws IOException, InterruptedException {
+    public CompletableFuture<Optional<Viewer>> view(String key, Executor executor) {
+      return super.view(key, executor).thenApply(viewer -> viewer.map(EditAwaitableViewer::new));
+    }
+
+    @Override
+    public Optional<Editor> edit(String key) throws IOException {
       return super.edit(key).map(editAwaiter::register);
+    }
+
+    @Override
+    public CompletableFuture<Optional<Editor>> edit(String key, Executor executor) {
+      return super.edit(key, executor).thenApply(editor -> editor.map(editAwaiter::register));
     }
 
     @Override
@@ -417,8 +437,13 @@ abstract class AbstractHttpCacheTest {
       }
 
       @Override
-      public Optional<Editor> edit() throws IOException, InterruptedException {
+      public Optional<Editor> edit() throws IOException {
         return super.edit().map(editAwaiter::register);
+      }
+
+      @Override
+      public CompletableFuture<Optional<Editor>> edit(Executor executor) {
+        return super.edit(executor).thenApply(editor -> editor.map(editAwaiter::register));
       }
     }
   }
@@ -458,7 +483,7 @@ abstract class AbstractHttpCacheTest {
       try {
         phaser.awaitAdvanceInterruptibly(phaser.arrive(), 5, TimeUnit.SECONDS);
       } catch (InterruptedException | TimeoutException e) {
-        fail("timed out / interrupted while waiting for tasks to finish", e);
+        fail("Timed out / interrupted while waiting for tasks to finish", e);
       }
     }
   }

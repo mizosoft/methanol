@@ -39,6 +39,7 @@ import com.github.mizosoft.methanol.testing.store.StoreConfig;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.store.StoreContext;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -114,8 +115,8 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
   private Editor edit(String key) {
     try {
       return store.edit(key).orElseThrow();
-    } catch (IOException | InterruptedException e) {
-      throw new RuntimeException(e);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
@@ -131,6 +132,7 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
 
   @DataProvider
   public static Object[][] provider() {
+    // Handcrafted cartesian product.
     var parameters =
         new ArrayList<>(
             List.of(

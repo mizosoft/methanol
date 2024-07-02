@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,6 @@ abstract class PublisherResponse extends RawResponse {
   @Override
   public <T> CompletableFuture<TrackedResponse<T>> handleAsync(
       BodyHandler<T> handler, Executor executor) {
-    // Result will be a TrackedResponse<T> similar to the original response.
     return Handlers.handleAsync(response, publisher, handler, executor)
         .thenApply(response -> (TrackedResponse<T>) response);
   }

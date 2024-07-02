@@ -289,11 +289,6 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public Optional<Executor> executor() {
-    return Optional.of(executor);
-  }
-
-  @Override
   public Optional<Viewer> view(String key) throws IOException {
     requireNonNull(key);
     closeLock.readLock().lock();
@@ -307,6 +302,11 @@ public final class DiskStore implements Store {
   }
 
   @Override
+  public CompletableFuture<Optional<Viewer>> view(String key, Executor executor) {
+    return Unchecked.supplyAsync(() -> view(key), executor);
+  }
+
+  @Override
   public Optional<Editor> edit(String key) throws IOException {
     requireNonNull(key);
     closeLock.readLock().lock();
@@ -317,6 +317,11 @@ public final class DiskStore implements Store {
     } finally {
       closeLock.readLock().unlock();
     }
+  }
+
+  @Override
+  public CompletableFuture<Optional<Editor>> edit(String key, Executor executor) {
+    return Unchecked.supplyAsync(() -> edit(key), executor);
   }
 
   @Override
@@ -1085,11 +1090,7 @@ public final class DiskStore implements Store {
 
     /** Forcibly submits an index write to the index executor, ignoring the time rate. */
     void forceSchedule() throws IOException {
-      try {
-        Utils.get(forceScheduleAsync());
-      } catch (InterruptedException e) {
-        throw (IOException) new InterruptedIOException().initCause(e);
-      }
+      Utils.getIo(forceScheduleAsync());
     }
 
     private CompletableFuture<Void> forceScheduleAsync() {
@@ -1114,7 +1115,7 @@ public final class DiskStore implements Store {
         runningTaskAwaiter.awaitAdvanceInterruptibly(runningTaskAwaiter.arriveAndDeregister());
         assert runningTaskAwaiter.isTerminated();
       } catch (InterruptedException e) {
-        throw new InterruptedIOException();
+        throw Utils.toInterruptedIOException(e);
       }
     }
 
@@ -1849,6 +1850,11 @@ public final class DiskStore implements Store {
     }
 
     @Override
+    public CompletableFuture<Optional<Editor>> edit(Executor executor) {
+      return Unchecked.supplyAsync(this::edit, executor);
+    }
+
+    @Override
     public long dataSize() {
       return descriptor.dataSize;
     }
@@ -1897,6 +1903,16 @@ public final class DiskStore implements Store {
         } finally {
           lock.unlock();
         }
+      }
+
+      @Override
+      public CompletableFuture<Integer> read(ByteBuffer dst, Executor executor) {
+        return Unchecked.supplyAsync(() -> read(dst), executor);
+      }
+
+      @Override
+      public CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor executor) {
+        return Unchecked.supplyAsync(() -> read(dsts), executor);
       }
 
       int readBytes(ByteBuffer dst) throws IOException {
@@ -1985,6 +2001,14 @@ public final class DiskStore implements Store {
     }
 
     @Override
+    public CompletableFuture<Void> commit(ByteBuffer metadata, Executor executor) {
+      requireNonNull(metadata);
+      requireState(closed.compareAndSet(false, true), "closed");
+      return Unchecked.runAsync(
+          () -> entry.commit(this, key, metadata, writer.dataSizeIfWritten(), channel), executor);
+    }
+
+    @Override
     public void close() {
       if (closed.compareAndSet(false, true)) {
         entry.discardIfCurrentEdit(this);
@@ -2018,6 +2042,12 @@ public final class DiskStore implements Store {
       }
 
       @Override
+      public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
+        requireNonNull(src);
+        return Unchecked.supplyAsync(() -> write(src), executor);
+      }
+
+      @Override
       public long write(List<ByteBuffer> srcs) throws IOException {
         requireNonNull(srcs);
         requireState(!closed.get(), "closed");
@@ -2030,6 +2060,12 @@ public final class DiskStore implements Store {
         } finally {
           lock.unlock();
         }
+      }
+
+      @Override
+      public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor) {
+        requireNonNull(srcs);
+        return Unchecked.supplyAsync(() -> write(srcs), executor);
       }
 
       long dataSizeIfWritten() {

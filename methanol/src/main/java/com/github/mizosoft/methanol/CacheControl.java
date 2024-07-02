@@ -88,7 +88,7 @@ public final class CacheControl {
   private final Set<String> privateFields;
 
   /** The map of all directives, lazily initialized if this instance wasn't parsed from a string. */
-  private @MonotonicNonNull Map<String, String> directives;
+  private @MonotonicNonNull Map<String, String> lazyDirectives;
 
   /**
    * Map that contains unrecognized (non-standard) directives added via {@link Builder#directive}.
@@ -96,7 +96,7 @@ public final class CacheControl {
    */
   private final Map<String, String> unrecognizedAddedDirectives;
 
-  private @MonotonicNonNull String cachedToString;
+  private @MonotonicNonNull String lazyToString;
 
   private CacheControl(Builder builder) {
     maxAge = Optional.ofNullable(builder.maxAge);
@@ -121,7 +121,7 @@ public final class CacheControl {
     var parsedDirectives = builder.parsedDirectives;
     if (parsedDirectives != null) {
       // Safe to retain a reference as parsedDirectives is never modified again when parsed.
-      directives = Collections.unmodifiableMap(parsedDirectives);
+      lazyDirectives = Collections.unmodifiableMap(parsedDirectives);
       unrecognizedAddedDirectives = Map.of();
     } else {
       unrecognizedAddedDirectives = Map.copyOf(builder.unrecognizedDirectives);
@@ -133,12 +133,12 @@ public final class CacheControl {
    * mapped to an empty string.
    */
   public Map<String, String> directives() {
-    var result = directives;
-    if (result == null) {
-      result = computeDirectives();
-      directives = result;
+    var directives = lazyDirectives;
+    if (directives == null) {
+      directives = computeDirectives();
+      lazyDirectives = directives;
     }
-    return result;
+    return directives;
   }
 
   private Map<String, String> computeDirectives() {
@@ -302,12 +302,12 @@ public final class CacheControl {
 
   @Override
   public String toString() {
-    var result = cachedToString;
-    if (result == null) {
-      result = computeToString();
-      cachedToString = result;
+    var toString = lazyToString;
+    if (toString == null) {
+      toString = computeToString();
+      lazyToString = toString;
     }
-    return result;
+    return toString;
   }
 
   private String computeToString() {

@@ -30,7 +30,6 @@ import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
@@ -99,7 +98,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
           try {
             Listener.this.onReadSuccess();
           } catch (Throwable e) {
-            logger.log(Level.WARNING, "exception thrown by Listener::onReadSuccess", e);
+            logger.log(Level.WARNING, "Exception thrown by Listener::onReadSuccess", e);
           }
         }
 
@@ -108,7 +107,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
           try {
             Listener.this.onReadFailure(exception);
           } catch (Throwable e) {
-            logger.log(Level.WARNING, "exception thrown by Listener::onReadFailure", e);
+            logger.log(Level.WARNING, "Exception thrown by Listener::onReadFailure", e);
           }
         }
       };
@@ -239,7 +238,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
           && ((maintainReadingState && state == State.READING)
               || STATE.compareAndSet(this, State.IDLE, State.READING))) {
         // Re-read buffersPromised twice as it can only decrease if we're here, and if so we want
-        // that decrease to be reflected.
+        // the decreased quantity to be reflected.
         int buffersNeeded = Math.min(PREFETCH - buffersPromised.get(), MAX_BULK_READ_SIZE);
         var buffers =
             Stream.generate(() -> ByteBuffer.allocate(bufferSize))
@@ -247,7 +246,8 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
                 .collect(Collectors.toUnmodifiableList());
         buffersPromised.getAndAdd(buffersNeeded);
         try {
-          Unchecked.supplyAsync(() -> reader.read(buffers), executor)
+          reader
+              .read(buffers, executor)
               .whenComplete((read, exception) -> onReadCompletion(buffers, read, exception));
           return true;
         } catch (Throwable t) {
@@ -276,7 +276,6 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         fireOrKeepAlive();
       } else {
         assert !buffers.isEmpty();
-
         readQueue.add(
             sliceNonEmptyBuffers(
                 buffers.stream()

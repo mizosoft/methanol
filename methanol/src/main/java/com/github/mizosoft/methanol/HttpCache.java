@@ -43,16 +43,18 @@ import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutor;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.Flushable;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -86,14 +88,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
   private final Executor executor;
   private final boolean isDefaultExecutor;
   private final StatsRecorder statsRecorder;
+  private final Clock clock;
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private final Optional<Listener> userListener;
 
   private final Listener listener;
-  private final Clock clock;
-
-  private final LocalCache localCache = new LocalCacheImpl();
+  private final LocalCache asyncLocalCache;
+  private final LocalCache syncLocalCache;
 
   private HttpCache(Store store, Executor executor, boolean isDefaultExecutor, Builder builder) {
     this.store = requireNonNull(store);
@@ -101,12 +103,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
     this.isDefaultExecutor = isDefaultExecutor;
     this.statsRecorder =
         requireNonNullElseGet(builder.statsRecorder, StatsRecorder::createConcurrentRecorder);
+    this.clock = requireNonNullElse(builder.clock, Utils.systemMillisUtc());
     this.userListener = Optional.ofNullable(builder.listener);
     this.listener =
         new CompositeListener(
             userListener.orElse(DisabledListener.INSTANCE),
             new StatsRecordingListener(statsRecorder));
-    this.clock = requireNonNullElse(builder.clock, Utils.systemMillisUtc());
+    this.asyncLocalCache = new AsyncLocalCache(executor);
+    this.syncLocalCache = new AsyncLocalCache(FlowSupport.SYNC_EXECUTOR);
   }
 
   Store store() {
@@ -218,12 +222,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
       private boolean findNext() {
         while (nextUri == null && viewerIterator.hasNext()) {
           try (var viewer = viewerIterator.next()) {
-            var metadata = tryDecodeMetadata(viewer);
+            var metadata = tryRecoverMetadata(viewer);
             if (metadata != null) {
               nextUri = metadata.uri();
               return true;
-            } else {
-              viewerIterator.remove();
             }
           }
         }
@@ -247,11 +249,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
    * @throws IllegalStateException if closed
    */
   public boolean remove(URI uri) throws IOException {
-    try {
-      return store.remove(toStoreKey(uri));
-    } catch (InterruptedException e) {
-      throw (IOException) new InterruptedIOException().initCause(e);
-    }
+    return store.remove(toStoreKey(uri));
   }
 
   /**
@@ -262,20 +260,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
   public boolean remove(HttpRequest request) throws IOException {
     try (var viewer = store.view(toStoreKey(request)).orElse(null)) {
       if (viewer != null) {
-        var metadata = tryDecodeMetadata(viewer);
+        var metadata = tryRecoverMetadata(viewer);
         if (metadata != null && metadata.matches(request)) {
           return viewer.removeEntry();
-        } else if (metadata == null) {
-          // The entry is corrupt, try removing it anyway.
-          try {
-            viewer.removeEntry();
-          } catch (IOException e) {
-            logger.log(Level.WARNING, "Exception when thrown removing corrupt entry", e);
-          }
         }
       }
-    } catch (InterruptedException e) {
-      throw (IOException) new InterruptedIOException().initCause(e);
     }
     return false;
   }
@@ -306,7 +295,17 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   /** Returns an interceptor that serves responses from this cache if applicable. */
   Interceptor interceptor() {
-    return new CacheInterceptor(localCache, listener, executor, clock);
+    return new CacheInterceptor(this::createLocalCache, listener, executor, clock);
+  }
+
+  private LocalCache createLocalCache(Executor executor) {
+    if (executor == FlowSupport.SYNC_EXECUTOR) {
+      return syncLocalCache;
+    } else if (executor == this.executor) {
+      return asyncLocalCache;
+    } else {
+      return new AsyncLocalCache(executor);
+    }
   }
 
   static String toStoreKey(HttpRequest request) {
@@ -318,15 +317,18 @@ public final class HttpCache implements AutoCloseable, Flushable {
     return uri.toString();
   }
 
-  private static @Nullable CacheResponseMetadata tryDecodeMetadata(@Nullable Viewer viewer) {
-    if (viewer != null) {
+  private static @Nullable CacheResponseMetadata tryRecoverMetadata(Viewer viewer) {
+    try {
+      return CacheResponseMetadata.decode(viewer.metadata());
+    } catch (IOException e) {
       try {
-        return CacheResponseMetadata.decode(viewer.metadata());
-      } catch (IOException e) {
-        logger.log(Level.WARNING, "Unrecoverable cache entry", e);
+        viewer.removeEntry();
+      } catch (IOException removeEx) {
+        e.addSuppressed(removeEx);
       }
+      logger.log(Level.WARNING, "Unrecoverable cache entry", e);
+      return null;
     }
-    return null;
   }
 
   /** Returns a new {@code HttpCache.Builder}. */
@@ -364,16 +366,27 @@ public final class HttpCache implements AutoCloseable, Flushable {
     };
   }
 
-  private final class LocalCacheImpl implements LocalCache {
-    LocalCacheImpl() {}
+  private final class AsyncLocalCache implements LocalCache {
+    private final Executor executor;
+
+    AsyncLocalCache(Executor executor) {
+      this.executor = executor;
+    }
 
     @Override
-    public Optional<CacheResponse> get(HttpRequest request)
-        throws IOException, InterruptedException {
-      var viewer = store.view(toStoreKey(request));
+    public CompletableFuture<Optional<CacheResponse>> get(
+        HttpRequest request, Instant requestTime) {
+      return store
+          .view(toStoreKey(request), executor)
+          .thenApply(viewer -> readCacheResponse(viewer, request, requestTime));
+    }
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private Optional<CacheResponse> readCacheResponse(
+        Optional<Viewer> viewer, HttpRequest request, Instant requestTime) {
       var cacheResponse =
           viewer
-              .map(HttpCache::tryDecodeMetadata)
+              .map(HttpCache::tryRecoverMetadata)
               .filter(metadata -> metadata.matches(request))
               .map(
                   metadata ->
@@ -383,7 +396,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
                           executor,
                           toReadListener(listener, request),
                           request,
-                          clock.instant()));
+                          requestTime));
       if (cacheResponse.isEmpty()) {
         viewer.ifPresent(Viewer::close);
       }
@@ -391,30 +404,46 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public void update(CacheResponse cacheResponse) throws IOException, InterruptedException {
-      try (var editor = cacheResponse.edit().orElse(null)) {
-        if (editor != null) {
-          editor.commit(CacheResponseMetadata.from(cacheResponse.get()).encode());
-        }
-      }
+    public CompletableFuture<Void> update(CacheResponse cacheResponse) {
+      return cacheResponse
+          .edit()
+          .thenCompose(
+              optionalEditor ->
+                  optionalEditor
+                      .map(
+                          editor ->
+                              editor
+                                  .commit(
+                                      CacheResponseMetadata.from(cacheResponse.get()).encode(),
+                                      executor)
+                                  .whenComplete((__, ___) -> editor.close()))
+                      .orElseGet(() -> CompletableFuture.completedFuture(null)));
     }
 
     @Override
-    public Optional<NetworkResponse> put(
-        HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse)
-        throws IOException, InterruptedException {
-      var editor = cacheResponse != null ? cacheResponse.edit() : store.edit(toStoreKey(request));
-      return editor.isPresent()
-          ? Optional.of(
-              networkResponse.writingWith(
-                  editor.get(), executor, toWriteListener(listener, request)))
-          : Optional.empty();
+    public CompletableFuture<Optional<NetworkResponse>> put(
+        HttpRequest request,
+        NetworkResponse networkResponse,
+        @Nullable CacheResponse cacheResponse) {
+      var editorFuture =
+          cacheResponse != null ? cacheResponse.edit() : store.edit(toStoreKey(request), executor);
+      return editorFuture.thenApply(
+          optionalEditor ->
+              optionalEditor.map(
+                  editor ->
+                      networkResponse.writingWith(
+                          editor, executor, toWriteListener(listener, request))));
     }
 
     @Override
-    public boolean removeAll(List<URI> uris) throws IOException, InterruptedException {
-      return store.removeAll(
-          uris.stream().map(HttpCache::toStoreKey).collect(Collectors.toUnmodifiableList()));
+    public CompletableFuture<Boolean> removeAll(List<URI> uris) {
+      return Unchecked.supplyAsync(
+          () ->
+              store.removeAll(
+                  uris.stream()
+                      .map(HttpCache::toStoreKey)
+                      .collect(Collectors.toUnmodifiableList())),
+          executor);
     }
   }
 

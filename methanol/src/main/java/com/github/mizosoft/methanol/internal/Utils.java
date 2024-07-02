@@ -219,6 +219,14 @@ public class Utils {
     }
   }
 
+  public static <T> T getIo(Future<T> future) throws IOException {
+    try {
+      return get(future);
+    } catch (InterruptedException e) {
+      throw toInterruptedIOException(e);
+    }
+  }
+
   /**
    * From RFC 7230 section 3.2.6:
    *

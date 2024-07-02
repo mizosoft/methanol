@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,11 +37,13 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.DiskEntry;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.EntryCorruptionMode;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.Index;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexCorruptionMode;
 import com.github.mizosoft.methanol.internal.cache.MockDiskStore.IndexEntry;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
@@ -92,7 +94,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void persistenceOnCreation(DiskStoreContext context) throws IOException, InterruptedException {
+  void persistenceOnCreation(DiskStoreContext context) throws IOException {
     var mockStore = new MockDiskStore(context);
     mockStore.write("e1", "Ditto", "Eevee");
     mockStore.write("e2", "Mew", "Mewtwo");
@@ -106,8 +108,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void persistenceAcrossSessions(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void persistenceAcrossSessions(DiskStoreContext context) throws IOException {
     try (var store1 = context.createAndRegisterStore()) {
       write(store1, "e1", "Mewtwo", "Charmander");
       write(store1, "e2", "Psyduck", "Pikachu");
@@ -122,8 +123,7 @@ class DiskStoreTest {
   /** Dirty entry files of untracked entries found during initialization are deleted. */
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void createWithIncompleteEditsForUntrackedEntries(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void createWithIncompleteEditsForUntrackedEntries(DiskStoreContext context) throws IOException {
     var mockStore = new MockDiskStore(context);
 
     // Write an empty index.
@@ -143,8 +143,7 @@ class DiskStoreTest {
   /** Dirty entry files of tracked entries found during initialization are deleted. */
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void createWithIncompleteEditsForTrackedEntries(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void createWithIncompleteEditsForTrackedEntries(DiskStoreContext context) throws IOException {
     var mockStore = new MockDiskStore(context);
     mockStore.write("e1", "Eevee", "Jigglypuff");
     mockStore.write("e2", "Jynx", "Mew");
@@ -163,8 +162,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void createWithDirtyFileForTrackedEntry(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void createWithDirtyFileForTrackedEntry(DiskStoreContext context) throws IOException {
     // Write a tracked entry with only its dirty file on disk.
     var index = new Index(context.config().appVersion());
     var entry = new DiskEntry("e1", "Eevee", "Mew", context.config().appVersion());
@@ -182,8 +180,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void untrackedEntriesFoundOnDiskAreDeleted(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void untrackedEntriesFoundOnDiskAreDeleted(DiskStoreContext context) throws IOException {
     var mockStore = new MockDiskStore(context);
     mockStore.writeIndex();
 
@@ -200,8 +197,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void createWithDeletedTrackedEntries(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void createWithDeletedTrackedEntries(DiskStoreContext context) throws IOException {
     var mockStore = new MockDiskStore(context);
     mockStore.write("e1", "Ditto", "Psyduck");
     mockStore.writeIndex();
@@ -215,7 +211,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void entryInitCombinations(DiskStoreContext context) throws IOException, InterruptedException {
+  void entryInitCombinations(DiskStoreContext context) throws IOException {
     var mockStore = new MockDiskStore(context);
     mockStore.write("e1", "a", "a"); // Tracked clean entry.
     mockStore.writeDirty("e1", "b", "b"); // Incomplete second edit for tracked entry.
@@ -240,8 +236,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void storeContentIsDroppedOnCorruptIndex(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void storeContentIsDroppedOnCorruptIndex(DiskStoreContext context) throws IOException {
     for (var corruptionMode : IndexCorruptionMode.values()) {
       try {
         assertStoreContentIsDroppedOnCorruptIndex(context, corruptionMode);
@@ -253,8 +248,7 @@ class DiskStoreTest {
   }
 
   private void assertStoreContentIsDroppedOnCorruptIndex(
-      DiskStoreContext context, IndexCorruptionMode corruptionMode)
-      throws IOException, InterruptedException {
+      DiskStoreContext context, IndexCorruptionMode corruptionMode) throws IOException {
     var mockStore = new MockDiskStore(context);
     mockStore.write("e1", "Ditto", "Eevee");
     mockStore.write("e2", "Jynx", "Snorlax");
@@ -310,7 +304,7 @@ class DiskStoreTest {
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
   void unreadableEntriesAreNotTrackedByTheIndex(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+      throws IOException {
     var editor = edit(store, "e1");
     write(editor, "Ditto");
 
@@ -328,8 +322,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void removeBeforeFlush(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void removeBeforeFlush(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "Mew", "Mewtwo");
     assertThat(store.remove("e1")).isTrue();
     store.flush();
@@ -341,8 +334,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void clearBeforeFlush(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void clearBeforeFlush(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "Mew", "Mewtwo");
     write(store, "e2", "Jynx", "Ditto");
     store.clear();
@@ -358,8 +350,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK, maxSize = 4, execution = Execution.SAME_THREAD)
-  void lruEvictionBeforeFlush(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void lruEvictionBeforeFlush(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "aa", "bb"); // Grow size to 4 bytes.
     write(store, "e2", "cc", "dd"); // Grow size to 8 bytes, causing e1 to be evicted.
     assertAbsent(store, context, "e1");
@@ -375,7 +366,7 @@ class DiskStoreTest {
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
   void closingTheStoreDiscardsIncompleteFirstEdit(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+      throws IOException {
     var editor = edit(store, "e1");
     write(editor, "Ditto");
 
@@ -399,7 +390,7 @@ class DiskStoreTest {
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
   void closingTheStoreDiscardsIncompleteSecondEdit(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+      throws IOException {
     write(store, "e1", "Pikachu", "Eevee");
 
     var editor = edit(store, "e1");
@@ -421,8 +412,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void viewerDisallowsEditsAfterClosingTheStore(Store store)
-      throws IOException, InterruptedException {
+  void viewerDisallowsEditsAfterClosingTheStore(Store store) throws IOException {
     write(store, "e1", "Mew", "Mewtwo");
     try (var viewer = view(store, "e1")) {
       store.close();
@@ -438,7 +428,7 @@ class DiskStoreTest {
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
   @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void concurrentRemovals(Store store, Executor executor) throws IOException, InterruptedException {
+  void concurrentRemovals(Store store, Executor executor) throws IOException {
     write(store, "e1", "Ditto", "Eevee");
 
     int removalTriesCount = 10;
@@ -461,8 +451,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void removeIsAppliedOnDisk(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void removeIsAppliedOnDisk(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "Jynx", "Ditto");
     assertThat(store.remove("e1")).isTrue();
     new MockDiskStore(context).assertEntryFileDoesNotExist("e1");
@@ -470,8 +459,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void removeFromViewerIsAppliedOnDisk(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void removeFromViewerIsAppliedOnDisk(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "Jynx", "Ditto");
     try (var viewer = view(store, "e1")) {
       assertThat(viewer.removeEntry()).isTrue();
@@ -481,8 +469,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void clearIsAppliedOnDisk(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void clearIsAppliedOnDisk(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "Jynx", "Ditto");
     write(store, "e2", "Mew", "Charmander");
     write(store, "e3", "Eevee", "Mewtwo");
@@ -492,8 +479,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void discardedEditIsAppliedOnDisk(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void discardedEditIsAppliedOnDisk(Store store, DiskStoreContext context) throws IOException {
     var mockStore = new MockDiskStore(context);
     try (var editor = edit(store, "e1")) {
       // Don't commit edit.
@@ -535,8 +521,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK, maxSize = 4, execution = Execution.SAME_THREAD)
-  void createdStoreStartsWithinBounds(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void createdStoreStartsWithinBounds(DiskStoreContext context) throws IOException {
     var mockStore = new MockDiskStore(context);
     mockStore.write("e1", "aa", "bb"); // Grow size to 4 bytes.
     mockStore.write("e2", "cc", "dd"); // Grow size to 8 bytes, evicting e1.
@@ -550,7 +535,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK, maxSize = 8, execution = Execution.SAME_THREAD)
-  void lruOrderIsPersisted(DiskStoreContext context) throws IOException, InterruptedException {
+  void lruOrderIsPersisted(DiskStoreContext context) throws IOException {
     // LRU queue: e1, e2, e2
     var store1 = (DiskStore) context.createAndRegisterStore();
     write(store1, "e1", "a", "b"); // Grow size to 2 bytes.
@@ -585,8 +570,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void missingEntryFile(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void missingEntryFile(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "Ditto", "Jynx");
 
     var mockStore = new MockDiskStore(context);
@@ -596,8 +580,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void missingEntryFileWhileIterating(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void missingEntryFileWhileIterating(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "Ditto", "Jynx");
     var iter = store.iterator();
     var mockStore = new MockDiskStore(context);
@@ -613,8 +596,7 @@ class DiskStoreTest {
       indexUpdateDelaySeconds = 0,
       autoAdvanceClock = false,
       dispatchEagerly = false)
-  void indexUpdateEvents(DiskStore store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void indexUpdateEvents(DiskStore store, DiskStoreContext context) throws IOException {
     var delayer = (MockDelayer) store.delayer();
     var clock = (MockClock) store.clock();
     var mockStore = new MockDiskStore(context);
@@ -638,7 +620,7 @@ class DiskStoreTest {
     assertThat(store.indexWriteCount()).isEqualTo(++indexWriteCount);
 
     // Attempting to view a non-existent entry doesn't issue an index write.
-    assertThat(store.view("e2")).isEmpty();
+    assertThat(Utils.getIo(store.view("e2", FlowSupport.SYNC_EXECUTOR))).isEmpty();
     assertThat(delayer.taskCount()).isZero();
 
     // Removing an existing entry issues an index write.
@@ -719,7 +701,7 @@ class DiskStoreTest {
       autoAdvanceClock = false,
       dispatchEagerly = false,
       indexUpdateDelaySeconds = 1)
-  void indexUpdatesAreTimeLimited(DiskStore store) throws IOException, InterruptedException {
+  void indexUpdatesAreTimeLimited(DiskStore store) throws IOException {
     var delayer = (MockDelayer) store.delayer();
     var clock = (MockClock) store.clock();
     int indexWriteCount = 0;
@@ -779,8 +761,7 @@ class DiskStoreTest {
       tested = StoreType.DISK,
       indexUpdateDelaySeconds = 1, // Stall time-limited index writes.
       autoAdvanceClock = false)
-  void indexIsFlushedOnClosure(DiskStore store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void indexIsFlushedOnClosure(DiskStore store, DiskStoreContext context) throws IOException {
     write(store, "e1", "12", "ab");
     store.close();
 
@@ -791,7 +772,7 @@ class DiskStoreTest {
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
   void entryFileIsTruncatedWhenMetadataShrinks(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+      throws IOException {
     var mockStore = new MockDiskStore(context);
 
     write(store, "e1", "123", "abc");
@@ -807,8 +788,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK, maxSize = 5, execution = Execution.SAME_THREAD)
-  void entryExceedingMaxSize(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void entryExceedingMaxSize(Store store, DiskStoreContext context) throws IOException {
     var mockStore = new MockDiskStore(context);
 
     write(store, "e1", "12", "ab"); // 4 bytes.
@@ -827,8 +807,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK, maxSize = 4)
-  void exceedMaxSizeByExpandingData(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void exceedMaxSizeByExpandingData(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "12", "ab");
     assertEntryEquals(store, "e1", "12", "ab");
 
@@ -840,8 +819,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK, maxSize = 4)
-  void exceedMaxSizeByExpandingMetadata(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void exceedMaxSizeByExpandingMetadata(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "12", "ab");
     assertEntryEquals(store, "e1", "12", "ab");
 
@@ -866,7 +844,7 @@ class DiskStoreTest {
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
   void removalFromViewerIsIgnoredAfterClosingTheStore(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+      throws IOException {
     write(store, "e1", "Eevee", "Jynx");
     try (var viewer = view(store, "e1")) {
       store.close();
@@ -880,8 +858,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void removalFromViewerIsIgnoredAfterDisposingTheStore(Store store)
-      throws IOException, InterruptedException {
+  void removalFromViewerIsIgnoredAfterDisposingTheStore(Store store) throws IOException {
     write(store, "e1", "Eevee", "Jynx");
     try (var viewer = view(store, "e1")) {
       store.dispose();
@@ -892,7 +869,7 @@ class DiskStoreTest {
   /** Closing the store while iterating silently terminates iteration. */
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void closeWhileIterating(Store store) throws IOException, InterruptedException {
+  void closeWhileIterating(Store store) throws IOException {
     write(store, "e1", "Ditto", "Charmander");
     write(store, "e2", "Eevee", "Jynx");
 
@@ -906,7 +883,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void closeStoreWhileReading(Store store) throws IOException, InterruptedException {
+  void closeStoreWhileReading(Store store) throws IOException {
     write(store, "e1", "Jynx", "Ditto");
     try (var viewer = view(store, "e1")) {
       store.close();
@@ -916,8 +893,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void disposeClearsStoreContent(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void disposeClearsStoreContent(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "Jynx", "Eevee");
     store.dispose();
     assertInoperable(store);
@@ -937,8 +913,7 @@ class DiskStoreTest {
       dispatchEagerly = false)
   @ExecutorSpec(ExecutorType.CACHED_POOL)
   void indexWriteDisposeRaces_systemFileSystem(
-      DiskStore store, DiskStoreContext context, Executor executor)
-      throws IOException, InterruptedException {
+      DiskStore store, DiskStoreContext context, Executor executor) throws IOException {
     testDisposeDuringIndexWrite(store, context, executor);
   }
 
@@ -951,14 +926,12 @@ class DiskStoreTest {
       dispatchEagerly = false)
   @ExecutorSpec(ExecutorType.CACHED_POOL)
   void indexWriteDisposeRaces_windowsEmulatingFilesystem(
-      DiskStore store, DiskStoreContext context, Executor executor)
-      throws IOException, InterruptedException {
+      DiskStore store, DiskStoreContext context, Executor executor) throws IOException {
     testDisposeDuringIndexWrite(store, context, executor);
   }
 
   private void testDisposeDuringIndexWrite(
-      DiskStore store, DiskStoreContext context, Executor executor)
-      throws IOException, InterruptedException {
+      DiskStore store, DiskStoreContext context, Executor executor) throws IOException {
     // Submit index write tasks (queued by the delayer).
     int indexWriteCount = 10;
     write(store, "e1", "", "a");
@@ -996,8 +969,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void disposeStoreWhileReading(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void disposeStoreWhileReading(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "Jynx", "Ditto");
     try (var viewer = view(store, "e1")) {
       store.dispose();
@@ -1008,20 +980,18 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void hashCollisionOnViewing(Store store, DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void hashCollisionOnViewing(Store store, DiskStoreContext context) throws IOException {
     context.hasher().setHash("e1", 1);
     context.hasher().setHash("e2", 1);
 
     write(store, "e1", "Jynx", "Psyduck");
-    assertThat(store.view("e2")).isEmpty();
+    assertThat(Utils.getIo(store.view("e2", FlowSupport.SYNC_EXECUTOR))).isEmpty();
     assertEntryEquals(store, "e1", "Jynx", "Psyduck");
   }
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void hashCollisionOnViewingRecoveredEntry(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void hashCollisionOnViewingRecoveredEntry(DiskStoreContext context) throws IOException {
     context.hasher().setHash("e1", 1);
     context.hasher().setHash("e2", 1);
 
@@ -1030,7 +1000,7 @@ class DiskStoreTest {
     mockStore.writeIndex();
 
     var store = context.createAndRegisterStore();
-    assertThat(store.view("e2")).isEmpty();
+    assertThat(Utils.getIo(store.view("e2", FlowSupport.SYNC_EXECUTOR))).isEmpty();
     assertEntryEquals(store, "e1", "Jynx", "Psyduck");
   }
 
@@ -1038,7 +1008,7 @@ class DiskStoreTest {
       "DiskStore currently doesn't care if entries collide on removal and the key isn't cached")
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void hashCollisionOnRemoval(DiskStoreContext context) throws IOException, InterruptedException {
+  void hashCollisionOnRemoval(DiskStoreContext context) throws IOException {
     context.hasher().setHash("e1", 1);
     context.hasher().setHash("e2", 1);
 
@@ -1053,8 +1023,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void hashCollisionOnRemovalWithCachedKey(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void hashCollisionOnRemovalWithCachedKey(DiskStoreContext context) throws IOException {
     context.hasher().setHash("e1", 1);
     context.hasher().setHash("e2", 1);
 
@@ -1066,8 +1035,7 @@ class DiskStoreTest {
 
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
-  void hashCollisionOnCompletedEdit(DiskStoreContext context)
-      throws IOException, InterruptedException {
+  void hashCollisionOnCompletedEdit(DiskStoreContext context) throws IOException {
     context.hasher().setHash("e1", 1);
     context.hasher().setHash("e2", 1);
 
@@ -1083,8 +1051,10 @@ class DiskStoreTest {
   }
 
   private static void assertInoperable(Store store) {
-    assertThatIllegalStateException().isThrownBy(() -> store.view("e1"));
-    assertThatIllegalStateException().isThrownBy(() -> store.edit("e1"));
+    assertThatIllegalStateException()
+        .isThrownBy(() -> Utils.get(store.view("e1", FlowSupport.SYNC_EXECUTOR)));
+    assertThatIllegalStateException()
+        .isThrownBy(() -> Utils.get(store.edit("e1", FlowSupport.SYNC_EXECUTOR)));
     assertThatIllegalStateException().isThrownBy(() -> store.remove("e1"));
     assertThatIllegalStateException().isThrownBy(store::clear);
   }

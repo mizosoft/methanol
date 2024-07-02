@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -131,7 +131,7 @@ class CacheResponseMetadataTest {
   }
 
   @Test
-  void endOfInput() throws IOException {
+  void endOfInput() {
     var response = response("Cache-Control", "max-age=4200").request(request()).buildTrackedResponse();
     var buffer = metadata(response).encode();
     buffer.limit(buffer.limit() - 10);

@@ -49,7 +49,6 @@ import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.internal.text.CharMatcher;
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import java.io.IOException;
@@ -77,7 +76,6 @@ import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -130,13 +128,14 @@ public final class CacheInterceptor implements Interceptor {
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private static final Optional<Boolean> TRUE_OPTIONAL = Optional.of(true);
 
-  private final LocalCache cache;
+  private final LocalCache.Factory cacheFactory;
   private final Listener listener;
   private final Executor executor;
   private final Clock clock;
 
-  public CacheInterceptor(LocalCache cache, Listener listener, Executor executor, Clock clock) {
-    this.cache = requireNonNull(cache);
+  public CacheInterceptor(
+      LocalCache.Factory cacheFactory, Listener listener, Executor executor, Clock clock) {
+    this.cacheFactory = requireNonNull(cacheFactory);
     this.listener = requireNonNull(listener);
     this.executor = requireNonNull(executor);
     this.clock = requireNonNull(clock);
@@ -161,13 +160,12 @@ public final class CacheInterceptor implements Interceptor {
     listener.onRequest(request);
 
     var requestTime = clock.instant();
-    var asyncAdapter = new AsyncAdapter(async, executor);
-    var publisherChain = Handlers.toPublisherChain(chain, executor);
-    return getCacheResponse(request, chain, asyncAdapter)
+    var chainAdapter = new ChainAdapter(Handlers.toPublisherChain(chain, executor), async);
+    var cache = cacheFactory.instance(async ? executor : FlowSupport.SYNC_EXECUTOR);
+    return getCacheResponse(request, requestTime, chainAdapter, cache)
         .thenApply(
             cacheResponse ->
-                new Exchange(
-                    request, publisherChain, cacheResponse.orElse(null), requestTime, asyncAdapter))
+                new Exchange(request, cacheResponse.orElse(null), requestTime, chainAdapter, cache))
         .thenCompose(Exchange::evaluate)
         .thenApply(Exchange::serveResponse)
         .thenApply(
@@ -178,14 +176,13 @@ public final class CacheInterceptor implements Interceptor {
   }
 
   private CompletableFuture<Optional<CacheResponse>> getCacheResponse(
-      HttpRequest request, Chain<?> chain, AsyncAdapter asyncAdapter) {
-    // TODO check for no-cache here.
+      HttpRequest request, Instant requestTime, ChainAdapter chainAdapter, LocalCache cache) {
     if (!"GET".equalsIgnoreCase(request.method())
         || hasUnsupportedPreconditions(request.headers())
-        || chain.pushPromiseHandler().isPresent()) {
+        || chainAdapter.chain.pushPromiseHandler().isPresent()) {
       return CompletableFuture.completedFuture(Optional.empty());
     }
-    return asyncAdapter.get(cache, request);
+    return cache.get(request, requestTime);
   }
 
   private void handleAsyncRevalidation(
@@ -461,7 +458,7 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     int firstTagLength = firstTag.length() - firstTagBegin;
-    if (firstTagLength != (secondTag.length() - secondTagBegin)) {
+    if (firstTagLength != secondTag.length() - secondTagBegin) {
       return false;
     }
 
@@ -504,79 +501,72 @@ public final class CacheInterceptor implements Interceptor {
   }
 
   /**
-   * An object that masks synchronous operations as {@code CompletableFuture} calls that are
+   * An object that masks synchronous chain calls as {@code CompletableFuture} calls that are
    * executed on the caller thread. This is important in order to share major logic between {@code
    * intercept} and {@code interceptAsync}, which facilitates implementation & maintenance.
    */
-  private static final class AsyncAdapter {
+  private static final class ChainAdapter {
+    final Chain<Publisher<List<ByteBuffer>>> chain;
     private final boolean async;
-    private final Executor executor;
 
-    AsyncAdapter(boolean async, Executor asyncExecutor) {
+    ChainAdapter(Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
+      this.chain = chain;
       this.async = async;
-      this.executor = async ? asyncExecutor : FlowSupport.SYNC_EXECUTOR;
     }
 
-    <T> CompletableFuture<HttpResponse<T>> forward(Chain<T> chain, HttpRequest request) {
-      return async
-          ? chain.forwardAsync(request)
-          : Unchecked.supplyAsync(() -> chain.forward(request), FlowSupport.SYNC_EXECUTOR);
-    }
+    CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> forward(HttpRequest request) {
+      if (async) {
+        return chain.forwardAsync(request);
+      }
 
-    CompletableFuture<Optional<CacheResponse>> get(LocalCache cache, HttpRequest request) {
-      return Unchecked.supplyAsync(() -> cache.get(request), executor);
-    }
-
-    CompletableFuture<Optional<NetworkResponse>> put(
-        LocalCache cache,
-        HttpRequest request,
-        NetworkResponse networkResponse,
-        @Nullable CacheResponse cacheResponse) {
-      return Unchecked.supplyAsync(
-          () -> cache.put(request, networkResponse, cacheResponse), executor);
+      try {
+        return CompletableFuture.completedFuture(chain.forward(request));
+      } catch (Throwable t) {
+        return CompletableFuture.failedFuture(t);
+      }
     }
   }
 
   private final class Exchange {
     private final HttpRequest request;
-    private final Chain<Publisher<List<ByteBuffer>>> chain;
     private final @Nullable CacheResponse cacheResponse;
     private final @Nullable NetworkResponse networkResponse;
     private final Instant requestTime;
     private final CacheControl requestCacheControl;
-    private final AsyncAdapter asyncAdapter;
+    private final ChainAdapter chainAdapter;
+    private final LocalCache cache;
 
     Exchange(
         HttpRequest request,
-        Chain<Publisher<List<ByteBuffer>>> chain,
         @Nullable CacheResponse cacheResponse,
         Instant requestTime,
-        AsyncAdapter asyncAdapter) {
+        ChainAdapter chainAdapter,
+        LocalCache cache) {
       this(
           request,
-          chain,
+          CacheControl.parse(request.headers()),
           cacheResponse,
           null,
           requestTime,
-          CacheControl.parse(request.headers()),
-          asyncAdapter);
+          chainAdapter,
+          cache);
     }
 
     private Exchange(
         HttpRequest request,
-        Chain<Publisher<List<ByteBuffer>>> chain,
+        CacheControl requestCacheControl,
         @Nullable CacheResponse cacheResponse,
         @Nullable NetworkResponse networkResponse,
         Instant requestTime,
-        CacheControl requestCacheControl,
-        AsyncAdapter asyncAdapter) {
+        ChainAdapter chainAdapter,
+        LocalCache cache) {
       this.request = request;
-      this.chain = chain;
       this.cacheResponse = cacheResponse;
       this.networkResponse = networkResponse;
       this.requestTime = requestTime;
       this.requestCacheControl = requestCacheControl;
-      this.asyncAdapter = asyncAdapter;
+      this.chainAdapter = chainAdapter;
+      this.cache = cache;
     }
 
     /** Evaluates this exchange and returns an exchange that's ready to serve the response. */
@@ -620,7 +610,8 @@ public final class CacheInterceptor implements Interceptor {
         networkResponse.discard(executor);
 
         var updatedCacheResponse = updateCacheResponse(cacheResponse, networkResponse);
-        Unchecked.runAsync(() -> cache.update(updatedCacheResponse), executor)
+        cache
+            .update(updatedCacheResponse)
             .whenComplete(
                 (__, ex) -> {
                   if (ex != null) {
@@ -633,8 +624,8 @@ public final class CacheInterceptor implements Interceptor {
       }
 
       if (isCacheable(request, networkResponse.get())) {
-        return asyncAdapter
-            .put(cache, request, networkResponse, cacheResponse)
+        return cache
+            .put(request, networkResponse, cacheResponse)
             .thenApply(
                 cacheUpdatingNetworkResponse ->
                     cacheUpdatingNetworkResponse.map(this::withNetworkResponse).orElse(this));
@@ -643,7 +634,8 @@ public final class CacheInterceptor implements Interceptor {
       // An uncacheable response might invalidate itself and other related responses.
       var invalidatedUris = invalidatedUris(request, networkResponse.get());
       if (!invalidatedUris.isEmpty()) {
-        Unchecked.runAsync(() -> cache.removeAll(invalidatedUris), executor)
+        cache
+            .removeAll(invalidatedUris)
             .whenComplete(
                 (__, ex) -> {
                   if (ex != null) {
@@ -729,23 +721,20 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     private CompletableFuture<Exchange> networkExchange() {
-      return networkExchange(asyncAdapter::forward);
+      return networkExchange(chainAdapter::forward);
     }
 
     private CompletableFuture<Exchange> backgroundNetworkExchange() {
-      return networkExchange(Chain::forwardAsync);
+      return networkExchange(chainAdapter.chain::forwardAsync); // Ensure asynchronous execution.
     }
 
     private CompletableFuture<Exchange> networkExchange(
-        BiFunction<
-                Chain<Publisher<List<ByteBuffer>>>,
-                HttpRequest,
-                CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>>>
+        Function<HttpRequest, CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>>>
             forwarder) {
       var networkRequest =
           cacheResponse != null ? cacheResponse.conditionalize(this.request) : this.request;
       return forwarder
-          .apply(chain, networkRequest)
+          .apply(networkRequest)
           .thenApply(
               response -> NetworkResponse.from(toTrackedResponse(response, requestTime, clock)))
           .thenApply(this::withNetworkResponse);
@@ -780,23 +769,23 @@ public final class CacheInterceptor implements Interceptor {
     private Exchange withCacheResponse(@Nullable CacheResponse cacheResponse) {
       return new Exchange(
           request,
-          chain,
+          requestCacheControl,
           cacheResponse,
           networkResponse,
           requestTime,
-          requestCacheControl,
-          asyncAdapter);
+          chainAdapter,
+          cache);
     }
 
     private Exchange withNetworkResponse(@Nullable NetworkResponse networkResponse) {
       return new Exchange(
           request,
-          chain,
+          requestCacheControl,
           cacheResponse,
           networkResponse,
           requestTime,
-          requestCacheControl,
-          asyncAdapter);
+          chainAdapter,
+          cache);
     }
   }
 }

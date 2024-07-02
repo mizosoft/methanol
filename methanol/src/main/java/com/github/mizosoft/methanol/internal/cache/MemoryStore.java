@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -59,11 +60,6 @@ public final class MemoryStore implements Store {
   }
 
   @Override
-  public Optional<Executor> executor() {
-    return Optional.empty();
-  }
-
-  @Override
   public long maxSize() {
     return maxSize;
   }
@@ -82,11 +78,21 @@ public final class MemoryStore implements Store {
   }
 
   @Override
+  public CompletableFuture<Optional<Viewer>> view(String key, Executor executor) {
+    return CompletableFuture.completedFuture(view(key));
+  }
+
+  @Override
   public Optional<Editor> edit(String key) {
     requireNonNull(key);
     synchronized (entries) {
       return Optional.ofNullable(entries.computeIfAbsent(key, Entry::new).edit(Entry.ANY_VERSION));
     }
+  }
+
+  @Override
+  public CompletableFuture<Optional<Editor>> edit(String key, Executor executor) {
+    return CompletableFuture.completedFuture(edit(key));
   }
 
   @Override
@@ -374,6 +380,11 @@ public final class MemoryStore implements Store {
         }
 
         @Override
+        public CompletableFuture<Integer> read(ByteBuffer dst, Executor ignored) {
+          return CompletableFuture.completedFuture(read(dst));
+        }
+
+        @Override
         public long read(List<ByteBuffer> dsts) {
           requireNonNull(dsts);
           synchronized (data) {
@@ -392,6 +403,11 @@ public final class MemoryStore implements Store {
             return totalRead;
           }
         }
+
+        @Override
+        public CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor ignored) {
+          return CompletableFuture.completedFuture(read(dsts));
+        }
       };
     }
 
@@ -408,6 +424,11 @@ public final class MemoryStore implements Store {
     @Override
     public Optional<Editor> edit() {
       return Optional.ofNullable(entry.edit(entryVersion));
+    }
+
+    @Override
+    public CompletableFuture<Optional<Editor>> edit(Executor executor) {
+      return CompletableFuture.completedFuture(edit());
     }
 
     @Override
@@ -460,6 +481,11 @@ public final class MemoryStore implements Store {
     }
 
     @Override
+    public CompletableFuture<Integer> write(ByteBuffer src, Executor ignored) {
+      return CompletableFuture.completedFuture(write(src));
+    }
+
+    @Override
     public long write(List<ByteBuffer> srcs) {
       requireNonNull(srcs);
       lock.lock();
@@ -472,8 +498,19 @@ public final class MemoryStore implements Store {
     }
 
     @Override
+    public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor) {
+      return CompletableFuture.completedFuture(write(srcs));
+    }
+
+    @Override
     public void commit(ByteBuffer metadata) {
       entry.commit(this, metadata, dataIfWritten());
+    }
+
+    @Override
+    public CompletableFuture<Void> commit(ByteBuffer metadata, Executor executor) {
+      entry.commit(this, metadata, dataIfWritten());
+      return CompletableFuture.completedFuture(null);
     }
 
     private @Nullable ByteBuffer dataIfWritten() {

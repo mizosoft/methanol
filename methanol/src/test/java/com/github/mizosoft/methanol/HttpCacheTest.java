@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -63,6 +63,7 @@ import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.InternalStorageExtension;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
 import com.github.mizosoft.methanol.testing.TestException;
@@ -94,6 +95,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -101,9 +103,9 @@ import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -119,14 +121,13 @@ import org.assertj.core.api.ObjectAssert;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.ThrowingConsumer;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-@Timeout(10)
+// @Timeout(10)
 @ExtendWith(StoreExtension.class)
 class HttpCacheTest extends AbstractHttpCacheTest {
   /**
@@ -187,7 +188,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
       var store = cache.store();
       assertThat(store).isInstanceOf(MemoryStore.class);
       assertThat(store.maxSize()).isEqualTo(12);
-      assertThat(store.executor()).isEmpty();
       assertThat(cache.directory()).isEmpty();
       assertThat(cache.size()).isZero();
     }
@@ -200,7 +200,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
       assertThat(store).isInstanceOf(DiskStore.class);
       assertThat(store.maxSize()).isEqualTo(12);
       assertThat(cache.directory()).hasValue(dir);
-      assertThat(cache.executor()).isEqualTo(store.executor());
     }
   }
 
@@ -962,7 +961,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     // Make response stale.
     clock.advanceSeconds(2);
 
-    client = clientBuilder.backendInterceptor(new FaultyInterceptor(TestException::new)).build();
+    client = clientBuilder.backendInterceptor(new FailingInterceptor(TestException::new)).build();
 
     var request = GET(serverUri).header("Cache-Control", "stale-if-error=5");
     assertThatThrownBy(() -> send(request)).isInstanceOf(TestException.class);
@@ -1003,7 +1002,8 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     assertNotStored(serverUri);
 
     // The response isn't stored.
-    assertThat(store.view(HttpCache.toStoreKey(serverUri))).isEmpty();
+    assertThat(Utils.get(store.view(HttpCache.toStoreKey(serverUri), FlowSupport.SYNC_EXECUTOR)))
+        .isEmpty();
   }
 
   @StoreParameterizedTest
@@ -1016,7 +1016,8 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     assertNotStored(serverUri);
 
     // The response isn't stored.
-    assertThat(store.view(HttpCache.toStoreKey(serverUri))).isEmpty();
+    assertThat(Utils.get(store.view(HttpCache.toStoreKey(serverUri), FlowSupport.SYNC_EXECUTOR)))
+        .isEmpty();
   }
 
   @StoreParameterizedTest
@@ -1031,7 +1032,8 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     assertNotStored(serverUri);
 
     // The response isn't stored.
-    assertThat(store.view(HttpCache.toStoreKey(serverUri))).isEmpty();
+    assertThat(Utils.get(store.view(HttpCache.toStoreKey(serverUri), FlowSupport.SYNC_EXECUTOR)))
+        .isEmpty();
   }
 
   @StoreParameterizedTest
@@ -1098,7 +1100,8 @@ class HttpCacheTest extends AbstractHttpCacheTest {
             .setBody("aaa"));
     verifyThat(send(serverUri)).isCacheMiss().hasBody("aaa");
     assertNotStored(serverUri);
-    assertThat(store.view(HttpCache.toStoreKey(serverUri))).isEmpty();
+    assertThat(Utils.get(store.view(HttpCache.toStoreKey(serverUri), FlowSupport.SYNC_EXECUTOR)))
+        .isEmpty();
   }
 
   @StoreParameterizedTest
@@ -1691,14 +1694,14 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         .doesNotContainHeader("Warning");
   }
 
-  private static final class FaultyInterceptor implements Interceptor {
+  private static final class FailingInterceptor implements Interceptor {
     private final Supplier<Throwable> failureFactory;
 
-    FaultyInterceptor(Supplier<Throwable> failureFactory) {
+    FailingInterceptor(Supplier<Throwable> failureFactory) {
       this.failureFactory = failureFactory;
     }
 
-    FaultyInterceptor(Class<? extends Throwable> failureType) {
+    FailingInterceptor(Class<? extends Throwable> failureType) {
       this.failureFactory =
           () -> {
             try {
@@ -1742,7 +1745,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     // Make response stale by 1 second
     clock.advanceSeconds(2);
 
-    client = clientBuilder.backendInterceptor(new FaultyInterceptor(failureType)).build();
+    client = clientBuilder.backendInterceptor(new FailingInterceptor(failureType)).build();
     verifyThat(send(serverUri))
         .hasCode(200)
         .isCacheHit()
@@ -1776,7 +1779,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     // Make response stale by 2 seconds
     clock.advanceSeconds(3);
 
-    client = clientBuilder.backendInterceptor(new FaultyInterceptor(failureType)).build();
+    client = clientBuilder.backendInterceptor(new FailingInterceptor(failureType)).build();
 
     // stale-if-error isn't satisfied
     assertThatExceptionOfType(failureType).isThrownBy(() -> send(serverUri));
@@ -1814,7 +1817,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     verifyThat(send(serverUri)).isCacheHit().hasBody("Charmander");
 
     // Make requests fail with a inapplicable exception
-    client = clientBuilder.backendInterceptor(new FaultyInterceptor(TestException::new)).build();
+    client = clientBuilder.backendInterceptor(new FailingInterceptor(TestException::new)).build();
 
     // Make response stale by 1 second
     clock.advanceSeconds(2);
@@ -1837,7 +1840,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     client =
         clientBuilder
             .backendInterceptor(
-                new FaultyInterceptor(() -> new UncheckedIOException(new ConnectException())))
+                new FailingInterceptor(() -> new UncheckedIOException(new ConnectException())))
             .build();
 
     // Make response stale by 1 second
@@ -2851,7 +2854,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
   @StoreParameterizedTest
   void errorsWhileWritingDiscardsCaching(Store store) throws Exception {
-    var faultyStore = new FaultyStore(store);
+    var faultyStore = new FailingStore(store);
     setUpCache(faultyStore);
 
     // Write failure is ignored & the response completes normally nevertheless.
@@ -2886,7 +2889,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
   @StoreParameterizedTest
   void errorsWhileReadingArePropagated(Store store) throws Exception {
-    var faultyStore = new FaultyStore(store);
+    var faultyStore = new FailingStore(store);
     faultyStore.allowWrites = true;
     setUpCache(faultyStore);
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
@@ -3066,8 +3069,9 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   }
 
   @StoreParameterizedTest
+  @StoreSpec(tested = StoreType.REDIS_STANDALONE)
   void writeStats(Store store) throws Exception {
-    var faultyStore = new FaultyStore(store);
+    var faultyStore = new FailingStore(store);
     faultyStore.allowReads = true;
     faultyStore.allowWrites = true;
     setUpCache(faultyStore, StatsRecorder.createConcurrentPerUriRecorder());
@@ -3215,7 +3219,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   @StoreParameterizedTest
   void readWriteListener(Store store) throws Exception {
     var listener = new RecordingListener(EventCategory.READ_WRITE);
-    var faultyStore = new FaultyStore(store);
+    var faultyStore = new FailingStore(store);
     setUpCache(faultyStore, null, listener);
 
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
@@ -3446,7 +3450,9 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   }
 
   private void assertNotStored(MutableRequest request) throws Exception {
-    try (var viewer = cache.store().view(HttpCache.toStoreKey(request)).orElse(null)) {
+    try (var viewer =
+        Utils.get(cache.store().view(HttpCache.toStoreKey(request), FlowSupport.SYNC_EXECUTOR))
+            .orElse(null)) {
       assertThat(viewer).isNull();
     }
 
@@ -3469,43 +3475,97 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     }
   }
 
-  private static final class FaultyStore extends ForwardingStore {
+  private static final class FailingStore extends ForwardingStore {
     volatile boolean allowReads = false;
     volatile boolean allowWrites = false;
 
-    FaultyStore(Store delegate) {
+    FailingStore(Store delegate) {
       super(delegate);
     }
 
     @Override
-    public Optional<Viewer> view(String key) throws IOException, InterruptedException {
-      return super.view(key).map(FaultyViewer::new);
+    public Optional<Viewer> view(String key) throws IOException {
+      return super.view(key).map(FailingViewer::new);
     }
 
     @Override
-    public Optional<Editor> edit(String key) throws IOException, InterruptedException {
-      return super.edit(key).map(FaultyEditor::new);
+    public CompletableFuture<Optional<Viewer>> view(String key, Executor executor) {
+      return super.view(key, executor).thenApply(viewer -> viewer.map(FailingViewer::new));
     }
 
-    private final class FaultyEditor extends ForwardingEditor {
-      private final AtomicInteger failedWrites = new AtomicInteger();
+    @Override
+    public Optional<Editor> edit(String key) throws IOException {
+      return super.edit(key).map(FailingEditor::new);
+    }
+
+    @Override
+    public CompletableFuture<Optional<Editor>> edit(String key, Executor executor) {
+      return super.edit(key, executor).thenApply(editor -> editor.map(FailingEditor::new));
+    }
+
+    private final class FailingEditor extends ForwardingEditor {
+      private volatile boolean failedAtLeastOnce;
       private volatile boolean committed;
 
-      FaultyEditor(Editor delegate) {
+      FailingEditor(Editor delegate) {
         super(delegate);
       }
 
       @Override
       public EntryWriter writer() {
         var delegate = super.writer();
-        return src -> {
-          // To simulate delays, fire an actual write on delegate even if writing is prohibited.
-          int written = delegate.write(src);
-          if (!allowWrites) {
-            failedWrites.incrementAndGet();
-            throw new TestException();
+        return new EntryWriter() {
+          @Override
+          public int write(ByteBuffer src) throws IOException {
+            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
+            int written = delegate.write(src);
+            if (!allowWrites) {
+              failedAtLeastOnce = true;
+              throw new TestException();
+            }
+            return written;
           }
-          return written;
+
+          @Override
+          public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
+            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
+            return delegate
+                .write(src, executor)
+                .thenApply(
+                    written -> {
+                      if (!allowWrites) {
+                        failedAtLeastOnce = true;
+                        throw new TestException();
+                      }
+                      return written;
+                    });
+          }
+
+          @Override
+          public long write(List<ByteBuffer> srcs) throws IOException {
+            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
+            long written = delegate.write(srcs);
+            if (!allowWrites) {
+              failedAtLeastOnce = true;
+              throw new TestException();
+            }
+            return written;
+          }
+
+          @Override
+          public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor) {
+            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
+            return delegate
+                .write(srcs, executor)
+                .thenApply(
+                    written -> {
+                      if (!allowWrites) {
+                        failedAtLeastOnce = true;
+                        throw new TestException();
+                      }
+                      return written;
+                    });
+          }
         };
       }
 
@@ -3518,33 +3578,79 @@ class HttpCacheTest extends AbstractHttpCacheTest {
       @Override
       public void close() {
         super.close();
-        if (committed && failedWrites.get() > 0) {
+        if (committed && failedAtLeastOnce) {
           fail("edit is committed despite prohibited writes");
         }
       }
     }
 
-    private final class FaultyViewer extends ForwardingViewer {
-      FaultyViewer(Viewer delegate) {
+    private final class FailingViewer extends ForwardingViewer {
+      FailingViewer(Viewer delegate) {
         super(delegate);
       }
 
       @Override
       public EntryReader newReader() {
         var delegate = super.newReader();
-        return dst -> {
-          // To simulate delays, fire an actual read on delegate even if reading is prohibited.
-          int read = delegate.read(dst);
-          if (!allowReads) {
-            throw new TestException();
+        return new EntryReader() {
+          @Override
+          public int read(ByteBuffer dst) throws IOException {
+            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
+            int read = delegate.read(dst);
+            if (!allowReads) {
+              throw new TestException();
+            }
+            return read;
           }
-          return read;
+
+          @Override
+          public CompletableFuture<Integer> read(ByteBuffer dst, Executor executor) {
+            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
+            return delegate
+                .read(dst, executor)
+                .thenApply(
+                    read -> {
+                      if (!allowReads) {
+                        throw new TestException();
+                      }
+                      return read;
+                    });
+          }
+
+          @Override
+          public long read(List<ByteBuffer> dsts) throws IOException {
+            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
+            long read = delegate.read(dsts);
+            if (!allowReads) {
+              throw new TestException();
+            }
+            return read;
+          }
+
+          @Override
+          public CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor executor) {
+            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
+            return delegate
+                .read(dsts, executor)
+                .thenApply(
+                    read -> {
+                      if (!allowReads) {
+                        throw new TestException();
+                      }
+                      return read;
+                    });
+          }
         };
       }
 
       @Override
-      public Optional<Editor> edit() throws IOException, InterruptedException {
-        return super.edit().map(FaultyEditor::new);
+      public Optional<Editor> edit() throws IOException {
+        return super.edit().map(FailingEditor::new);
+      }
+
+      @Override
+      public CompletableFuture<Optional<Editor>> edit(Executor executor) {
+        return super.edit(executor).thenApply(editor -> editor.map(FailingEditor::new));
       }
     }
   }

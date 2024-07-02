@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient.Version;
@@ -134,7 +135,7 @@ public final class CacheResponseMetadata {
     return true;
   }
 
-  public ByteBuffer encode() throws IOException {
+  public ByteBuffer encode() {
     var writer = new MetadataWriter();
     writer.writeInt(sslSession != null ? FLAG_HAS_SSL_INFO : 0);
     writer.writeUtf8(uri.toString());
@@ -145,7 +146,11 @@ public final class CacheResponseMetadata {
     writer.writeInstant(timeRequestSent);
     writer.writeInstant(timeResponseReceived);
     if (sslSession != null) {
-      writer.writeSSLSession(sslSession);
+      try {
+        writer.writeSSLSession(sslSession);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
     }
     return writer.snapshot();
   }
@@ -554,7 +559,7 @@ public final class CacheResponseMetadata {
       return new String[0];
     }
 
-    @SuppressWarnings({"deprecation", "removal"})
+    @SuppressWarnings("removal")
     @Override
     public javax.security.cert.X509Certificate[] getPeerCertificateChain() {
       throw unsupported();

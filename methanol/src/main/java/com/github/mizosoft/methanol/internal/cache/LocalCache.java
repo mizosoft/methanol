@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,23 +23,29 @@
 package com.github.mizosoft.methanol.internal.cache;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** An HTTP response cache that allows retrieval, metadata updates, insertion and removal. */
+/** A response cache that provides APIs for retrieval, metadata updates, insertion and removal. */
 public interface LocalCache {
-  Optional<CacheResponse> get(HttpRequest request) throws IOException, InterruptedException;
+  CompletableFuture<Optional<CacheResponse>> get(HttpRequest request, Instant requestTime);
 
-  void update(CacheResponse cacheResponse) throws IOException, InterruptedException;
+  CompletableFuture<Void> update(CacheResponse cacheResponse);
 
-  Optional<NetworkResponse> put(
-      HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse)
-      throws IOException, InterruptedException;
+  CompletableFuture<Optional<NetworkResponse>> put(
+      HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse);
 
   @CanIgnoreReturnValue
-  boolean removeAll(List<URI> uris) throws IOException, InterruptedException;
+  CompletableFuture<Boolean> removeAll(List<URI> uris);
+
+  @FunctionalInterface
+  interface Factory {
+    LocalCache instance(Executor executor);
+  }
 }

@@ -22,6 +22,9 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
@@ -29,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 /**
@@ -46,6 +50,13 @@ import java.util.concurrent.Executor;
  * indexing purposes. Thus, a store's {@link #maxSize} is not exact and might be slightly exceeded
  * as necessary.
  *
+ * <p>Functions that are expected to be called frequently have two variants: one synchronous, and
+ * another asynchronous variant that takes an additional {@link Executor} parameter. The former has
+ * a default implementation that calls the latter and waits for the result. The executor parameter
+ * only expresses caller's preferred asynchronous execution strategy, and may be ignored by the
+ * store if seen fit. The executor parameter can be {@code Runnable::run} if same-thread execution
+ * is preferred.
+ *
  * <p>{@code Store} is thread-safe and is suitable for concurrent use.
  */
 public interface Store extends Closeable, Flushable {
@@ -53,30 +64,44 @@ public interface Store extends Closeable, Flushable {
   /** Returns this store's max size in bytes. */
   long maxSize();
 
-  /** Returns the optionally specified executor used for asynchronous or background operations. */
-  Optional<Executor> executor();
-
   /**
-   * Returns an optional containing a viewer for the entry associated with the given key, or an
-   * empty optional if there's no such entry.
+   * Synchronous variant of {@link #view(String, Executor)}.
    *
    * @throws IllegalStateException if closed
    */
-  Optional<Viewer> view(String key) throws IOException, InterruptedException;
+  default Optional<Viewer> view(String key) throws IOException {
+    return Utils.getIo(view(key, FlowSupport.SYNC_EXECUTOR));
+  }
 
   /**
-   * Returns an optional containing an editor for the entry associated with the given key
-   * (atomically creating a new one if necessary), or an empty optional if such entry can't be
-   * edited.
+   * Opens a viewer for the entry associated with the given key. An empty optional is returned if
+   * there's no such entry.
    *
    * @throws IllegalStateException if closed
    */
-  Optional<Editor> edit(String key) throws IOException, InterruptedException;
+  CompletableFuture<Optional<Viewer>> view(String key, Executor executor);
+
+  /**
+   * Synchronous variant of {@link #edit(String, Executor)}.
+   *
+   * @throws IllegalStateException if closed
+   */
+  default Optional<Editor> edit(String key) throws IOException {
+    return Utils.getIo(edit(key, FlowSupport.SYNC_EXECUTOR));
+  }
+
+  /**
+   * Opens an editor for the entry associated with the given key. An empty optional is returned
+   * either if there's no such entry, or such entry cannot be edited at the moment.
+   *
+   * @throws IllegalStateException if closed
+   */
+  CompletableFuture<Optional<Editor>> edit(String key, Executor executor);
 
   /**
    * Returns an iterator of {@code Viewers} over the entries in this store. The iterator doesn't
-   * throw {@code ConcurrentModificationException} when the store is modified, but there's no
-   * guarantee these changes are reflected.
+   * throw {@code ConcurrentModificationException} when the store is asynchronously modified, but
+   * there's no guarantee such changes are reflected.
    */
   Iterator<Viewer> iterator() throws IOException;
 
@@ -85,14 +110,16 @@ public interface Store extends Closeable, Flushable {
    *
    * @throws IllegalStateException if closed
    */
-  boolean remove(String key) throws IOException, InterruptedException;
+  @CanIgnoreReturnValue
+  boolean remove(String key) throws IOException;
 
   /**
-   * Removes the entries associated with all of the given keys
+   * Removes all the entries associated with the given keys.
    *
    * @throws IllegalStateException if closed
    */
-  default boolean removeAll(List<String> keys) throws IOException, InterruptedException {
+  @CanIgnoreReturnValue
+  default boolean removeAll(List<String> keys) throws IOException {
     boolean removedAny = false;
     for (var key : keys) {
       removedAny |= remove(key);
@@ -114,8 +141,8 @@ public interface Store extends Closeable, Flushable {
   void dispose() throws IOException;
 
   /**
-   * Closes this store. Once the store is closed, all ongoing edits fail to write or commit
-   * anything.
+   * Closes this store. Once the store is closed, all ongoing edits fail, either silently or by
+   * throwing an exception, to write or commit anything.
    */
   @Override
   void close() throws IOException;
@@ -150,19 +177,28 @@ public interface Store extends Closeable, Flushable {
     long entrySize();
 
     /**
-     * Returns an editor for this viewer's entry, or {@code null} if another edit is in progress or
-     * if the entry has been modified since this viewer was created. Changes made by the returned
-     * editor are not reflected by this viewer.
+     * Synchronous variant of {@link #edit(Executor)}.
      *
-     * @throws IllegalStateException if the store is closed
+     * @throws IllegalStateException if closed
      */
-    Optional<Editor> edit() throws IOException, InterruptedException;
+    default Optional<Editor> edit() throws IOException {
+      return Utils.getIo(edit(FlowSupport.SYNC_EXECUTOR));
+    }
+
+    /**
+     * Opens an editor for the entry this viewer was opened for. An empty optional is returned if
+     * another edit is in progress or if the entry has been modified since this viewer was created.
+     * Changes made by the returned editor are not reflected by this viewer.
+     *
+     * @throws IllegalStateException if closed
+     */
+    CompletableFuture<Optional<Editor>> edit(Executor executor);
 
     /**
      * Removes the entry associated with this viewer only if it hasn't changed since this viewer was
      * opened.
      *
-     * @throws IllegalStateException if the store is closed
+     * @throws IllegalStateException if closed
      */
     boolean removeEntry() throws IOException;
 
@@ -185,11 +221,20 @@ public interface Store extends Closeable, Flushable {
     EntryWriter writer();
 
     /**
+     * Synchronous variant of {@link #commit(ByteBuffer, Executor)}.
+     *
+     * @throws IllegalStateException if closed
+     */
+    default void commit(ByteBuffer metadata) throws IOException {
+      Utils.getIo(commit(metadata, FlowSupport.SYNC_EXECUTOR));
+    }
+
+    /**
      * Commits the changes made so far.
      *
-     * @throws IllegalStateException if the edit is invalidated
+     * @throws IllegalStateException if closed
      */
-    void commit(ByteBuffer metadata) throws IOException;
+    CompletableFuture<Void> commit(ByteBuffer metadata, Executor executor);
 
     /**
      * Closes this editor. If {@link #commit(ByteBuffer)} hasn't been called prior to this method,
@@ -203,56 +248,77 @@ public interface Store extends Closeable, Flushable {
   interface EntryReader {
 
     /**
-     * Reads bytes from the data stream into the given buffer, and returns the number of read bytes,
-     * or {@code -1} if reached EOF.
+     * Synchronous variant of {@link #read(ByteBuffer, Executor)}.
+     *
+     * @throws IllegalStateException if closed
      */
-    int read(ByteBuffer dst) throws IOException;
+    default int read(ByteBuffer dst) throws IOException {
+      return (int) read(List.of(dst));
+    }
 
     /**
-     * Reads bytes from the data stream into the given buffers, in sequential order, and returns the
-     * number of read bytes, or {@code -1} if reached EOF.
+     * Reads as many bytes as possible from the data stream into the given buffer, and returns the
+     * number of read bytes, or {@code -1} if reached EOF. The number returned is the maximum of the
+     * number of bytes remaining in the buffer or the stream.
+     *
+     * @throws IllegalStateException if closed
+     */
+    CompletableFuture<Integer> read(ByteBuffer dst, Executor executor);
+
+    /**
+     * Synchronous variant of {@link #read(List, Executor)}.
+     *
+     * @throws IllegalStateException if closed
      */
     default long read(List<ByteBuffer> dsts) throws IOException {
-      long totalRead = 0;
-      outerLoop:
-      for (var dst : dsts) {
-        int read;
-        while (dst.hasRemaining()) {
-          read = read(dst);
-          if (read >= 0) {
-            totalRead += read;
-          } else if (totalRead > 0) {
-            break outerLoop;
-          } else {
-            return -1;
-          }
-        }
-      }
-      return totalRead;
+      return Utils.getIo(read(dsts, FlowSupport.SYNC_EXECUTOR));
     }
+
+    /**
+     * Reads as many bytes as possible from the data stream into the given buffers, in sequential
+     * order, and returns the number of read bytes, or {@code -1} if reached EOF. The number
+     * returned is the maximum of the number of bytes remaining in the buffer or the stream.
+     *
+     * @throws IllegalStateException if closed
+     */
+    CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor executor);
   }
 
   /** A writer for an entry's data stream. */
   interface EntryWriter {
 
     /**
-     * Writes bytes from the given buffer into the editor's data stream, and returns the number of
-     * bytes actually written.
+     * Synchronous variant of {@link #write(ByteBuffer, Executor)}.
+     *
+     * @throws IllegalStateException if closed
      */
-    int write(ByteBuffer src) throws IOException;
+    default int write(ByteBuffer src) throws IOException {
+      return (int) write(List.of(src));
+    }
 
     /**
-     * Writes bytes from the given buffers into the editor's data stream, in sequential order, and
-     * returns the number of bytes actually written.
+     * Writes all the bytes from the given buffer into the editor's data stream, and returns the
+     * number of bytes actually written.
+     *
+     * @throws IllegalStateException if closed
+     */
+    CompletableFuture<Integer> write(ByteBuffer src, Executor executor);
+
+    /**
+     * Synchronous variant of {@link #write(List, Executor)}.
+     *
+     * @throws IllegalStateException if closed
      */
     default long write(List<ByteBuffer> srcs) throws IOException {
-      long totalWritten = 0;
-      for (var src : srcs) {
-        while (src.hasRemaining()) {
-          totalWritten += write(src);
-        }
-      }
-      return totalWritten;
+      return Utils.getIo(write(srcs, FlowSupport.SYNC_EXECUTOR));
     }
+
+    /**
+     * Writes all the bytes from the given buffers into the editor's data stream, in sequential
+     * order, and returns the number of bytes actually written.
+     *
+     * @throws IllegalStateException if closed
+     */
+    CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor);
   }
 }

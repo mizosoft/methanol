@@ -76,6 +76,10 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
   public boolean supportsParameter(
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
+    if (parameterContext.getParameter().getType().equals(ExecutorContext.class)) {
+      return true;
+    }
+
     // Do not compete with our ArgumentsProvider side.
     boolean isPresentAsArgumentsProvider =
         AnnotationSupport.findAnnotation(
@@ -86,7 +90,6 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
     if (isPresentAsArgumentsProvider) {
       return false;
     }
-
     return Stream.of(findExecutorSpec(parameterContext.getDeclaringExecutable()).value())
         .anyMatch(executorType -> executorType.matches(parameterContext.getParameter().getType()));
   }
@@ -95,9 +98,13 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
   public Object resolveParameter(
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
+    var executors = ManagedExecutors.get(extensionContext);
+    if (parameterContext.getParameter().getType().equals(ExecutorContext.class)) {
+      return executors.context;
+    }
+
     var executable = parameterContext.getDeclaringExecutable();
     var spec = findExecutorSpec(executable);
-    var executors = ManagedExecutors.get(extensionContext);
     return Stream.of(spec.value())
         .filter(executorType -> executorType.matches(parameterContext.getParameter().getType()))
         .map(executors::createExecutor)
@@ -165,7 +172,7 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
   }
 
   private static final class ManagedExecutors implements CloseableResource {
-    private final ExecutorContext context = new ExecutorContext();
+    final ExecutorContext context = new ExecutorContext();
 
     ManagedExecutors() {}
 
