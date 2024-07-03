@@ -63,6 +63,6 @@ class RedisStandaloneStore
   boolean removeAllEntries(List<String> entryKeys) {
     return Script.REMOVE_ALL
         .evalOn(commands())
-        .asBoolean(entryKeys, List.of(encode(staleEntryTtlSeconds)));
+        .getAsBoolean(entryKeys, List.of(encode(staleEntryTtlSeconds)));
   }
 }

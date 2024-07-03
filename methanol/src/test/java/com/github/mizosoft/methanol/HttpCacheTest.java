@@ -121,13 +121,14 @@ import org.assertj.core.api.ObjectAssert;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.ThrowingConsumer;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-// @Timeout(10)
+@Timeout(10)
 @ExtendWith(StoreExtension.class)
 class HttpCacheTest extends AbstractHttpCacheTest {
   /**

@@ -192,7 +192,7 @@ abstract class AbstractRedisStore<
     var wipDataKey = entryKey + ":wip_data:" + editorId;
     return Script.EDIT
         .evalOn(asyncCommands())
-        .asBoolean(
+        .getAsBoolean(
             List.of(entryKey, editorLockKey, wipDataKey),
             List.of(encode(editorId), encode(targetEntryVersion), encode(editorLockTtlSeconds)))
         .thenApply(
@@ -227,7 +227,7 @@ abstract class AbstractRedisStore<
   boolean removeEntry(String entryKey, long targetEntryVersion) {
     return Script.REMOVE
         .evalOn(commands())
-        .asBoolean(
+        .getAsBoolean(
             List.of(entryKey), List.of(encode(targetEntryVersion), encode(staleEntryTtlSeconds)));
   }
 
@@ -424,7 +424,7 @@ abstract class AbstractRedisStore<
       return ScanResult.from(
           Script.SCAN_ENTRIES
               .evalOn(commands)
-              .asMulti(
+              .getAsMulti(
                   List.of(),
                   List.of(encode(cursor), encode(pattern), encode(ITERATOR_SCAN_LIMIT))));
     }
@@ -605,7 +605,7 @@ abstract class AbstractRedisStore<
       private CompletableFuture<ByteBuffer> getStaleRange(long position, long inclusiveLimit) {
         return Script.GET_STALE_RANGE
             .evalOn(asyncCommands())
-            .asValue(
+            .getAsValue(
                 List.of(dataKey),
                 List.of(encode(position), encode(inclusiveLimit), encode(staleEntryTtlSeconds)));
       }
@@ -667,7 +667,7 @@ abstract class AbstractRedisStore<
       requireState(closed.compareAndSet(false, true), "Closed");
       return Script.COMMIT
           .evalOn(asyncCommands())
-          .asMulti(
+          .getAsList(
               List.of(entryKey, editorLockKey, wipDataKey),
               List.of(
                   encode(editorId),
@@ -693,7 +693,7 @@ abstract class AbstractRedisStore<
         // command has executed as even if it hasn't, redis will expire this editor's state anyhow.
         Script.COMMIT
             .evalOn(asyncCommands())
-            .asBoolean(
+            .getAsBoolean(
                 List.of(entryKey, editorLockKey, wipDataKey),
                 List.of(
                     encode(editorId),
@@ -749,7 +749,7 @@ abstract class AbstractRedisStore<
         args.addAll(srcs);
         return Script.APPEND
             .evalOn(asyncCommands())
-            .asLong(List.of(editorLockKey, wipDataKey), Collections.unmodifiableList(args));
+            .getAsLong(List.of(editorLockKey, wipDataKey), Collections.unmodifiableList(args));
       }
 
       private long onAppend(List<ByteBuffer> srcs, long serverBytesWritten) {
