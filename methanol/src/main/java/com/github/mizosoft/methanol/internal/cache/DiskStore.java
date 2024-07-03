@@ -26,7 +26,6 @@ import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDura
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -536,32 +535,32 @@ public final class DiskStore implements Store {
       throws StoreCorruptionException {
     if (expected != found) {
       throw new StoreCorruptionException(
-          format("%s; expected: %#x, found: %#x", msg, expected, found));
+          String.format("%s; expected: %#x, found: %#x", msg, expected, found));
     }
   }
 
   private static void checkValue(boolean valueIsValid, String msg, long value)
       throws StoreCorruptionException {
     if (!valueIsValid) {
-      throw new StoreCorruptionException(format("%s: %d", msg, value));
+      throw new StoreCorruptionException(String.format("%s: %d", msg, value));
     }
   }
 
   private static int getNonNegativeInt(ByteBuffer buffer) throws StoreCorruptionException {
     int value = buffer.getInt();
-    checkValue(value >= 0, "expected a value >= 0", value);
+    checkValue(value >= 0, "Expected a value >= 0", value);
     return value;
   }
 
   private static long getNonNegativeLong(ByteBuffer buffer) throws StoreCorruptionException {
     long value = buffer.getLong();
-    checkValue(value >= 0, "expected a value >= 0", value);
+    checkValue(value >= 0, "Expected a value >= 0", value);
     return value;
   }
 
   private static long getPositiveLong(ByteBuffer buffer) throws StoreCorruptionException {
     long value = buffer.getLong();
-    checkValue(value > 0, "expected a positive value", value);
+    checkValue(value > 0, "Expected a positive value", value);
     return value;
   }
 
@@ -737,7 +736,7 @@ public final class DiskStore implements Store {
     private @Nullable Viewer view(Entry entry) throws IOException {
       closeLock.readLock().lock();
       try {
-        requireState(!closed, "closed");
+        requireState(!closed, "Closed");
         return entry.view(null);
       } finally {
         closeLock.readLock().unlock();
@@ -838,13 +837,13 @@ public final class DiskStore implements Store {
     Set<IndexEntry> readIndex() throws IOException {
       try (var channel = FileChannel.open(indexFile, READ)) {
         var header = StoreIO.readNBytes(channel, INDEX_HEADER_SIZE);
-        checkValue(INDEX_MAGIC, header.getLong(), "not in index format");
-        checkValue(STORE_VERSION, header.getInt(), "unrecognized store version");
-        checkValue(appVersion, header.getInt(), "unrecognized app version");
+        checkValue(INDEX_MAGIC, header.getLong(), "Not in index format");
+        checkValue(STORE_VERSION, header.getInt(), "Unrecognized store version");
+        checkValue(appVersion, header.getInt(), "Unrecognized app version");
 
         long entryCount = header.getLong();
         checkValue(
-            entryCount >= 0 && entryCount <= MAX_ENTRY_COUNT, "invalid entry count", entryCount);
+            entryCount >= 0 && entryCount <= MAX_ENTRY_COUNT, "Invalid entry count", entryCount);
         if (entryCount == 0) {
           return Set.of();
         }
@@ -861,7 +860,7 @@ public final class DiskStore implements Store {
     }
 
     void writeIndex(Set<IndexEntry> entries) throws IOException {
-      requireArgument(entries.size() <= MAX_ENTRY_COUNT, "too many entries");
+      requireArgument(entries.size() <= MAX_ENTRY_COUNT, "Too many entries");
       try (var channel = FileChannel.open(tempIndexFile, CREATE, WRITE, TRUNCATE_EXISTING)) {
         var index =
             ByteBuffer.allocate(INDEX_HEADER_SIZE + INDEX_ENTRY_SIZE * entries.size())
@@ -1097,7 +1096,7 @@ public final class DiskStore implements Store {
       var now = clock.instant();
       while (true) {
         var currentTask = scheduledWriteTask.get();
-        requireState(currentTask != TOMBSTONE, "shutdown");
+        requireState(currentTask != TOMBSTONE, "Shutdown");
 
         var newTask = new RunnableWriteTask(now);
         if (scheduledWriteTask.compareAndSet(currentTask, newTask)) {
@@ -1255,7 +1254,7 @@ public final class DiskStore implements Store {
       try {
         var fileLock = channel.tryLock();
         if (fileLock == null) {
-          throw new IOException(String.format("store directory <%s> already in use", directory));
+          throw new IOException("Store directory <" + directory + "> already in use");
         }
         return new DirectoryLock(lockFile, channel);
       } catch (IOException e) {
@@ -1559,9 +1558,9 @@ public final class DiskStore implements Store {
       int keySize = getNonNegativeInt(trailer);
       int metadataSize = getNonNegativeInt(trailer);
       long dataSize = getNonNegativeLong(trailer);
-      checkValue(ENTRY_MAGIC, magic, "not in entry file format");
-      checkValue(STORE_VERSION, storeVersion, "unexpected store version");
-      checkValue(DiskStore.this.appVersion, appVersion, "unexpected app version");
+      checkValue(ENTRY_MAGIC, magic, "Not in entry file format");
+      checkValue(STORE_VERSION, storeVersion, "Unexpected store version");
+      checkValue(DiskStore.this.appVersion, appVersion, "Unexpected app version");
       var keyAndMetadata = StoreIO.readNBytes(channel, keySize + metadataSize, dataSize);
       var key = UTF_8.decode(keyAndMetadata.limit(keySize)).toString();
       var metadata =
@@ -1607,10 +1606,10 @@ public final class DiskStore implements Store {
       long sizeDifference;
       lock.lock();
       try {
-        requireState(currentEditor == editor, "edit discarded");
+        requireState(currentEditor == editor, "Edit discarded");
         currentEditor = null;
 
-        requireState(writable, "committing a non-discarded edit to a non-writable entry");
+        requireState(writable, "Committing a non-discarded edit to a non-writable entry");
 
         EntryDescriptor committedDescriptor;
         boolean editInPlace = dataSize < 0 && readable;
@@ -2116,7 +2115,7 @@ public final class DiskStore implements Store {
 
     @CanIgnoreReturnValue
     public Builder maxSize(long maxSize) {
-      requireArgument(maxSize > 0, "expected a positive max size");
+      requireArgument(maxSize > 0, "Expected a positive max size");
       this.maxSize = maxSize;
       return this;
     }
@@ -2173,13 +2172,13 @@ public final class DiskStore implements Store {
 
     long maxSize() {
       long maxSize = this.maxSize;
-      requireState(maxSize != UNSET_NUMBER, "expected maxSize to bet set");
+      requireState(maxSize != UNSET_NUMBER, "Expected maxSize to bet set");
       return maxSize;
     }
 
     int appVersion() {
       int appVersion = this.appVersion;
-      requireState(appVersion != UNSET_NUMBER, "expected appVersion to be set");
+      requireState(appVersion != UNSET_NUMBER, "Expected appVersion to be set");
       return appVersion;
     }
 
@@ -2209,7 +2208,7 @@ public final class DiskStore implements Store {
 
     @CanIgnoreReturnValue
     private <T> T ensureSet(T property, String name) {
-      requireState(property != null, "expected %s to bet set", name);
+      requireState(property != null, "Expected %s to bet set", name);
       return property;
     }
   }
