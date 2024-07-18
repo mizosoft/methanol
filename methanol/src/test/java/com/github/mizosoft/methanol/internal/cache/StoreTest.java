@@ -557,6 +557,21 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
+  void multipleReadersReadFromIndependentPositions(Store store) throws IOException {
+    write(store, "e1", "a", "abcd");
+    try (var viewer = view(store, "e1")) {
+      var firstReader = viewer.newReader();
+      var buffer = ByteBuffer.allocate(2);
+      assertThat(firstReader.read(buffer)).isEqualTo(2);
+      assertThat(UTF_8.decode(buffer.flip()).toString()).isEqualTo("ab");
+
+      var secondReader = viewer.newReader();
+      assertThat(secondReader.read(buffer.clear())).isEqualTo(2);
+      assertThat(UTF_8.decode(buffer.flip()).toString()).isEqualTo("ab");
+    }
+  }
+
+  @StoreParameterizedTest
   void removeFromIterator(Store store, StoreContext context) throws IOException {
     write(store, "e1", "Mew", "Mewtwo");
     write(store, "e2", "Charmander", "Pickachu");

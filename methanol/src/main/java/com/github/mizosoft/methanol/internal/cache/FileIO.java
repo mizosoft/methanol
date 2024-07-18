@@ -32,24 +32,24 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 /** Read/Write utilities that make sure exactly the requested bytes are read/written. */
-public class StoreIO {
-  private StoreIO() {}
+public class FileIO {
+  private FileIO() {}
 
-  static ByteBuffer readNBytes(FileChannel channel, int count) throws IOException {
-    return readNBytes(channel, count, -1);
+  static ByteBuffer read(FileChannel channel, int byteCount) throws IOException {
+    return read(channel, byteCount, -1);
   }
 
-  static ByteBuffer readNBytes(FileChannel channel, int count, long position) throws IOException {
-    var buffer = ByteBuffer.allocate(count);
-    int read = readBytes(channel, buffer, position);
+  static ByteBuffer read(FileChannel channel, int byteCount, long position) throws IOException {
+    var buffer = ByteBuffer.allocate(byteCount);
+    int read = read(channel, buffer, position);
     if (buffer.hasRemaining()) {
-      throw new EOFException(format("Expected %d bytes, found %d", count, read));
+      throw new EOFException(format("Expected %d bytes, found %d", byteCount, read));
     }
     return buffer.flip();
   }
 
   @CanIgnoreReturnValue
-  static int readBytes(FileChannel channel, ByteBuffer dst) throws IOException {
+  static int read(FileChannel channel, ByteBuffer dst) throws IOException {
     int totalRead = 0;
     int read;
     while (dst.hasRemaining() && (read = channel.read(dst)) >= 0) {
@@ -59,7 +59,7 @@ public class StoreIO {
   }
 
   @CanIgnoreReturnValue
-  static int readBytes(FileChannel channel, ByteBuffer dst, long position) throws IOException {
+  static int read(FileChannel channel, ByteBuffer dst, long position) throws IOException {
     int totalRead = 0;
     int read;
     while (dst.hasRemaining()
@@ -72,7 +72,8 @@ public class StoreIO {
     return totalRead;
   }
 
-  static long readBytes(FileChannel channel, ByteBuffer[] dsts) throws IOException {
+  @CanIgnoreReturnValue
+  static long read(FileChannel channel, ByteBuffer[] dsts) throws IOException {
     long readable = Utils.remaining(dsts);
     long totalRead = 0;
     long read;
@@ -82,11 +83,13 @@ public class StoreIO {
     return totalRead;
   }
 
-  static int writeBytes(FileChannel channel, ByteBuffer src) throws IOException {
-    return writeBytes(channel, src, -1);
+  @CanIgnoreReturnValue
+  static int write(FileChannel channel, ByteBuffer src) throws IOException {
+    return write(channel, src, -1);
   }
 
-  static int writeBytes(FileChannel channel, ByteBuffer src, long position) throws IOException {
+  @CanIgnoreReturnValue
+  static int write(FileChannel channel, ByteBuffer src, long position) throws IOException {
     int totalWritten = 0;
     while (src.hasRemaining()) {
       int written = position >= 0 ? channel.write(src, position) : channel.write(src);
@@ -98,7 +101,8 @@ public class StoreIO {
     return totalWritten;
   }
 
-  static long writeBytes(FileChannel channel, ByteBuffer[] srcs) throws IOException {
+  @CanIgnoreReturnValue
+  static long write(FileChannel channel, ByteBuffer[] srcs) throws IOException {
     long writable = Utils.remaining(srcs);
     long totalWritten = 0;
     while (totalWritten < writable) {

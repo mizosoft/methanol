@@ -3070,7 +3070,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   }
 
   @StoreParameterizedTest
-  @StoreSpec(tested = StoreType.REDIS_STANDALONE)
   void writeStats(Store store) throws Exception {
     var faultyStore = new FailingStore(store);
     faultyStore.allowReads = true;

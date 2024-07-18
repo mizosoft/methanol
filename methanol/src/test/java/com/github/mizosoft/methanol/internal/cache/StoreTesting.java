@@ -61,7 +61,7 @@ class StoreTesting {
               .withFailMessage("Unexpected entry file for <%s>", key)
               .isNotEqualTo(key);
         } catch (NoSuchFileException ignored) {
-          assertThat(mockStore.entryFile(key))
+          assertThat(mockStore.toEntryPath(key))
               .withFailMessage("Unexpected entry file for <%s>", key)
               .doesNotExist();
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(ExecutorExtension.class)
-class StoreIOTest {
+class FileIOTest {
   private FileSystem fileSystem;
   private Path file;
 
@@ -95,7 +95,7 @@ class StoreIOTest {
 
     ByteBuffer buffer;
     try (channel) {
-      buffer = StoreIO.readNBytes(channel, "Pikachu".length());
+      buffer = FileIO.read(channel, "Pikachu".length());
     }
     assertThat(channel.calls).hasValue(3);
     assertThat(toByteArray(buffer)).asString(UTF_8).isEqualTo("Pikachu");
@@ -131,7 +131,7 @@ class StoreIOTest {
 
     ByteBuffer buffer;
     try (channel) {
-      buffer = StoreIO.readNBytes(channel, "Pikachu".length(), 4);
+      buffer = FileIO.read(channel, "Pikachu".length(), 4);
     }
     assertThat(channel.calls).hasValue(3);
     assertThat(toByteArray(buffer)).asString(UTF_8).isEqualTo("Pikachu");
@@ -158,8 +158,8 @@ class StoreIOTest {
     ByteBuffer buffer;
     ByteBuffer buffer2;
     try (channel) {
-      buffer = StoreIO.readNBytes(channel, 0);
-      buffer2 = StoreIO.readNBytes(channel, 0, 10);
+      buffer = FileIO.read(channel, 0);
+      buffer2 = FileIO.read(channel, 0, 10);
     }
     assertThat(channel.calls).hasValue(0);
     assertThat(buffer.remaining()).isEqualTo(0);
@@ -170,10 +170,8 @@ class StoreIOTest {
   void endOfFileRead() throws IOException {
     Files.writeString(file, "1234");
     try (var channel = FileChannel.open(file, READ)) {
-      assertThatExceptionOfType(EOFException.class)
-          .isThrownBy(() -> StoreIO.readNBytes(channel, 5));
-      assertThatExceptionOfType(EOFException.class)
-          .isThrownBy(() -> StoreIO.readNBytes(channel, 4, 1));
+      assertThatExceptionOfType(EOFException.class).isThrownBy(() -> FileIO.read(channel, 5));
+      assertThatExceptionOfType(EOFException.class).isThrownBy(() -> FileIO.read(channel, 4, 1));
     }
   }
 
@@ -204,7 +202,7 @@ class StoreIOTest {
     };
 
     try (channel) {
-      StoreIO.writeBytes(channel, UTF_8.encode("Pikachu"));
+      FileIO.write(channel, UTF_8.encode("Pikachu"));
     }
     assertThat(channel.calls).hasValue(3);
     assertThat(file).usingCharset(UTF_8).hasContent("Pikachu");
@@ -239,7 +237,7 @@ class StoreIOTest {
     };
 
     try (channel) {
-      StoreIO.writeBytes(channel, UTF_8.encode("Pikachu"), 4);
+      FileIO.write(channel, UTF_8.encode("Pikachu"), 4);
     }
     assertThat(channel.calls).hasValue(3);
     assertThat(file).usingCharset(UTF_8).hasContent("1234Pikachu");
@@ -266,8 +264,8 @@ class StoreIOTest {
     };
 
     try (channel) {
-      StoreIO.writeBytes(channel, ByteBuffer.allocate(0));
-      StoreIO.writeBytes(channel, ByteBuffer.allocate(0), 4);
+      FileIO.write(channel, ByteBuffer.allocate(0));
+      FileIO.write(channel, ByteBuffer.allocate(0), 4);
     }
     assertThat(file).usingCharset(UTF_8).hasContent("1234");
   }

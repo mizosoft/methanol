@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -52,6 +52,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.CRC32C;
 
 /** An object that provides direct access to the underlying storage of a {@link DiskStore}. */
 final class MockDiskStore {
@@ -95,11 +96,11 @@ final class MockDiskStore {
   }
 
   DiskEntry readEntry(String key) throws IOException {
-    return new DiskEntry(ByteBuffer.wrap(Files.readAllBytes(entryFile(key))));
+    return new DiskEntry(toEntryPath(key));
   }
 
   void write(DiskEntry entry, long lastUsed) throws IOException {
-    Files.write(entryFile(entry.key), TestUtils.toByteArray(entry.encode()));
+    Files.write(toEntryPath(entry.key), TestUtils.toByteArray(entry.encode()));
     index.put(entry.toIndexEntry(hasher, lastUsed));
   }
 
@@ -114,7 +115,7 @@ final class MockDiskStore {
   void write(String key, String data, String metadata, EntryCorruptionMode corruptionMode)
       throws IOException {
     var entry = new DiskEntry(key, metadata, data, appVersion);
-    Files.write(entryFile(key), TestUtils.toByteArray(corruptionMode.corrupt(entry, appVersion)));
+    Files.write(toEntryPath(key), TestUtils.toByteArray(corruptionMode.corrupt(entry, appVersion)));
     index.put(entry.toIndexEntry(hasher, lruClock.getAndIncrement()));
   }
 
@@ -133,7 +134,7 @@ final class MockDiskStore {
   }
 
   void deleteEntry(String key) throws IOException {
-    Files.delete(entryFile(key));
+    Files.delete(toEntryPath(key));
   }
 
   void delete() throws IOException {
@@ -145,13 +146,13 @@ final class MockDiskStore {
   }
 
   void assertEntryFileExists(String key) {
-    assertThat(entryFile(key))
+    assertThat(toEntryPath(key))
         .withFailMessage("expected entry file for <%s> to exist", key)
         .exists();
   }
 
   void assertEntryFileDoesNotExist(String key) {
-    assertThat(entryFile(key))
+    assertThat(toEntryPath(key))
         .withFailMessage("expected entry file for <%s> to not exist", key)
         .doesNotExist();
   }
@@ -230,7 +231,7 @@ final class MockDiskStore {
     return lockFile;
   }
 
-  Path entryFile(String key) {
+  Path toEntryPath(String key) {
     return directory.resolve(hasher.hash(key).toHexString() + ENTRY_FILE_SUFFIX);
   }
 
@@ -324,7 +325,6 @@ final class MockDiskStore {
     final String key;
     final String metadata;
     final String data;
-
     long magic;
     int storeVersion;
     int appVersion;
@@ -333,13 +333,12 @@ final class MockDiskStore {
       this.key = key;
       this.metadata = metadata;
       this.data = data;
-
-      magic = ENTRY_MAGIC;
-      storeVersion = STORE_VERSION;
+      this.magic = ENTRY_MAGIC;
+      this.storeVersion = STORE_VERSION;
       this.appVersion = appVersion;
     }
 
-    DiskEntry(ByteBuffer buffer) {
+    DiskEntry(Path path) throws IOException {
       // <data>
       // <key>
       // <metadata>
@@ -349,24 +348,35 @@ final class MockDiskStore {
       // <key-size>
       // <metadata-size>
       // <data-size>
+      // <data-crc32c>
+      // <epilogue-crc32c>
 
-      buffer.mark();
-      buffer.position(buffer.limit() - ENTRY_TRAILER_SIZE);
-      magic = buffer.getLong();
-      storeVersion = buffer.getInt();
-      appVersion = buffer.getInt();
+      var content = ByteBuffer.wrap(Files.readAllBytes(path));
+      content.position(content.limit() - ENTRY_TRAILER_SIZE);
+      magic = content.getLong();
+      storeVersion = content.getInt();
+      appVersion = content.getInt();
+      int keySize = content.getInt();
+      int metadataSize = content.getInt();
+      int dataSize = (int) content.getLong();
+      int dataCrc32c = content.getInt();
+      int epilogueCrc32c = content.getInt();
+      key = UTF_8.decode(content.position(dataSize).limit(dataSize + keySize)).toString();
+      metadata = UTF_8.decode(content.limit(dataSize + keySize + metadataSize)).toString();
+      var dataBytes = TestUtils.toByteArray(content.rewind().limit(dataSize));
+      data = new String(dataBytes, UTF_8);
 
-      int keySize = buffer.getInt();
-      int metadataSize = buffer.getInt();
-      int dataSize = (int) buffer.getLong();
+      var crc32c = new CRC32C();
+      crc32c.update(dataBytes);
+      assertThat(dataCrc32c)
+          .withFailMessage(() -> "Mismatching data CRC32C")
+          .isEqualTo((int) crc32c.getValue());
 
-      buffer.reset();
-      metadata =
-          UTF_8
-              .decode(buffer.position(dataSize + keySize).limit(dataSize + keySize + metadataSize))
-              .toString();
-      key = UTF_8.decode(buffer.position(dataSize).limit(dataSize + keySize)).toString();
-      data = UTF_8.decode(buffer.position(0).limit(dataSize)).toString();
+      crc32c.reset();
+      crc32c.update(content.limit(content.capacity() - Integer.BYTES).position(dataSize));
+      assertThat(epilogueCrc32c)
+          .withFailMessage(() -> "Mismatching epilogue CRC32C")
+          .isEqualTo((int) crc32c.getValue());
     }
 
     IndexEntry toIndexEntry(Hasher hasher, long lastUsed) {
@@ -374,24 +384,27 @@ final class MockDiskStore {
     }
 
     ByteBuffer encode() {
-      var dataBytes = UTF_8.encode(data);
-      var keyBytes = UTF_8.encode(key);
-      var metadataBytes = UTF_8.encode(metadata);
-      return ByteBuffer.allocate(
-              dataBytes.remaining()
-                  + keyBytes.remaining()
-                  + metadataBytes.remaining()
-                  + ENTRY_TRAILER_SIZE)
-          .put(dataBytes)
-          .put(keyBytes)
-          .put(metadataBytes)
-          .putLong(magic)
-          .putInt(storeVersion)
-          .putInt(appVersion)
-          .putInt(keyBytes.rewind().remaining())
-          .putInt(metadataBytes.rewind().remaining())
-          .putLong(dataBytes.rewind().remaining())
-          .flip();
+      var dataBytes = data.getBytes(UTF_8);
+      var keyBytes = key.getBytes(UTF_8);
+      var metadataBytes = metadata.getBytes(UTF_8);
+      var crc32c = new CRC32C();
+      crc32c.update(dataBytes);
+      var buffer =
+          ByteBuffer.allocate(
+                  dataBytes.length + keyBytes.length + metadataBytes.length + ENTRY_TRAILER_SIZE)
+              .put(dataBytes)
+              .put(keyBytes)
+              .put(metadataBytes)
+              .putLong(magic)
+              .putInt(storeVersion)
+              .putInt(appVersion)
+              .putInt(keyBytes.length)
+              .putInt(metadataBytes.length)
+              .putLong(dataBytes.length)
+              .putInt((int) crc32c.getValue());
+      crc32c.reset();
+      crc32c.update(buffer.flip().position(dataBytes.length));
+      return buffer.limit(buffer.capacity()).putInt((int) crc32c.getValue()).flip();
     }
   }
 

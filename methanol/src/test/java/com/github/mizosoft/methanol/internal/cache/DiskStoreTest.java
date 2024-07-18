@@ -776,11 +776,11 @@ class DiskStoreTest {
     var mockStore = new MockDiskStore(context);
 
     write(store, "e1", "123", "abc");
-    long sizeBeforeShrinking = Files.size(mockStore.entryFile("e1"));
+    long sizeBeforeShrinking = Files.size(mockStore.toEntryPath("e1"));
 
     // Shrink metadata by 1 byte.
     setMetadata(store, "e1", "12");
-    long sizeAfterShrinking = Files.size(mockStore.entryFile("e1"));
+    long sizeAfterShrinking = Files.size(mockStore.toEntryPath("e1"));
     assertThat(sizeBeforeShrinking)
         .withFailMessage("%d -> %d", sizeBeforeShrinking, sizeAfterShrinking)
         .isEqualTo(sizeAfterShrinking + 1);
