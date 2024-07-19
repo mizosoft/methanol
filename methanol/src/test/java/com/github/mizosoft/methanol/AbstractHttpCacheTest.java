@@ -105,7 +105,7 @@ abstract class AbstractHttpCacheTest {
                     if (failOnUnavailableResponses) {
                       assertThat(response.statusCode())
                           .withFailMessage(
-                              "server has no queued responses, expected something to be cached?")
+                              "Server has no queued responses, expected something to be cached?")
                           .isNotEqualTo(HTTP_UNAVAILABLE);
                     }
                     clock.advance(advanceOnSend);
@@ -122,7 +122,7 @@ abstract class AbstractHttpCacheTest {
                               if (failOnUnavailableResponses) {
                                 assertThat(response.statusCode())
                                     .withFailMessage(
-                                        "server has no queued responses, expected something to be cached?")
+                                        "Server has no queued responses, expected something to be cached?")
                                     .isNotEqualTo(HTTP_UNAVAILABLE);
                               }
                               clock.advance(advanceOnSend);

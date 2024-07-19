@@ -533,7 +533,6 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  @StoreSpec
   void iterateOverEntries(Store store) throws IOException {
     var entries =
         Map.of(
