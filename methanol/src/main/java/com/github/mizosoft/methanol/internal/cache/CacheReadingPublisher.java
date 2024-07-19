@@ -184,7 +184,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         Viewer viewer,
         Listener listener,
         int bufferSize) {
-      super(downstream, executor); // TODO maybe run subscriber inline?
+      super(downstream, FlowSupport.SYNC_EXECUTOR);
       this.viewer = viewer;
       this.executor = executor;
       this.reader = viewer.newReader();

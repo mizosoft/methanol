@@ -271,9 +271,6 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       DONE
     }
 
-    @SuppressWarnings("unused") // VarHandle indirection.
-    private volatile long position;
-
     /**
      * Set to true when onComplete() is called, after then the edit is to be committed as soon as
      * writeQueue becomes empty.
