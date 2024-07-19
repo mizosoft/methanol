@@ -750,6 +750,39 @@ public final class DiskStore implements Store {
     }
   }
 
+  private static final class Sha256MessageDigestFactory {
+    private static final @Nullable MessageDigest TEMPLATE = lookupTemplateIfCloneable();
+
+    private Sha256MessageDigestFactory() {}
+
+    static MessageDigest create() {
+      if (TEMPLATE == null) {
+        return lookup();
+      }
+      try {
+        return (MessageDigest) TEMPLATE.clone();
+      } catch (CloneNotSupportedException e) {
+        throw new AssertionError(e);
+      }
+    }
+
+    private static @Nullable MessageDigest lookupTemplateIfCloneable() {
+      try {
+        return (MessageDigest) lookup().clone();
+      } catch (CloneNotSupportedException ignored) {
+        return null;
+      }
+    }
+
+    private static MessageDigest lookup() {
+      try {
+        return MessageDigest.getInstance("SHA-256");
+      } catch (NoSuchAlgorithmException e) {
+        throw new UnsupportedOperationException("SHA-256 not available!", e);
+      }
+    }
+  }
+
   /** A function that computes an 80-bit hash from a string key. */
   @FunctionalInterface
   public interface Hasher {
@@ -759,18 +792,9 @@ public final class DiskStore implements Store {
     Hash hash(String key);
 
     private static Hash truncatedSha256Hash(String key) {
-      var digest = sha256Digest();
-      digest.update(UTF_8.encode(key));
-      return new Hash(ByteBuffer.wrap(digest.digest()).limit(Hash.BYTES));
-    }
-
-    // TODO we can use a MessageDigest as a cloning template to avoid service lookup every time.
-    private static MessageDigest sha256Digest() {
-      try {
-        return MessageDigest.getInstance("SHA-256");
-      } catch (NoSuchAlgorithmException e) {
-        throw new UnsupportedOperationException("SHA-256 not available!", e);
-      }
+      return new Hash(
+          ByteBuffer.wrap(Sha256MessageDigestFactory.create().digest(key.getBytes(UTF_8)))
+              .limit(Hash.BYTES));
     }
   }
 
