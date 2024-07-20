@@ -269,19 +269,11 @@ class CacheWritingPublisherTest {
           public EntryWriter writer() {
             var calledWriteOnce = new AtomicBoolean();
             var delegate = super.writer();
-            return new EntryWriter() {
-              @Override
-              public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
-                throw new UnsupportedOperationException();
-              }
-
-              @Override
-              public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor) {
-                assertThat(calledWriteOnce.compareAndSet(false, true)).isTrue();
-                return delegate
-                    .write(srcs, executor)
-                    .thenCompose(written -> resumeWrite.thenApply(___ -> written));
-              }
+            return (srcs, executor1) -> {
+              assertThat(calledWriteOnce.compareAndSet(false, true)).isTrue();
+              return delegate
+                  .write(srcs, executor1)
+                  .thenCompose(written -> resumeWrite.thenApply(___ -> written));
             };
           }
         };
@@ -577,21 +569,12 @@ class CacheWritingPublisherTest {
 
     @Override
     public EntryWriter writer() {
-      return new EntryWriter() {
-        @Override
-        public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
-          return CompletableFuture.supplyAsync(() -> TestEditor.this.write(src), executor);
-        }
-
-        @Override
-        public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor) {
-          return CompletableFuture.supplyAsync(
+      return (srcs, executor) ->
+          CompletableFuture.supplyAsync(
               () ->
                   (long)
                       srcs.stream().map(TestEditor.this::write).mapToInt(Integer::intValue).sum(),
               executor);
-        }
-      };
     }
 
     @Override

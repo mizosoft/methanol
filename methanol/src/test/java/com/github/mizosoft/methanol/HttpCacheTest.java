@@ -3568,32 +3568,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         var delegate = super.writer();
         return new EntryWriter() {
           @Override
-          public int write(ByteBuffer src) throws IOException {
-            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
-            int written = delegate.write(src);
-            if (!allowWrites) {
-              failedAtLeastOnce = true;
-              throw new TestException();
-            }
-            return written;
-          }
-
-          @Override
-          public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
-            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
-            return delegate
-                .write(src, executor)
-                .thenApply(
-                    written -> {
-                      if (!allowWrites) {
-                        failedAtLeastOnce = true;
-                        throw new TestException();
-                      }
-                      return written;
-                    });
-          }
-
-          @Override
           public long write(List<ByteBuffer> srcs) throws IOException {
             // To simulate delays, fire an actual write on delegate even if writing is prohibited.
             long written = delegate.write(srcs);
@@ -3645,30 +3619,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
       public EntryReader newReader() {
         var delegate = super.newReader();
         return new EntryReader() {
-          @Override
-          public int read(ByteBuffer dst) throws IOException {
-            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
-            int read = delegate.read(dst);
-            if (!allowReads) {
-              throw new TestException();
-            }
-            return read;
-          }
-
-          @Override
-          public CompletableFuture<Integer> read(ByteBuffer dst, Executor executor) {
-            // To simulate delays, fire an actual write on delegate even if writing is prohibited.
-            return delegate
-                .read(dst, executor)
-                .thenApply(
-                    read -> {
-                      if (!allowReads) {
-                        throw new TestException();
-                      }
-                      return read;
-                    });
-          }
-
           @Override
           public long read(List<ByteBuffer> dsts) throws IOException {
             // To simulate delays, fire an actual write on delegate even if writing is prohibited.

@@ -240,8 +240,8 @@ abstract class AbstractRedisStore<
   @Override
   public long size() {
     long size = 0;
-    for (var iter = iterator(); iter.hasNext(); ) {
-      try (var viewer = iter.next()) {
+    for (var iterator = iterator(); iterator.hasNext(); ) {
+      try (var viewer = iterator.next()) {
         size += viewer.entrySize();
       }
     }
@@ -396,9 +396,9 @@ abstract class AbstractRedisStore<
         }
 
         try {
-          var iter = entryIterator;
-          if (iter != null && iter.hasNext()) {
-            var entry = iter.next();
+          var iterator = entryIterator;
+          if (iterator != null && iterator.hasNext()) {
+            var entry = iterator.next();
             if (seenKeys.add(entry.key)) {
               nextViewer = createViewer(null, entry.key, entry.fields);
               return true;
@@ -414,7 +414,7 @@ abstract class AbstractRedisStore<
           }
         } catch (RedisException e) {
           finished = true;
-          logger.log(Level.WARNING, "Exception thrown during iteration", e.getCause());
+          logger.log(Level.WARNING, "Exception thrown during iteration", e);
           return false;
         }
       }
@@ -553,11 +553,6 @@ abstract class AbstractRedisStore<
       private boolean readingFreshEntry = true;
 
       RedisEntryReader() {}
-
-      @Override
-      public CompletableFuture<Integer> read(ByteBuffer dst, Executor executor) {
-        return read(List.of(dst), executor).thenApply(Long::intValue);
-      }
 
       @Override
       public CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor ignored) {
@@ -721,11 +716,6 @@ abstract class AbstractRedisStore<
       private boolean isWritten;
 
       RedisEntryWriter() {}
-
-      @Override
-      public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
-        return write(List.of(src), executor).thenApply(Long::intValue);
-      }
 
       public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor ignored) {
         requireNonNull(srcs);

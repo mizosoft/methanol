@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
+import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
@@ -263,19 +264,10 @@ class CacheReadingPublisherTest {
     abstract int read(ByteBuffer dst);
 
     @Override
-    public Store.EntryReader newReader() {
-      return new Store.EntryReader() {
-        @Override
-        public CompletableFuture<Integer> read(ByteBuffer dst, Executor executor) {
-          return CompletableFuture.supplyAsync(() -> TestViewer.this.read(dst), executor);
-        }
-
-        @Override
-        public CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor executor) {
-          return CompletableFuture.supplyAsync(
+    public EntryReader newReader() {
+      return (dsts, executor) ->
+          CompletableFuture.supplyAsync(
               () -> (long) dsts.stream().mapToInt(TestViewer.this::read).sum(), executor);
-        }
-      };
     }
 
     @Override

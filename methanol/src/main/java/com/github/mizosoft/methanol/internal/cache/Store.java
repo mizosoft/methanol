@@ -250,7 +250,8 @@ public interface Store extends Closeable, Flushable {
     /**
      * Synchronous variant of {@link #read(ByteBuffer, Executor)}.
      *
-     * @throws IllegalStateException if closed
+     * @throws IllegalStateException if the viewer is closed or if a read is currently in progress
+     *     and the store doesn't allow concurrent reads
      */
     default int read(ByteBuffer dst) throws IOException {
       return (int) read(List.of(dst));
@@ -261,14 +262,20 @@ public interface Store extends Closeable, Flushable {
      * number of read bytes, or {@code -1} if reached EOF. The number returned is the maximum of the
      * number of bytes remaining in the buffer or the stream.
      *
-     * @throws IllegalStateException if closed
+     * @implSpec The default implementation calls {@link #read(List, Executor)}, where the passed
+     *     list contains only the given buffer.
+     * @throws IllegalStateException if the viewer is closed or if a read is currently in progress
+     *     and the store doesn't allow concurrent reads
      */
-    CompletableFuture<Integer> read(ByteBuffer dst, Executor executor);
+    default CompletableFuture<Integer> read(ByteBuffer dst, Executor executor) {
+      return read(List.of(dst), executor).thenApply(Long::intValue);
+    }
 
     /**
      * Synchronous variant of {@link #read(List, Executor)}.
      *
-     * @throws IllegalStateException if closed
+     * @throws IllegalStateException if the viewer is closed or if a read is currently in progress
+     *     and the store doesn't allow concurrent reads
      */
     default long read(List<ByteBuffer> dsts) throws IOException {
       return Utils.getIo(read(dsts, FlowSupport.SYNC_EXECUTOR));
@@ -279,7 +286,8 @@ public interface Store extends Closeable, Flushable {
      * order, and returns the number of read bytes, or {@code -1} if reached EOF. The number
      * returned is the maximum of the number of bytes remaining in the buffer or the stream.
      *
-     * @throws IllegalStateException if closed
+     * @throws IllegalStateException if the viewer is closed or if a read is currently in progress
+     *     and the store doesn't allow concurrent reads
      */
     CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor executor);
   }
@@ -290,7 +298,8 @@ public interface Store extends Closeable, Flushable {
     /**
      * Synchronous variant of {@link #write(ByteBuffer, Executor)}.
      *
-     * @throws IllegalStateException if closed
+     * @throws IllegalStateException if the editor is closed or if a write is currently in progress
+     *     and the store doesn't allow concurrent writes
      */
     default int write(ByteBuffer src) throws IOException {
       return (int) write(List.of(src));
@@ -300,14 +309,20 @@ public interface Store extends Closeable, Flushable {
      * Writes all the bytes from the given buffer into the editor's data stream, and returns the
      * number of bytes actually written.
      *
-     * @throws IllegalStateException if closed
+     * @implSpec The default implementation calls {@link #write(List, Executor)}, where the passed
+     *     list contains only the given buffer.
+     * @throws IllegalStateException if the editor is closed or if a write is currently in progress
+     *     and the store doesn't allow concurrent writes
      */
-    CompletableFuture<Integer> write(ByteBuffer src, Executor executor);
+    default CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
+      return write(List.of(src), executor).thenApply(Long::intValue);
+    }
 
     /**
      * Synchronous variant of {@link #write(List, Executor)}.
      *
-     * @throws IllegalStateException if closed
+     * @throws IllegalStateException if the editor is closed or if a write is currently in progress
+     *     and the store doesn't allow concurrent writes
      */
     default long write(List<ByteBuffer> srcs) throws IOException {
       return Utils.getIo(write(srcs, FlowSupport.SYNC_EXECUTOR));
@@ -317,7 +332,8 @@ public interface Store extends Closeable, Flushable {
      * Writes all the bytes from the given buffers into the editor's data stream, in sequential
      * order, and returns the number of bytes actually written.
      *
-     * @throws IllegalStateException if closed
+     * @throws IllegalStateException if the editor is closed or if a write is currently in progress
+     *     and the store doesn't allow concurrent writes
      */
     CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor);
   }
