@@ -62,6 +62,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -181,7 +182,6 @@ class CacheWritingPublisherTest {
             UTF_8.encode("abc"),
             executor,
             listener,
-            false,
             true); // Make sure the entry is written when downstream completes.
     var subscriber = BodySubscribers.ofString(UTF_8);
     publisher.subscribe(subscriber);
@@ -243,98 +243,64 @@ class CacheWritingPublisherTest {
     assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
   }
 
-  /**
-   * The publisher shouldn't propagate cancellation upstream and prefer instead to continue caching
-   * the body.
-   */
   @ExecutorParameterizedTest
-  void cancellationIsNotPropagatedIfWriting(Executor executor) {
+  void cancellationIsPropagatedUpstream(Executor executor) {
     var editor = new TestEditor();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
-    var subscriber = new StringSubscriber();
-    publisher.subscribe(subscriber);
-
-    // Cancel before submitting items.
-    subscriber.awaitSubscription().cancel();
-    upstream.submitAll(toResponseBodyIterable("Cancel me if you can!"));
-    upstream.close();
-
-    // Writing completes successfully and cancellation is not propagated.
-    editor.awaitCommit();
-    assertThat(editor.writtenString()).isEqualTo("Cancel me if you can!");
-    assertThat(upstream.firstSubscription().flowInterrupted()).isFalse();
-
-    // Subscriber's cancellation request is satisfied & body flow stops.
-    assertThat(subscriber.peekAvailable())
-        .withFailMessage(() -> "unexpectedly received: " + subscriber.bodyToString())
-        .isEmpty();
-  }
-
-  @ExecutorParameterizedTest
-  void cancellationIsPropagatedIfNotWriting(Executor executor) {
-    var failingEditor =
-        new TestEditor() {
-          @Override
-          int write(ByteBuffer src) {
-            try {
-              Thread.sleep(50);
-            } catch (InterruptedException e) {
-              throw new RuntimeException(e);
-            }
-            throw new TestException();
-          }
-        };
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER, executor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
     publisher.subscribe(subscriber);
-    upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write.
-
-    // Wait till the error is handled and failingEditor is closed.
-    failingEditor.awaitDiscard();
-
-    // This cancellation is propagated as there's nothing being written.
-    subscriber.awaitSubscription().cancel();
-    var subscription = upstream.firstSubscription();
-    subscription.awaitAbort();
-    assertThat(subscription.flowInterrupted()).isTrue();
-  }
-
-  @ExecutorParameterizedTest
-  void cancellationIsPropagatedLaterOnFailedWrite(
-      Executor executor, ExecutorContext executorContext) {
-    var failOnWriteLatch = new CountDownLatch(1);
-    var failingEditor =
-        new TestEditor() {
-          @Override
-          int write(ByteBuffer src) {
-            awaitUninterruptibly(failOnWriteLatch);
-            // This failure causes cancellation to be propagated.
-            throw new TestException();
-          }
-        };
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher =
-        new CacheWritingPublisher(
-            upstream,
-            failingEditor,
-            EMPTY_BUFFER,
-            executorContext.createExecutor(
-                ExecutorType.CACHED_POOL)); // Use an async pool to avoid blocking indefinitely.
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
-
-    // Cancel subscription eagerly.
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscription().cancel();
     upstream.submit(List.of(ByteBuffer.allocate(1)));
+    subscriber.awaitSubscription().cancel();
 
-    // Cancellation isn't propagated until the editor fails.
-    assertThat(upstream.firstSubscription().flowInterrupted()).isFalse();
-    failOnWriteLatch.countDown();
     var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
     assertThat(subscription.flowInterrupted()).isTrue();
+    editor.awaitDiscard(); // The edit is discarded.
+  }
+
+  @ExecutorParameterizedTest
+  void editIsNotDiscardedWhenCancelledAfterCompletion(Executor executor) {
+    // Delay write completion so that it is completed after cancellation.
+    var resumeWrite = new CompletableFuture<Void>();
+    var editor =
+        new TestEditor() {
+          @Override
+          public EntryWriter writer() {
+            var calledWriteOnce = new AtomicBoolean();
+            var delegate = super.writer();
+            return new EntryWriter() {
+              @Override
+              public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
+                throw new UnsupportedOperationException();
+              }
+
+              @Override
+              public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor) {
+                assertThat(calledWriteOnce.compareAndSet(false, true)).isTrue();
+                return delegate
+                    .write(srcs, executor)
+                    .thenCompose(written -> resumeWrite.thenApply(___ -> written));
+              }
+            };
+          }
+        };
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
+    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    publisher.subscribe(subscriber);
+    upstream.submit(List.of(ByteBuffer.allocate(1)));
+    upstream.close();
+    subscriber.awaitCompletion();
+    subscriber.awaitSubscription().cancel();
+
+    var subscription = upstream.firstSubscription();
+    subscription.awaitAbort();
+    assertThat(subscription.flowInterrupted()).isFalse();
+
+    // The edit isn't discarded as the entire body is received (but not necessarily written).
+    resumeWrite.complete(null);
+    editor.awaitCommit();
   }
 
   @ExecutorParameterizedTest
@@ -348,7 +314,6 @@ class CacheWritingPublisherTest {
     upstream.close();
 
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
-
     editor.awaitDiscard();
   }
 
@@ -436,7 +401,7 @@ class CacheWritingPublisherTest {
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher =
         new CacheWritingPublisher(
-            upstream, new TestEditor(), EMPTY_BUFFER, executor, Listener.disabled(), true, false);
+            upstream, new TestEditor(), EMPTY_BUFFER, executor, Listener.disabled(), false);
     var subscriber = new TestSubscriber<List<ByteBuffer>>().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(2);
@@ -484,7 +449,6 @@ class CacheWritingPublisherTest {
             EMPTY_BUFFER,
             executorContext.createExecutor(ExecutorType.CACHED_POOL),
             Listener.disabled(),
-            false,
             true);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
@@ -519,7 +483,6 @@ class CacheWritingPublisherTest {
             EMPTY_BUFFER,
             executorContext.createExecutor(ExecutorType.CACHED_POOL),
             Listener.disabled(),
-            false,
             true);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
@@ -556,7 +519,6 @@ class CacheWritingPublisherTest {
             EMPTY_BUFFER,
             executorContext.createExecutor(ExecutorType.CACHED_POOL),
             Listener.disabled(),
-            false,
             true);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);

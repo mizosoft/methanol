@@ -48,36 +48,27 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A {@code Publisher} that writes the body stream into cache while simultaneously forwarding it to
- * downstream. The publisher prefers writing the whole stream if downstream cancels the subscription
- * midway transmission. Forwarding downstream items is advanced independently of writing them.
- * Consequently, writing may lag behind downstream consumption, and may proceed after downstream has
- * been completed (or optionally block downstream completion). This affords the downstream not
- * having to unnecessarily wait for the entire body to be cached. If an error occurs while writing,
- * the edit is silently discarded.
+ * downstream. Forwarding data downstream and writing it run at different paces. Consequently,
+ * writing may lag behind downstream consumption, and may, by default, proceed in background after
+ * downstream has been completed. If the {@code
+ * com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.waitForCommit} is true,
+ * downstream isn't completed unless all data is written and the edit is committed. If an error
+ * occurs while writing, the edit is silently discarded.
  */
 public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> {
   private static final Logger logger = System.getLogger(CacheWritingPublisher.class.getName());
 
-  private static final boolean DEFAULT_PROPAGATE_CANCELLATION =
-      Boolean.getBoolean(
-          "com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.propagateCancellation");
   private static final boolean DEFAULT_WAIT_FOR_COMMIT =
       Boolean.getBoolean(
           "com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.waitForCommit");
 
-  private static final int BULK_WRITE_POLL_LIMIT = 16;
+  private static final int MAX_BULK_WRITE_SIZE = 8;
 
   private final Publisher<List<ByteBuffer>> upstream;
   private final Editor editor;
   private final ByteBuffer metadata;
   private final Executor executor;
   private final Listener listener;
-
-  /**
-   * Whether to propagate cancellation by downstream to upstream, or prefer draining the response
-   * body into cache instead.
-   */
-  private final boolean propagateCancellation;
 
   /** Whether to wait till the cache entry is committed before completing downstream. */
   private final boolean waitForCommit;
@@ -86,14 +77,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
   public CacheWritingPublisher(
       Publisher<List<ByteBuffer>> upstream, Editor editor, ByteBuffer metadata, Executor executor) {
-    this(
-        upstream,
-        editor,
-        metadata,
-        executor,
-        DisabledListener.INSTANCE,
-        DEFAULT_PROPAGATE_CANCELLATION,
-        DEFAULT_WAIT_FOR_COMMIT);
+    this(upstream, editor, metadata, executor, DisabledListener.INSTANCE, DEFAULT_WAIT_FOR_COMMIT);
   }
 
   public CacheWritingPublisher(
@@ -102,14 +86,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       ByteBuffer metadata,
       Executor executor,
       Listener listener) {
-    this(
-        upstream,
-        editor,
-        metadata,
-        executor,
-        listener,
-        DEFAULT_PROPAGATE_CANCELLATION,
-        DEFAULT_WAIT_FOR_COMMIT);
+    this(upstream, editor, metadata, executor, listener, DEFAULT_WAIT_FOR_COMMIT);
   }
 
   public CacheWritingPublisher(
@@ -118,14 +95,12 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       ByteBuffer metadata,
       Executor executor,
       Listener listener,
-      boolean propagateCancellation,
       boolean waitForCommit) {
     this.upstream = requireNonNull(upstream);
     this.editor = requireNonNull(editor);
     this.metadata = requireNonNull(metadata);
     this.executor = requireNonNull(executor);
     this.listener = requireNonNull(listener);
-    this.propagateCancellation = propagateCancellation;
     this.waitForCommit = waitForCommit;
   }
 
@@ -135,13 +110,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     if (subscribed.compareAndSet(false, true)) {
       upstream.subscribe(
           new CacheWritingSubscriber(
-              subscriber,
-              editor,
-              metadata,
-              executor,
-              listener,
-              propagateCancellation,
-              waitForCommit));
+              subscriber, editor, metadata, executor, listener, waitForCommit));
     } else {
       FlowSupport.rejectMulticast(subscriber);
     }
@@ -198,17 +167,10 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         ByteBuffer metadata,
         Executor executor,
         Listener listener,
-        boolean propagateCancellation,
         boolean waitForCommit) {
       downstreamSubscription =
           new CacheWritingSubscription(
-              downstream,
-              editor,
-              metadata,
-              executor,
-              listener,
-              propagateCancellation,
-              waitForCommit);
+              downstream, editor, metadata, executor, listener, waitForCommit);
     }
 
     @Override
@@ -255,7 +217,6 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private final EntryWriter writer;
     private final Executor executor;
     private final Listener listener;
-    private final boolean propagateCancellation;
     private final boolean waitForCommit;
     private final Upstream upstream = new Upstream();
     private final ConcurrentLinkedQueue<List<ByteBuffer>> writeQueue =
@@ -283,7 +244,6 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
         ByteBuffer metadata,
         Executor executor,
         Listener listener,
-        boolean propagateCancellation,
         boolean waitForCommit) {
       this.downstream = downstream;
       this.editor = editor;
@@ -291,7 +251,6 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       this.executor = executor;
       this.writer = editor.writer();
       this.listener = listener.guarded(); // Ensure the listener doesn't throw.
-      this.propagateCancellation = propagateCancellation;
       this.waitForCommit = waitForCommit;
     }
 
@@ -302,17 +261,14 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
     @Override
     public void cancel() {
-      // Downstream isn't interested in the body anymore. However, we are! So we won't propagate
-      // cancellation upwards (unless propagateCancellation is set or we're not writing). This
-      // will be done in background as downstream is probably done by now.
-      if (state == WritingState.DONE || propagateCancellation) {
-        upstream.cancel();
-        discardEdit();
-      } else {
-        // TODO to avoid getting bombarded with buffers, consider requesting a bunch at a time.
-        upstream.request(Long.MAX_VALUE);
-      }
       getAndClearDownstream();
+      upstream.cancel();
+
+      // If we've received the entire body there's no need to discard the edit as it can continue in
+      // background till committing.
+      if (!receivedBodyCompletion) {
+        discardEdit();
+      }
     }
 
     void onSubscribe(Subscription subscription) {
@@ -393,7 +349,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
           // Take this chance to write as much as we can up to a limit.
           List<ByteBuffer> moreBuffers;
           int polledCount = 1; // We've just polled one list.
-          while (polledCount < BULK_WRITE_POLL_LIMIT && (moreBuffers = writeQueue.poll()) != null) {
+          while (polledCount < MAX_BULK_WRITE_SIZE && (moreBuffers = writeQueue.poll()) != null) {
             if (polledCount == 1) {
               buffers = new ArrayList<>(buffers);
             }
@@ -453,12 +409,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       if (exception != null) {
         discardEdit();
         listener.onWriteFailure(exception);
-        if (downstream == null) {
-          // Just cancel upstream if downstream was disposed and we were only writing the body.
-          upstream.cancel();
-        } else {
-          completeDownstreamOnDiscardedEdit();
-        }
+        completeDownstreamOnDiscardedEdit();
       } else if (!tryScheduleWrite(true)
           && STATE.compareAndSet(this, WritingState.WRITING, WritingState.IDLE)) {
         // There might be signals missed just before CASing to IDLE.
@@ -469,7 +420,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
     private void discardEdit() {
       while (true) {
         var currentState = state;
-        if (currentState == WritingState.COMMITTING) {
+        if (currentState == WritingState.COMMITTING || currentState == WritingState.DONE) {
           return;
         } else if (STATE.compareAndSet(this, currentState, WritingState.DONE)) {
           writeQueue.clear();

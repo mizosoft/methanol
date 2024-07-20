@@ -98,9 +98,7 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
         edit("e" + entryId.getAndIncrement()),
         TestUtils.EMPTY_BUFFER,
         executorContext.createExecutor(executorType),
-        Listener.disabled(),
-        true,
-        false);
+        Listener.disabled());
   }
 
   @Override

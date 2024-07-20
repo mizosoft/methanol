@@ -2906,27 +2906,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   }
 
   @StoreParameterizedTest
-  void prematurelyCloseResponseBody(Store store) throws Exception {
-    setUpCache(store);
-
-    // Ensure we have a body that spans multiple onNext signals
-    var body = "Pikachu\n".repeat(12 * 1024);
-    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody(body));
-
-    // Prematurely close the response body. This causes cache writing to continue in background.
-    try (var reader = client.send(GET(serverUri), MoreBodyHandlers.ofReader()).body()) {
-      var chars = new char["Pikachu".length()];
-      int read = reader.read(chars);
-      assertThat(read).isEqualTo(chars.length);
-      assertThat(new String(chars)).isEqualTo("Pikachu");
-    }
-
-    // Wait till opened editors are closed so all writing is completed
-    editAwaiter.await();
-    verifyThat(send(serverUri)).isCacheHit().hasBody(body);
-  }
-
-  @StoreParameterizedTest
   void errorsWhileWritingDiscardsCaching(Store store) throws Exception {
     var faultyStore = new FailingStore(store);
     setUpCache(faultyStore);
