@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -113,10 +113,9 @@ public class HttpDates {
     return Optional.empty();
   }
 
-  // TODO tolerate -ve values by truncating to 0?
   public static Duration parseDeltaSeconds(String value) {
     long secondsLong = Long.parseLong(value);
-    requireArgument(secondsLong >= 0, "delta seconds can't be negative");
+    requireArgument(secondsLong >= 0, "Delta seconds can't be negative");
 
     // Truncate to Integer.MAX_VALUE to avoid overflows on further calculations.
     int secondsInt = (int) Math.min(secondsLong, Integer.MAX_VALUE);
