@@ -275,7 +275,6 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         listener.onReadSuccess();
         fireOrKeepAlive();
       } else {
-        assert !buffers.isEmpty();
         readQueue.add(
             sliceNonEmptyBuffers(
                 buffers.stream()
@@ -289,7 +288,10 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       }
     }
 
-    /** Removes empty buffers from the end of the list, which can exist at the end of the stream. */
+    /**
+     * Removes empty buffers from the end of the list, which can exist when reading at the end of
+     * stream.
+     */
     private List<ByteBuffer> sliceNonEmptyBuffers(List<ByteBuffer> buffers) {
       if (buffers.get(buffers.size() - 1).hasRemaining()) {
         return buffers;
