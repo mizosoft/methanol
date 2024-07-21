@@ -189,7 +189,7 @@ abstract class AbstractRedisStore<
     requireNotClosed();
     var editorId = UUID.randomUUID().toString();
     var editorLockKey = entryKey + ":editor";
-    var wipDataKey = entryKey + ":wip_data:" + editorId;
+    var wipDataKey = entryKey + ":data:wip:" + editorId;
     return Script.EDIT
         .evalOn(asyncCommands())
         .getAsBoolean(
