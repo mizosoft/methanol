@@ -93,10 +93,6 @@ enum Script {
     return sb.toString();
   }
 
-  private interface EvalFunction<T, K, V> {
-    Object apply(T source, K[] keys, V[] values, ScriptOutputType scriptOutputType);
-  }
-
   static final class RunnableScript<K, V> {
     private final Script script;
     private final RedisScriptingCommands<K, V> commands;

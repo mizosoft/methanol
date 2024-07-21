@@ -137,7 +137,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
      * enough so that bulk reads are faster than single-buffer reads, taking into account that we
      * pass lists of buffers downstream, but small enough so that each read doesn't take too long,
      * and little allocation is wasted when the response size is small. The chosen number seems good
-     * enough considering the default buffer size of 16kB (see {@link Utils#BUFFER_SIZE}.
+     * enough considering the default buffer size of 16kB (see {@link Utils#BUFFER_SIZE}).
      */
     private static final int MAX_BULK_READ_SIZE = 4;
 
