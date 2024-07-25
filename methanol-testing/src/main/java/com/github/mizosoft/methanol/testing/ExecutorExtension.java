@@ -66,10 +66,13 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
 
   @Override
   public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-    var spec = findExecutorSpec(context.getRequiredTestMethod());
+    var spec = findSpec(context.getRequiredTestMethod());
     var executors = ManagedExecutors.get(context);
     return Stream.of(spec.value())
-        .map(executorType -> Arguments.of(executors.createExecutor(executorType)));
+        .flatMap(
+            executorType ->
+                Stream.generate(() -> Arguments.of(executors.createExecutor(executorType)))
+                    .limit(RepeatArgumentsSupport.findRepetitionCount(context).orElse(1)));
   }
 
   @Override
@@ -90,7 +93,7 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
     if (isPresentAsArgumentsProvider) {
       return false;
     }
-    return Stream.of(findExecutorSpec(parameterContext.getDeclaringExecutable()).value())
+    return Stream.of(findSpec(parameterContext.getDeclaringExecutable()).value())
         .anyMatch(executorType -> executorType.matches(parameterContext.getParameter().getType()));
   }
 
@@ -104,7 +107,7 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
     }
 
     var executable = parameterContext.getDeclaringExecutable();
-    var spec = findExecutorSpec(executable);
+    var spec = findSpec(executable);
     return Stream.of(spec.value())
         .filter(executorType -> executorType.matches(parameterContext.getParameter().getType()))
         .map(executors::createExecutor)
@@ -112,7 +115,7 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
         .orElseThrow(UnsupportedOperationException::new);
   }
 
-  private static ExecutorSpec findExecutorSpec(AnnotatedElement element) {
+  private static ExecutorSpec findSpec(AnnotatedElement element) {
     return AnnotationSupport.findAnnotation(element, ExecutorSpec.class)
         .orElse(DEFAULT_EXECUTOR_SPEC);
   }

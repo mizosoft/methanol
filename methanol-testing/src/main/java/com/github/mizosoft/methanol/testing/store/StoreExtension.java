@@ -26,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
+import com.github.mizosoft.methanol.testing.RepeatArgumentsSupport;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.Execution;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
@@ -89,16 +90,20 @@ public final class StoreExtension
   }
 
   @Override
-  public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) {
-    var testMethod = extensionContext.getRequiredTestMethod();
-    var stores = ManagedStores.get(extensionContext);
-    return resolveSpec(findSpec(testMethod))
-        .map(
-            Unchecked.func(
-                config ->
-                    resolveArguments(
-                        List.of(testMethod.getParameterTypes()),
-                        stores.createContext(testMethod, config))));
+  public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+    var testMethod = context.getRequiredTestMethod();
+    var stores = ManagedStores.get(context);
+    var spec = findSpec(testMethod);
+    return resolveSpec(spec)
+        .flatMap(
+            config ->
+                Stream.generate(
+                        Unchecked.supplier(
+                            () ->
+                                resolveArguments(
+                                    List.of(testMethod.getParameterTypes()),
+                                    stores.createContext(testMethod, config))))
+                    .limit(RepeatArgumentsSupport.findRepetitionCount(context).orElse(1)));
   }
 
   @Override

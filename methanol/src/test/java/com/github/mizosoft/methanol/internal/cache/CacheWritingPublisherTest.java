@@ -45,6 +45,7 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.Logging;
+import com.github.mizosoft.methanol.testing.RepeatArguments;
 import com.github.mizosoft.methanol.testing.SubmittablePublisher;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
@@ -75,6 +76,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @Timeout(5)
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
+@RepeatArguments(10)
 class CacheWritingPublisherTest {
   static {
     Logging.disable(CacheWritingPublisher.class);
@@ -82,15 +84,13 @@ class CacheWritingPublisherTest {
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreConfig.StoreType.MEMORY, fileSystem = StoreConfig.FileSystemType.NONE)
-  void writeSmallStringToMemory(Executor executor, Store store)
-      throws IOException, InterruptedException {
+  void writeSmallStringToMemory(Executor executor, Store store) throws IOException {
     testWritingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreConfig.StoreType.DISK, fileSystem = StoreConfig.FileSystemType.SYSTEM)
-  void writeSmallStringToDisk(Executor executor, Store store)
-      throws IOException, InterruptedException {
+  void writeSmallStringToDisk(Executor executor, Store store) throws IOException {
     testWritingSmallString(store, executor);
   }
 
@@ -99,8 +99,7 @@ class CacheWritingPublisherTest {
       tested = StoreConfig.StoreType.REDIS_STANDALONE,
       fileSystem = StoreConfig.FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
-  void writeSmallStringToRedisStandalone(Executor executor, Store store)
-      throws IOException, InterruptedException {
+  void writeSmallStringToRedisStandalone(Executor executor, Store store) throws IOException {
     testWritingSmallString(store, executor);
   }
 
@@ -109,22 +108,19 @@ class CacheWritingPublisherTest {
       tested = StoreConfig.StoreType.REDIS_CLUSTER,
       fileSystem = StoreConfig.FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
-  void writeSmallStringToRedisCluster(Executor executor, Store store)
-      throws IOException, InterruptedException {
+  void writeSmallStringToRedisCluster(Executor executor, Store store) throws IOException {
     testWritingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreConfig.StoreType.MEMORY, fileSystem = StoreConfig.FileSystemType.NONE)
-  void writeLargeStringToMemory(Executor executor, Store store)
-      throws IOException, InterruptedException {
+  void writeLargeStringToMemory(Executor executor, Store store) throws IOException {
     testWritingLargeString(store, executor);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreConfig.StoreType.DISK, fileSystem = StoreConfig.FileSystemType.SYSTEM)
-  void writeLargeStringToDisk(Executor executor, Store store)
-      throws IOException, InterruptedException {
+  void writeLargeStringToDisk(Executor executor, Store store) throws IOException {
     testWritingLargeString(store, executor);
   }
 
@@ -133,8 +129,7 @@ class CacheWritingPublisherTest {
       tested = StoreConfig.StoreType.REDIS_STANDALONE,
       fileSystem = StoreConfig.FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
-  void writeLargeStringToRedisStandalone(Executor executor, Store store)
-      throws IOException, InterruptedException {
+  void writeLargeStringToRedisStandalone(Executor executor, Store store) throws IOException {
     testWritingLargeString(store, executor);
   }
 
@@ -143,23 +138,19 @@ class CacheWritingPublisherTest {
       tested = StoreConfig.StoreType.REDIS_CLUSTER,
       fileSystem = StoreConfig.FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
-  void writeLargeStringToRedisCluster(Executor executor, Store store)
-      throws IOException, InterruptedException {
+  void writeLargeStringToRedisCluster(Executor executor, Store store) throws IOException {
     testWritingLargeString(store, executor);
   }
 
-  private void testWritingSmallString(Store store, Executor executor)
-      throws IOException, InterruptedException {
+  private void testWritingSmallString(Store store, Executor executor) throws IOException {
     testWritingString("Cache me if you can!", store, executor);
   }
 
-  private void testWritingLargeString(Store store, Executor executor)
-      throws IOException, InterruptedException {
+  private void testWritingLargeString(Store store, Executor executor) throws IOException {
     testWritingString("Cache me if you can!".repeat(100_000), store, executor);
   }
 
-  private void testWritingString(String str, Store store, Executor executor)
-      throws IOException, InterruptedException {
+  private void testWritingString(String str, Store store, Executor executor) throws IOException {
     var listener =
         new CacheWritingPublisher.Listener() {
           private Object result;
