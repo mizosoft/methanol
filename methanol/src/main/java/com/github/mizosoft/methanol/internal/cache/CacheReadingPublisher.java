@@ -197,6 +197,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       var batch = readQueue.poll();
       if (batch != null) {
         buffersPromised.getAndAdd(-batch.size());
+        batch = sliceNonEmptyBuffers(batch);
       }
       if (!exhausted) {
         tryScheduleRead(false);
@@ -276,10 +277,9 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
         fireOrKeepAlive();
       } else {
         readQueue.add(
-            sliceNonEmptyBuffers(
-                buffers.stream()
-                    .map(buffer -> buffer.flip().asReadOnlyBuffer())
-                    .collect(Collectors.toUnmodifiableList())));
+            buffers.stream()
+                .map(buffer -> buffer.flip().asReadOnlyBuffer())
+                .collect(Collectors.toUnmodifiableList()));
         if (!tryScheduleRead(true) && STATE.compareAndSet(this, State.READING, State.IDLE)) {
           // There might've been missed signals just before CASing to IDLE.
           tryScheduleRead(false);
