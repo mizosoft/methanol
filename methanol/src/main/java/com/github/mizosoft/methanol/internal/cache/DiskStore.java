@@ -429,6 +429,7 @@ public final class DiskStore implements Store {
     return Collections.unmodifiableSet(snapshot);
   }
 
+  @CanIgnoreReturnValue
   private boolean removeEntry(Entry entry) throws IOException {
     return removeEntry(entry, Entry.ANY_VERSION);
   }
@@ -437,6 +438,7 @@ public final class DiskStore implements Store {
    * Atomically evicts the given entry and decrements its size, returning {@code true} if the entry
    * was evicted by this call.
    */
+  @CanIgnoreReturnValue
   private boolean removeEntry(Entry entry, int targetVersion) throws IOException {
     long evictedSize = evict(entry, targetVersion);
     if (evictedSize >= 0) {
@@ -679,6 +681,30 @@ public final class DiskStore implements Store {
 
   public static Builder newBuilder() {
     return new Builder();
+  }
+
+  private static final class FileChannelCloseable implements Closeable {
+    private final FileChannel channel;
+    private boolean close = true;
+
+    FileChannelCloseable(FileChannel channel) {
+      this.channel = channel;
+    }
+
+    FileChannel channel() {
+      return channel;
+    }
+
+    void keepOpen() {
+      close = false;
+    }
+
+    @Override
+    public void close() throws IOException {
+      if (close) {
+        channel.close();
+      }
+    }
   }
 
   private final class ConcurrentViewerIterator implements Iterator<Viewer> {
@@ -1279,15 +1305,17 @@ public final class DiskStore implements Store {
 
     static DirectoryLock acquire(Path directory) throws IOException {
       var lockFile = directory.resolve(LOCK_FILENAME);
-      var channel = FileChannel.open(lockFile, READ, WRITE, CREATE);
-      try {
+      try (var closeable =
+          new FileChannelCloseable(FileChannel.open(lockFile, READ, WRITE, CREATE))) {
+        var channel = closeable.channel();
         var fileLock = channel.tryLock();
         if (fileLock == null) {
           throw new IOException("Store directory <" + directory + "> already in use");
         }
-        return new DirectoryLock(lockFile, channel);
+        var lock = new DirectoryLock(lockFile, channel);
+        closeable.keepOpen();
+        return lock;
       } catch (IOException e) {
-        closeQuietly(channel);
         deleteIfExistsQuietly(lockFile);
         throw e;
       }
@@ -1534,27 +1562,21 @@ public final class DiskStore implements Store {
           return null;
         }
 
-        var channel = FileChannel.open(entryFile(), READ);
-        try {
+        try (var closeable = new FileChannelCloseable(FileChannel.open(entryFile(), READ))) {
+          var channel = closeable.channel();
           var descriptor = readDescriptorForKey(channel, expectedKey);
-          if (descriptor != null) {
-            return createViewer(channel, version, descriptor);
+          if (descriptor == null) {
+            return null;
           }
-          channel.close();
-          return null;
-        } catch (IOException e) {
-          try {
-            channel.close();
-          } catch (IOException closeEx) {
-            e.addSuppressed(closeEx);
-          }
-          throw e;
+          var viewer = createViewer(channel, version, descriptor);
+          closeable.keepOpen();
+          return viewer;
+        } catch (NoSuchFileException missingEntryFile) {
+          // Our file disappeared! We'll handle this gracefully by making the store lose track of
+          // us. This is done after releasing the lock to not incur a potential index write while
+          // holding it in case the executor is synchronous.
+          logger.log(Level.WARNING, "Dropping entry with missing file", missingEntryFile);
         }
-      } catch (NoSuchFileException missingEntryFile) {
-        // Our file disappeared! We'll handle this gracefully by making the store lose track of us.
-        // This is done after releasing the lock to not incur a potential index write while holding
-        // it.
-        logger.log(Level.WARNING, "Dropping entry with missing file", missingEntryFile);
       } finally {
         lock.unlock();
       }
@@ -1609,7 +1631,7 @@ public final class DiskStore implements Store {
       var crc32c = new CRC32C();
       crc32c.update(keyAndMetadata.rewind());
       crc32c.update(trailer.rewind().limit(trailer.limit() - Integer.BYTES));
-      checkValue(crc32c.getValue(), epilogueCrc32c, "Unexpected checksum");
+      checkValue(crc32c.getValue(), epilogueCrc32c, "Unexpected epilogue checksum");
       return new EntryDescriptor(key, metadata, dataSize, dataCrc32c);
     }
 
@@ -1989,8 +2011,8 @@ public final class DiskStore implements Store {
       }
 
       void checkCrc32cIfEndOfStream() throws StoreCorruptionException {
-        if (position == descriptor.dataSize && crc32C.getValue() != descriptor.dataCrc32c) {
-          throw new StoreCorruptionException("Data stream is corrupt");
+        if (position == descriptor.dataSize) {
+          checkValue(crc32C.getValue(), descriptor.dataCrc32c, "Unexpected data checksum");
         }
       }
     }

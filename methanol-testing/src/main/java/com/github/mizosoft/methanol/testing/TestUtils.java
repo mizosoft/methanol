@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
@@ -64,7 +65,11 @@ public class TestUtils {
    */
   public static final int BUFFERS_PER_LIST = 3;
 
-  public static final long RANDOM_SEED = 25;
+  private static final long RANDOM_SEED = 25;
+
+  public static Random newRandom() {
+    return new Random(RANDOM_SEED);
+  }
 
   public static void awaitUninterruptibly(CountDownLatch latch) {
     while (true) {

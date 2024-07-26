@@ -36,7 +36,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -110,14 +109,14 @@ public class StoreReadWriteBenchmark {
   @Benchmark
   public void read_singleThreaded(
       ThreadLocalInt entryId, ReadDataState ignored, ReadDstState dstState, Blackhole blackhole)
-      throws IOException, InterruptedException {
+      throws IOException {
     read(keys[entryId.getAndIncrement() & KEYS_COUNT_MASK], dstState, blackhole);
   }
 
   @Benchmark
   public void write_singleThreaded(
       ThreadLocalInt entryId, WriteMetadataState metadataState, WriteSrcsState srcsState)
-      throws IOException, InterruptedException {
+      throws IOException {
     write(keys[entryId.getAndIncrement() & KEYS_COUNT_MASK], metadataState, srcsState);
   }
 
@@ -126,7 +125,7 @@ public class StoreReadWriteBenchmark {
   @GroupThreads(6)
   public void readWrite_reader(
       ThreadLocalInt entryId, ReadDataState ignored, ReadDstState dstState, Blackhole blackhole)
-      throws IOException, InterruptedException {
+      throws IOException {
     read(keys[entryId.getAndIncrement() & KEYS_COUNT_MASK], dstState, blackhole);
   }
 
@@ -135,12 +134,11 @@ public class StoreReadWriteBenchmark {
   @GroupThreads(1) // Can only have one writer for the same entry.
   public void readWrite_writer(
       ThreadLocalInt entryId, WriteMetadataState metadataState, WriteSrcsState srcsState)
-      throws IOException, InterruptedException {
+      throws IOException {
     write(keys[entryId.getAndIncrement() & KEYS_COUNT_MASK], metadataState, srcsState);
   }
 
-  private void read(String key, ReadDstState dstState, Blackhole blackhole)
-      throws IOException, InterruptedException {
+  private void read(String key, ReadDstState dstState, Blackhole blackhole) throws IOException {
     var dst = dstState.dst.duplicate();
     try (var viewer = store.view(key).orElseThrow()) {
       var reader = viewer.newReader();
@@ -158,7 +156,7 @@ public class StoreReadWriteBenchmark {
   }
 
   private void write(String key, WriteMetadataState metadataState, WriteSrcsState srcsState)
-      throws IOException, InterruptedException {
+      throws IOException {
     try (var editor = store.edit(key).orElseThrow()) {
       var writer = editor.writer();
       int totalWritten = 0;
@@ -195,7 +193,7 @@ public class StoreReadWriteBenchmark {
     public void setUp(StoreReadWriteBenchmark benchmark) {
       int dataSize = benchmark.dataSize;
       data = ByteBuffer.allocate(dataSize);
-      new Random(TestUtils.RANDOM_SEED).ints(dataSize, 0x21, 0x7F).forEach(i -> data.put((byte) i));
+      TestUtils.newRandom().ints(dataSize, 0x21, 0x7F).forEach(i -> data.put((byte) i));
       data.flip();
     }
   }
@@ -203,8 +201,7 @@ public class StoreReadWriteBenchmark {
   @State(Scope.Benchmark)
   public static class ReadDataState {
     @Setup
-    public void setUp(StoreReadWriteBenchmark benchmark, DataState dataState)
-        throws IOException, InterruptedException {
+    public void setUp(StoreReadWriteBenchmark benchmark, DataState dataState) throws IOException {
       // Populate all entries.
       for (var key : new HashSet<>(List.of(benchmark.keys))) {
         try (var editor = benchmark.store.edit(key).orElseThrow()) {
@@ -234,9 +231,7 @@ public class StoreReadWriteBenchmark {
     @Setup
     public void setUp() {
       metadata = ByteBuffer.allocate(METADATA_SIZE);
-      new Random(TestUtils.RANDOM_SEED)
-          .ints(METADATA_SIZE, 0x21, 0x7F)
-          .forEach(i -> metadata.put((byte) i));
+      TestUtils.newRandom().ints(METADATA_SIZE, 0x21, 0x7F).forEach(i -> metadata.put((byte) i));
     }
   }
 

@@ -109,10 +109,10 @@ class DiskStoreTest {
   @StoreParameterizedTest
   @StoreSpec(tested = StoreType.DISK)
   void persistenceAcrossSessions(DiskStoreContext context) throws IOException {
-    try (var store1 = context.createAndRegisterStore()) {
-      write(store1, "e1", "Mewtwo", "Charmander");
-      write(store1, "e2", "Psyduck", "Pikachu");
-    }
+    var store1 = context.createAndRegisterStore();
+    write(store1, "e1", "Mewtwo", "Charmander");
+    write(store1, "e2", "Psyduck", "Pikachu");
+    store1.close();
 
     var store2 = context.createAndRegisterStore();
     assertEntryEquals(store2, "e1", "Mewtwo", "Charmander");
@@ -239,8 +239,9 @@ class DiskStoreTest {
   void storeContentIsDroppedOnCorruptIndex(DiskStoreContext context) throws IOException {
     for (var corruptionMode : IndexCorruptionMode.values()) {
       try {
-        assertStoreContentIsDroppedOnCorruptIndex(context, corruptionMode);
-        new MockDiskStore(context).delete();
+        var mockStore = new MockDiskStore(context);
+        assertStoreContentIsDroppedOnCorruptIndex(context, mockStore, corruptionMode);
+        mockStore.delete(); // Clean workspace for next mode.
       } catch (AssertionError e) {
         fail(corruptionMode.toString(), e);
       }
@@ -248,28 +249,24 @@ class DiskStoreTest {
   }
 
   private void assertStoreContentIsDroppedOnCorruptIndex(
-      DiskStoreContext context, IndexCorruptionMode corruptionMode) throws IOException {
-    var mockStore = new MockDiskStore(context);
+      DiskStoreContext context, MockDiskStore mockStore, IndexCorruptionMode corruptionMode)
+      throws IOException {
     mockStore.write("e1", "Ditto", "Eevee");
     mockStore.write("e2", "Jynx", "Snorlax");
     mockStore.writeIndex(mockStore.index().copy(), corruptionMode);
+    try (var store = context.createAndRegisterStore()) {
+      mockStore.assertHasNoEntriesOnDisk();
+      assertAbsent(store, context, "e1", "e2");
+      assertThat(store.size()).isZero();
 
-    var store = context.createAndRegisterStore();
-    mockStore.assertHasNoEntriesOnDisk();
-    assertAbsent(store, context, "e1", "e2");
-    assertThat(store.size()).isZero();
+      // The corrupt index is overwritten with an empty index.
+      assertThat(mockStore.indexFile()).doesNotExist();
+      store.flush();
+      mockStore.assertEmptyIndex();
 
-    // The corrupt index is overwritten with an empty index.
-    assertThat(mockStore.indexFile()).doesNotExist();
-    store.flush();
-    mockStore.assertEmptyIndex();
-
-    // Make sure the lock file is not deleted with store content.
-    assertThat(mockStore.lockFile()).exists();
-
-    // Clean workspace for next mode.
-    store.close();
-    mockStore.delete();
+      // Make sure the lock file is not deleted with store content.
+      assertThat(mockStore.lockFile()).exists();
+    }
   }
 
   @StoreParameterizedTest
@@ -277,28 +274,27 @@ class DiskStoreTest {
   void entryCorruption(DiskStoreContext context) throws IOException {
     for (var corruptionMode : EntryCorruptionMode.values()) {
       try {
-        assertEntryCorruption(context, corruptionMode);
+        var mockStore = new MockDiskStore(context);
+        assertEntryCorruption(context, mockStore, corruptionMode);
+        mockStore.delete(); // Clean workspace for next mode.
       } catch (AssertionError e) {
         fail(corruptionMode.toString(), e);
       }
     }
   }
 
-  private void assertEntryCorruption(DiskStoreContext context, EntryCorruptionMode corruptionMode)
+  private void assertEntryCorruption(
+      DiskStoreContext context, MockDiskStore mockStore, EntryCorruptionMode corruptionMode)
       throws IOException {
-    var mockStore = new MockDiskStore(context);
     mockStore.write("e1", "Pikachu", "Mew", corruptionMode);
     mockStore.writeIndex();
+    try (var store = context.createAndRegisterStore()) {
+      assertThatExceptionOfType(StoreCorruptionException.class)
+          .isThrownBy(() -> assertEntryEquals(store, "e1", "Mew", "Pikachu"));
 
-    var store = context.createAndRegisterStore();
-    assertThatExceptionOfType(StoreCorruptionException.class).isThrownBy(() -> view(store, "e1"));
-
-    // The current implementation doesn't automatically remove the entry.
-    mockStore.assertEntryFileExists("e1");
-
-    // Clean workspace for next mode.
-    store.close();
-    mockStore.delete();
+      // The current implementation keeps the entry.
+      mockStore.assertEntryFileExists("e1");
+    }
   }
 
   @StoreParameterizedTest

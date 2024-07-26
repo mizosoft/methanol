@@ -88,7 +88,7 @@ final class MockDiskStore {
   }
 
   void writeIndex(Index index, IndexCorruptionMode corruptionMode) throws IOException {
-    Files.write(indexFile, TestUtils.toByteArray(corruptionMode.corrupt(index.copy(), appVersion)));
+    Files.write(indexFile, TestUtils.toByteArray(corruptionMode.corrupt(index.copy())));
   }
 
   void writeIndex() throws IOException {
@@ -115,7 +115,7 @@ final class MockDiskStore {
   void write(String key, String data, String metadata, EntryCorruptionMode corruptionMode)
       throws IOException {
     var entry = new DiskEntry(key, metadata, data, appVersion);
-    Files.write(toEntryPath(key), TestUtils.toByteArray(corruptionMode.corrupt(entry, appVersion)));
+    Files.write(toEntryPath(key), TestUtils.toByteArray(corruptionMode.corrupt(entry)));
     index.put(entry.toIndexEntry(hasher, lruClock.getAndIncrement()));
   }
 
@@ -328,6 +328,9 @@ final class MockDiskStore {
     long magic;
     int storeVersion;
     int appVersion;
+    int keySize;
+    int metadataSize;
+    int dataSize;
 
     DiskEntry(String key, String metadata, String data, int appVersion) {
       this.key = key;
@@ -336,6 +339,9 @@ final class MockDiskStore {
       this.magic = ENTRY_MAGIC;
       this.storeVersion = STORE_VERSION;
       this.appVersion = appVersion;
+      this.keySize = key.getBytes(UTF_8).length;
+      this.metadataSize = metadata.getBytes(UTF_8).length;
+      this.dataSize = data.getBytes(UTF_8).length;
     }
 
     DiskEntry(Path path) throws IOException {
@@ -356,9 +362,9 @@ final class MockDiskStore {
       magic = content.getLong();
       storeVersion = content.getInt();
       appVersion = content.getInt();
-      int keySize = content.getInt();
-      int metadataSize = content.getInt();
-      int dataSize = (int) content.getLong();
+      keySize = content.getInt();
+      metadataSize = content.getInt();
+      dataSize = (int) content.getLong();
       int dataCrc32c = content.getInt();
       int epilogueCrc32c = content.getInt();
       key = UTF_8.decode(content.position(dataSize).limit(dataSize + keySize)).toString();
@@ -411,64 +417,93 @@ final class MockDiskStore {
   enum IndexCorruptionMode {
     MAGIC {
       @Override
-      ByteBuffer corrupt(Index index, int appVersion) {
+      ByteBuffer corrupt(Index index) {
         index.magic = 1;
         return index.encode();
       }
     },
     STORE_VERSION {
       @Override
-      ByteBuffer corrupt(Index index, int appVersion) {
-        index.storeVersion = DiskStore.STORE_VERSION + 1;
+      ByteBuffer corrupt(Index index) {
+        index.storeVersion++;
         return index.encode();
       }
     },
     APP_VERSION {
       @Override
-      ByteBuffer corrupt(Index index, int appVersion) {
-        index.appVersion = appVersion + 1;
+      ByteBuffer corrupt(Index index) {
+        index.appVersion++;
         return index.encode();
       }
     },
     TRUNCATED {
       @Override
-      ByteBuffer corrupt(Index index, int appVersion) {
+      ByteBuffer corrupt(Index index) {
         return truncate(index.encode());
       }
     };
 
-    abstract ByteBuffer corrupt(Index index, int appVersion);
+    abstract ByteBuffer corrupt(Index index);
   }
 
   enum EntryCorruptionMode {
     MAGIC {
       @Override
-      ByteBuffer corrupt(DiskEntry entry, int appVersion) {
+      ByteBuffer corrupt(DiskEntry entry) {
         entry.magic = 1;
         return entry.encode();
       }
     },
     STORE_VERSION {
       @Override
-      ByteBuffer corrupt(DiskEntry entry, int appVersion) {
-        entry.storeVersion = DiskStore.STORE_VERSION + 1;
+      ByteBuffer corrupt(DiskEntry entry) {
+        entry.storeVersion++;
         return entry.encode();
       }
     },
     APP_VERSION {
       @Override
-      ByteBuffer corrupt(DiskEntry entry, int appVersion) {
-        entry.appVersion = appVersion + 1;
+      ByteBuffer corrupt(DiskEntry entry) {
+        entry.appVersion++;
         return entry.encode();
       }
     },
     TRUNCATE {
       @Override
-      ByteBuffer corrupt(DiskEntry entry, int appVersion) {
+      ByteBuffer corrupt(DiskEntry entry) {
         return truncate(entry.encode());
+      }
+    },
+    KEY {
+      @Override
+      ByteBuffer corrupt(DiskEntry entry) {
+        var content = entry.encode();
+        var random = TestUtils.newRandom();
+        content.put(entry.dataSize + random.nextInt(entry.keySize), (byte) random.nextInt());
+        return content;
+      }
+    },
+    METADATA {
+      @Override
+      ByteBuffer corrupt(DiskEntry entry) {
+        var content = entry.encode();
+        var random = TestUtils.newRandom();
+        content.put(
+            entry.dataSize + entry.keySize + random.nextInt(entry.metadataSize),
+            (byte) random.nextInt());
+        return content;
+      }
+    },
+    DATA {
+      @Override
+      ByteBuffer corrupt(DiskEntry entry) {
+        var content = entry.encode();
+        var random = TestUtils.newRandom();
+        content.put(random.nextInt(entry.dataSize), (byte) random.nextInt());
+        return content;
       }
     };
 
-    abstract ByteBuffer corrupt(DiskEntry entry, int appVersion);
+    abstract ByteBuffer corrupt(DiskEntry entry);
   }
 }
