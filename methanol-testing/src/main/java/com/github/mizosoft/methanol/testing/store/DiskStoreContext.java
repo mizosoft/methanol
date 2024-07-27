@@ -60,10 +60,10 @@ public final class DiskStoreContext extends StoreContext {
   private final Executor executor;
   private final MockHasher hasher = new MockHasher();
 
-  private DiskStoreContext(DiskStoreConfig config, Path directory, FileSystem fileSystem) {
+  DiskStoreContext(DiskStoreConfig config) throws IOException {
     super(config);
-    this.directory = requireNonNull(directory);
-    this.fileSystem = requireNonNull(fileSystem);
+    this.directory = createTempDir(config.fileSystemType());
+    this.fileSystem = this.directory.getFileSystem();
     this.executor = config.execution().newExecutor();
   }
 
@@ -159,11 +159,6 @@ public final class DiskStoreContext extends StoreContext {
     } catch (Exception e) {
       exceptions.add(e);
     }
-  }
-
-  public static DiskStoreContext create(DiskStoreConfig config) throws IOException {
-    var directory = createTempDir(config.fileSystemType());
-    return new DiskStoreContext(config, directory, directory.getFileSystem());
   }
 
   private static Path createTempDir(FileSystemType fsType) throws IOException {

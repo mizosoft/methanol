@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,37 +20,22 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.store;
+package com.github.mizosoft.methanol.testing;
 
-import com.github.mizosoft.methanol.internal.Utils;
-import io.lettuce.core.codec.RedisCodec;
-import java.nio.ByteBuffer;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
 
-public enum ByteBufferCodec implements RedisCodec<ByteBuffer, ByteBuffer> {
-  INSTANCE;
-
-  @Override
-  public ByteBuffer decodeKey(ByteBuffer bytes) {
-    return copy(bytes);
-  }
-
-  @Override
-  public ByteBuffer decodeValue(ByteBuffer bytes) {
-    return copy(bytes);
-  }
-
-  @Override
-  public ByteBuffer encodeKey(ByteBuffer key) {
-    return copy(key);
-  }
-
-  @Override
-  public ByteBuffer encodeValue(ByteBuffer value) {
-    return copy(value);
-  }
-
-  private static ByteBuffer copy(ByteBuffer source) {
-    // Copy the buffer without consuming it.
-    return Utils.copy(source.duplicate());
-  }
+/**
+ * Meant for {@link ArgumentsProvider} implementations to know how many times the same arguments
+ * should be repeated. This circumvents JUnit's limitation of not being able to use {@link
+ * RepeatedTest} with an arguments provider.
+ */
+@Target({ElementType.METHOD, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface RepeatArguments {
+  int value();
 }

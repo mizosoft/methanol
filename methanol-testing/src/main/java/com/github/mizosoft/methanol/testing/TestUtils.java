@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
@@ -57,6 +58,18 @@ import okhttp3.tls.HeldCertificate;
 
 public class TestUtils {
   public static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
+
+  /**
+   * The number of buffers to use for {@code List<ByteBuffer>} streams. This number matches what's
+   * used by the HTTP client.
+   */
+  public static final int BUFFERS_PER_LIST = 3;
+
+  private static final long RANDOM_SEED = 25;
+
+  public static Random newRandom() {
+    return new Random(RANDOM_SEED);
+  }
 
   public static void awaitUninterruptibly(CountDownLatch latch) {
     while (true) {

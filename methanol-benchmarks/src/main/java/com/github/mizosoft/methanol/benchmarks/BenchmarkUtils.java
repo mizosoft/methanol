@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,21 +22,15 @@
 
 package com.github.mizosoft.methanol.benchmarks;
 
-import com.github.mizosoft.methanol.TypeRef;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.util.List;
-import java.util.Map;
 import java.util.zip.DeflaterInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public class BenchmarkUtils {
-
   public static final int N_CPU = Runtime.getRuntime().availableProcessors();
-
-  public static final TypeRef<List<Map<String, Object>>> ARRAY_OF_OBJECTS = new TypeRef<>() {};
 
   public static byte[] gzip(byte[] data) {
     var outBuff = new ByteArrayOutputStream();

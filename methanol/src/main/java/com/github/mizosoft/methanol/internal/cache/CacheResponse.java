@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,12 +30,12 @@ import com.github.mizosoft.methanol.internal.cache.CacheStrategy.StalenessRule;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import java.io.Closeable;
-import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Consumer;
@@ -44,6 +44,7 @@ import java.util.function.Consumer;
 public final class CacheResponse extends PublisherResponse implements Closeable {
   private final Viewer viewer;
   private final CacheStrategy strategy;
+  private final Executor executor;
 
   public CacheResponse(
       TrackedResponse<?> response,
@@ -56,6 +57,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
         response,
         new CacheReadingPublisher(viewer, executor, readListener),
         viewer,
+        executor,
         CacheStrategy.create(request, response, now));
   }
 
@@ -63,9 +65,11 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
       TrackedResponse<?> response,
       Publisher<List<ByteBuffer>> body,
       Viewer viewer,
+      Executor executor,
       CacheStrategy strategy) {
     super(response, body);
     this.viewer = requireNonNull(viewer);
+    this.executor = requireNonNull(executor);
     this.strategy = requireNonNull(strategy);
   }
 
@@ -73,7 +77,7 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
   public CacheResponse with(Consumer<ResponseBuilder<?>> mutator) {
     var builder = ResponseBuilder.newBuilder(response);
     mutator.accept(builder);
-    return new CacheResponse(builder.buildTrackedResponse(), publisher, viewer, strategy);
+    return new CacheResponse(builder.buildTrackedResponse(), publisher, viewer, executor, strategy);
   }
 
   @Override
@@ -81,8 +85,8 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
     viewer.close();
   }
 
-  public Optional<Editor> edit() throws IOException, InterruptedException {
-    return viewer.edit();
+  public CompletableFuture<Optional<Editor>> edit() {
+    return viewer.edit(executor);
   }
 
   public boolean isServable() {

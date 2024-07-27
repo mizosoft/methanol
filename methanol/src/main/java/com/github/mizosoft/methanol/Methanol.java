@@ -816,6 +816,14 @@ public final class Methanol extends HttpClient {
     abstract B self();
 
     abstract HttpClient buildBackend();
+
+    // Currently used in tests.
+    @CanIgnoreReturnValue
+    B clearInterceptors() {
+      interceptors.clear();
+      backendInterceptors.clear();
+      return self();
+    }
   }
 
   /** A builder for {@code Methanol} instances with a pre-specified backend {@code HttpClient}. */

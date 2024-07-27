@@ -1,8 +1,8 @@
 local entryKey = KEYS[1]
 local editorLockKey = KEYS[2]
 local wipDataKey = KEYS[3]
-local targetEntryVersion = ARGV[1]
-local editorId = ARGV[2]
+local editorId = ARGV[1]
+local targetEntryVersion = ARGV[2]
 local timeToLiveSeconds = ARGV[3]
 
 if targetEntryVersion ~= '-1' and redis.call('hget', entryKey, 'entryVersion') ~= targetEntryVersion then

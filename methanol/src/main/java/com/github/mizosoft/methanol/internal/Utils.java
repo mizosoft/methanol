@@ -34,6 +34,7 @@ import java.nio.CharBuffer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -218,6 +219,14 @@ public class Utils {
     }
   }
 
+  public static <T> T getIo(Future<T> future) throws IOException {
+    try {
+      return get(future);
+    } catch (InterruptedException e) {
+      throw toInterruptedIOException(e);
+    }
+  }
+
   /**
    * From RFC 7230 section 3.2.6:
    *
@@ -255,5 +264,21 @@ public class Utils {
 
   public static InterruptedIOException toInterruptedIOException(InterruptedException e) {
     return (InterruptedIOException) new InterruptedIOException().initCause(e);
+  }
+
+  public static long remaining(List<ByteBuffer> buffers) {
+    long remaining = 0;
+    for (var buffer : buffers) {
+      remaining += buffer.remaining();
+    }
+    return remaining;
+  }
+
+  public static long remaining(ByteBuffer[] buffers) {
+    long remaining = 0;
+    for (var buffer : buffers) {
+      remaining += buffer.remaining();
+    }
+    return remaining;
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -79,11 +79,11 @@ public abstract class StoreContext implements AutoCloseable {
     }
   }
 
-  public static StoreContext from(StoreConfig config) throws IOException {
+  public static StoreContext of(StoreConfig config) throws IOException {
     if (config instanceof MemoryStoreConfig) {
       return new MemoryStoreContext((MemoryStoreConfig) config);
     } else if (config instanceof DiskStoreConfig) {
-      return DiskStoreContext.create((DiskStoreConfig) config);
+      return new DiskStoreContext((DiskStoreConfig) config);
     } else if (config instanceof RedisStandaloneStoreConfig) {
       return new RedisStandaloneStoreContext((RedisStandaloneStoreConfig) config);
     } else {

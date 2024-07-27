@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.store.redis;
 
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.api.sync.RedisCommands;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -30,7 +31,9 @@ import java.util.List;
 /** A {@code Store} implementation backed by a Redis Standalone instance. */
 class RedisStandaloneStore
     extends AbstractRedisStore<
-        StatefulRedisConnection<String, ByteBuffer>, RedisCommands<String, ByteBuffer>> {
+        StatefulRedisConnection<String, ByteBuffer>,
+        RedisCommands<String, ByteBuffer>,
+        RedisAsyncCommands<String, ByteBuffer>> {
   RedisStandaloneStore(
       StatefulRedisConnection<String, ByteBuffer> connection,
       RedisConnectionProvider<StatefulRedisConnection<String, ByteBuffer>> connectionProvider,
@@ -52,9 +55,14 @@ class RedisStandaloneStore
   }
 
   @Override
+  RedisAsyncCommands<String, ByteBuffer> asyncCommands() {
+    return connection.async();
+  }
+
+  @Override
   boolean removeAllEntries(List<String> entryKeys) {
     return Script.REMOVE_ALL
         .evalOn(commands())
-        .asBoolean(entryKeys, List.of(encodeLong(staleEntryTtlSeconds)));
+        .getAsBoolean(entryKeys, List.of(encode(staleEntryTtlSeconds)));
   }
 }

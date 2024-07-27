@@ -1,3 +1,5 @@
+import extensions.libs
+
 plugins {
   id("conventions.java-library")
   id("conventions.static-analysis")
@@ -8,6 +10,8 @@ plugins {
 
 dependencies {
   api(project(":methanol"))
+  api(platform(libs.junit.bom))
+  api(libs.junit.jupiter)
   implementation(project(":methanol-redis"))
   implementation(platform(libs.junit.bom))
   implementation(libs.okhttp.tls)

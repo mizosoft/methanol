@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,11 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
+import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
 import static com.github.mizosoft.methanol.testing.TestUtils.EMPTY_BUFFER;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,32 +40,150 @@ import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.BodyCollector;
 import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
+import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.Logging;
+import com.github.mizosoft.methanol.testing.RepeatArguments;
 import com.github.mizosoft.methanol.testing.SubmittablePublisher;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestUtils;
+import com.github.mizosoft.methanol.testing.store.StoreConfig;
+import com.github.mizosoft.methanol.testing.store.StoreExtension;
+import com.github.mizosoft.methanol.testing.store.StoreSpec;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import java.io.IOException;
+import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(ExecutorExtension.class)
+@Timeout(5)
+@ExtendWith({ExecutorExtension.class, StoreExtension.class})
+@RepeatArguments(10)
 class CacheWritingPublisherTest {
   static {
     Logging.disable(CacheWritingPublisher.class);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreConfig.StoreType.MEMORY, fileSystem = StoreConfig.FileSystemType.NONE)
+  void writeSmallStringToMemory(Executor executor, Store store) throws IOException {
+    testWritingSmallString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreConfig.StoreType.DISK, fileSystem = StoreConfig.FileSystemType.SYSTEM)
+  void writeSmallStringToDisk(Executor executor, Store store) throws IOException {
+    testWritingSmallString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(
+      tested = StoreConfig.StoreType.REDIS_STANDALONE,
+      fileSystem = StoreConfig.FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
+  void writeSmallStringToRedisStandalone(Executor executor, Store store) throws IOException {
+    testWritingSmallString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(
+      tested = StoreConfig.StoreType.REDIS_CLUSTER,
+      fileSystem = StoreConfig.FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
+  void writeSmallStringToRedisCluster(Executor executor, Store store) throws IOException {
+    testWritingSmallString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreConfig.StoreType.MEMORY, fileSystem = StoreConfig.FileSystemType.NONE)
+  void writeLargeStringToMemory(Executor executor, Store store) throws IOException {
+    testWritingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreConfig.StoreType.DISK, fileSystem = StoreConfig.FileSystemType.SYSTEM)
+  void writeLargeStringToDisk(Executor executor, Store store) throws IOException {
+    testWritingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(
+      tested = StoreConfig.StoreType.REDIS_STANDALONE,
+      fileSystem = StoreConfig.FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
+  void writeLargeStringToRedisStandalone(Executor executor, Store store) throws IOException {
+    testWritingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(
+      tested = StoreConfig.StoreType.REDIS_CLUSTER,
+      fileSystem = StoreConfig.FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
+  void writeLargeStringToRedisCluster(Executor executor, Store store) throws IOException {
+    testWritingLargeString(store, executor);
+  }
+
+  private void testWritingSmallString(Store store, Executor executor) throws IOException {
+    testWritingString("Cache me if you can!", store, executor);
+  }
+
+  private void testWritingLargeString(Store store, Executor executor) throws IOException {
+    testWritingString("Cache me if you can!".repeat(100_000), store, executor);
+  }
+
+  private void testWritingString(String str, Store store, Executor executor) throws IOException {
+    var listener =
+        new CacheWritingPublisher.Listener() {
+          private Object result;
+
+          @Override
+          public void onWriteSuccess() {
+            result = Boolean.TRUE;
+          }
+
+          @Override
+          public void onWriteFailure(Throwable exception) {
+            result = exception;
+          }
+        };
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher =
+        new CacheWritingPublisher(
+            upstream,
+            edit(store, "e1"),
+            UTF_8.encode("abc"),
+            executor,
+            listener,
+            true); // Make sure the entry is written when downstream completes.
+    var subscriber = BodySubscribers.ofString(UTF_8);
+    publisher.subscribe(subscriber);
+    upstream.submitAll(toResponseBodyIterable(str, Utils.BUFFER_SIZE));
+    upstream.close();
+    verifyThat(subscriber).succeedsWith(str);
+    if (listener.result instanceof Throwable) {
+      fail((Throwable) listener.result);
+    }
+    assertThat(listener.result).isEqualTo(true);
+    assertEntryEquals(store, "e1", "abc", str);
   }
 
   @ExecutorParameterizedTest
@@ -72,7 +193,7 @@ class CacheWritingPublisherTest {
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
-    upstream.submitAll(toResponseBody("Cache me if you can!"));
+    upstream.submitAll(toResponseBodyIterable("Cache me if you can!"));
     upstream.close();
     assertThat(subscriber.bodyToString()).isEqualTo("Cache me if you can!");
 
@@ -113,96 +234,56 @@ class CacheWritingPublisherTest {
     assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
   }
 
-  /**
-   * The publisher shouldn't propagate cancellation upstream and prefer instead to continue caching
-   * the body.
-   */
   @ExecutorParameterizedTest
-  void cancellationIsNotPropagatedIfWriting(Executor executor) {
+  void cancellationIsPropagatedUpstream(Executor executor) {
     var editor = new TestEditor();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
-    var subscriber = new StringSubscriber();
-    publisher.subscribe(subscriber);
-
-    // Cancel before submitting items.
-    subscriber.awaitSubscription().cancel();
-    upstream.submitAll(toResponseBody("Cancel me if you can!"));
-    upstream.close();
-
-    // Writing completes successfully and cancellation is not propagated.
-    editor.awaitCommit();
-    assertThat(editor.writtenString()).isEqualTo("Cancel me if you can!");
-    assertThat(upstream.firstSubscription().flowInterrupted()).isFalse();
-
-    // Subscriber's cancellation request is satisfied & body flow stops.
-    assertThat(subscriber.peekAvailable())
-        .withFailMessage(() -> "unexpectedly received: " + subscriber.bodyToString())
-        .isEmpty();
-  }
-
-  @ExecutorParameterizedTest
-  void cancellationIsPropagatedIfNotWriting(Executor executor) {
-    var failingEditor =
-        new TestEditor() {
-          @Override
-          int write(ByteBuffer src) {
-            try {
-              Thread.sleep(50);
-            } catch (InterruptedException e) {
-              return fail("unexpected exception", e);
-            }
-            throw new TestException();
-          }
-        };
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER, executor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
     publisher.subscribe(subscriber);
-    upstream.submit(List.of(ByteBuffer.allocate(1))); // Trigger write.
-
-    // Wait till the error is handled and failingEditor is closed.
-    failingEditor.awaitDiscard();
-
-    // This cancellation is propagated as there's nothing being written.
-    subscriber.awaitSubscription().cancel();
-    var subscription = upstream.firstSubscription();
-    subscription.awaitAbort();
-    assertThat(subscription.flowInterrupted()).isTrue();
-  }
-
-  @ExecutorParameterizedTest
-  void cancellationIsPropagatedLaterOnFailedWrite(Executor executor) {
-    var failOnWriteLatch = new CountDownLatch(1);
-    var failingEditor =
-        new TestEditor() {
-          @Override
-          int write(ByteBuffer src) {
-            awaitUninterruptibly(failOnWriteLatch);
-            // This failure causes cancellation to be propagated.
-            throw new TestException();
-          }
-        };
-    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
-    var publisher =
-        new CacheWritingPublisher(
-            upstream,
-            failingEditor,
-            EMPTY_BUFFER,
-            ForkJoinPool.commonPool()); // Use an async pool to avoid blocking indefinitely.
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
-
-    // Cancel subscription eagerly.
-    publisher.subscribe(subscriber);
-    subscriber.awaitSubscription().cancel();
     upstream.submit(List.of(ByteBuffer.allocate(1)));
+    subscriber.awaitSubscription().cancel();
 
-    // Cancellation isn't propagated until the editor fails.
-    assertThat(upstream.firstSubscription().flowInterrupted()).isFalse();
-    failOnWriteLatch.countDown();
     var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
     assertThat(subscription.flowInterrupted()).isTrue();
+    editor.awaitDiscard(); // The edit is discarded.
+  }
+
+  @ExecutorParameterizedTest
+  void editIsNotDiscardedWhenCancelledAfterCompletion(Executor executor) {
+    // Delay write completion so that it is completed after cancellation.
+    var resumeWrite = new CompletableFuture<Void>();
+    var editor =
+        new TestEditor() {
+          @Override
+          public EntryWriter writer() {
+            var calledWriteOnce = new AtomicBoolean();
+            var delegate = super.writer();
+            return (srcs, executor1) -> {
+              assertThat(calledWriteOnce.compareAndSet(false, true)).isTrue();
+              return delegate
+                  .write(srcs, executor1)
+                  .thenCompose(written -> resumeWrite.thenApply(___ -> written));
+            };
+          }
+        };
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
+    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    publisher.subscribe(subscriber);
+    upstream.submit(List.of(ByteBuffer.allocate(1)));
+    upstream.close();
+    subscriber.awaitCompletion();
+    subscriber.awaitSubscription().cancel();
+
+    var subscription = upstream.firstSubscription();
+    subscription.awaitAbort();
+    assertThat(subscription.flowInterrupted()).isFalse();
+
+    // The edit isn't discarded as the entire body is received (but not necessarily written).
+    resumeWrite.complete(null);
+    editor.awaitCommit();
   }
 
   @ExecutorParameterizedTest
@@ -216,7 +297,6 @@ class CacheWritingPublisherTest {
     upstream.close();
 
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
-
     editor.awaitDiscard();
   }
 
@@ -236,6 +316,8 @@ class CacheWritingPublisherTest {
     upstream.submit(List.of(ByteBuffer.allocate(1)));
     upstream.close();
     failingEditor.awaitDiscard();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.errorCount()).isZero();
   }
 
   @ExecutorParameterizedTest
@@ -251,7 +333,7 @@ class CacheWritingPublisherTest {
     var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER, executor);
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
-    upstream.submitAll(toResponseBody("Cache me if you can!"));
+    upstream.submitAll(toResponseBodyIterable("Cache me if you can!"));
     upstream.close();
     failingEditor.awaitDiscard();
     assertThat(subscriber.bodyToString()).isEqualTo("Cache me if you can!");
@@ -262,7 +344,7 @@ class CacheWritingPublisherTest {
    * case, completion is forwarded downstream and writing continues on background.
    */
   @ExecutorParameterizedTest
-  void writeLaggingBehindBodyCompletion(Executor executor) {
+  void writeLaggingBehindBodyCompletion(Executor executor, ExecutorContext executorContext) {
     var bodyCompletionLatch = new CountDownLatch(1);
     var laggyEditor =
         new TestEditor() {
@@ -278,13 +360,14 @@ class CacheWritingPublisherTest {
             upstream,
             laggyEditor,
             EMPTY_BUFFER,
-            ForkJoinPool.commonPool()); // Use an async pool to avoid blocking indefinitely.
+            executorContext.createExecutor(
+                ExecutorType.CACHED_POOL)); // Use an async pool to avoid blocking indefinitely.
     var subscriber = new StringSubscriber();
     publisher.subscribe(subscriber);
     subscriber.awaitSubscription();
     executor.execute(
         () -> {
-          upstream.submitAll(toResponseBody("Cyberpunk"));
+          upstream.submitAll(toResponseBodyIterable("Cyberpunk"));
           upstream.close();
         });
 
@@ -301,7 +384,7 @@ class CacheWritingPublisherTest {
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher =
         new CacheWritingPublisher(
-            upstream, new TestEditor(), EMPTY_BUFFER, executor, Listener.disabled(), true);
+            upstream, new TestEditor(), EMPTY_BUFFER, executor, Listener.disabled(), false);
     var subscriber = new TestSubscriber<List<ByteBuffer>>().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(2);
@@ -314,8 +397,134 @@ class CacheWritingPublisherTest {
     assertThat(upstream.firstSubscription().currentDemand()).isEqualTo(2);
   }
 
-  private static Iterable<List<ByteBuffer>> toResponseBody(String str) {
-    return () -> new ByteBufferListIterator(UTF_8.encode(str), 2, 2);
+  /*
+   * The tests blow exercise different paths to downstream completion if {@code waitForCommit} is
+   * true, which then instructs {@code CacheWritingPublisher} to not forward upstream's {@code
+   * onComplete} downstream until the edit is either committed or discarded. The tests that cause
+   * completion by committing or discarding the edit after upstream completion are "stochastic" if
+   * upstream operates asynchronously as it then cannot be guaranteed that {@code
+   * CacheWritingPublisher} has completely processed said completion and decided not to forward it.
+   */
+
+  @ExecutorParameterizedTest
+  void waitForCommitToCompleteDownstream_stochasticWithAsyncUpstream(
+      Executor executor, ExecutorContext executorContext) {
+    var calledCommit = new CountDownLatch(1);
+    var proceedWithCommit = new CountDownLatch(1);
+    var editor =
+        new TestEditor() {
+          @Override
+          public CompletableFuture<Void> commit(ByteBuffer metadata, Executor executor) {
+            return CompletableFuture.runAsync(
+                    () -> {
+                      calledCommit.countDown();
+                      awaitUninterruptibly(proceedWithCommit);
+                    },
+                    executor)
+                .thenCompose(__ -> super.commit(metadata, executor));
+          }
+        };
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher =
+        new CacheWritingPublisher(
+            upstream,
+            editor,
+            EMPTY_BUFFER,
+            executorContext.createExecutor(ExecutorType.CACHED_POOL),
+            Listener.disabled(),
+            true);
+    var subscriber = new StringSubscriber();
+    publisher.subscribe(subscriber);
+    upstream.submitAll(toResponseBodyIterable("Pikachu"));
+    upstream.close();
+    awaitUninterruptibly(calledCommit);
+    assertThat(subscriber.completionCount()).isZero();
+
+    // Complete by committing edit.
+    proceedWithCommit.countDown();
+    editor.awaitCommit();
+    subscriber.awaitCompletion();
+    assertThat(editor.writtenString()).isEqualTo("Pikachu");
+    assertThat(subscriber.completionCount()).isOne();
+    assertThat(subscriber.bodyToString()).isEqualTo("Pikachu");
+  }
+
+  @ExecutorParameterizedTest
+  void waitForCommitWithFailedWrite(Executor executor, ExecutorContext executorContext) {
+    var editor =
+        new TestEditor() {
+          @Override
+          int write(ByteBuffer src) {
+            throw new TestException();
+          }
+        };
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher =
+        new CacheWritingPublisher(
+            upstream,
+            editor,
+            EMPTY_BUFFER,
+            executorContext.createExecutor(ExecutorType.CACHED_POOL),
+            Listener.disabled(),
+            true);
+    var subscriber = new StringSubscriber();
+    publisher.subscribe(subscriber);
+    upstream.submitAll(toResponseBodyIterable("Pikachu"));
+    editor.awaitDiscard();
+    assertThat(subscriber.completionCount()).isZero();
+
+    // Complete by closing upstream. The edit is already discarded.
+    upstream.close();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.errorCount()).isZero();
+    assertThat(subscriber.bodyToString()).isEqualTo("Pikachu");
+  }
+
+  @ExecutorParameterizedTest
+  void waitForCommitWithDelayedFailedWrite_stochasticWithAsyncUpstream(
+      Executor executor, ExecutorContext executorContext) {
+    var calledWrite = new CountDownLatch(1);
+    var proceedWithWrite = new CountDownLatch(1);
+    var editor =
+        new TestEditor() {
+          @Override
+          int write(ByteBuffer src) {
+            calledWrite.countDown();
+            awaitUninterruptibly(proceedWithWrite);
+            throw new TestException();
+          }
+        };
+    var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
+    var publisher =
+        new CacheWritingPublisher(
+            upstream,
+            editor,
+            EMPTY_BUFFER,
+            executorContext.createExecutor(ExecutorType.CACHED_POOL),
+            Listener.disabled(),
+            true);
+    var subscriber = new StringSubscriber();
+    publisher.subscribe(subscriber);
+    upstream.submitAll(toResponseBodyIterable("Pikachu"));
+    upstream.close();
+    awaitUninterruptibly(calledWrite);
+    assertThat(subscriber.completionCount()).isZero();
+
+    // Complete by discarding the edit.
+    proceedWithWrite.countDown();
+    editor.awaitDiscard();
+    subscriber.awaitCompletion();
+    assertThat(subscriber.errorCount()).isZero();
+    assertThat(subscriber.bodyToString()).isEqualTo("Pikachu");
+  }
+
+  private static Iterable<List<ByteBuffer>> toResponseBodyIterable(String str) {
+    return toResponseBodyIterable(str, 2);
+  }
+
+  private static Iterable<List<ByteBuffer>> toResponseBodyIterable(String str, int bufferSize) {
+    return () ->
+        new ByteBufferListIterator(UTF_8.encode(str), bufferSize, TestUtils.BUFFERS_PER_LIST);
   }
 
   private static class TestEditor implements Editor {
@@ -351,17 +560,23 @@ class CacheWritingPublisherTest {
 
     @Override
     public EntryWriter writer() {
-      return this::write;
+      return (srcs, executor) ->
+          CompletableFuture.supplyAsync(
+              () ->
+                  (long)
+                      srcs.stream().map(TestEditor.this::write).mapToInt(Integer::intValue).sum(),
+              executor);
     }
 
     @Override
-    public void commit(ByteBuffer metadata) {
+    public CompletableFuture<Void> commit(ByteBuffer metadata, Executor executor) {
       lock.lock();
       try {
         this.metadata = requireNonNull(metadata);
         committed = true;
         closed = true;
         closedCondition.signalAll();
+        return CompletableFuture.completedFuture(null);
       } finally {
         lock.unlock();
       }
@@ -417,6 +632,12 @@ class CacheWritingPublisherTest {
     }
 
     String writtenString() {
+      lock.lock();
+      try {
+        assertThat(committed).withFailMessage("Not commited").isTrue();
+      } finally {
+        lock.unlock();
+      }
       return UTF_8.decode(writtenBytes()).toString();
     }
   }

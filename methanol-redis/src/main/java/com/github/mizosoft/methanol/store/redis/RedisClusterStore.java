@@ -28,6 +28,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import io.lettuce.core.RedisException;
 import io.lettuce.core.api.sync.RedisScriptingCommands;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands;
 import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
 import io.lettuce.core.cluster.models.partitions.Partitions;
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
@@ -47,7 +48,8 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 class RedisClusterStore
     extends AbstractRedisStore<
         StatefulRedisClusterConnection<String, ByteBuffer>,
-        RedisClusterCommands<String, ByteBuffer>> {
+        RedisClusterCommands<String, ByteBuffer>,
+        RedisClusterAsyncCommands<String, ByteBuffer>> {
   RedisClusterStore(
       StatefulRedisClusterConnection<String, ByteBuffer> connection,
       RedisConnectionProvider<StatefulRedisClusterConnection<String, ByteBuffer>>
@@ -62,6 +64,11 @@ class RedisClusterStore
   @Override
   RedisClusterCommands<String, ByteBuffer> commands() {
     return connection.sync();
+  }
+
+  @Override
+  RedisClusterAsyncCommands<String, ByteBuffer> asyncCommands() {
+    return connection.async();
   }
 
   @Override

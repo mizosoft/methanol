@@ -16,6 +16,7 @@ dependencies {
   implementation(libs.brotli.dec)
   implementation(libs.checkerframework.qual)
   implementation(libs.errorprone.annotations)
+  implementation(libs.commons.math3)
 }
 
 tasks.shadowJar {

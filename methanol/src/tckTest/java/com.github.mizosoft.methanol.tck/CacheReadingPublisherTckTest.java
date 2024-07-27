@@ -33,10 +33,10 @@ import com.github.mizosoft.methanol.testing.store.StoreConfig;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.store.StoreContext;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -51,6 +51,11 @@ import org.testng.annotations.Factory;
 
 @Slow
 public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List<ByteBuffer>> {
+  /**
+   * This field mirrors {@code MAX_BULK_READ_SIZE} in CacheReadingPublisher. The two are the same as
+   * the current implementation passes downstream each list of buffers into which data is read, so
+   * at most a received list can have {@code MAX_BULK_READ_SIZE}.
+   */
   private static final int MAX_BATCH_SIZE = 4;
 
   private static final AtomicLong entryId = new AtomicLong();
@@ -80,16 +85,14 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
   @BeforeMethod
   public void setMeUp() throws IOException {
     executorContext = new ExecutorContext();
-    storeContext = StoreContext.from(storeConfig);
+    storeContext = StoreContext.of(storeConfig);
     store = storeContext.createAndRegisterStore();
   }
 
   @AfterMethod
   public void tearMeDown() throws Exception {
     executorContext.close();
-    for (var viewer : openedViewers) {
-      viewer.close();
-    }
+    openedViewers.forEach(Viewer::close);
     openedViewers.clear();
     storeContext.close();
   }
@@ -99,7 +102,6 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
     var viewer = populateThenViewEntry(elements);
     openedViewers.add(viewer);
 
-    // Limit published items to `elements`.
     var publisher =
         new CacheReadingPublisher(
             viewer,
@@ -113,17 +115,18 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
 
   private Viewer populateThenViewEntry(long elements) {
     try {
-      var entryName = "test-entry-" + entryId.getAndIncrement();
+      var entryName = "e-" + entryId.getAndIncrement();
       try (var editor = store.edit(entryName).orElseThrow()) {
         long itemCount = elements * MAX_BATCH_SIZE; // Product `elements` items at minimum.
+        var writer = editor.writer();
         for (int i = 0; i < itemCount; i++) {
-          editor.writer().write(TckUtils.generateData());
+          writer.write(TckUtils.generateData());
         }
         editor.commit(ByteBuffer.allocate(1));
       }
       return store.view(entryName).orElseThrow();
-    } catch (IOException | InterruptedException e) {
-      throw new CompletionException(e);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
@@ -205,6 +208,7 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
     private final long elements;
     private @MonotonicNonNull Subscription upstream;
     private long received;
+    private boolean completed;
 
     LimitingSubscriber(Subscriber<T> downstream, long elements) {
       this.downstream = downstream;
@@ -227,18 +231,23 @@ public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List
         downstream.onNext(item);
       }
       if (received == elements) {
-        onComplete();
+        completed = true;
+        downstream.onComplete();
       }
     }
 
     @Override
     public void onError(Throwable throwable) {
-      downstream.onError(throwable);
+      if (!completed) {
+        downstream.onError(throwable);
+      }
     }
 
     @Override
     public void onComplete() {
-      downstream.onComplete();
+      if (!completed) {
+        downstream.onComplete();
+      }
     }
   }
 }

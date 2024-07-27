@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,13 +28,16 @@ import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibl
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
+import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
+import com.github.mizosoft.methanol.testing.RepeatArguments;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
@@ -47,60 +50,90 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+@Timeout(5)
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
+@RepeatArguments(10)
 class CacheReadingPublisherTest {
-  static {
-    Awaitility.setDefaultTimeout(Duration.ofSeconds(30));
-  }
-
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
-  void cacheStringInMemory(Executor executor, Store store)
-      throws IOException, InterruptedException {
-    testCachingAsString(executor, store);
+  void readSmallStringFromMemory(Executor executor, Store store) throws Exception {
+    testReadingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
-  void cacheStringOnDisk(Executor executor, Store store) throws IOException, InterruptedException {
-    testCachingAsString(executor, store);
+  void readSmallStringFromDisk(Executor executor, Store store) throws IOException {
+    testReadingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
-  void cacheStringOnRedisStandalone(Executor executor, Store store)
-      throws IOException, InterruptedException {
-    testCachingAsString(executor, store);
+  void readSmallStringFromRedisStandalone(Executor executor, Store store) throws IOException {
+    testReadingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
-  void cacheStringOnRedisCluster(Executor executor, Store store)
-      throws IOException, InterruptedException {
-    testCachingAsString(executor, store);
+  void readSmallStringFromRedisCluster(Executor executor, Store store) throws IOException {
+    testReadingSmallString(store, executor);
   }
 
-  private void testCachingAsString(Executor executor, Store store)
-      throws IOException, InterruptedException {
-    write(store, "e1", "", "Cache me please!");
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
+  void readLargeStringFromMemory(Executor executor, Store store) throws IOException {
+    testReadingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
+  void readLargeStringFromDisk(Executor executor, Store store) throws IOException {
+    testReadingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
+  void readLargeStringFromRedisStandalone(Executor executor, Store store) throws IOException {
+    testReadingLargeString(store, executor);
+  }
+
+  @ExecutorParameterizedTest
+  @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
+  @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
+  void readLargeStringFromRedisCluster(Executor executor, Store store) throws IOException {
+    testReadingLargeString(store, executor);
+  }
+
+  private void testReadingSmallString(Store store, Executor executor) throws IOException {
+    testReadingString("Cache me please!", store, executor);
+  }
+
+  private void testReadingLargeString(Store store, Executor executor) throws IOException {
+    testReadingString("Cache me please!".repeat(100_000), store, executor);
+  }
+
+  private void testReadingString(String str, Store store, Executor executor) throws IOException {
+    write(store, "e1", "", str);
 
     var publisher = new CacheReadingPublisher(view(store, "e1"), executor);
     var subscriber = BodySubscribers.ofString(UTF_8);
     publisher.subscribe(subscriber);
     assertThat(subscriber.getBody())
-        .succeedsWithin(Duration.ofSeconds(20))
-        .isEqualTo("Cache me please!");
+        .succeedsWithin(Duration.ofSeconds(5))
+        .returns(str.length(), from(String::length))
+        .isEqualTo(str);
   }
 
   @ExecutorParameterizedTest
@@ -222,12 +255,14 @@ class CacheReadingPublisherTest {
     abstract int read(ByteBuffer dst);
 
     @Override
-    public Store.EntryReader newReader() {
-      return this::read;
+    public EntryReader newReader() {
+      return (dsts, executor) ->
+          CompletableFuture.supplyAsync(
+              () -> (long) dsts.stream().mapToInt(TestViewer.this::read).sum(), executor);
     }
 
     @Override
-    public Optional<Editor> edit() {
+    public CompletableFuture<Optional<Editor>> edit(Executor executor) {
       return fail("unexpected call");
     }
 

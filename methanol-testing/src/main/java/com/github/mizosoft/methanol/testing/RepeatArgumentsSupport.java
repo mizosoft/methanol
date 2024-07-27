@@ -20,12 +20,28 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.cache;
+package com.github.mizosoft.methanol.testing;
 
-import java.io.IOException;
+import java.util.OptionalInt;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.platform.commons.support.AnnotationSupport;
 
-public class StoreCorruptionException extends IOException {
-  public StoreCorruptionException(String message) {
-    super(message);
+public class RepeatArgumentsSupport {
+  private RepeatArgumentsSupport() {}
+
+  public static OptionalInt findRepetitionCount(ExtensionContext context) {
+    return context
+        .getTestMethod()
+        .flatMap(testMethod -> AnnotationSupport.findAnnotation(testMethod, RepeatArguments.class))
+        .or(
+            () ->
+                context
+                    .getTestClass()
+                    .flatMap(
+                        testClass ->
+                            AnnotationSupport.findAnnotation(testClass, RepeatArguments.class)))
+        .stream()
+        .mapToInt(RepeatArguments::value)
+        .findAny();
   }
 }

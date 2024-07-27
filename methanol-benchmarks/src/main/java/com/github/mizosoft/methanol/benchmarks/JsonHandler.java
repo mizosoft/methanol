@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,9 @@
 
 package com.github.mizosoft.methanol.benchmarks;
 
-import static com.github.mizosoft.methanol.benchmarks.BenchmarkUtils.ARRAY_OF_OBJECTS;
-
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.charset.Charset;
@@ -38,14 +37,14 @@ public enum JsonHandler {
     @Override
     BodySubscriber<List<Map<String, Object>>> createSubscriber(JsonMapper mapper, Charset charset) {
       return JacksonAdapterFactory.createJsonDecoder(mapper)
-          .toObject(ARRAY_OF_OBJECTS, MediaType.APPLICATION_JSON.withCharset(charset));
+          .toObject(new TypeRef<>() {}, MediaType.APPLICATION_JSON.withCharset(charset));
     }
   },
   BYTE_ARRAY_PARSER {
     @Override
     BodySubscriber<List<Map<String, Object>>> createSubscriber(JsonMapper mapper, Charset charset) {
       return new ByteArrayJacksonDecoder(mapper, MediaType.APPLICATION_JSON)
-          .toObject(ARRAY_OF_OBJECTS, MediaType.APPLICATION_JSON.withCharset(charset));
+          .toObject(new TypeRef<>() {}, MediaType.APPLICATION_JSON.withCharset(charset));
     }
   };
 

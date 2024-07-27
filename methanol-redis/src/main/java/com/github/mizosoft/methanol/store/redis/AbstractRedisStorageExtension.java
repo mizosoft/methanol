@@ -26,12 +26,17 @@ import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.api.async.RedisHashAsyncCommands;
+import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
+import io.lettuce.core.api.async.RedisStringAsyncCommands;
 import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.api.sync.RedisHashCommands;
 import io.lettuce.core.api.sync.RedisKeyCommands;
 import io.lettuce.core.api.sync.RedisScriptingCommands;
 import io.lettuce.core.api.sync.RedisStringCommands;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands;
 import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -43,7 +48,11 @@ abstract class AbstractRedisStorageExtension<
         C extends StatefulConnection<String, ByteBuffer>,
         CMD extends
             RedisHashCommands<String, ByteBuffer> & RedisScriptingCommands<String, ByteBuffer>
-                & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>>
+                & RedisKeyCommands<String, ByteBuffer> & RedisStringCommands<String, ByteBuffer>,
+        ASYNC_CMD extends
+            RedisHashAsyncCommands<String, ByteBuffer>
+                & RedisScriptingAsyncCommands<String, ByteBuffer>
+                & RedisStringAsyncCommands<String, ByteBuffer>>
     implements RedisStorageExtension {
   final RedisConnectionProvider<C> connectionProvider;
   final int editorLockTtlSeconds;
@@ -77,11 +86,13 @@ abstract class AbstractRedisStorageExtension<
         .toCompletableFuture();
   }
 
-  abstract AbstractRedisStore<C, CMD> createStore(C connection, int appVersion);
+  abstract AbstractRedisStore<C, CMD, ASYNC_CMD> createStore(C connection, int appVersion);
 
   static final class RedisStandaloneStorageExtension
       extends AbstractRedisStorageExtension<
-          StatefulRedisConnection<String, ByteBuffer>, RedisCommands<String, ByteBuffer>> {
+          StatefulRedisConnection<String, ByteBuffer>,
+          RedisCommands<String, ByteBuffer>,
+          RedisAsyncCommands<String, ByteBuffer>> {
     RedisStandaloneStorageExtension(
         RedisConnectionProvider<StatefulRedisConnection<String, ByteBuffer>> connectionProvider,
         int editorLockTtlSeconds,
@@ -100,7 +111,8 @@ abstract class AbstractRedisStorageExtension<
   static final class RedisClusterStorageExtension
       extends AbstractRedisStorageExtension<
           StatefulRedisClusterConnection<String, ByteBuffer>,
-          RedisClusterCommands<String, ByteBuffer>> {
+          RedisClusterCommands<String, ByteBuffer>,
+          RedisClusterAsyncCommands<String, ByteBuffer>> {
     RedisClusterStorageExtension(
         RedisConnectionProvider<StatefulRedisClusterConnection<String, ByteBuffer>>
             connectionProvider,

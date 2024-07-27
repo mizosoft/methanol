@@ -22,33 +22,31 @@
 
 package com.github.mizosoft.methanol.tck;
 
-import static com.github.mizosoft.methanol.testing.TestUtils.EMPTY_BUFFER;
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listener;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
-import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.FailingPublisher;
 import com.github.mizosoft.methanol.testing.IterablePublisher;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext;
 import com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext;
 import com.github.mizosoft.methanol.testing.store.StoreConfig;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.store.StoreContext;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.AfterMethod;
@@ -81,7 +79,7 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
   @BeforeMethod
   public void setMeUp() throws IOException {
     executorContext = new ExecutorContext();
-    storeContext = StoreContext.from(storeConfig);
+    storeContext = StoreContext.of(storeConfig);
     store = storeContext.createAndRegisterStore();
   }
 
@@ -93,38 +91,46 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
 
   @Override
   public Publisher<List<ByteBuffer>> createFlowPublisher(long elements) {
-    try {
-      return new CacheWritingPublisher(
-          new IterablePublisher<>(
-              () -> elementGenerator(elements),
-              executorContext.createExecutor(ExecutorType.CACHED_POOL)),
-          store.edit("test-entry-" + entryId.getAndIncrement()).orElseThrow(),
-          UTF_8.encode("abc"),
-          executorContext.createExecutor(executorType),
-          Listener.disabled(),
-          true);
-    } catch (IOException | InterruptedException e) {
-      throw new CompletionException(e);
-    }
+    return new CacheWritingPublisher(
+        new IterablePublisher<>(
+            () -> elementGenerator(elements),
+            executorContext.createExecutor(ExecutorType.CACHED_POOL)),
+        edit("e" + entryId.getAndIncrement()),
+        TestUtils.EMPTY_BUFFER,
+        executorContext.createExecutor(executorType),
+        Listener.disabled());
   }
 
   @Override
   public Publisher<List<ByteBuffer>> createFailedFlowPublisher() {
     return new CacheWritingPublisher(
         new FailingPublisher<>(TestException::new),
-        DisabledEditor.INSTANCE,
-        EMPTY_BUFFER,
+        edit("e" + entryId.getAndIncrement()),
+        TestUtils.EMPTY_BUFFER,
         executorContext.createExecutor(executorType));
   }
 
+  private Editor edit(String key) {
+    try {
+      return store.edit(key).orElseThrow();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
   private static Iterator<List<ByteBuffer>> elementGenerator(long elements) {
-    return Stream.generate(() -> List.of(TckUtils.generateData(), TckUtils.generateData()))
+    return Stream.generate(
+            () ->
+                Stream.generate(TckUtils::generateData)
+                    .limit(TestUtils.BUFFERS_PER_LIST)
+                    .collect(Collectors.toUnmodifiableList()))
         .limit(elements)
         .iterator();
   }
 
   @DataProvider
   public static Object[][] provider() {
+    // Handcrafted cartesian product.
     var parameters =
         new ArrayList<>(
             List.of(
@@ -145,29 +151,5 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
               new Object[] {ExecutorType.CACHED_POOL, StoreType.REDIS_CLUSTER}));
     }
     return parameters.toArray(Object[][]::new);
-  }
-
-  private enum DisabledEditor implements Editor {
-    INSTANCE;
-
-    @Override
-    public String key() {
-      return "null-key";
-    }
-
-    @Override
-    public EntryWriter writer() {
-      return src -> {
-        int remaining = src.remaining();
-        src.position(src.position() + remaining);
-        return remaining;
-      };
-    }
-
-    @Override
-    public void commit(ByteBuffer metadata) {}
-
-    @Override
-    public void close() {}
   }
 }

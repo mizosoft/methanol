@@ -20,12 +20,27 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.cache;
+package com.github.mizosoft.methanol.internal.function;
 
-import java.io.IOException;
+import java.util.concurrent.CompletionException;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
-public class StoreCorruptionException extends IOException {
-  public StoreCorruptionException(String message) {
-    super(message);
+public interface ThrowingBiConsumer<T, U> {
+  void accept(T t, U u) throws Exception;
+
+  /**
+   * Converts this consumer to a {@link Consumer <T>}. If this consumer throws a checked exception,
+   * the returned consumer wraps the former in a {@link java.util.concurrent.CompletionException}.
+   */
+  default BiConsumer<T, U> toUnchecked() {
+    return (t, u) -> {
+      try {
+        accept(t, u);
+      } catch (Exception e) {
+        Unchecked.propagateIfUnchecked(e);
+        throw new CompletionException(e);
+      }
+    };
   }
 }

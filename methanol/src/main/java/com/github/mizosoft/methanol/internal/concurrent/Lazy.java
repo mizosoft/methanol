@@ -31,11 +31,11 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public final class Lazy<T> implements Supplier<T> {
   private final ReentrantLock lock = new ReentrantLock();
-  private final Supplier<T> factory;
+  private final Supplier<? extends T> factory;
 
   private volatile @MonotonicNonNull T lazyValue;
 
-  private Lazy(Supplier<T> factory) {
+  private Lazy(Supplier<? extends T> factory) {
     this.factory = requireNonNull(factory);
   }
 

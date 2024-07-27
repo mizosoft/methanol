@@ -26,7 +26,6 @@ import static com.github.mizosoft.methanol.internal.Utils.requireNonNegativeDura
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
-import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -94,6 +93,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
+import java.util.zip.CRC32C;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -153,6 +153,8 @@ public final class DiskStore implements Store {
    *                     4-bytes-key-size
    *                     4-bytes-metadata-size
    *                     8-bytes-data-size
+   *                     4-bytes-data-crc32c
+   *                     4-bytes-epilogue-crc32c
    *
    * Having the key, metadata & their sizes at the end of the file makes it easier and quicker to
    * update an entry when only its metadata block changes (and possibly its key in case there's a
@@ -180,10 +182,12 @@ public final class DiskStore implements Store {
 
   static final long INDEX_MAGIC = 0x6d657468616e6f6cL;
   static final long ENTRY_MAGIC = 0x7b6368332d6f687dL;
-  static final int STORE_VERSION = 1;
+  static final int STORE_VERSION = 2;
   static final int INDEX_HEADER_SIZE = 2 * Long.BYTES + 2 * Integer.BYTES;
   static final int INDEX_ENTRY_SIZE = Hash.BYTES + 2 * Long.BYTES;
-  static final int ENTRY_TRAILER_SIZE = 2 * Long.BYTES + 4 * Integer.BYTES;
+  static final int ENTRY_TRAILER_SIZE = 2 * Long.BYTES + 6 * Integer.BYTES;
+  static final long INT_MASK = 0xffffffffL;
+  static final int SHORT_MASK = 0xffff;
 
   static final String LOCK_FILENAME = ".lock";
   static final String INDEX_FILENAME = "index";
@@ -195,7 +199,6 @@ public final class DiskStore implements Store {
   private final long maxSize;
   private final int appVersion;
   private final Path directory;
-  private final Executor executor;
   private final Hasher hasher;
   private final SerialExecutor indexExecutor;
   private final IndexOperator indexOperator;
@@ -221,10 +224,12 @@ public final class DiskStore implements Store {
     maxSize = builder.maxSize();
     appVersion = builder.appVersion();
     directory = builder.directory();
-    executor = builder.executor();
     hasher = builder.hasher();
     indexExecutor =
-        new SerialExecutor(debugIndexOps ? toDebuggingIndexExecutorDelegate(executor) : executor);
+        new SerialExecutor(
+            debugIndexOps
+                ? toDebuggingIndexExecutorDelegate(builder.executor())
+                : builder.executor());
     indexOperator =
         debugIndexOps
             ? new DebugIndexOperator(directory, appVersion)
@@ -237,7 +242,7 @@ public final class DiskStore implements Store {
             builder.indexUpdateDelay(),
             builder.delayer(),
             builder.clock());
-    evictionScheduler = new EvictionScheduler(this, executor);
+    evictionScheduler = new EvictionScheduler(this, builder.executor());
 
     if (debugIndexOps) {
       isIndexExecutor.set(true);
@@ -289,11 +294,6 @@ public final class DiskStore implements Store {
   }
 
   @Override
-  public Optional<Executor> executor() {
-    return Optional.of(executor);
-  }
-
-  @Override
   public Optional<Viewer> view(String key) throws IOException {
     requireNonNull(key);
     closeLock.readLock().lock();
@@ -307,6 +307,11 @@ public final class DiskStore implements Store {
   }
 
   @Override
+  public CompletableFuture<Optional<Viewer>> view(String key, Executor executor) {
+    return Unchecked.supplyAsync(() -> view(key), executor);
+  }
+
+  @Override
   public Optional<Editor> edit(String key) throws IOException {
     requireNonNull(key);
     closeLock.readLock().lock();
@@ -317,6 +322,11 @@ public final class DiskStore implements Store {
     } finally {
       closeLock.readLock().unlock();
     }
+  }
+
+  @Override
+  public CompletableFuture<Optional<Editor>> edit(String key, Executor executor) {
+    return Unchecked.supplyAsync(() -> edit(key), executor);
   }
 
   @Override
@@ -419,6 +429,7 @@ public final class DiskStore implements Store {
     return Collections.unmodifiableSet(snapshot);
   }
 
+  @CanIgnoreReturnValue
   private boolean removeEntry(Entry entry) throws IOException {
     return removeEntry(entry, Entry.ANY_VERSION);
   }
@@ -427,6 +438,7 @@ public final class DiskStore implements Store {
    * Atomically evicts the given entry and decrements its size, returning {@code true} if the entry
    * was evicted by this call.
    */
+  @CanIgnoreReturnValue
   private boolean removeEntry(Entry entry, int targetVersion) throws IOException {
     long evictedSize = evict(entry, targetVersion);
     if (evictedSize >= 0) {
@@ -531,32 +543,32 @@ public final class DiskStore implements Store {
       throws StoreCorruptionException {
     if (expected != found) {
       throw new StoreCorruptionException(
-          format("%s; expected: %#x, found: %#x", msg, expected, found));
+          String.format("%s; expected: %#x, found: %#x", msg, expected, found));
     }
   }
 
   private static void checkValue(boolean valueIsValid, String msg, long value)
       throws StoreCorruptionException {
     if (!valueIsValid) {
-      throw new StoreCorruptionException(format("%s: %d", msg, value));
+      throw new StoreCorruptionException(String.format("%s: %d", msg, value));
     }
   }
 
   private static int getNonNegativeInt(ByteBuffer buffer) throws StoreCorruptionException {
     int value = buffer.getInt();
-    checkValue(value >= 0, "expected a value >= 0", value);
+    checkValue(value >= 0, "Expected a value >= 0", value);
     return value;
   }
 
   private static long getNonNegativeLong(ByteBuffer buffer) throws StoreCorruptionException {
     long value = buffer.getLong();
-    checkValue(value >= 0, "expected a value >= 0", value);
+    checkValue(value >= 0, "Expected a value >= 0", value);
     return value;
   }
 
   private static long getPositiveLong(ByteBuffer buffer) throws StoreCorruptionException {
     long value = buffer.getLong();
-    checkValue(value > 0, "expected a positive value", value);
+    checkValue(value > 0, "Expected a positive value", value);
     return value;
   }
 
@@ -671,6 +683,30 @@ public final class DiskStore implements Store {
     return new Builder();
   }
 
+  private static final class FileChannelCloseable implements Closeable {
+    private final FileChannel channel;
+    private boolean close = true;
+
+    FileChannelCloseable(FileChannel channel) {
+      this.channel = channel;
+    }
+
+    FileChannel channel() {
+      return channel;
+    }
+
+    void keepOpen() {
+      close = false;
+    }
+
+    @Override
+    public void close() throws IOException {
+      if (close) {
+        channel.close();
+      }
+    }
+  }
+
   private final class ConcurrentViewerIterator implements Iterator<Viewer> {
     private final Iterator<Entry> entryIterator = entries.values().iterator();
 
@@ -732,10 +768,43 @@ public final class DiskStore implements Store {
     private @Nullable Viewer view(Entry entry) throws IOException {
       closeLock.readLock().lock();
       try {
-        requireState(!closed, "closed");
+        requireState(!closed, "Closed");
         return entry.view(null);
       } finally {
         closeLock.readLock().unlock();
+      }
+    }
+  }
+
+  private static final class Sha256MessageDigestFactory {
+    private static final @Nullable MessageDigest TEMPLATE = lookupTemplateIfCloneable();
+
+    private Sha256MessageDigestFactory() {}
+
+    static MessageDigest create() {
+      if (TEMPLATE == null) {
+        return lookup();
+      }
+      try {
+        return (MessageDigest) TEMPLATE.clone();
+      } catch (CloneNotSupportedException e) {
+        throw new AssertionError(e);
+      }
+    }
+
+    private static @Nullable MessageDigest lookupTemplateIfCloneable() {
+      try {
+        return (MessageDigest) lookup().clone();
+      } catch (CloneNotSupportedException ignored) {
+        return null;
+      }
+    }
+
+    private static MessageDigest lookup() {
+      try {
+        return MessageDigest.getInstance("SHA-256");
+      } catch (NoSuchAlgorithmException e) {
+        throw new UnsupportedOperationException("SHA-256 not available!", e);
       }
     }
   }
@@ -749,18 +818,9 @@ public final class DiskStore implements Store {
     Hash hash(String key);
 
     private static Hash truncatedSha256Hash(String key) {
-      var digest = sha256Digest();
-      digest.update(UTF_8.encode(key));
-      return new Hash(ByteBuffer.wrap(digest.digest()).limit(Hash.BYTES));
-    }
-
-    // TODO we can use a MessageDigest as a cloning template to avoid service lookup every time.
-    private static MessageDigest sha256Digest() {
-      try {
-        return MessageDigest.getInstance("SHA-256");
-      } catch (NoSuchAlgorithmException e) {
-        throw new UnsupportedOperationException("SHA-256 not available!", e);
-      }
+      return new Hash(
+          ByteBuffer.wrap(Sha256MessageDigestFactory.create().digest(key.getBytes(UTF_8)))
+              .limit(Hash.BYTES));
     }
   }
 
@@ -824,7 +884,6 @@ public final class DiskStore implements Store {
       } catch (StoreCorruptionException | EOFException e) {
         // TODO consider trying to rebuild the index from a directory scan instead.
         logger.log(Level.WARNING, "Dropping store content due to an unreadable index", e);
-
         deleteStoreContent(directory);
         return Set.of();
       }
@@ -832,21 +891,21 @@ public final class DiskStore implements Store {
 
     Set<IndexEntry> readIndex() throws IOException {
       try (var channel = FileChannel.open(indexFile, READ)) {
-        var header = StoreIO.readNBytes(channel, INDEX_HEADER_SIZE);
-        checkValue(INDEX_MAGIC, header.getLong(), "not in index format");
-        checkValue(STORE_VERSION, header.getInt(), "unrecognized store version");
-        checkValue(appVersion, header.getInt(), "unrecognized app version");
+        var header = FileIO.read(channel, INDEX_HEADER_SIZE);
+        checkValue(INDEX_MAGIC, header.getLong(), "Not in index format");
+        checkValue(STORE_VERSION, header.getInt(), "Unexpected store version");
+        checkValue(appVersion, header.getInt(), "Unexpected app version");
 
         long entryCount = header.getLong();
         checkValue(
-            entryCount >= 0 && entryCount <= MAX_ENTRY_COUNT, "invalid entry count", entryCount);
+            entryCount >= 0 && entryCount <= MAX_ENTRY_COUNT, "Invalid entry count", entryCount);
         if (entryCount == 0) {
           return Set.of();
         }
 
         int intEntryCount = (int) entryCount;
         int entryTableSize = intEntryCount * INDEX_ENTRY_SIZE;
-        var entryTable = StoreIO.readNBytes(channel, entryTableSize);
+        var entryTable = FileIO.read(channel, entryTableSize);
         var entries = new HashSet<IndexEntry>(intEntryCount);
         for (int i = 0; i < intEntryCount; i++) {
           entries.add(new IndexEntry(entryTable));
@@ -856,7 +915,7 @@ public final class DiskStore implements Store {
     }
 
     void writeIndex(Set<IndexEntry> entries) throws IOException {
-      requireArgument(entries.size() <= MAX_ENTRY_COUNT, "too many entries");
+      requireArgument(entries.size() <= MAX_ENTRY_COUNT, "Too many entries");
       try (var channel = FileChannel.open(tempIndexFile, CREATE, WRITE, TRUNCATE_EXISTING)) {
         var index =
             ByteBuffer.allocate(INDEX_HEADER_SIZE + INDEX_ENTRY_SIZE * entries.size())
@@ -865,7 +924,7 @@ public final class DiskStore implements Store {
                 .putInt(appVersion)
                 .putLong(entries.size());
         entries.forEach(entry -> entry.writeTo(index));
-        StoreIO.writeBytes(channel, index.flip());
+        FileIO.write(channel, index.flip());
         channel.force(false);
       }
       replace(tempIndexFile, indexFile);
@@ -1085,18 +1144,14 @@ public final class DiskStore implements Store {
 
     /** Forcibly submits an index write to the index executor, ignoring the time rate. */
     void forceSchedule() throws IOException {
-      try {
-        Utils.get(forceScheduleAsync());
-      } catch (InterruptedException e) {
-        throw (IOException) new InterruptedIOException().initCause(e);
-      }
+      Utils.getIo(forceScheduleAsync());
     }
 
     private CompletableFuture<Void> forceScheduleAsync() {
       var now = clock.instant();
       while (true) {
         var currentTask = scheduledWriteTask.get();
-        requireState(currentTask != TOMBSTONE, "shutdown");
+        requireState(currentTask != TOMBSTONE, "Shutdown");
 
         var newTask = new RunnableWriteTask(now);
         if (scheduledWriteTask.compareAndSet(currentTask, newTask)) {
@@ -1114,7 +1169,7 @@ public final class DiskStore implements Store {
         runningTaskAwaiter.awaitAdvanceInterruptibly(runningTaskAwaiter.arriveAndDeregister());
         assert runningTaskAwaiter.isTerminated();
       } catch (InterruptedException e) {
-        throw new InterruptedIOException();
+        throw Utils.toInterruptedIOException(e);
       }
     }
 
@@ -1250,15 +1305,17 @@ public final class DiskStore implements Store {
 
     static DirectoryLock acquire(Path directory) throws IOException {
       var lockFile = directory.resolve(LOCK_FILENAME);
-      var channel = FileChannel.open(lockFile, READ, WRITE, CREATE);
-      try {
+      try (var closeable =
+          new FileChannelCloseable(FileChannel.open(lockFile, READ, WRITE, CREATE))) {
+        var channel = closeable.channel();
         var fileLock = channel.tryLock();
         if (fileLock == null) {
-          throw new IOException(String.format("store directory <%s> already in use", directory));
+          throw new IOException("Store directory <" + directory + "> already in use");
         }
-        return new DirectoryLock(lockFile, channel);
+        var lock = new DirectoryLock(lockFile, channel);
+        closeable.keepOpen();
+        return lock;
       } catch (IOException e) {
-        closeQuietly(channel);
         deleteIfExistsQuietly(lockFile);
         throw e;
       }
@@ -1295,7 +1352,7 @@ public final class DiskStore implements Store {
       if (hex == null) {
         hex =
             toPaddedHexString(upper64Bits, Long.BYTES)
-                + toPaddedHexString(lower16Bits & 0xffff, Short.BYTES);
+                + toPaddedHexString(lower16Bits & SHORT_MASK, Short.BYTES);
         lazyHex = hex;
       }
       return hex;
@@ -1401,27 +1458,33 @@ public final class DiskStore implements Store {
     final String key;
     final ByteBuffer metadata;
     final long dataSize;
+    final long dataCrc32c;
 
-    EntryDescriptor(String key, ByteBuffer metadata, long dataSize) {
+    EntryDescriptor(String key, ByteBuffer metadata, long dataSize, long dataCrc32c) {
       this.key = key;
       this.metadata = metadata.asReadOnlyBuffer();
       this.dataSize = dataSize;
+      this.dataCrc32c = dataCrc32c;
     }
 
     ByteBuffer encodeToEpilogue(int appVersion) {
       var encodedKey = UTF_8.encode(key);
       int keySize = encodedKey.remaining();
       int metadataSize = metadata.remaining();
-      return ByteBuffer.allocate(keySize + metadataSize + ENTRY_TRAILER_SIZE)
-          .put(encodedKey)
-          .put(metadata.duplicate())
-          .putLong(ENTRY_MAGIC)
-          .putInt(STORE_VERSION)
-          .putInt(appVersion)
-          .putInt(keySize)
-          .putInt(metadataSize)
-          .putLong(dataSize)
-          .flip();
+      var epilogue =
+          ByteBuffer.allocate(keySize + metadataSize + ENTRY_TRAILER_SIZE)
+              .put(encodedKey)
+              .put(metadata.duplicate())
+              .putLong(ENTRY_MAGIC)
+              .putInt(STORE_VERSION)
+              .putInt(appVersion)
+              .putInt(keySize)
+              .putInt(metadataSize)
+              .putLong(dataSize)
+              .putInt((int) dataCrc32c);
+      var crc32c = new CRC32C();
+      crc32c.update(epilogue.flip());
+      return epilogue.limit(epilogue.capacity()).putInt((int) crc32c.getValue()).flip();
     }
   }
 
@@ -1499,27 +1562,21 @@ public final class DiskStore implements Store {
           return null;
         }
 
-        var channel = FileChannel.open(entryFile(), READ);
-        try {
+        try (var closeable = new FileChannelCloseable(FileChannel.open(entryFile(), READ))) {
+          var channel = closeable.channel();
           var descriptor = readDescriptorForKey(channel, expectedKey);
-          if (descriptor != null) {
-            return createViewer(channel, version, descriptor);
+          if (descriptor == null) {
+            return null;
           }
-          channel.close();
-          return null;
-        } catch (IOException e) {
-          try {
-            channel.close();
-          } catch (IOException closeEx) {
-            e.addSuppressed(closeEx);
-          }
-          throw e;
+          var viewer = createViewer(channel, version, descriptor);
+          closeable.keepOpen();
+          return viewer;
+        } catch (NoSuchFileException missingEntryFile) {
+          // Our file disappeared! We'll handle this gracefully by making the store lose track of
+          // us. This is done after releasing the lock to not incur a potential index write while
+          // holding it in case the executor is synchronous.
+          logger.log(Level.WARNING, "Dropping entry with missing file", missingEntryFile);
         }
-      } catch (NoSuchFileException missingEntryFile) {
-        // Our file disappeared! We'll handle this gracefully by making the store lose track of us.
-        // This is done after releasing the lock to not incur a potential index write while holding
-        // it.
-        logger.log(Level.WARNING, "Dropping entry with missing file", missingEntryFile);
       } finally {
         lock.unlock();
       }
@@ -1546,29 +1603,36 @@ public final class DiskStore implements Store {
       return descriptor;
     }
 
+    @GuardedBy("lock")
     private EntryDescriptor readDescriptor(FileChannel channel) throws IOException {
       // TODO a smarter thing to do is to read a larger buffer from the end and optimistically
       //      expect key and metadata to be there. Or store the sizes of metadata, data & key in
       //      the index.
       long fileSize = channel.size();
-      var trailer = StoreIO.readNBytes(channel, ENTRY_TRAILER_SIZE, fileSize - ENTRY_TRAILER_SIZE);
+      var trailer = FileIO.read(channel, ENTRY_TRAILER_SIZE, fileSize - ENTRY_TRAILER_SIZE);
       long magic = trailer.getLong();
       int storeVersion = trailer.getInt();
       int appVersion = trailer.getInt();
       int keySize = getNonNegativeInt(trailer);
       int metadataSize = getNonNegativeInt(trailer);
       long dataSize = getNonNegativeLong(trailer);
-      checkValue(ENTRY_MAGIC, magic, "not in entry file format");
-      checkValue(STORE_VERSION, storeVersion, "unexpected store version");
-      checkValue(DiskStore.this.appVersion, appVersion, "unexpected app version");
-      var keyAndMetadata = StoreIO.readNBytes(channel, keySize + metadataSize, dataSize);
+      long dataCrc32c = trailer.getInt() & INT_MASK;
+      long epilogueCrc32c = trailer.getInt() & INT_MASK;
+      checkValue(ENTRY_MAGIC, magic, "Not in entry file format");
+      checkValue(STORE_VERSION, storeVersion, "Unexpected store version");
+      checkValue(DiskStore.this.appVersion, appVersion, "Unexpected app version");
+      var keyAndMetadata = FileIO.read(channel, keySize + metadataSize, dataSize);
       var key = UTF_8.decode(keyAndMetadata.limit(keySize)).toString();
       var metadata =
-          keyAndMetadata
-              .limit(keySize + metadataSize)
-              .slice() // Slice to have 0 position & metadataSize capacity.
+          ByteBuffer.allocate(keyAndMetadata.limit(keySize + metadataSize).remaining())
+              .put(keyAndMetadata)
+              .flip()
               .asReadOnlyBuffer();
-      return new EntryDescriptor(key, metadata, dataSize);
+      var crc32c = new CRC32C();
+      crc32c.update(keyAndMetadata.rewind());
+      crc32c.update(trailer.rewind().limit(trailer.limit() - Integer.BYTES));
+      checkValue(crc32c.getValue(), epilogueCrc32c, "Unexpected epilogue checksum");
+      return new EntryDescriptor(key, metadata, dataSize, dataCrc32c);
     }
 
     @GuardedBy("lock")
@@ -1599,17 +1663,18 @@ public final class DiskStore implements Store {
         DiskEditor editor,
         String key,
         ByteBuffer metadata,
+        FileChannel editorChannel,
         long dataSize,
-        FileChannel editorChannel)
+        long dataCrc32c)
         throws IOException {
       long newSize;
       long sizeDifference;
       lock.lock();
       try {
-        requireState(currentEditor == editor, "edit discarded");
+        requireState(currentEditor == editor, "Edit discarded");
         currentEditor = null;
 
-        requireState(writable, "committing a non-discarded edit to a non-writable entry");
+        requireState(writable, "Committing a non-discarded edit to a non-writable entry");
 
         EntryDescriptor committedDescriptor;
         boolean editInPlace = dataSize < 0 && readable;
@@ -1617,11 +1682,17 @@ public final class DiskStore implements Store {
             var existingEntryChannel =
                 editInPlace ? FileChannel.open(entryFile(), READ, WRITE) : null) {
           var targetChannel = editorChannel;
-          EntryDescriptor existingDescriptor = null;
+          EntryDescriptor existingEntryDescriptor = null;
           if (existingEntryChannel != null
-              && (existingDescriptor = readDescriptorForKey(existingEntryChannel, key)) != null) {
+              && (existingEntryDescriptor = readDescriptorForKey(existingEntryChannel, key))
+                  != null) {
             targetChannel = existingEntryChannel;
-            committedDescriptor = new EntryDescriptor(key, metadata, existingDescriptor.dataSize);
+            committedDescriptor =
+                new EntryDescriptor(
+                    key,
+                    metadata,
+                    existingEntryDescriptor.dataSize,
+                    existingEntryDescriptor.dataCrc32c);
 
             // Close editor's file channel before deleting. See isolatedDeleteIfExists(Path).
             closeQuietly(editorChannel);
@@ -1633,16 +1704,16 @@ public final class DiskStore implements Store {
             DiskStore.this.size.addAndGet(-size);
             size = 0;
           } else {
-            committedDescriptor = new EntryDescriptor(key, metadata, Math.max(dataSize, 0));
+            committedDescriptor =
+                new EntryDescriptor(key, metadata, Math.max(dataSize, 0), dataCrc32c);
           }
 
           int written =
-              StoreIO.writeBytes(
+              FileIO.write(
                   targetChannel,
                   committedDescriptor.encodeToEpilogue(appVersion),
                   committedDescriptor.dataSize);
-
-          if (existingDescriptor != null) {
+          if (existingEntryDescriptor != null) {
             // Truncate to correct size in case the previous entry had a larger epilogue.
             targetChannel.truncate(committedDescriptor.dataSize + written);
           }
@@ -1656,7 +1727,6 @@ public final class DiskStore implements Store {
           isolatedDeleteIfExists(entryFile());
         }
         replace(tempEntryFile(), entryFile());
-
         version++;
         newSize = committedDescriptor.metadata.remaining() + committedDescriptor.dataSize;
         sizeDifference = newSize - size;
@@ -1816,7 +1886,6 @@ public final class DiskStore implements Store {
     private final EntryDescriptor descriptor;
     private final FileChannel channel;
     private final AtomicBoolean closed = new AtomicBoolean();
-
     private final AtomicBoolean createdFirstReader = new AtomicBoolean();
 
     DiskViewer(Entry entry, int entryVersion, EntryDescriptor descriptor, FileChannel channel) {
@@ -1849,6 +1918,11 @@ public final class DiskStore implements Store {
     }
 
     @Override
+    public CompletableFuture<Optional<Editor>> edit(Executor executor) {
+      return Unchecked.supplyAsync(this::edit, executor);
+    }
+
+    @Override
     public long dataSize() {
       return descriptor.dataSize;
     }
@@ -1873,6 +1947,7 @@ public final class DiskStore implements Store {
 
     private class DiskEntryReader implements EntryReader {
       final Lock lock = new ReentrantLock();
+      final CRC32C crc32C = new CRC32C();
       long position;
 
       DiskEntryReader() {}
@@ -1892,6 +1967,8 @@ public final class DiskStore implements Store {
           var boundedDst = dst.duplicate().limit(dst.position() + maxReadable);
           int read = readBytes(boundedDst);
           position += read;
+          crc32C.update(boundedDst.rewind());
+          checkCrc32cIfEndOfStream();
           dst.position(dst.position() + read);
           return read;
         } finally {
@@ -1899,22 +1976,59 @@ public final class DiskStore implements Store {
         }
       }
 
+      @Override
+      public CompletableFuture<Integer> read(ByteBuffer dst, Executor executor) {
+        return Unchecked.supplyAsync(() -> read(dst), executor);
+      }
+
+      @Override
+      public long read(List<ByteBuffer> dsts) throws IOException {
+        long totalRead = 0;
+        outerLoop:
+        for (var dst : dsts) {
+          int read;
+          while (dst.hasRemaining()) {
+            read = read(dst);
+            if (read >= 0) {
+              totalRead += read;
+            } else if (totalRead > 0) {
+              break outerLoop;
+            } else {
+              return -1;
+            }
+          }
+        }
+        return totalRead;
+      }
+
+      @Override
+      public CompletableFuture<Long> read(List<ByteBuffer> dsts, Executor executor) {
+        return Unchecked.supplyAsync(() -> read(dsts), executor);
+      }
+
       int readBytes(ByteBuffer dst) throws IOException {
-        return StoreIO.readBytes(channel, dst, position);
+        return FileIO.read(channel, dst, position);
+      }
+
+      void checkCrc32cIfEndOfStream() throws StoreCorruptionException {
+        if (position == descriptor.dataSize) {
+          checkValue(crc32C.getValue(), descriptor.dataCrc32c, "Unexpected data checksum");
+        }
       }
     }
 
     /**
      * A reader that uses scattering API for bulk reads. This reader relies on the file's native
      * position (scattering API doesn't take a position argument). As such, it must only be created
-     * once.
+     * once. Note that this restriction makes scattering reads inefficient, or not as efficient, for
+     * readers created after the first reader.
      */
     private final class ScatteringDiskEntryReader extends DiskEntryReader {
       ScatteringDiskEntryReader() {}
 
       @Override
       int readBytes(ByteBuffer dst) throws IOException {
-        return StoreIO.readBytes(channel, dst); // Use native file position.
+        return FileIO.read(channel, dst); // Use native file position.
       }
 
       @Override
@@ -1929,18 +2043,22 @@ public final class DiskStore implements Store {
           }
 
           var boundedDsts = new ArrayList<ByteBuffer>(dsts.size());
-          long maxReadable = 0;
+          long maxReadableSoFar = 0;
           for (var dst : dsts) {
-            int dstMaxReadable = (int) Math.min(dst.remaining(), available - maxReadable);
+            int dstMaxReadable = (int) Math.min(dst.remaining(), available - maxReadableSoFar);
             boundedDsts.add(dst.duplicate().limit(dst.position() + dstMaxReadable));
-            maxReadable = Math.addExact(maxReadable, dstMaxReadable);
-            if (maxReadable >= available) {
+            maxReadableSoFar = Math.addExact(maxReadableSoFar, dstMaxReadable);
+            if (maxReadableSoFar >= available) {
               break;
             }
           }
 
-          long read = StoreIO.readBytes(channel, boundedDsts.toArray(ByteBuffer[]::new));
+          long read = FileIO.read(channel, boundedDsts.toArray(ByteBuffer[]::new));
           position += read;
+          for (var boundedDst : boundedDsts) {
+            crc32C.update(boundedDst.rewind());
+          }
+          checkCrc32cIfEndOfStream();
           for (int i = 0; i < boundedDsts.size(); i++) {
             dsts.get(i).position(boundedDsts.get(i).position());
           }
@@ -1980,7 +2098,20 @@ public final class DiskStore implements Store {
     public void commit(ByteBuffer metadata) throws IOException {
       requireNonNull(metadata);
       requireState(closed.compareAndSet(false, true), "closed");
-      entry.commit(this, key, metadata, writer.dataSizeIfWritten(), channel);
+      internalCommit(metadata);
+    }
+
+    @Override
+    public CompletableFuture<Void> commit(ByteBuffer metadata, Executor executor) {
+      requireNonNull(metadata);
+      requireState(closed.compareAndSet(false, true), "closed");
+      return Unchecked.runAsync(() -> internalCommit(metadata), executor);
+    }
+
+    private void internalCommit(ByteBuffer metadata) throws IOException {
+      long[] crc32cHolder = new long[1];
+      long dataSize = writer.dataSizeIfWritten(crc32cHolder);
+      entry.commit(this, key, metadata, channel, dataSize, crc32cHolder[0]);
     }
 
     @Override
@@ -1996,6 +2127,7 @@ public final class DiskStore implements Store {
 
     private final class DiskEntryWriter implements EntryWriter {
       private final Lock lock = new ReentrantLock();
+      private final CRC32C crc32C = new CRC32C();
       private long position;
       private boolean isWritten;
 
@@ -2007,7 +2139,9 @@ public final class DiskStore implements Store {
         requireState(!closed.get(), "closed");
         lock.lock();
         try {
-          int written = StoreIO.writeBytes(channel, src);
+          int srcPosition = src.position();
+          int written = FileIO.write(channel, src);
+          crc32C.update(src.position(srcPosition));
           position += written;
           isWritten = true;
           return written;
@@ -2017,12 +2151,26 @@ public final class DiskStore implements Store {
       }
 
       @Override
+      public CompletableFuture<Integer> write(ByteBuffer src, Executor executor) {
+        requireNonNull(src);
+        return Unchecked.supplyAsync(() -> write(src), executor);
+      }
+
+      @Override
       public long write(List<ByteBuffer> srcs) throws IOException {
         requireNonNull(srcs);
         requireState(!closed.get(), "closed");
         lock.lock();
         try {
-          long written = StoreIO.writeBytes(channel, srcs.toArray(ByteBuffer[]::new));
+          var srcsArray = srcs.toArray(ByteBuffer[]::new);
+          int[] srcPositions = new int[srcsArray.length];
+          for (int i = 0; i < srcsArray.length; i++) {
+            srcPositions[i] = srcsArray[i].position();
+          }
+          long written = FileIO.write(channel, srcsArray);
+          for (int i = 0; i < srcsArray.length; i++) {
+            crc32C.update(srcsArray[i].position(srcPositions[i]));
+          }
           position += written;
           isWritten = true;
           return written;
@@ -2031,10 +2179,21 @@ public final class DiskStore implements Store {
         }
       }
 
-      long dataSizeIfWritten() {
+      @Override
+      public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor executor) {
+        requireNonNull(srcs);
+        return Unchecked.supplyAsync(() -> write(srcs), executor);
+      }
+
+      long dataSizeIfWritten(long[] crc32cHolder) {
         lock.lock();
         try {
-          return isWritten ? position : -1;
+          if (isWritten) {
+            crc32cHolder[0] = crc32C.getValue();
+            return position;
+          } else {
+            return -1;
+          }
         } finally {
           lock.unlock();
         }
@@ -2079,7 +2238,7 @@ public final class DiskStore implements Store {
 
     @CanIgnoreReturnValue
     public Builder maxSize(long maxSize) {
-      requireArgument(maxSize > 0, "expected a positive max size");
+      requireArgument(maxSize > 0, "Expected a positive max size");
       this.maxSize = maxSize;
       return this;
     }
@@ -2136,13 +2295,13 @@ public final class DiskStore implements Store {
 
     long maxSize() {
       long maxSize = this.maxSize;
-      requireState(maxSize != UNSET_NUMBER, "expected maxSize to bet set");
+      requireState(maxSize != UNSET_NUMBER, "Expected maxSize to bet set");
       return maxSize;
     }
 
     int appVersion() {
       int appVersion = this.appVersion;
-      requireState(appVersion != UNSET_NUMBER, "expected appVersion to be set");
+      requireState(appVersion != UNSET_NUMBER, "Expected appVersion to be set");
       return appVersion;
     }
 
@@ -2172,7 +2331,7 @@ public final class DiskStore implements Store {
 
     @CanIgnoreReturnValue
     private <T> T ensureSet(T property, String name) {
-      requireState(property != null, "expected %s to bet set", name);
+      requireState(property != null, "Expected %s to bet set", name);
       return property;
     }
   }

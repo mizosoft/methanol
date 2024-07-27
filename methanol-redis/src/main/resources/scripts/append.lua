@@ -1,8 +1,12 @@
 local editorLockKey = KEYS[1]
 local wipDataKey = KEYS[2]
-local data = ARGV[1]
-local editorId = ARGV[2]
-local editorLockTtlSeconds = tonumber(ARGV[3])
+local editorId = ARGV[1]
+local editorLockTtlSeconds = tonumber(ARGV[2])
+local dataCount = tonumber(ARGV[3])
+local data = {}
+for i = 1, dataCount do
+    data[i] = ARGV[3 + i]
+end
 
 -- Update expiry if enough time has passed.
 if redis.call('ttl', wipDataKey) < 0.5 * editorLockTtlSeconds then
@@ -20,4 +24,9 @@ if redis.call('ttl', wipDataKey) < 0.5 * editorLockTtlSeconds then
     return -1
   end
 end
-return redis.call('append', wipDataKey, data)
+
+local sizeAfterAppend = 0
+for _, d in ipairs(data) do
+  sizeAfterAppend = redis.call('append', wipDataKey, d)
+end
+return sizeAfterAppend
