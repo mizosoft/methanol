@@ -100,11 +100,12 @@ loadScripts(document, 'script');</script>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>
 implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Publisher.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Publisher</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&gt;&gt;</span></div>
 <div class="block">A <code>Publisher</code> that writes the body stream into cache while simultaneously forwarding it to
- downstream. The publisher prefers writing the whole stream if downstream cancels the subscription
- midway transmission. Forwarding downstream items is advanced independently of writing them.
- Consequently, writing may lag behind downstream consumption, and may proceed after downstream has
- been completed. This affords the downstream not having to unnecessarily wait for the entire body
- to be cached. If an error occurs while writing, the edit is silently discarded.</div>
+ downstream. Forwarding data downstream and writing it run at different paces. Consequently,
+ writing may lag behind downstream consumption, and may, by default, proceed in background after
+ downstream has been completed. If the <code>
+ com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.waitForCommit</code> is true,
+ downstream isn't completed unless all data is written and the edit is committed. If an error
+ occurs while writing, the edit is silently discarded.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -147,7 +148,7 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&nbsp;metadata,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
  <a href="CacheWritingPublisher.Listener.html" title="interface in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher.Listener</a>&nbsp;listener,
- boolean&nbsp;propagateCancellation)</code></div>
+ boolean&nbsp;waitForCommit)</code></div>
 <div class="col-last even-row-color">&nbsp;</div>
 </div>
 </section>
@@ -210,7 +211,7 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/ByteBuffer.html" title="class or interface in java.nio" class="external-link">ByteBuffer</a>&nbsp;metadata,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
  <a href="CacheWritingPublisher.Listener.html" title="interface in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher.Listener</a>&nbsp;listener,
- boolean&nbsp;propagateCancellation)</span></div>
+ boolean&nbsp;waitForCommit)</span></div>
 </section>
 </li>
 </ul>
