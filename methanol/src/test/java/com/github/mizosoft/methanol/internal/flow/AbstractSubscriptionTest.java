@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,6 +47,7 @@ import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittableSubscription;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -60,7 +61,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(20)
+@Timeout(2)
 @ExtendWith(ExecutorExtension.class)
 class AbstractSubscriptionTest {
   static {
@@ -408,6 +409,47 @@ class AbstractSubscriptionTest {
     assertThat(subscriber.errorCount()).isOne();
     assertThat(subscription.abortCount()).isOne();
     assertThat(subscription.flowInterrupted()).isTrue();
+  }
+
+  @ExecutorParameterizedTest
+  void failingAbort(Executor executor) {
+    var subscriber = new TestSubscriber<Integer>();
+    var subscription =
+        new AbstractSubscription<>(subscriber, executor) {
+          @Override
+          protected long emit(Subscriber<? super Integer> downstream, long emit) {
+            cancelOnComplete(downstream);
+            return 0;
+          }
+
+          @Override
+          protected void abort(boolean flowInterrupted) {
+            throw new TestException();
+          }
+        };
+    subscription.fireOrKeepAlive();
+    subscriber.awaitCompletion();
+  }
+
+  @ExecutorParameterizedTest
+  void failingEmit(Executor executor) {
+    var subscriber = new TestSubscriber<Integer>();
+    var abortFuture = new CompletableFuture<Boolean>();
+    var subscription =
+        new AbstractSubscription<>(subscriber, executor) {
+          @Override
+          protected long emit(Subscriber<? super Integer> downstream, long emit) {
+            throw new TestException();
+          }
+
+          @Override
+          protected void abort(boolean flowInterrupted) {
+            abortFuture.complete(flowInterrupted);
+          }
+        };
+    subscription.fireOrKeepAlive();
+    assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
+    assertThat(abortFuture).succeedsWithin(Duration.ofSeconds(1)).isEqualTo(true);
   }
 
   @ExecutorParameterizedTest
