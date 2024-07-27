@@ -28,7 +28,6 @@ import static com.github.mizosoft.methanol.internal.Utils.requireValidHeaderValu
 import static com.github.mizosoft.methanol.internal.Utils.requireValidToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.cache.HttpDates.parseDeltaSeconds;
-import static java.lang.String.format;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -344,8 +343,7 @@ public final class CacheControl {
       values.forEach(value -> parseDirectives(value, directives));
       return new Builder(directives).build();
     } catch (IllegalArgumentException | IllegalStateException e) {
-      throw new IllegalArgumentException(
-          format("couldn't parse: '%s'", String.join(", ", values)), e);
+      throw new IllegalArgumentException("Couldn't parse: '" + String.join(", ", values) + "'", e);
     }
   }
 
@@ -355,7 +353,7 @@ public final class CacheControl {
    * @throws IllegalArgumentException if the given headers have any invalid cache directives
    */
   public static CacheControl parse(HttpHeaders headers) {
-    return CacheControl.parse(headers.allValues("Cache-Control"));
+    return parse(headers.allValues("Cache-Control"));
   }
 
   /** Returns a new {@code Builder}. */
@@ -379,7 +377,8 @@ public final class CacheControl {
       if (tokenizer.consumeCharIfPresent('=')) {
         argument = tokenizer.nextTokenOrQuotedString();
       }
-      directives.put(normalizedDirective, argument);
+      boolean duplicateDirective = directives.put(normalizedDirective, argument) != null;
+      requireArgument(!duplicateDirective, "Duplicate directive: '%s'", normalizedDirective);
     } while (tokenizer.consumeDelimiter(','));
   }
 
@@ -571,7 +570,7 @@ public final class CacheControl {
     private boolean setStandardDirective(String normalizedDirective, String argument) {
       requireArgument(
           !(mustHaveArgument(normalizedDirective) && argument.isEmpty()),
-          "directive %s requires an argument",
+          "Directive '%s' requires an argument",
           normalizedDirective);
 
       switch (normalizedDirective) {

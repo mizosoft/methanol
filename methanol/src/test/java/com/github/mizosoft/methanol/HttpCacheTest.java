@@ -2837,6 +2837,21 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         List.of("private", "public"));
   }
 
+  @StoreParameterizedTest
+  void responseWithInvalidCacheControlIsNotCacheable(Store store) throws Exception {
+    setUpCache(store);
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=one").setBody("Pikachu"));
+    verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send(GET(serverUri).cacheControl(CacheControl.newBuilder().onlyIfCached().build())))
+        .isCacheUnsatisfaction();
+
+    server.enqueue(
+        new MockResponse().setHeader("Cache-Control", "max-age=1, max-age=2").setBody("Pikachu"));
+    verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send(GET(serverUri).cacheControl(CacheControl.newBuilder().onlyIfCached().build())))
+        .isCacheUnsatisfaction();
+  }
+
   @UseHttps // Test SSLSession persistence
   @StoreParameterizedTest
   @StoreSpec(skipped = StoreType.MEMORY)
