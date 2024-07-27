@@ -337,6 +337,13 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
     return this;
   }
 
+  @CanIgnoreReturnValue
+  public MutableRequest setHeaders(HttpHeaders headers) {
+    headersBuilder.setAll(headers);
+    cachedHeaders = null;
+    return this;
+  }
+
   @Override
   @CanIgnoreReturnValue
   public MutableRequest GET() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import java.net.URI;
 import java.net.http.HttpClient.Version;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.time.Duration;
 import java.util.List;
@@ -203,6 +204,15 @@ class MutableRequestTest {
 
     request.setHeader("Accept-Encoding", "deflate");
     verifyThat(request).containsHeadersExactly("Accept-Encoding", "deflate");
+  }
+
+  @Test
+  void setHeaders() {
+    var request = MutableRequest.create().headers("X1", "Y", "X2", "Y");
+    verifyThat(request).containsHeadersExactly("X1", "Y", "X2", "Y");
+
+    request.setHeaders(HttpHeaders.of(Map.of("A", List.of("B")), (name, value) -> true));
+    verifyThat(request).containsHeadersExactly("A", "B");
   }
 
   @Test
