@@ -26,7 +26,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
+import com.github.mizosoft.methanol.internal.extensions.BasicAdapter;
 import com.github.mizosoft.methanol.internal.spi.BodyAdapterProviders;
+import com.github.mizosoft.methanol.internal.spi.ServiceProviders;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -47,7 +49,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 public final class AdapterCodec {
   /**
    * Codec for the installed encoders & decoders. This is lazily created in a racy manner, which is
-   * OK since ServiceCache makes sure we see a constant snapshot of the services.
+   * OK since {@link ServiceProviders} makes sure we see a constant snapshot of the services.
    */
   @SuppressWarnings("NonFinalStaticField") // Lazily initialized.
   private static @MonotonicNonNull AdapterCodec lazyInstalledCodec;
@@ -208,6 +210,53 @@ public final class AdapterCodec {
     public Builder decoder(Decoder decoder) {
       decoders.add(requireNonNull(decoder));
       return this;
+    }
+
+    /**
+     * Adds the basic encoder. The basic encoder is compatible with any media type, and supports
+     * encoding any subtype of:
+     *
+     * <ul>
+     *   <li>{@code CharSequence} (encoded using the media-type's charset, or {@code UTF-8} in case
+     *       the former is not present)
+     *   <li>{@code InputStream}
+     *   <li>{@code byte[]}
+     *   <li>{@code ByteBuffer}
+     *   <li>{@code Path} (represents a file from which the request content is sent)
+     * </ul>
+     *
+     * It is recommended to add this encoder after you add more-specific encoders.
+     */
+    @CanIgnoreReturnValue
+    public Builder basicEncoder() {
+      return encoder(BasicAdapter.newEncoder());
+    }
+
+    /**
+     * Adds the basic decoder. The basic decoder is compatible with any media type, and supports
+     * decoding:
+     *
+     * <ul>
+     *   <li>{@code String} (decoded using the media-type's charset, or {@code UTF-8} in case the
+     *       former is not present)
+     *   <li>{@code InputStream}
+     *   <li>{@code Reader} (decoded using the media-type's charset, or {@code UTF-8} in case the
+     *       former is not present)
+     *   <li>{@code byte[]}
+     *   <li>{@code ByteBuffer}
+     * </ul>
+     *
+     * It is recommended to add this decoder after you add more-specific decoders.
+     */
+    @CanIgnoreReturnValue
+    public Builder basicDecoder() {
+      return decoder(BasicAdapter.newDecoder());
+    }
+
+    /** Adds both the basic encoder & decoder pair. */
+    @CanIgnoreReturnValue
+    public Builder basicCodec() {
+      return basicEncoder().basicDecoder();
     }
 
     /** Returns a new {@code AdapterCodec} for the added encoders and decoders. */
