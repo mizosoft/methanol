@@ -165,9 +165,10 @@ public abstract class TypeRef<T> {
       return rawUpperBound(((TypeVariable<?>) type).getBounds());
     } else if (type instanceof WildcardType) {
       return rawUpperBound(((WildcardType) type).getUpperBounds());
+    } else {
+      throw new IllegalArgumentException(
+          "Unsupported specialization of java.lang.reflect.Type: <" + type + ">");
     }
-    throw new IllegalArgumentException(
-        "Unsupported specialization of java.lang.reflect.Type: <" + type + ">");
   }
 
   private static Class<?> rawUpperBound(Type[] upperBounds) {

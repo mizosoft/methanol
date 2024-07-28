@@ -55,7 +55,9 @@ public interface BodyAdapter {
       List<A> installed, TypeRef<?> typeRef, @Nullable MediaType mediaType) {
     return installed.stream()
         .filter(
-            a -> a.supportsType(typeRef) && (mediaType == null || a.isCompatibleWith(mediaType)))
+            adapter ->
+                adapter.supportsType(typeRef)
+                    && (mediaType == null || adapter.isCompatibleWith(mediaType)))
         .findFirst();
   }
 
