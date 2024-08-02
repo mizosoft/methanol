@@ -73,7 +73,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * somewhere before it's sent in order to prevent accidental mutation, especially when the request
  * is sent asynchronously.
  */
-public final class MutableRequest extends TaggableRequest implements TaggableRequest.Builder {
+public final class MutableRequest extends TaggableRequest
+    implements TaggableRequest.Builder, HeadersAccumulator {
   private static final URI EMPTY_URI = URI.create("");
 
   private final Map<TypeRef<?>, Object> tags = new HashMap<>();
@@ -128,40 +129,6 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   @CanIgnoreReturnValue
   public MutableRequest uri(String uri) {
     return uri(URI.create(uri));
-  }
-
-  /** Removes all headers added so far. */
-  @CanIgnoreReturnValue
-  public MutableRequest removeHeaders() {
-    headersBuilder.clear();
-    cachedHeaders = null;
-    return this;
-  }
-
-  /** Removes any header associated with the given name. */
-  @CanIgnoreReturnValue
-  public MutableRequest removeHeader(String name) {
-    if (headersBuilder.remove(name)) {
-      cachedHeaders = null;
-    }
-    return this;
-  }
-
-  /** Removes all headers matched by the given predicate. */
-  @CanIgnoreReturnValue
-  public MutableRequest removeHeadersIf(BiPredicate<String, String> filter) {
-    if (headersBuilder.removeIf(filter)) {
-      cachedHeaders = null;
-    }
-    return this;
-  }
-
-  /** Adds each of the given {@code HttpHeaders}. */
-  @CanIgnoreReturnValue
-  public MutableRequest headers(HttpHeaders headers) {
-    headersBuilder.addAll(headers);
-    cachedHeaders = null;
-    return this;
   }
 
   /** Sets the {@code Cache-Control} header to the given value. */
@@ -311,21 +278,17 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   @Override
   @CanIgnoreReturnValue
   public MutableRequest headers(String... headers) {
-    requireArgument(
-        headers.length > 0 && headers.length % 2 == 0,
-        "illegal number of headers: %d",
-        headers.length);
-    for (int i = 0; i < headers.length; i += 2) {
-      headersBuilder.add(headers[i], headers[i + 1]);
-    }
+    headersBuilder.addAll(headers);
     cachedHeaders = null;
     return this;
   }
 
+  /** Adds each of the given {@code HttpHeaders}. */
   @Override
   @CanIgnoreReturnValue
-  public MutableRequest timeout(Duration timeout) {
-    this.timeout = requirePositiveDuration(timeout);
+  public MutableRequest headers(HttpHeaders headers) {
+    headersBuilder.addAll(headers);
+    cachedHeaders = null;
     return this;
   }
 
@@ -334,6 +297,41 @@ public final class MutableRequest extends TaggableRequest implements TaggableReq
   public MutableRequest setHeader(String name, String value) {
     headersBuilder.set(name, value);
     cachedHeaders = null;
+    return this;
+  }
+
+  /** Removes all headers added so far. */
+  @CanIgnoreReturnValue
+  public MutableRequest removeHeaders() {
+    headersBuilder.clear();
+    cachedHeaders = null;
+    return this;
+  }
+
+  /** Removes any header associated with the given name. */
+  @Override
+  @CanIgnoreReturnValue
+  public MutableRequest removeHeader(String name) {
+    if (headersBuilder.remove(name)) {
+      cachedHeaders = null;
+    }
+    return this;
+  }
+
+  /** Removes all headers matched by the given predicate. */
+  @Override
+  @CanIgnoreReturnValue
+  public MutableRequest removeHeadersIf(BiPredicate<String, String> filter) {
+    if (headersBuilder.removeIf(filter)) {
+      cachedHeaders = null;
+    }
+    return this;
+  }
+
+  @Override
+  @CanIgnoreReturnValue
+  public MutableRequest timeout(Duration timeout) {
+    this.timeout = requirePositiveDuration(timeout);
     return this;
   }
 

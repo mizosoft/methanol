@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.extensions;
 import static com.github.mizosoft.methanol.internal.Utils.requireValidHeader;
 import static com.github.mizosoft.methanol.internal.Utils.requireValidHeaderName;
 import static com.github.mizosoft.methanol.internal.Utils.requireValidHeaderValue;
+import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.http.HttpHeaders;
@@ -42,6 +43,16 @@ public final class HeadersBuilder {
   public void add(String name, String value) {
     requireValidHeader(name, value);
     addLenient(name, value);
+  }
+
+  public void addAll(String... headers) {
+    requireArgument(
+        headers.length > 0 && headers.length % 2 == 0,
+        "Expected a even-numbered, positive array length: %d",
+        headers.length);
+    for (int i = 0; i < headers.length; i += 2) {
+      add(headers[i], headers[i + 1]);
+    }
   }
 
   public void addAll(HttpHeaders headers) {
@@ -82,11 +93,6 @@ public final class HeadersBuilder {
     var myValues = headers.computeIfAbsent(name, __ -> new ArrayList<>());
     myValues.clear();
     myValues.add(value);
-  }
-
-  public void setAll(HttpHeaders headers) {
-    clear();
-    addAll(headers);
   }
 
   public void setLenient(String name, List<String> values) {

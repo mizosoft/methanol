@@ -312,7 +312,8 @@ public final class CacheInterceptor implements Interceptor {
     return cacheResponse.with(
         builder ->
             builder
-                .setHeaders(
+                .removeHeaders()
+                .headers(
                     mergeHeaders(cacheResponse.get().headers(), networkResponse.get().headers()))
                 .timeRequestSent(networkResponse.get().timeRequestSent())
                 .timeResponseReceived(networkResponse.get().timeResponseReceived()));
