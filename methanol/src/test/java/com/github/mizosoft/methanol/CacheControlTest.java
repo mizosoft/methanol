@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -123,9 +123,11 @@ class CacheControlTest {
   }
 
   @Test
-  void lastValueTakesPrecedence() {
-    var cacheControl = CacheControl.parse("max-age=1, max-age=2");
-    assertThat(cacheControl.maxAge()).hasValue(Duration.ofSeconds(2));
+  void duplicateDirectivesFailToParse() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CacheControl.parse("max-age=1, max-age=2"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CacheControl.parse("max-age=1, min-fresh=1, max-age=2"));
   }
 
   @Test

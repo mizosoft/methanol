@@ -256,8 +256,10 @@ public final class CacheInterceptor implements Interceptor {
     try {
       responseCacheControl = CacheControl.parse(response.headers());
     } catch (IllegalArgumentException e) {
-      // Don't crash because of server's ill-formed Cache-Control.
-      logger.log(Level.WARNING, "Invalid Cache-Control in response", e);
+      // Don't crash because of server's ill-formed Cache-Control. rfc9111 says in section 4.2.1.
+      // that we're encouraged to consider such responses stale. But we take the more conservative
+      // approach of not storing the response in the first place.
+      logger.log(Level.WARNING, "Invalid response Cache-Control", e);
       return false;
     }
 
