@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -110,12 +110,18 @@ class CacheStrategy {
   }
 
   HttpRequest conditionalize(HttpRequest request) {
-    var conditionalizedRequest = MutableRequest.copyOf(request);
-    etag.ifPresent(etag -> conditionalizedRequest.setHeader("If-None-Match", etag));
-    lastModified.ifPresent(
-        lastModified ->
-            conditionalizedRequest.setHeader("If-Modified-Since", formatHttpDate(lastModified)));
-    return conditionalizedRequest.toImmutableRequest();
+    return etag.isEmpty() && lastModified.isEmpty()
+        ? request
+        : MutableRequest.copyOf(request)
+            .apply(
+                conditionalRequest -> {
+                  etag.ifPresent(etag -> conditionalRequest.setHeader("If-None-Match", etag));
+                  lastModified.ifPresent(
+                      lastModified ->
+                          conditionalRequest.setHeader(
+                              "If-Modified-Since", formatHttpDate(lastModified)));
+                })
+            .toImmutableRequest();
   }
 
   static CacheStrategy create(HttpRequest request, TrackedResponse<?> cacheResponse, Instant now) {
