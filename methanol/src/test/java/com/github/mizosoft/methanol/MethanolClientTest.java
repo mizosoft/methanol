@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -542,36 +542,36 @@ class MethanolClientTest {
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.send(GET(serverUri)).body()) {
-      assertThat(body.as(String.class)).isEqualTo("Pikachu");
+      assertThat(body.to(String.class)).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.send(GET(serverUri)).body()) {
-      assertThat(body.asAsync(String.class))
+      assertThat(body.toAsync(String.class))
           .succeedsWithin(Duration.ofSeconds(1))
           .isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.send(GET(serverUri)).body()) {
-      assertThat(body.as(new TypeRef<String>() {})).isEqualTo("Pikachu");
+      assertThat(body.to(new TypeRef<String>() {})).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.send(GET(serverUri)).body()) {
-      assertThat(body.asAsync(new TypeRef<String>() {}))
+      assertThat(body.toAsync(new TypeRef<String>() {}))
           .succeedsWithin(Duration.ofSeconds(1))
           .isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.send(GET(serverUri)).body()) {
-      assertThat(body.with(BodyHandlers.ofString())).isEqualTo("Pikachu");
+      assertThat(body.handleWith(BodyHandlers.ofString())).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.send(GET(serverUri)).body()) {
-      assertThat(body.withAsync(BodyHandlers.ofString()))
+      assertThat(body.handleWithAsync(BodyHandlers.ofString()))
           .succeedsWithin(Duration.ofSeconds(1))
           .isEqualTo("Pikachu");
     }
@@ -586,36 +586,36 @@ class MethanolClientTest {
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
-      assertThat(body.as(String.class)).isEqualTo("Pikachu");
+      assertThat(body.to(String.class)).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
-      assertThat(body.asAsync(String.class))
+      assertThat(body.toAsync(String.class))
           .succeedsWithin(Duration.ofSeconds(1))
           .isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
-      assertThat(body.as(new TypeRef<String>() {})).isEqualTo("Pikachu");
+      assertThat(body.to(new TypeRef<String>() {})).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
-      assertThat(body.asAsync(new TypeRef<String>() {}))
+      assertThat(body.toAsync(new TypeRef<String>() {}))
           .succeedsWithin(Duration.ofSeconds(1))
           .isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
-      assertThat(body.with(BodyHandlers.ofString())).isEqualTo("Pikachu");
+      assertThat(body.handleWith(BodyHandlers.ofString())).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
-      assertThat(body.withAsync(BodyHandlers.ofString()))
+      assertThat(body.handleWithAsync(BodyHandlers.ofString()))
           .succeedsWithin(Duration.ofSeconds(1))
           .isEqualTo("Pikachu");
     }

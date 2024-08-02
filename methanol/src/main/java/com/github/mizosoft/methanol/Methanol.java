@@ -476,22 +476,22 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    public <T> T as(TypeRef<T> typeRef) throws IOException, InterruptedException {
+    public <T> T to(TypeRef<T> typeRef) throws IOException, InterruptedException {
       return Utils.get(handleAsync(adapterCodec.handlerOf(typeRef), FlowSupport.SYNC_EXECUTOR));
     }
 
     @Override
-    public <T> T with(BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
+    public <T> T handleWith(BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
       return Utils.get(handleAsync(bodyHandler, FlowSupport.SYNC_EXECUTOR));
     }
 
     @Override
-    public <T> CompletableFuture<T> asAsync(TypeRef<T> typeRef) {
+    public <T> CompletableFuture<T> toAsync(TypeRef<T> typeRef) {
       return handleAsync(adapterCodec.handlerOf(typeRef), executorSupplier.get());
     }
 
     @Override
-    public <T> CompletableFuture<T> withAsync(BodyHandler<T> bodyHandler) {
+    public <T> CompletableFuture<T> handleWithAsync(BodyHandler<T> bodyHandler) {
       return handleAsync(bodyHandler, executorSupplier.get());
     }
 
