@@ -37,13 +37,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import javax.net.ssl.SSLSession;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A builder of {@link HttpResponse} instances. */
-public final class ResponseBuilder<T> {
+public final class ResponseBuilder<T> implements HeadersAccumulator {
   private static final @Nullable Class<?> jdkHttpResponseClass;
 
   static {
@@ -94,39 +95,52 @@ public final class ResponseBuilder<T> {
     return this;
   }
 
+  @Override
   @CanIgnoreReturnValue
   public ResponseBuilder<T> header(String name, String value) {
     headersBuilder.add(name, value);
     return this;
   }
 
+  @Override
   @CanIgnoreReturnValue
-  public ResponseBuilder<T> setHeader(String name, String value) {
-    headersBuilder.set(name, value);
+  public ResponseBuilder<T> headers(String... headers) {
+    headersBuilder.addAll(headers);
     return this;
   }
 
+  @Override
   @CanIgnoreReturnValue
   public ResponseBuilder<T> headers(HttpHeaders headers) {
     headersBuilder.addAll(headers);
     return this;
   }
 
+  @Override
   @CanIgnoreReturnValue
-  public ResponseBuilder<T> setHeaders(HttpHeaders headers) {
-    headersBuilder.setAll(headers);
+  public ResponseBuilder<T> setHeader(String name, String value) {
+    headersBuilder.set(name, value);
     return this;
   }
 
+  @Override
   @CanIgnoreReturnValue
-  public ResponseBuilder<T> clearHeaders() {
+  public ResponseBuilder<T> removeHeaders() {
     headersBuilder.clear();
     return this;
   }
 
+  @Override
   @CanIgnoreReturnValue
   public ResponseBuilder<T> removeHeader(String name) {
     headersBuilder.remove(name);
+    return this;
+  }
+
+  @Override
+  @CanIgnoreReturnValue
+  public ResponseBuilder<T> removeHeadersIf(BiPredicate<String, String> filter) {
+    headersBuilder.removeIf(filter);
     return this;
   }
 
