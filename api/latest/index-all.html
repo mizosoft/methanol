@@ -129,6 +129,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#addAll(com.github.mizosoft.methanol.internal.extensions.HeadersBuilder)" class="member-name-link">addAll(HeadersBuilder)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#addAll(java.lang.String...)" class="member-name-link">addAll(String...)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#addAll(java.net.http.HttpHeaders)" class="member-name-link">addAll(HttpHeaders)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#addAllLenient(java.net.http.HttpHeaders)" class="member-name-link">addAllLenient(HttpHeaders)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
@@ -723,8 +725,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Just loses the reference to upstream if cancellation it is not required.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#clearHeaders()" class="member-name-link">clearHeaders()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html#clock(java.time.Clock)" class="member-name-link">clock(Clock)</a> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncDecoder.html#close()" class="member-name-link">close()</a> - Method in interface com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncDecoder.html" title="interface in com.github.mizosoft.methanol.decoder">AsyncDecoder</a></dt>
@@ -2247,6 +2247,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ImmutableResponseInfo.html#headers()" class="member-name-link">headers()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ImmutableResponseInfo.html" title="class in com.github.mizosoft.methanol.testing">ImmutableResponseInfo</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#headers(java.lang.String...)" class="member-name-link">headers(String...)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#headers(java.lang.String...)" class="member-name-link">headers(String...)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#headers(java.lang.String...)" class="member-name-link">headers(String...)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
 <dd>&nbsp;</dd>
@@ -3918,10 +3920,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Removes all headers added so far.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#removeHeaders()" class="member-name-link">removeHeaders()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#removeHeadersIf(java.util.function.BiPredicate)" class="member-name-link">removeHeadersIf(BiPredicate&lt;String, String&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
 <div class="block">Removes all headers matched by the given predicate.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#removeHeadersIf(java.util.function.BiPredicate)" class="member-name-link">removeHeadersIf(BiPredicate&lt;String, String&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#removeIf(java.util.function.BiPredicate)" class="member-name-link">removeIf(BiPredicate&lt;String, String&gt;)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#removeTag(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">removeTag(TypeRef&lt;?&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
@@ -4126,8 +4132,6 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#set(java.lang.String,java.lang.String)" class="member-name-link">set(String, String)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#setAll(java.net.http.HttpHeaders)" class="member-name-link">setAll(HttpHeaders)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/MockHasher.html#setHash(java.lang.String,long)" class="member-name-link">setHash(String, long)</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/MockHasher.html" title="class in com.github.mizosoft.methanol.testing.store">MockHasher</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#setHeader(java.lang.String,java.lang.String)" class="member-name-link">setHeader(String, String)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
@@ -4135,8 +4139,6 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#setHeader(java.lang.String,java.lang.String)" class="member-name-link">setHeader(String, String)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#setHeader(java.lang.String,java.lang.String)" class="member-name-link">setHeader(String, String)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#setHeaders(java.net.http.HttpHeaders)" class="member-name-link">setHeaders(HttpHeaders)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#setLenient(java.lang.String,java.util.List)" class="member-name-link">setLenient(String, List&lt;String&gt;)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
 <dd>&nbsp;</dd>

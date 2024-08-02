@@ -141,14 +141,14 @@ loadScripts(document, 'script');</script>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cacheStatus(com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus)" class="member-name-link">cacheStatus</a><wbr>(<a href="CacheAwareResponse.CacheStatus.html" title="enum class in com.github.mizosoft.methanol">CacheAwareResponse.CacheStatus</a>&nbsp;cacheStatus)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#clearHeaders()" class="member-name-link">clearHeaders</a>()</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#dropBody()" class="member-name-link">dropBody</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#dropBody()" class="member-name-link">dropBody</a>()</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#header(java.lang.String,java.lang.String)" class="member-name-link">header</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#header(java.lang.String,java.lang.String)" class="member-name-link">header</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#headers(java.lang.String...)" class="member-name-link">headers</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>...&nbsp;headers)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#headers(java.net.http.HttpHeaders)" class="member-name-link">headers</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</code></div>
@@ -166,6 +166,12 @@ loadScripts(document, 'script');</script>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#removeHeader(java.lang.String)" class="member-name-link">removeHeader</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#removeHeaders()" class="member-name-link">removeHeaders</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#removeHeadersIf(java.util.function.BiPredicate)" class="member-name-link">removeHeadersIf</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/BiPredicate.html" title="class or interface in java.util.function" class="external-link">BiPredicate</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;filter)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#request(java.net.http.HttpRequest)" class="member-name-link">request</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
@@ -173,26 +179,23 @@ loadScripts(document, 'script');</script>
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#setHeaders(java.net.http.HttpHeaders)" class="member-name-link">setHeaders</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#sslSession(javax.net.ssl.SSLSession)" class="member-name-link">sslSession</a><wbr>(@Nullable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/javax/net/ssl/SSLSession.html" title="class or interface in javax.net.ssl" class="external-link">SSLSession</a>&nbsp;sslSession)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#sslSession(javax.net.ssl.SSLSession)" class="member-name-link">sslSession</a><wbr>(@Nullable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/javax/net/ssl/SSLSession.html" title="class or interface in javax.net.ssl" class="external-link">SSLSession</a>&nbsp;sslSession)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#statusCode(int)" class="member-name-link">statusCode</a><wbr>(int&nbsp;statusCode)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#statusCode(int)" class="member-name-link">statusCode</a><wbr>(int&nbsp;statusCode)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#timeRequestSent(java.time.Instant)" class="member-name-link">timeRequestSent</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;timeRequestSent)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#timeRequestSent(java.time.Instant)" class="member-name-link">timeRequestSent</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;timeRequestSent)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#timeResponseReceived(java.time.Instant)" class="member-name-link">timeResponseReceived</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;timeResponseReceived)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#timeResponseReceived(java.time.Instant)" class="member-name-link">timeResponseReceived</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Instant.html" title="class or interface in java.time" class="external-link">Instant</a>&nbsp;timeResponseReceived)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#uri(java.net.URI)" class="member-name-link">uri</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#uri(java.net.URI)" class="member-name-link">uri</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#version(java.net.http.HttpClient.Version)" class="member-name-link">version</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpClient.Version.html" title="class or interface in java.net.http" class="external-link">HttpClient.Version</a>&nbsp;version)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a><wbr>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#version(java.net.http.HttpClient.Version)" class="member-name-link">version</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpClient.Version.html" title="class or interface in java.net.http" class="external-link">HttpClient.Version</a>&nbsp;version)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 </div>
 </div>
 </div>
@@ -254,11 +257,10 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="setHeader(java.lang.String,java.lang.String)">
-<h3>setHeader</h3>
+<section class="detail" id="headers(java.lang.String...)">
+<h3>headers</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</span>&nbsp;<span class="element-name">setHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</span></div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</span>&nbsp;<span class="element-name">headers</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>...&nbsp;headers)</span></div>
 </section>
 </li>
 <li>
@@ -269,17 +271,18 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="setHeaders(java.net.http.HttpHeaders)">
-<h3>setHeaders</h3>
+<section class="detail" id="setHeader(java.lang.String,java.lang.String)">
+<h3>setHeader</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</span>&nbsp;<span class="element-name">setHeaders</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</span></div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</span>&nbsp;<span class="element-name">setHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</span></div>
 </section>
 </li>
 <li>
-<section class="detail" id="clearHeaders()">
-<h3>clearHeaders</h3>
+<section class="detail" id="removeHeaders()">
+<h3>removeHeaders</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</span>&nbsp;<span class="element-name">clearHeaders</span>()</div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</span>&nbsp;<span class="element-name">removeHeaders</span>()</div>
 </section>
 </li>
 <li>
@@ -287,6 +290,13 @@ loadScripts(document, 'script');</script>
 <h3>removeHeader</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</span>&nbsp;<span class="element-name">removeHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name)</span></div>
+</section>
+</li>
+<li>
+<section class="detail" id="removeHeadersIf(java.util.function.BiPredicate)">
+<h3>removeHeadersIf</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;<a href="ResponseBuilder.html" title="type parameter in ResponseBuilder">T</a>&gt;</span>&nbsp;<span class="element-name">removeHeadersIf</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/BiPredicate.html" title="class or interface in java.util.function" class="external-link">BiPredicate</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;filter)</span></div>
 </section>
 </li>
 <li>

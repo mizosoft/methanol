@@ -482,38 +482,6 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 </section>
 </li>
 <li>
-<section class="detail" id="removeHeaders()">
-<h3>removeHeaders</h3>
-<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">removeHeaders</span>()</div>
-<div class="block">Removes all headers added so far.</div>
-</section>
-</li>
-<li>
-<section class="detail" id="removeHeader(java.lang.String)">
-<h3>removeHeader</h3>
-<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">removeHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name)</span></div>
-<div class="block">Removes any header associated with the given name.</div>
-</section>
-</li>
-<li>
-<section class="detail" id="removeHeadersIf(java.util.function.BiPredicate)">
-<h3>removeHeadersIf</h3>
-<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">removeHeadersIf</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/BiPredicate.html" title="class or interface in java.util.function" class="external-link">BiPredicate</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;filter)</span></div>
-<div class="block">Removes all headers matched by the given predicate.</div>
-</section>
-</li>
-<li>
-<section class="detail" id="headers(java.net.http.HttpHeaders)">
-<h3>headers</h3>
-<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">headers</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</span></div>
-<div class="block">Adds each of the given <code>HttpHeaders</code>.</div>
-</section>
-</li>
-<li>
 <section class="detail" id="cacheControl(com.github.mizosoft.methanol.CacheControl)">
 <h3>cacheControl</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
@@ -753,16 +721,11 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 </section>
 </li>
 <li>
-<section class="detail" id="timeout(java.time.Duration)">
-<h3>timeout</h3>
+<section class="detail" id="headers(java.net.http.HttpHeaders)">
+<h3>headers</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">timeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout)</span></div>
-<dl class="notes">
-<dt>Specified by:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html#timeout(java.time.Duration)" title="class or interface in java.net.http" class="external-link">timeout</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link">HttpRequest.Builder</a></code></dd>
-<dt>Specified by:</dt>
-<dd><code><a href="TaggableRequest.Builder.html#timeout(java.time.Duration)">timeout</a></code>&nbsp;in interface&nbsp;<code><a href="TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></code></dd>
-</dl>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">headers</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpHeaders.html" title="class or interface in java.net.http" class="external-link">HttpHeaders</a>&nbsp;headers)</span></div>
+<div class="block">Adds each of the given <code>HttpHeaders</code>.</div>
 </section>
 </li>
 <li>
@@ -776,6 +739,43 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html#setHeader(java.lang.String,java.lang.String)" title="class or interface in java.net.http" class="external-link">setHeader</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link">HttpRequest.Builder</a></code></dd>
 <dt>Specified by:</dt>
 <dd><code><a href="TaggableRequest.Builder.html#setHeader(java.lang.String,java.lang.String)">setHeader</a></code>&nbsp;in interface&nbsp;<code><a href="TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></code></dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="removeHeaders()">
+<h3>removeHeaders</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">removeHeaders</span>()</div>
+<div class="block">Removes all headers added so far.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="removeHeader(java.lang.String)">
+<h3>removeHeader</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">removeHeader</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name)</span></div>
+<div class="block">Removes any header associated with the given name.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="removeHeadersIf(java.util.function.BiPredicate)">
+<h3>removeHeadersIf</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">removeHeadersIf</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/BiPredicate.html" title="class or interface in java.util.function" class="external-link">BiPredicate</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;filter)</span></div>
+<div class="block">Removes all headers matched by the given predicate.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="timeout(java.time.Duration)">
+<h3>timeout</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">timeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout)</span></div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html#timeout(java.time.Duration)" title="class or interface in java.net.http" class="external-link">timeout</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link">HttpRequest.Builder</a></code></dd>
+<dt>Specified by:</dt>
+<dd><code><a href="TaggableRequest.Builder.html#timeout(java.time.Duration)">timeout</a></code>&nbsp;in interface&nbsp;<code><a href="TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></code></dd>
 </dl>
 </section>
 </li>
