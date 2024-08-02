@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -77,19 +77,8 @@ public class MoreBodyPublishers {
    *     runtime type or the given media type is installed
    */
   public static BodyPublisher ofObject(Object object, @Nullable MediaType mediaType) {
-    var runtimeType = TypeRef.of(object.getClass());
-    return Encoder.getEncoder(runtimeType, mediaType)
-        .orElseThrow(() -> unsupportedConversion(runtimeType, mediaType))
-        .toBody(object, mediaType);
-  }
-
-  private static UnsupportedOperationException unsupportedConversion(
-      TypeRef<?> objectType, @Nullable MediaType mediaType) {
-    var message = "unsupported conversion from an object type <" + objectType + ">";
-    if (mediaType != null) {
-      message += " with media type <" + mediaType + ">";
-    }
-    return new UnsupportedOperationException(message);
+    return AdapterCodec.installed()
+        .publisherOf(object, mediaType != null ? mediaType : MediaType.ANY);
   }
 
   private static <T extends AutoCloseable> BodyPublisher ofBodyWriter(
@@ -105,7 +94,6 @@ public class MoreBodyPublishers {
 
           var publisher = WritableBodyPublisher.create();
           publisher.subscribe(subscriber);
-
           if (!publisher.isClosed()) {
             try {
               executor.execute(
