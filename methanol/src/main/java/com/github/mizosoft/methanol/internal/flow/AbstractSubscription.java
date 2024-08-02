@@ -153,6 +153,15 @@ public abstract class AbstractSubscription<T> implements Subscription {
    */
   protected abstract long emit(Subscriber<? super T> downstream, long emit);
 
+  private long guardedEmit(Subscriber<? super T> downstream, long emit) {
+    try {
+      return emit(downstream, emit);
+    } catch (Throwable t) {
+      cancelOnError(downstream, t, true);
+      return -1;
+    }
+  }
+
   /**
    * Releases resources held by this subscription. {@code flowInterrupted} tells whether
    * cancellation was due to flow interruption by downstream (e.g. calling {@code cancel()} or
@@ -165,7 +174,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
     try {
       abort(flowInterrupted);
     } catch (Throwable t) {
-      logger.log(Level.WARNING, "exception thrown during subscription cancellation", t);
+      logger.log(Level.WARNING, "Exception thrown during subscription cancellation", t);
     }
   }
 
@@ -210,8 +219,8 @@ public abstract class AbstractSubscription<T> implements Subscription {
       try {
         downstream.onError(exception);
       } catch (Throwable t) {
-        logger.log(
-            Level.WARNING, () -> "exception thrown by subscriber's onError: " + downstream, t);
+        t.addSuppressed(exception);
+        logger.log(Level.WARNING, () -> "Exception thrown by subscriber's onError", t);
       }
     } else {
       FlowSupport.onDroppedException(exception);
@@ -227,7 +236,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
         downstream.onComplete();
       } catch (Throwable t) {
         logger.log(
-            Level.WARNING, () -> "exception thrown by subscriber's onComplete: " + downstream, t);
+            Level.WARNING, () -> "Exception thrown by subscriber's onComplete: " + downstream, t);
       }
     }
   }
@@ -260,8 +269,10 @@ public abstract class AbstractSubscription<T> implements Subscription {
         var exception =
             (Throwable) PENDING_EXCEPTION.getAndSet(this, ConsumedPendingException.INSTANCE);
         cancelOnError(d, castNonNull(exception), false);
-      } else if ((emitted = emit(d, r - x)) > 0L) {
+      } else if ((emitted = guardedEmit(d, r - x)) > 0L) {
         x += emitted;
+      } else if (emitted < 0) {
+        return; // Emit failed and the subscriber is completed exceptionally.
       } else if (x > 0) {
         // Flush satisfied demand.
         r = subtractAndGetDemand(this, DEMAND, x);

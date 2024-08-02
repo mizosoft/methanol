@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -151,14 +151,13 @@ public class FlowSupport {
       logger.log(
           Level.WARNING,
           () ->
-              "dropped exception: "
+              "Dropped exception: "
                   + System.lineSeparator()
                   + "\tat "
                   + StackWalker.getInstance()
                       .walk(
                           frames ->
                               frames
-                                  .limit(15)
                                   .map(StackWalker.StackFrame::toString)
                                   .collect(Collectors.joining(System.lineSeparator() + "\tat "))),
           exception);
