@@ -35,8 +35,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 /** A subscription that publishes submitted items. */
 public final class SubmittableSubscription<T> extends AbstractQueueSubscription<T> {
-  private static final int AWAIT_ABORT_TIMEOUT_SECONDS = 2;
-
   private final Lock abortLock = new ReentrantLock();
   private final Condition abortedCondition = abortLock.newCondition();
 
@@ -67,10 +65,10 @@ public final class SubmittableSubscription<T> extends AbstractQueueSubscription<
   public void awaitAbort() {
     abortLock.lock();
     try {
-      long remainingNanos = TimeUnit.SECONDS.toNanos(AWAIT_ABORT_TIMEOUT_SECONDS);
+      long remainingNanos = TimeUnit.SECONDS.toNanos(TestUtils.TIMEOUT_SECONDS);
       while (abortCount == 0) {
         if (remainingNanos <= 0) {
-          fail("timed out while waiting for abort()");
+          fail("Timed out while waiting for abort()");
         }
         try {
           remainingNanos = abortedCondition.awaitNanos(remainingNanos);

@@ -43,6 +43,7 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -368,7 +369,8 @@ abstract class AbstractHttpCacheTest {
 
     void await() {
       try {
-        phaser.awaitAdvanceInterruptibly(phaser.arrive(), 5, TimeUnit.SECONDS);
+        phaser.awaitAdvanceInterruptibly(
+            phaser.arrive(), TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
       } catch (InterruptedException | TimeoutException e) {
         fail("Timed out / interrupted while waiting for editors to be closed", e);
       }
@@ -481,7 +483,8 @@ abstract class AbstractHttpCacheTest {
 
     void await() {
       try {
-        phaser.awaitAdvanceInterruptibly(phaser.arrive(), 5, TimeUnit.SECONDS);
+        phaser.awaitAdvanceInterruptibly(
+            phaser.arrive(), TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
       } catch (InterruptedException | TimeoutException e) {
         fail("Timed out / interrupted while waiting for tasks to finish", e);
       }

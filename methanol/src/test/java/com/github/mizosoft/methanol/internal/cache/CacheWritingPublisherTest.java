@@ -70,11 +70,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(5)
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
 @RepeatArguments(10)
 class CacheWritingPublisherTest {
@@ -528,8 +526,6 @@ class CacheWritingPublisherTest {
   }
 
   private static class TestEditor implements Editor {
-    private static final int TIMEOUT_SECONDS = 3;
-
     private final Lock lock = new ReentrantLock();
     private final Condition closedCondition = lock.newCondition();
 
@@ -594,17 +590,17 @@ class CacheWritingPublisherTest {
     }
 
     void awaitClose() {
-      long remainingNanos = TimeUnit.SECONDS.toNanos(TIMEOUT_SECONDS);
+      long remainingNanos = TimeUnit.SECONDS.toNanos(TestUtils.TIMEOUT_SECONDS);
       lock.lock();
       try {
         while (!closed) {
           try {
             if (remainingNanos <= 0) {
-              fail("expected to be closed within " + TIMEOUT_SECONDS + " seconds");
+              fail("expected to be closed within " + TestUtils.TIMEOUT_SECONDS + " seconds");
             }
             remainingNanos = closedCondition.awaitNanos(remainingNanos);
           } catch (InterruptedException e) {
-            fail("unexpected exception", e);
+            fail("Interrupted", e);
           }
         }
       } finally {

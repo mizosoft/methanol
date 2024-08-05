@@ -47,7 +47,7 @@ public final class RedisClusterSession implements RedisSession {
   private static final Logger logger = System.getLogger(RedisClusterSession.class.getName());
 
   private static final int HEALTH_CHECK_MAX_RETRIES = 10;
-  private static final int CLUSTER_JOIN_TIMEOUT_SECONDS = 20;
+  private static final int CLUSTER_JOIN_TIMEOUT_SECONDS = TestUtils.VERY_SLOW_TIMEOUT_SECONDS;
 
   private final List<RedisStandaloneSession> nodes;
 

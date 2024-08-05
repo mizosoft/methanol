@@ -73,7 +73,7 @@ public class CacheWritingPublisherTckTest extends FlowPublisherVerification<List
 
   @Factory(dataProvider = "provider")
   public CacheWritingPublisherTckTest(ExecutorType executorType, StoreType storeType) {
-    super(TckUtils.newTestEnvironment(CacheWritingPublisherTckTest.class));
+    super(TckUtils.newTestEnvironment());
     this.executorType = executorType;
     this.storeConfig = StoreConfig.createDefault(storeType);
   }

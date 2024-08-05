@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import org.assertj.core.api.Assertions;
@@ -52,9 +53,7 @@ class JacksonFluxDecoderTest {
 
   @Test
   void incompatibleMediaTypes() {
-    verifyThat(createDecoder())
-        .isNotCompatibleWith("text/html")
-        .isNotCompatibleWith("text/*");
+    verifyThat(createDecoder()).isNotCompatibleWith("text/html").isNotCompatibleWith("text/*");
   }
 
   @Test
@@ -78,9 +77,10 @@ class JacksonFluxDecoderTest {
 
   @Test
   void deserializeMonoWithCustomDeserializer() {
-    var mapper = new JsonMapper()
-        .registerModule(
-            new SimpleModule().addDeserializer(Point.class, new CompactPointDeserializer()));
+    var mapper =
+        new JsonMapper()
+            .registerModule(
+                new SimpleModule().addDeserializer(Point.class, new CompactPointDeserializer()));
     verifyThat(createDecoder(mapper))
         .converting(new TypeRef<Mono<Point>>() {})
         .withBody("[1, 2]")
@@ -111,9 +111,10 @@ class JacksonFluxDecoderTest {
 
   @Test
   void deserializeFluxWithCustomDeserializer() {
-    var mapper = new JsonMapper()
-        .registerModule(
-            new SimpleModule().addDeserializer(Point.class, new CompactPointDeserializer()));
+    var mapper =
+        new JsonMapper()
+            .registerModule(
+                new SimpleModule().addDeserializer(Point.class, new CompactPointDeserializer()));
     verifyThat(createDecoder(mapper))
         .converting(new TypeRef<Flux<Point>>() {})
         .withBody("[[1, 2], [3, 4]]")
@@ -138,17 +139,17 @@ class JacksonFluxDecoderTest {
         .converting(new TypeRef<java.util.concurrent.Flow.Publisher<Point>>() {})
         .withBody("[{\"x\":1, \"y\":2}, {\"x\":3, \"y\":4}]")
         .completedBody()
-        .extracting(
-            publisher -> flowPublisherToFlux(publisher).toIterable(), Assertions.ITERABLE)
+        .extracting(publisher -> flowPublisherToFlux(publisher).toIterable(), Assertions.ITERABLE)
         .containsExactly(new Point(1, 2), new Point(3, 4));
   }
 
   /** Test that the used parser has access to the underlying ObjectMapper. */
   @Test
   void deserializeMonoWithCustomDeserializerThatNeedsParserCodec() {
-    var mapper = new ObjectMapper()
-        .registerModule(
-            new SimpleModule().addDeserializer(Point.class, new PointTreeNodeDeserializer()));
+    var mapper =
+        new ObjectMapper()
+            .registerModule(
+                new SimpleModule().addDeserializer(Point.class, new PointTreeNodeDeserializer()));
     verifyThat(createDecoder(mapper))
         .converting(new TypeRef<Mono<Point>>() {})
         .withBody("{\"x\":1, \"y\":2}")
@@ -163,7 +164,7 @@ class JacksonFluxDecoderTest {
         .withBody("{x:\"1\", y:\"2\"") // Missing enclosing bracket
         .completedBody()
         .extracting(Mono::toFuture, Assertions.COMPLETABLE_FUTURE)
-        .failsWithin(Duration.ofSeconds(20))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(JsonProcessingException.class);
   }
@@ -175,7 +176,7 @@ class JacksonFluxDecoderTest {
         .withBody("[{\"x\":1, \"y\":2}, {\"x\":3, \"y\":4}") // Missing enclosing bracket
         .completedBody()
         .extracting(Mono::toFuture, Assertions.COMPLETABLE_FUTURE)
-        .failsWithin(Duration.ofSeconds(20))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(JsonProcessingException.class);
   }
@@ -184,9 +185,7 @@ class JacksonFluxDecoderTest {
   void deserializeWithUnsupportedType() {
     class NotAPublisher {}
 
-    verifyThat(createDecoder())
-        .converting(NotAPublisher.class)
-        .isNotSupported();
+    verifyThat(createDecoder()).converting(NotAPublisher.class).isNotSupported();
   }
 
   @Test

@@ -66,7 +66,7 @@ public class AsyncBodyDecoderTckTest
 
   @Factory(dataProvider = "provider")
   public AsyncBodyDecoderTckTest(ExecutorType executorType) {
-    super(TckUtils.newTestEnvironment(AsyncBodyDecoderTckTest.class));
+    super(TckUtils.newTestEnvironment());
     this.executorType = executorType;
   }
 

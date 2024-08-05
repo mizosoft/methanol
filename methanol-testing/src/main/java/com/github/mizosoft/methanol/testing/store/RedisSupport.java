@@ -90,7 +90,7 @@ class RedisSupport {
       var process =
           new ProcessBuilder().command(command, "--version").redirectErrorStream(true).start();
       try (var reader = TestUtils.inputReaderOf(process)) {
-        if (!process.waitFor(10, TimeUnit.SECONDS)) {
+        if (!process.waitFor(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
           reportUnavailability(command, "timed out", null, reader);
         }
         if (process.exitValue() != 0) {
