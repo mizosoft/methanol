@@ -27,7 +27,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** Marks a TCK test as slow, mostly due to IO-based workloads. */
+/** Marks a TCK test as slow, typically due to IO-based workloads. */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Slow {}

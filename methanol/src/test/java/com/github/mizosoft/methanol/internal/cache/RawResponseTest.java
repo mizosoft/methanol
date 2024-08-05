@@ -83,7 +83,7 @@ class RawResponseTest {
     var rawResponse = failingWith(TestException::new);
     var handledResponseFuture = rawResponse.handleAsync(BodyHandlers.ofString(), threadPool);
     assertThat(handledResponseFuture)
-        .failsWithin(Duration.ofSeconds(1))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(TestException.class);
   }

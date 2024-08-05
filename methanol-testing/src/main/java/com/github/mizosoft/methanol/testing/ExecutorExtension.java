@@ -177,7 +177,7 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
   private static final class ManagedExecutors implements CloseableResource {
     final ExecutorContext context = new ExecutorContext();
 
-    ManagedExecutors() {}
+    private ManagedExecutors() {}
 
     Executor createExecutor(ExecutorType type) {
       return context.createExecutor(type);
@@ -191,7 +191,8 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
     static ManagedExecutors get(ExtensionContext extensionContext) {
       return extensionContext
           .getStore(EXTENSION_NAMESPACE)
-          .getOrComputeIfAbsent(ManagedExecutors.class);
+          .getOrComputeIfAbsent(
+              ManagedExecutors.class, __ -> new ManagedExecutors(), ManagedExecutors.class);
     }
   }
 }

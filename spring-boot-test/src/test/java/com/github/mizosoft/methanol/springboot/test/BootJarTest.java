@@ -29,6 +29,9 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.MoreBodyHandlers;
 import com.github.mizosoft.methanol.MutableRequest;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.http.HttpResponse;
@@ -36,7 +39,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -44,9 +46,13 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(ExecutorExtension.class)
 class BootJarTest {
-  private static final String JAR_PATH_PROP = "com.github.mizosoft.methanol.bootJar.path";
+  private static final String JAR_PATH_PROP =
+      "com.github.mizosoft.methanol.springboot.test.bootJarPath";
 
   // Range for 'dynamic ports'
   private static final int PORT_START = 49152;
@@ -55,16 +61,14 @@ class BootJarTest {
   private final List<String> processOutput = new ArrayList<>();
   private Process bootJarProcess;
   private Methanol client;
-
-  // TODO replace with ExecutorExtension after removing to common module
-  private ExecutorService executorService;
+  private ExecutorService executor;
 
   @BeforeEach
   void assumeJava() throws Exception {
     var process =
         new ProcessBuilder().command("java", "--version").redirectErrorStream(true).start();
     try (var in = TestUtils.inputReaderOf(process)) {
-      assertThat(process.waitFor(10, TimeUnit.SECONDS))
+      assertThat(process.waitFor(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS))
           .withFailMessage("'java --version' timed out")
           .isTrue();
       assumeThat(process.exitValue())
@@ -77,8 +81,9 @@ class BootJarTest {
   }
 
   @BeforeEach
-  void setUp() {
-    executorService = Executors.newCachedThreadPool();
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
+  void setUp(ExecutorService executor) {
+    this.executor = executor;
   }
 
   private boolean tryLaunchBootJar(int port) throws Exception {
@@ -100,9 +105,9 @@ class BootJarTest {
     var in = TestUtils.inputReaderOf(bootJarProcess);
     while (true) {
       String line;
-      var lineFuture = executorService.submit(in::readLine);
+      var lineFuture = executor.submit(in::readLine);
       try {
-        line = lineFuture.get(10, TimeUnit.SECONDS);
+        line = lineFuture.get(TestUtils.VERY_SLOW_TIMEOUT_SECONDS, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
         lineFuture.cancel(true);
         return fail(formatProcessOutput("readLine timed out", processOutput), e);
@@ -127,6 +132,7 @@ class BootJarTest {
   }
 
   @BeforeEach
+  @Timeout(TestUtils.VERY_SLOW_TIMEOUT_SECONDS)
   void launchBootJar() throws Exception {
     int port;
     do {
@@ -137,7 +143,7 @@ class BootJarTest {
 
   @AfterEach
   void tearDown() {
-    TestUtils.shutdown(executorService);
+    TestUtils.shutdown(executor);
     if (bootJarProcess != null) {
       bootJarProcess.destroyForcibly();
     }
@@ -149,7 +155,8 @@ class BootJarTest {
     try {
       response =
           client.send(
-              MutableRequest.GET("?x=11&y=22").timeout(Duration.ofSeconds(20)),
+              MutableRequest.GET("?x=11&y=22")
+                  .timeout(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS)),
               MoreBodyHandlers.ofObject(Point.class));
     } catch (IOException e) {
       // Spill what's remaining in stdout without blocking
@@ -187,7 +194,7 @@ class BootJarTest {
   private static String findBootJarPath() {
     var path = System.getProperty(JAR_PATH_PROP);
     assertThat(path)
-        .withFailMessage(() -> "couldn't find boot jar: " + JAR_PATH_PROP + " isn't set")
+        .withFailMessage(() -> "Couldn't find boot jar: " + JAR_PATH_PROP + " isn't set")
         .isNotNull();
     return path;
   }

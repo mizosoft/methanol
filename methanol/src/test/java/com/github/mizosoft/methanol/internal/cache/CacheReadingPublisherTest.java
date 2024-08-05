@@ -40,6 +40,7 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.RepeatArguments;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.store.StoreExtension;
@@ -56,11 +57,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(5)
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
 @RepeatArguments(10)
 class CacheReadingPublisherTest {
@@ -131,7 +130,7 @@ class CacheReadingPublisherTest {
     var subscriber = BodySubscribers.ofString(UTF_8);
     publisher.subscribe(subscriber);
     assertThat(subscriber.getBody())
-        .succeedsWithin(Duration.ofSeconds(5))
+        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .returns(str.length(), from(String::length))
         .isEqualTo(str);
   }

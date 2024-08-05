@@ -312,7 +312,7 @@ public final class StoreExtension
   private static final class ManagedStores implements CloseableResource {
     private final Map<Object, List<StoreContext>> contexts = new HashMap<>();
 
-    ManagedStores() {}
+    private ManagedStores() {}
 
     StoreContext createContext(Object key, StoreConfig config) throws IOException {
       var context = StoreContext.of(config);
@@ -361,7 +361,10 @@ public final class StoreExtension
     }
 
     static ManagedStores get(ExtensionContext context) {
-      return context.getStore(EXTENSION_NAMESPACE).getOrComputeIfAbsent(ManagedStores.class);
+      return context
+          .getStore(EXTENSION_NAMESPACE)
+          .getOrComputeIfAbsent(
+              ManagedStores.class, __ -> new ManagedStores(), ManagedStores.class);
     }
   }
 }

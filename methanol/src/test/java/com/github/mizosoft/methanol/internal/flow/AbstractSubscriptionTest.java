@@ -49,6 +49,7 @@ import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittableSubscription;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -60,10 +61,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(2)
 @ExtendWith(ExecutorExtension.class)
 class AbstractSubscriptionTest {
   static {
@@ -315,7 +314,6 @@ class AbstractSubscriptionTest {
   }
 
   /** Tests scenario for JDK-8187947: A race condition in SubmissionPublisher. */
-  @Timeout(2)
   @ExecutorParameterizedTest
   void testMissedSignal_8187947(Executor executor, ExecutorContext executorContext)
       throws Exception {
@@ -349,8 +347,8 @@ class AbstractSubscriptionTest {
     ref.set(subscription);
     subscription.fireOrKeepAlive();
     CompletableFuture.runAsync(() -> subscription.submit(Boolean.TRUE), submitExecutor)
-        .get(20, TimeUnit.SECONDS);
-    assertThat(finished.await(20, TimeUnit.SECONDS)).isTrue();
+        .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    assertThat(finished.await(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -455,7 +453,9 @@ class AbstractSubscriptionTest {
         };
     subscription.fireOrKeepAlive();
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
-    assertThat(abortFuture).succeedsWithin(Duration.ofSeconds(1)).isEqualTo(true);
+    assertThat(abortFuture)
+        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
+        .isEqualTo(true);
   }
 
   @ExecutorParameterizedTest

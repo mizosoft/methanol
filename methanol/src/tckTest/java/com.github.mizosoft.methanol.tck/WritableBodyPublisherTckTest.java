@@ -32,7 +32,7 @@ import org.testng.SkipException;
 
 public class WritableBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
   public WritableBodyPublisherTckTest() {
-    super(TckUtils.newTestEnvironment(WritableBodyPublisherTckTest.class));
+    super(TckUtils.newTestEnvironment());
   }
 
   @Override

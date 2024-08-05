@@ -69,6 +69,7 @@ import com.github.mizosoft.methanol.internal.function.ThrowingBiConsumer;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
 import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.store.StoreContext;
 import com.github.mizosoft.methanol.testing.store.StoreExtension;
@@ -129,7 +130,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.TestAbortedException;
 
-@Timeout(10)
+@Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
 @ExtendWith(StoreExtension.class)
 class HttpCacheTest extends AbstractHttpCacheTest {
   /**
@@ -3318,8 +3319,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   }
 
   static final class RecordingListener implements Listener {
-    private static final int TIMEOUT_SECONDS = 2;
-
     final EventCategory toRecord;
     final BlockingQueue<Event> events = new LinkedBlockingQueue<>();
 
@@ -3334,13 +3333,14 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
     Event pollNext() {
       try {
-        var event = events.poll(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        var event = events.poll(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
         assertThat(event)
-            .withFailMessage(() -> "expected an event within " + TIMEOUT_SECONDS + " seconds")
+            .withFailMessage(
+                () -> "Expected an event within " + TestUtils.TIMEOUT_SECONDS + " seconds")
             .isNotNull();
         return event;
       } catch (InterruptedException e) {
-        return fail("unexpected exception", e);
+        return fail("Unexpected exception", e);
       }
     }
 

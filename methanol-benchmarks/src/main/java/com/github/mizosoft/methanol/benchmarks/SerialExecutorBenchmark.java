@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.benchmarks;
 
 import com.github.mizosoft.methanol.internal.concurrent.SerialExecutor;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
@@ -55,7 +56,7 @@ public class SerialExecutorBenchmark {
   @TearDown
   public void tearDown() throws InterruptedException {
     delegate.shutdown();
-    if (!delegate.awaitTermination(2, TimeUnit.SECONDS)) {
+    if (!delegate.awaitTermination(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
       throw new RuntimeException("timed out while waiting for termination");
     }
   }

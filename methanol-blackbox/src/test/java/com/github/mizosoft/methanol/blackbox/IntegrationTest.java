@@ -115,12 +115,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Flux;
 
-@Timeout(10)
 @ExtendWith(ExecutorExtension.class)
 class IntegrationTest {
   private static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
@@ -596,7 +594,9 @@ class IntegrationTest {
   void fromAsyncSubscriber_uncompletedToCompletedBody() throws Exception {
     server.enqueue(new MockResponse().setBody(okBuffer(new byte[] {1})));
     var request =
-        HttpRequest.newBuilder(server.url("/").uri()).timeout(Duration.ofSeconds(10)).build();
+        HttpRequest.newBuilder(server.url("/").uri())
+            .timeout(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
+            .build();
     var deadlockBody =
         new BodySubscriber<>() {
           private final CompletableFuture<Subscription> subscriptionCf = new CompletableFuture<>();

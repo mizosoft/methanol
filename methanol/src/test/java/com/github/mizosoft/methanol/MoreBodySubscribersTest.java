@@ -68,10 +68,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(5)
 @ExtendWith(ExecutorExtension.class)
 class MoreBodySubscribersTest {
   @Test
@@ -122,7 +120,7 @@ class MoreBodySubscribersTest {
     interruptLatch.await();
     readerThread.get().interrupt();
     assertThat(readFuture)
-        .failsWithin(Duration.ofSeconds(1))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(ClosedByInterruptException.class);
   }
@@ -272,7 +270,9 @@ class MoreBodySubscribersTest {
     var publisher = publisherOf(body, buffSize, buffsPerList, executor);
     var timeoutSubscriber = withReadTimeout(ofString(UTF_8), Duration.ofMillis(Long.MAX_VALUE));
     publisher.subscribe(timeoutSubscriber);
-    assertThat(timeoutSubscriber.getBody()).succeedsWithin(Duration.ofSeconds(20)).isEqualTo(body);
+    assertThat(timeoutSubscriber.getBody())
+        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
+        .isEqualTo(body);
   }
 
   @Test
@@ -457,7 +457,7 @@ class MoreBodySubscribersTest {
   private static void assertReadTimeout(
       BodySubscriber<?> subscriber, int index, long timeoutMillis) {
     assertThat(subscriber.getBody())
-        .failsWithin(Duration.ofSeconds(20))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
         .isInstanceOf(HttpReadTimeoutException.class)

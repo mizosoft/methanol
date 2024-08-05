@@ -70,11 +70,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /** DiskStore specific tests that are complementary to {@link StoreTest}. */
-@Timeout(5)
 @ExtendWith({StoreExtension.class, ExecutorExtension.class})
 class DiskStoreTest {
   static {

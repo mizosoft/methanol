@@ -25,7 +25,7 @@ tasks.test {
   dependsOn(tasks.bootJar)
   doFirst {
     systemProperty(
-      "com.github.mizosoft.methanol.bootJar.path",
+      "com.github.mizosoft.methanol.springboot.test.bootJarPath",
       tasks.bootJar.flatMap { it.archiveFile }.get()
     )
   }
