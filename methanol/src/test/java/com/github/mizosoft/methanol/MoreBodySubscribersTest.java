@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,6 @@ import static com.github.mizosoft.methanol.MoreBodySubscribers.ofObject;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.ofReader;
 import static com.github.mizosoft.methanol.MoreBodySubscribers.withReadTimeout;
 import static com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType.SCHEDULER;
-import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
 import static com.github.mizosoft.methanol.testing.TestUtils.toByteArray;
 import static java.net.http.HttpResponse.BodySubscribers.discarding;
 import static java.net.http.HttpResponse.BodySubscribers.fromSubscriber;
@@ -42,12 +41,12 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.*;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedByInterruptException;
@@ -82,7 +81,7 @@ class MoreBodySubscribersTest {
 
   @Test
   @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void ofByteChannel_readsBody(Executor executor) throws IOException {
+  void ofByteChannel_readsBody(Executor executor) throws Exception {
     int buffSize = 100;
     int buffsPerList = 5;
     int listCount = 5;
@@ -103,31 +102,34 @@ class MoreBodySubscribersTest {
 
   @Test
   @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void ofByteChannel_isInterruptible(Executor executor) {
+  void ofByteChannel_isInterruptible(Executor executor) throws Exception {
     var subscriber = ofByteChannel();
     var channel = getBody(subscriber);
     assertThat(channel).isInstanceOf(InterruptibleChannel.class);
 
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    var readLatch = new CountDownLatch(1);
-    var readerThread = Thread.currentThread();
-    executor.execute(
-        () -> {
-          awaitUninterruptibly(readLatch);
-          readerThread.interrupt();
-        });
-
-    assertThatExceptionOfType(ClosedByInterruptException.class)
-        .isThrownBy(
-            () -> {
-              readLatch.countDown();
-              channel.read(ByteBuffer.allocate(1));
-            });
+    var interruptLatch = new CountDownLatch(1);
+    var readerThread = new AtomicReference<Thread>();
+    var readFuture =
+        CompletableFuture.runAsync(
+            Unchecked.runnable(
+                () -> {
+                  readerThread.set(Thread.currentThread());
+                  interruptLatch.countDown();
+                  channel.read(ByteBuffer.allocate(1));
+                }),
+            executor);
+    interruptLatch.await();
+    readerThread.get().interrupt();
+    assertThat(readFuture)
+        .failsWithin(Duration.ofSeconds(1))
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseInstanceOf(ClosedByInterruptException.class);
   }
 
   @Test
   @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void ofByteChannel_blocksForAtLeastOneByte(Executor executor) throws IOException {
+  void ofByteChannel_blocksForAtLeastOneByte(Executor executor) throws Exception {
     var oneByte = ByteBuffer.wrap(new byte[] {'b'});
     var subscriber = ofByteChannel();
     var channel = getBody(subscriber);
@@ -143,7 +145,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void ofByteChannel_cancelsUpstreamWhenClosed() throws IOException {
+  void ofByteChannel_cancelsUpstreamWhenClosed() throws Exception {
     var subscription = new TestSubscription();
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(subscription);
@@ -156,7 +158,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void ofByteChannel_cancelsUpstreamWhenReaderIsInterrupted() {
+  void ofByteChannel_cancelsUpstreamWhenReaderIsInterrupted() throws Exception {
     var subscription = new TestSubscription();
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(subscription);
@@ -169,7 +171,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void ofByteChannel_cancelsUpstreamIfClosedBeforeSubscribing() throws IOException {
+  void ofByteChannel_cancelsUpstreamIfClosedBeforeSubscribing() throws Exception {
     var subscriber = ofByteChannel();
     getBody(subscriber).close();
 
@@ -179,7 +181,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void ofByteChannel_throwsUpstreamErrors() {
+  void ofByteChannel_throwsUpstreamErrors() throws Exception {
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     subscriber.onError(new TestException());
@@ -191,7 +193,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void ofByteChannel_throwsUpstreamErrorsEvenIfThereIsData() {
+  void ofByteChannel_throwsUpstreamErrorsEvenIfThereIsData() throws Exception {
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     subscriber.onNext(List.of(ByteBuffer.wrap(new byte[] {'a'})));
@@ -204,7 +206,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void ofByteChannel_handlesQueueOverflowGracefully() {
+  void ofByteChannel_handlesQueueOverflowGracefully() throws Exception {
     var subscription = new TestSubscription();
     var subscriber = ofByteChannel();
     subscriber.onSubscribe(subscription);
@@ -231,7 +233,7 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void ofReader_decodesInGivenCharset() throws IOException {
+  void ofReader_decodesInGivenCharset() throws Exception {
     var str = "لوريم إيبسوم";
     var subscriber = ofReader(UTF_8);
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
@@ -413,7 +415,7 @@ class MoreBodySubscribersTest {
 
   @Test
   @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void ofObject_stringBody(Executor executor) {
+  void ofObject_stringBody(Executor executor) throws Exception {
     var publisher = publisherOf("Pikachu", "Pikachu".length(), 1, executor);
     var subscriber = ofObject(TypeRef.of(String.class), MediaType.TEXT_PLAIN);
     publisher.subscribe(subscriber);
@@ -422,7 +424,7 @@ class MoreBodySubscribersTest {
 
   @Test
   @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void ofDeferredObject_stringBody(Executor executor) {
+  void ofDeferredObject_stringBody(Executor executor) throws Exception {
     var publisher = publisherOf("Pikachu", "Pikachu".length(), 1, executor);
     var subscriber = ofDeferredObject(TypeRef.of(String.class), MediaType.parse("text/plain"));
     assertThat(subscriber.getBody()).isCompleted();
@@ -466,8 +468,9 @@ class MoreBodySubscribersTest {
     return s.getBody().toCompletableFuture();
   }
 
-  private static <T> T getBody(BodySubscriber<T> s) {
-    return toFuture(s).join();
+  private static <T> T getBody(BodySubscriber<T> s)
+      throws ExecutionException, InterruptedException {
+    return toFuture(s).get();
   }
 
   private static String randomString(int len) {

@@ -42,6 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
@@ -71,14 +72,11 @@ public class TestUtils {
     return new Random(RANDOM_SEED);
   }
 
-  public static void awaitUninterruptibly(CountDownLatch latch) {
-    while (true) {
-      try {
-        latch.await();
-        return;
-      } catch (InterruptedException ignored) {
-        // continue;
-      }
+  public static void awaitUnchecked(CountDownLatch latch) {
+    try {
+      latch.await();
+    } catch (InterruptedException e) {
+      throw new CompletionException(e);
     }
   }
 
@@ -86,7 +84,7 @@ public class TestUtils {
     try {
       barrier.await();
     } catch (InterruptedException | BrokenBarrierException e) {
-      throw new RuntimeException(e);
+      throw new CompletionException(e);
     }
   }
 

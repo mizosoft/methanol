@@ -210,7 +210,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         clientBuilder.clearInterceptors();
         ((QueueDispatcher) server.getDispatcher()).clear();
       } catch (TestAbortedException e) {
-        logger.log(Level.INFO, "Skipping test with a failed assumption", e);
+        logger.log(Level.INFO, "Skipping test with a failed assumption: " + e.getMessage());
       } catch (Throwable t) {
         fail("Test failed when running with <" + value + ">", t);
       }

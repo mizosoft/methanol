@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -201,7 +201,7 @@ class SerialExecutorTest {
           });
     }
 
-    assertAll(futures.stream().map(future -> future::join));
+    assertAll(futures.stream().map(future -> future::get));
     assertThat(calls).hasValue(threadCount);
   }
 }

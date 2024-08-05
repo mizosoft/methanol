@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
-import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -174,14 +174,14 @@ class CacheReadingPublisherTest {
           public int read(ByteBuffer dst) {
             readAsyncCalls.incrementAndGet();
             firstReadLatch.countDown();
-            awaitUninterruptibly(endReadLatch);
+            awaitUnchecked(endReadLatch);
             return -1;
           }
         };
     var publisher = new CacheReadingPublisher(viewer, executor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
     publisher.subscribe(subscriber);
-    awaitUninterruptibly(firstReadLatch);
+    awaitUnchecked(firstReadLatch);
     subscriber.awaitSubscription().cancel();
 
     // Trigger CacheReadingPublisher's read completion callback.

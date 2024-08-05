@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -200,7 +201,13 @@ public final class RecordingHttpClient extends HttpClient {
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     subscriber.onNext(List.of(responseBody));
     subscriber.onComplete();
-    return subscriber.getBody().toCompletableFuture().join();
+    try {
+      return subscriber.getBody().toCompletableFuture().get();
+    } catch (InterruptedException e) {
+      throw new CompletionException(e);
+    } catch (ExecutionException e) {
+      throw new CompletionException(e.getCause());
+    }
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")

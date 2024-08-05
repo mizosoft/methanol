@@ -134,7 +134,7 @@ class MethanolClientTest {
         new MockResponse()
             .setBody(new okio.Buffer().write(gzip("Unzip me!")))
             .setHeader("Content-Encoding", "gzip"));
-    verifyThat(client.sendAsync(GET("relative?q=value"), BodyHandlers.ofString()).join())
+    verifyThat(client.sendAsync(GET("relative?q=value"), BodyHandlers.ofString()).get())
         .hasCode(200)
         .hasBody("Unzip me!")
         .doesNotContainHeader("Content-Encoding")
@@ -152,7 +152,7 @@ class MethanolClientTest {
 
   @Test
   @UseHttps
-  void asyncGetWithCompressedPush() {
+  void asyncGetWithCompressedPush() throws Exception {
     var client = clientBuilder.version(Version.HTTP_2).build();
 
     var decompressedPaths = Set.of("/push0", "/push2");
@@ -190,14 +190,14 @@ class MethanolClientTest {
                     GET(serverUri),
                     BodyHandlers.ofString(),
                     PushPromiseHandler.of(__ -> BodyHandlers.ofString(), pushFutures))
-                .join())
+                .get())
         .hasCode(200)
         .hasBody("Pikachu")
         .doesNotContainHeader("Content-Encoding")
         .doesNotContainHeader("Content-Length");
 
     for (var future : pushFutures.values()) {
-      var response = future.join();
+      var response = future.get();
       if (decompressedPaths.contains(response.uri().getPath())) {
         verifyThat(response)
             .hasCode(200)
@@ -403,17 +403,15 @@ class MethanolClientTest {
   }
 
   @Test
-  void asyncRetryingWithInterceptors() {
+  void asyncRetryingWithInterceptors() throws Exception {
     int maxRetries = 3;
-
-    var client = clientBuilder.interceptor(new RetryingInterceptor(maxRetries)).build();
-
     for (int i = 0; i < maxRetries; i++) {
       server.enqueue(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
     }
     server.enqueue(new MockResponse().setBody("I'm back!"));
 
-    verifyThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()).join())
+    var client = clientBuilder.interceptor(new RetryingInterceptor(maxRetries)).build();
+    verifyThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()).get())
         .hasCode(200)
         .hasBody("I'm back!");
   }
@@ -488,14 +486,13 @@ class MethanolClientTest {
         new MockResponse()
             .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
             .addHeader("Content-Type", "text/plain"));
-    verifyThat(client.sendAsync(GET(serverUri), String.class).join()).hasBody("Pikachu");
+    verifyThat(client.sendAsync(GET(serverUri), String.class).get()).hasBody("Pikachu");
 
     server.enqueue(
         new MockResponse()
             .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
             .addHeader("Content-Type", "text/plain"));
-    verifyThat(client.sendAsync(GET(serverUri), TypeRef.of(String.class)).join())
-        .hasBody("Pikachu");
+    verifyThat(client.sendAsync(GET(serverUri), TypeRef.of(String.class)).get()).hasBody("Pikachu");
   }
 
   @Test
