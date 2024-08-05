@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.function.Supplier;
@@ -136,7 +137,13 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
     private SupplierVerifier<T> verifySupplier(BodySubscriber<Supplier<T>> subscriber) {
       var bodyFuture = subscriber.getBody();
       assertThat(bodyFuture).isCompleted().isNotCancelled();
-      return new SupplierVerifier<>(bodyFuture.toCompletableFuture().join());
+      try {
+        return new SupplierVerifier<>(bodyFuture.toCompletableFuture().get());
+      } catch (InterruptedException e) {
+        throw new CompletionException(e);
+      } catch (ExecutionException e) {
+        throw new CompletionException(e.getCause());
+      }
     }
 
     private static void publishBody(BodySubscriber<?> subscriber, ByteBuffer buffer) {

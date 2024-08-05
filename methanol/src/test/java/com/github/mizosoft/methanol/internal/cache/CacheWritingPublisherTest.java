@@ -25,7 +25,7 @@ package com.github.mizosoft.methanol.internal.cache;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
 import static com.github.mizosoft.methanol.testing.TestUtils.EMPTY_BUFFER;
-import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -350,7 +350,7 @@ class CacheWritingPublisherTest {
         new TestEditor() {
           @Override
           int write(ByteBuffer src) {
-            awaitUninterruptibly(bodyCompletionLatch);
+            awaitUnchecked(bodyCompletionLatch);
             return super.write(src);
           }
         };
@@ -418,7 +418,7 @@ class CacheWritingPublisherTest {
             return CompletableFuture.runAsync(
                     () -> {
                       calledCommit.countDown();
-                      awaitUninterruptibly(proceedWithCommit);
+                      awaitUnchecked(proceedWithCommit);
                     },
                     executor)
                 .thenCompose(__ -> super.commit(metadata, executor));
@@ -437,7 +437,7 @@ class CacheWritingPublisherTest {
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Pikachu"));
     upstream.close();
-    awaitUninterruptibly(calledCommit);
+    awaitUnchecked(calledCommit);
     assertThat(subscriber.completionCount()).isZero();
 
     // Complete by committing edit.
@@ -490,7 +490,7 @@ class CacheWritingPublisherTest {
           @Override
           int write(ByteBuffer src) {
             calledWrite.countDown();
-            awaitUninterruptibly(proceedWithWrite);
+            awaitUnchecked(proceedWithWrite);
             throw new TestException();
           }
         };
@@ -507,7 +507,7 @@ class CacheWritingPublisherTest {
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Pikachu"));
     upstream.close();
-    awaitUninterruptibly(calledWrite);
+    awaitUnchecked(calledWrite);
     assertThat(subscriber.completionCount()).isZero();
 
     // Complete by discarding the edit.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -236,11 +236,12 @@ class HttpRedirectTest {
     //    System.out.println("Setup: done");
   }
 
-  private void testNonIdempotent(URI u, HttpRequest request, int code, String method) {
+  private void testNonIdempotent(URI u, HttpRequest request, int code, String method)
+      throws Exception {
     //    System.out.println("Testing with " + u);
     CompletableFuture<HttpResponse<String>> respCf =
         client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
-    HttpResponse<String> resp = respCf.join();
+    HttpResponse<String> resp = respCf.get();
     if (method.equals("DO_NOT_FOLLOW")) {
       assertEquals(code, resp.statusCode(), u + ": status code");
     } else {
@@ -258,10 +259,10 @@ class HttpRedirectTest {
     }
   }
 
-  public void testIdempotent(URI u, HttpRequest request, int code, String method) {
+  public void testIdempotent(URI u, HttpRequest request, int code, String method) throws Exception {
     CompletableFuture<HttpResponse<String>> respCf =
         client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
-    HttpResponse<String> resp = respCf.join();
+    HttpResponse<String> resp = respCf.get();
     if (method.equals("DO_NOT_FOLLOW")) {
       assertEquals(code, resp.statusCode(), u + ": status code");
     } else {
@@ -287,7 +288,7 @@ class HttpRedirectTest {
 
   @ParameterizedTest
   @MethodSource("uris")
-  void testPOST(Supplier<URI> uri, int code, String method) {
+  void testPOST(Supplier<URI> uri, int code, String method) throws Exception {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
     HttpRequest request =
         HttpRequest.newBuilder(u).POST(HttpRequest.BodyPublishers.ofString(REQUEST_BODY)).build();
@@ -297,7 +298,7 @@ class HttpRedirectTest {
 
   @ParameterizedTest
   @MethodSource("uris")
-  void testPUT(Supplier<URI> uri, int code, String method) {
+  void testPUT(Supplier<URI> uri, int code, String method) throws Exception {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
     //    System.out.println("Testing with " + u);
     HttpRequest request =
@@ -308,7 +309,7 @@ class HttpRedirectTest {
 
   @ParameterizedTest
   @MethodSource("uris")
-  void testFoo(Supplier<URI> uri, int code, String method) {
+  void testFoo(Supplier<URI> uri, int code, String method) throws Exception {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
     //    System.out.println("Testing with " + u);
     HttpRequest request =
@@ -322,7 +323,7 @@ class HttpRedirectTest {
   @ParameterizedTest
   @MethodSource("uris")
   @Disabled("MockWebServer complains about GET requests with bodies")
-  void testGet(Supplier<URI> uri, int code, String method) {
+  void testGet(Supplier<URI> uri, int code, String method) throws Exception {
     URI u = uri.get().resolve("foo?n=" + requestCounter.incrementAndGet());
     //    System.out.println("Testing with " + u);
     HttpRequest request =
@@ -331,7 +332,7 @@ class HttpRedirectTest {
             .build();
     CompletableFuture<HttpResponse<String>> respCf =
         client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
-    HttpResponse<String> resp = respCf.join();
+    HttpResponse<String> resp = respCf.get();
     // body will be preserved except for 304 and 303: this is a GET.
     if (method.equals("DO_NOT_FOLLOW")) {
       assertEquals(code, resp.statusCode(), u + ": status code");

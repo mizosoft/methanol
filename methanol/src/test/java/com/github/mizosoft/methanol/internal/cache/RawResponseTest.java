@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.cache;
 import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -39,9 +40,10 @@ import java.net.http.HttpClient.Version;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.function.Supplier;
@@ -62,7 +64,7 @@ class RawResponseTest {
 
   @Test
   @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void handleAsync(Executor threadPool) {
+  void handleAsync(Executor threadPool) throws Exception {
     var response =
         ResponseBuilder.newBuilder(responseTemplate)
             .body(strPublisher("Indiana Jones", UTF_8, threadPool))
@@ -70,7 +72,7 @@ class RawResponseTest {
     var rawResponse = NetworkResponse.from(response);
     assertEqualResponses(response, rawResponse.get());
 
-    var handledResponse = rawResponse.handleAsync(BodyHandlers.ofString(), threadPool).join();
+    var handledResponse = rawResponse.handleAsync(BodyHandlers.ofString(), threadPool).get();
     assertEqualResponses(response, handledResponse);
     assertEquals("Indiana Jones", handledResponse.body());
   }
@@ -80,12 +82,10 @@ class RawResponseTest {
   void handleAsyncWithError(Executor threadPool) {
     var rawResponse = failingWith(TestException::new);
     var handledResponseFuture = rawResponse.handleAsync(BodyHandlers.ofString(), threadPool);
-    var ex = assertThrows(CompletionException.class, handledResponseFuture::join);
-    assertThrows(
-        TestException.class,
-        () -> {
-          throw ex.getCause();
-        });
+    assertThat(handledResponseFuture)
+        .failsWithin(Duration.ofSeconds(1))
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseInstanceOf(TestException.class);
   }
 
   @Test
