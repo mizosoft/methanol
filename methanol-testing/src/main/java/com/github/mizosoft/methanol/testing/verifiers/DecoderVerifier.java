@@ -177,6 +177,10 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
       return assertThat(subscriber.getBody()).isCompleted().succeedsWithin(Duration.ZERO);
     }
 
+    public ObjectAssert<T> body() {
+      return assertThat(subscriber.getBody()).succeedsWithin(Duration.ofSeconds(2));
+    }
+
     public ObjectAssert<T> succeedsWith(T obj) {
       return assertThat(subscriber.getBody()).succeedsWithin(Duration.ofSeconds(20)).isEqualTo(obj);
     }

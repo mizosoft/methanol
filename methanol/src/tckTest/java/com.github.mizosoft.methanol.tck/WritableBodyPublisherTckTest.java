@@ -29,7 +29,9 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.Flow.Publisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.SkipException;
+import org.testng.annotations.Test;
 
+@Test
 public class WritableBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
   public WritableBodyPublisherTckTest() {
     super(TckUtils.newTestEnvironment(WritableBodyPublisherTckTest.class));

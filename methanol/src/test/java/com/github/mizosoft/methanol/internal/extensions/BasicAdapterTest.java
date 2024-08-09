@@ -28,6 +28,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -37,6 +41,11 @@ import java.nio.ByteBuffer;
 import java.nio.charset.MalformedInputException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.Flow.Publisher;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -60,6 +69,13 @@ class BasicAdapterTest {
     verifyThat(encoder)
         .converting(new ByteArrayInputStream("Pikachu".getBytes(UTF_8)))
         .succeedsWith("Pikachu");
+    verifyThat(encoder)
+        .<Supplier<InputStream>>converting(
+            () -> new ByteArrayInputStream("Pikachu".getBytes(UTF_8)))
+        .succeedsWith("Pikachu");
+    verifyThat(encoder)
+        .converting(List.of(new byte[] {1}, new byte[] {1, 2}, new byte[] {1, 2, 3}))
+        .succeedsWith(ByteBuffer.wrap(new byte[] {1, 1, 2, 1, 2, 3}));
 
     var file = Files.createTempFile(tempDir, BasicAdapterTest.class.getName(), "");
     Files.writeString(file, "Pikachu");
@@ -69,6 +85,39 @@ class BasicAdapterTest {
   @Test
   void unsupportedEncoding() {
     verifyThat(BasicAdapter.encoder()).converting(1).isNotSupported();
+
+    // For non-scalars the UnsupportedOperation is thrown during transmission.
+    verifyThat(BasicAdapter.encoder())
+        .<Supplier<Integer>>converting(() -> 1)
+        .failsWith(UnsupportedOperationException.class);
+    verifyThat(BasicAdapter.encoder())
+        .converting(List.of(1, 2, 3))
+        .failsWith(UnsupportedOperationException.class);
+  }
+
+  @Test
+  void failingInputStreamSupplier() {
+    verifyThat(BasicAdapter.encoder())
+        .<Supplier<InputStream>>converting(
+            () -> {
+              throw new TestException();
+            })
+        .failsWith(TestException.class);
+  }
+
+  @Test
+  void failingSubscriberForFailingInputStreamSupplier() {
+    Supplier<InputStream> supplier =
+        () -> {
+          throw new TestException();
+        };
+    var publisher = BasicAdapter.encoder().toBody(supplier, MediaType.ANY);
+    var subscriber = new TestSubscriber<>();
+    subscriber.throwOnSubscribe(true);
+    publisher.subscribe(subscriber);
+    assertThat(subscriber.awaitError())
+        .isInstanceOf(TestException.class)
+        .hasSuppressedException(new TestException());
   }
 
   @Test
@@ -116,6 +165,33 @@ class BasicAdapterTest {
         .converting(ByteBuffer.class)
         .withBody(ByteBuffer.wrap(new byte[] {1, 2, 3}))
         .succeedsWith(ByteBuffer.wrap(new byte[] {1, 2, 3}));
+    verifyThat(decoder)
+        .converting(new TypeRef<Stream<String>>() {})
+        .withBody("A\nB\nC\r\nD")
+        .completedBody()
+        .asInstanceOf(InstanceOfAssertFactories.STREAM)
+        .containsExactly("A", "B", "C", "D");
+    verifyThat(decoder)
+        .converting(new TypeRef<Publisher<List<ByteBuffer>>>() {})
+        .withBody("Pikachu")
+        .body()
+        .satisfies(
+            publisher -> {
+              var subscriber = new TestSubscriber<List<ByteBuffer>>();
+              publisher.subscribe(subscriber);
+              var body =
+                  subscriber.pollAll().stream()
+                      .flatMap(List::stream)
+                      .reduce(
+                          (b1, b2) ->
+                              ByteBuffer.allocate(b1.remaining() + b2.remaining())
+                                  .put(b1)
+                                  .put(b2)
+                                  .flip())
+                      .orElse(TestUtils.EMPTY_BUFFER);
+              assertThat(UTF_8.decode(body).toString()).isEqualTo("Pikachu");
+            });
+    verifyThat(decoder).converting(Void.class).withBody("Pikachu").succeedsWith(null);
   }
 
   @Test

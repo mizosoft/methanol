@@ -53,7 +53,9 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
+import org.testng.annotations.Test;
 
+@Test
 public class AsyncBodyDecoderTckTest
     extends IdentityFlowProcessorVerification<List<AsyncBodyDecoderTckTest.ByteBufferHandle>> {
   private static final int BUFFERS_PER_LIST = 4;
