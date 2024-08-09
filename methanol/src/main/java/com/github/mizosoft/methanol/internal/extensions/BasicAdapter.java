@@ -52,15 +52,17 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
     super(MediaType.ANY);
   }
 
-  public static Encoder newEncoder() {
-    return new BasicEncoder();
+  public static Encoder encoder() {
+    return BasicEncoder.INSTANCE;
   }
 
-  public static Decoder newDecoder() {
-    return new BasicDecoder();
+  public static Decoder decoder() {
+    return BasicDecoder.INSTANCE;
   }
 
   private static final class BasicEncoder extends BasicAdapter implements Encoder {
+    static final BasicEncoder INSTANCE = new BasicEncoder();
+
     private static final Map<Class<?>, BiFunction<?, MediaType, BodyPublisher>> ENCODERS;
 
     static {
@@ -84,7 +86,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
       encoders.put(type, encoder);
     }
 
-    BasicEncoder() {}
+    private BasicEncoder() {}
 
     @Override
     public boolean supportsType(TypeRef<?> typeRef) {
@@ -134,6 +136,8 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
   }
 
   private static final class BasicDecoder extends BasicAdapter implements Decoder {
+    static final BasicDecoder INSTANCE = new BasicDecoder();
+
     private static final Map<Class<?>, Function<MediaType, BodySubscriber<?>>> DECODERS;
 
     static {
@@ -151,7 +155,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
       DECODERS = Collections.unmodifiableMap(decoders);
     }
 
-    BasicDecoder() {}
+    private BasicDecoder() {}
 
     @Override
     public boolean supportsType(TypeRef<?> type) {

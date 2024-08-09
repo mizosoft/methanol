@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import com.github.mizosoft.methanol.internal.extensions.BasicAdapter;
 import com.github.mizosoft.methanol.internal.spi.BodyAdapterProviders;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -87,6 +88,23 @@ public interface BodyAdapter {
     static Optional<Encoder> getEncoder(TypeRef<?> objectTypeRef, @Nullable MediaType mediaType) {
       return BodyAdapter.lookupAdapter(installed(), objectTypeRef, mediaType);
     }
+
+    /**
+     * Returns the basic encoder. The basic encoder is compatible with any media type, and supports
+     * encoding any subtype of:
+     *
+     * <ul>
+     *   <li>{@code CharSequence} (encoded using the media-type's charset, or {@code UTF-8} in case
+     *       the former is not present)
+     *   <li>{@code InputStream}
+     *   <li>{@code byte[]}
+     *   <li>{@code ByteBuffer}
+     *   <li>{@code Path} (represents a file from which the request content is sent)
+     * </ul>
+     */
+    static Encoder basic() {
+      return BasicAdapter.encoder();
+    }
   }
 
   /** A {@code BodyAdapter} that decodes response bodies into objects. */
@@ -131,6 +149,24 @@ public interface BodyAdapter {
      */
     static Optional<Decoder> getDecoder(TypeRef<?> objectType, @Nullable MediaType mediaType) {
       return BodyAdapter.lookupAdapter(installed(), objectType, mediaType);
+    }
+
+    /**
+     * Returns the basic decoder. The basic decoder is compatible with any media type, and supports
+     * decoding:
+     *
+     * <ul>
+     *   <li>{@code String} (decoded using the media-type's charset, or {@code UTF-8} in case the
+     *       former is not present)
+     *   <li>{@code InputStream}
+     *   <li>{@code Reader} (decoded using the media-type's charset, or {@code UTF-8} in case the
+     *       former is not present)
+     *   <li>{@code byte[]}
+     *   <li>{@code ByteBuffer}
+     * </ul>
+     */
+    static Decoder basic() {
+      return BasicAdapter.decoder();
     }
   }
 }
