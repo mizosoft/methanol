@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -162,9 +162,13 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
     }
 
     public BodySubscriberVerifier<T> publishing(String body) {
+      return publishing(UTF_8.encode(body));
+    }
+
+    public BodySubscriberVerifier<T> publishing(ByteBuffer body) {
       try (var publisher = new SubmissionPublisher<List<ByteBuffer>>()) {
         publisher.subscribe(subscriber);
-        publisher.submit(List.of(UTF_8.encode(body)));
+        publisher.submit(List.of(body));
       }
       return this;
     }

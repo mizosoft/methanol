@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -50,30 +50,30 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface ResponsePayload extends AutoCloseable {
   /** Converts this payload into an object of type {@code T}. */
-  default <T> T as(Class<T> type) throws IOException, InterruptedException {
-    return as(TypeRef.of(type));
+  default <T> T to(Class<T> type) throws IOException, InterruptedException {
+    return to(TypeRef.of(type));
   }
 
   /** Converts this payload into an object of (possibly generic) type {@code T}. */
-  <T> T as(TypeRef<T> typeRef) throws IOException, InterruptedException;
+  <T> T to(TypeRef<T> typeRef) throws IOException, InterruptedException;
 
   /** Converts this payload using the given body handler. */
-  <T> T with(BodyHandler<T> bodyHandler) throws IOException, InterruptedException;
+  <T> T handleWith(BodyHandler<T> bodyHandler) throws IOException, InterruptedException;
 
   /** Asynchronously converts this payload into an object of type {@code T}. */
-  default <T> CompletableFuture<T> asAsync(Class<T> type) {
-    return asAsync(TypeRef.of(type));
+  default <T> CompletableFuture<T> toAsync(Class<T> type) {
+    return toAsync(TypeRef.of(type));
   }
 
   /** Asynchronously converts this payload into an object of (possibly generic) type {@code T}. */
-  <T> CompletableFuture<T> asAsync(TypeRef<T> typeRef);
+  <T> CompletableFuture<T> toAsync(TypeRef<T> typeRef);
 
   /** Asynchronously this payload using the given body handler. */
-  <T> CompletableFuture<T> withAsync(BodyHandler<T> bodyHandler);
+  <T> CompletableFuture<T> handleWithAsync(BodyHandler<T> bodyHandler);
 
   /**
    * Makes sure the resources held by this payload are released. If the payload has been consumed,
-   * this method does nothing. Otherwise, the response body is discarded.
+   * this method does nothing.
    */
   @Override
   void close();
