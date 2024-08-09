@@ -30,7 +30,7 @@ import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
-import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -61,10 +61,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(5)
 @ExtendWith({StoreExtension.class, ExecutorExtension.class})
 class StoreTest {
   static {
@@ -105,7 +103,7 @@ class StoreTest {
               },
               executor));
     }
-    assertAll(assertionTasks.stream().map(cf -> cf::join));
+    assertAll(assertionTasks.stream().map(cf -> cf::get));
   }
 
   @StoreParameterizedTest
@@ -293,7 +291,7 @@ class StoreTest {
                     localEditor -> {
                       try (localEditor) {
                         // Keep ownership of the editor (if owned) till all threads finish.
-                        awaitUninterruptibly(endLatch);
+                        awaitUnchecked(endLatch);
                         commit(localEditor, "Jigglypuff");
                       } catch (IOException e) {
                         throw new UncheckedIOException(e);
@@ -303,7 +301,7 @@ class StoreTest {
               executor));
     }
 
-    assertAll(assertionTasks.stream().map(cf -> cf::join));
+    assertAll(assertionTasks.stream().map(cf -> cf::get));
     assertEntryEquals(store, "e1", "Jigglypuff", "Psyduck");
   }
 

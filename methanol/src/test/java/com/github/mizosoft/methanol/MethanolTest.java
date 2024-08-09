@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,6 +56,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 class MethanolTest {
   @Test
@@ -351,6 +352,7 @@ class MethanolTest {
   }
 
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS) // Mockito seems to take some time to load.
   void requestPayloadIsMappedToBodyPublisher() {
     var payload = new Object();
     var publisher = BodyPublishers.ofString("abc");

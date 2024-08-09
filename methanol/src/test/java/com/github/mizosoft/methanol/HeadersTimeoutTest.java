@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ import com.github.mizosoft.methanol.testing.ImmutableResponseInfo;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
@@ -81,7 +82,7 @@ class HeadersTimeoutTest {
     clock.advanceSeconds(1);
     assertThat(responseFuture)
         .isCompletedExceptionally()
-        .failsWithin(Duration.ofSeconds(1))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(HttpHeadersTimeoutException.class);
     assertThat(recordingClient.lastCall().future()).isCancelled();

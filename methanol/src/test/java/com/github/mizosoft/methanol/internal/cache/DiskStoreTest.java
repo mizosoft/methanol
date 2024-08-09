@@ -70,11 +70,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /** DiskStore specific tests that are complementary to {@link StoreTest}. */
-@Timeout(5)
 @ExtendWith({StoreExtension.class, ExecutorExtension.class})
 class DiskStoreTest {
   static {
@@ -442,7 +440,7 @@ class DiskStoreTest {
               },
               executor));
     }
-    assertAll(assertionTasks.stream().map(cf -> cf::join));
+    assertAll(assertionTasks.stream().map(cf -> cf::get));
   }
 
   @StoreParameterizedTest
@@ -504,7 +502,7 @@ class DiskStoreTest {
               executor));
     }
 
-    assertAll(writers.stream().map(cf -> cf::join));
+    assertAll(writers.stream().map(cf -> cf::get));
 
     var iter = store.iterator();
     assertThat(iter.hasNext()).isTrue();
@@ -909,7 +907,7 @@ class DiskStoreTest {
       dispatchEagerly = false)
   @ExecutorSpec(ExecutorType.CACHED_POOL)
   void indexWriteDisposeRaces_systemFileSystem(
-      DiskStore store, DiskStoreContext context, Executor executor) throws IOException {
+      DiskStore store, DiskStoreContext context, Executor executor) throws Exception {
     testDisposeDuringIndexWrite(store, context, executor);
   }
 
@@ -922,12 +920,12 @@ class DiskStoreTest {
       dispatchEagerly = false)
   @ExecutorSpec(ExecutorType.CACHED_POOL)
   void indexWriteDisposeRaces_windowsEmulatingFilesystem(
-      DiskStore store, DiskStoreContext context, Executor executor) throws IOException {
+      DiskStore store, DiskStoreContext context, Executor executor) throws Exception {
     testDisposeDuringIndexWrite(store, context, executor);
   }
 
   private void testDisposeDuringIndexWrite(
-      DiskStore store, DiskStoreContext context, Executor executor) throws IOException {
+      DiskStore store, DiskStoreContext context, Executor executor) throws Exception {
     // Submit index write tasks (queued by the delayer).
     int indexWriteCount = 10;
     write(store, "e1", "", "a");
@@ -958,7 +956,7 @@ class DiskStoreTest {
             },
             executor);
 
-    CompletableFuture.allOf(triggerIndexWrites, invokeDispose).join();
+    CompletableFuture.allOf(triggerIndexWrites, invokeDispose).get();
     assertThat(context.directory()).isEmptyDirectory();
     assertThat(store.indexWriteCount()).isNotZero();
   }

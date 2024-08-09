@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.internal.cache;
 
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
-import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -40,6 +40,7 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.RepeatArguments;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.store.StoreExtension;
@@ -56,11 +57,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(5)
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
 @RepeatArguments(10)
 class CacheReadingPublisherTest {
@@ -131,7 +130,7 @@ class CacheReadingPublisherTest {
     var subscriber = BodySubscribers.ofString(UTF_8);
     publisher.subscribe(subscriber);
     assertThat(subscriber.getBody())
-        .succeedsWithin(Duration.ofSeconds(5))
+        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .returns(str.length(), from(String::length))
         .isEqualTo(str);
   }
@@ -174,14 +173,14 @@ class CacheReadingPublisherTest {
           public int read(ByteBuffer dst) {
             readAsyncCalls.incrementAndGet();
             firstReadLatch.countDown();
-            awaitUninterruptibly(endReadLatch);
+            awaitUnchecked(endReadLatch);
             return -1;
           }
         };
     var publisher = new CacheReadingPublisher(viewer, executor);
     var subscriber = new TestSubscriber<List<ByteBuffer>>();
     publisher.subscribe(subscriber);
-    awaitUninterruptibly(firstReadLatch);
+    awaitUnchecked(firstReadLatch);
     subscriber.awaitSubscription().cancel();
 
     // Trigger CacheReadingPublisher's read completion callback.

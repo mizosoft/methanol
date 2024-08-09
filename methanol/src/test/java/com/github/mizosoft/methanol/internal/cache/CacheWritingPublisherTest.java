@@ -25,7 +25,7 @@ package com.github.mizosoft.methanol.internal.cache;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
 import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
 import static com.github.mizosoft.methanol.testing.TestUtils.EMPTY_BUFFER;
-import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -70,11 +70,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(5)
 @ExtendWith({ExecutorExtension.class, StoreExtension.class})
 @RepeatArguments(10)
 class CacheWritingPublisherTest {
@@ -350,7 +348,7 @@ class CacheWritingPublisherTest {
         new TestEditor() {
           @Override
           int write(ByteBuffer src) {
-            awaitUninterruptibly(bodyCompletionLatch);
+            awaitUnchecked(bodyCompletionLatch);
             return super.write(src);
           }
         };
@@ -418,7 +416,7 @@ class CacheWritingPublisherTest {
             return CompletableFuture.runAsync(
                     () -> {
                       calledCommit.countDown();
-                      awaitUninterruptibly(proceedWithCommit);
+                      awaitUnchecked(proceedWithCommit);
                     },
                     executor)
                 .thenCompose(__ -> super.commit(metadata, executor));
@@ -437,7 +435,7 @@ class CacheWritingPublisherTest {
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Pikachu"));
     upstream.close();
-    awaitUninterruptibly(calledCommit);
+    awaitUnchecked(calledCommit);
     assertThat(subscriber.completionCount()).isZero();
 
     // Complete by committing edit.
@@ -490,7 +488,7 @@ class CacheWritingPublisherTest {
           @Override
           int write(ByteBuffer src) {
             calledWrite.countDown();
-            awaitUninterruptibly(proceedWithWrite);
+            awaitUnchecked(proceedWithWrite);
             throw new TestException();
           }
         };
@@ -507,7 +505,7 @@ class CacheWritingPublisherTest {
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Pikachu"));
     upstream.close();
-    awaitUninterruptibly(calledWrite);
+    awaitUnchecked(calledWrite);
     assertThat(subscriber.completionCount()).isZero();
 
     // Complete by discarding the edit.
@@ -528,8 +526,6 @@ class CacheWritingPublisherTest {
   }
 
   private static class TestEditor implements Editor {
-    private static final int TIMEOUT_SECONDS = 3;
-
     private final Lock lock = new ReentrantLock();
     private final Condition closedCondition = lock.newCondition();
 
@@ -594,17 +590,17 @@ class CacheWritingPublisherTest {
     }
 
     void awaitClose() {
-      long remainingNanos = TimeUnit.SECONDS.toNanos(TIMEOUT_SECONDS);
+      long remainingNanos = TimeUnit.SECONDS.toNanos(TestUtils.TIMEOUT_SECONDS);
       lock.lock();
       try {
         while (!closed) {
           try {
             if (remainingNanos <= 0) {
-              fail("expected to be closed within " + TIMEOUT_SECONDS + " seconds");
+              fail("expected to be closed within " + TestUtils.TIMEOUT_SECONDS + " seconds");
             }
             remainingNanos = closedCondition.awaitNanos(remainingNanos);
           } catch (InterruptedException e) {
-            fail("unexpected exception", e);
+            fail("Interrupted", e);
           }
         }
       } finally {

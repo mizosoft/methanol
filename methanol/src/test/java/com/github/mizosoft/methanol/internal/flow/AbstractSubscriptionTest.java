@@ -37,16 +37,19 @@
 
 package com.github.mizosoft.methanol.internal.flow;
 
-import static com.github.mizosoft.methanol.testing.TestUtils.awaitUninterruptibly;
+import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittableSubscription;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -58,10 +61,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(2)
 @ExtendWith(ExecutorExtension.class)
 class AbstractSubscriptionTest {
   static {
@@ -314,7 +315,8 @@ class AbstractSubscriptionTest {
 
   /** Tests scenario for JDK-8187947: A race condition in SubmissionPublisher. */
   @ExecutorParameterizedTest
-  void testMissedSignal_8187947(Executor executor) throws Exception {
+  void testMissedSignal_8187947(Executor executor, ExecutorContext executorContext)
+      throws Exception {
     int N =
         ((ForkJoinPool.getCommonPoolParallelism() < 2) // JDK-8212899
                 ? (1 << 5)
@@ -322,6 +324,7 @@ class AbstractSubscriptionTest {
             * ((1 << 6));
     var finished = new CountDownLatch(1);
     var ref = new AtomicReference<SubmittableSubscription<Boolean>>();
+    var submitExecutor = executorContext.createExecutor(ExecutorType.CACHED_POOL);
     class Sub implements Subscriber<Boolean> {
       int received;
 
@@ -331,7 +334,7 @@ class AbstractSubscriptionTest {
 
       public void onNext(Boolean item) {
         if (++received == N) finished.countDown();
-        else CompletableFuture.runAsync(() -> ref.get().submit(Boolean.TRUE));
+        else CompletableFuture.runAsync(() -> ref.get().submit(Boolean.TRUE), submitExecutor);
       }
 
       public void onError(Throwable t) {
@@ -343,8 +346,9 @@ class AbstractSubscriptionTest {
     var subscription = new SubmittableSubscription<>(new Sub(), executor);
     ref.set(subscription);
     subscription.fireOrKeepAlive();
-    CompletableFuture.runAsync(() -> subscription.submit(Boolean.TRUE)).get(20, TimeUnit.SECONDS);
-    assertThat(finished.await(20, TimeUnit.SECONDS)).isTrue();
+    CompletableFuture.runAsync(() -> subscription.submit(Boolean.TRUE), submitExecutor)
+        .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    assertThat(finished.await(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
   }
 
   @ExecutorParameterizedTest
@@ -449,7 +453,9 @@ class AbstractSubscriptionTest {
         };
     subscription.fireOrKeepAlive();
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
-    assertThat(abortFuture).succeedsWithin(Duration.ofSeconds(1)).isEqualTo(true);
+    assertThat(abortFuture)
+        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
+        .isEqualTo(true);
   }
 
   @ExecutorParameterizedTest
@@ -467,7 +473,7 @@ class AbstractSubscriptionTest {
 
   /** Test that emit() stops in case of an asynchronous signalError detected by submitOnNext. */
   @ExecutorParameterizedTest
-  void pendingErrorStopsSubmission(Executor executor) {
+  void pendingErrorStopsSubmission(Executor executor, ExecutorContext executorContext) {
     var onErrorLatch = new CountDownLatch(1);
     var firstOnNextLatch = new CountDownLatch(1);
     var subscriber =
@@ -475,7 +481,7 @@ class AbstractSubscriptionTest {
           @Override
           public void onNext(Integer item) {
             firstOnNextLatch.countDown();
-            awaitUninterruptibly(onErrorLatch);
+            awaitUnchecked(onErrorLatch);
             super.onNext(item);
           }
         }.autoRequest(0);
@@ -487,10 +493,12 @@ class AbstractSubscriptionTest {
     subscription.submitSilently(1);
 
     // Request 2 items (request asynchronously to not block in case the executor is synchronous).
-    CompletableFuture.runAsync(() -> subscriber.requestItems(2L));
+    CompletableFuture.runAsync(
+        () -> subscriber.requestItems(2L),
+        executorContext.createExecutor(ExecutorType.CACHED_POOL));
 
     // Wait till first onNext comes.
-    awaitUninterruptibly(firstOnNextLatch);
+    awaitUnchecked(firstOnNextLatch);
 
     // Set pendingError (first onNext now blocking).
     subscription.fireOrKeepAliveOnError(new TestException());

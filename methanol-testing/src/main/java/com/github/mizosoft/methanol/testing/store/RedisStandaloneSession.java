@@ -26,6 +26,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.testing.TestUtils;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisException;
 import io.lettuce.core.RedisURI;
@@ -64,7 +65,7 @@ public final class RedisStandaloneSession implements RedisSession {
   // communication port.
   private static final int SERVER_PORT_END = DYNAMIC_PORT_END - 10000;
 
-  private static final int PROCESS_WAIT_FOR_TIMEOUT_SECONDS = 4;
+  private static final int PROCESS_WAIT_FOR_TIMEOUT_SECONDS = TestUtils.TIMEOUT_SECONDS;
 
   private static final int MASTER_SERVER_START_RETRIES = 10;
 

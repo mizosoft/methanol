@@ -22,17 +22,6 @@ dependencies {
   testImplementation(libs.mockito)
 }
 
-tasks.test {
-  // Don't time out tests when debugging.
-  systemProperty("junit.jupiter.execution.timeout.mode", "disabled_on_debug")
-
-  reports {
-    junitXml.apply {
-      isOutputPerTestCase = true
-    }
-  }
-}
-
 sourceSets {
   create("tckTest") {
     compileClasspath += sourceSets.main.get().output
