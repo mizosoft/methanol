@@ -47,6 +47,8 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.io.TempDir;
 
 class BasicAdapterTest {
@@ -90,6 +92,12 @@ class BasicAdapterTest {
     verifyThat(BasicAdapter.encoder())
         .<Supplier<Integer>>converting(() -> 1)
         .failsWith(UnsupportedOperationException.class);
+  }
+
+  @Test
+  @EnabledForJreRange(
+      min = JRE.JAVA_18) // Earlier JDK versions weren't catching exceptions from Iterator::next.
+  void unsupportedEncoding_byteArrayIterable() {
     verifyThat(BasicAdapter.encoder())
         .converting(List.of(1, 2, 3))
         .failsWith(UnsupportedOperationException.class);
