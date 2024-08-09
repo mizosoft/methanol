@@ -43,7 +43,7 @@ import org.junit.jupiter.api.io.TempDir;
 class BasicAdapterTest {
   @Test
   void encoding(@TempDir Path tempDir) throws IOException {
-    var encoder = BasicAdapter.newEncoder();
+    var encoder = BasicAdapter.encoder();
     verifyThat(encoder).converting("Pikachu").succeedsWith("Pikachu");
     verifyThat(encoder).converting("é€Pikachu€é").succeedsWith("é€Pikachu€é");
     verifyThat(encoder)
@@ -68,12 +68,12 @@ class BasicAdapterTest {
 
   @Test
   void unsupportedEncoding() {
-    verifyThat(BasicAdapter.newEncoder()).converting(1).isNotSupported();
+    verifyThat(BasicAdapter.encoder()).converting(1).isNotSupported();
   }
 
   @Test
   void decoding() {
-    var decoder = BasicAdapter.newDecoder();
+    var decoder = BasicAdapter.decoder();
     verifyThat(decoder).converting(String.class).withBody("Pikachu").succeedsWith("Pikachu");
     verifyThat(decoder)
         .converting(InputStream.class)
@@ -120,6 +120,6 @@ class BasicAdapterTest {
 
   @Test
   void unsupportedDecoding() {
-    verifyThat(BasicAdapter.newDecoder()).converting(Integer.class).isNotSupported();
+    verifyThat(BasicAdapter.decoder()).converting(Integer.class).isNotSupported();
   }
 }

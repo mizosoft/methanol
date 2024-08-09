@@ -26,7 +26,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
-import com.github.mizosoft.methanol.internal.extensions.BasicAdapter;
 import com.github.mizosoft.methanol.internal.spi.BodyAdapterProviders;
 import com.github.mizosoft.methanol.internal.spi.ServiceProviders;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -145,7 +144,7 @@ public final class AdapterCodec {
   private static UnsupportedOperationException unsupportedConversionFrom(
       TypeRef<?> objectType, MediaType mediaType) {
     var message =
-        "unsupported conversion from an object type <"
+        "Unsupported conversion from an object type <"
             + objectType
             + "> with media "
             + "type <"
@@ -157,7 +156,7 @@ public final class AdapterCodec {
   private static UnsupportedOperationException unsupportedConversionTo(
       TypeRef<?> objectType, MediaType mediaType) {
     var message =
-        "unsupported conversion to an object of type <"
+        "Unsupported conversion to an object of type <"
             + objectType
             + "> with media type <"
             + mediaType
@@ -168,7 +167,7 @@ public final class AdapterCodec {
   private static void requireDecoderSupport(List<Decoder> decoders, TypeRef<?> objectType) {
     if (decoders.stream().noneMatch(decoder -> decoder.supportsType(objectType))) {
       throw new UnsupportedOperationException(
-          "unsupported conversion to an object of type <" + objectType + ">");
+          "Unsupported conversion to an object of type <" + objectType + ">");
     }
   }
 
@@ -212,48 +211,21 @@ public final class AdapterCodec {
       return this;
     }
 
-    /**
-     * Adds the basic encoder. The basic encoder is compatible with any media type, and supports
-     * encoding any subtype of:
-     *
-     * <ul>
-     *   <li>{@code CharSequence} (encoded using the media-type's charset, or {@code UTF-8} in case
-     *       the former is not present)
-     *   <li>{@code InputStream}
-     *   <li>{@code byte[]}
-     *   <li>{@code ByteBuffer}
-     *   <li>{@code Path} (represents a file from which the request content is sent)
-     * </ul>
-     *
-     * It is recommended to add this encoder after you add more-specific encoders.
-     */
+    /** Adds the {@link Encoder#basic() basic encoder}. */
     @CanIgnoreReturnValue
     public Builder basicEncoder() {
-      return encoder(BasicAdapter.newEncoder());
+      return encoder(Encoder.basic());
+    }
+
+    /** Adds the {@link Decoder#basic() basic decoder}. */
+    @CanIgnoreReturnValue
+    public Builder basicDecoder() {
+      return decoder(Decoder.basic());
     }
 
     /**
-     * Adds the basic decoder. The basic decoder is compatible with any media type, and supports
-     * decoding:
-     *
-     * <ul>
-     *   <li>{@code String} (decoded using the media-type's charset, or {@code UTF-8} in case the
-     *       former is not present)
-     *   <li>{@code InputStream}
-     *   <li>{@code Reader} (decoded using the media-type's charset, or {@code UTF-8} in case the
-     *       former is not present)
-     *   <li>{@code byte[]}
-     *   <li>{@code ByteBuffer}
-     * </ul>
-     *
-     * It is recommended to add this decoder after you add more-specific decoders.
+     * Adds both the basic {@link Encoder#basic() encoder} & {@link Decoder#basic() decoder} pair.
      */
-    @CanIgnoreReturnValue
-    public Builder basicDecoder() {
-      return decoder(BasicAdapter.newDecoder());
-    }
-
-    /** Adds both the basic encoder & decoder pair. */
     @CanIgnoreReturnValue
     public Builder basicCodec() {
       return basicEncoder().basicDecoder();
