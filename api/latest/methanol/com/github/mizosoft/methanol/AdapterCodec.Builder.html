@@ -113,19 +113,34 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#build()" class="member-name-link">build</a>()</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#basicCodec()" class="member-name-link">basicCodec</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns a new <code>AdapterCodec</code> for the added encoders and decoders.</div>
+<div class="block">Adds both the basic <a href="BodyAdapter.Encoder.html#basic()"><code>encoder</code></a> <span class="invalid-tag">invalid input: '&amp;'</span> <a href="BodyAdapter.Decoder.html#basic()"><code>decoder</code></a> pair.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#decoder(com.github.mizosoft.methanol.BodyAdapter.Decoder)" class="member-name-link">decoder</a><wbr>(<a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>&nbsp;decoder)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#basicDecoder()" class="member-name-link">basicDecoder</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Adds the given decoder.</div>
+<div class="block">Adds the <a href="BodyAdapter.Decoder.html#basic()"><code>basic decoder</code></a>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#encoder(com.github.mizosoft.methanol.BodyAdapter.Encoder)" class="member-name-link">encoder</a><wbr>(<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>&nbsp;encoder)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#basicEncoder()" class="member-name-link">basicEncoder</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Adds the <a href="BodyAdapter.Encoder.html#basic()"><code>basic encoder</code></a>.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#build()" class="member-name-link">build</a>()</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns a new <code>AdapterCodec</code> for the added encoders and decoders.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#decoder(com.github.mizosoft.methanol.BodyAdapter.Decoder)" class="member-name-link">decoder</a><wbr>(<a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>&nbsp;decoder)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Adds the given decoder.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#encoder(com.github.mizosoft.methanol.BodyAdapter.Encoder)" class="member-name-link">encoder</a><wbr>(<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>&nbsp;encoder)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Adds the given encoder.</div>
 </div>
 </div>
@@ -159,6 +174,30 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></span>&nbsp;<span class="element-name">decoder</span><wbr><span class="parameters">(<a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>&nbsp;decoder)</span></div>
 <div class="block">Adds the given decoder.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="basicEncoder()">
+<h3>basicEncoder</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></span>&nbsp;<span class="element-name">basicEncoder</span>()</div>
+<div class="block">Adds the <a href="BodyAdapter.Encoder.html#basic()"><code>basic encoder</code></a>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="basicDecoder()">
+<h3>basicDecoder</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></span>&nbsp;<span class="element-name">basicDecoder</span>()</div>
+<div class="block">Adds the <a href="BodyAdapter.Decoder.html#basic()"><code>basic decoder</code></a>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="basicCodec()">
+<h3>basicCodec</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></span>&nbsp;<span class="element-name">basicCodec</span>()</div>
+<div class="block">Adds both the basic <a href="BodyAdapter.Encoder.html#basic()"><code>encoder</code></a> <span class="invalid-tag">invalid input: '&amp;'</span> <a href="BodyAdapter.Decoder.html#basic()"><code>decoder</code></a> pair.</div>
 </section>
 </li>
 <li>
