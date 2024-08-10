@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -138,10 +138,8 @@ public class MoreBodyHandlers {
    * @throws UnsupportedOperationException if no {@link Decoder} that supports the given type is
    *     installed
    */
-  public static <T> BodyHandler<T> ofObject(TypeRef<T> type) {
-    requireSupport(type);
-    return responseInfo ->
-        MoreBodySubscribers.ofObject(type, mediaTypeOrNull(responseInfo.headers()));
+  public static <T> BodyHandler<T> ofObject(TypeRef<T> typeRef) {
+    return AdapterCodec.installed().handlerOf(typeRef);
   }
 
   /**
@@ -166,10 +164,8 @@ public class MoreBodyHandlers {
    * @throws UnsupportedOperationException if no {@link Decoder} that supports the given type is
    *     installed
    */
-  public static <T> BodyHandler<Supplier<T>> ofDeferredObject(TypeRef<T> type) {
-    requireSupport(type);
-    return responseInfo ->
-        MoreBodySubscribers.ofDeferredObject(type, mediaTypeOrNull(responseInfo.headers()));
+  public static <T> BodyHandler<Supplier<T>> ofDeferredObject(TypeRef<T> typeRef) {
+    return AdapterCodec.installed().deferredHandlerOf(typeRef);
   }
 
   /**
@@ -206,17 +202,6 @@ public class MoreBodyHandlers {
         .firstValue("Content-Type")
         .map(contentType -> MediaType.parse(contentType).charsetOrDefault(UTF_8))
         .orElse(UTF_8);
-  }
-
-  private static void requireSupport(TypeRef<?> type) {
-    if (Decoder.installed().stream().noneMatch(decoder -> decoder.supportsType(type))) {
-      throw new UnsupportedOperationException(
-          "unsupported conversion to an object of type <" + type + ">");
-    }
-  }
-
-  private static @Nullable MediaType mediaTypeOrNull(HttpHeaders headers) {
-    return headers.firstValue("Content-Type").map(MediaType::parse).orElse(null);
   }
 
   private static final class DecodingHandler<T> implements BodyHandler<T> {

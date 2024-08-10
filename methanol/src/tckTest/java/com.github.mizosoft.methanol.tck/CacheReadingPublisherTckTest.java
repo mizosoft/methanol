@@ -48,8 +48,10 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
+import org.testng.annotations.Test;
 
 @Slow
+@Test
 public class CacheReadingPublisherTckTest extends FlowPublisherVerification<List<ByteBuffer>> {
   /**
    * This field mirrors {@code MAX_BULK_READ_SIZE} in CacheReadingPublisher. The two are the same as

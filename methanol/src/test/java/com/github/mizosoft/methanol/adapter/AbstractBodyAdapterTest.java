@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +22,8 @@
 
 package com.github.mizosoft.methanol.adapter;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MimeBodyPublisher;
@@ -37,45 +34,45 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class AbstractBodyAdapterTest {
-
   @Test
   void isCompatibleWith_single() {
     var adapter = new BodyAdapterImpl(MediaType.of("text", "*"));
-    assertTrue(adapter.isCompatibleWith(MediaType.of("text", "plain")));
-    assertTrue(adapter.isCompatibleWith(MediaType.of("text", "html")));
-    assertFalse(adapter.isCompatibleWith(MediaType.of("application", "octet-stream")));
-    assertTrue(Set.of(MediaType.of("text", "*")).containsAll(adapter.compatibleMediaTypes()));
+    assertThat(adapter.isCompatibleWith(MediaType.of("text", "plain"))).isTrue();
+    assertThat(adapter.isCompatibleWith(MediaType.of("text", "html"))).isTrue();
+    assertThat(adapter.isCompatibleWith(MediaType.of("application", "octet-stream"))).isFalse();
+    assertThat(adapter.compatibleMediaTypes()).containsOnly(MediaType.of("text", "*"));
   }
 
   @Test
   void isCompatibleWith_multiple() {
-    var adapter = new BodyAdapterImpl(
-        MediaType.of("text", "plain"), MediaType.of("application", "json"));
-    assertTrue(adapter.isCompatibleWith(MediaType.of("text", "plain")));
-    assertTrue(adapter.isCompatibleWith(MediaType.of("application", "json")));
-    assertTrue(adapter.isCompatibleWith(MediaType.of("application", "*")));
-    assertFalse(adapter.isCompatibleWith(MediaType.of("application", "octet_stream")));
-    var types = Set.of(MediaType.of("text", "plain"), MediaType.of("application", "json"));
-    assertTrue(types.containsAll(adapter.compatibleMediaTypes()));
+    var adapter =
+        new BodyAdapterImpl(MediaType.of("text", "plain"), MediaType.of("application", "json"));
+    assertThat(adapter.isCompatibleWith(MediaType.of("text", "plain"))).isTrue();
+    assertThat(adapter.isCompatibleWith(MediaType.of("application", "json"))).isTrue();
+    assertThat(adapter.isCompatibleWith(MediaType.of("application", "*"))).isTrue();
+    assertThat(adapter.isCompatibleWith(MediaType.of("application", "octet_stream"))).isFalse();
+    assertThat(adapter.compatibleMediaTypes())
+        .containsOnly(MediaType.of("text", "plain"), MediaType.of("application", "json"));
   }
 
   @Test
   void requireSupport() {
-    var adapter = new AbstractBodyAdapter() {
-      @Override
-      public boolean supportsType(TypeRef<?> type) {
-        return List.class.isAssignableFrom(type.rawType());
-      }
-    };
-    assertThrows(UnsupportedOperationException.class,
-        () -> adapter.requireSupport(Set.class));
+    var adapter =
+        new AbstractBodyAdapter(MediaType.ANY) {
+          @Override
+          public boolean supportsType(TypeRef<?> type) {
+            return List.class.isAssignableFrom(type.rawType());
+          }
+        };
+    assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(() -> adapter.requireSupport(Set.class));
   }
 
   @Test
   void requireCompatibleOrNull() {
     var adapter = new BodyAdapterImpl(MediaType.of("text", "plain"));
-    assertThrows(UnsupportedOperationException.class,
-        () -> adapter.requireCompatibleOrNull(MediaType.of("application", "json")));
+    assertThatExceptionOfType(UnsupportedOperationException.class)
+        .isThrownBy(() -> adapter.requireCompatibleOrNull(MediaType.of("application", "json")));
   }
 
   @Test
@@ -84,16 +81,14 @@ class AbstractBodyAdapterTest {
     var source = BodyPublishers.ofString("hello there");
     var withMediaType = AbstractBodyAdapter.attachMediaType(source, textPlain);
     var withoutMediaType = AbstractBodyAdapter.attachMediaType(source, null);
-    var withoutMediaType2 = AbstractBodyAdapter.attachMediaType(
-        source, MediaType.of("text", "*"));
-    assertTrue(withMediaType instanceof MimeBodyPublisher);
-    assertEquals(textPlain, ((MimeBodyPublisher) withMediaType).mediaType());
-    assertSame(source, withoutMediaType);
-    assertSame(source, withoutMediaType2);
+    var withoutMediaType2 = AbstractBodyAdapter.attachMediaType(source, MediaType.of("text", "*"));
+    assertThat(withMediaType).isInstanceOf(MimeBodyPublisher.class);
+    assertThat(((MimeBodyPublisher) withMediaType).mediaType()).isEqualTo(textPlain);
+    assertThat(withoutMediaType).isSameAs(source);
+    assertThat(withoutMediaType2).isSameAs(source);
   }
 
   private static final class BodyAdapterImpl extends AbstractBodyAdapter {
-
     BodyAdapterImpl(MediaType... compatibleMediaTypes) {
       super(compatibleMediaTypes);
     }

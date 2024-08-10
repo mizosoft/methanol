@@ -476,22 +476,22 @@ public final class Methanol extends HttpClient {
     }
 
     @Override
-    public <T> T as(TypeRef<T> typeRef) throws IOException, InterruptedException {
+    public <T> T to(TypeRef<T> typeRef) throws IOException, InterruptedException {
       return Utils.get(handleAsync(adapterCodec.handlerOf(typeRef), FlowSupport.SYNC_EXECUTOR));
     }
 
     @Override
-    public <T> T with(BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
+    public <T> T handleWith(BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
       return Utils.get(handleAsync(bodyHandler, FlowSupport.SYNC_EXECUTOR));
     }
 
     @Override
-    public <T> CompletableFuture<T> asAsync(TypeRef<T> typeRef) {
+    public <T> CompletableFuture<T> toAsync(TypeRef<T> typeRef) {
       return handleAsync(adapterCodec.handlerOf(typeRef), executorSupplier.get());
     }
 
     @Override
-    public <T> CompletableFuture<T> withAsync(BodyHandler<T> bodyHandler) {
+    public <T> CompletableFuture<T> handleWithAsync(BodyHandler<T> bodyHandler) {
       return handleAsync(bodyHandler, executorSupplier.get());
     }
 
@@ -1082,14 +1082,15 @@ public final class Methanol extends HttpClient {
 
     private HttpRequest rewriteRequest(HttpRequest request) {
       var rewrittenRequest = MutableRequest.copyOf(request);
-      adapterCodec.ifPresent(rewrittenRequest::adapterCodec);
+      if (rewrittenRequest.adapterCodec().isEmpty()) {
+        adapterCodec.ifPresent(rewrittenRequest::adapterCodec);
+      }
 
       baseUri.map(baseUri -> baseUri.resolve(request.uri())).ifPresent(rewrittenRequest::uri);
       validateUri(rewrittenRequest.uri());
 
       var originalHeadersMap = request.headers().map();
       var defaultHeadersMap = defaultHeaders.map();
-
       defaultHeadersMap.forEach(
           (name, values) -> {
             if (!originalHeadersMap.containsKey(name)) {
@@ -1114,7 +1115,6 @@ public final class Methanol extends HttpClient {
       if (request.timeout().isEmpty()) {
         requestTimeout.ifPresent(rewrittenRequest::timeout);
       }
-
       return rewrittenRequest.toImmutableRequest();
     }
   }

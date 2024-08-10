@@ -40,12 +40,14 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Factory;
+import org.testng.annotations.Test;
 
+@Test
 public class MultipartBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
   private static final int MIN_BATCHES = 2; // Can at least pass a part's heading and last boundary.
 
   private final ExecutorType executorType;
-
+  
   private ExecutorContext executorContext;
 
   @Factory(dataProvider = "provider")

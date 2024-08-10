@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -129,7 +129,8 @@ public class MoreBodySubscribers {
    *     or media type is installed
    */
   public static <T> BodySubscriber<T> ofObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-    return requireDecoder(type, mediaType).toObject(type, mediaType);
+    return AdapterCodec.installed()
+        .subscriberOf(type, mediaType != null ? mediaType : MediaType.ANY);
   }
 
   /**
@@ -141,20 +142,7 @@ public class MoreBodySubscribers {
    */
   public static <T> BodySubscriber<Supplier<T>> ofDeferredObject(
       TypeRef<T> type, @Nullable MediaType mediaType) {
-    return requireDecoder(type, mediaType).toDeferredObject(type, mediaType);
-  }
-
-  private static Decoder requireDecoder(TypeRef<?> objectType, @Nullable MediaType mediaType) {
-    return Decoder.getDecoder(objectType, mediaType)
-        .orElseThrow(() -> unsupportedConversionFrom(objectType, mediaType));
-  }
-
-  private static UnsupportedOperationException unsupportedConversionFrom(
-      TypeRef<?> type, @Nullable MediaType mediaType) {
-    var message = "unsupported conversion to an object of type <" + type + ">";
-    if (mediaType != null) {
-      message += " with media type <" + mediaType + ">";
-    }
-    return new UnsupportedOperationException(message);
+    return AdapterCodec.installed()
+        .deferredSubscriberOf(type, mediaType != null ? mediaType : MediaType.ANY);
   }
 }

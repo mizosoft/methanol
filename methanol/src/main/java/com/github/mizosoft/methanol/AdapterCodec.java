@@ -27,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import com.github.mizosoft.methanol.internal.spi.BodyAdapterProviders;
+import com.github.mizosoft.methanol.internal.spi.ServiceProviders;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -47,7 +48,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 public final class AdapterCodec {
   /**
    * Codec for the installed encoders & decoders. This is lazily created in a racy manner, which is
-   * OK since ServiceCache makes sure we see a constant snapshot of the services.
+   * OK since {@link ServiceProviders} makes sure we see a constant snapshot of the services.
    */
   @SuppressWarnings("NonFinalStaticField") // Lazily initialized.
   private static @MonotonicNonNull AdapterCodec lazyInstalledCodec;
@@ -143,7 +144,7 @@ public final class AdapterCodec {
   private static UnsupportedOperationException unsupportedConversionFrom(
       TypeRef<?> objectType, MediaType mediaType) {
     var message =
-        "unsupported conversion from an object type <"
+        "Unsupported conversion from an object type <"
             + objectType
             + "> with media "
             + "type <"
@@ -155,7 +156,7 @@ public final class AdapterCodec {
   private static UnsupportedOperationException unsupportedConversionTo(
       TypeRef<?> objectType, MediaType mediaType) {
     var message =
-        "unsupported conversion to an object of type <"
+        "Unsupported conversion to an object of type <"
             + objectType
             + "> with media type <"
             + mediaType
@@ -166,7 +167,7 @@ public final class AdapterCodec {
   private static void requireDecoderSupport(List<Decoder> decoders, TypeRef<?> objectType) {
     if (decoders.stream().noneMatch(decoder -> decoder.supportsType(objectType))) {
       throw new UnsupportedOperationException(
-          "unsupported conversion to an object of type <" + objectType + ">");
+          "Unsupported conversion to an object of type <" + objectType + ">");
     }
   }
 
@@ -208,6 +209,26 @@ public final class AdapterCodec {
     public Builder decoder(Decoder decoder) {
       decoders.add(requireNonNull(decoder));
       return this;
+    }
+
+    /** Adds the {@link Encoder#basic() basic encoder}. */
+    @CanIgnoreReturnValue
+    public Builder basicEncoder() {
+      return encoder(Encoder.basic());
+    }
+
+    /** Adds the {@link Decoder#basic() basic decoder}. */
+    @CanIgnoreReturnValue
+    public Builder basicDecoder() {
+      return decoder(Decoder.basic());
+    }
+
+    /**
+     * Adds both the basic {@link Encoder#basic() encoder} & {@link Decoder#basic() decoder} pair.
+     */
+    @CanIgnoreReturnValue
+    public Builder basicCodec() {
+      return basicEncoder().basicDecoder();
     }
 
     /** Returns a new {@code AdapterCodec} for the added encoders and decoders. */
