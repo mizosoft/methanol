@@ -25,12 +25,15 @@ package com.github.mizosoft.methanol.testing;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public final class ExecutorContext implements AutoCloseable {
   private final List<Executor> executors = new ArrayList<>();
-  private final Set<Throwable> asyncExceptions = ConcurrentHashMap.newKeySet();
+  private final List<Throwable> asyncExceptions = new CopyOnWriteArrayList<>();
 
   public ExecutorContext() {}
 
@@ -61,8 +64,8 @@ public final class ExecutorContext implements AutoCloseable {
         // by some test.
         boolean interrupted = Thread.interrupted();
         try {
-          if (!service.awaitTermination(30, TimeUnit.SECONDS)) {
-            throw new TimeoutException("timed out while waiting for pool termination: " + executor);
+          if (!service.awaitTermination(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            throw new TimeoutException("Timed out while waiting for pool termination: " + executor);
           }
         } finally {
           if (interrupted) {
@@ -77,7 +80,7 @@ public final class ExecutorContext implements AutoCloseable {
     var asyncExceptionsSnapshot = List.copyOf(asyncExceptions);
     if (!asyncExceptionsSnapshot.isEmpty()) {
       asyncExceptions.clear();
-      throw new AggregateException("uncaught asynchronous failures", asyncExceptionsSnapshot);
+      throw new AggregateException("Uncaught asynchronous failures", asyncExceptionsSnapshot);
     }
   }
 }

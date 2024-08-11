@@ -9,7 +9,7 @@ import org.testng.annotations.Test;
 @Test
 public class ByteBufferBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
   public ByteBufferBodyPublisherTckTest() {
-    super(TckUtils.newTestEnvironment(ByteBufferBodyPublisherTckTest.class));
+    super(TckUtils.newTestEnvironment());
   }
 
   @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,8 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Flow;
 import java.util.concurrent.Flow.Publisher;
 
@@ -76,7 +78,13 @@ public class BodyCollector implements Flow.Subscriber<ByteBuffer> {
   }
 
   public static ByteBuffer collect(Publisher<ByteBuffer> publisher) {
-    return collectAsync(publisher).join();
+    try {
+      return collectAsync(publisher).get();
+    } catch (InterruptedException e) {
+      throw new CompletionException(e);
+    } catch (ExecutionException e) {
+      throw new CompletionException(e.getCause());
+    }
   }
 
   public static CompletableFuture<ByteBuffer> collectAsync(Publisher<ByteBuffer> publisher) {

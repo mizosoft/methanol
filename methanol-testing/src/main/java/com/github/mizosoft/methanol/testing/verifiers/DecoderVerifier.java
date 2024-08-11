@@ -29,11 +29,13 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.SubmissionPublisher;
 import java.util.function.Supplier;
@@ -136,7 +138,13 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
     private SupplierVerifier<T> verifySupplier(BodySubscriber<Supplier<T>> subscriber) {
       var bodyFuture = subscriber.getBody();
       assertThat(bodyFuture).isCompleted().isNotCancelled();
-      return new SupplierVerifier<>(bodyFuture.toCompletableFuture().join());
+      try {
+        return new SupplierVerifier<>(bodyFuture.toCompletableFuture().get());
+      } catch (InterruptedException e) {
+        throw new CompletionException(e);
+      } catch (ExecutionException e) {
+        throw new CompletionException(e.getCause());
+      }
     }
 
     private static void publishBody(BodySubscriber<?> subscriber, ByteBuffer buffer) {
@@ -178,16 +186,19 @@ public final class DecoderVerifier extends BodyAdapterVerifier<Decoder, DecoderV
     }
 
     public ObjectAssert<T> body() {
-      return assertThat(subscriber.getBody()).succeedsWithin(Duration.ofSeconds(2));
+      return assertThat(subscriber.getBody())
+          .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS));
     }
 
     public ObjectAssert<T> succeedsWith(T obj) {
-      return assertThat(subscriber.getBody()).succeedsWithin(Duration.ofSeconds(20)).isEqualTo(obj);
+      return assertThat(subscriber.getBody())
+          .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
+          .isEqualTo(obj);
     }
 
     public ThrowableAssertAlternative<?> failsWith(Class<? extends Throwable> type) {
       return assertThat(subscriber.getBody())
-          .failsWithin(Duration.ofSeconds(20))
+          .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .withThrowableOfType(ExecutionException.class)
           .havingCause()
           .isInstanceOf(type);

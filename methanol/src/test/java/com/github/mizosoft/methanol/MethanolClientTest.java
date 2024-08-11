@@ -42,6 +42,7 @@ import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
 import com.github.mizosoft.methanol.testing.StringDecoder;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
@@ -71,10 +72,8 @@ import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(10)
 @ExtendWith({ExecutorExtension.class, MockWebServerExtension.class})
 class MethanolClientTest {
   static {
@@ -134,7 +133,7 @@ class MethanolClientTest {
         new MockResponse()
             .setBody(new okio.Buffer().write(gzip("Unzip me!")))
             .setHeader("Content-Encoding", "gzip"));
-    verifyThat(client.sendAsync(GET("relative?q=value"), BodyHandlers.ofString()).join())
+    verifyThat(client.sendAsync(GET("relative?q=value"), BodyHandlers.ofString()).get())
         .hasCode(200)
         .hasBody("Unzip me!")
         .doesNotContainHeader("Content-Encoding")
@@ -152,7 +151,7 @@ class MethanolClientTest {
 
   @Test
   @UseHttps
-  void asyncGetWithCompressedPush() {
+  void asyncGetWithCompressedPush() throws Exception {
     var client = clientBuilder.version(Version.HTTP_2).build();
 
     var decompressedPaths = Set.of("/push0", "/push2");
@@ -190,14 +189,14 @@ class MethanolClientTest {
                     GET(serverUri),
                     BodyHandlers.ofString(),
                     PushPromiseHandler.of(__ -> BodyHandlers.ofString(), pushFutures))
-                .join())
+                .get())
         .hasCode(200)
         .hasBody("Pikachu")
         .doesNotContainHeader("Content-Encoding")
         .doesNotContainHeader("Content-Length");
 
     for (var future : pushFutures.values()) {
-      var response = future.join();
+      var response = future.get();
       if (decompressedPaths.contains(response.uri().getPath())) {
         verifyThat(response)
             .hasCode(200)
@@ -251,7 +250,7 @@ class MethanolClientTest {
         .isThrownBy(() -> client.send(GET(serverUri), BodyHandlers.ofString()));
 
     assertThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()))
-        .failsWithin(Duration.ofSeconds(5))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(HttpTimeoutException.class);
   }
@@ -268,7 +267,7 @@ class MethanolClientTest {
     server.enqueue(
         new MockResponse().setBody("Pikachu").throttleBody(1, 500, TimeUnit.MILLISECONDS));
     assertThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()))
-        .failsWithin(Duration.ofSeconds(5))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(HttpReadTimeoutException.class);
   }
@@ -286,7 +285,7 @@ class MethanolClientTest {
     server.enqueue(
         new MockResponse().setBody("Pikachu").throttleBody(1, 500, TimeUnit.MILLISECONDS));
     assertThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()))
-        .failsWithin(Duration.ofSeconds(5))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(HttpReadTimeoutException.class);
   }
@@ -403,17 +402,15 @@ class MethanolClientTest {
   }
 
   @Test
-  void asyncRetryingWithInterceptors() {
+  void asyncRetryingWithInterceptors() throws Exception {
     int maxRetries = 3;
-
-    var client = clientBuilder.interceptor(new RetryingInterceptor(maxRetries)).build();
-
     for (int i = 0; i < maxRetries; i++) {
       server.enqueue(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
     }
     server.enqueue(new MockResponse().setBody("I'm back!"));
 
-    verifyThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()).join())
+    var client = clientBuilder.interceptor(new RetryingInterceptor(maxRetries)).build();
+    verifyThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()).get())
         .hasCode(200)
         .hasBody("I'm back!");
   }
@@ -488,14 +485,13 @@ class MethanolClientTest {
         new MockResponse()
             .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
             .addHeader("Content-Type", "text/plain"));
-    verifyThat(client.sendAsync(GET(serverUri), String.class).join()).hasBody("Pikachu");
+    verifyThat(client.sendAsync(GET(serverUri), String.class).get()).hasBody("Pikachu");
 
     server.enqueue(
         new MockResponse()
             .setBody(new okio.Buffer().writeString("Pikachu", StandardCharsets.UTF_8))
             .addHeader("Content-Type", "text/plain"));
-    verifyThat(client.sendAsync(GET(serverUri), TypeRef.of(String.class)).join())
-        .hasBody("Pikachu");
+    verifyThat(client.sendAsync(GET(serverUri), TypeRef.of(String.class)).get()).hasBody("Pikachu");
   }
 
   @Test
@@ -548,7 +544,7 @@ class MethanolClientTest {
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.send(GET(serverUri)).body()) {
       assertThat(body.toAsync(String.class))
-          .succeedsWithin(Duration.ofSeconds(1))
+          .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
     }
 
@@ -560,7 +556,7 @@ class MethanolClientTest {
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.send(GET(serverUri)).body()) {
       assertThat(body.toAsync(new TypeRef<String>() {}))
-          .succeedsWithin(Duration.ofSeconds(1))
+          .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
     }
 
@@ -572,7 +568,7 @@ class MethanolClientTest {
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body = client.send(GET(serverUri)).body()) {
       assertThat(body.handleWithAsync(BodyHandlers.ofString()))
-          .succeedsWithin(Duration.ofSeconds(1))
+          .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
     }
   }
@@ -585,38 +581,44 @@ class MethanolClientTest {
             .build();
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+    try (var body =
+        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
       assertThat(body.to(String.class)).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+    try (var body =
+        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
       assertThat(body.toAsync(String.class))
-          .succeedsWithin(Duration.ofSeconds(1))
+          .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+    try (var body =
+        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
       assertThat(body.to(new TypeRef<String>() {})).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+    try (var body =
+        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
       assertThat(body.toAsync(new TypeRef<String>() {}))
-          .succeedsWithin(Duration.ofSeconds(1))
+          .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+    try (var body =
+        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
       assertThat(body.handleWith(BodyHandlers.ofString())).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS).body()) {
+    try (var body =
+        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
       assertThat(body.handleWithAsync(BodyHandlers.ofString()))
-          .succeedsWithin(Duration.ofSeconds(1))
+          .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
     }
   }
@@ -662,7 +664,7 @@ class MethanolClientTest {
     server.enqueue(new MockResponse().setBody("Pikachu"));
     var response = client.send(GET(serverUri));
     response.body().close();
-    assertThat(bodyCompletion).succeedsWithin(Duration.ofSeconds(1));
+    assertThat(bodyCompletion).succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS));
   }
 
   @Test
@@ -703,9 +705,10 @@ class MethanolClientTest {
             .build();
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    var response = client.sendAsync(GET(serverUri)).get(1, TimeUnit.SECONDS);
+    var response =
+        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
     response.body().close();
-    assertThat(bodyCompletion).succeedsWithin(Duration.ofSeconds(1));
+    assertThat(bodyCompletion).succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS));
   }
 
   private static String acceptEncodingValue() {

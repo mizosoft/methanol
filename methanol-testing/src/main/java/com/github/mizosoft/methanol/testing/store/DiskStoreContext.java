@@ -32,6 +32,7 @@ import com.github.mizosoft.methanol.testing.MemoryFileSystemProvider;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.MockExecutor;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.file.LeakDetectingFileSystem;
 import com.github.mizosoft.methanol.testing.file.WindowsEmulatingFileSystem;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
@@ -136,8 +137,8 @@ public final class DiskStoreContext extends StoreContext {
       var service = (ExecutorService) executor;
       service.shutdown();
       try {
-        if (!service.awaitTermination(20, TimeUnit.SECONDS)) {
-          throw new TimeoutException("timed out while waiting for pool's termination: " + service);
+        if (!service.awaitTermination(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+          throw new TimeoutException("Timed out while waiting for pool's termination: " + service);
         }
       } catch (Exception e) {
         exceptions.add(e);

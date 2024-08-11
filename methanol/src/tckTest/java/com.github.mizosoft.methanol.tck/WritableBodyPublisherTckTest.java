@@ -34,7 +34,7 @@ import org.testng.annotations.Test;
 @Test
 public class WritableBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
   public WritableBodyPublisherTckTest() {
-    super(TckUtils.newTestEnvironment(WritableBodyPublisherTckTest.class));
+    super(TckUtils.newTestEnvironment());
   }
 
   @Override

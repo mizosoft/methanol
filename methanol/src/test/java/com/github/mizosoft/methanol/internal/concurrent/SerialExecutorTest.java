@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,7 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockExecutor;
 import com.github.mizosoft.methanol.testing.TestException;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CyclicBarrier;
@@ -157,7 +158,7 @@ class SerialExecutorTest {
     assertThat(calls).hasValue(2);
 
     // Drain task is retried.
-    assertThat(mockExecutor.awaitNext(5, TimeUnit.SECONDS))
+    assertThat(mockExecutor.awaitNext(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS))
         .withFailMessage("drain task retry timed out")
         .isTrue();
     assertThat(mockExecutor.taskCount()).isOne();
@@ -201,7 +202,7 @@ class SerialExecutorTest {
           });
     }
 
-    assertAll(futures.stream().map(future -> future::join));
+    assertAll(futures.stream().map(future -> future::get));
     assertThat(calls).hasValue(threadCount);
   }
 }

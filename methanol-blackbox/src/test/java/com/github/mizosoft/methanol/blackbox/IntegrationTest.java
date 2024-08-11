@@ -62,12 +62,14 @@ import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.WritableBodyPublisher;
-import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoment;
-import com.github.mizosoft.methanol.blackbox.Bruh.BruhMoments;
+import com.github.mizosoft.methanol.blackbox.PersonOuterClass.People;
+import com.github.mizosoft.methanol.blackbox.PersonOuterClass.Person;
 import com.github.mizosoft.methanol.blackbox.support.JacksonMapper;
 import com.github.mizosoft.methanol.testing.ByteBufferIterator;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.IterablePublisher;
-import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.MockGzipStream;
 import com.github.mizosoft.methanol.testing.MockGzipStream.CorruptionMode;
 import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
@@ -113,17 +115,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Flux;
 
-@Timeout(10)
+@ExtendWith(ExecutorExtension.class)
 class IntegrationTest {
-  static {
-    Logging.disable("com.github.mizosoft.methanol.internal.spi.ServiceCache");
-  }
-
-  private static final Base64.Decoder base64Decoder = Base64.getDecoder();
+  private static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
 
   private static final String POEM =
       "Roses are red,\n"
@@ -175,7 +173,7 @@ class IntegrationTest {
   private static Map<String, byte[]> lotsOfTextEncodings;
   private static String lotsOfJson;
   private static List<Map<String, Object>> lotsOfJsonDecoded;
-  private static BruhMoments bruhMoments;
+  private static People people;
 
   private MockWebServer server;
   private HttpClient client;
@@ -216,11 +214,11 @@ class IntegrationTest {
       throw new UncheckedIOException(ioe);
     }
 
-    bruhMoments =
-        BruhMoments.newBuilder()
-            .addMoments(0, BruhMoment.newBuilder().setMessage("bruh"))
-            .addMoments(1, BruhMoment.newBuilder().setMessage("bbruuuhhh"))
-            .addMoments(2, BruhMoment.newBuilder().setMessage("bbrrruuuuuuuhhhhhhhh!!??"))
+    people =
+        People.newBuilder()
+            .addPeople(0, Person.newBuilder().setName("Jacob"))
+            .addPeople(1, Person.newBuilder().setName("Jack"))
+            .addPeople(2, Person.newBuilder().setName("John"))
             .build();
   }
 
@@ -254,7 +252,7 @@ class IntegrationTest {
   }
 
   private void assertDecodesSmall(String encoding) throws Exception {
-    var compressed = base64Decoder.decode(poemEncodings.get(encoding));
+    var compressed = BASE64_DECODER.decode(poemEncodings.get(encoding));
     assertDecodes(encoding, POEM, compressed);
     // Test deflate body without zlib wrapping
     if (encoding.equals("deflate")) {
@@ -293,7 +291,7 @@ class IntegrationTest {
   @Test
   void decoding_concatenatedGzip() throws Exception {
     var firstMember = lotsOfTextEncodings.get("gzip");
-    var secondMember = base64Decoder.decode(poemEncodings.get("gzip"));
+    var secondMember = BASE64_DECODER.decode(poemEncodings.get("gzip"));
     var thirdMember =
         MockGzipStream.newBuilder()
             .addComment(55)
@@ -350,7 +348,7 @@ class IntegrationTest {
   void decoding_nestedHandlerGetsNoLengthOrEncoding() throws Exception {
     server.enqueue(
         new MockResponse()
-            .setBody(okBuffer(base64Decoder.decode(poemEncodings.get("gzip"))))
+            .setBody(okBuffer(BASE64_DECODER.decode(poemEncodings.get("gzip"))))
             .setHeader("Content-Encoding", "gzip"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var headers = new AtomicReference<HttpHeaders>();
@@ -397,7 +395,7 @@ class IntegrationTest {
 
   @Test
   @Disabled // MockWebServer never interrupts throttled body in shutdown
-  void ofByteChannel_interruptThrottled() {
+  void ofByteChannel_interruptThrottled() throws Exception {
     var amountToRead = 128;
     server.enqueue(
         new MockResponse()
@@ -421,7 +419,7 @@ class IntegrationTest {
                 throwableFuture.complete(t);
               }
             });
-    var throwable = throwableFuture.join();
+    var throwable = throwableFuture.get();
     assertTrue(throwable instanceof ClosedByInterruptException, String.valueOf(throwable));
   }
 
@@ -447,23 +445,23 @@ class IntegrationTest {
   void ofObject_protobuf() throws Exception {
     server.enqueue(
         new MockResponse()
-            .setBody(okBuffer(bruhMoments.toByteArray()))
+            .setBody(okBuffer(people.toByteArray()))
             .addHeader("Content-Type", "application/x-protobuf"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
-    var response = client.send(request, ofObject(BruhMoments.class));
-    assertEquals(bruhMoments, response.body());
+    var response = client.send(request, ofObject(People.class));
+    assertEquals(people, response.body());
   }
 
   @Test
   void ofObject_gzippedDeferredProtobuf() throws Exception {
     server.enqueue(
         new MockResponse()
-            .setBody(okBuffer(gzip(bruhMoments.toByteArray())))
+            .setBody(okBuffer(gzip(people.toByteArray())))
             .addHeader("Content-Encoding", "gzip")
             .addHeader("Content-Type", "application/octet-stream"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
-    var response = client.send(request, decoding(ofDeferredObject(BruhMoments.class)));
-    assertEquals(bruhMoments, response.body().get());
+    var response = client.send(request, decoding(ofDeferredObject(People.class)));
+    assertEquals(people, response.body().get());
   }
 
   @Test
@@ -492,7 +490,9 @@ class IntegrationTest {
   @Test
   void ofObject_unsupported() {
     server.enqueue(
-        new MockResponse().setBody("heuhuehue").setHeader("Content-Type", "application/x-bruh"));
+        new MockResponse()
+            .setBody("What's up")
+            .setHeader("Content-Type", "application/x-greeting"));
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var ioe = assertThrows(IOException.class, () -> client.send(request, ofObject(String.class)));
     assertTrue(ioe.getCause() instanceof UnsupportedOperationException, ioe.toString());
@@ -594,7 +594,9 @@ class IntegrationTest {
   void fromAsyncSubscriber_uncompletedToCompletedBody() throws Exception {
     server.enqueue(new MockResponse().setBody(okBuffer(new byte[] {1})));
     var request =
-        HttpRequest.newBuilder(server.url("/").uri()).timeout(Duration.ofSeconds(10)).build();
+        HttpRequest.newBuilder(server.url("/").uri())
+            .timeout(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
+            .build();
     var deadlockBody =
         new BodySubscriber<>() {
           private final CompletableFuture<Subscription> subscriptionCf = new CompletableFuture<>();
@@ -776,7 +778,8 @@ class IntegrationTest {
   }
 
   @Test
-  void sendGzippedRequest() throws Exception {
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
+  void sendGzippedRequest(Executor executor) throws Exception {
     var body = WritableBodyPublisher.create();
     var request = MutableRequest.POST(server.url("/").uri(), body);
     client.sendAsync(request, BodyHandlers.discarding());
@@ -787,7 +790,8 @@ class IntegrationTest {
           } catch (IOException e) {
             fail(e);
           }
-        });
+        },
+        executor);
 
     var recordedRequest = server.takeRequest();
     assertEquals(lotsOfText, new String(gunzip(recordedRequest.getBody().readByteArray()), UTF_8));

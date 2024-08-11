@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.from;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MimeBodyPublisher;
 import com.github.mizosoft.methanol.testing.BodyCollector;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -78,27 +79,27 @@ public final class BodyPublisherVerifier {
 
   public AbstractStringAssert<?> succeedsWith(String expected, Charset charset) {
     return Assertions.assertThat(BodyCollector.collectStringAsync(publisher, charset))
-        .succeedsWithin(Duration.ofSeconds(20))
+        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .extracting(Function.identity(), Assertions.STRING)
         .isEqualTo(expected);
   }
 
   public AbstractObjectAssert<?, ByteBuffer> succeedsWith(ByteBuffer bytes) {
     return assertThat(BodyCollector.collectAsync(publisher))
-        .succeedsWithin(Duration.ofSeconds(20))
+        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .isEqualTo(bytes);
   }
 
   public AbstractStringAssert<?> succeedsWithNormalizingLineEndings(String expected) {
     return assertThat(BodyCollector.collectStringAsync(publisher, UTF_8))
-        .succeedsWithin(Duration.ofSeconds(20))
+        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .extracting(Function.identity(), Assertions.STRING)
         .isEqualToNormalizingNewlines(expected);
   }
 
   public ThrowableAssertAlternative<?> failsWith(Class<? extends Throwable> type) {
     return assertThat(BodyCollector.collectAsync(publisher))
-        .failsWithin(Duration.ofSeconds(20))
+        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
         .isInstanceOf(type);

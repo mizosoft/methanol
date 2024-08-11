@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -379,7 +379,7 @@ class InterceptorTest {
         .containsTag(Integer.class, 1)
         .containsTag(String.class, "a");
 
-    client.sendAsync(request, BodyHandlers.discarding()).join();
+    client.sendAsync(request, BodyHandlers.discarding()).get();
     verifyThat(clientInterceptorRequest.get()).containsTag(Double.class, 1.0);
     verifyThat(backendInterceptorRequest.get())
         .containsTag(Double.class, 1.0)

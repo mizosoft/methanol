@@ -48,7 +48,7 @@ public class TckUtils {
   private static final long NO_SIGNAL_TIMEOUT_MILLIS = 100L;
   private static final long POLL_TIMEOUT_MILLIS = 100L;
 
-  private static final long SLOW_TIMEOUT_MILLIS = 15000L;
+  private static final long SLOW_TIMEOUT_MILLIS = 5000L;
   private static final long SLOW_NO_SIGNAL_TIMEOUT_MILLIS = 200L;
   private static final long SLOW_POLL_TIMEOUT_MILLIS = 200L;
 
@@ -76,10 +76,12 @@ public class TckUtils {
 
   private TckUtils() {}
 
-  static TestEnvironment newTestEnvironment(Class<?> testSuite) {
+  static TestEnvironment newTestEnvironment() {
+    var testSuite =
+        StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE).getCallerClass();
     requireArgument(
         TCK_SUITES.stream().anyMatch(suite -> suite.isAssignableFrom(testSuite)),
-        "Unknown test suite: %s",
+        "This method must be called from a known test suite, not %s",
         testSuite);
     boolean isSlowTest = testSuite.isAnnotationPresent(Slow.class);
     long timeoutMillis = isSlowTest ? SLOW_TIMEOUT_MILLIS : TIMEOUT_MILLIS;
