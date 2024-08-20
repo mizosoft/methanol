@@ -28,18 +28,15 @@ import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MimeBodyPublisher;
-import com.github.mizosoft.methanol.testing.BodyCollector;
-import com.github.mizosoft.methanol.testing.TestUtils;
+import com.github.mizosoft.methanol.testing.ByteBufferCollector;
+import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.time.Duration;
-import java.util.concurrent.ExecutionException;
-import java.util.function.Function;
 import org.assertj.core.api.AbstractObjectAssert;
 import org.assertj.core.api.AbstractStringAssert;
+import org.assertj.core.api.AbstractThrowableAssert;
 import org.assertj.core.api.Assertions;
-import org.assertj.core.api.ThrowableAssertAlternative;
 
 /** A small DSL for testing {@code BodyPublisher} implementations. */
 @SuppressWarnings("UnusedReturnValue")
@@ -78,30 +75,22 @@ public final class BodyPublisherVerifier {
   }
 
   public AbstractStringAssert<?> succeedsWith(String expected, Charset charset) {
-    return Assertions.assertThat(BodyCollector.collectStringAsync(publisher, charset))
-        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
-        .extracting(Function.identity(), Assertions.STRING)
+    return Assertions.assertThat(charset.decode(ByteBufferCollector.collect(publisher)).toString())
         .isEqualTo(expected);
   }
 
   public AbstractObjectAssert<?, ByteBuffer> succeedsWith(ByteBuffer bytes) {
-    return assertThat(BodyCollector.collectAsync(publisher))
-        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
-        .isEqualTo(bytes);
+    return assertThat(ByteBufferCollector.collect(publisher)).isEqualTo(bytes);
   }
 
   public AbstractStringAssert<?> succeedsWithNormalizingLineEndings(String expected) {
-    return assertThat(BodyCollector.collectStringAsync(publisher, UTF_8))
-        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
-        .extracting(Function.identity(), Assertions.STRING)
+    return assertThat(UTF_8.decode(ByteBufferCollector.collect(publisher)).toString())
         .isEqualToNormalizingNewlines(expected);
   }
 
-  public ThrowableAssertAlternative<?> failsWith(Class<? extends Throwable> type) {
-    return assertThat(BodyCollector.collectAsync(publisher))
-        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
-        .withThrowableOfType(ExecutionException.class)
-        .havingCause()
-        .isInstanceOf(type);
+  public AbstractThrowableAssert<?, ?> failsWith(Class<? extends Throwable> type) {
+    var subscriber = new TestSubscriber<ByteBuffer>();
+    publisher.subscribe(subscriber);
+    return assertThat(subscriber.awaitError()).isInstanceOf(type);
   }
 }

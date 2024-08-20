@@ -28,7 +28,7 @@ import static java.util.function.Predicate.isEqual;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.ProgressTracker.Progress;
-import com.github.mizosoft.methanol.testing.BodyCollector;
+import com.github.mizosoft.methanol.testing.ByteBufferCollector;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
 import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
@@ -71,7 +71,7 @@ class ProgressTrackerClientTest {
     assertThat(progressEvents).isNotEmpty();
 
     var body =
-        BodyCollector.collect(
+        ByteBufferCollector.collect(
             subscriber.pollAll().stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toUnmodifiableList()));
