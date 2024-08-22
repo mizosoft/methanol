@@ -280,11 +280,12 @@ class CacheWritingPublisherTest {
     var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
     upstream.submit(List.of(ByteBuffer.allocate(1)));
+
+    var subscription = upstream.firstSubscription();
     upstream.close();
     subscriber.awaitCompletion();
     subscriber.awaitSubscription().cancel();
 
-    var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
     assertThat(subscription.flowInterrupted()).isFalse();
 
@@ -300,7 +301,7 @@ class CacheWritingPublisherTest {
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
     var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
-    upstream.firstSubscription().fireOrKeepAliveOnError(new TestException());
+    upstream.closeExceptionally(new TestException());
     upstream.close();
 
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
