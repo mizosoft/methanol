@@ -206,7 +206,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
           new TypeRef<Stream<String>>() {},
           mediaType -> BodySubscribers.ofLines(mediaType.charsetOrDefault(UTF_8)));
       decoders.put(
-          new TypeRef<Publisher<List<ByteBuffer>>>() {}, __ -> BodySubscribers.ofPublisher());
+          new TypeRef<Publisher<List<ByteBuffer>>>() {}, __ -> new PublisherBodySubscriber());
       decoders.put(
           new TypeRef<Stream<String>>() {},
           mediaType -> BodySubscribers.ofLines(mediaType.charsetOrDefault(UTF_8)));

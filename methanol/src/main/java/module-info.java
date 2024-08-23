@@ -43,7 +43,8 @@ module methanol {
       methanol.redis,
       methanol.testing;
   exports com.github.mizosoft.methanol.internal.extensions to
-      methanol.adapter.jackson;
+      methanol.adapter.jackson,
+      methanol.adapter.jackson.flux;
   exports com.github.mizosoft.methanol.internal.concurrent to
       methanol.adapter.jackson,
       methanol.redis,

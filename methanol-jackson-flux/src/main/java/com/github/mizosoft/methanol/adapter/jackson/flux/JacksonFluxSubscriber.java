@@ -34,12 +34,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.util.TokenBuffer;
 import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
+import com.github.mizosoft.methanol.internal.extensions.PublisherBodySubscriber;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.http.HttpResponse.BodySubscriber;
-import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,17 +58,16 @@ import reactor.core.publisher.MonoSink;
 
 class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
     implements BodySubscriber<Flux<T>> {
-
+  private final BodySubscriber<Publisher<List<ByteBuffer>>> downstream =
+      new PublisherBodySubscriber();
   private final ObjectMapper mapper;
   private final ObjectReader reader;
   private final JsonParser parser;
-  private final BodySubscriber<Publisher<List<ByteBuffer>>> downstream;
 
   JacksonFluxSubscriber(ObjectMapper mapper, Type elementType, JsonParser parser) {
     this.mapper = mapper;
     this.reader = mapper.readerFor(mapper.constructType(elementType));
     this.parser = parser;
-    downstream = BodySubscribers.ofPublisher();
   }
 
   @Override
@@ -99,7 +98,6 @@ class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
 
   /** Wraps a possibly non-completed publisher's {@code CompletionStage}. */
   private static final class PossiblyDelayedPublisher implements Flow.Publisher<List<ByteBuffer>> {
-
     private final CompletionStage<Publisher<List<ByteBuffer>>> publisherFuture;
 
     PossiblyDelayedPublisher(CompletionStage<Publisher<List<ByteBuffer>>> publisherFuture) {
@@ -133,7 +131,6 @@ class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
 
   private static final class JacksonTokenizer
       implements Function<List<ByteBuffer>, List<TokenBuffer>> {
-
     private final JsonParser parser;
     private final ByteArrayFeeder feeder;
     private @Nullable TokenBuffer currentTokenBuffer;

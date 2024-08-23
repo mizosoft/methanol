@@ -26,7 +26,6 @@ import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.net.http.HttpResponse.ResponseInfo;
 import java.nio.ByteBuffer;
@@ -79,7 +78,7 @@ public class Handlers {
             .pushPromiseHandler()
             .map(pushHandler -> toRelayingPushPromiseHandler(pushHandler, executor))
             .orElse(null);
-    return chain.with(BodyHandlers.ofPublisher(), relayingPushPromiseHandler);
+    return chain.with(PublisherBodySubscriber.bodyHandler(), relayingPushPromiseHandler);
   }
 
   /**
@@ -93,7 +92,7 @@ public class Handlers {
       Function<BodyHandler<T>, CompletableFuture<HttpResponse<T>>> downstreamAcceptor =
           bodyHandler ->
               acceptor
-                  .apply(BodyHandlers.ofPublisher())
+                  .apply(PublisherBodySubscriber.bodyHandler())
                   .thenCompose(response -> handleAsync(response, bodyHandler, executor));
       downstreamPushPromiseHandler.applyPushPromise(
           initiatingRequest, pushPromiseRequest, downstreamAcceptor);
