@@ -42,6 +42,7 @@ import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
 import com.github.mizosoft.methanol.testing.StringDecoder;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.URI;
@@ -74,7 +75,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith({ExecutorExtension.class, MockWebServerExtension.class})
+@ExtendWith({ExecutorExtension.class, MockWebServerExtension.class, TestSubscriberExtension.class})
 class MethanolClientTest {
   static {
     Assertions.setMaxStackTraceElementsDisplayed(100);
@@ -291,19 +292,16 @@ class MethanolClientTest {
   }
 
   @Test
-  void exchange() {
+  void exchange(TestSubscriber<HttpResponse<String>> subscriber) {
     var client = clientBuilder.build();
     var publisher = client.exchange(GET(serverUri), BodyHandlers.ofString());
-    var subscriber = new TestSubscriber<HttpResponse<String>>().autoRequest(20L);
-
     server.enqueue(
         new MockResponse()
             .setBody(new okio.Buffer().write(gzip("Pikachu")))
             .setHeader("Content-Encoding", "gzip"));
+
     publisher.subscribe(subscriber);
     subscriber.awaitCompletion();
-
-    assertThat(subscriber.errorCount()).isZero();
     assertThat(subscriber.nextCount()).isOne();
     verifyThat(subscriber.pollNext())
         .hasCode(200)
@@ -314,7 +312,7 @@ class MethanolClientTest {
 
   @Test
   @UseHttps
-  void exchangeWithPush() {
+  void exchangeWithPush(TestSubscriber<HttpResponse<String>> subscriber) {
     var client = clientBuilder.version(Version.HTTP_2).build();
 
     // Accept all push promises but the first.
@@ -324,7 +322,6 @@ class MethanolClientTest {
             GET(serverUri),
             BodyHandlers.ofString(),
             push -> rejectedFirstPush.compareAndSet(false, true) ? null : BodyHandlers.ofString());
-    var subscriber = new TestSubscriber<HttpResponse<String>>();
 
     int pushCount = 3;
     var decompressedPaths = Set.of("/push0", "/push2");

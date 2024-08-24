@@ -31,6 +31,8 @@ import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -49,8 +51,10 @@ import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
+@ExtendWith(TestSubscriberExtension.class)
 class BasicAdapterTest {
   @Test
   void encoding(@TempDir Path tempDir) throws IOException {
@@ -114,13 +118,12 @@ class BasicAdapterTest {
   }
 
   @Test
-  void failingSubscriberForFailingInputStreamSupplier() {
+  void failingSubscriberForFailingInputStreamSupplier(TestSubscriber<ByteBuffer> subscriber) {
     Supplier<InputStream> supplier =
         () -> {
           throw new TestException();
         };
     var publisher = BasicAdapter.encoder().toBody(supplier, MediaType.ANY);
-    var subscriber = new TestSubscriber<>();
     subscriber.throwOnSubscribe(true);
     publisher.subscribe(subscriber);
     assertThat(subscriber.awaitError())
@@ -129,7 +132,7 @@ class BasicAdapterTest {
   }
 
   @Test
-  void decoding() {
+  void decoding(TestSubscriberContext subscriberContext) {
     var decoder = BasicAdapter.decoder();
     verifyThat(decoder).converting(String.class).withBody("Pikachu").succeedsWith("Pikachu");
     verifyThat(decoder)
@@ -185,7 +188,7 @@ class BasicAdapterTest {
         .body()
         .satisfies(
             publisher -> {
-              var subscriber = new TestSubscriber<List<ByteBuffer>>();
+              var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
               publisher.subscribe(subscriber);
               var body =
                   subscriber.pollAll().stream()

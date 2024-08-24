@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@ import com.github.mizosoft.methanol.ProgressTracker.Progress;
 import com.github.mizosoft.methanol.testing.BodyCollector;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import java.net.URI;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.ByteBuffer;
@@ -44,7 +45,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(MockWebServerExtension.class)
+@ExtendWith({MockWebServerExtension.class, TestSubscriberExtension.class})
 class ProgressTrackerClientTest {
   private MockWebServer server;
   private URI serverUri;
@@ -60,10 +61,9 @@ class ProgressTrackerClientTest {
   }
 
   @Test
-  void trackSmallDownload() throws Exception {
+  void trackSmallDownload(TestSubscriber<List<ByteBuffer>> subscriber) throws Exception {
     server.enqueue(new MockResponse().setBody("Pikachu"));
 
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
     var progressEvents = new CopyOnWriteArrayList<Progress>();
     client.send(
         GET(serverUri),

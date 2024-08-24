@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,17 +23,26 @@
 package com.github.mizosoft.methanol.testing;
 
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
+/** Creates and manages {@link Executor} instances. */
 public final class ExecutorContext implements AutoCloseable {
+  private static final Logger logger = System.getLogger(ExecutorContext.class.getName());
+
+  private static final Throwable[] CLOSED = new Throwable[0];
+
   private final List<Executor> executors = new ArrayList<>();
-  private final List<Throwable> asyncExceptions = new CopyOnWriteArrayList<>();
+  private final AtomicReference<Throwable[]> uncaughtExceptions = new AtomicReference<>();
 
   public ExecutorContext() {}
 
@@ -46,15 +55,32 @@ public final class ExecutorContext implements AutoCloseable {
                       try {
                         r.run();
                       } catch (Throwable t) {
-                        asyncExceptions.add(t);
+                        recordUncaughtException(t);
                       }
                     }));
     executors.add(executor);
     return executor;
   }
 
+  private void recordUncaughtException(Throwable t) {
+    while (true) {
+      var currentExceptions = uncaughtExceptions.get();
+      if (currentExceptions == CLOSED) {
+        logger.log(Level.ERROR, "Uncaught async failure", t);
+        return;
+      }
+
+      var expandedExceptions = Arrays.copyOf(currentExceptions, currentExceptions.length + 1);
+      expandedExceptions[expandedExceptions.length - 1] = t;
+      if (uncaughtExceptions.compareAndSet(currentExceptions, expandedExceptions)) {
+        return;
+      }
+    }
+  }
+
   @Override
   public void close() throws Exception {
+    var exceptions = new ArrayList<Throwable>();
     for (var executor : executors) {
       if (executor instanceof ExecutorService) {
         var service = (ExecutorService) executor;
@@ -65,7 +91,8 @@ public final class ExecutorContext implements AutoCloseable {
         boolean interrupted = Thread.interrupted();
         try {
           if (!service.awaitTermination(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-            throw new TimeoutException("Timed out while waiting for pool termination: " + executor);
+            exceptions.add(
+                new TimeoutException("Timed out while waiting for pool termination: " + executor));
           }
         } finally {
           if (interrupted) {
@@ -74,13 +101,11 @@ public final class ExecutorContext implements AutoCloseable {
         }
       }
     }
-
     executors.clear();
 
-    var asyncExceptionsSnapshot = List.copyOf(asyncExceptions);
-    if (!asyncExceptionsSnapshot.isEmpty()) {
-      asyncExceptions.clear();
-      throw new AggregateException("Uncaught asynchronous failures", asyncExceptionsSnapshot);
+    Collections.addAll(exceptions, uncaughtExceptions.getAndSet(CLOSED));
+    if (!exceptions.isEmpty()) {
+      throw new AggregateException("Multiple exceptions while closing executors", exceptions);
     }
   }
 }

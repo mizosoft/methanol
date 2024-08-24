@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,13 +31,24 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.from;
 
 import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(TestSubscriberExtension.class)
 class WritableBodyPublisherTest {
+  private TestSubscriberContext subscriberContext;
+
+  @BeforeEach
+  void setUp(TestSubscriberContext subscriberContext) {
+    this.subscriberContext = subscriberContext;
+  }
+
   @Test
   void contentLengthIsUndefined() {
     verifyThat(WritableBodyPublisher.create()).hasContentLength(-1);
@@ -64,7 +75,7 @@ class WritableBodyPublisherTest {
   @Test
   void flushAfterWritingWithOutputStream() throws IOException {
     var publisher = WritableBodyPublisher.create();
-    var subscriber = new TestSubscriber<ByteBuffer>().autoRequest(0);
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(1);
     publisher.outputStream().write('a');
@@ -78,7 +89,7 @@ class WritableBodyPublisherTest {
   @Test
   void flushAfterWritingWithByteChannel() throws IOException {
     var publisher = WritableBodyPublisher.create();
-    var subscriber = new TestSubscriber<ByteBuffer>().autoRequest(0);
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(1);
     publisher.byteChannel().write(ByteBuffer.wrap(new byte[] {'a'}));
@@ -92,7 +103,7 @@ class WritableBodyPublisherTest {
   @Test
   void completeByClosingByteChannel() throws IOException {
     var publisher = WritableBodyPublisher.create();
-    var subscriber = new TestSubscriber<ByteBuffer>();
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber();
     publisher.subscribe(subscriber);
     publisher.byteChannel().close();
     assertThat(subscriber.completionCount()).isEqualTo(1);
@@ -102,7 +113,7 @@ class WritableBodyPublisherTest {
   @Test
   void completeByClosingOutputStream() throws IOException {
     var publisher = WritableBodyPublisher.create();
-    var subscriber = new TestSubscriber<ByteBuffer>();
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber();
     publisher.subscribe(subscriber);
     publisher.outputStream().close();
     assertThat(subscriber.completionCount()).isEqualTo(1);
@@ -120,7 +131,7 @@ class WritableBodyPublisherTest {
       publisher.closeExceptionally(new TestException());
     }
 
-    var subscriber = new TestSubscriber<ByteBuffer>();
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber();
     publisher.subscribe(subscriber);
     assertThat(subscriber.nextCount()).isZero();
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
@@ -129,9 +140,9 @@ class WritableBodyPublisherTest {
   @Test
   void subscribeTwice() {
     var publisher = WritableBodyPublisher.create();
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
-    var secondSubscriber = new TestSubscriber<ByteBuffer>();
+    var secondSubscriber = subscriberContext.<ByteBuffer>createSubscriber();
     publisher.subscribe(secondSubscriber);
     assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
   }
@@ -175,7 +186,7 @@ class WritableBodyPublisherTest {
   @Test
   void writingInFrames() throws IOException {
     var publisher = WritableBodyPublisher.create(10);
-    var subscriber = new TestSubscriber<ByteBuffer>();
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber();
     publisher.subscribe(subscriber);
     try (var out = publisher.outputStream()) {
       out.write(new byte[10]);

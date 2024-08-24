@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -35,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -59,6 +59,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   private final Condition itemsAvailable = lock.newCondition();
   private final Condition completion = lock.newCondition();
   private final AtomicReference<LatchOwner> latch = new AtomicReference<>();
+  private final List<AssertionError> protocolViolations = new CopyOnWriteArrayList<>();
 
   private static final class LatchOwner {
     final Thread thread;
@@ -188,11 +189,29 @@ public class TestSubscriber<T> implements Subscriber<T> {
 
   @Override
   public void onSubscribe(Subscription subscription) {
-    requireNonNull(subscription);
-    acquireLatch("onSubscribe(" + subscription + ")");
+    if (!check(() -> assertThat(subscription).isNotNull())) {
+      return;
+    }
+
+    boolean latchAcquired = check(() -> acquireLatch("onSubscribe(" + subscription + ")"));
     try {
       lock.lock();
       try {
+        boolean calledOnce =
+            check(
+                () ->
+                    assertThat(this.subscription)
+                        .withFailMessage(
+                            "Receiving "
+                                + subscription
+                                + " despite already having received "
+                                + this.subscription)
+                        .isNull());
+        if (!calledOnce) {
+          subscription.cancel();
+          return;
+        }
+
         this.subscription = subscription;
         subscriptionReceived.signalAll();
         if (autoRequest > 0) {
@@ -205,21 +224,29 @@ public class TestSubscriber<T> implements Subscriber<T> {
         lock.unlock();
       }
     } finally {
-      releaseLatch();
+      if (latchAcquired) {
+        releaseLatch();
+      }
     }
   }
 
   @Override
   public void onNext(T item) {
-    requireNonNull(item);
-    acquireLatch("onNext(" + item + ")");
+    if (!check(() -> assertThat(item).isNotNull())) {
+      return;
+    }
+
+    var label = "onNext(" + item + ")";
+    boolean latchAcquired = check(() -> acquireLatch(label));
     try {
       lock.lock();
       try {
+        check(() -> assertNotEndOfStream(label));
+        check(() -> assertReceivedSubscription(label));
         nextCount++;
         items.addLast(item);
         itemsAvailable.signalAll();
-        if (autoRequest > 0) {
+        if (autoRequest > 0 && subscription != null) {
           subscription.request(autoRequest);
         }
         if (throwOnNext) {
@@ -229,17 +256,25 @@ public class TestSubscriber<T> implements Subscriber<T> {
         lock.unlock();
       }
     } finally {
-      releaseLatch();
+      if (latchAcquired) {
+        releaseLatch();
+      }
     }
   }
 
   @Override
   public void onError(Throwable throwable) {
-    requireNonNull(throwable);
-    acquireLatch("onError(" + exceptionToString(throwable) + ")");
+    if (!check(() -> assertThat(throwable).isNotNull())) {
+      return;
+    }
+
+    var label = "onError(" + exceptionToString(throwable) + ")";
+    boolean isLatchAcquired = check(() -> acquireLatch(label));
     try {
       lock.lock();
       try {
+        check(() -> assertNotEndOfStream(label));
+        check(() -> assertReceivedSubscription(label));
         errorCount++;
         lastError = throwable;
         completion.signalAll();
@@ -247,7 +282,9 @@ public class TestSubscriber<T> implements Subscriber<T> {
         lock.unlock();
       }
     } finally {
-      releaseLatch();
+      if (isLatchAcquired) {
+        releaseLatch();
+      }
     }
   }
 
@@ -257,6 +294,8 @@ public class TestSubscriber<T> implements Subscriber<T> {
     try {
       lock.lock();
       try {
+        check(() -> assertNotEndOfStream("onComplete()"));
+        check(() -> assertReceivedSubscription("onComplete()"));
         completionCount++;
         completion.signalAll();
       } finally {
@@ -264,6 +303,41 @@ public class TestSubscriber<T> implements Subscriber<T> {
       }
     } finally {
       releaseLatch();
+    }
+  }
+
+  @GuardedBy("lock")
+  private void assertNotEndOfStream(String label) {
+    assertThat(completionCount + errorCount)
+        .withFailMessage(
+            () ->
+                "Calling "
+                    + label
+                    + " after stream has ended; got "
+                    + completionCount
+                    + " onComplete() and "
+                    + errorCount
+                    + " onError(Throwable)"
+                    + (lastError != null
+                        ? " with lastError=<" + exceptionToString(lastError) + ">"
+                        : ""))
+        .isZero();
+  }
+
+  @GuardedBy("lock")
+  private void assertReceivedSubscription(String label) {
+    assertThat(subscription)
+        .withFailMessage(() -> "Calling " + label + " before receiving a subscription")
+        .isNotNull();
+  }
+
+  private boolean check(Runnable assertion) {
+    try {
+      assertion.run();
+      return true;
+    } catch (AssertionError e) {
+      protocolViolations.add(e);
+      return false;
     }
   }
 
@@ -279,7 +353,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
         || (currentOwner = latch.compareAndExchange(currentOwner, nextOwner))
             != currentOwnerBeforeCas) {
       throw new AssertionError(
-          "Misbehaving reactive-streams implementation: concurrent subscriber calls (owner=<"
+          "Concurrent subscriber calls (owner=<"
               + currentOwner
               + ">, acquirer=<"
               + nextOwner
@@ -437,6 +511,10 @@ public class TestSubscriber<T> implements Subscriber<T> {
       }
     }
     return true;
+  }
+
+  public List<Throwable> protocolViolations() {
+    return List.copyOf(protocolViolations);
   }
 
   private static String exceptionToString(Throwable ex) {

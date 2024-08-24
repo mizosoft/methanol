@@ -39,7 +39,8 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.RepeatArguments;
 import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
@@ -56,13 +57,21 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith({ExecutorExtension.class, StoreExtension.class})
+@ExtendWith({ExecutorExtension.class, StoreExtension.class, TestSubscriberExtension.class})
 @RepeatArguments(10)
 class CacheReadingPublisherTest {
+  private TestSubscriberContext subscriberContext;
+
+  @BeforeEach
+  void setUp(TestSubscriberContext subscriberContext) {
+    this.subscriberContext = subscriberContext;
+  }
+
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
   void readSmallStringFromMemory(Executor executor, Store store) throws Exception {
@@ -150,10 +159,8 @@ class CacheReadingPublisherTest {
           }
         };
     var publisher = new CacheReadingPublisher(failingViewer, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
-    subscriber.awaitCompletion();
-    assertThat(subscriber.errorCount()).isOne();
     assertThat(subscriber.awaitError())
         .isInstanceOf(CompletionException.class)
         .hasCauseInstanceOf(TestException.class);
@@ -178,7 +185,7 @@ class CacheReadingPublisherTest {
           }
         };
     var publisher = new CacheReadingPublisher(viewer, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
     awaitUnchecked(firstReadLatch);
     subscriber.awaitSubscription().cancel();
@@ -205,7 +212,7 @@ class CacheReadingPublisherTest {
           }
         };
     var publisher = new CacheReadingPublisher(emptyViewer, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>().autoRequest(0);
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.awaitCompletion();
     assertThat(subscriber.nextCount()).isEqualTo(0);
@@ -221,9 +228,9 @@ class CacheReadingPublisherTest {
           }
         };
     var publisher = new CacheReadingPublisher(emptyViewer, executor);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
-    var secondSubscriber = new TestSubscriber<>();
+    var secondSubscriber = subscriberContext.createSubscriber();
     publisher.subscribe(secondSubscriber);
     assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
   }
