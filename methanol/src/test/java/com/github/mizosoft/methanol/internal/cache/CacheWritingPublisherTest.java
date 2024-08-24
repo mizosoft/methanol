@@ -227,9 +227,8 @@ class CacheWritingPublisherTest {
 
     var secondSubscriber = new TestSubscriber<>();
     publisher.subscribe(secondSubscriber);
-    secondSubscriber.awaitCompletion();
-    assertThat(secondSubscriber.errorCount()).isOne();
     assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
+    assertThat(secondSubscriber.errorCount()).isOne();
   }
 
   @ExecutorParameterizedTest
