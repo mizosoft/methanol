@@ -42,7 +42,8 @@ public final class ExecutorContext implements AutoCloseable {
   private static final Throwable[] CLOSED = new Throwable[0];
 
   private final List<Executor> executors = new ArrayList<>();
-  private final AtomicReference<Throwable[]> uncaughtExceptions = new AtomicReference<>();
+  private final AtomicReference<Throwable[]> uncaughtExceptions =
+      new AtomicReference<>(new Throwable[0]);
 
   public ExecutorContext() {}
 
