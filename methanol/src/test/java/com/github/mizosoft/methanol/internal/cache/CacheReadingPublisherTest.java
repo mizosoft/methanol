@@ -149,11 +149,10 @@ class CacheReadingPublisherTest {
     var failingViewer =
         new TestViewer() {
           @Override
-          public int read(ByteBuffer dst) {
+          public long read(List<ByteBuffer> dst) {
             try {
-              Thread.sleep(50);
-            } catch (InterruptedException e) {
-              return fail("unexpected exception", e);
+              Thread.sleep(10);
+            } catch (InterruptedException ignored) {
             }
             throw new TestException();
           }
@@ -174,11 +173,11 @@ class CacheReadingPublisherTest {
     var endReadLatch = new CountDownLatch(1);
     var viewer =
         new TestViewer() {
-          final AtomicInteger readAsyncCalls = new AtomicInteger();
+          final AtomicInteger readCalls = new AtomicInteger();
 
           @Override
-          public int read(ByteBuffer dst) {
-            readAsyncCalls.incrementAndGet();
+          public long read(List<ByteBuffer> dst) {
+            readCalls.incrementAndGet();
             firstReadLatch.countDown();
             awaitUnchecked(endReadLatch);
             return -1;
@@ -193,8 +192,13 @@ class CacheReadingPublisherTest {
     // Trigger CacheReadingPublisher's read completion callback.
     endReadLatch.countDown();
 
+    try {
+      Thread.sleep(10);
+    } catch (InterruptedException ignored) {
+    }
+
     // No further reads are scheduled.
-    assertThat(viewer.readAsyncCalls.get()).isEqualTo(1);
+    assertThat(viewer.readCalls.get()).isEqualTo(1);
 
     // The subscriber receives no signals.
     assertThat(subscriber.nextCount()).isZero();
@@ -207,7 +211,7 @@ class CacheReadingPublisherTest {
     var emptyViewer =
         new TestViewer() {
           @Override
-          public int read(ByteBuffer dst) {
+          public long read(List<ByteBuffer> dst) {
             return -1;
           }
         };
@@ -223,7 +227,7 @@ class CacheReadingPublisherTest {
     var emptyViewer =
         new TestViewer() {
           @Override
-          public int read(ByteBuffer dst) {
+          public long read(List<ByteBuffer> dsts) {
             return -1;
           }
         };
@@ -240,41 +244,39 @@ class CacheReadingPublisherTest {
 
     @Override
     public String key() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override
     public ByteBuffer metadata() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override
     public long dataSize() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override
     public long entrySize() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
-    abstract int read(ByteBuffer dst);
+    abstract long read(List<ByteBuffer> dsts);
 
     @Override
     public EntryReader newReader() {
-      return (dsts, executor) ->
-          CompletableFuture.supplyAsync(
-              () -> (long) dsts.stream().mapToInt(TestViewer.this::read).sum(), executor);
+      return (dsts, executor) -> CompletableFuture.supplyAsync(() -> read(dsts), executor);
     }
 
     @Override
     public CompletableFuture<Optional<Editor>> edit(Executor executor) {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override
     public boolean removeEntry() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override
