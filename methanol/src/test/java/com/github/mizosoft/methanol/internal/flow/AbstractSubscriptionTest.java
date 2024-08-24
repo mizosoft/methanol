@@ -84,7 +84,7 @@ class AbstractSubscriptionTest {
     var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
-    assertThat(subscriber.awaitSubscription()).isSameAs(subscription);
+    subscriber.awaitSubscription();
     assertThat(subscriber.nextCount()).isZero();
     assertThat(subscriber.errorCount()).isZero();
     assertThat(subscriber.completionCount()).isZero();

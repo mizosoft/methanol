@@ -47,8 +47,7 @@ class ForwardingSubscriberTest {
     var subscriber = new TestForwardingSubscriber();
     var downstream = subscriber.downstream();
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    assertThat(downstream.awaitSubscription()).isSameAs(FlowSupport.NOOP_SUBSCRIPTION);
-
+    downstream.awaitSubscription();
     subscriber.onNext(1);
     subscriber.onNext(2);
     subscriber.onNext(3);

@@ -39,6 +39,7 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -112,6 +113,8 @@ public class TestSubscriber<T> implements Subscriber<T> {
 
   @GuardedBy("lock")
   private boolean throwOnNext = false;
+
+  private final AtomicLong requested = new AtomicLong();
 
   public TestSubscriber() {}
 
@@ -187,6 +190,19 @@ public class TestSubscriber<T> implements Subscriber<T> {
     }
   }
 
+  private void addRequest(long n) {
+    while (true) {
+      long current = requested.get();
+      long updated = current + n;
+      if (updated < 0) {
+        updated = Long.MAX_VALUE;
+      }
+      if (requested.compareAndSet(current, updated)) {
+        return;
+      }
+    }
+  }
+
   @Override
   public void onSubscribe(Subscription subscription) {
     if (!check(() -> assertThat(subscription).isNotNull())) {
@@ -215,6 +231,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
         this.subscription = subscription;
         subscriptionReceived.signalAll();
         if (autoRequest > 0) {
+          addRequest(autoRequest);
           subscription.request(autoRequest);
         }
         if (throwOnSubscribe) {
@@ -243,10 +260,24 @@ public class TestSubscriber<T> implements Subscriber<T> {
       try {
         check(() -> assertNotEndOfStream(label));
         check(() -> assertReceivedSubscription(label));
+
         nextCount++;
+        long localRequested = requested.get();
+        check(
+            () ->
+                assertThat((long) nextCount)
+                    .withFailMessage(
+                        () ->
+                            "Receiving more items than requested; received="
+                                + nextCount
+                                + ", requested="
+                                + localRequested)
+                    .isLessThanOrEqualTo(localRequested));
+
         items.addLast(item);
         itemsAvailable.signalAll();
         if (autoRequest > 0 && subscription != null) {
+          addRequest(autoRequest);
           subscription.request(autoRequest);
         }
         if (throwOnNext) {
@@ -389,7 +420,20 @@ public class TestSubscriber<T> implements Subscriber<T> {
       assertThat(await(subscriptionReceived, hasSubscription, timeout))
           .withFailMessage("Expected onSubscribe within " + timeout)
           .isTrue();
-      return subscription;
+
+      var localSubscription = subscription;
+      return new Subscription() {
+        @Override
+        public void request(long n) {
+          addRequest(n);
+          localSubscription.request(n);
+        }
+
+        @Override
+        public void cancel() {
+          localSubscription.cancel();
+        }
+      };
     } finally {
       lock.unlock();
     }
