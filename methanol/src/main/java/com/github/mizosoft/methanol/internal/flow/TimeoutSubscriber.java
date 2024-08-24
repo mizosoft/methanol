@@ -107,19 +107,23 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
 
     currentTimeoutTask.cancel();
 
+    long currentDemand = subtractAndGetDemand(this, DEMAND, 1);
+    if (currentDemand < 0) {
+      // We're getting overflowed.
+      cancelOnError(this::onError, new IllegalStateException("Getting more items than requested"));
+      return;
+    }
+
     super.onNext(item);
 
-    long currentDemand = subtractAndGetDemand(this, DEMAND, 1);
     if (currentDemand > 0) {
       // We still have requests, so start a new timeout for the next item.
       try {
         scheduleTimeout(currentTimeoutTask.index + 1);
       } catch (RuntimeException | Error e) {
         cancelOnError(this::onError, e);
+        return;
       }
-    } else if (currentDemand < 0) {
-      // We're getting overflowed.
-      cancelOnError(this::onError, new IllegalStateException("getting more items than requested"));
     }
   }
 
@@ -128,6 +132,8 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
     requireNonNull(throwable);
     if (cancelTimeout()) {
       super.onError(throwable);
+    } else {
+      FlowSupport.onDroppedException(throwable);
     }
   }
 
@@ -172,8 +178,9 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
 
   private void cancelOnError(Consumer<Throwable> onError, Throwable exception) {
     // Capture the subscription before it's cleared by onError. The subscription is cancelled after
-    // onError as the HTTP client seems to sometimes complete downstream with an IOException if
-    // the subscription is cancelled, which causes the wrong exception to be passed on.
+    // (not before) onError as the HTTP client seems to sometimes complete downstream with an
+    // IOException if the subscription is cancelled, which causes the wrong exception to be passed
+    // on.
     var subscription = upstream.get();
     try {
       onError.accept(exception);
