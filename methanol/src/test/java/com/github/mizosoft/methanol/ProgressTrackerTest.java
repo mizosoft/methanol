@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,8 @@ import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.SubmittablePublisher;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -49,13 +51,17 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(TestSubscriberExtension.class)
 class ProgressTrackerTest {
+  private TestSubscriberContext subscriberContext;
   private MockClock clock;
 
   @BeforeEach
-  void setUp() {
-    clock = new MockClock();
+  void setUp(TestSubscriberContext subscriberContext) {
+    this.subscriberContext = subscriberContext;
+    this.clock = new MockClock();
   }
 
   @Test
@@ -90,7 +96,7 @@ class ProgressTrackerTest {
   void downloadProgress(Executor executor) {
     var tracker = ProgressTracker.newBuilder().clock(clock).executor(executor).build();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
     upstream.subscribe(subscriber);
 
@@ -157,7 +163,7 @@ class ProgressTrackerTest {
   void downloadProgressWithUnknownContentLength(Executor executor) {
     var tracker = ProgressTracker.newBuilder().clock(clock).executor(executor).build();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, -1);
     upstream.subscribe(subscriber);
 
@@ -236,7 +242,7 @@ class ProgressTrackerTest {
             .enclosedProgress(false)
             .build();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, -1);
     upstream.subscribe(subscriber);
 
@@ -302,7 +308,7 @@ class ProgressTrackerTest {
             .bytesTransferredThreshold(2)
             .build();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
     upstream.subscribe(subscriber);
 
@@ -388,7 +394,7 @@ class ProgressTrackerTest {
             .enclosedProgress(false)
             .build();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
     upstream.subscribe(subscriber);
 
@@ -465,7 +471,7 @@ class ProgressTrackerTest {
             .timePassedThreshold(Duration.ofSeconds(2))
             .build();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
     upstream.subscribe(subscriber);
 
@@ -555,7 +561,7 @@ class ProgressTrackerTest {
             .enclosedProgress(false)
             .build();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var subscriber = tracker.tracking(BodySubscribers.discarding(), listener, 10);
     upstream.subscribe(subscriber);
 
@@ -629,8 +635,8 @@ class ProgressTrackerTest {
   void downloadProgressWithError(Executor executor) {
     var tracker = ProgressTracker.newBuilder().clock(clock).executor(executor).build();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
-    var downstream = new TestSubscriber<>();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
+    var downstream = subscriberContext.createSubscriber();
     var subscriber = tracker.tracking(BodySubscribers.fromSubscriber(downstream), listener, -1);
     upstream.subscribe(subscriber);
     listener.awaitSubscription();
@@ -643,9 +649,9 @@ class ProgressTrackerTest {
   void uploadProgress(Executor executor) {
     var tracker = ProgressTracker.newBuilder().clock(clock).executor(executor).build();
     var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
     // Receive enclosing 0% progress
     verifyThat(listener.pollNext())
@@ -710,9 +716,9 @@ class ProgressTrackerTest {
   void uploadProgressWithUnknownContentLength(Executor executor) {
     var tracker = ProgressTracker.newBuilder().clock(clock).executor(executor).build();
     var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream), listener);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
     // Receive enclosing 0% progress
     verifyThat(listener.pollNext())
@@ -789,9 +795,9 @@ class ProgressTrackerTest {
             .enclosedProgress(false)
             .build();
     var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream), listener);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
     // No enclosing 0% progress
     listener.awaitSubscription();
@@ -855,9 +861,9 @@ class ProgressTrackerTest {
             .bytesTransferredThreshold(2)
             .build();
     var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
     // Receive enclosing 0% progress
     verifyThat(listener.pollNext())
@@ -941,9 +947,9 @@ class ProgressTrackerTest {
             .enclosedProgress(false)
             .build();
     var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
     // No enclosing 0% progress
     listener.awaitSubscription();
@@ -1018,9 +1024,9 @@ class ProgressTrackerTest {
             .timePassedThreshold(Duration.ofSeconds(2))
             .build();
     var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
     // Receive enclosing 0% progress
     verifyThat(listener.pollNext())
@@ -1108,9 +1114,9 @@ class ProgressTrackerTest {
             .enclosedProgress(false)
             .build();
     var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream, 10), listener);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
     // No enclosing 0% progress
     listener.awaitSubscription();
@@ -1190,9 +1196,9 @@ class ProgressTrackerTest {
             .formPart(
                 "part2", BodyPublishers.fromPublisher(secondUpstream)) // Part with unknown length
             .build();
-    var listener = new MultipartProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(MultipartProgressSubscriber::new);
     var publisher = tracker.trackingMultipart(multipartBody, listener);
-    var subscriber = new TestSubscriber<ByteBuffer>().autoRequest(0);
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
 
     // Receive enclosing 0% progress
@@ -1377,9 +1383,9 @@ class ProgressTrackerTest {
   void uploadProgressWithError(Executor executor) {
     var tracker = ProgressTracker.newBuilder().clock(clock).executor(executor).build();
     var upstream = new SubmittablePublisher<ByteBuffer>(FlowSupport.SYNC_EXECUTOR);
-    var listener = new ProgressSubscriber();
+    var listener = subscriberContext.createSubscriber(ProgressSubscriber::new);
     var publisher = tracker.tracking(BodyPublishers.fromPublisher(upstream), listener);
-    var subscriber = new TestSubscriber<>();
+    var subscriber = subscriberContext.createSubscriber();
     publisher.subscribe(subscriber);
     listener.awaitSubscription();
     upstream.firstSubscription().fireOrKeepAliveOnError(new TestException());

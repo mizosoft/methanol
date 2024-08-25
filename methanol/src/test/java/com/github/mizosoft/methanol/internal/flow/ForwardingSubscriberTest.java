@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,17 +26,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestSubscription;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(TestSubscriberExtension.class)
 class ForwardingSubscriberTest {
+  private TestSubscriberContext subscriberContext;
+
+  @BeforeEach
+  void setUp(TestSubscriberContext subscriberFactory) {
+    this.subscriberContext = subscriberFactory;
+  }
+
   @Test
   void forwardsBodyToDownstream() {
     var subscriber = new TestForwardingSubscriber();
     var downstream = subscriber.downstream();
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    assertThat(downstream.awaitSubscription()).isSameAs(FlowSupport.NOOP_SUBSCRIPTION);
-
+    downstream.awaitSubscription();
     subscriber.onNext(1);
     subscriber.onNext(2);
     subscriber.onNext(3);
@@ -67,12 +78,10 @@ class ForwardingSubscriberTest {
     assertThat(subscription.cancellationCount()).isEqualTo(2);
   }
 
-  private static final class TestForwardingSubscriber extends ForwardingSubscriber<Integer> {
-    private final TestSubscriber<Integer> downstream;
+  private final class TestForwardingSubscriber extends ForwardingSubscriber<Integer> {
+    private final TestSubscriber<Integer> downstream = subscriberContext.createSubscriber();
 
-    TestForwardingSubscriber() {
-      this.downstream = new TestSubscriber<>();
-    }
+    TestForwardingSubscriber() {}
 
     @Override
     protected TestSubscriber<Integer> downstream() {

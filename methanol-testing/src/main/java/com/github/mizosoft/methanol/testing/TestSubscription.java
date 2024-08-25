@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -56,7 +56,7 @@ public class TestSubscription implements Subscription {
     try {
       var request = requests.poll(TIMEOUT_SECONDS, TimeUnit.SECONDS);
       assertThat(request)
-          .withFailMessage(() -> "expected a request within " + TIMEOUT_SECONDS + " seconds")
+          .withFailMessage(() -> "Expected a request within " + TIMEOUT_SECONDS + " seconds")
           .isNotNull();
       return castNonNull(request);
     } catch (InterruptedException e) {
@@ -67,7 +67,7 @@ public class TestSubscription implements Subscription {
   public void awaitCancellation() {
     try {
       assertThat(cancellationLatch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS))
-          .withFailMessage(() -> "expected cancellation within " + TIMEOUT_SECONDS + " seconds")
+          .withFailMessage(() -> "Expected cancellation within " + TIMEOUT_SECONDS + " seconds")
           .isTrue();
     } catch (InterruptedException e) {
       throw new RuntimeException(e);

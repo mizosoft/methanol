@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,21 +32,27 @@ import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestSubscription;
 import java.time.Duration;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(TestSubscriberExtension.class)
 class TimeoutSubscriberTest {
   private MockClock clock;
   private MockDelayer delayer;
+  private TestSubscriberContext subscriberContext;
 
   @BeforeEach
-  void setUp() {
-    clock = new MockClock();
-    delayer = new MockDelayer(clock);
+  void setUp(TestSubscriberContext subscriberContext) {
+    this.subscriberContext = subscriberContext;
+    this.clock = new MockClock();
+    this.delayer = new MockDelayer(clock);
   }
 
   @Test
@@ -308,12 +314,15 @@ class TimeoutSubscriberTest {
 
   private static class ItemTimeoutException extends Exception {}
 
-  private static final class TestTimeoutSubscriber
+  private final class TestTimeoutSubscriber
       extends TimeoutSubscriber<Integer, TestSubscriber<Integer>> {
     volatile long timeoutIndex;
 
     TestTimeoutSubscriber(Duration timeout, Delayer delayer) {
-      super(new TestSubscriber<Integer>().autoRequest(0), timeout, delayer);
+      super(
+          subscriberContext.<Integer>createSubscriber().autoRequest(0), // Request manually.
+          timeout,
+          delayer);
     }
 
     @Override

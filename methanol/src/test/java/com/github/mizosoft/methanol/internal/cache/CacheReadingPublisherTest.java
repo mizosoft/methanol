@@ -39,7 +39,8 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.RepeatArguments;
 import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
 import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
@@ -56,13 +57,21 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith({ExecutorExtension.class, StoreExtension.class})
+@ExtendWith({ExecutorExtension.class, StoreExtension.class, TestSubscriberExtension.class})
 @RepeatArguments(10)
 class CacheReadingPublisherTest {
+  private TestSubscriberContext subscriberContext;
+
+  @BeforeEach
+  void setUp(TestSubscriberContext subscriberContext) {
+    this.subscriberContext = subscriberContext;
+  }
+
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
   void readSmallStringFromMemory(Executor executor, Store store) throws Exception {
@@ -140,20 +149,17 @@ class CacheReadingPublisherTest {
     var failingViewer =
         new TestViewer() {
           @Override
-          public int read(ByteBuffer dst) {
+          public long read(List<ByteBuffer> dst) {
             try {
-              Thread.sleep(50);
-            } catch (InterruptedException e) {
-              return fail("unexpected exception", e);
+              Thread.sleep(10);
+            } catch (InterruptedException ignored) {
             }
             throw new TestException();
           }
         };
     var publisher = new CacheReadingPublisher(failingViewer, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
-    subscriber.awaitCompletion();
-    assertThat(subscriber.errorCount()).isOne();
     assertThat(subscriber.awaitError())
         .isInstanceOf(CompletionException.class)
         .hasCauseInstanceOf(TestException.class);
@@ -167,18 +173,18 @@ class CacheReadingPublisherTest {
     var endReadLatch = new CountDownLatch(1);
     var viewer =
         new TestViewer() {
-          final AtomicInteger readAsyncCalls = new AtomicInteger();
+          final AtomicInteger readCalls = new AtomicInteger();
 
           @Override
-          public int read(ByteBuffer dst) {
-            readAsyncCalls.incrementAndGet();
+          public long read(List<ByteBuffer> dst) {
+            readCalls.incrementAndGet();
             firstReadLatch.countDown();
             awaitUnchecked(endReadLatch);
             return -1;
           }
         };
     var publisher = new CacheReadingPublisher(viewer, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
     awaitUnchecked(firstReadLatch);
     subscriber.awaitSubscription().cancel();
@@ -186,8 +192,13 @@ class CacheReadingPublisherTest {
     // Trigger CacheReadingPublisher's read completion callback.
     endReadLatch.countDown();
 
+    try {
+      Thread.sleep(10);
+    } catch (InterruptedException ignored) {
+    }
+
     // No further reads are scheduled.
-    assertThat(viewer.readAsyncCalls.get()).isEqualTo(1);
+    assertThat(viewer.readCalls.get()).isEqualTo(1);
 
     // The subscriber receives no signals.
     assertThat(subscriber.nextCount()).isZero();
@@ -200,12 +211,12 @@ class CacheReadingPublisherTest {
     var emptyViewer =
         new TestViewer() {
           @Override
-          public int read(ByteBuffer dst) {
+          public long read(List<ByteBuffer> dst) {
             return -1;
           }
         };
     var publisher = new CacheReadingPublisher(emptyViewer, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>().autoRequest(0);
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.awaitCompletion();
     assertThat(subscriber.nextCount()).isEqualTo(0);
@@ -216,14 +227,14 @@ class CacheReadingPublisherTest {
     var emptyViewer =
         new TestViewer() {
           @Override
-          public int read(ByteBuffer dst) {
+          public long read(List<ByteBuffer> dsts) {
             return -1;
           }
         };
     var publisher = new CacheReadingPublisher(emptyViewer, executor);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
-    var secondSubscriber = new TestSubscriber<>();
+    var secondSubscriber = subscriberContext.createSubscriber();
     publisher.subscribe(secondSubscriber);
     assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
   }
@@ -233,41 +244,39 @@ class CacheReadingPublisherTest {
 
     @Override
     public String key() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override
     public ByteBuffer metadata() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override
     public long dataSize() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override
     public long entrySize() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
-    abstract int read(ByteBuffer dst);
+    abstract long read(List<ByteBuffer> dsts);
 
     @Override
     public EntryReader newReader() {
-      return (dsts, executor) ->
-          CompletableFuture.supplyAsync(
-              () -> (long) dsts.stream().mapToInt(TestViewer.this::read).sum(), executor);
+      return (dsts, executor) -> CompletableFuture.supplyAsync(() -> read(dsts), executor);
     }
 
     @Override
     public CompletableFuture<Optional<Editor>> edit(Executor executor) {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override
     public boolean removeEntry() {
-      return fail("unexpected call");
+      return fail("Unexpected call");
     }
 
     @Override

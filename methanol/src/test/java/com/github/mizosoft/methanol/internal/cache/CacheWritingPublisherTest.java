@@ -49,6 +49,8 @@ import com.github.mizosoft.methanol.testing.RepeatArguments;
 import com.github.mizosoft.methanol.testing.SubmittablePublisher;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.store.StoreConfig;
 import com.github.mizosoft.methanol.testing.store.StoreExtension;
@@ -69,15 +71,23 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith({ExecutorExtension.class, StoreExtension.class})
+@ExtendWith({ExecutorExtension.class, StoreExtension.class, TestSubscriberExtension.class})
 @RepeatArguments(10)
 class CacheWritingPublisherTest {
   static {
     Logging.disable(CacheWritingPublisher.class);
+  }
+
+  private TestSubscriberContext subscriberContext;
+
+  @BeforeEach
+  void setUp(TestSubscriberContext subscriberContext) {
+    this.subscriberContext = subscriberContext;
   }
 
   @ExecutorParameterizedTest
@@ -189,7 +199,7 @@ class CacheWritingPublisherTest {
     var editor = new TestEditor();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
-    var subscriber = new StringSubscriber();
+    var subscriber = subscriberContext.createSubscriber(StringSubscriber::new);
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Cache me if you can!"));
     upstream.close();
@@ -205,7 +215,7 @@ class CacheWritingPublisherTest {
     var publisher =
         new CacheWritingPublisher(
             FlowSupport.emptyPublisher(), editor, UTF_8.encode("abc"), FlowSupport.SYNC_EXECUTOR);
-    var subscriber = new TestSubscriber<>();
+    var subscriber = subscriberContext.createSubscriber();
     publisher.subscribe(subscriber);
     subscriber.awaitCompletion();
     editor.awaitCommit();
@@ -223,13 +233,12 @@ class CacheWritingPublisherTest {
             new TestEditor(),
             EMPTY_BUFFER,
             FlowSupport.SYNC_EXECUTOR);
-    publisher.subscribe(new TestSubscriber<>());
+    publisher.subscribe(subscriberContext.createSubscriber());
 
-    var secondSubscriber = new TestSubscriber<>();
+    var secondSubscriber = subscriberContext.createSubscriber();
     publisher.subscribe(secondSubscriber);
-    secondSubscriber.awaitCompletion();
-    assertThat(secondSubscriber.errorCount()).isOne();
     assertThat(secondSubscriber.awaitError()).isInstanceOf(IllegalStateException.class);
+    assertThat(secondSubscriber.errorCount()).isOne();
   }
 
   @ExecutorParameterizedTest
@@ -237,7 +246,7 @@ class CacheWritingPublisherTest {
     var editor = new TestEditor();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
     upstream.submit(List.of(ByteBuffer.allocate(1)));
     subscriber.awaitSubscription().cancel();
@@ -268,7 +277,7 @@ class CacheWritingPublisherTest {
         };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
     upstream.submit(List.of(ByteBuffer.allocate(1)));
     upstream.close();
@@ -289,7 +298,7 @@ class CacheWritingPublisherTest {
     var editor = new TestEditor();
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
     upstream.firstSubscription().fireOrKeepAliveOnError(new TestException());
     upstream.close();
@@ -309,7 +318,7 @@ class CacheWritingPublisherTest {
         };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER, executor);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>();
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
     upstream.submit(List.of(ByteBuffer.allocate(1)));
     upstream.close();
@@ -329,7 +338,7 @@ class CacheWritingPublisherTest {
         };
     var upstream = new SubmittablePublisher<List<ByteBuffer>>(executor);
     var publisher = new CacheWritingPublisher(upstream, failingEditor, EMPTY_BUFFER, executor);
-    var subscriber = new StringSubscriber();
+    var subscriber = subscriberContext.createSubscriber(StringSubscriber::new);
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Cache me if you can!"));
     upstream.close();
@@ -360,7 +369,7 @@ class CacheWritingPublisherTest {
             EMPTY_BUFFER,
             executorContext.createExecutor(
                 ExecutorType.CACHED_POOL)); // Use an async pool to avoid blocking indefinitely.
-    var subscriber = new StringSubscriber();
+    var subscriber = subscriberContext.createSubscriber(StringSubscriber::new);
     publisher.subscribe(subscriber);
     subscriber.awaitSubscription();
     executor.execute(
@@ -383,7 +392,7 @@ class CacheWritingPublisherTest {
     var publisher =
         new CacheWritingPublisher(
             upstream, new TestEditor(), EMPTY_BUFFER, executor, Listener.disabled(), false);
-    var subscriber = new TestSubscriber<List<ByteBuffer>>().autoRequest(0);
+    var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(2);
     assertThat(upstream.firstSubscription().currentDemand()).isEqualTo(2);
@@ -431,7 +440,7 @@ class CacheWritingPublisherTest {
             executorContext.createExecutor(ExecutorType.CACHED_POOL),
             Listener.disabled(),
             true);
-    var subscriber = new StringSubscriber();
+    var subscriber = subscriberContext.createSubscriber(StringSubscriber::new);
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Pikachu"));
     upstream.close();
@@ -465,7 +474,7 @@ class CacheWritingPublisherTest {
             executorContext.createExecutor(ExecutorType.CACHED_POOL),
             Listener.disabled(),
             true);
-    var subscriber = new StringSubscriber();
+    var subscriber = subscriberContext.createSubscriber(StringSubscriber::new);
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Pikachu"));
     editor.awaitDiscard();
@@ -501,7 +510,7 @@ class CacheWritingPublisherTest {
             executorContext.createExecutor(ExecutorType.CACHED_POOL),
             Listener.disabled(),
             true);
-    var subscriber = new StringSubscriber();
+    var subscriber = subscriberContext.createSubscriber(StringSubscriber::new);
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable("Pikachu"));
     upstream.close();

@@ -25,13 +25,14 @@ package com.github.mizosoft.methanol.testing.store;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.cache.Store;
+import com.github.mizosoft.methanol.testing.AggregateException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A group of created {@link Store} instances and their associated configuration as required by a
- * test case. There's a specialized context class for each store type.
+ * Creates and manages {@link Store} instances corresponding to a given configuration. There's a
+ * specialized context class for each store type.
  */
 public abstract class StoreContext implements AutoCloseable {
   private final StoreConfig config;
@@ -63,9 +64,7 @@ public abstract class StoreContext implements AutoCloseable {
     if (exceptions.size() == 1) {
       throw exceptions.get(0);
     } else if (exceptions.size() > 1) {
-      var compositeException = new IOException("encountered one or more exceptions when closing");
-      exceptions.forEach(compositeException::addSuppressed);
-      throw compositeException;
+      throw new AggregateException("Multiple exceptions thrown while closing", exceptions);
     }
   }
 

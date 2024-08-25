@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,11 +31,12 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.net.http.HttpRequest.BodyPublishers;
+import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -128,12 +129,20 @@ class MoreBodyPublishersTest {
     var inWriter = new AtomicBoolean();
     var publisher = MoreBodyPublishers.ofOutputStream(out -> inWriter.set(true), service);
     publisher.subscribe(
-        new TestSubscriber<>() {
+        new Subscriber<>() {
           @Override
-          public synchronized void onSubscribe(Subscription subscription) {
+          public void onSubscribe(Subscription subscription) {
             subscription.cancel();
-            super.onSubscribe(subscription);
           }
+
+          @Override
+          public void onNext(ByteBuffer item) {}
+
+          @Override
+          public void onError(Throwable throwable) {}
+
+          @Override
+          public void onComplete() {}
         });
     service.shutdown();
     assertThat(service.awaitTermination(0, TimeUnit.SECONDS)).isTrue(); // No tasks are submitted.

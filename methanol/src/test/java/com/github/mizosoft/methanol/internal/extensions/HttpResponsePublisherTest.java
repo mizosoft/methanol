@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,8 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameteri
 import com.github.mizosoft.methanol.testing.HttpClientStub;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.TestException;
-import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -53,17 +54,25 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(ExecutorExtension.class)
+@ExtendWith({ExecutorExtension.class, TestSubscriberExtension.class})
 class HttpResponsePublisherTest {
+  private TestSubscriberContext subscriberContext;
+
+  @BeforeEach
+  void setUp(TestSubscriberContext subscriberContext) {
+    this.subscriberContext = subscriberContext;
+  }
+
   @ExecutorParameterizedTest
   void successfulResponseWithoutPushPromises(Executor executor) {
     var request = GET("https://localhost");
     var client = new RecordingHttpClient();
     var publisher =
         new HttpResponsePublisher<>(client, request, BodyHandlers.replacing("A"), null, executor);
-    var subscriber = new TestSubscriber<HttpResponse<?>>().autoRequest(0);
+    var subscriber = subscriberContext.<HttpResponse<?>>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
 
     // The request isn't sent until the first demand from downstream.
@@ -92,7 +101,7 @@ class HttpResponsePublisherTest {
     var client = new RecordingHttpClient();
     var publisher =
         new HttpResponsePublisher<>(client, request, BodyHandlers.replacing("A"), null, executor);
-    var subscriber = new TestSubscriber<>().autoRequest(0);
+    var subscriber = subscriberContext.createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(1);
     client.awaitCall().completeExceptionally(new TestException());
@@ -113,7 +122,7 @@ class HttpResponsePublisherTest {
                     ? BodyHandlers.ofString()
                     : null,
             executor);
-    var subscriber = new TestSubscriber<HttpResponse<String>>().autoRequest(0);
+    var subscriber = subscriberContext.<HttpResponse<String>>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
 
     // Request one to send the request.
@@ -169,7 +178,7 @@ class HttpResponsePublisherTest {
     var publisher =
         new HttpResponsePublisher<>(
             client, request, BodyHandlers.replacing("A"), faultyPushPromiseMapper, executor);
-    var subscriber = new TestSubscriber<HttpResponse<String>>().autoRequest(0);
+    var subscriber = subscriberContext.<HttpResponse<String>>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(1);
 
@@ -199,7 +208,7 @@ class HttpResponsePublisherTest {
         };
     var publisher =
         new HttpResponsePublisher<>(client, request, BodyHandlers.replacing("A"), null, executor);
-    var subscriber = new TestSubscriber<>().autoRequest(0);
+    var subscriber = subscriberContext.createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(1);
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
@@ -217,7 +226,7 @@ class HttpResponsePublisherTest {
             BodyHandlers.replacing("A"),
             __ -> BodyHandlers.replacing("B"),
             executor);
-    var subscriber = new TestSubscriber<HttpResponse<String>>().autoRequest(0);
+    var subscriber = subscriberContext.<HttpResponse<String>>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(1);
 
@@ -243,7 +252,7 @@ class HttpResponsePublisherTest {
             BodyHandlers.replacing("A"),
             __ -> BodyHandlers.replacing("B"),
             executor);
-    var subscriber = new TestSubscriber<HttpResponse<String>>();
+    var subscriber = subscriberContext.<HttpResponse<String>>createSubscriber();
     publisher.subscribe(subscriber);
 
     var call = client.<String>awaitCall();

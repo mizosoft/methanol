@@ -224,7 +224,8 @@ public final class AdapterCodec {
     }
 
     /**
-     * Adds both the basic {@link Encoder#basic() encoder} & {@link Decoder#basic() decoder} pair.
+     * Adds both the basic {@link Encoder#basic() encoder} {@code &} {@link Decoder#basic() decoder}
+     * pair.
      */
     @CanIgnoreReturnValue
     public Builder basicCodec() {

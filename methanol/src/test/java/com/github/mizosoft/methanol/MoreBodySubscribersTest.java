@@ -70,7 +70,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(ExecutorExtension.class)
+@ExtendWith({ExecutorExtension.class, TestSubscriberExtension.class})
 class MoreBodySubscribersTest {
   @Test
   void ofByteChannel_isCompleted() {
@@ -306,17 +306,17 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void withReadTimeout_racyOnError() throws InterruptedException {
+  void withReadTimeout_racyOnError(TestSubscriber<List<ByteBuffer>> downstream)
+      throws InterruptedException {
     var timeoutMillis = 20L;
-    var baseSubscriber = new TestSubscriber<List<ByteBuffer>>();
     var timeoutSubscriber =
-        withReadTimeout(fromSubscriber(baseSubscriber), Duration.ofMillis(timeoutMillis));
+        withReadTimeout(fromSubscriber(downstream), Duration.ofMillis(timeoutMillis));
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     // Race with background timeout task on completing the subscriber exceptionally
     Thread.sleep(timeoutMillis);
     timeoutSubscriber.onError(new TestException());
-    assertThat(baseSubscriber.awaitError())
+    assertThat(downstream.awaitError())
         .isInstanceOfAny(TestException.class, HttpReadTimeoutException.class)
         .satisfies(
             t -> {
@@ -327,20 +327,21 @@ class MoreBodySubscribersTest {
   }
 
   @Test
-  void withReadTimeout_subscriptionIsCancelledOnTimeout() {
+  void withReadTimeout_subscriptionIsCancelledOnTimeout(
+      TestSubscriber<List<ByteBuffer>> downstream) {
     var timeoutMillis = 50L;
-    var baseSubscriber = new TestSubscriber<List<ByteBuffer>>();
     var timeoutSubscriber =
-        withReadTimeout(fromSubscriber(baseSubscriber), Duration.ofMillis(timeoutMillis));
+        withReadTimeout(fromSubscriber(downstream), Duration.ofMillis(timeoutMillis));
     var subscription = new TestSubscription();
     timeoutSubscriber.onSubscribe(subscription);
-    assertThat(baseSubscriber.awaitError()).isInstanceOf(HttpReadTimeoutException.class);
+    assertThat(downstream.awaitError()).isInstanceOf(HttpReadTimeoutException.class);
     subscription.awaitCancellation(); // Cancellation happens concurrently.
     assertReadTimeout(timeoutSubscriber, 1, timeoutMillis);
   }
 
   @Test
-  void withReadTimeout_rethrowsRejectionFromSubscriptionRequest() {
+  void withReadTimeout_rethrowsRejectionFromSubscriptionRequest(
+      TestSubscriber<List<ByteBuffer>> downstream) {
     var superBusyScheduler =
         new ScheduledThreadPoolExecutor(0) {
           @Override
@@ -348,21 +349,22 @@ class MoreBodySubscribersTest {
             throw new RejectedExecutionException();
           }
         };
-    var baseSubscriber = new TestSubscriber<>().autoRequest(0); // Request manually.
+    downstream.autoRequest(0); // Request manually.
     var timeoutSubscriber =
         withReadTimeout(
-            fromSubscriber(baseSubscriber), Duration.ofSeconds(Long.MAX_VALUE), superBusyScheduler);
+            fromSubscriber(downstream), Duration.ofSeconds(Long.MAX_VALUE), superBusyScheduler);
     var subscription = new TestSubscription();
     timeoutSubscriber.onSubscribe(subscription);
-    baseSubscriber.awaitSubscription();
+    downstream.awaitSubscription();
     assertThatExceptionOfType(RejectedExecutionException.class)
-        .isThrownBy(() -> baseSubscriber.requestItems(1));
+        .isThrownBy(() -> downstream.requestItems(1));
     assertThat(subscription.isCancelled()).isTrue();
   }
 
   @Test
   @ExecutorSpec(SCHEDULER)
-  void withReadTimeout_handlesRejectionFromOnNextGracefully(ScheduledExecutorService scheduler) {
+  void withReadTimeout_handlesRejectionFromOnNextGracefully(
+      ScheduledExecutorService scheduler, TestSubscriber<List<ByteBuffer>> downstream) {
     var scheduledFuture = new AtomicReference<ScheduledFuture<?>>();
     var busyScheduler =
         new ScheduledThreadPoolExecutor(0) {
@@ -378,22 +380,22 @@ class MoreBodySubscribersTest {
             return future;
           }
         };
-    var baseSubscriber = new TestSubscriber<>().autoRequest(0);
+    downstream.autoRequest(0);
     var timeoutSubscriber =
         withReadTimeout(
-            fromSubscriber(baseSubscriber), Duration.ofSeconds(Long.MAX_VALUE), busyScheduler);
+            fromSubscriber(downstream), Duration.ofSeconds(Long.MAX_VALUE), busyScheduler);
     var subscription = new TestSubscription();
 
     timeoutSubscriber.onSubscribe(subscription);
 
     // Request 2 items to trigger a second timeout task from onNext when it receives the first item
-    baseSubscriber.requestItems(2);
+    downstream.requestItems(2);
 
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1))); // Second timeout is rejected
     timeoutSubscriber.onNext(List.of(ByteBuffer.allocate(1)));
     timeoutSubscriber.onComplete();
-    assertThat(baseSubscriber.awaitError()).isInstanceOf(RejectedExecutionException.class);
-    assertThat(baseSubscriber.nextCount()).isEqualTo(1); // First item is received
+    assertThat(downstream.awaitError()).isInstanceOf(RejectedExecutionException.class);
+    assertThat(downstream.nextCount()).isEqualTo(1); // First item is received
     assertThat(subscription.isCancelled()).isTrue();
     assertThat(scheduledFuture)
         .withFailMessage("First ScheduledFuture isn't cancelled after rejection")

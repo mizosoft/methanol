@@ -49,6 +49,8 @@ import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.SubmittableSubscription;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriber;
+import com.github.mizosoft.methanol.testing.TestSubscriberContext;
+import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -61,20 +63,28 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(ExecutorExtension.class)
+@ExtendWith({ExecutorExtension.class, TestSubscriberExtension.class})
 class AbstractSubscriptionTest {
   static {
     Logging.disable(AbstractSubscription.class);
   }
 
+  private TestSubscriberContext subscriberContext;
+
+  @BeforeEach
+  void setUp(TestSubscriberContext subscriberFactory) {
+    this.subscriberContext = subscriberFactory;
+  }
+
   @ExecutorParameterizedTest
   void subscribeNoSignals(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
-    assertThat(subscriber.awaitSubscription()).isSameAs(subscription);
+    subscriber.awaitSubscription();
     assertThat(subscriber.nextCount()).isZero();
     assertThat(subscriber.errorCount()).isZero();
     assertThat(subscriber.completionCount()).isZero();
@@ -82,7 +92,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void noItems(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscription.complete();
@@ -94,7 +104,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void errorSignal(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAliveOnError(new TestException());
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
@@ -105,7 +115,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void errorOnSubscribe(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>().throwOnSubscribeAndOnNext(true);
+    var subscriber = subscriberContext.<Integer>createSubscriber().throwOnSubscribeAndOnNext(true);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
@@ -116,7 +126,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void oneItem(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscription.submit(1);
@@ -130,7 +140,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void oneItemThenErrorNoWaitForItem(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscription.submit(1);
@@ -143,7 +153,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void oneItemThenErrorWaitForItem(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscription.submit(1);
@@ -157,7 +167,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void itemsAfterCancellation(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     for (int i = 1; i <= 40; ++i) {
@@ -175,7 +185,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void errorOnNext(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscription.submit(1);
@@ -192,7 +202,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void itemOrder(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     for (int i = 1; i <= 20; ++i) {
@@ -208,7 +218,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void noItemsWithoutRequests(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscriber = subscriberContext.<Integer>createSubscriber().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscription.submit(1);
@@ -228,7 +238,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void noItemsMoreThanRequestedAreReceived(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscriber = subscriberContext.<Integer>createSubscriber().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscription.submit(1);
@@ -251,7 +261,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void requestMoreThanAvailable(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscriber = subscriberContext.<Integer>createSubscriber().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscriber.requestItems(2);
@@ -274,7 +284,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void requestOneReceiveOne(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscriber.awaitSubscription(); // Makes sure one item is automatically requested.
@@ -288,7 +298,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void zeroRequest(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscriber = subscriberContext.<Integer>createSubscriber().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscriber.awaitSubscription();
@@ -302,7 +312,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void negativeRequest(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>().autoRequest(0);
+    var subscriber = subscriberContext.<Integer>createSubscriber().autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscriber.requestItems(-1);
@@ -353,7 +363,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void abortByCancellation(Executor executor) {
-    var downstream = new TestSubscriber<Integer>();
+    var downstream = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(downstream, executor);
     for (int i = 0; i < 5; i++) {
       subscription.cancel();
@@ -365,7 +375,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void abortByCompletion(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.submit(1);
     subscription.complete();
@@ -378,7 +388,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void abortByError(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.submit(1);
     subscription.fireOrKeepAliveOnError(new TestException());
@@ -391,7 +401,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void abortByErrorOnSubscribe(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>().throwOnSubscribe(true);
+    var subscriber = subscriberContext.<Integer>createSubscriber().throwOnSubscribe(true);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
@@ -403,7 +413,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void abortByErrorOnNext(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>().throwOnNext(true);
+    var subscriber = subscriberContext.<Integer>createSubscriber().throwOnNext(true);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
     subscription.submit(1);
@@ -417,7 +427,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void failingAbort(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var subscription =
         new AbstractSubscription<>(subscriber, executor) {
           @Override
@@ -437,7 +447,7 @@ class AbstractSubscriptionTest {
 
   @ExecutorParameterizedTest
   void failingEmit(Executor executor) {
-    var subscriber = new TestSubscriber<Integer>();
+    var subscriber = subscriberContext.<Integer>createSubscriber();
     var abortFuture = new CompletableFuture<Boolean>();
     var subscription =
         new AbstractSubscription<>(subscriber, executor) {
@@ -464,7 +474,8 @@ class AbstractSubscriptionTest {
         r -> {
           throw new RejectedExecutionException();
         };
-    var subscription = new SubmittableSubscription<>(new TestSubscriber<Integer>(), busyExecutor);
+    var subscription =
+        new SubmittableSubscription<>(subscriberContext.<Integer>createSubscriber(), busyExecutor);
     assertThatExceptionOfType(RejectedExecutionException.class)
         .isThrownBy(subscription::fireOrKeepAlive);
     assertThat(subscription.abortCount()).isOne();
@@ -476,15 +487,16 @@ class AbstractSubscriptionTest {
   void pendingErrorStopsSubmission(Executor executor, ExecutorContext executorContext) {
     var onErrorLatch = new CountDownLatch(1);
     var firstOnNextLatch = new CountDownLatch(1);
-    var subscriber =
-        new TestSubscriber<Integer>() {
-          @Override
-          public void onNext(Integer item) {
-            firstOnNextLatch.countDown();
-            awaitUnchecked(onErrorLatch);
-            super.onNext(item);
-          }
-        }.autoRequest(0);
+    class MyTestSubscriber extends TestSubscriber<Integer> {
+      @Override
+      public void onNext(Integer item) {
+        super.onNext(item);
+        firstOnNextLatch.countDown();
+        awaitUnchecked(onErrorLatch);
+      }
+    }
+
+    var subscriber = subscriberContext.createSubscriber(MyTestSubscriber::new).autoRequest(0);
     var subscription = new SubmittableSubscription<>(subscriber, executor);
     subscription.fireOrKeepAlive();
 

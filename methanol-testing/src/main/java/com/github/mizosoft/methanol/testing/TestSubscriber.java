@@ -22,26 +22,31 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
-import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BooleanSupplier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A {@link Subscriber} implementation that facilitates testing {@link Publisher} implementations
@@ -54,6 +59,33 @@ public class TestSubscriber<T> implements Subscriber<T> {
   private final Condition subscriptionReceived = lock.newCondition();
   private final Condition itemsAvailable = lock.newCondition();
   private final Condition completion = lock.newCondition();
+  private final AtomicReference<LatchOwner> latch = new AtomicReference<>();
+  private final List<AssertionError> protocolViolations = new CopyOnWriteArrayList<>();
+
+  private static final class LatchOwner {
+    final Thread thread;
+    final String label;
+    final @Nullable LatchOwner next;
+
+    LatchOwner(Thread thread, String label, @Nullable LatchOwner next) {
+      this.thread = thread;
+      this.label = label;
+      this.next = next;
+    }
+
+    LatchOwner push(String label) {
+      return new LatchOwner(thread, label, this);
+    }
+
+    @Nullable LatchOwner pop() {
+      return next;
+    }
+
+    @Override
+    public String toString() {
+      return label + " by " + thread;
+    }
+  }
 
   @GuardedBy("lock")
   private int nextCount;
@@ -81,6 +113,8 @@ public class TestSubscriber<T> implements Subscriber<T> {
 
   @GuardedBy("lock")
   private boolean throwOnNext = false;
+
+  private final AtomicLong requested = new AtomicLong();
 
   public TestSubscriber() {}
 
@@ -156,65 +190,222 @@ public class TestSubscriber<T> implements Subscriber<T> {
     }
   }
 
+  private void addRequest(long n) {
+    while (true) {
+      long current = requested.get();
+      long updated = current + n;
+      if (updated < 0) {
+        updated = Long.MAX_VALUE;
+      }
+      if (requested.compareAndSet(current, updated)) {
+        return;
+      }
+    }
+  }
+
   @Override
   public void onSubscribe(Subscription subscription) {
-    requireNonNull(subscription);
-    lock.lock();
+    if (!check(() -> assertThat(subscription).isNotNull())) {
+      return;
+    }
+
+    boolean latchAcquired = check(() -> acquireLatch("onSubscribe(" + subscription + ")"));
     try {
-      this.subscription = subscription;
-      subscriptionReceived.signalAll();
-      if (autoRequest > 0) {
-        subscription.request(autoRequest);
-      }
-      if (throwOnSubscribe) {
-        throw new TestException();
+      lock.lock();
+      try {
+        boolean calledOnce =
+            check(
+                () ->
+                    assertThat(this.subscription)
+                        .withFailMessage(
+                            "Receiving "
+                                + subscription
+                                + " despite already having received "
+                                + this.subscription)
+                        .isNull());
+        if (!calledOnce) {
+          subscription.cancel();
+          return;
+        }
+
+        this.subscription = subscription;
+        subscriptionReceived.signalAll();
+        if (autoRequest > 0) {
+          addRequest(autoRequest);
+          subscription.request(autoRequest);
+        }
+        if (throwOnSubscribe) {
+          throw new TestException();
+        }
+      } finally {
+        lock.unlock();
       }
     } finally {
-      lock.unlock();
+      if (latchAcquired) {
+        releaseLatch();
+      }
     }
   }
 
   @Override
   public void onNext(T item) {
-    requireNonNull(item);
-    lock.lock();
+    if (!check(() -> assertThat(item).isNotNull())) {
+      return;
+    }
+
+    var label = "onNext(" + item + ")";
+    boolean latchAcquired = check(() -> acquireLatch(label));
     try {
-      nextCount++;
-      items.addLast(item);
-      itemsAvailable.signalAll();
-      if (autoRequest > 0) {
-        subscription.request(autoRequest);
-      }
-      if (throwOnNext) {
-        throw new TestException();
+      lock.lock();
+      try {
+        check(() -> assertNotEndOfStream(label));
+        check(() -> assertReceivedSubscription(label));
+
+        nextCount++;
+        long localRequested = requested.get();
+        check(
+            () ->
+                assertThat((long) nextCount)
+                    .withFailMessage(
+                        () ->
+                            "Receiving more items than requested; received="
+                                + nextCount
+                                + ", requested="
+                                + localRequested)
+                    .isLessThanOrEqualTo(localRequested));
+
+        items.addLast(item);
+        itemsAvailable.signalAll();
+        if (autoRequest > 0 && subscription != null) {
+          addRequest(autoRequest);
+          subscription.request(autoRequest);
+        }
+        if (throwOnNext) {
+          throw new TestException();
+        }
+      } finally {
+        lock.unlock();
       }
     } finally {
-      lock.unlock();
+      if (latchAcquired) {
+        releaseLatch();
+      }
     }
   }
 
   @Override
   public void onError(Throwable throwable) {
-    requireNonNull(throwable);
-    lock.lock();
+    if (!check(() -> assertThat(throwable).isNotNull())) {
+      return;
+    }
+
+    var label = "onError(" + exceptionToString(throwable) + ")";
+    boolean isLatchAcquired = check(() -> acquireLatch(label));
     try {
-      errorCount++;
-      lastError = throwable;
-      completion.signalAll();
+      lock.lock();
+      try {
+        check(() -> assertNotEndOfStream(label));
+        check(() -> assertReceivedSubscription(label));
+        errorCount++;
+        lastError = throwable;
+        completion.signalAll();
+      } finally {
+        lock.unlock();
+      }
     } finally {
-      lock.unlock();
+      if (isLatchAcquired) {
+        releaseLatch();
+      }
     }
   }
 
   @Override
   public void onComplete() {
-    lock.lock();
+    acquireLatch("onComplete()");
     try {
-      completionCount++;
-      completion.signalAll();
+      lock.lock();
+      try {
+        check(() -> assertNotEndOfStream("onComplete()"));
+        check(() -> assertReceivedSubscription("onComplete()"));
+        completionCount++;
+        completion.signalAll();
+      } finally {
+        lock.unlock();
+      }
     } finally {
-      lock.unlock();
+      releaseLatch();
     }
+  }
+
+  @GuardedBy("lock")
+  private void assertNotEndOfStream(String label) {
+    assertThat(completionCount + errorCount)
+        .withFailMessage(
+            () ->
+                "Calling "
+                    + label
+                    + " after stream has ended; got "
+                    + completionCount
+                    + " onComplete() and "
+                    + errorCount
+                    + " onError(Throwable)"
+                    + (lastError != null
+                        ? " with lastError=<" + exceptionToString(lastError) + ">"
+                        : ""))
+        .isZero();
+  }
+
+  @GuardedBy("lock")
+  private void assertReceivedSubscription(String label) {
+    assertThat(subscription)
+        .withFailMessage(() -> "Calling " + label + " before receiving a subscription")
+        .isNotNull();
+  }
+
+  private boolean check(Runnable assertion) {
+    try {
+      assertion.run();
+      return true;
+    } catch (AssertionError e) {
+      protocolViolations.add(e);
+      return false;
+    }
+  }
+
+  private void acquireLatch(String label) {
+    var currentThread = Thread.currentThread();
+    var currentOwner = latch.get();
+    var nextOwner =
+        currentOwner != null && currentOwner.thread == currentThread
+            ? currentOwner.push(label) // Recursive call.
+            : new LatchOwner(currentThread, label, null);
+    var currentOwnerBeforeCas = currentOwner;
+    if ((currentOwner != null && nextOwner.thread != currentOwner.thread)
+        || (currentOwner = latch.compareAndExchange(currentOwner, nextOwner))
+            != currentOwnerBeforeCas) {
+      throw new AssertionError(
+          "Concurrent subscriber calls (owner=<"
+              + currentOwner
+              + ">, acquirer=<"
+              + nextOwner
+              + ">)");
+    }
+  }
+
+  private void releaseLatch() {
+    var currentThread = Thread.currentThread();
+    var currentOwner = latch.get();
+    assertThat(currentOwner != null && currentOwner.thread == currentThread)
+        .withFailMessage("Latch not owned by current thread")
+        .isTrue();
+
+    // We know for sure that there can be no contention here. Contention with another releaseLatch
+    // is impossible as the assertion above guarantees the releaser only comes from the owner's
+    // thread. Contention with acquireLatch is also impossible, as it only CASes if the owner is
+    // null or the acquirer has the owner's thread. Absence of the first condition is guaranteed
+    // by the assertion above. Absence of the second is guaranteed by the fact that a thread cannot
+    // be an acquirer and releaser at the same time.
+    latch.set(currentOwner.pop());
   }
 
   public Subscription awaitSubscription() {
@@ -227,9 +418,22 @@ public class TestSubscriber<T> implements Subscriber<T> {
       @SuppressWarnings("GuardedBy")
       BooleanSupplier hasSubscription = () -> subscription != null;
       assertThat(await(subscriptionReceived, hasSubscription, timeout))
-          .withFailMessage("expected onSubscribe within " + timeout)
+          .withFailMessage("Expected onSubscribe within " + timeout)
           .isTrue();
-      return subscription;
+
+      var localSubscription = subscription;
+      return new Subscription() {
+        @Override
+        public void request(long n) {
+          addRequest(n);
+          localSubscription.request(n);
+        }
+
+        @Override
+        public void cancel() {
+          localSubscription.cancel();
+        }
+      };
     } finally {
       lock.unlock();
     }
@@ -276,7 +480,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
       @SuppressWarnings("GuardedBy")
       BooleanSupplier hasEnoughItems = () -> items.size() >= n;
       assertThat(await(itemsAvailable, hasEnoughItems, timeout))
-          .withFailMessage("expected onNext within " + timeout)
+          .withFailMessage("Expected onNext within " + timeout)
           .isTrue();
       var polled = new ArrayList<T>();
       for (int i = 0; i < n; i++) {
@@ -298,8 +502,17 @@ public class TestSubscriber<T> implements Subscriber<T> {
       @SuppressWarnings("GuardedBy")
       BooleanSupplier isComplete = () -> completionCount > 0 || errorCount > 0;
       assertThat(await(completion, isComplete, timeout))
-          .withFailMessage("expected completion within " + timeout)
+          .withFailMessage("Expected completion within " + timeout)
           .isTrue();
+
+      var localLastError = lastError;
+      assertThat(lastError)
+          .withFailMessage(
+              () ->
+                  "Expected onComplete() but got onError("
+                      + exceptionToString(localLastError)
+                      + ")")
+          .isNull();
     } finally {
       lock.unlock();
     }
@@ -315,10 +528,14 @@ public class TestSubscriber<T> implements Subscriber<T> {
       @SuppressWarnings("GuardedBy")
       BooleanSupplier isComplete = () -> completionCount > 0 || errorCount > 0;
       assertThat(await(completion, isComplete, timeout))
-          .withFailMessage("expected an error within " + timeout)
+          .withFailMessage("Expected an error within " + timeout)
           .isTrue();
-      assertThat(lastError).withFailMessage("expected onError but got onComplete").isNotNull();
-      return castNonNull(lastError);
+
+      var localLastError = lastError;
+      assertThat(lastError)
+          .withFailMessage("Expected onError(Throwable) but got onComplete()")
+          .isNotNull();
+      return localLastError;
     } finally {
       lock.unlock();
     }
@@ -334,9 +551,19 @@ public class TestSubscriber<T> implements Subscriber<T> {
         }
         remainingNanos = condition.awaitNanos(remainingNanos);
       } catch (InterruptedException ex) {
-        throw new RuntimeException(ex);
+        throw new CompletionException(ex);
       }
     }
     return true;
+  }
+
+  public List<Throwable> protocolViolations() {
+    return List.copyOf(protocolViolations);
+  }
+
+  private static String exceptionToString(Throwable ex) {
+    var writer = new StringWriter();
+    ex.printStackTrace(new PrintWriter(writer));
+    return writer.toString();
   }
 }
