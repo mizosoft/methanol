@@ -365,7 +365,8 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basicCodec()" class="member-name-link">basicCodec()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></dt>
 <dd>
-<div class="block">Adds both the basic <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html#basic()"><code>encoder</code></a> <span class="invalid-tag">invalid input: '&amp;'</span> <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#basic()"><code>decoder</code></a> pair.</div>
+<div class="block">Adds both the basic <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html#basic()"><code>encoder</code></a> <code>&amp;</code> <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#basic()"><code>decoder</code></a>
+ pair.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basicDecoder()" class="member-name-link">basicDecoder()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></dt>
 <dd>
@@ -794,6 +795,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreContext.html#close()" class="member-name-link">close()</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreContext.html" title="class in com.github.mizosoft.methanol.testing.store">StoreContext</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittablePublisher.html#close()" class="member-name-link">close()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittablePublisher.html" title="class in com.github.mizosoft.methanol.testing">SubmittablePublisher</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html#close()" class="member-name-link">close()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriberContext</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html#close()" class="member-name-link">close()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></dt>
 <dd>
@@ -1277,6 +1280,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/InternalStorageExtension.html#createStore(java.util.concurrent.Executor,int)" class="member-name-link">createStore(Executor, int)</a> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/InternalStorageExtension.html" title="interface in com.github.mizosoft.methanol.internal.cache">InternalStorageExtension</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/InternalStorageExtension.html#createStoreAsync(java.util.concurrent.Executor,int)" class="member-name-link">createStoreAsync(Executor, int)</a> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/InternalStorageExtension.html" title="interface in com.github.mizosoft.methanol.internal.cache">InternalStorageExtension</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html#createSubscriber()" class="member-name-link">createSubscriber()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriberContext</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html#createSubscriber(java.util.function.Supplier)" class="member-name-link">createSubscriber(Supplier&lt;S&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriberContext</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/JaxbBindingFactory.html#createUnmarshaller(java.lang.Class)" class="member-name-link">createUnmarshaller(Class&lt;?&gt;)</a> - Method in interface com.github.mizosoft.methanol.adapter.jaxb.jakarta.<a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/JaxbBindingFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jaxb.jakarta">JaxbBindingFactory</a></dt>
 <dd>
@@ -1766,7 +1773,9 @@ loadScripts(document, 'script');</script>
 <div class="block">Sets the executor on which <a href="methanol/com/github/mizosoft/methanol/ProgressTracker.Listener.html" title="interface in com.github.mizosoft.methanol"><code>ProgressTracker.Listener</code></a> methods are called.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorContext.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing">ExecutorContext</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block">Creates and manages <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link"><code>Executor</code></a> instances.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorContext.html#%3Cinit%3E()" class="member-name-link">ExecutorContext()</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorContext.html" title="class in com.github.mizosoft.methanol.testing">ExecutorContext</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorExtension.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing">ExecutorExtension</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
@@ -3660,6 +3669,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Providers <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> for google's <a href="https://developers.google.com/protocol-buffers">protocol buffers</a> format.</div>
 </dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#protocolViolations()" class="member-name-link">protocolViolations()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorExtension.html#provideArguments(org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">provideArguments(ExtensionContext)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorExtension.html" title="class in com.github.mizosoft.methanol.testing">ExecutorExtension</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreExtension.html#provideArguments(org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">provideArguments(ExtensionContext)</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreExtension.html" title="class in com.github.mizosoft.methanol.testing.store">StoreExtension</a></dt>
@@ -4069,6 +4080,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreExtension.html#resolveParameter(org.junit.jupiter.api.extension.ParameterContext,org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">resolveParameter(ParameterContext, ExtensionContext)</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreExtension.html" title="class in com.github.mizosoft.methanol.testing.store">StoreExtension</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberExtension.html#resolveParameter(org.junit.jupiter.api.extension.ParameterContext,org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">resolveParameter(ParameterContext, ExtensionContext)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberExtension.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriberExtension</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" class="type-name-link" title="class in com.github.mizosoft.methanol">ResponseBuilder&lt;T&gt;</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">A builder of <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse</code></a> instances.</div>
@@ -4339,8 +4352,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreContext.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing.store">StoreContext</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/store/package-summary.html">com.github.mizosoft.methanol.testing.store</a></dt>
 <dd>
-<div class="block">A group of created <a href="methanol/com/github/mizosoft/methanol/internal/cache/Store.html" title="interface in com.github.mizosoft.methanol.internal.cache"><code>Store</code></a> instances and their associated configuration as required by a
- test case.</div>
+<div class="block">Creates and manages <a href="methanol/com/github/mizosoft/methanol/internal/cache/Store.html" title="interface in com.github.mizosoft.methanol.internal.cache"><code>Store</code></a> instances corresponding to a given configuration.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/StoreCorruptionException.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.cache">StoreCorruptionException</a> - Exception Class in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
 <dd>&nbsp;</dd>
@@ -4471,6 +4483,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreExtension.html#supportsParameter(org.junit.jupiter.api.extension.ParameterContext,org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">supportsParameter(ParameterContext, ExtensionContext)</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreExtension.html" title="class in com.github.mizosoft.methanol.testing.store">StoreExtension</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberExtension.html#supportsParameter(org.junit.jupiter.api.extension.ParameterContext,org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">supportsParameter(ParameterContext, ExtensionContext)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberExtension.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriberExtension</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingBodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">supportsType(TypeRef&lt;?&gt;)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingBodyAdapter</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">supportsType(TypeRef&lt;?&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></dt>
@@ -4546,6 +4560,20 @@ loadScripts(document, 'script');</script>
  and the like.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#%3Cinit%3E()" class="member-name-link">TestSubscriber()</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing">TestSubscriberContext</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
+<dd>
+<div class="block">Creates and manages <a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing"><code>TestSubscriber</code></a> instances.</div>
+</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html#%3Cinit%3E()" class="member-name-link">TestSubscriberContext()</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriberContext</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberExtension.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing">TestSubscriberExtension</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
+<dd>
+<div class="block"><code>Extension</code> that provides <a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing"><code>TestSubscriber</code></a> or <a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberContext.html" title="class in com.github.mizosoft.methanol.testing"><code>TestSubscriberContext</code></a> instances
+ and reports misbehaving usage of the provided subscribers, according to the reactive-streams
+ protocol.</div>
+</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberExtension.html#%3Cinit%3E()" class="member-name-link">TestSubscriberExtension()</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberExtension.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriberExtension</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscription.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing">TestSubscription</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
 <dd>&nbsp;</dd>
