@@ -9,7 +9,7 @@ if targetEntryVersion ~= '-1' and targetEntryVersion ~= entryVersion then
 end
 
 local removed = redis.call('unlink', entryKey) > 0
-if removed and dataVersion then
+if dataVersion then
   local dataKey = entryKey .. ':data:' .. dataVersion
   if redis.call('expire', dataKey, staleEntryTtlSeconds) == 1 then
     redis.call('rename', dataKey, dataKey .. ':stale')
@@ -19,7 +19,7 @@ end
 -- Invalidate any ongoing edit for this entry.
 local currentEditorId = redis.call('getdel', entryKey .. ':editor')
 if currentEditorId then
-  redis.call('unlink', entryKey .. ':wip_data:' .. currentEditorId)
+  redis.call('unlink', entryKey .. ':data:wip:' .. currentEditorId)
   removed = true
 end
 return removed
