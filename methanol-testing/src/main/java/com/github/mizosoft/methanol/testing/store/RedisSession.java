@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.testing.store;
 
+import io.lettuce.core.api.StatefulConnection;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -40,6 +41,9 @@ public interface RedisSession extends AutoCloseable {
 
   /** Returns {@code true} if this session is operable. */
   boolean isHealthy();
+
+  /** Returns a connection to the redis server represented by this session. */
+  StatefulConnection<String, String> connect();
 
   @Override
   void close() throws IOException;

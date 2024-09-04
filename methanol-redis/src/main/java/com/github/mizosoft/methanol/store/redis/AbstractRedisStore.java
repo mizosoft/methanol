@@ -294,6 +294,14 @@ abstract class AbstractRedisStore<
     return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, key);
   }
 
+  String wipDataKey(Editor editor) {
+    requireArgument(
+        editor instanceof AbstractRedisStore<?, ?, ?>.RedisEditor,
+        "Unrecognized editor: %s",
+        editor);
+    return ((AbstractRedisStore<?, ?, ?>.RedisEditor) editor).wipDataKey();
+  }
+
   void requireNotClosed() {
     requireState(!closed.get(), "Store is closed");
   }
@@ -644,6 +652,10 @@ abstract class AbstractRedisStore<
       this.editorLockKey = editorLockKey;
       this.wipDataKey = wipDataKey;
       this.editorId = editorId;
+    }
+
+    String wipDataKey() {
+      return wipDataKey;
     }
 
     @Override

@@ -34,6 +34,7 @@ import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.github.mizosoft.methanol.internal.Utils;
@@ -52,6 +53,7 @@ import com.github.mizosoft.methanol.testing.store.StoreSpec;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -628,6 +630,21 @@ class StoreTest {
     try (var viewer = view(store, "e1")) {
       assertThat(viewer.metadata().isReadOnly()).isTrue();
     }
+  }
+
+  @StoreParameterizedTest
+  void editingIsAvailableWhenEditorIsClosed(Store store) throws IOException {
+    var editor = edit(store, "e1");
+    assertThat(store.edit("e1")).isEmpty();
+    editor.close();
+
+    // Releasing the editor lock in redis stores is done asynchronously so we must retry.
+    //noinspection OptionalGetWithoutIsPresent
+    await()
+        .pollDelay(Duration.ZERO)
+        .until(() -> store.edit("e1"), Optional::isPresent)
+        .get()
+        .close();
   }
 
   @StoreParameterizedTest

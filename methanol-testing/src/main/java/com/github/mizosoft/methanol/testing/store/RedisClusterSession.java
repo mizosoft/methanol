@@ -50,9 +50,11 @@ public final class RedisClusterSession implements RedisSession {
   private static final int CLUSTER_JOIN_TIMEOUT_SECONDS = TestUtils.VERY_SLOW_TIMEOUT_SECONDS;
 
   private final List<RedisStandaloneSession> nodes;
+  private final RedisClusterClient client;
 
   private RedisClusterSession(List<RedisStandaloneSession> nodes) {
     this.nodes = List.copyOf(nodes);
+    this.client = RedisClusterClient.create(uris());
   }
 
   public List<RedisURI> uris() {
@@ -103,7 +105,13 @@ public final class RedisClusterSession implements RedisSession {
   }
 
   @Override
+  public StatefulRedisClusterConnection<String, String> connect() {
+    return client.connect();
+  }
+
+  @Override
   public void close() throws IOException {
+    client.close();
     closeNodes(nodes);
   }
 

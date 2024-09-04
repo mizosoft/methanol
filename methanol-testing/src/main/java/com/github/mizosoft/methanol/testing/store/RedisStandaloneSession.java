@@ -31,6 +31,7 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisException;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.ShutdownArgs;
+import io.lettuce.core.api.StatefulRedisConnection;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,6 +75,7 @@ public final class RedisStandaloneSession implements RedisSession {
   private final Path directory;
   private final boolean deleteDirectoryOnClosure;
   private final Path logFile;
+  private final RedisClient client;
 
   private boolean closed;
 
@@ -84,6 +86,7 @@ public final class RedisStandaloneSession implements RedisSession {
     this.directory = requireNonNull(directory);
     this.deleteDirectoryOnClosure = deleteDirectoryOnClosure;
     this.logFile = requireNonNull(logFile);
+    this.client = RedisClient.create(uri);
   }
 
   public RedisURI uri() {
@@ -133,12 +136,18 @@ public final class RedisStandaloneSession implements RedisSession {
   }
 
   @Override
+  public StatefulRedisConnection<String, String> connect() {
+    return client.connect();
+  }
+
+  @Override
   public void close() throws IOException {
     if (closed) {
       return;
     }
 
     closed = true;
+    client.close();
     if (process.isAlive()) {
       shutdownServer();
     }
