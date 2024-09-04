@@ -51,14 +51,12 @@ public interface RedisStorageExtension extends InternalStorageExtension {
 
   /** A builder of {@code RedisStorageExtension}. */
   final class Builder {
-    private static final int UNSET_NUMBER = -1;
-
-    private static final int DEFAULT_EDITOR_LOCK_TTL_SECONDS = 10;
-    private static final int DEFAULT_STALE_ENTRY_TTL_SECONDS = 5;
+    private static final int DEFAULT_EDITOR_LOCK_TTL_SECONDS = 8;
+    private static final int DEFAULT_STALE_ENTRY_TTL_SECONDS = 4;
 
     private @MonotonicNonNull RedisStorageExtensionFactory factory;
-    private int editorLockTtlSeconds = UNSET_NUMBER;
-    private int staleEntryTtlSeconds = UNSET_NUMBER;
+    private int editorLockTtlSeconds = DEFAULT_EDITOR_LOCK_TTL_SECONDS;
+    private int staleEntryTtlSeconds = DEFAULT_STALE_ENTRY_TTL_SECONDS;
 
     Builder() {}
 
@@ -144,14 +142,6 @@ public interface RedisStorageExtension extends InternalStorageExtension {
 
     /** Creates a new {@code RedisStorageExtension}. */
     public RedisStorageExtension build() {
-      int editorLockTtlSeconds = this.editorLockTtlSeconds;
-      if (editorLockTtlSeconds == UNSET_NUMBER) {
-        editorLockTtlSeconds = DEFAULT_EDITOR_LOCK_TTL_SECONDS;
-      }
-      int staleEntryTtlSeconds = this.staleEntryTtlSeconds;
-      if (staleEntryTtlSeconds == UNSET_NUMBER) {
-        staleEntryTtlSeconds = DEFAULT_STALE_ENTRY_TTL_SECONDS;
-      }
       return factory.create(editorLockTtlSeconds, staleEntryTtlSeconds);
     }
 
