@@ -30,6 +30,7 @@ import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyTha
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.from;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -52,7 +53,8 @@ import com.github.mizosoft.methanol.testing.TestSubscriber;
 import com.github.mizosoft.methanol.testing.TestSubscriberContext;
 import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import com.github.mizosoft.methanol.testing.store.StoreConfig;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.FileSystemType;
+import com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType;
 import com.github.mizosoft.methanol.testing.store.StoreExtension;
 import com.github.mizosoft.methanol.testing.store.StoreSpec;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -73,6 +75,7 @@ import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -91,60 +94,55 @@ class CacheWritingPublisherTest {
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(tested = StoreConfig.StoreType.MEMORY, fileSystem = StoreConfig.FileSystemType.NONE)
+  @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
   void writeSmallStringToMemory(Executor executor, Store store) throws IOException {
     testWritingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(tested = StoreConfig.StoreType.DISK, fileSystem = StoreConfig.FileSystemType.SYSTEM)
+  @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void writeSmallStringToDisk(Executor executor, Store store) throws IOException {
     testWritingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(
-      tested = StoreConfig.StoreType.REDIS_STANDALONE,
-      fileSystem = StoreConfig.FileSystemType.NONE)
+  @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
   void writeSmallStringToRedisStandalone(Executor executor, Store store) throws IOException {
     testWritingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(
-      tested = StoreConfig.StoreType.REDIS_CLUSTER,
-      fileSystem = StoreConfig.FileSystemType.NONE)
+  @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
   void writeSmallStringToRedisCluster(Executor executor, Store store) throws IOException {
     testWritingSmallString(store, executor);
   }
 
   @ExecutorParameterizedTest
-  @StoreSpec(tested = StoreConfig.StoreType.MEMORY, fileSystem = StoreConfig.FileSystemType.NONE)
+  @StoreSpec(tested = StoreType.MEMORY, fileSystem = FileSystemType.NONE)
   void writeLargeStringToMemory(Executor executor, Store store) throws IOException {
     testWritingLargeString(store, executor);
   }
 
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
-  @StoreSpec(tested = StoreConfig.StoreType.DISK, fileSystem = StoreConfig.FileSystemType.SYSTEM)
+  @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void writeLargeStringToDisk(Executor executor, Store store) throws IOException {
     testWritingLargeString(store, executor);
   }
 
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
-  @StoreSpec(
-      tested = StoreConfig.StoreType.REDIS_STANDALONE,
-      fileSystem = StoreConfig.FileSystemType.NONE)
+  @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
   void writeLargeStringToRedisStandalone(Executor executor, Store store) throws IOException {
     testWritingLargeString(store, executor);
   }
 
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
-  @StoreSpec(
-      tested = StoreConfig.StoreType.REDIS_CLUSTER,
-      fileSystem = StoreConfig.FileSystemType.NONE)
+  @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")
   void writeLargeStringToRedisCluster(Executor executor, Store store) throws IOException {
     testWritingLargeString(store, executor);
@@ -186,7 +184,7 @@ class CacheWritingPublisherTest {
     publisher.subscribe(subscriber);
     upstream.submitAll(toResponseBodyIterable(str, Utils.BUFFER_SIZE));
     upstream.close();
-    verifyThat(subscriber).succeedsWith(str);
+    verifyThat(subscriber).body().returns(str.length(), from(String::length)).isEqualTo(str);
     if (listener.result instanceof Throwable) {
       fail((Throwable) listener.result);
     }
