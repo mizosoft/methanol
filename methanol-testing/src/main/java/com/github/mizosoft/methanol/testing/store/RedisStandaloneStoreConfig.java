@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,9 +22,7 @@
 
 package com.github.mizosoft.methanol.testing.store;
 
-import java.util.OptionalInt;
-
-public final class RedisStandaloneStoreConfig extends AbstractRedisStoreConfig {
+public final class RedisStandaloneStoreConfig extends RedisStoreConfig {
   public RedisStandaloneStoreConfig(
       int appVersion, int editorLockTimeToLiveSeconds, int staleEntryTimeToLiveSeconds) {
     super(
@@ -35,12 +33,12 @@ public final class RedisStandaloneStoreConfig extends AbstractRedisStoreConfig {
   }
 
   @Override
-  public OptionalInt editorLockTtlSeconds() {
+  public int editorLockTtlSeconds() {
     return super.editorLockTtlSeconds();
   }
 
   @Override
-  public OptionalInt staleEntryTtlSeconds() {
+  public int staleEntryTtlSeconds() {
     return super.staleEntryTtlSeconds();
   }
 }

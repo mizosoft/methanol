@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreContext {
-  private static final int MAX_TAIL_LENGTH = 15;
+  private static final int MAX_TAIL_LENGTH = 20;
 
   private static final Logger logger = System.getLogger(AbstractRedisStoreContext.class.getName());
 
@@ -53,8 +53,7 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
   final RedisSessionSingletonPool<R> sessionPool;
   final R session;
 
-  AbstractRedisStoreContext(
-      AbstractRedisStoreConfig config, RedisSessionSingletonPool<R> sessionPool)
+  AbstractRedisStoreContext(RedisStoreConfig config, RedisSessionSingletonPool<R> sessionPool)
       throws IOException {
     super(config);
     this.sessionPool = requireNonNull(sessionPool);
@@ -67,14 +66,14 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
   Store createStore() {
     var builder = RedisStorageExtension.newBuilder();
     configure(builder);
-    config().editorLockTtlSeconds().ifPresent(builder::editorLockTtlSeconds);
-    config().staleEntryTtlSeconds().ifPresent(builder::staleEntryTtlSeconds);
+    builder.editorLockTtlSeconds(config().editorLockTtlSeconds());
+    builder.staleEntryTtlSeconds(config().staleEntryTtlSeconds());
     return builder.build().createStore(Runnable::run, config().appVersion());
   }
 
   @Override
-  public AbstractRedisStoreConfig config() {
-    return (AbstractRedisStoreConfig) super.config();
+  public RedisStoreConfig config() {
+    return (RedisStoreConfig) super.config();
   }
 
   @Override

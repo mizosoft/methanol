@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,41 +24,36 @@ package com.github.mizosoft.methanol.testing.store;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 
-import java.util.OptionalInt;
+class RedisStoreConfig extends StoreConfig {
+  private final int editorLockTtlSeconds;
+  private final int staleEntryTtlSeconds;
 
-class AbstractRedisStoreConfig extends StoreConfig {
-  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private final OptionalInt editorLockTimeToLiveSeconds;
-
-  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private final OptionalInt staleEntryTimeToLiveSeconds;
-
-  AbstractRedisStoreConfig(
+  RedisStoreConfig(
       RedisStoreType redisStoreType,
       int appVersion,
-      int editorLockTimeToLiveSeconds,
-      int staleEntryTimeToLiveSeconds) {
+      int editorLockTtlSeconds,
+      int staleEntryTtlSeconds) {
     super(redisStoreType.storeType, Long.MAX_VALUE, appVersion);
-    this.editorLockTimeToLiveSeconds =
-        editorLockTimeToLiveSeconds != UNSET_NUMBER
-            ? OptionalInt.of(editorLockTimeToLiveSeconds)
-            : OptionalInt.empty();
-    this.editorLockTimeToLiveSeconds.ifPresent(
-        value -> requireArgument(value >= 0, "Expected a non-negative value, got: %d", value));
-    this.staleEntryTimeToLiveSeconds =
-        staleEntryTimeToLiveSeconds != UNSET_NUMBER
-            ? OptionalInt.of(staleEntryTimeToLiveSeconds)
-            : OptionalInt.empty();
-    this.staleEntryTimeToLiveSeconds.ifPresent(
-        value -> requireArgument(value >= 0, "Expected a non-negative value, got: %d", value));
+    this.editorLockTtlSeconds =
+        editorLockTtlSeconds != UNSET_NUMBER ? editorLockTtlSeconds : Integer.MAX_VALUE;
+    this.staleEntryTtlSeconds =
+        staleEntryTtlSeconds != UNSET_NUMBER ? staleEntryTtlSeconds : Integer.MAX_VALUE;
+    requireArgument(
+        editorLockTtlSeconds > 0,
+        "Expected a positive editorLockTtlSeconds, got: %d",
+        editorLockTtlSeconds);
+    requireArgument(
+        staleEntryTtlSeconds > 0,
+        "Expected a positive staleEntryTtlSeconds, got: %d",
+        staleEntryTtlSeconds);
   }
 
-  OptionalInt editorLockTtlSeconds() {
-    return editorLockTimeToLiveSeconds;
+  int editorLockTtlSeconds() {
+    return editorLockTtlSeconds;
   }
 
-  OptionalInt staleEntryTtlSeconds() {
-    return staleEntryTimeToLiveSeconds;
+  int staleEntryTtlSeconds() {
+    return staleEntryTtlSeconds;
   }
 
   enum RedisStoreType {
