@@ -334,14 +334,6 @@ abstract class AbstractRedisStore<
     private final String pattern;
     private final RedisScriptingCommands<String, ByteBuffer> commands;
 
-    private String cursor = INITIAL_CURSOR_VALUE;
-    private boolean isInitialScan = true;
-
-    private @Nullable Iterator<ScanEntry> entryIterator;
-
-    private @Nullable Viewer nextViewer;
-    private @Nullable Viewer currentViewer;
-
     /**
      * The set of keys seen so far, tracked to avoid returning duplicate entries. This may happen
      * when the SCAN command iterates over the same key multiple times, which is possible if the
@@ -349,6 +341,11 @@ abstract class AbstractRedisStore<
      */
     private final Set<String> seenKeys;
 
+    private String cursor = INITIAL_CURSOR_VALUE;
+    private boolean isInitialScan = true;
+    private @Nullable Iterator<ScanEntry> entryIterator;
+    private @Nullable Viewer nextViewer;
+    private @Nullable Viewer currentViewer;
     private boolean finished;
 
     ScanningViewerIterator(String pattern) {
@@ -546,7 +543,7 @@ abstract class AbstractRedisStore<
 
       /**
        * Position of the next byte to read. This field can be accessed from multiple threads, but
-       * never simultaneously.
+       * never simultaneously. Accesses are synchronized by {@link #readLatch}.
        */
       private long position;
 
@@ -556,7 +553,8 @@ abstract class AbstractRedisStore<
        * detect that while reading, this field's value is set to {@code false} and never changes.
        * After which reading is always directed to the stale data entry.
        *
-       * <p>This field can be accessed from multiple threads, but never simultaneously.
+       * <p>This field can be accessed from multiple threads, but never simultaneously. Accesses are
+       * synchronized by {@link #readLatch}.
        */
       private boolean readingFreshEntry = true;
 
@@ -575,7 +573,7 @@ abstract class AbstractRedisStore<
 
           // We must be careful not to call GETRANGE with `long` arguments as the returned value is
           // a ByteBuffer, which has an `int` capacity.
-          long readableByteCount = Utils.remaining(dsts);
+          long readableByteCount = Math.min(Utils.remaining(dsts), dataSize - position);
           requireArgument(
               readableByteCount <= SOFT_MAX_ARRAY_LENGTH,
               "Too many bytes requested: %d",
@@ -584,7 +582,7 @@ abstract class AbstractRedisStore<
           var rangeFuture =
               readingFreshEntry
                   ? asyncCommands().getrange(dataKey, position, inclusiveLimit)
-                  : getStaleRange(position, inclusiveLimit);
+                  : getRangeOfStaleEntry(position, inclusiveLimit);
           return rangeFuture
               .thenCompose(range -> recoverIfStale(range, position, inclusiveLimit))
               .thenApply(
@@ -605,7 +603,8 @@ abstract class AbstractRedisStore<
         }
       }
 
-      private CompletableFuture<ByteBuffer> getStaleRange(long position, long inclusiveLimit) {
+      private CompletableFuture<ByteBuffer> getRangeOfStaleEntry(
+          long position, long inclusiveLimit) {
         return Script.GET_STALE_RANGE
             .evalOn(asyncCommands())
             .getAsValue(
@@ -619,13 +618,15 @@ abstract class AbstractRedisStore<
           return CompletableFuture.completedFuture(range);
         }
 
-        requireState(readingFreshEntry, "Stale entry data expired");
-        return getStaleRange(position, inclusiveLimit)
+        requireState(readingFreshEntry, "Stale entry is absent, normally due to expiry");
+        return getRangeOfStaleEntry(position, inclusiveLimit)
             .thenApply(
-                staleRange -> {
-                  requireState(staleRange.hasRemaining(), "Entry data removed");
-                  readingFreshEntry = false;
-                  return staleRange;
+                staleEntryRange -> {
+                  requireState(
+                      staleEntryRange.hasRemaining(),
+                      "Stale entry is absent, normally due to expiry");
+                  readingFreshEntry = false; // Write is protected by readLatch.
+                  return staleEntryRange;
                 });
       }
     }
@@ -712,7 +713,7 @@ abstract class AbstractRedisStore<
             .whenComplete(
                 (__, ex) -> {
                   if (ex != null) {
-                    logger.log(Level.WARNING, "Exception thrown by closing the editor");
+                    logger.log(Level.WARNING, "Exception thrown by closing the editor", ex);
                   }
                 });
       }
@@ -773,7 +774,12 @@ abstract class AbstractRedisStore<
           totalBytesWritten += written;
           if (totalBytesWritten != serverBytesWritten) {
             RedisEditor.this.close();
-            throw new IllegalStateException("Server/client data inconsistency");
+            throw new IllegalStateException(
+                "Server/client data inconsistency; expected "
+                    + totalBytesWritten
+                    + " bytes to be written so far, but server says "
+                    + serverBytesWritten
+                    + " bytes were written");
           }
           isWritten = true;
           return written;
