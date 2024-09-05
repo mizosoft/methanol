@@ -67,7 +67,7 @@ class RedisSessionSingletonPool<R extends RedisSession> {
   synchronized void release(R instance) throws IOException {
     if (this.instance == null && instance.reset()) {
       this.instance = instance;
-    } else {
+    } else if (this.instance != instance) { // Protect against releasing same instance twice.
       instance.close();
     }
   }

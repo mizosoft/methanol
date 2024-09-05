@@ -39,13 +39,13 @@ class RedisStoreConfig extends StoreConfig {
     this.staleEntryTtlSeconds =
         staleEntryTtlSeconds != UNSET_NUMBER ? staleEntryTtlSeconds : Integer.MAX_VALUE;
     requireArgument(
-        editorLockTtlSeconds > 0,
+        this.editorLockTtlSeconds > 0,
         "Expected a positive editorLockTtlSeconds, got: %d",
-        editorLockTtlSeconds);
+        this.editorLockTtlSeconds);
     requireArgument(
-        staleEntryTtlSeconds > 0,
+        this.staleEntryTtlSeconds > 0,
         "Expected a positive staleEntryTtlSeconds, got: %d",
-        staleEntryTtlSeconds);
+        this.staleEntryTtlSeconds);
   }
 
   int editorLockTtlSeconds() {

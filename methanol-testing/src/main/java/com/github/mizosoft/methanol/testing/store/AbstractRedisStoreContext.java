@@ -88,12 +88,9 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
 
   @Override
   void logDebugInfo() {
-    var session = this.session;
-    if (session != null) {
-      session.logFiles().stream()
-          .map(Unchecked.func(AbstractRedisStoreContext::tail))
-          .forEach(log -> logger.log(Level.WARNING, log));
-    }
+    session.logFiles().stream()
+        .map(Unchecked.func(AbstractRedisStoreContext::tail))
+        .forEach(log -> logger.log(Level.WARNING, log));
   }
 
   abstract StatefulConnection<String, String> connect() throws IOException;

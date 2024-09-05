@@ -29,7 +29,6 @@ import io.lettuce.core.RedisReadOnlyException;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
-import io.lettuce.core.cluster.models.partitions.RedisClusterNode.NodeFlag;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.System.Logger;
@@ -70,32 +69,22 @@ public final class RedisClusterSession implements RedisSession {
 
   @Override
   public boolean reset() {
-    try (var client = RedisClusterClient.create(uris());
-        var connection = client.connect()) {
-      var masters =
-          connection.getPartitions().stream()
-              .filter(node -> node.is(NodeFlag.UPSTREAM))
-              .collect(Collectors.toUnmodifiableList());
-      for (var node : masters) {
-        try {
-          connection.getConnection(node.getNodeId()).sync().flushall();
-        } catch (RedisReadOnlyException ignored) {
-          // This will be thrown in case the command is sent to a replica, which happens if the
-          // connection doesn't have an up-to-date view of the cluster topology and some replicas
-          // are still flagged as masters.
-        }
+    for (var node : nodes) {
+      try (var connection = node.connect()) {
+        connection.sync().flushall();
+      } catch (RedisReadOnlyException ignored) {
+        // This will be thrown in case the command is sent to a replica.
+      } catch (RedisException e) {
+        logger.log(Level.WARNING, "Inoperable redis cluster", e);
+        return false;
       }
-      return true;
-    } catch (RedisException e) {
-      logger.log(Level.WARNING, "Inoperable redis cluster", e);
-      return false;
     }
+    return true;
   }
 
   @Override
   public boolean isHealthy() {
-    try (var client = RedisClusterClient.create(uris());
-        var connection = client.connect()) {
+    try (var connection = client.connect()) {
       checkClusterRouting(connection);
       return true;
     } catch (RedisException e) {
@@ -226,8 +215,7 @@ public final class RedisClusterSession implements RedisSession {
    * before we return it.
    */
   private static void checkHealth(RedisClusterSession cluster) throws InterruptedException {
-    try (var client = RedisClusterClient.create(cluster.uris());
-        var connection = client.connect()) {
+    try (var connection = cluster.connect()) {
       int retriesLeft = HEALTH_CHECK_MAX_RETRIES;
       int retryWaitMillis = 200;
       while (true) {
@@ -261,8 +249,8 @@ public final class RedisClusterSession implements RedisSession {
 
   private static void checkClusterRouting(
       StatefulRedisClusterConnection<String, String> connection) {
-    // Make sure we have good routing to (probabilistically) all of the nodes.
-    for (int i = 0; i < 3 * connection.getPartitions().size(); i++) {
+    // Make sure we have good routing to (probabilistically) all the nodes.
+    for (int i = 0; i < 4 * connection.getPartitions().size(); i++) {
       var key = "k" + ThreadLocalRandom.current().nextInt();
       connection.sync().set(key, "v");
       connection.sync().del(key);

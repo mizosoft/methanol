@@ -695,10 +695,11 @@ abstract class AbstractRedisStore<
     @Override
     public void close() {
       if (closed.compareAndSet(false, true)) {
-        // We must run the command asynchronously as blocking risks deadlocks if close() is called
-        // from netty's NioEventLoop, which is single-threaded. This will cause us to wait for a
-        // command whose completion cannot be processed. We have no scruples not making sure the
-        // command has executed as even if it hasn't, redis will expire this editor's state anyhow.
+        // We must run the command asynchronously as blocking indefinitely risks deadlocks if
+        // close() is called from netty's NioEventLoop, which is single-threaded. Thus, blocking
+        // will make us wait for a command which cannot be processed. We have no scruples not making
+        // sure the command has executed as even if it hasn't, redis will expire this editor's state
+        // anyhow.
         Script.COMMIT
             .evalOn(asyncCommands())
             .getAsBoolean(

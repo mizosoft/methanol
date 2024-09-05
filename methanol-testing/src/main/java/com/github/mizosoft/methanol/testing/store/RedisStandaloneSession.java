@@ -108,8 +108,7 @@ public final class RedisStandaloneSession implements RedisSession {
       return false;
     }
 
-    try (var client = RedisClient.create(uri);
-        var connection = client.connect()) {
+    try (var connection = client.connect()) {
       connection.sync().flushall();
       return true;
     } catch (RedisException e) {
@@ -124,8 +123,7 @@ public final class RedisStandaloneSession implements RedisSession {
       return false;
     }
 
-    try (var client = RedisClient.create(uri);
-        var connection = client.connect()) {
+    try (var connection = client.connect()) {
       connection.sync().set("k", "v");
       connection.sync().del("k");
       return true;
@@ -147,19 +145,19 @@ public final class RedisStandaloneSession implements RedisSession {
     }
 
     closed = true;
-    client.close();
-    if (process.isAlive()) {
-      shutdownServer();
-    }
-    if (deleteDirectoryOnClosure) {
-      Directories.deleteRecursively(directory);
+    try (client) {
+      if (process.isAlive()) {
+        shutdownServer();
+      }
+      if (deleteDirectoryOnClosure) {
+        Directories.deleteRecursively(directory);
+      }
     }
   }
 
   private void shutdownServer() {
     boolean sentClientShutdown;
-    try (var client = RedisClient.create(uri);
-        var connection = client.connect()) {
+    try (var connection = client.connect()) {
       connection.sync().shutdown(ShutdownArgs.Builder.save(false).force());
       sentClientShutdown = true;
     } catch (RedisException ignored) {
