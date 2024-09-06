@@ -108,7 +108,7 @@ class RedisStoreTest {
   @StoreParameterizedTest
   @StoreSpec(
       tested = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
-      editorLockTtlSeconds = 1)
+      editorLockInactiveTtlSeconds = 1)
   void expiredEdit(StoreContext context) throws Exception {
     var firstStore = context.createAndRegisterStore();
     var secondStore = context.createAndRegisterStore();
@@ -137,7 +137,7 @@ class RedisStoreTest {
   @StoreParameterizedTest
   @StoreSpec(
       tested = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
-      staleEntryLockTtlSeconds = 1)
+      staleEntryInactiveTtlSeconds = 1)
   void expireStaleViewerByOverwriteBeforeStaleRead(StoreContext context) throws Exception {
     var firstStore = context.createAndRegisterStore();
     var secondStore = context.createAndRegisterStore();
@@ -156,7 +156,7 @@ class RedisStoreTest {
   @StoreParameterizedTest
   @StoreSpec(
       tested = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
-      staleEntryLockTtlSeconds = 1)
+      staleEntryInactiveTtlSeconds = 1)
   void expireStaleViewerByOverwriteAfterStaleRead(StoreContext context) throws Exception {
     var firstStore = context.createAndRegisterStore();
     var secondStore = context.createAndRegisterStore();
@@ -176,7 +176,7 @@ class RedisStoreTest {
   @StoreParameterizedTest
   @StoreSpec(
       tested = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
-      staleEntryLockTtlSeconds = 1)
+      staleEntryInactiveTtlSeconds = 1)
   void expireStaleViewerByRemovalBeforeStaleRead(StoreContext context) throws Exception {
     var firstStore = context.createAndRegisterStore();
     var secondStore = context.createAndRegisterStore();
@@ -195,7 +195,7 @@ class RedisStoreTest {
   @StoreParameterizedTest
   @StoreSpec(
       tested = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
-      staleEntryLockTtlSeconds = 1)
+      staleEntryInactiveTtlSeconds = 1)
   void expireStaleViewerByRemovalAfterStaleRead(StoreContext context) throws Exception {
     var firstStore = context.createAndRegisterStore();
     var secondStore = context.createAndRegisterStore();
@@ -215,7 +215,7 @@ class RedisStoreTest {
   @StoreParameterizedTest
   @StoreSpec(
       tested = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
-      staleEntryLockTtlSeconds = 1)
+      staleEntryInactiveTtlSeconds = 1)
   void expireStaleViewerByClearingBeforeStaleRead(StoreContext context) throws Exception {
     var firstStore = context.createAndRegisterStore();
     var secondStore = context.createAndRegisterStore();
@@ -234,7 +234,7 @@ class RedisStoreTest {
   @StoreParameterizedTest
   @StoreSpec(
       tested = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER},
-      staleEntryLockTtlSeconds = 1)
+      staleEntryInactiveTtlSeconds = 1)
   void expireStaleViewerByClearingAfterStaleRead(StoreContext context) throws Exception {
     var firstStore = context.createAndRegisterStore();
     var secondStore = context.createAndRegisterStore();

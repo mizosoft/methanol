@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,7 +68,9 @@ public @interface StoreSpec {
    */
   boolean dispatchEagerly() default true;
 
-  int editorLockTtlSeconds() default StoreConfig.UNSET_NUMBER;
+  /** The number of seconds an inactive editor lock gets to live. */
+  int editorLockInactiveTtlSeconds() default StoreConfig.UNSET_NUMBER;
 
-  int staleEntryLockTtlSeconds() default StoreConfig.UNSET_NUMBER;
+  /** The number of seconds an inactive stale entry gets to live. */
+  int staleEntryInactiveTtlSeconds() default StoreConfig.UNSET_NUMBER;
 }

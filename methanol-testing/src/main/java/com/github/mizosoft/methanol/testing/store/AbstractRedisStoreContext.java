@@ -66,8 +66,8 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
   Store createStore() {
     var builder = RedisStorageExtension.newBuilder();
     configure(builder);
-    builder.editorLockTtlSeconds(config().editorLockTtlSeconds());
-    builder.staleEntryTtlSeconds(config().staleEntryTtlSeconds());
+    builder.editorLockInactiveTtlSeconds(config().editorLockInactiveTtlSeconds());
+    builder.staleEntryInactiveTtlSeconds(config().staleEntryInactiveTtlSeconds());
     return builder.build().createStore(Runnable::run, config().appVersion());
   }
 

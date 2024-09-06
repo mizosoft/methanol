@@ -4,7 +4,7 @@ local wipDataKey = KEYS[3]
 local editorId = ARGV[1]
 local metadata = ARGV[2]
 local clientDataSize = tonumber(ARGV[3]) -- < 0 to not commit the data stream.
-local staleEntryTtlSeconds = ARGV[4]
+local staleEntryInactiveTtlSeconds = ARGV[4]
 local commit = ARGV[5]
 local clockKey = ARGV[6]
 
@@ -65,7 +65,7 @@ if commitData then
     -- If a previous entry existed, schedule its data stream for expiry. We don't immediately lose
     -- the entry as a concurrent reader might be in progress.
     local dataKey = entryKey .. ':data:' .. dataVersion
-    redis.call('expire', dataKey, staleEntryTtlSeconds)
+    redis.call('expire', dataKey, staleEntryInactiveTtlSeconds)
     redis.call('rename', dataKey, dataKey .. ':stale')
     newDataVersion = dataVersion + 1
   else

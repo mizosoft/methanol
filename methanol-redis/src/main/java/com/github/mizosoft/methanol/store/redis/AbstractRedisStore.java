@@ -94,8 +94,8 @@ abstract class AbstractRedisStore<
 
   final C connection;
   final RedisConnectionProvider<C> connectionProvider;
-  final int editorLockTtlSeconds;
-  final int staleEntryTtlSeconds;
+  final int editorLockInactiveTtlSeconds;
+  final int staleEntryInactiveTtlSeconds;
   final int appVersion;
 
   /**
@@ -123,18 +123,22 @@ abstract class AbstractRedisStore<
   AbstractRedisStore(
       C connection,
       RedisConnectionProvider<C> connectionProvider,
-      int editorLockTtlSeconds,
-      int staleEntryTtlSeconds,
+      int editorLockInactiveTtlSeconds,
+      int staleEntryInactiveTtlSeconds,
       int appVersion,
       String clockKey) {
     requireArgument(
-        editorLockTtlSeconds > 0, "Expected a positive ttl, got: %s", editorLockTtlSeconds);
+        editorLockInactiveTtlSeconds > 0,
+        "Non-positive editorLockInactiveTtlSeconds: %d",
+        editorLockInactiveTtlSeconds);
     requireArgument(
-        staleEntryTtlSeconds > 0, "Expected a positive ttl, got: %s", staleEntryTtlSeconds);
+        staleEntryInactiveTtlSeconds > 0,
+        "Non-positive staleEntryInactiveTtlSeconds: %d",
+        staleEntryInactiveTtlSeconds);
     this.connection = requireNonNull(connection);
     this.connectionProvider = requireNonNull(connectionProvider);
-    this.editorLockTtlSeconds = editorLockTtlSeconds;
-    this.staleEntryTtlSeconds = staleEntryTtlSeconds;
+    this.editorLockInactiveTtlSeconds = editorLockInactiveTtlSeconds;
+    this.staleEntryInactiveTtlSeconds = staleEntryInactiveTtlSeconds;
     this.appVersion = appVersion;
     this.clockKey = requireNonNull(clockKey);
   }
@@ -194,7 +198,8 @@ abstract class AbstractRedisStore<
         .evalOn(asyncCommands())
         .getAsBoolean(
             List.of(entryKey, editorLockKey, wipDataKey),
-            List.of(encode(editorId), encode(targetEntryVersion), encode(editorLockTtlSeconds)))
+            List.of(
+                encode(editorId), encode(targetEntryVersion), encode(editorLockInactiveTtlSeconds)))
         .thenApply(
             isLockAcquired ->
                 isLockAcquired
@@ -228,7 +233,8 @@ abstract class AbstractRedisStore<
     return Script.REMOVE
         .evalOn(commands())
         .getAsBoolean(
-            List.of(entryKey), List.of(encode(targetEntryVersion), encode(staleEntryTtlSeconds)));
+            List.of(entryKey),
+            List.of(encode(targetEntryVersion), encode(staleEntryInactiveTtlSeconds)));
   }
 
   @Override
@@ -609,7 +615,10 @@ abstract class AbstractRedisStore<
             .evalOn(asyncCommands())
             .getAsValue(
                 List.of(dataKey),
-                List.of(encode(position), encode(inclusiveLimit), encode(staleEntryTtlSeconds)));
+                List.of(
+                    encode(position),
+                    encode(inclusiveLimit),
+                    encode(staleEntryInactiveTtlSeconds)));
       }
 
       private CompletableFuture<ByteBuffer> recoverIfStale(
@@ -681,7 +690,7 @@ abstract class AbstractRedisStore<
                   encode(editorId),
                   metadata,
                   encode(writer.dataSizeIfWritten()), // clientDataSize
-                  encode(staleEntryTtlSeconds),
+                  encode(staleEntryInactiveTtlSeconds),
                   encode(1), // commit
                   encode(clockKey)))
           .thenAccept(
@@ -708,13 +717,13 @@ abstract class AbstractRedisStore<
                     encode(editorId),
                     EMPTY_BUFFER, // metadata
                     encode(-1), // clientDataSize
-                    encode(staleEntryTtlSeconds),
+                    encode(staleEntryInactiveTtlSeconds),
                     encode(0), // commit
                     encode(clockKey)))
             .whenComplete(
-                (__, ex) -> {
-                  if (ex != null) {
-                    logger.log(Level.WARNING, "Exception thrown by closing the editor", ex);
+                (__, e) -> {
+                  if (e != null) {
+                    logger.log(Level.WARNING, "Exception thrown by closing the editor", e);
                   }
                 });
       }
@@ -749,7 +758,8 @@ abstract class AbstractRedisStore<
       private CompletableFuture<Long> append(List<ByteBuffer> srcs) {
         var args =
             new ArrayList<>(
-                List.of(encode(editorId), encode(editorLockTtlSeconds), encode(srcs.size())));
+                List.of(
+                    encode(editorId), encode(editorLockInactiveTtlSeconds), encode(srcs.size())));
         args.addAll(srcs);
         return Script.APPEND
             .evalOn(asyncCommands())

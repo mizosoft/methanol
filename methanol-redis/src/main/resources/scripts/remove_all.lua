@@ -1,4 +1,4 @@
-local staleEntryTtlSeconds = ARGV[1]
+local staleEntryInactiveTtlSeconds = ARGV[1]
 
 local removedAny = false
 for _, entryKey in ipairs(KEYS) do
@@ -7,7 +7,7 @@ for _, entryKey in ipairs(KEYS) do
   removedAny = removedAny or removedEntry
   if dataVersion then
     local dataKey = entryKey .. ':data:' .. dataVersion
-    if redis.call('expire', dataKey, staleEntryTtlSeconds) == 1 then
+    if redis.call('expire', dataKey, staleEntryInactiveTtlSeconds) == 1 then
       redis.call('rename', dataKey, dataKey .. ':stale')
     end
   end

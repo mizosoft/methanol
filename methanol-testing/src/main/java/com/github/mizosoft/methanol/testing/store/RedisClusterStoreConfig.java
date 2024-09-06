@@ -24,21 +24,21 @@ package com.github.mizosoft.methanol.testing.store;
 
 public class RedisClusterStoreConfig extends RedisStoreConfig {
   public RedisClusterStoreConfig(
-      int appVersion, int editorLockTimeToLiveSeconds, int staleEntryTimeToLiveSeconds) {
+      int appVersion, int editorLockInactiveTtlSeconds, int staleEntryInactiveTtlSeconds) {
     super(
         RedisStoreType.CLUSTER,
         appVersion,
-        editorLockTimeToLiveSeconds,
-        staleEntryTimeToLiveSeconds);
+        editorLockInactiveTtlSeconds,
+        staleEntryInactiveTtlSeconds);
   }
 
   @Override
-  public int editorLockTtlSeconds() {
-    return super.editorLockTtlSeconds();
+  public int editorLockInactiveTtlSeconds() {
+    return super.editorLockInactiveTtlSeconds();
   }
 
   @Override
-  public int staleEntryTtlSeconds() {
-    return super.staleEntryTtlSeconds();
+  public int staleEntryInactiveTtlSeconds() {
+    return super.staleEntryInactiveTtlSeconds();
   }
 }

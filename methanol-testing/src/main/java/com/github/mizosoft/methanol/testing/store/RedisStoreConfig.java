@@ -25,35 +25,39 @@ package com.github.mizosoft.methanol.testing.store;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 
 class RedisStoreConfig extends StoreConfig {
-  private final int editorLockTtlSeconds;
-  private final int staleEntryTtlSeconds;
+  private final int editorLockInactiveTtlSeconds;
+  private final int staleEntryInactiveTtlSeconds;
 
   RedisStoreConfig(
       RedisStoreType redisStoreType,
       int appVersion,
-      int editorLockTtlSeconds,
-      int staleEntryTtlSeconds) {
+      int editorLockInactiveTtlSeconds,
+      int staleEntryInactiveTtlSeconds) {
     super(redisStoreType.storeType, Long.MAX_VALUE, appVersion);
-    this.editorLockTtlSeconds =
-        editorLockTtlSeconds != UNSET_NUMBER ? editorLockTtlSeconds : Integer.MAX_VALUE;
-    this.staleEntryTtlSeconds =
-        staleEntryTtlSeconds != UNSET_NUMBER ? staleEntryTtlSeconds : Integer.MAX_VALUE;
+    this.editorLockInactiveTtlSeconds =
+        editorLockInactiveTtlSeconds != UNSET_NUMBER
+            ? editorLockInactiveTtlSeconds
+            : Integer.MAX_VALUE;
+    this.staleEntryInactiveTtlSeconds =
+        staleEntryInactiveTtlSeconds != UNSET_NUMBER
+            ? staleEntryInactiveTtlSeconds
+            : Integer.MAX_VALUE;
     requireArgument(
-        this.editorLockTtlSeconds > 0,
-        "Expected a positive editorLockTtlSeconds, got: %d",
-        this.editorLockTtlSeconds);
+        this.editorLockInactiveTtlSeconds > 0,
+        "Non-positive editorLockInactiveTtlSeconds: %d",
+        this.editorLockInactiveTtlSeconds);
     requireArgument(
-        this.staleEntryTtlSeconds > 0,
-        "Expected a positive staleEntryTtlSeconds, got: %d",
-        this.staleEntryTtlSeconds);
+        this.staleEntryInactiveTtlSeconds > 0,
+        "Non-positive staleEntryInactiveTtlSeconds: %d",
+        this.staleEntryInactiveTtlSeconds);
   }
 
-  int editorLockTtlSeconds() {
-    return editorLockTtlSeconds;
+  int editorLockInactiveTtlSeconds() {
+    return editorLockInactiveTtlSeconds;
   }
 
-  int staleEntryTtlSeconds() {
-    return staleEntryTtlSeconds;
+  int staleEntryInactiveTtlSeconds() {
+    return staleEntryInactiveTtlSeconds;
   }
 
   enum RedisStoreType {

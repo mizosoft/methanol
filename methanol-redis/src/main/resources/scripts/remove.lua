@@ -1,6 +1,6 @@
 local entryKey = KEYS[1]
 local targetEntryVersion = ARGV[1]
-local staleEntryTtlSeconds = ARGV[2]
+local staleEntryInactiveTtlSeconds = ARGV[2]
 
 local entryVersion, dataVersion = unpack(
     redis.call('hmget', entryKey, 'entryVersion', 'dataVersion'))
@@ -11,7 +11,7 @@ end
 local removed = redis.call('unlink', entryKey) > 0
 if dataVersion then
   local dataKey = entryKey .. ':data:' .. dataVersion
-  if redis.call('expire', dataKey, staleEntryTtlSeconds) == 1 then
+  if redis.call('expire', dataKey, staleEntryInactiveTtlSeconds) == 1 then
     redis.call('rename', dataKey, dataKey .. ':stale')
   end
 end

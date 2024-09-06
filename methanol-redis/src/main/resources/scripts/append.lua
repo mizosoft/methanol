@@ -1,7 +1,7 @@
 local editorLockKey = KEYS[1]
 local wipDataKey = KEYS[2]
 local editorId = ARGV[1]
-local editorLockTtlSeconds = tonumber(ARGV[2])
+local editorLockInactiveTtlSeconds = tonumber(ARGV[2])
 local dataCount = tonumber(ARGV[3])
 
 local data = {}
@@ -16,7 +16,7 @@ if ttl == -2 then
 end
 
 -- Update expiry if enough time has passed.
-if ttl < 0.5 * editorLockTtlSeconds then
+if ttl < 0.5 * editorLockInactiveTtlSeconds then
   -- Make sure we're extending the expiry of the correct editor lock.
   if redis.call('get', editorLockKey) ~= editorId then
     redis.log(redis.LOG_WARNING, 'Editor lock expired')
@@ -25,7 +25,7 @@ if ttl < 0.5 * editorLockTtlSeconds then
   end
 
   local now = redis.call('time')[1]
-  local expireAt = now + editorLockTtlSeconds
+  local expireAt = now + editorLockInactiveTtlSeconds
   if redis.call('expireat', editorLockKey, expireAt) == 0
       or redis.call('expireat', wipDataKey, expireAt) == 0 then
     return -1

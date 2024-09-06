@@ -51,12 +51,12 @@ public interface RedisStorageExtension extends InternalStorageExtension {
 
   /** A builder of {@code RedisStorageExtension}. */
   final class Builder {
-    private static final int DEFAULT_EDITOR_LOCK_TTL_SECONDS = 8;
-    private static final int DEFAULT_STALE_ENTRY_TTL_SECONDS = 4;
+    private static final int DEFAULT_EDITOR_LOCK_INACTIVE_TTL_SECONDS = 8;
+    private static final int DEFAULT_STALE_ENTRY_INACTIVE_TTL_SECONDS = 4;
 
     private @MonotonicNonNull RedisStorageExtensionFactory factory;
-    private int editorLockTtlSeconds = DEFAULT_EDITOR_LOCK_TTL_SECONDS;
-    private int staleEntryTtlSeconds = DEFAULT_STALE_ENTRY_TTL_SECONDS;
+    private int editorLockInactiveTtlSeconds = DEFAULT_EDITOR_LOCK_INACTIVE_TTL_SECONDS;
+    private int staleEntryInactiveTtlSeconds = DEFAULT_STALE_ENTRY_INACTIVE_TTL_SECONDS;
 
     Builder() {}
 
@@ -79,9 +79,9 @@ public interface RedisStorageExtension extends InternalStorageExtension {
         RedisConnectionProvider<StatefulRedisConnection<String, ByteBuffer>> connectionProvider) {
       requireNonNull(connectionProvider);
       this.factory =
-          (editorLockTtlSeconds, staleEntryTtlSeconds) ->
+          (editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds) ->
               new RedisStandaloneStorageExtension(
-                  connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds);
+                  connectionProvider, editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds);
       return this;
     }
 
@@ -105,9 +105,9 @@ public interface RedisStorageExtension extends InternalStorageExtension {
             connectionProvider) {
       requireNonNull(connectionProvider);
       this.factory =
-          (editorLockTtlSeconds, staleEntryTtlSeconds) ->
+          (editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds) ->
               new RedisClusterStorageExtension(
-                  connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds);
+                  connectionProvider, editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds);
       return this;
     }
 
@@ -120,9 +120,12 @@ public interface RedisStorageExtension extends InternalStorageExtension {
      * @throws IllegalArgumentException if the given number of seconds is negative
      */
     @CanIgnoreReturnValue
-    public Builder editorLockTtlSeconds(int editorLockTtlSeconds) {
-      requireArgument(editorLockTtlSeconds >= 0, "negative ttl: %d", editorLockTtlSeconds);
-      this.editorLockTtlSeconds = editorLockTtlSeconds;
+    public Builder editorLockInactiveTtlSeconds(int editorLockInactiveTtlSeconds) {
+      requireArgument(
+          editorLockInactiveTtlSeconds > 0,
+          "Non-positive editorLockInactiveTtlSeconds: %d",
+          editorLockInactiveTtlSeconds);
+      this.editorLockInactiveTtlSeconds = editorLockInactiveTtlSeconds;
       return this;
     }
 
@@ -134,20 +137,24 @@ public interface RedisStorageExtension extends InternalStorageExtension {
      * @throws IllegalArgumentException if the given number of seconds is negative
      */
     @CanIgnoreReturnValue
-    public Builder staleEntryTtlSeconds(int staleEntryTtlSeconds) {
-      requireArgument(staleEntryTtlSeconds >= 0, "negative ttl: %d", staleEntryTtlSeconds);
-      this.staleEntryTtlSeconds = staleEntryTtlSeconds;
+    public Builder staleEntryInactiveTtlSeconds(int staleEntryInactiveTtlSeconds) {
+      requireArgument(
+          staleEntryInactiveTtlSeconds > 0,
+          "Non-positive staleEntryInactiveTtlSeconds: %d",
+          staleEntryInactiveTtlSeconds);
+      this.staleEntryInactiveTtlSeconds = staleEntryInactiveTtlSeconds;
       return this;
     }
 
     /** Creates a new {@code RedisStorageExtension}. */
     public RedisStorageExtension build() {
-      return factory.create(editorLockTtlSeconds, staleEntryTtlSeconds);
+      return factory.create(editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds);
     }
 
     @FunctionalInterface
     private interface RedisStorageExtensionFactory {
-      RedisStorageExtension create(int editorLockTtlSeconds, int staleEntryTtlSeconds);
+      RedisStorageExtension create(
+          int editorLockInactiveTtlSeconds, int staleEntryInactiveTtlSeconds);
     }
   }
 }
