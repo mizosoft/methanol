@@ -2,7 +2,7 @@ package com.github.mizosoft.methanol.tck;
 
 import com.github.mizosoft.methanol.internal.extensions.ByteBufferBodyPublisher;
 import java.nio.ByteBuffer;
-import java.util.concurrent.Flow;
+import java.util.concurrent.Flow.Publisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
 import org.testng.annotations.Test;
 
@@ -13,7 +13,7 @@ public class ByteBufferBodyPublisherTckTest extends FlowPublisherVerification<By
   }
 
   @Override
-  public Flow.Publisher<ByteBuffer> createFlowPublisher(long l) {
+  public Publisher<ByteBuffer> createFlowPublisher(long l) {
     var buffer = ByteBuffer.allocate((int) l * TckUtils.BUFFER_SIZE);
     while (buffer.hasRemaining()) {
       buffer.put(TckUtils.generateData());
@@ -22,7 +22,7 @@ public class ByteBufferBodyPublisherTckTest extends FlowPublisherVerification<By
   }
 
   @Override
-  public Flow.Publisher<ByteBuffer> createFailedFlowPublisher() {
+  public Publisher<ByteBuffer> createFailedFlowPublisher() {
     return null; // Cannot fail.
   }
 

@@ -38,7 +38,7 @@ import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listene
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.testing.BodyCollector;
+import com.github.mizosoft.methanol.testing.ByteBufferCollector;
 import com.github.mizosoft.methanol.testing.ByteBufferListIterator;
 import com.github.mizosoft.methanol.testing.ExecutorContext;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
@@ -280,11 +280,12 @@ class CacheWritingPublisherTest {
     var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
     upstream.submit(List.of(ByteBuffer.allocate(1)));
+
+    var subscription = upstream.firstSubscription();
     upstream.close();
     subscriber.awaitCompletion();
     subscriber.awaitSubscription().cancel();
 
-    var subscription = upstream.firstSubscription();
     subscription.awaitAbort();
     assertThat(subscription.flowInterrupted()).isFalse();
 
@@ -300,7 +301,7 @@ class CacheWritingPublisherTest {
     var publisher = new CacheWritingPublisher(upstream, editor, EMPTY_BUFFER, executor);
     var subscriber = subscriberContext.<List<ByteBuffer>>createSubscriber();
     publisher.subscribe(subscriber);
-    upstream.firstSubscription().fireOrKeepAliveOnError(new TestException());
+    upstream.closeExceptionally(new TestException());
     upstream.close();
 
     assertThat(subscriber.awaitError()).isInstanceOf(TestException.class);
@@ -630,7 +631,7 @@ class CacheWritingPublisherTest {
     ByteBuffer writtenBytes() {
       lock.lock();
       try {
-        return BodyCollector.collect(writes);
+        return ByteBufferCollector.collect(writes);
       } finally {
         lock.unlock();
       }
@@ -652,7 +653,7 @@ class CacheWritingPublisherTest {
 
     String bodyToString() {
       var body =
-          BodyCollector.collect(
+          ByteBufferCollector.collect(
               pollAll().stream().flatMap(List::stream).collect(Collectors.toUnmodifiableList()));
       return UTF_8.decode(body).toString();
     }

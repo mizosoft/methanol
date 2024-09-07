@@ -38,6 +38,7 @@ import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutor;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
+import com.github.mizosoft.methanol.internal.extensions.PublisherBodySubscriber;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.InlineMe;
@@ -344,7 +345,7 @@ public final class Methanol extends HttpClient {
         request,
         responseInfo ->
             BodySubscribers.mapping(
-                BodySubscribers.ofPublisher(),
+                new PublisherBodySubscriber(),
                 publisher ->
                     new ResponsePayloadImpl(
                         responseInfo,
@@ -364,7 +365,7 @@ public final class Methanol extends HttpClient {
         request,
         responseInfo ->
             BodySubscribers.mapping(
-                BodySubscribers.ofPublisher(),
+                new PublisherBodySubscriber(),
                 publisher ->
                     new ResponsePayloadImpl(
                         responseInfo,

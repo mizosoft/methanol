@@ -25,19 +25,18 @@ package com.github.mizosoft.methanol.testing;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 
 /**
- * A {@code Flow.Publisher<T>} that emits submitted items. The publisher is similar to {@link
+ * A {@code Publisher<T>} that emits submitted items. The publisher is similar to {@link
  * java.util.concurrent.SubmissionPublisher} but doesn't require the executor to operate
  * concurrently and has an unbounded buffer.
  */
 public final class SubmittablePublisher<T> implements Publisher<T>, AutoCloseable {
-  private final List<SubmittableSubscription<T>> subscriptions = new CopyOnWriteArrayList<>();
+  private final CloseableCopyOnWriteList<SubmittableSubscription<T>> subscriptions =
+      new CloseableCopyOnWriteList<>();
   private final Executor executor;
 
   public SubmittablePublisher(Executor executor) {
@@ -47,12 +46,15 @@ public final class SubmittablePublisher<T> implements Publisher<T>, AutoCloseabl
   @Override
   public void subscribe(Subscriber<? super T> subscriber) {
     var subscription = new SubmittableSubscription<T>(subscriber, executor);
-    subscriptions.add(subscription);
-    subscription.fireOrKeepAlive();
+    if (subscriptions.add(subscription)) {
+      subscription.fireOrKeepAlive();
+    } else {
+      subscription.fireOrKeepAliveOnError(new IllegalStateException("Closed"));
+    }
   }
 
   public SubmittableSubscription<T> firstSubscription() {
-    assertThat(subscriptions).withFailMessage("nothing has subscribed yet").isNotEmpty();
+    assertThat(subscriptions).withFailMessage("Nothing has subscribed yet").isNotEmpty();
     return subscriptions.get(0);
   }
 
@@ -66,6 +68,10 @@ public final class SubmittablePublisher<T> implements Publisher<T>, AutoCloseabl
 
   @Override
   public void close() {
-    subscriptions.forEach(SubmittableSubscription::complete);
+    subscriptions.close().forEach(SubmittableSubscription::complete);
+  }
+
+  public void closeExceptionally(Throwable exception) {
+    subscriptions.close().forEach(s -> s.fireOrKeepAliveOnError(exception));
   }
 }

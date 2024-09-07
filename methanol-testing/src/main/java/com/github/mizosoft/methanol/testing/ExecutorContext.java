@@ -26,24 +26,19 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 
 /** Creates and manages {@link Executor} instances. */
 public final class ExecutorContext implements AutoCloseable {
   private static final Logger logger = System.getLogger(ExecutorContext.class.getName());
 
-  private static final Throwable[] CLOSED = new Throwable[0];
-
   private final List<Executor> executors = new ArrayList<>();
-  private final AtomicReference<Throwable[]> uncaughtExceptions =
-      new AtomicReference<>(new Throwable[0]);
+  private final CloseableCopyOnWriteList<Throwable> uncaughtExceptions =
+      new CloseableCopyOnWriteList<>();
 
   public ExecutorContext() {}
 
@@ -56,27 +51,14 @@ public final class ExecutorContext implements AutoCloseable {
                       try {
                         r.run();
                       } catch (Throwable t) {
-                        recordUncaughtException(t);
+                        if (!uncaughtExceptions.add(t)) {
+                          logger.log(
+                              Level.ERROR, "Uncaught exception during asynchronous execution", t);
+                        }
                       }
                     }));
     executors.add(executor);
     return executor;
-  }
-
-  private void recordUncaughtException(Throwable t) {
-    while (true) {
-      var currentExceptions = uncaughtExceptions.get();
-      if (currentExceptions == CLOSED) {
-        logger.log(Level.ERROR, "Uncaught async failure", t);
-        return;
-      }
-
-      var expandedExceptions = Arrays.copyOf(currentExceptions, currentExceptions.length + 1);
-      expandedExceptions[expandedExceptions.length - 1] = t;
-      if (uncaughtExceptions.compareAndSet(currentExceptions, expandedExceptions)) {
-        return;
-      }
-    }
   }
 
   @Override
@@ -104,7 +86,7 @@ public final class ExecutorContext implements AutoCloseable {
     }
     executors.clear();
 
-    Collections.addAll(exceptions, uncaughtExceptions.getAndSet(CLOSED));
+    exceptions.addAll(uncaughtExceptions.close());
     if (!exceptions.isEmpty()) {
       throw new AggregateException("Multiple exceptions while closing executors", exceptions);
     }

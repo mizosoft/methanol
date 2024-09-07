@@ -31,6 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import org.assertj.core.api.AbstractObjectAssert;
 import org.assertj.core.api.AbstractStringAssert;
+import org.assertj.core.api.AbstractThrowableAssert;
 import org.assertj.core.api.ThrowableAssertAlternative;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -98,7 +99,7 @@ public final class EncoderVerifier extends BodyAdapterVerifier<Encoder, EncoderV
       return asBodyPublisher().succeedsWith(bytes);
     }
 
-    public ThrowableAssertAlternative<?> failsWith(Class<? extends Throwable> type) {
+    public AbstractThrowableAssert<?, ?> failsWith(Class<? extends Throwable> type) {
       return asBodyPublisher().failsWith(type);
     }
   }
