@@ -62,6 +62,11 @@ class RedisStoreTest {
     Awaitility.setDefaultTimeout(Duration.ofSeconds(TestUtils.SLOW_TIMEOUT_SECONDS));
   }
 
+  /*
+   * Unfortunately, there doesn't seem to be a way to mock time in redis. So tests that want to test
+   * expiry behaviour will have to sleep for >= the expiry time.
+   */
+
   @StoreParameterizedTest
   @StoreSpec(tested = {StoreType.REDIS_STANDALONE, StoreType.REDIS_CLUSTER})
   void readValueWrittenByAnotherStore(StoreContext context) throws IOException {
@@ -113,15 +118,10 @@ class RedisStoreTest {
     var firstStore = context.createAndRegisterStore();
     var secondStore = context.createAndRegisterStore();
 
-    var firstEditor = edit(firstStore, "e1");
-    firstEditor.writer().write(ByteBuffer.wrap(new byte[] {'a'}));
-    assertThat(secondStore.edit("e1")).isEmpty();
-
-    // Unfortunately, there doesn't seem to be a way to mock time in redis. So we'll have to wait to
-    // test editor expiry.
-    Thread.sleep(1100);
-
-    try (firstEditor) {
+    try (var firstEditor = edit(firstStore, "e1")) {
+      firstEditor.writer().write(ByteBuffer.wrap(new byte[] {'a'}));
+      assertThat(secondStore.edit("e1")).isEmpty();
+      Thread.sleep(1100);
       assertThatIllegalStateException()
           .isThrownBy(() -> firstEditor.writer().write(ByteBuffer.wrap(new byte[] {'a'})));
       assertThatIllegalStateException()
@@ -256,13 +256,13 @@ class RedisStoreTest {
   void editorDataSizeInconsistency_redisStandalone(RedisStandaloneStoreContext context)
       throws IOException {
     var store = (AbstractRedisStore<?, ?, ?>) context.createAndRegisterStore();
-    var editor = edit(store, "e1");
-    editor.writer().write(ByteBuffer.wrap(new byte[] {'a', 'a'}));
-    try (var connection = context.connect()) {
+    try (var editor = edit(store, "e1");
+        var connection = context.connect()) {
+      editor.writer().write(ByteBuffer.wrap(new byte[] {'a', 'a'}));
       connection.sync().set(store.wipDataKey(editor), "a");
+      assertThatIllegalStateException()
+          .isThrownBy(() -> editor.writer().write(ByteBuffer.allocate(1)));
     }
-    assertThatIllegalStateException()
-        .isThrownBy(() -> editor.writer().write(ByteBuffer.allocate(1)));
   }
 
   @StoreParameterizedTest
@@ -270,13 +270,13 @@ class RedisStoreTest {
   void editorDataSizeInconsistency_redisCluster(RedisClusterStoreContext context)
       throws IOException {
     var store = (AbstractRedisStore<?, ?, ?>) context.createAndRegisterStore();
-    var editor = edit(store, "e1");
-    editor.writer().write(ByteBuffer.wrap(new byte[] {'a', 'a'}));
-    try (var connection = context.connect()) {
+    try (var editor = edit(store, "e1");
+        var connection = context.connect()) {
+      editor.writer().write(ByteBuffer.wrap(new byte[] {'a', 'a'}));
       connection.sync().set(store.wipDataKey(editor), "a");
+      assertThatIllegalStateException()
+          .isThrownBy(() -> editor.writer().write(ByteBuffer.allocate(1)));
     }
-    assertThatIllegalStateException()
-        .isThrownBy(() -> editor.writer().write(ByteBuffer.allocate(1)));
   }
 
   private static char readAsciiChar(EntryReader reader) throws IOException {

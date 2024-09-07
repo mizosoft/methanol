@@ -9,27 +9,12 @@ for i = 1, dataCount do
     data[i] = ARGV[3 + i]
 end
 
-local ttl = redis.call('ttl', wipDataKey)
-if ttl == -2 then
-  redis.log(redis.LOG_WARNING, 'Editor lock expired')
+-- Make sure we're extending the expiry of the correct editor lock.
+if redis.call('expire', wipDataKey, editorLockInactiveTtlSeconds) == 0
+  or redis.call('get', editorLockKey) ~= editorId
+  or redis.call('expire', editorLockKey, editorLockInactiveTtlSeconds) == 0 then
+  redis.call('unlink', wipDataKey)
   return -1
-end
-
--- Update expiry if enough time has passed.
-if ttl < 0.5 * editorLockInactiveTtlSeconds then
-  -- Make sure we're extending the expiry of the correct editor lock.
-  if redis.call('get', editorLockKey) ~= editorId then
-    redis.log(redis.LOG_WARNING, 'Editor lock expired')
-    redis.call('unlink', wipDataKey)
-    return -1
-  end
-
-  local now = redis.call('time')[1]
-  local expireAt = now + editorLockInactiveTtlSeconds
-  if redis.call('expireat', editorLockKey, expireAt) == 0
-      or redis.call('expireat', wipDataKey, expireAt) == 0 then
-    return -1
-  end
 end
 
 local sizeAfterAppend = 0

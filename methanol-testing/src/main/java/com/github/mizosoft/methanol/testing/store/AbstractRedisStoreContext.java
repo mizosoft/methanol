@@ -93,7 +93,7 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
         .forEach(log -> logger.log(Level.WARNING, log));
   }
 
-  abstract StatefulConnection<String, String> connect() throws IOException;
+  public abstract StatefulConnection<String, String> connect() throws IOException;
 
   /**
    * Returns a string containing at most the last {@value MAX_TAIL_LENGTH} lines of the given file.
