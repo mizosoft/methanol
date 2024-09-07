@@ -31,10 +31,7 @@ if commitData then
   wipDataSize = redis.call('strlen', wipDataKey)
   if wipDataSize ~= clientDataSize then
     redis.call('unlink', wipDataKey)
-
-    local msg = 'Data size inconsistency; client: ' .. clientDataSize .. ', server: ' .. wipDataSize
-    redis.log(redis.LOG_WARNING, msg)
-    return { 0, msg }
+    return { 0, 'Data size inconsistency; client: ' .. clientDataSize .. ', server: ' .. wipDataSize }
   end
 else
   redis.call('unlink', wipDataKey)
