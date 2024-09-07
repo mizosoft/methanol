@@ -50,10 +50,12 @@ import java.util.stream.Stream;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @Timeout(TestUtils.VERY_SLOW_TIMEOUT_SECONDS)
 @ExtendWith(StoreExtension.class)
+@EnabledIf("isRedisStandaloneOrClusterAvailable")
 class RedisStoreTest {
   @BeforeAll
   static void setUp() {
@@ -348,5 +350,9 @@ class RedisStoreTest {
 
   private static long sizeOf(String... values) {
     return Stream.of(values).map(UTF_8::encode).mapToLong(ByteBuffer::remaining).sum();
+  }
+
+  public static boolean isRedisStandaloneOrClusterAvailable() {
+    return RedisStandaloneStoreContext.isAvailable() || RedisClusterStoreContext.isAvailable();
   }
 }
