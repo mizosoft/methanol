@@ -22,9 +22,9 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.view;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.write;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;

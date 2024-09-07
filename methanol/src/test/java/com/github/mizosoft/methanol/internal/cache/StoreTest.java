@@ -22,15 +22,14 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertAbsent;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertUnreadable;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.commit;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.assertEntryEquals;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.assertUnreadable;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.commit;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.edit;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.sizeOf;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.view;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.write;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -117,9 +116,9 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void writeNothingOnDiscardedFirstEdit(Store store, StoreContext context) throws IOException {
+  void writeNothingOnDiscardedFirstEdit(Store store) throws IOException {
     edit(store, "e1").close();
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertThat(store.size()).isZero();
   }
 
@@ -154,21 +153,21 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void writeThenRemove(Store store, StoreContext context) throws IOException {
+  void writeThenRemove(Store store) throws IOException {
     write(store, "e1", "Jigglypuff", "Pickachu");
     assertThat(store.remove("e1")).isTrue();
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertThat(store.size()).isZero();
   }
 
   @StoreParameterizedTest
-  void writeThenClear(Store store, StoreContext context) throws IOException {
+  void writeThenClear(Store store) throws IOException {
     write(store, "e1", "methanol", "CH3OH");
     write(store, "e2", "ethanol", "C2H5OH");
 
     store.clear();
-    assertAbsent(store, context, "e1");
-    assertAbsent(store, context, "e2");
+    assertUnreadable(store, "e1");
+    assertUnreadable(store, "e2");
     assertThat(store.iterator().hasNext()).isFalse();
     assertThat(store.size()).isZero();
   }
@@ -182,11 +181,11 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void discardEdit(Store store, StoreContext context) throws IOException {
+  void discardEdit(Store store) throws IOException {
     try (var editor = edit(store, "e1")) {
       write(editor, "Eevee");
     }
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertThat(store.size()).isZero();
   }
 
@@ -211,7 +210,7 @@ class StoreTest {
         assertThatIllegalStateException().isThrownBy((() -> commit(editor, "Ditto")));
       }
     }
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
   }
 
   @StoreParameterizedTest
@@ -226,7 +225,7 @@ class StoreTest {
         assertThatIllegalStateException().isThrownBy((() -> commit(editor, "Ditto")));
       }
     }
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
   }
 
   @StoreParameterizedTest
@@ -243,7 +242,7 @@ class StoreTest {
         }
       }
     }
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
   }
 
   @StoreParameterizedTest
@@ -260,7 +259,7 @@ class StoreTest {
         }
       }
     }
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
   }
 
   @StoreParameterizedTest
@@ -343,11 +342,11 @@ class StoreTest {
    * with which files in NIO are normally opened.
    */
   @StoreParameterizedTest
-  void removeWhileReading(Store store, StoreContext context) throws IOException {
+  void removeWhileReading(Store store) throws IOException {
     write(store, "e1", "Ditto", "Eevee");
     try (var viewer = view(store, "e1")) {
       assertThat(store.remove("e1")).isTrue();
-      assertAbsent(store, context, "e1");
+      assertUnreadable(store, "e1");
       assertThat(store.size()).isZero();
 
       // Viewer continues to read the entry it was opened for.
@@ -360,11 +359,11 @@ class StoreTest {
    * before removal.
    */
   @StoreParameterizedTest
-  void removeThenWriteWhileReading(Store store, StoreContext context) throws IOException {
+  void removeThenWriteWhileReading(Store store) throws IOException {
     write(store, "e1", "Ditto", "Eevee");
     try (var viewer = view(store, "e1")) {
       assertThat(store.remove("e1")).isTrue();
-      assertAbsent(store, context, "e1");
+      assertUnreadable(store, "e1");
       assertThat(store.size()).isZero();
       assertEntryEquals(viewer, "Ditto", "Eevee");
 
@@ -416,7 +415,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void removeWhileEditingFromViewer(Store store, StoreContext context) throws IOException {
+  void removeWhileEditingFromViewer(Store store) throws IOException {
     write(store, "e1", "Pickachu", "Mewtwo");
     try (var viewer = view(store, "e1")) {
       try (var editor = edit(viewer)) {
@@ -424,7 +423,7 @@ class StoreTest {
         assertThat(store.remove("e1")).isTrue();
       }
 
-      assertAbsent(store, context, "e1");
+      assertUnreadable(store, "e1");
       assertThat(store.size()).isZero();
 
       assertEntryEquals(viewer, "Pickachu", "Mewtwo");
@@ -432,16 +431,16 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void removeFromViewer(Store store, StoreContext context) throws IOException {
+  void removeFromViewer(Store store) throws IOException {
     write(store, "e1", "Mew", "Mewtwo");
     try (var viewer = view(store, "e1")) {
       assertThat(viewer.removeEntry()).isTrue();
-      assertAbsent(store, context, "e1");
+      assertUnreadable(store, "e1");
 
       // The viewer keeps operating normally.
       assertEntryEquals(viewer, "Mew", "Mewtwo");
     }
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
   }
 
   @StoreParameterizedTest
@@ -458,20 +457,19 @@ class StoreTest {
           assertThatIllegalStateException().isThrownBy((() -> commit(editor, "Ditto")));
         }
       }
-      assertAbsent(store, context, "e1");
+      assertUnreadable(store, "e1");
       assertThat(store.size()).isZero();
       assertEntryEquals(viewer, "Pickachu", "Mewtwo");
     }
   }
 
   @StoreParameterizedTest
-  void removeFromViewerAfterRemovingFromStore(Store store, StoreContext context)
-      throws IOException {
+  void removeFromViewerAfterRemovingFromStore(Store store) throws IOException {
     write(store, "e1", "Eevee", "Ditto");
     try (var viewer = view(store, "e1")) {
       assertThat(store.remove("e1")).isTrue();
       assertThat(viewer.removeEntry()).isFalse();
-      assertAbsent(store, context, "e1");
+      assertUnreadable(store, "e1");
     }
   }
 
@@ -502,12 +500,12 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void editFromStaleViewerDueToRemoval(Store store, StoreContext context) throws IOException {
+  void editFromStaleViewerDueToRemoval(Store store) throws IOException {
     write(store, "e1", "Eevee", "Ditto");
     try (var viewer = view(store, "e1")) {
       // Make viewer stale by removing the entry.
       assertThat(store.remove("e1")).isTrue();
-      assertAbsent(store, context, "e1");
+      assertUnreadable(store, "e1");
 
       assertThat(viewer.edit()).isEmpty(); // Uneditable.
       assertEntryEquals(viewer, "Eevee", "Ditto");
@@ -571,7 +569,7 @@ class StoreTest {
   }
 
   @StoreParameterizedTest
-  void removeFromIterator(Store store, StoreContext context) throws IOException {
+  void removeFromIterator(Store store) throws IOException {
     write(store, "e1", "Mew", "Mewtwo");
     write(store, "e2", "Charmander", "Pickachu");
 
@@ -589,7 +587,7 @@ class StoreTest {
     }
     assertThat(iter.hasNext()).isFalse();
 
-    assertAbsent(store, context, "e2");
+    assertUnreadable(store, "e2");
     assertThat(store.size()).isEqualTo(sizeOf("Mew", "Mewtwo"));
   }
 

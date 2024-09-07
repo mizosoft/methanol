@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreContext {
-  private static final int MAX_TAIL_LENGTH = 20;
+  private static final int MAX_TAIL_LENGTH = 15;
 
   private static final Logger logger = System.getLogger(AbstractRedisStoreContext.class.getName());
 

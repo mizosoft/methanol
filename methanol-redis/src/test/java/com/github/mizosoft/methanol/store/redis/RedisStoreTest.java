@@ -22,16 +22,15 @@
 
 package com.github.mizosoft.methanol.store.redis;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.assertEntryEquals;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.edit;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.view;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.awaitility.Awaitility.await;
 
-import com.github.mizosoft.methanol.internal.cache.Store;
-import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
-import com.github.mizosoft.methanol.internal.cache.Store.EntryWriter;
-import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext;
 import com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext;
@@ -40,13 +39,10 @@ import com.github.mizosoft.methanol.testing.store.StoreContext;
 import com.github.mizosoft.methanol.testing.store.StoreExtension;
 import com.github.mizosoft.methanol.testing.store.StoreExtension.StoreParameterizedTest;
 import com.github.mizosoft.methanol.testing.store.StoreSpec;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.stream.Stream;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Timeout;
@@ -285,71 +281,6 @@ class RedisStoreTest {
     var buffer = ByteBuffer.allocate(1);
     assertThat(reader.read(buffer)).isOne();
     return (char) buffer.flip().get();
-  }
-
-  private static String read(Viewer viewer) throws IOException {
-    return read(viewer.newReader());
-  }
-
-  private static String read(EntryReader reader) throws IOException {
-    var out = new ByteArrayOutputStream();
-    var outChannel = Channels.newChannel(out);
-    var buffer = ByteBuffer.allocate(1024);
-    while (reader.read(buffer.clear()) != -1) {
-      outChannel.write(buffer.flip());
-    }
-    return out.toString(UTF_8);
-  }
-
-  private static void assertEntryEquals(Store store, String key, String metadata, String data)
-      throws IOException {
-    try (var viewer = view(store, key)) {
-      assertEntryEquals(viewer, metadata, data);
-    }
-  }
-
-  private static void assertEntryEquals(Viewer viewer, String metadata, String data)
-      throws IOException {
-    assertThat(UTF_8.decode(viewer.metadata()).toString()).isEqualTo(metadata);
-    assertThat(read(viewer)).isEqualTo(data);
-    assertThat(viewer.dataSize()).isEqualTo(sizeOf(data));
-    assertThat(viewer.entrySize()).isEqualTo(sizeOf(metadata, data));
-  }
-
-  private static void commit(Editor editor, String metadata) throws IOException {
-    editor.commit(UTF_8.encode(metadata));
-  }
-
-  private static void write(Store store, String key, String metadata, String data)
-      throws IOException {
-    try (var editor = edit(store, key)) {
-      write(editor, data);
-      commit(editor, metadata);
-    }
-  }
-
-  private static void write(Editor editor, String data) throws IOException {
-    write(editor.writer(), data);
-  }
-
-  private static void write(EntryWriter writer, String data) throws IOException {
-    writer.write(UTF_8.encode(data));
-  }
-
-  private static Viewer view(Store store, String key) throws IOException {
-    var viewer = store.view(key);
-    assertThat(viewer).withFailMessage("Expected entry <%s> to be readable", key).isNotEmpty();
-    return viewer.orElseThrow();
-  }
-
-  private static Editor edit(Store store, String key) throws IOException {
-    var editor = store.edit(key);
-    assertThat(editor).withFailMessage("Expected entry <%s> to be editable", key).isNotEmpty();
-    return editor.orElseThrow();
-  }
-
-  private static long sizeOf(String... values) {
-    return Stream.of(values).map(UTF_8::encode).mapToLong(ByteBuffer::remaining).sum();
   }
 
   public static boolean isRedisStandaloneOrClusterAvailable() {
