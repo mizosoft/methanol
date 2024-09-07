@@ -28,9 +28,11 @@ import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElseGet;
+import static java.util.function.Predicate.not;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store;
+import com.github.mizosoft.methanol.internal.cache.TestableStore;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.RedisException;
@@ -64,6 +66,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -81,7 +84,7 @@ abstract class AbstractRedisStore<
             RedisHashAsyncCommands<String, ByteBuffer>
                 & RedisScriptingAsyncCommands<String, ByteBuffer>
                 & RedisStringAsyncCommands<String, ByteBuffer>>
-    implements Store {
+    implements Store, TestableStore {
   static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
 
   static final long ANY_ENTRY_VERSION = -1;
@@ -163,7 +166,7 @@ abstract class AbstractRedisStore<
         .hmget(entryKey, "metadata", "dataSize", "entryVersion", "dataVersion")
         .thenApply(
             fields ->
-                fields.stream().allMatch(Predicate.not(KeyValue::isEmpty))
+                fields.stream().allMatch(not(KeyValue::isEmpty))
                     ? Optional.of(
                         createViewer(
                             key,
@@ -296,7 +299,7 @@ abstract class AbstractRedisStore<
   public void flush() {}
 
   String toEntryKey(String key) {
-    requireArgument(key.indexOf('}') == -1, "Malformed key");
+    requireArgument(key.indexOf('}') == -1, "Illegal key");
     return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, key);
   }
 
@@ -309,7 +312,17 @@ abstract class AbstractRedisStore<
   }
 
   void requireNotClosed() {
-    requireState(!closed.get(), "Store is closed");
+    requireState(!closed.get(), "Closed");
+  }
+
+  @Override
+  public List<String> entriesOnUnderlyingStorageForTesting(String key) {
+    return Stream.concat(
+            commands().keys(toEntryKey(key)).stream(),
+            commands().keys(toEntryKey(key) + ":data:*").stream())
+        .filter(
+            Predicate.not(redisKey -> redisKey.contains(":wip:") || redisKey.endsWith(":stale")))
+        .collect(Collectors.toUnmodifiableList());
   }
 
   static ByteBuffer encode(int value) {

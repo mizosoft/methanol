@@ -34,10 +34,8 @@ import static com.github.mizosoft.methanol.internal.cache.DiskStore.ISOLATED_FIL
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.LOCK_FILENAME;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.STORE_VERSION;
 import static com.github.mizosoft.methanol.internal.cache.DiskStore.TEMP_ENTRY_FILE_SUFFIX;
-import static com.github.mizosoft.methanol.internal.cache.DiskStore.TEMP_INDEX_FILENAME;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.sizeOf;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.function.Predicate.not;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.cache.DiskStore.Hash;
@@ -58,7 +56,6 @@ import java.util.zip.CRC32C;
 final class MockDiskStore {
   private final Path directory;
   private final Path indexFile;
-  private final Path tempIndexFile;
   private final Path lockFile;
   private final Hasher hasher;
   private final int appVersion;
@@ -68,7 +65,6 @@ final class MockDiskStore {
   MockDiskStore(DiskStoreContext context) {
     directory = context.directory();
     indexFile = directory.resolve(INDEX_FILENAME);
-    tempIndexFile = directory.resolve(TEMP_INDEX_FILENAME);
     lockFile = directory.resolve(LOCK_FILENAME);
     hasher = context.hasher();
     appVersion = context.config().appVersion();
@@ -197,7 +193,6 @@ final class MockDiskStore {
           .isNotNull();
       assertThat(indexEntry.lastUsed).as(key).isEqualTo(content[i + 1]);
       assertThat(indexEntry.size).as(key).isEqualTo(content[i + 2]);
-
       coveredHashes.add(hash);
     }
 
@@ -212,15 +207,16 @@ final class MockDiskStore {
 
   void assertHasNoEntriesOnDisk() throws IOException {
     try (var stream = Files.list(directory)) {
-      assertThat(stream).filteredOn(not(this::isNonEntryFile)).isEmpty();
+      assertThat(stream).filteredOn(this::isEntryFile).isEmpty();
     }
   }
 
-  private boolean isNonEntryFile(Path file) {
-    return file.equals(indexFile)
-        || file.equals(tempIndexFile)
-        || file.equals(lockFile)
-        || file.getFileName().toString().startsWith(ISOLATED_FILE_PREFIX);
+  private boolean isEntryFile(Path file) {
+    var filenameComponent = file.getFileName();
+    String filename;
+    return filenameComponent != null
+        && (filename = filenameComponent.toString()).endsWith(ENTRY_FILE_SUFFIX)
+        && !filename.startsWith(ISOLATED_FILE_PREFIX);
   }
 
   Path indexFile() {

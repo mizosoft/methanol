@@ -22,10 +22,10 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
 import static com.github.mizosoft.methanol.testing.TestUtils.EMPTY_BUFFER;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.assertEntryEquals;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.edit;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;

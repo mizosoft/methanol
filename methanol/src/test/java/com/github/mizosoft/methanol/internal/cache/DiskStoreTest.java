@@ -22,15 +22,14 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertAbsent;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertEntryEquals;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.assertUnreadable;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.commit;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.edit;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.setMetadata;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.sizeOf;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.assertEntryEquals;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.assertUnreadable;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.commit;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.edit;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.setMetadata;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.sizeOf;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.view;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
@@ -134,7 +133,7 @@ class DiskStoreTest {
     var store = context.createAndRegisterStore();
     mockStore.assertDirtyEntryFileDoesNotExist("e2");
     mockStore.assertDirtyEntryFileDoesNotExist("e3");
-    assertAbsent(store, context, "e2", "e3");
+    assertUnreadable(store, "e2", "e3");
     assertThat(store.size()).isZero();
   }
 
@@ -172,7 +171,7 @@ class DiskStoreTest {
 
     var store = context.createAndRegisterStore();
     mockStore.assertDirtyEntryFileDoesNotExist("e1");
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertThat(store.size()).isZero();
   }
 
@@ -189,7 +188,7 @@ class DiskStoreTest {
     var store = context.createAndRegisterStore();
     mockStore.assertEntryFileDoesNotExist("e2");
     mockStore.assertDirtyEntryFileDoesNotExist("e3");
-    assertAbsent(store, context, "e2", "e3");
+    assertUnreadable(store, "e2", "e3");
     assertThat(store.size()).isZero();
   }
 
@@ -203,7 +202,7 @@ class DiskStoreTest {
     mockStore.deleteEntry("e1");
 
     var store = context.createAndRegisterStore();
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertThat(store.size()).isZero();
   }
 
@@ -227,7 +226,7 @@ class DiskStoreTest {
     mockStore.index().put(new IndexEntry(context.hasher().hash("e5"), 100, 2));
 
     var store = context.createAndRegisterStore();
-    assertAbsent(store, context, "e2", "e3", "e4", "e5");
+    assertUnreadable(store, "e2", "e3", "e4", "e5");
     assertEntryEquals(store, "e1", "a", "a");
     assertThat(store.size()).isEqualTo(2);
   }
@@ -254,7 +253,7 @@ class DiskStoreTest {
     mockStore.writeIndex(mockStore.index().copy(), corruptionMode);
     try (var store = context.createAndRegisterStore()) {
       mockStore.assertHasNoEntriesOnDisk();
-      assertAbsent(store, context, "e1", "e2");
+      assertUnreadable(store, "e1", "e2");
       assertThat(store.size()).isZero();
 
       // The corrupt index is overwritten with an empty index.
@@ -347,7 +346,7 @@ class DiskStoreTest {
   void lruEvictionBeforeFlush(Store store, DiskStoreContext context) throws IOException {
     write(store, "e1", "aa", "bb"); // Grow size to 4 bytes.
     write(store, "e2", "cc", "dd"); // Grow size to 8 bytes, causing e1 to be evicted.
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertThat(store.size()).isEqualTo(4);
     store.flush();
 
@@ -522,7 +521,7 @@ class DiskStoreTest {
     mockStore.writeIndex();
 
     var store = context.createAndRegisterStore();
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertEntryEquals(store, "e2", "cc", "dd");
     assertThat(store.size()).isEqualTo(4);
   }
@@ -557,7 +556,7 @@ class DiskStoreTest {
     var expectedEvictionOrder = List.of("e3", "e1", "e4", "e2").iterator();
     for (int i = 0; i < 4; i++) {
       write(store2, "e" + (5 + i), "a", "b");
-      assertAbsent(store2, context, expectedEvictionOrder.next());
+      assertUnreadable(store2, expectedEvictionOrder.next());
     }
     assertThat(store2.size()).isEqualTo(8);
   }
@@ -569,7 +568,7 @@ class DiskStoreTest {
 
     var mockStore = new MockDiskStore(context);
     mockStore.deleteEntry("e1");
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
   }
 
   @StoreParameterizedTest
@@ -678,7 +677,7 @@ class DiskStoreTest {
     assertThat(delayer.taskCount()).isEqualTo(2); // 1 for editing + 1 for eviction.
     clock.advanceSeconds(0);
     assertThat(store.indexWriteCount()).isEqualTo(indexWriteCount += 2);
-    assertAbsent(store, context, "e3");
+    assertUnreadable(store, "e3");
 
     // Clearing the store issues an index write.
     store.clear();
@@ -787,13 +786,13 @@ class DiskStoreTest {
 
     write(store, "e1", "12", "ab"); // 4 bytes.
     write(store, "e2", "12", "abc"); // 5 bytes -> e1 is evicted to accommodate e2.
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertEntryEquals(store, "e2", "12", "abc");
     assertThat(store.size()).isEqualTo(5);
 
     // 6 bytes -> e3 is ignored & e2 remains untouched.
     write(store, "e3", "123", "abc");
-    assertAbsent(store, context, "e3");
+    assertUnreadable(store, "e3");
     assertEntryEquals(store, "e2", "12", "abc");
     assertThat(store.size()).isEqualTo(5);
     mockStore.assertDirtyEntryFileDoesNotExist("e3");
@@ -806,7 +805,7 @@ class DiskStoreTest {
     assertEntryEquals(store, "e1", "12", "ab");
 
     write(store, "e1", "12", "abc");
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertThat(store.size()).isZero();
     new MockDiskStore(context).assertDirtyEntryFileDoesNotExist("e1");
   }
@@ -818,7 +817,7 @@ class DiskStoreTest {
     assertEntryEquals(store, "e1", "12", "ab");
 
     write(store, "e1", "123", "ab");
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertThat(store.size()).isZero();
     new MockDiskStore(context).assertDirtyEntryFileDoesNotExist("e1");
   }
@@ -1038,7 +1037,7 @@ class DiskStoreTest {
     write(store, "e2", "Eevee", "Mewtwo");
 
     // e2 replaces e1 as they collide.
-    assertAbsent(store, context, "e1");
+    assertUnreadable(store, "e1");
     assertEntryEquals(store, "e2", "Eevee", "Mewtwo");
     assertThat(store.remove("e1")).isFalse();
     assertThat(store.remove("e2")).isTrue();
