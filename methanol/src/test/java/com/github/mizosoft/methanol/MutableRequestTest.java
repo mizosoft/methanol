@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -90,6 +90,9 @@ class MutableRequestTest {
 
     verifyThat(MutableRequest.GET(uriString)).hasUri(uri).isGET().hasNoBody();
     verifyThat(MutableRequest.GET(uri)).hasUri(uri).isGET().hasNoBody();
+
+    verifyThat(MutableRequest.DELETE(uriString)).hasUri(uri).isDELETE().hasNoBody();
+    verifyThat(MutableRequest.DELETE(uri)).hasUri(uri).isDELETE().hasNoBody();
 
     var publisher = BodyPublishers.ofString("something");
     verifyThat(MutableRequest.POST(uriString, publisher))
@@ -508,6 +511,14 @@ class MutableRequestTest {
                         .toImmutableRequest())
                 .toImmutableRequest())
         .hasBodyPublisher(publisher);
+  }
+
+  @Test
+  void copyingPreservesMethodWithoutPayload() {
+    verifyThat(
+            MutableRequest.copyOf(MutableRequest.DELETE("https://example.com").toImmutableRequest())
+                .toImmutableRequest())
+        .isDELETE();
   }
 
   @Test

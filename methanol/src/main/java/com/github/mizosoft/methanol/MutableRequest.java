@@ -483,9 +483,7 @@ public final class MutableRequest extends TaggableRequest
               if (other instanceof ImmutableRequest) {
                 var immutableOther = (ImmutableRequest) other;
                 immutableOther.adapterCodec().ifPresent(self::adapterCodec);
-                immutableOther
-                    .body()
-                    .ifPresent(body -> self.setMethod(immutableOther.method(), body));
+                self.setMethod(immutableOther.method, immutableOther.body().orElse(null));
               } else {
                 self.setMethod(other.method(), other.bodyPublisher().orElse(null));
               }
@@ -497,82 +495,92 @@ public final class MutableRequest extends TaggableRequest
     return new MutableRequest();
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI}. */
+  /** Returns a new {@code MutableRequest} with the given URI and a default GET method. */
   public static MutableRequest create(String uri) {
     return new MutableRequest().uri(uri);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI}. */
+  /** Returns a new {@code MutableRequest} with the given URI and a default GET method. */
   public static MutableRequest create(URI uri) {
     return new MutableRequest().uri(uri);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a GET method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a GET method. */
   public static MutableRequest GET(String uri) {
     return new MutableRequest().uri(uri); // default is GET
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a GET method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a GET method. */
   public static MutableRequest GET(URI uri) {
     return new MutableRequest().uri(uri); // default is GET
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a POST method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a DELETE method. */
+  public static MutableRequest DELETE(String uri) {
+    return new MutableRequest().uri(uri).DELETE();
+  }
+
+  /** Returns a new {@code MutableRequest} with the given URI and a DELETE method. */
+  public static MutableRequest DELETE(URI uri) {
+    return new MutableRequest().uri(uri).DELETE();
+  }
+
+  /** Returns a new {@code MutableRequest} with the given URI and a POST method. */
   public static MutableRequest POST(String uri, BodyPublisher bodyPublisher) {
     return new MutableRequest().uri(uri).POST(bodyPublisher);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a POST method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a POST method. */
   public static MutableRequest POST(URI uri, BodyPublisher bodyPublisher) {
     return new MutableRequest().uri(uri).POST(bodyPublisher);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a POST method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a POST method. */
   public static MutableRequest POST(String uri, Object payload, MediaType mediaType) {
     return new MutableRequest().uri(uri).POST(payload, mediaType);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a POST method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a POST method. */
   public static MutableRequest POST(URI uri, Object payload, MediaType mediaType) {
     return new MutableRequest().uri(uri).POST(payload, mediaType);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PUT method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a PUT method. */
   public static MutableRequest PUT(String uri, BodyPublisher bodyPublisher) {
     return new MutableRequest().uri(uri).PUT(bodyPublisher);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PUT method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a PUT method. */
   public static MutableRequest PUT(URI uri, BodyPublisher bodyPublisher) {
     return new MutableRequest().uri(uri).PUT(bodyPublisher);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PUT method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a PUT method. */
   public static MutableRequest PUT(String uri, Object payload, MediaType mediaType) {
     return new MutableRequest().uri(uri).PUT(payload, mediaType);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PUT method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a PUT method. */
   public static MutableRequest PUT(URI uri, Object payload, MediaType mediaType) {
     return new MutableRequest().uri(uri).PUT(payload, mediaType);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PATCH method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a PATCH method. */
   public static MutableRequest PATCH(String uri, BodyPublisher bodyPublisher) {
     return new MutableRequest().uri(uri).PATCH(bodyPublisher);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PATCH method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a PATCH method. */
   public static MutableRequest PATCH(URI uri, BodyPublisher bodyPublisher) {
     return new MutableRequest().uri(uri).PATCH(bodyPublisher);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PATCH method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a PATCH method. */
   public static MutableRequest PATCH(String uri, Object payload, MediaType mediaType) {
     return new MutableRequest().uri(uri).PATCH(payload, mediaType);
   }
 
-  /** Returns a new {@code MutableRequest} with the given {@code URI} and a PATCH method. */
+  /** Returns a new {@code MutableRequest} with the given URI and a PATCH method. */
   public static MutableRequest PATCH(URI uri, Object payload, MediaType mediaType) {
     return new MutableRequest().uri(uri).PATCH(payload, mediaType);
   }
