@@ -629,6 +629,14 @@ public final class Methanol extends HttpClient {
       return self();
     }
 
+    /** Configures the default headers as specified by the given consumer. */
+    @CanIgnoreReturnValue
+    public B defaultHeaders(Consumer<HeadersAccumulator<?>> configurator) {
+      configurator.accept(defaultHeadersBuilder.asHeadersAccumulator());
+      userAgent = defaultHeadersBuilder.lastValue("User-Agent").orElse(null);
+      return self();
+    }
+
     /** Sets a default request timeout to use when not explicitly by an {@code HttpRequest}. */
     @CanIgnoreReturnValue
     public B requestTimeout(Duration requestTimeout) {
