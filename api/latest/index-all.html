@@ -1081,7 +1081,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#create(java.lang.String)" class="member-name-link">create(String)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code>.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a default GET method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.Part.html#create(java.net.http.HttpHeaders,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">create(HttpHeaders, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.Part.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Part</a></dt>
 <dd>
@@ -1109,7 +1109,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#create(java.net.URI)" class="member-name-link">create(URI)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code>.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a default GET method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.html#create(java.util.function.Function)" class="member-name-link">create(Function&lt;HttpRequest, HttpRequest&gt;)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a></dt>
 <dd>
@@ -1459,6 +1459,14 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#DELETE()" class="member-name-link">DELETE()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#DELETE(java.lang.String)" class="member-name-link">DELETE(String)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a DELETE method.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#DELETE(java.net.URI)" class="member-name-link">DELETE(URI)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a DELETE method.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ProgressTracker.Progress.html#determinate()" class="member-name-link">determinate()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ProgressTracker.Progress.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.Progress</a></dt>
 <dd>
 <div class="block">Returns <code>true</code> if this progress is determinate (i.e.</div>
@@ -2044,11 +2052,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#GET(java.lang.String)" class="member-name-link">GET(String)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a GET method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a GET method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#GET(java.net.URI)" class="member-name-link">GET(URI)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a GET method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a GET method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html#getAndAddDemand(java.lang.Object,java.lang.invoke.VarHandle,long)" class="member-name-link">getAndAddDemand(Object, VarHandle, long)</a> - Static method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html" title="class in com.github.mizosoft.methanol.internal.flow">FlowSupport</a></dt>
 <dd>
@@ -3544,11 +3552,11 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PATCH(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH(String, Object, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a PATCH method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PATCH(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PATCH(String, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a PATCH method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PATCH(java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PATCH(HttpRequest.BodyPublisher)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
@@ -3556,11 +3564,11 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PATCH(java.net.URI,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH(URI, Object, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a PATCH method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PATCH(java.net.URI,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PATCH(URI, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a PATCH method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#peekAvailable()" class="member-name-link">peekAvailable()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
@@ -3594,11 +3602,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST(String, Object, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a POST method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">POST(String, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a POST method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">POST(HttpRequest.BodyPublisher)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
@@ -3606,11 +3614,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.net.URI,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST(URI, Object, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a POST method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.net.URI,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">POST(URI, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a POST method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#postDecorationInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)" class="member-name-link">postDecorationInterceptor(Methanol.Interceptor)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a></dt>
 <dd>
@@ -3744,11 +3752,11 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT(String, Object, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a PUT method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PUT(String, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a PUT method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PUT(HttpRequest.BodyPublisher)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
@@ -3756,11 +3764,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.net.URI,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT(URI, Object, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a PUT method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.net.URI,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PUT(URI, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
-<div class="block">Returns a new <code>MutableRequest</code> with the given <code>URI</code> and a PUT method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:Q">Q</h2>
