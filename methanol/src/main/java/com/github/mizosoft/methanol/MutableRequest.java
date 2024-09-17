@@ -36,6 +36,7 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiPredicate;
@@ -78,7 +79,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * is sent asynchronously.
  */
 public final class MutableRequest extends TaggableRequest
-    implements TaggableRequest.Builder, HeadersAccumulator, MimeAwareRequest {
+    implements TaggableRequest.Builder, HeadersAccumulator<MutableRequest>, MimeAwareRequest {
   private static final URI EMPTY_URI = URI.create("");
 
   private final Map<TypeRef<?>, Object> tags = new HashMap<>();
@@ -322,6 +323,27 @@ public final class MutableRequest extends TaggableRequest
   @CanIgnoreReturnValue
   public MutableRequest setHeader(String name, String value) {
     headersBuilder.set(name, value);
+    cachedHeaders = null;
+    return this;
+  }
+
+  @Override
+  public MutableRequest setHeader(String name, List<String> values) {
+    headersBuilder.set(name, values);
+    cachedHeaders = null;
+    return this;
+  }
+
+  @Override
+  public MutableRequest setHeaderIfAbsent(String name, String value) {
+    headersBuilder.setIfAbsent(name, value);
+    cachedHeaders = null;
+    return this;
+  }
+
+  @Override
+  public MutableRequest setHeaderIfAbsent(String name, List<String> values) {
+    headersBuilder.setIfAbsent(name, values);
     cachedHeaders = null;
     return this;
   }
