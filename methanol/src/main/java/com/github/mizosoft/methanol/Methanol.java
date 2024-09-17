@@ -621,7 +621,7 @@ public final class Methanol extends HttpClient {
     public B defaultHeaders(String... headers) {
       requireArgument(
           headers.length > 0 && headers.length % 2 == 0,
-          "illegal number of headers: %d",
+          "Illegal number of headers: %d",
           headers.length);
       for (int i = 0; i < headers.length; i += 2) {
         defaultHeader(headers[i], headers[i + 1]);
@@ -798,14 +798,16 @@ public final class Methanol extends HttpClient {
     }
 
     /**
-     * Sets a chain of caches to be called, one after another, in the order specified by the given
+     * Sets a chain of caches to be called one after another, in the order specified by the given
      * list. Each cache forwards to the other till a suitable response is found or the request is
      * sent to network. Although not enforced, it is highly recommended for the caches to be sorted
      * in the order of decreasing locality.
      */
     @CanIgnoreReturnValue
     public Builder cacheChain(List<HttpCache> caches) {
-      this.caches = List.copyOf(caches);
+      var cachesCopy = List.copyOf(caches);
+      requireArgument(!cachesCopy.isEmpty(), "Must have at least one cache in the chain");
+      this.caches = cachesCopy;
       return this;
     }
 
