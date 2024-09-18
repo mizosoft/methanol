@@ -42,7 +42,7 @@ import com.github.mizosoft.methanol.internal.cache.LocalCache;
 import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutor;
+import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutorProvider;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -1077,7 +1077,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       if (executor != null) {
         isDefaultExecutor[0] = false;
       } else {
-        executor = FallbackExecutor.get();
+        executor = FallbackExecutorProvider.get();
         isDefaultExecutor[0] = true;
       }
       return executor;
