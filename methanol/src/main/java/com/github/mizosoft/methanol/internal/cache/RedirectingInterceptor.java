@@ -34,7 +34,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutor;
+import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutorProvider;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
@@ -77,7 +77,7 @@ public final class RedirectingInterceptor implements Interceptor {
 
   public RedirectingInterceptor(Redirect policy, @Nullable Executor handlerExecutor) {
     this.policy = requireNonNull(policy);
-    this.handlerExecutor = requireNonNullElseGet(handlerExecutor, FallbackExecutor::get);
+    this.handlerExecutor = requireNonNullElseGet(handlerExecutor, FallbackExecutorProvider::get);
   }
 
   @Override
