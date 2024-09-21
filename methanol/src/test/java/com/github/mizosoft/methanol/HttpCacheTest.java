@@ -120,6 +120,7 @@ import mockwebserver3.QueueDispatcher;
 import mockwebserver3.RecordedRequest;
 import mockwebserver3.SocketPolicy;
 import okhttp3.Headers;
+import okio.Buffer;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.assertj.core.api.ObjectAssert;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -1142,7 +1143,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("Vary", "Accept-Encoding")
             .setHeader("Content-Encoding", "gzip")
-            .setBody(new okio.Buffer().write(gzip("Jigglypuff"))));
+            .setBody(new Buffer().write(gzip("Jigglypuff"))));
 
     var gzipRequest = GET(serverUri).header("Accept-Encoding", "gzip");
     verifyThat(send(gzipRequest)).isCacheMiss().hasBody("Jigglypuff");
@@ -1153,7 +1154,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("Vary", "Accept-Encoding")
             .setHeader("Content-Encoding", "deflate")
-            .setBody(new okio.Buffer().write(deflate("Jigglypuff"))));
+            .setBody(new Buffer().write(deflate("Jigglypuff"))));
 
     var deflateRequest = GET(serverUri).header("Accept-Encoding", "deflate");
     verifyThat(send(deflateRequest))
@@ -2765,7 +2766,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     assertThat(cache.remove(uri1)).isTrue();
     assertNotStored(uri1);
 
-    assertThat(cache.remove(MutableRequest.GET(uri2))).isTrue();
+    assertThat(cache.remove(GET(uri2))).isTrue();
     assertNotStored(uri2);
 
     verifyThat(send(uri1)).isCacheMiss().hasBody("a");
@@ -2787,7 +2788,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("Vary", "Accept-Encoding")
             .setHeader("Content-Encoding", "gzip")
-            .setBody(new okio.Buffer().write(gzip("Mew"))));
+            .setBody(new Buffer().write(gzip("Mew"))));
     verifyThat(send(GET(serverUri).header("Accept-Encoding", "gzip"))).isCacheMiss().hasBody("Mew");
 
     // Removal only succeeds for the request matching the correct response variant
@@ -3214,7 +3215,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         new MockResponse()
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("Content-Encoding", "gzip")
-            .setBody(new okio.Buffer().write(gzippedBytes)));
+            .setBody(new Buffer().write(gzippedBytes)));
     verifyThat(send(serverUri)).isCacheMiss().hasBody("Will Smith");
     verifyThat(send(serverUri))
         .isCacheHit()
