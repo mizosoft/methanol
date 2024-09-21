@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.testing.store;
 
 import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
+import io.lettuce.core.api.StatefulRedisConnection;
 import java.io.IOException;
 
 public final class RedisStandaloneStoreContext
@@ -30,13 +31,18 @@ public final class RedisStandaloneStoreContext
   private static final RedisSessionSingletonPool<RedisStandaloneSession> serverPool =
       new RedisSessionSingletonPool<>(RedisStandaloneSession::start);
 
-  RedisStandaloneStoreContext(RedisStandaloneStoreConfig config) {
+  RedisStandaloneStoreContext(RedisStandaloneStoreConfig config) throws IOException {
     super(config, serverPool);
   }
 
   @Override
-  void configure(RedisStorageExtension.Builder builder) throws IOException {
-    builder.standalone(getSession().uri());
+  void configure(RedisStorageExtension.Builder builder) {
+    builder.standalone(session.uri());
+  }
+
+  @Override
+  public StatefulRedisConnection<String, String> connect() {
+    return session.connect();
   }
 
   public static boolean isAvailable() {

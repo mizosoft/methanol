@@ -174,8 +174,8 @@ public final class StoreExtension
                 Set.of(spec.indexUpdateDelaySeconds()),
                 Set.of(spec.autoAdvanceClock()),
                 Set.of(spec.dispatchEagerly()),
-                Set.of(spec.editorLockTtlSeconds()),
-                Set.of(spec.staleEntryLockTtlSeconds())))
+                Set.of(spec.editorLockInactiveTtlSeconds()),
+                Set.of(spec.staleEntryInactiveTtlSeconds())))
         .stream()
         .filter(configTuple -> isCompatibleConfig(configTuple) && isAvailableConfig(configTuple))
         .filter(StoreExtension::isAvailableConfig)
@@ -258,16 +258,18 @@ public final class StoreExtension
 
   private static RedisStandaloneStoreConfig createRedisStandaloneConfig(List<?> tuple) {
     int appVersion = (int) tuple.get(2);
-    int editorLockTtlSeconds = (int) tuple.get(8);
-    int staleEntryTtlSeconds = (int) tuple.get(9);
-    return new RedisStandaloneStoreConfig(appVersion, editorLockTtlSeconds, staleEntryTtlSeconds);
+    int editorLockInactiveTtlSeconds = (int) tuple.get(8);
+    int staleEntryInactiveTtlSeconds = (int) tuple.get(9);
+    return new RedisStandaloneStoreConfig(
+        appVersion, editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds);
   }
 
   private static RedisClusterStoreConfig createRedisClusterConfig(List<?> tuple) {
     int appVersion = (int) tuple.get(2);
-    int editorLockTtlSeconds = (int) tuple.get(8);
-    int staleEntryTtlSeconds = (int) tuple.get(9);
-    return new RedisClusterStoreConfig(appVersion, editorLockTtlSeconds, staleEntryTtlSeconds);
+    int editorLockInactiveTtlSeconds = (int) tuple.get(8);
+    int staleEntryInactiveTtlSeconds = (int) tuple.get(9);
+    return new RedisClusterStoreConfig(
+        appVersion, editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds);
   }
 
   private static Set<List<?>> cartesianProduct(List<Set<?>> sets) {

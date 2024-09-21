@@ -22,9 +22,9 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.view;
-import static com.github.mizosoft.methanol.internal.cache.StoreTesting.write;
 import static com.github.mizosoft.methanol.testing.TestUtils.awaitUnchecked;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.view;
+import static com.github.mizosoft.methanol.testing.store.StoreTesting.write;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -59,6 +59,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -104,12 +105,14 @@ class CacheReadingPublisherTest {
     testReadingLargeString(store, executor);
   }
 
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void readLargeStringFromDisk(Executor executor, Store store) throws IOException {
     testReadingLargeString(store, executor);
   }
 
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
@@ -117,6 +120,7 @@ class CacheReadingPublisherTest {
     testReadingLargeString(store, executor);
   }
 
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")

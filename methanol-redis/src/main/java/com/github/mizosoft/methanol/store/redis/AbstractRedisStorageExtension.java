@@ -55,16 +55,16 @@ abstract class AbstractRedisStorageExtension<
                 & RedisStringAsyncCommands<String, ByteBuffer>>
     implements RedisStorageExtension {
   final RedisConnectionProvider<C> connectionProvider;
-  final int editorLockTtlSeconds;
-  final int staleEntryTtlSeconds;
+  final int editorLockInactiveTtlSeconds;
+  final int staleEntryInactiveTtlSeconds;
 
   AbstractRedisStorageExtension(
       RedisConnectionProvider<C> connectionProvider,
-      int editorLockTtlSeconds,
-      int staleEntryTtlSeconds) {
+      int editorLockInactiveTtlSeconds,
+      int staleEntryInactiveTtlSeconds) {
     this.connectionProvider = connectionProvider;
-    this.editorLockTtlSeconds = editorLockTtlSeconds;
-    this.staleEntryTtlSeconds = staleEntryTtlSeconds;
+    this.editorLockInactiveTtlSeconds = editorLockInactiveTtlSeconds;
+    this.staleEntryInactiveTtlSeconds = staleEntryInactiveTtlSeconds;
   }
 
   @Override
@@ -95,16 +95,20 @@ abstract class AbstractRedisStorageExtension<
           RedisAsyncCommands<String, ByteBuffer>> {
     RedisStandaloneStorageExtension(
         RedisConnectionProvider<StatefulRedisConnection<String, ByteBuffer>> connectionProvider,
-        int editorLockTtlSeconds,
-        int staleEntryTtlSeconds) {
-      super(connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds);
+        int editorLockInactiveTtlSeconds,
+        int staleEntryInactiveTtlSeconds) {
+      super(connectionProvider, editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds);
     }
 
     @Override
     RedisStandaloneStore createStore(
         StatefulRedisConnection<String, ByteBuffer> connection, int appVersion) {
       return new RedisStandaloneStore(
-          connection, connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion);
+          connection,
+          connectionProvider,
+          editorLockInactiveTtlSeconds,
+          staleEntryInactiveTtlSeconds,
+          appVersion);
     }
   }
 
@@ -116,16 +120,20 @@ abstract class AbstractRedisStorageExtension<
     RedisClusterStorageExtension(
         RedisConnectionProvider<StatefulRedisClusterConnection<String, ByteBuffer>>
             connectionProvider,
-        int editorLockTtlSeconds,
-        int staleEntryTtlSeconds) {
-      super(connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds);
+        int editorLockInactiveTtlSeconds,
+        int staleEntryInactiveTtlSeconds) {
+      super(connectionProvider, editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds);
     }
 
     @Override
     RedisClusterStore createStore(
         StatefulRedisClusterConnection<String, ByteBuffer> connection, int appVersion) {
       return new RedisClusterStore(
-          connection, connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion);
+          connection,
+          connectionProvider,
+          editorLockInactiveTtlSeconds,
+          staleEntryInactiveTtlSeconds,
+          appVersion);
     }
   }
 }

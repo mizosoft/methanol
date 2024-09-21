@@ -9,4 +9,5 @@ plugins {
 dependencies {
   api(project(":methanol"))
   api(libs.lettuce)
+  testImplementation(project(":methanol-testing"))
 }

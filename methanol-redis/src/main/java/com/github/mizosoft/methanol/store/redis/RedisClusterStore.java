@@ -54,11 +54,16 @@ class RedisClusterStore
       StatefulRedisClusterConnection<String, ByteBuffer> connection,
       RedisConnectionProvider<StatefulRedisClusterConnection<String, ByteBuffer>>
           connectionProvider,
-      int editorLockTtlSeconds,
-      int staleEntryTtlSeconds,
+      int editorLockInactiveTtlSeconds,
+      int staleEntryInactiveTtlSeconds,
       int appVersion) {
     super(
-        connection, connectionProvider, editorLockTtlSeconds, staleEntryTtlSeconds, appVersion, "");
+        connection,
+        connectionProvider,
+        editorLockInactiveTtlSeconds,
+        staleEntryInactiveTtlSeconds,
+        appVersion,
+        "");
   }
 
   @Override
