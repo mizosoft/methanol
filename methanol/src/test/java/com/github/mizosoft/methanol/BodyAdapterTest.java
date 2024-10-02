@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -59,17 +59,17 @@ class BodyAdapterTest {
 
     @Override
     public boolean isCompatibleWith(MediaType mediaType) {
-      throw new AssertionError();
+      return true;
     }
 
     @Override
-    public boolean supportsType(TypeRef<?> type) {
-      throw new AssertionError();
+    public boolean supportsType(TypeRef<?> typeRef) {
+      return typeRef.rawType().isInstance(value);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
+    public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, @Nullable MediaType mediaType) {
       return (BodySubscriber<T>) BodySubscribers.replacing(value);
     }
   }

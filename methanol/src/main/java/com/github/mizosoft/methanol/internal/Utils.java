@@ -26,6 +26,8 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.FIELD_VALUE_MATCHER;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.TOKEN_MATCHER;
 
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
+import com.github.mizosoft.methanol.MediaType;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -280,5 +282,9 @@ public class Utils {
       remaining += buffer.remaining();
     }
     return remaining;
+  }
+
+  public static Hints hintsOf(@Nullable MediaType mediaType) {
+    return mediaType != null ? Hints.of(mediaType) : Hints.empty();
   }
 }

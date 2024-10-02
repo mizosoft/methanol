@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,13 +44,23 @@ public class ForwardingDecoder extends ForwardingBodyAdapter implements Decoder 
   }
 
   @Override
-  public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
-    return delegate.toObject(objectType, mediaType);
+  public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, @Nullable MediaType mediaType) {
+    return delegate.toObject(typeRef, mediaType);
+  }
+
+  @Override
+  public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+    return delegate.toObject(typeRef, hints);
   }
 
   @Override
   public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-      TypeRef<T> objectType, @Nullable MediaType mediaType) {
-    return delegate.toDeferredObject(objectType, mediaType);
+      TypeRef<T> typeRef, @Nullable MediaType mediaType) {
+    return delegate.toDeferredObject(typeRef, mediaType);
+  }
+
+  @Override
+  public <T> BodySubscriber<Supplier<T>> toDeferredObject(TypeRef<T> typeRef, Hints hints) {
+    return delegate.toDeferredObject(typeRef, hints);
   }
 }
