@@ -60,8 +60,8 @@ class AbstractBodyAdapterTest {
     var adapter =
         new AbstractBodyAdapter(MediaType.ANY) {
           @Override
-          public boolean supportsType(TypeRef<?> type) {
-            return List.class.isAssignableFrom(type.rawType());
+          public boolean supportsType(TypeRef<?> typeRef) {
+            return List.class.isAssignableFrom(typeRef.rawType());
           }
         };
     assertThatExceptionOfType(UnsupportedOperationException.class)
@@ -94,7 +94,7 @@ class AbstractBodyAdapterTest {
     }
 
     @Override
-    public boolean supportsType(TypeRef<?> type) {
+    public boolean supportsType(TypeRef<?> typeRef) {
       return false;
     }
   }
