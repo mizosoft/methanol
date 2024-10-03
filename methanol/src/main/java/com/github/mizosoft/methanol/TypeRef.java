@@ -215,6 +215,13 @@ public abstract class TypeRef<T> {
     return new ExplicitTypeRef<>(rawType);
   }
 
+  /**
+   * Returns a new {@code TypeRef} who's {@link #type()} is the runtime type of the given instance.
+   */
+  public static <T> TypeRef<? extends T> ofRuntimeType(T instance) {
+    return new ExplicitTypeRef<>(instance.getClass());
+  }
+
   private static final class ExplicitTypeRef<T> extends TypeRef<T> {
     ExplicitTypeRef(Type type) {
       super(requireNonNull(type));

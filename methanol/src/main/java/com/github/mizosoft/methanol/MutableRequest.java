@@ -27,6 +27,7 @@ import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuratio
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.URI;
@@ -670,7 +671,6 @@ public final class MutableRequest extends TaggableRequest
   private static final class UnresolvedBody implements MimeAware {
     private final Object payload;
     private final MediaType mediaType;
-
     private @Nullable BodyPublisher resolvedBodyPublisher;
 
     UnresolvedBody(Object payload, MediaType mediaType) {
@@ -681,7 +681,7 @@ public final class MutableRequest extends TaggableRequest
     BodyPublisher resolve(AdapterCodec adapterCodec) {
       var bodyPublisher = resolvedBodyPublisher;
       if (bodyPublisher == null) {
-        bodyPublisher = adapterCodec.publisherOf(payload, mediaType);
+        bodyPublisher = adapterCodec.publisherOf(payload, Hints.of(mediaType));
         resolvedBodyPublisher = bodyPublisher;
       }
       return bodyPublisher;

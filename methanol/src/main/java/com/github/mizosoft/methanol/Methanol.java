@@ -29,6 +29,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.internal.Utils;
@@ -402,14 +403,20 @@ public final class Methanol extends HttpClient {
   public <T> HttpResponse<T> send(HttpRequest request, TypeRef<T> bodyType)
       throws IOException, InterruptedException {
     return new InterceptorChain<>(
-            backend, adapterCodecOrInstalled().handlerOf(bodyType), null, mergedInterceptors)
+            backend,
+            adapterCodecOrInstalled().handlerOf(bodyType, Hints.empty()),
+            null,
+            mergedInterceptors)
         .forward(request);
   }
 
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(
       HttpRequest request, TypeRef<T> bodyType) {
     return new InterceptorChain<>(
-            backend, adapterCodecOrInstalled().handlerOf(bodyType), null, mergedInterceptors)
+            backend,
+            adapterCodecOrInstalled().handlerOf(bodyType, Hints.empty()),
+            null,
+            mergedInterceptors)
         .forwardAsync(request);
   }
 
@@ -478,7 +485,8 @@ public final class Methanol extends HttpClient {
 
     @Override
     public <T> T to(TypeRef<T> typeRef) throws IOException, InterruptedException {
-      return Utils.get(handleAsync(adapterCodec.handlerOf(typeRef), FlowSupport.SYNC_EXECUTOR));
+      return Utils.get(
+          handleAsync(adapterCodec.handlerOf(typeRef, Hints.empty()), FlowSupport.SYNC_EXECUTOR));
     }
 
     @Override
@@ -488,7 +496,7 @@ public final class Methanol extends HttpClient {
 
     @Override
     public <T> CompletableFuture<T> toAsync(TypeRef<T> typeRef) {
-      return handleAsync(adapterCodec.handlerOf(typeRef), executorSupplier.get());
+      return handleAsync(adapterCodec.handlerOf(typeRef, Hints.empty()), executorSupplier.get());
     }
 
     @Override
