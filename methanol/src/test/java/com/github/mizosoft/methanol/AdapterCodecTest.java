@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.from;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 import com.github.mizosoft.methanol.testing.ImmutableResponseInfo;
 import java.io.BufferedReader;
@@ -49,12 +50,12 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.assertj.core.api.Assertions;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class AdapterCodecTest {
   private static final MediaType X_NUMBER_INT = MediaType.parse("x-number/int");
+  private static final MediaType X_NUMBER_INT_LIST = MediaType.parse("x-number/int-list");
 
   @Test
   void getEncoders() {
@@ -79,15 +80,15 @@ class AdapterCodecTest {
     var codec =
         AdapterCodec.newBuilder().encoder(new IntEncoder()).decoder(new IntDecoder()).build();
 
-    verifyThat(codec.publisherOf(1, X_NUMBER_INT)) //
+    verifyThat(codec.publisherOf(1, Hints.of(X_NUMBER_INT))) //
         .hasMediaType(X_NUMBER_INT)
         .succeedsWith("1");
 
-    verifyThat(codec.subscriberOf(TypeRef.of(Integer.class), X_NUMBER_INT)) //
+    verifyThat(codec.subscriberOf(TypeRef.of(Integer.class), Hints.of(X_NUMBER_INT))) //
         .publishing("1")
         .succeedsWith(1);
 
-    verifyThat(codec.deferredSubscriberOf(TypeRef.of(Integer.class), X_NUMBER_INT)) //
+    verifyThat(codec.deferredSubscriberOf(TypeRef.of(Integer.class), Hints.of(X_NUMBER_INT))) //
         .publishing("1")
         .completedBody()
         .returns(1, from(Supplier::get));
@@ -96,7 +97,10 @@ class AdapterCodecTest {
   @Test
   void handleToInt() {
     var codec = AdapterCodec.newBuilder().decoder(new IntDecoder()).build();
-    verifyThat(codec.handlerOf(TypeRef.of(Integer.class)).apply(responseInfoOf(X_NUMBER_INT)))
+    verifyThat(
+            codec
+                .handlerOf(TypeRef.of(Integer.class), Hints.empty())
+                .apply(responseInfoOf(X_NUMBER_INT)))
         .publishing("1")
         .succeedsWith(1);
   }
@@ -105,7 +109,9 @@ class AdapterCodecTest {
   void deferredHandleToInt() {
     var codec = AdapterCodec.newBuilder().decoder(new IntDecoder()).build();
     verifyThat(
-            codec.deferredHandlerOf(TypeRef.of(Integer.class)).apply(responseInfoOf(X_NUMBER_INT)))
+            codec
+                .deferredHandlerOf(TypeRef.of(Integer.class), Hints.empty())
+                .apply(responseInfoOf(X_NUMBER_INT)))
         .publishing("1")
         .completedBody()
         .returns(1, from(Supplier::get));
@@ -121,30 +127,32 @@ class AdapterCodecTest {
             .decoder(new StringDecoder())
             .build();
 
-    verifyThat(codec.publisherOf(1, X_NUMBER_INT)) //
+    verifyThat(codec.publisherOf(1, Hints.of(X_NUMBER_INT))) //
         .hasMediaType(X_NUMBER_INT)
         .succeedsWith("1");
 
-    verifyThat(codec.subscriberOf(TypeRef.of(Integer.class), X_NUMBER_INT)) //
+    verifyThat(codec.subscriberOf(TypeRef.of(Integer.class), Hints.of(X_NUMBER_INT))) //
         .publishing("1")
         .succeedsWith(1);
 
-    verifyThat(codec.deferredSubscriberOf(TypeRef.of(Integer.class), X_NUMBER_INT)) //
+    verifyThat(codec.deferredSubscriberOf(TypeRef.of(Integer.class), Hints.of(X_NUMBER_INT))) //
         .publishing("1")
         .completedBody()
         .returns(1, from(Supplier::get));
 
     // ---
 
-    verifyThat(codec.publisherOf("a", MediaType.TEXT_PLAIN)) //
+    verifyThat(codec.publisherOf("a", Hints.of(MediaType.TEXT_PLAIN))) //
         .hasMediaType(MediaType.TEXT_PLAIN)
         .succeedsWith("a");
 
-    verifyThat(codec.subscriberOf(TypeRef.of(String.class), MediaType.TEXT_PLAIN)) //
+    verifyThat(codec.subscriberOf(TypeRef.of(String.class), Hints.of(MediaType.TEXT_PLAIN))) //
         .publishing("a")
         .succeedsWith("a");
 
-    verifyThat(codec.deferredSubscriberOf(TypeRef.of(String.class), MediaType.TEXT_PLAIN)) //
+    verifyThat(
+            codec.deferredSubscriberOf(
+                TypeRef.of(String.class), Hints.of(MediaType.TEXT_PLAIN))) //
         .publishing("a")
         .completedBody()
         .returns("a", from(Supplier::get));
@@ -154,13 +162,12 @@ class AdapterCodecTest {
   void unsupportedConversion() {
     var codec =
         AdapterCodec.newBuilder().encoder(new IntEncoder()).decoder(new IntDecoder()).build();
-    assertThatThrownBy(() -> codec.publisherOf(12, MediaType.TEXT_PLAIN))
+    assertThatThrownBy(() -> codec.publisherOf(12, Hints.of(MediaType.TEXT_PLAIN)))
         .isInstanceOf(UnsupportedOperationException.class);
-
-    assertThatThrownBy(() -> codec.subscriberOf(TypeRef.of(Integer.class), MediaType.TEXT_PLAIN))
+    assertThatThrownBy(
+            () -> codec.subscriberOf(TypeRef.of(Integer.class), Hints.of(MediaType.TEXT_PLAIN)))
         .isInstanceOf(UnsupportedOperationException.class);
-
-    assertThatThrownBy(() -> codec.handlerOf(TypeRef.of(Double.class)))
+    assertThatThrownBy(() -> codec.handlerOf(TypeRef.of(Double.class), Hints.empty()))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -174,31 +181,43 @@ class AdapterCodecTest {
             .decoder(new StringDecoder())
             .build();
 
-    verifyThat(codec.publisherOf(1, MediaType.ANY)) //
+    verifyThat(codec.publisherOf(1, Hints.of(MediaType.ANY))) //
         .hasNoMediaType()
         .succeedsWith("1");
 
-    verifyThat(codec.subscriberOf(TypeRef.of(Integer.class), MediaType.ANY))
+    verifyThat(codec.subscriberOf(TypeRef.of(Integer.class), Hints.of(MediaType.ANY)))
         .publishing("1")
         .succeedsWith(1);
-    verifyThat(codec.deferredSubscriberOf(TypeRef.of(Integer.class), MediaType.ANY))
+    verifyThat(codec.deferredSubscriberOf(TypeRef.of(Integer.class), Hints.of(MediaType.ANY)))
         .publishing("1")
         .completedBody()
         .returns(1, from(Supplier::get));
 
     // ---
 
-    verifyThat(codec.publisherOf("a", MediaType.ANY)) //
+    verifyThat(codec.publisherOf("a", Hints.of(MediaType.ANY))) //
         .hasNoMediaType()
         .succeedsWith("a");
 
-    verifyThat(codec.subscriberOf(TypeRef.of(String.class), MediaType.ANY))
+    verifyThat(codec.subscriberOf(TypeRef.of(String.class), Hints.of(MediaType.ANY)))
         .publishing("a")
         .succeedsWith("a");
-    verifyThat(codec.deferredSubscriberOf(TypeRef.of(String.class), MediaType.ANY))
+    verifyThat(codec.deferredSubscriberOf(TypeRef.of(String.class), Hints.of(MediaType.ANY)))
         .publishing("a")
         .completedBody()
         .returns("a", from(Supplier::get));
+  }
+
+  @Test
+  void encodeGenericType() {
+    var codec = AdapterCodec.newBuilder().encoder(new IntListEncoder()).build();
+    verifyThat(codec.publisherOf(List.of(1, 2), new TypeRef<>() {}, Hints.of(X_NUMBER_INT_LIST)))
+        .succeedsWith(List.of(1, 2).toString());
+    assertThatThrownBy(
+            () ->
+                codec.publisherOf(
+                    List.of("a", "b"), new TypeRef<>() {}, Hints.of(X_NUMBER_INT_LIST)))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
@@ -213,56 +232,59 @@ class AdapterCodecTest {
 
   @Test
   void basicCodec(@TempDir Path tempDir) throws IOException {
-    var codec = AdapterCodec.newBuilder().basicCodec().build();
+    var codec = AdapterCodec.newBuilder().basic().build();
     testBasicEncoder(codec, tempDir);
     testBasicDecoder(codec);
   }
 
   private void testBasicEncoder(AdapterCodec codec, Path tempDir) throws IOException {
-    verifyThat(codec.publisherOf("Pikachu", MediaType.TEXT_PLAIN))
+    verifyThat(codec.publisherOf("Pikachu", Hints.of(MediaType.TEXT_PLAIN)))
         .hasMediaType(MediaType.TEXT_PLAIN)
         .succeedsWith("Pikachu");
-    verifyThat(codec.publisherOf("é€Pikachu€é", MediaType.TEXT_PLAIN.withCharset(UTF_8)))
+    verifyThat(codec.publisherOf("é€Pikachu€é", Hints.of(MediaType.TEXT_PLAIN.withCharset(UTF_8))))
         .hasMediaType(MediaType.TEXT_PLAIN.withCharset(UTF_8))
         .succeedsWith("é€Pikachu€é");
-    verifyThat(codec.publisherOf(new byte[] {1, 2, 3}, MediaType.ANY))
+    verifyThat(codec.publisherOf(new byte[] {1, 2, 3}, Hints.of(MediaType.ANY)))
         .hasNoMediaType()
         .succeedsWith(ByteBuffer.wrap(new byte[] {1, 2, 3}));
     verifyThat(
-            codec.publisherOf(new ByteArrayInputStream("Pikachu".getBytes(UTF_8)), MediaType.ANY))
+            codec.publisherOf(
+                new ByteArrayInputStream("Pikachu".getBytes(UTF_8)), Hints.of(MediaType.ANY)))
         .succeedsWith("Pikachu");
 
     var file = Files.createTempFile(tempDir, AdapterCodecTest.class.getName(), "");
     Files.writeString(file, "Pikachu");
-    verifyThat(codec.publisherOf(file, MediaType.ANY)).succeedsWith("Pikachu");
+    verifyThat(codec.publisherOf(file, Hints.of(MediaType.ANY))).succeedsWith("Pikachu");
   }
 
   private void testBasicDecoder(AdapterCodec codec) {
-    verifyThat(codec.subscriberOf(new TypeRef<String>() {}, MediaType.TEXT_PLAIN))
+    verifyThat(codec.subscriberOf(new TypeRef<String>() {}, Hints.of(MediaType.TEXT_PLAIN)))
         .publishing("Pikachu")
         .succeedsWith("Pikachu");
     verifyThat(
-            codec.subscriberOf(new TypeRef<String>() {}, MediaType.TEXT_PLAIN.withCharset(UTF_8)))
+            codec.subscriberOf(
+                new TypeRef<String>() {}, Hints.of(MediaType.TEXT_PLAIN.withCharset(UTF_8))))
         .publishing("é€Pikachu€é")
         .succeedsWith("é€Pikachu€é");
-    verifyThat(codec.subscriberOf(new TypeRef<Reader>() {}, MediaType.TEXT_PLAIN))
+    verifyThat(codec.subscriberOf(new TypeRef<Reader>() {}, Hints.of(MediaType.TEXT_PLAIN)))
         .publishing("Pikachu")
         .completedBody()
         .satisfies(
             reader ->
                 Assertions.assertThat(new BufferedReader(reader).readLine()).isEqualTo("Pikachu"));
     verifyThat(
-            codec.subscriberOf(new TypeRef<Reader>() {}, MediaType.TEXT_PLAIN.withCharset(UTF_8)))
+            codec.subscriberOf(
+                new TypeRef<Reader>() {}, Hints.of(MediaType.TEXT_PLAIN.withCharset(UTF_8))))
         .publishing("é€Pikachu€é")
         .completedBody()
         .satisfies(
             reader ->
                 Assertions.assertThat(new BufferedReader(reader).readLine())
                     .isEqualTo("é€Pikachu€é"));
-    verifyThat(codec.subscriberOf(new TypeRef<byte[]>() {}, MediaType.ANY))
+    verifyThat(codec.subscriberOf(new TypeRef<byte[]>() {}, Hints.of(MediaType.ANY)))
         .publishing(ByteBuffer.wrap(new byte[] {1, 2, 3}))
         .succeedsWith(new byte[] {1, 2, 3});
-    verifyThat(codec.subscriberOf(new TypeRef<ByteBuffer>() {}, MediaType.ANY))
+    verifyThat(codec.subscriberOf(new TypeRef<ByteBuffer>() {}, Hints.of(MediaType.ANY)))
         .publishing(ByteBuffer.wrap(new byte[] {1, 2, 3}))
         .succeedsWith(ByteBuffer.wrap(new byte[] {1, 2, 3}));
   }
@@ -283,11 +305,11 @@ class AdapterCodecTest {
     }
 
     @Override
-    public boolean supportsType(TypeRef<?> type) {
-      return targetType.equals(type);
+    public boolean supportsType(TypeRef<?> typeRef) {
+      return targetType.equals(typeRef);
     }
 
-    static class Encoder<V> extends CustomAdapter<V> implements BodyAdapter.Encoder {
+    static class Encoder<V> extends CustomAdapter<V> implements BaseEncoder {
       private final Function<V, String> encode;
 
       Encoder(Class<V> clazz, Function<V, String> encode, MediaType... compatibleMediaTypes) {
@@ -295,28 +317,39 @@ class AdapterCodecTest {
         this.encode = encode;
       }
 
+      Encoder(TypeRef<V> typeRef, Function<V, String> encode, MediaType... compatibleMediaTypes) {
+        super(typeRef, compatibleMediaTypes);
+        this.encode = encode;
+      }
+
       @SuppressWarnings("unchecked")
       @Override
-      public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
-        requireSupport(object.getClass());
-        return attachMediaType(BodyPublishers.ofString(encode.apply((V) object)), mediaType);
+      public <T> BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints) {
+        requireSupport(typeRef, hints);
+        return attachMediaType(
+            BodyPublishers.ofString(encode.apply((V) value)), hints.mediaTypeOrAny());
       }
     }
 
-    static class Decoder<V> extends CustomAdapter<V> implements BodyAdapter.Decoder {
+    static class Decoder<V> extends CustomAdapter<V> implements BaseDecoder {
       private final Function<String, V> decode;
 
       Decoder(Class<V> clazz, Function<String, V> decode, MediaType... compatibleMediaTypes) {
-        super(TypeRef.of(clazz), compatibleMediaTypes);
+        this(TypeRef.of(clazz), decode, compatibleMediaTypes);
+      }
+
+      Decoder(TypeRef<V> typeRef, Function<String, V> decode, MediaType... compatibleMediaTypes) {
+        super(typeRef, compatibleMediaTypes);
         this.decode = decode;
       }
 
       @SuppressWarnings("unchecked")
       @Override
-      public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
-        requireSupport(objectType);
+      public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+        requireSupport(typeRef, hints);
         return (BodySubscriber<T>)
-            BodySubscribers.mapping(BodySubscribers.ofString(charsetOrUtf8(mediaType)), decode);
+            BodySubscribers.mapping(
+                BodySubscribers.ofString(hints.mediaTypeOrAny().charsetOrDefault(UTF_8)), decode);
       }
     }
   }
@@ -330,6 +363,12 @@ class AdapterCodecTest {
   private static final class IntDecoder extends CustomAdapter.Decoder<Integer> {
     IntDecoder() {
       super(Integer.class, Integer::parseInt, X_NUMBER_INT);
+    }
+  }
+
+  private static final class IntListEncoder extends CustomAdapter.Encoder<List<Integer>> {
+    IntListEncoder() {
+      super(new TypeRef<>() {}, List<Integer>::toString, X_NUMBER_INT_LIST);
     }
   }
 

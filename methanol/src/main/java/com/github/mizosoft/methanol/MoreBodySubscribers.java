@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.AsyncSubscriberAdapter;
 import com.github.mizosoft.methanol.internal.extensions.ByteChannelSubscriber;
@@ -129,8 +130,7 @@ public class MoreBodySubscribers {
    *     or media type is installed
    */
   public static <T> BodySubscriber<T> ofObject(TypeRef<T> type, @Nullable MediaType mediaType) {
-    return AdapterCodec.installed()
-        .subscriberOf(type, mediaType != null ? mediaType : MediaType.ANY);
+    return AdapterCodec.installed().subscriberOf(type, Utils.hintsOf(mediaType));
   }
 
   /**
@@ -142,7 +142,6 @@ public class MoreBodySubscribers {
    */
   public static <T> BodySubscriber<Supplier<T>> ofDeferredObject(
       TypeRef<T> type, @Nullable MediaType mediaType) {
-    return AdapterCodec.installed()
-        .deferredSubscriberOf(type, mediaType != null ? mediaType : MediaType.ANY);
+    return AdapterCodec.installed().deferredSubscriberOf(type, Utils.hintsOf(mediaType));
   }
 }
