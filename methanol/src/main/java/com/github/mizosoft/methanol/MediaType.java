@@ -26,6 +26,7 @@ import static com.github.mizosoft.methanol.internal.Utils.escapeAndQuoteValueIfN
 import static com.github.mizosoft.methanol.internal.Utils.requireValidToken;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.text.HttpCharMatchers.QUOTED_PAIR_MATCHER;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
@@ -198,6 +199,11 @@ public final class MediaType {
     }
   }
 
+  /** Equivalent to calling {@code charsetOrDefault(StandardCharsets.UTF_8)}. */
+  public Charset charsetOrUtf8() {
+    return charsetOrDefault(UTF_8);
+  }
+
   /**
    * Return {@code true} if this media type is {@code *}{@code /*} or if it has a wildcard subtype.
    */
@@ -214,7 +220,6 @@ public final class MediaType {
    * @param other the other media type
    */
   public boolean includes(MediaType other) {
-    requireNonNull(other);
     return includesType(other.type, other.subtype)
         && other.parameters.entrySet().containsAll(parameters.entrySet());
   }
