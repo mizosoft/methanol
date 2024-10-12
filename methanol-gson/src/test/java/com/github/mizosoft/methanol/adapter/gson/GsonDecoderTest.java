@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,8 +29,7 @@ import static java.nio.charset.StandardCharsets.UTF_16;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.google.gson.GsonBuilder;
-import com.google.gson.stream.MalformedJsonException;
-import java.io.UncheckedIOException;
+import com.google.gson.JsonSyntaxException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -46,9 +45,7 @@ class GsonDecoderTest {
 
   @Test
   void incompatibleMediaTypes() {
-    verifyThat(createDecoder())
-        .isNotCompatibleWith("text/html")
-        .isNotCompatibleWith("text/*");
+    verifyThat(createDecoder()).isNotCompatibleWith("text/html").isNotCompatibleWith("text/*");
   }
 
   @Test
@@ -70,9 +67,8 @@ class GsonDecoderTest {
 
   @Test
   void deserializeWithCustomTypeAdapter() {
-    var gson = new GsonBuilder()
-        .registerTypeAdapter(Point.class, new CompactPointAdapter())
-        .create();
+    var gson =
+        new GsonBuilder().registerTypeAdapter(Point.class, new CompactPointAdapter()).create();
     verifyThat(createDecoder(gson))
         .converting(Point.class)
         .withBody("[1, 2]")
@@ -89,9 +85,8 @@ class GsonDecoderTest {
 
   @Test
   void deserializeWithGenericsAndCustomTypeAdapter() {
-    var gson = new GsonBuilder()
-        .registerTypeAdapter(Point.class, new CompactPointAdapter())
-        .create();
+    var gson =
+        new GsonBuilder().registerTypeAdapter(Point.class, new CompactPointAdapter()).create();
     verifyThat(createDecoder(gson))
         .converting(new TypeRef<List<Point>>() {})
         .withBody("[[1, 2], [3, 4]]")
@@ -100,16 +95,10 @@ class GsonDecoderTest {
 
   @Test
   void deserializeWithLenientGson() {
-    var gson = new GsonBuilder()
-        .setLenient()
-        .create();
+    var gson = new GsonBuilder().setLenient().create();
     verifyThat(createDecoder(gson))
         .converting(Point.class)
-        .withBody(
-              "{\n"
-            + "  x: '1',\n"
-            + "  y: '2' // This is a comment \n"
-            + "}")
+        .withBody("{\n" + "  x: '1',\n" + "  y: '2' // This is a comment \n" + "}")
         .succeedsWith(new Point(1, 2));
   }
 
@@ -118,8 +107,7 @@ class GsonDecoderTest {
     verifyThat(createDecoder())
         .converting(Point.class)
         .withBody("{x:\"1\", y:\"2\"") // Missing enclosing bracket
-        .failsWith(UncheckedIOException.class) // IOExceptions are rethrown as UncheckedIOExceptions
-        .withCauseInstanceOf(MalformedJsonException.class);
+        .failsWith(JsonSyntaxException.class);
   }
 
   @Test
