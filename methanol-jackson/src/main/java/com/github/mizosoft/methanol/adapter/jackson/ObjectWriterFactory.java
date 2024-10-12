@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2021 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,6 @@ import com.github.mizosoft.methanol.TypeRef;
 
 /** A strategy for creating an {@link ObjectWriter} for a given type. */
 public interface ObjectWriterFactory {
-
   /** Uses the given mapper to create an {@link ObjectWriter} for the given type. */
   ObjectWriter createWriter(ObjectMapper mapper, TypeRef<?> type);
 
