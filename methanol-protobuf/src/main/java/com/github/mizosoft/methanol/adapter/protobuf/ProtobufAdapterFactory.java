@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,25 +28,24 @@ import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import com.google.protobuf.ExtensionRegistryLite;
 
 /**
- * Providers {@link BodyAdapter} for google's <a
- * href="https://developers.google.com/protocol-buffers">protocol buffers</a> format. The adapters
+ * Providers {@link BodyAdapter} for Google's <a
+ * href="https://developers.google.com/protocol-buffers">Protocol Buffers</a> format. The adapters
  * support any subtype of {@link com.google.protobuf.MessageLite}.
  */
 public class ProtobufAdapterFactory {
+  private ProtobufAdapterFactory() {} // Non-instantiable.
 
-  private ProtobufAdapterFactory() {} // non-instantiable
-
-  /** Returns a new {@code Encoder}. */
+  /** Returns a new {@link Encoder}. */
   public static Encoder createEncoder() {
     return new ProtobufAdapter.Encoder();
   }
 
-  /** Returns a new {@code Decoder} with an empty extension registry. */
+  /** Returns a new {@link Decoder} with an empty extension registry. */
   public static Decoder createDecoder() {
     return createDecoder(ExtensionRegistryLite.getEmptyRegistry());
   }
 
-  /** Returns a new {@code Decoder} that uses the given extension registry. */
+  /** Returns a new {@link Decoder} that uses the given extension registry. */
   public static Decoder createDecoder(ExtensionRegistryLite registry) {
     return new ProtobufAdapter.Decoder(registry);
   }
