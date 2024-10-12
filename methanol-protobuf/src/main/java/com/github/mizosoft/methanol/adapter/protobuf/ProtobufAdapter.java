@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,6 @@ package com.github.mizosoft.methanol.adapter.protobuf;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
@@ -32,45 +31,38 @@ import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.util.function.Supplier;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class ProtobufAdapter extends AbstractBodyAdapter {
-
   ProtobufAdapter() {
     super(MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_X_PROTOBUF);
   }
 
   @Override
-  public boolean supportsType(TypeRef<?> type) {
-    return type.type() instanceof Class<?>
-        && MessageLite.class.isAssignableFrom(type.rawType());
+  public boolean supportsType(TypeRef<?> typeRef) {
+    return typeRef.type() instanceof Class<?>
+        && MessageLite.class.isAssignableFrom(typeRef.rawType());
   }
 
-  static final class Encoder extends ProtobufAdapter implements BodyAdapter.Encoder {
-
+  static final class Encoder extends ProtobufAdapter implements BaseEncoder {
     Encoder() {}
 
     @Override
-    public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
-      requireNonNull(object);
-      requireSupport(object.getClass());
-      requireCompatibleOrNull(mediaType);
-      MessageLite message = (MessageLite) object;
-      return attachMediaType(BodyPublishers.ofByteArray(message.toByteArray()), mediaType);
+    public <T> BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
+      var message = (MessageLite) value;
+      return attachMediaType(
+          BodyPublishers.ofByteArray(message.toByteArray()), hints.mediaTypeOrAny());
     }
   }
 
-  static final class Decoder extends ProtobufAdapter implements BodyAdapter.Decoder {
-
+  static final class Decoder extends ProtobufAdapter implements BaseDecoder {
     private final ExtensionRegistryLite registry;
 
     Decoder(ExtensionRegistryLite registry) {
@@ -78,54 +70,47 @@ abstract class ProtobufAdapter extends AbstractBodyAdapter {
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
-      requireNonNull(objectType);
-      requireSupport(objectType);
-      requireCompatibleOrNull(mediaType);
-      // We know that T is <= MessageLite to the caller, but the compiler doesn't
-      Class<T> messageClass = objectType.exactRawType();
-      MessageLite.Builder builder = getBuilderForMessage(messageClass);
+    public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
+      var messageType = typeRef.exactRawType();
+      var builder = builderOf(messageType);
       return BodySubscribers.mapping(
-          BodySubscribers.ofByteArray(), data -> buildMessage(messageClass, builder, data));
+          BodySubscribers.ofByteArray(),
+          bytes -> {
+            try {
+              builder.mergeFrom(bytes, registry);
+            } catch (InvalidProtocolBufferException e) {
+              throw new UncheckedIOException(e);
+            }
+            return messageType.cast(builder.build());
+          });
     }
 
     @Override
-    public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeRef<T> objectType, @Nullable MediaType mediaType) {
-      requireNonNull(objectType);
-      requireSupport(objectType);
-      requireCompatibleOrNull(mediaType);
-      Class<T> messageClass = objectType.exactRawType();
-      MessageLite.Builder builder = getBuilderForMessage(messageClass);
+    public <T> BodySubscriber<Supplier<T>> toDeferredObject(TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
+      var messageType = typeRef.exactRawType();
+      var builder = builderOf(messageType);
       return BodySubscribers.mapping(
-          BodySubscribers.ofInputStream(), in -> () -> buildMessage(messageClass, builder, in));
+          BodySubscribers.ofInputStream(),
+          in ->
+              () -> {
+                try {
+                  builder.mergeFrom(in, registry);
+                } catch (IOException e) {
+                  throw new UncheckedIOException(e);
+                }
+                return messageType.cast(builder.build());
+              });
     }
 
-    private <T> T buildMessage(Class<T> messageClass, MessageLite.Builder builder, byte[] data) {
+    private static MessageLite.Builder builderOf(Class<?> messageClass) {
       try {
-        builder.mergeFrom(data, registry);
-      } catch (InvalidProtocolBufferException e) {
-        throw new UncheckedIOException(e);
-      }
-      return messageClass.cast(builder.build());
-    }
-
-    private <T> T buildMessage(Class<T> messageClass, MessageLite.Builder builder, InputStream in) {
-      try {
-        builder.mergeFrom(in, registry);
-      } catch (IOException ioe) {
-        throw new UncheckedIOException(ioe);
-      }
-      return messageClass.cast(builder.build());
-    }
-
-    private static MessageLite.Builder getBuilderForMessage(Class<?> clazz) {
-      try {
-        Method builderFactory = clazz.getMethod("newBuilder");
+        var builderFactory = messageClass.getMethod("newBuilder");
         return (MessageLite.Builder) builderFactory.invoke(null);
       } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
         throw new UnsupportedOperationException(
-            "couldn't create a builder from message of type: " + clazz,
+            "Couldn't create a builder from message of type: " + messageClass,
             e instanceof InvocationTargetException ? e.getCause() : e);
       }
     }
