@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,11 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.WildcardType;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
 
 class TypeRefTest {
@@ -78,8 +82,8 @@ class TypeRefTest {
 
   @Test
   void rawType_wildcardNoBounds() {
-    var wildCard = ((ParameterizedType) new TypeRef<List<?>>() {}.type())
-        .getActualTypeArguments()[0];
+    var wildCard =
+        ((ParameterizedType) new TypeRef<List<?>>() {}.type()).getActualTypeArguments()[0];
     var ref = TypeRef.of(wildCard);
     assertThat(ref.type()).isInstanceOf(WildcardType.class);
     assertThat(ref.rawType()).isEqualTo(Object.class);
@@ -87,8 +91,9 @@ class TypeRefTest {
 
   @Test
   void rawType_wildcardOneBounds() {
-    var wildCard = ((ParameterizedType) new TypeRef<List<? extends Dummy1>>() {}.type())
-        .getActualTypeArguments()[0];
+    var wildCard =
+        ((ParameterizedType) new TypeRef<List<? extends Dummy1>>() {}.type())
+            .getActualTypeArguments()[0];
     var ref = TypeRef.of(wildCard);
     assertThat(ref.type()).isInstanceOf(WildcardType.class);
     assertThat(ref.rawType()).isEqualTo(Dummy1.class);
@@ -120,16 +125,17 @@ class TypeRefTest {
 
   @Test
   <T extends Dummy1 & Dummy2, Y extends T, X extends Y>
-  void rawType_typeVariableWithTypeVariableBound() {
+      void rawType_typeVariableWithTypeVariableBound() {
     var ref = new TypeRef<X>() {};
     assertThat(ref.rawType()).isEqualTo(Dummy1.class);
   }
 
   @Test
   <T extends Dummy1 & Dummy2, Y extends T, X extends Y>
-  void rawType_wildcardWithTypeVariableBound() {
-    var wildCard = ((ParameterizedType) new TypeRef<List<? extends X>>() {}.type())
-        .getActualTypeArguments()[0];
+      void rawType_wildcardWithTypeVariableBound() {
+    var wildCard =
+        ((ParameterizedType) new TypeRef<List<? extends X>>() {}.type())
+            .getActualTypeArguments()[0];
     var ref = TypeRef.of(wildCard);
     assertThat(ref.type()).isInstanceOf(WildcardType.class);
     assertThat(ref.rawType()).isEqualTo(Dummy1.class);
@@ -143,13 +149,110 @@ class TypeRefTest {
 
   @Test
   <T extends Dummy1 & Dummy2, Y extends T, X extends Y>
-  void rawType_typeVariable3DArrayWithTypeVariableBound() {
+      void rawType_typeVariable3DArrayWithTypeVariableBound() {
     var ref = new TypeRef<X[][][]>() {};
     assertThat(ref.rawType()).isEqualTo(Dummy1[][][].class);
   }
 
   @Test
-  void equals_hashCode() {
+  void basicResolveSupertype() {
+    assertThat(TypeRef.of(StringList.TYPE).resolveSupertype(List.class))
+        .isEqualTo(TypeRef.of(StringList.TYPE));
+    assertThat(new TypeRef<ArrayList<String>>() {}.resolveSupertype(List.class))
+        .isEqualTo(TypeRef.of(StringList.TYPE));
+    assertThat(new TypeRef<HashMap<String, Integer>>() {}.resolveSupertype(Map.class))
+        .isEqualTo(new TypeRef<Map<String, Integer>>() {});
+  }
+
+  @Test
+  void resolveSupertypeWithNestedVariables() {
+    abstract class ListIterable<T> implements Iterable<List<T>> {}
+    assertThat(new TypeRef<ListIterable<String>>() {}.resolveSupertype(Iterable.class))
+        .isEqualTo(new TypeRef<Iterable<List<String>>>() {});
+
+    abstract class ListArrayIterable<T> implements Iterable<List<T>[]> {}
+    assertThat(new TypeRef<ListArrayIterable<String>>() {}.resolveSupertype(Iterable.class))
+        .isEqualTo(new TypeRef<Iterable<List<String>[]>>() {});
+  }
+
+  @Test
+  void resolveSupertypeWithMemberClassSubtype() {
+    interface I<X, Y, Z> {}
+    class C1<T> {
+      class C2<R> {
+        class C3<K> implements I<T, R, K> {}
+
+        <K> C3<K> newC3() {
+          return new C3<>();
+        }
+      }
+
+      <R> C2<R> newC2() {
+        return new C2<>();
+      }
+    }
+    assertThat(new TypeRef<C1<String>.C2<Integer>.C3<Double>>() {}.resolveSupertype(I.class))
+        .isEqualTo(new TypeRef<I<String, Integer, Double>>() {});
+    assertThat(
+            new TypeRef<C1<String>.C2<Integer>.C3<Double>>() {}.resolveSupertype(
+                new C1<>().newC2().newC3().getClass()))
+        .isEqualTo(new TypeRef<C1<String>.C2<Integer>.C3<Double>>() {});
+  }
+
+  @Test
+  <U> void resolveSupertypeWithComplexSubstitution() {
+    interface I<X, Y, Z, U> {}
+    class C1<T> {
+      class C2<R> {
+        class C3<K>
+            implements I<
+                List<T[]>,
+                Map<List<T[]>, List<? super List<R>>>[][],
+                List<? extends K[]>,
+                Map<K, U>> {}
+
+        class C3MapOfQToE<Q, E> extends C3<Map<Q, E>> {}
+
+        class C3MapOfDoubleToE<E> extends C3MapOfQToE<Double, E> {}
+      }
+    }
+    assertThat(
+            new TypeRef<C1<String>.C2<Integer>.C3MapOfDoubleToE<Short>>() {}.resolveSupertype(
+                I.class))
+        .isEqualTo(
+            new TypeRef<
+                I<
+                    List<String[]>,
+                    Map<List<String[]>, List<? super List<Integer>>>[][],
+                    List<? extends Map<Double, Short>[]>,
+                    Map<Map<Double, Short>, U>>>() {});
+  }
+
+  @Test
+  <T extends List<String>> void resolveSupertypeFromTypeVariable() {
+    assertThat(new TypeRef<T>() {}.resolveSupertype(List.class))
+        .isEqualTo(TypeRef.of(StringList.TYPE));
+  }
+
+  @Test
+  void resolveFromTypeVariable() {
+    var wildcardType =
+        ((ParameterizedType) new TypeRef<List<? extends ArrayList<String>>>() {}.type())
+            .getActualTypeArguments()[0];
+    assertThat(TypeRef.of(wildcardType).resolveSupertype(List.class))
+        .isEqualTo(TypeRef.of(StringList.TYPE));
+  }
+
+  @Test
+  void resolveRecursiveTypeVariable() {
+    interface RecursiveList<A extends RecursiveList<A>> extends List<A> {}
+    interface RecursiveStringList extends RecursiveList<RecursiveStringList> {}
+    assertThat(TypeRef.of(RecursiveStringList.class).resolveSupertype(List.class))
+        .isEqualTo(new TypeRef<List<RecursiveStringList>>() {});
+  }
+
+  @Test
+  void equalsAndHashCode() {
     var ref1 = new TypeRef<List<String>>() {};
     var ref2 = TypeRef.of(StringList.TYPE);
     assertThat(ref1)
@@ -185,19 +288,23 @@ class TypeRefTest {
 
   @Test
   void from_parameterizedTypeNotReturningValidRawType() {
-    var fakeParameterizedType = new ParameterizedType() {
-      @Override public Type[] getActualTypeArguments() {
-        return new Type[] { Object.class };
-      }
+    var fakeParameterizedType =
+        new ParameterizedType() {
+          @Override
+          public Type[] getActualTypeArguments() {
+            return new Type[] {Object.class};
+          }
 
-      @Override public Type getRawType() {
-        return new Type() {};
-      }
+          @Override
+          public Type getRawType() {
+            return new Type() {};
+          }
 
-      @Override public Type getOwnerType() {
-        return null;
-      }
-    };
+          @Override
+          public @Nullable Type getOwnerType() {
+            return null;
+          }
+        };
     assertThatIllegalArgumentException().isThrownBy(() -> TypeRef.of(fakeParameterizedType));
   }
 
