@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import static java.util.function.Predicate.not;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
@@ -249,6 +250,71 @@ class TypeRefTest {
     interface RecursiveStringList extends RecursiveList<RecursiveStringList> {}
     assertThat(TypeRef.of(RecursiveStringList.class).resolveSupertype(List.class))
         .isEqualTo(new TypeRef<List<RecursiveStringList>>() {});
+  }
+
+  @Test
+  void typeArgumentsOfParameterizedType() {
+    assertThat(new TypeRef<Map<List<String>, Integer>>() {}.typeArguments())
+        .containsExactly(new TypeRef<List<String>>() {}, TypeRef.of(Integer.class));
+  }
+
+  @Test
+  <T> void typeArgumentsOfNonParameterizedType() {
+    assertThat(TypeRef.of(Integer.class).typeArguments()).isEmpty();
+    assertThat(new TypeRef<T>() {}.typeArguments()).isEmpty();
+    assertThat(new TypeRef<List<String>[]>() {}.typeArguments()).isEmpty();
+    assertThat(new TypeRef<List<String>>() {}.typeArguments().get(0).typeArguments()).isEmpty();
+  }
+
+  @Test
+  void typeArgumentAtForParameterizedType() {
+    var type = new TypeRef<Map<String, List<String>>>() {};
+    assertThat(type.typeArgumentAt(0)).hasValue(TypeRef.of(String.class));
+    assertThat(type.typeArgumentAt(1)).hasValue(new TypeRef<List<String>>() {});
+  }
+
+  @Test
+  <T> void nonExistingTypeArgumentAt() {
+    assertThat(TypeRef.of(String.class).typeArgumentAt(0)).isEmpty();
+    assertThat(TypeRef.of(String.class).typeArgumentAt(1)).isEmpty();
+    assertThat(new TypeRef<T>() {}.typeArgumentAt(0)).isEmpty();
+    assertThat(new TypeRef<List<Integer>>() {}.typeArgumentAt(1)).isEmpty();
+  }
+
+  @Test
+  void isRawType() {
+    assertThat(TypeRef.of(String.class)).matches(TypeRef::isRawType, "isRawType");
+    assertThat(new TypeRef<List<String>>() {}).matches(not(TypeRef::isRawType), "not isRawType");
+  }
+
+  @Test
+  void isParameterizedType() {
+    assertThat(new TypeRef<List<String>>() {})
+        .matches(TypeRef::isParameterizedType, "isParameterizedType");
+    assertThat(TypeRef.of(String.class))
+        .matches(not(TypeRef::isParameterizedType), "not isParameterizedType");
+  }
+
+  @SuppressWarnings("rawtypes")
+  @Test
+  void isGenericArray() {
+    assertThat(new TypeRef<List<String>[]>() {}).matches(TypeRef::isGenericArray, "isGenericArray");
+    assertThat(new TypeRef<List[]>() {})
+        .matches(not(TypeRef::isGenericArray), "not isGenericArray");
+  }
+
+  @Test
+  void isWildcard() {
+    assertThat(new TypeRef<List<?>>() {}.typeArgumentAt(0).orElseThrow())
+        .matches(TypeRef::isWildcard, "isWildcard");
+    assertThat(TypeRef.of(String.class)).matches(not(TypeRef::isWildcard), "not isWildcard");
+  }
+
+  @Test
+  <T> void isTypeVariable() {
+    assertThat(new TypeRef<T>() {}).matches(TypeRef::isTypeVariable, "isTypeVariable");
+    assertThat(TypeRef.of(String.class))
+        .matches(not(TypeRef::isTypeVariable), "not isTypeVariable");
   }
 
   @Test
