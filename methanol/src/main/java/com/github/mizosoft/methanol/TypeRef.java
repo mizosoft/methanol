@@ -33,8 +33,12 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.StringJoiner;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -50,6 +54,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public abstract class TypeRef<T> {
   private final Type type;
   private @MonotonicNonNull Class<?> lazyRawType;
+  private @MonotonicNonNull List<TypeRef<?>> lazyTypeArguments;
 
   /**
    * Creates a new {@code TypeRef<T>} capturing the {@link Type} of {@link T}. This constructor is
@@ -99,6 +104,50 @@ public abstract class TypeRef<T> {
     return (Class<? super T>) rawType;
   }
 
+  /** Returns {@code true} if {@link T} is a raw type (i.e. {@code Class<T>}). */
+  public final boolean isRawType() {
+    return type instanceof Class<?>;
+  }
+
+  /** Returns {@code true} if {@link T} is a {@link ParameterizedType parameterized type}. */
+  public final boolean isParameterizedType() {
+    return type instanceof ParameterizedType;
+  }
+
+  /** Returns {@code true} if {@link T} is a {@link GenericArrayType generic array}. */
+  public final boolean isGenericArray() {
+    return type instanceof GenericArrayType;
+  }
+
+  /** Returns {@code true} if {@link T} is a {@link TypeVariable type variable}. */
+  public final boolean isTypeVariable() {
+    return type instanceof TypeVariable<?>;
+  }
+
+  /** Returns {@code true} if {@link T} is a {@link WildcardType wildcard}. */
+  public final boolean isWildcard() {
+    return type instanceof WildcardType;
+  }
+
+  /**
+   * Returns the type argument of {@link T} at the given index, provided that {@code T} is a {@link
+   * ParameterizedType parameterized type} that has at least as many arguments as the given index.
+   *
+   * <p>For instance:
+   *
+   * <ul>
+   *   <li>{@code new TypeRef<List<String>>() {}.typeArgumentAt(0) => String}
+   *   <li>{@code new TypeRef<List>() {}.typeArgumentAt(0) => No result}
+   *   <li>{@code TypeRef.of(StringList.class).resolveSupertype(List.class).typeArgumentAt(0) =>
+   *       String} where {@code StringList implements List<String>}
+   * </ul>
+   */
+  public final Optional<TypeRef<?>> typeArgumentAt(int i) {
+    requireArgument(i >= 0, "Negative index: %d", i);
+    var typeArguments = typeArguments();
+    return i < typeArguments.size() ? Optional.of(typeArguments.get(i)) : Optional.empty();
+  }
+
   /**
    * Returns the underlying type as a {@code Class<T>} for when it is known that {@link T} is a raw
    * type. Equivalent to {@code (Class<T>) type.type()}.
@@ -129,7 +178,7 @@ public abstract class TypeRef<T> {
    * Resolves the given supertype into a type with concrete type arguments (if any) that are derived
    * from this type (i.e. {@link T}).
    *
-   * <p>Some examples:
+   * <p>For instance:
    *
    * <ul>
    *   <li>{@code new TypeRef<ArrayList<String>>() {}.resolveSupertype(List.class) => List<String>}
@@ -147,6 +196,31 @@ public abstract class TypeRef<T> {
     var resolved = resolve(type, supertype);
     requireArgument(resolved != null, "<%s> is not a supertype of <%>", supertype, type);
     return (TypeRef<? super T>) TypeRef.of(resolved);
+  }
+
+  /**
+   * Returns a list of {@code TypeRef<?>} corresponding to {@link T}'s type arguments, provided it
+   * is a {@link ParameterizedType parameterized type}, otherwise an empty list is returned.
+   */
+  public final List<TypeRef<?>> typeArguments() {
+    var typeArguments = lazyTypeArguments;
+    if (typeArguments == null) {
+      typeArguments = computeTypeArguments();
+      lazyTypeArguments = typeArguments;
+    }
+    return typeArguments;
+  }
+
+  private List<TypeRef<?>> computeTypeArguments() {
+    if (!(type instanceof ParameterizedType)) {
+      return List.of();
+    }
+
+    var result = new ArrayList<TypeRef<?>>();
+    for (var type : ((ParameterizedType) type).getActualTypeArguments()) {
+      result.add(TypeRef.of(type));
+    }
+    return Collections.unmodifiableList(result);
   }
 
   /**
@@ -173,36 +247,6 @@ public abstract class TypeRef<T> {
   @Override
   public final String toString() {
     return type.getTypeName();
-  }
-
-  private static Class<?> rawTypeOf(Type type) {
-    if (type instanceof Class<?>) {
-      return (Class<?>) type;
-    } else if (type instanceof ParameterizedType) {
-      var rawType = ((ParameterizedType) type).getRawType();
-      requireArgument(
-          rawType instanceof Class,
-          "ParameterizedType::getRawType of %s returned a non-raw type: %s",
-          type,
-          rawType);
-      return (Class<?>) rawType;
-    } else if (type instanceof GenericArrayType) {
-      // Here, the raw type is the type of the array created with the generic-component's raw type.
-      var rawComponentType = rawTypeOf(((GenericArrayType) type).getGenericComponentType());
-      return Array.newInstance(rawComponentType, 0).getClass();
-    } else if (type instanceof TypeVariable<?>) {
-      return rawUpperBound(((TypeVariable<?>) type).getBounds());
-    } else if (type instanceof WildcardType) {
-      return rawUpperBound(((WildcardType) type).getUpperBounds());
-    } else {
-      throw new IllegalArgumentException(
-          "Unknown specialization of java.lang.reflect.Type: <" + type + ">");
-    }
-  }
-
-  private static Class<?> rawUpperBound(Type[] upperBounds) {
-    // Same behaviour as Method::getGenericReturnType vs Method::getReturnType.
-    return upperBounds.length > 0 ? rawTypeOf(upperBounds[0]) : Object.class;
   }
 
   /**
@@ -249,6 +293,36 @@ public abstract class TypeRef<T> {
    */
   public static <T> TypeRef<? extends T> ofRuntimeType(T instance) {
     return new ExplicitTypeRef<>(instance.getClass());
+  }
+
+  private static Class<?> rawTypeOf(Type type) {
+    if (type instanceof Class<?>) {
+      return (Class<?>) type;
+    } else if (type instanceof ParameterizedType) {
+      var rawType = ((ParameterizedType) type).getRawType();
+      requireArgument(
+          rawType instanceof Class,
+          "ParameterizedType::getRawType of <%s> returned a non-raw type <%s>",
+          type,
+          rawType);
+      return (Class<?>) rawType;
+    } else if (type instanceof GenericArrayType) {
+      // Here, the raw type is the type of the array created with the generic-component's raw type.
+      var rawComponentType = rawTypeOf(((GenericArrayType) type).getGenericComponentType());
+      return Array.newInstance(rawComponentType, 0).getClass();
+    } else if (type instanceof TypeVariable<?>) {
+      return rawUpperBound(((TypeVariable<?>) type).getBounds());
+    } else if (type instanceof WildcardType) {
+      return rawUpperBound(((WildcardType) type).getUpperBounds());
+    } else {
+      throw new IllegalArgumentException(
+          "Unknown specialization of java.lang.reflect.Type: <" + type + ">");
+    }
+  }
+
+  private static Class<?> rawUpperBound(Type[] upperBounds) {
+    // Same behaviour as Method::getGenericReturnType vs Method::getReturnType.
+    return upperBounds.length > 0 ? rawTypeOf(upperBounds[0]) : Object.class;
   }
 
   private static @Nullable Type resolve(Type spec, Class<?> supertype) {
@@ -324,6 +398,7 @@ public abstract class TypeRef<T> {
   }
 
   private static Type substitute(ParameterizedType spec, Type target) {
+    requireNonNull(target);
     if (target instanceof Class<?>) {
       return target;
     } else if (target instanceof ParameterizedType) {
@@ -331,7 +406,7 @@ public abstract class TypeRef<T> {
       var arguments = parameterizedTarget.getActualTypeArguments();
       var substitutedArguments = substituteAll(spec, arguments);
       var owner = parameterizedTarget.getOwnerType();
-      var substitutedOwner = substitute(spec, owner);
+      var substitutedOwner = owner != null ? substitute(spec, owner) : null;
       return substitutedArguments != arguments || substitutedOwner != owner
           ? new ParameterizedTypeImpl(
               substitutedArguments, substitutedOwner, parameterizedTarget.getRawType())
@@ -384,7 +459,7 @@ public abstract class TypeRef<T> {
           : target;
     } else {
       throw new IllegalArgumentException(
-          "Unknown specialization of java.lang.reflect.Type: <" + spec + ">");
+          "Unknown specialization of java.lang.reflect.Type: <" + target + ">");
     }
   }
 
