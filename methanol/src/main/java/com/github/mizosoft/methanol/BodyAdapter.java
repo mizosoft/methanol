@@ -111,11 +111,12 @@ public interface BodyAdapter {
      * encoding any subtype of:
      *
      * <ul>
-     *   <li>{@code CharSequence} (encoded using the passed {@code MediaType}'s charset, or {@code
-     *       UTF-8} if absent)
+     *   <li>{@code CharSequence} (encoded using {@link Hints#effectiveCharsetOrUtf8()})
      *   <li>{@code InputStream}
      *   <li>{@code byte[]}
      *   <li>{@code ByteBuffer}
+     *   <li>{@code Supplier<InputStream>}
+     *   <li>{@code Supplier<ByteBuffer>}
      *   <li>{@code Path} (represents a file from which the request content is sent)
      * </ul>
      */
@@ -201,13 +202,15 @@ public interface BodyAdapter {
      * decoding:
      *
      * <ul>
-     *   <li>{@code String} (decoded using the {@code MediaType}'s charset, or {@code UTF-8} if
-     *       absent)
+     *   <li>{@code String} (decoded using {@link Hints#effectiveCharsetOrUtf8()})
      *   <li>{@code InputStream}
-     *   <li>{@code Reader} (decoded using the {@code MediaType}'s charset, or {@code UTF-8} if
-     *       absent)
+     *   <li>{@code Reader} (decoded using {@link Hints#effectiveCharsetOrUtf8()})
      *   <li>{@code byte[]}
      *   <li>{@code ByteBuffer}
+     *   <li>{@code Stream<String>} (response body lines; decoded using {@link
+     *       Hints#effectiveCharsetOrUtf8()})
+     *   <li>{@code Publisher<List<ByteBuffer>>}
+     *   <li>{@code Void} (discards the response body)
      * </ul>
      */
     static Decoder basic() {

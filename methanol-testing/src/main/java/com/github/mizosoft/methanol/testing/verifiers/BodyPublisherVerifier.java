@@ -33,6 +33,7 @@ import com.github.mizosoft.methanol.testing.TestSubscriber;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.function.Consumer;
 import org.assertj.core.api.AbstractObjectAssert;
 import org.assertj.core.api.AbstractStringAssert;
 import org.assertj.core.api.AbstractThrowableAssert;
@@ -92,5 +93,12 @@ public final class BodyPublisherVerifier {
     var subscriber = new TestSubscriber<ByteBuffer>();
     publisher.subscribe(subscriber);
     return assertThat(subscriber.awaitError()).isInstanceOf(type);
+  }
+
+  /** Repeats the verification twice to ensure result repeatability. */
+  public BodyPublisherVerifier repeatedly(Consumer<BodyPublisherVerifier> verification) {
+    verification.accept(this);
+    verification.accept(this);
+    return this;
   }
 }
