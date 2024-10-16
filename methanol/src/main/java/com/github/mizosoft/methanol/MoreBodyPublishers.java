@@ -36,7 +36,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Factory for additional {@link BodyPublisher} implementations. */
+/** Static factories for additional {@link BodyPublisher} implementations. */
 public class MoreBodyPublishers {
   private MoreBodyPublishers() {}
 

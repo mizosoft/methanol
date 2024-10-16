@@ -177,9 +177,9 @@ public abstract class TypeRef<T> {
   }
 
   /**
-   * Creates a new {@code TypeRef} for the given type.
+   * Returns a new {@code TypeRef} who's {@link #type()} is the given type.
    *
-   * @deprecated in favor of the better-named {@link #of(Type)}.
+   * @deprecated in favor of {@link #of(Type)}.
    * @throws IllegalArgumentException if the given type is not a standard specialization of {@link
    *     Type}
    */
@@ -190,7 +190,7 @@ public abstract class TypeRef<T> {
   }
 
   /**
-   * Creates a new {@code TypeRef} for the given type.
+   * Returns a new {@code TypeRef} who's {@link #type()} is the given type.
    *
    * @throws IllegalArgumentException if the given type is not a standard specialization of {@link
    *     Type}
@@ -200,9 +200,9 @@ public abstract class TypeRef<T> {
   }
 
   /**
-   * Creates a new {@code TypeRef} from the given class.
+   * Returns a new {@code TypeRef} who's {@link #type()} is the given class.
    *
-   * @deprecated in favor of the better-named {@link #of(Class)}
+   * @deprecated in favor of {@link #of(Class)}
    */
   @Deprecated
   @InlineMe(replacement = "TypeRef.of(rawType)", imports = "com.github.mizosoft.methanol.TypeRef")
@@ -210,7 +210,7 @@ public abstract class TypeRef<T> {
     return of(rawType);
   }
 
-  /** Creates a new {@code TypeRef} from the given class. */
+  /** Returns a new {@code TypeRef} who's {@link #type()} is the given class. */
   public static <U> TypeRef<U> of(Class<U> rawType) {
     return new ExplicitTypeRef<>(rawType);
   }
