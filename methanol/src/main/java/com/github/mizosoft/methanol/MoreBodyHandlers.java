@@ -48,7 +48,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Factory for additional {@link BodyHandler} implementations. */
+/** Static factories for additional {@link BodyHandler} implementations. */
 public class MoreBodyHandlers {
   private MoreBodyHandlers() {}
 

@@ -27,7 +27,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.BasicAdapter;
-import com.github.mizosoft.methanol.internal.spi.BodyAdapterProviders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -60,15 +59,6 @@ public interface BodyAdapter {
 
   /** Returns {@code true} if this adapter supports the given type. */
   boolean supportsType(TypeRef<?> typeRef);
-
-  private static <A extends BodyAdapter> Optional<A> lookup(
-      List<A> installed, TypeRef<?> typeRef, Hints hints) {
-    return installed.stream()
-        .filter(
-            adapter ->
-                adapter.supportsType(typeRef) && adapter.isCompatibleWith(hints.mediaTypeOrAny()))
-        .findFirst();
-  }
 
   /** A {@code BodyAdapter} that encodes objects into request bodies. */
   interface Encoder extends BodyAdapter {
@@ -103,7 +93,7 @@ public interface BodyAdapter {
 
     /** Returns an immutable list containing the installed encoders. */
     static List<Encoder> installed() {
-      return BodyAdapterProviders.encoders();
+      return AdapterCodec.installed().encoders();
     }
 
     /**
@@ -111,7 +101,7 @@ public interface BodyAdapter {
      * type is {@code null}, any encoder supporting the given object type is returned.
      */
     static Optional<Encoder> getEncoder(TypeRef<?> typeRef, @Nullable MediaType mediaType) {
-      return BodyAdapter.lookup(installed(), typeRef, Utils.hintsOf(mediaType));
+      return AdapterCodec.installed().lookupEncoder(typeRef, Utils.hintsOf(mediaType));
     }
 
     /**
@@ -193,7 +183,7 @@ public interface BodyAdapter {
 
     /** Returns an immutable list containing the installed decoders. */
     static List<Decoder> installed() {
-      return BodyAdapterProviders.decoders();
+      return AdapterCodec.installed().decoders();
     }
 
     /**
@@ -201,7 +191,7 @@ public interface BodyAdapter {
      * is {@code null}, any decoder supporting the given object type is returned.
      */
     static Optional<Decoder> getDecoder(TypeRef<?> typeRef, @Nullable MediaType mediaType) {
-      return BodyAdapter.lookup(installed(), typeRef, Utils.hintsOf(mediaType));
+      return AdapterCodec.installed().lookupDecoder(typeRef, Utils.hintsOf(mediaType));
     }
 
     /**
