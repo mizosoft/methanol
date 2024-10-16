@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.testing.TestUtils;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import org.assertj.core.api.Assertions;
@@ -166,7 +167,10 @@ class JacksonFluxDecoderTest {
         .extracting(Mono::toFuture, Assertions.COMPLETABLE_FUTURE)
         .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
-        .withCauseInstanceOf(JsonProcessingException.class);
+        .havingCause()
+        .isInstanceOf(UncheckedIOException.class)
+        .havingCause()
+        .isInstanceOf(JsonProcessingException.class);
   }
 
   @Test
@@ -178,7 +182,10 @@ class JacksonFluxDecoderTest {
         .extracting(Mono::toFuture, Assertions.COMPLETABLE_FUTURE)
         .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
         .withThrowableOfType(ExecutionException.class)
-        .withCauseInstanceOf(JsonProcessingException.class);
+        .havingCause()
+        .isInstanceOf(UncheckedIOException.class)
+        .havingCause()
+        .isInstanceOf(JsonProcessingException.class);
   }
 
   @Test
