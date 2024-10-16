@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,14 +26,15 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.TypeRef;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import org.assertj.core.api.AbstractObjectAssert;
 import org.assertj.core.api.AbstractStringAssert;
 import org.assertj.core.api.AbstractThrowableAssert;
 import org.assertj.core.api.ThrowableAssertAlternative;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A small DSL for testing {@link Encoder} implementations. */
 @SuppressWarnings("UnusedReturnValue")
@@ -47,27 +48,33 @@ public final class EncoderVerifier extends BodyAdapterVerifier<Encoder, EncoderV
     return this;
   }
 
-  public <T> ObjectConversionStep<T> converting(T obj) {
-    return new ObjectConversionStep<>(adapter, obj);
+  public <T> ObjectConversionStep<T> converting(T value) {
+    return new ObjectConversionStep<>(adapter, value, TypeRef.ofRuntimeType(value));
+  }
+
+  public <T> ObjectConversionStep<T> converting(T value, TypeRef<T> typeRef) {
+    return new ObjectConversionStep<>(adapter, value, typeRef);
   }
 
   public static final class ObjectConversionStep<T> {
     private final Encoder encoder;
-    private final T obj;
-    private final @Nullable MediaType mediaType;
+    private final T value;
+    private final TypeRef<T> typeRef;
+    private final Hints hints;
 
-    ObjectConversionStep(Encoder encoder, T obj) {
-      this(encoder, obj, null);
+    ObjectConversionStep(Encoder encoder, T value, TypeRef<T> typeRef) {
+      this(encoder, value, typeRef, Hints.empty());
     }
 
-    ObjectConversionStep(Encoder encoder, T obj, @Nullable MediaType mediaType) {
+    ObjectConversionStep(Encoder encoder, T value, TypeRef<T> typeRef, Hints hints) {
       this.encoder = encoder;
-      this.obj = obj;
-      this.mediaType = mediaType;
+      this.value = value;
+      this.typeRef = typeRef;
+      this.hints = hints;
     }
 
     public ObjectConversionStep<T> withMediaType(MediaType mediaType) {
-      return new ObjectConversionStep<>(encoder, obj, mediaType);
+      return new ObjectConversionStep<>(encoder, value, typeRef, Hints.of(mediaType));
     }
 
     public ObjectConversionStep<T> withMediaType(String mediaType) {
@@ -76,11 +83,11 @@ public final class EncoderVerifier extends BodyAdapterVerifier<Encoder, EncoderV
 
     public ThrowableAssertAlternative<UnsupportedOperationException> isNotSupported() {
       return assertThatExceptionOfType(UnsupportedOperationException.class)
-          .isThrownBy(() -> encoder.toBody(obj, mediaType));
+          .isThrownBy(() -> encoder.toBody(value, typeRef, hints));
     }
 
     public BodyPublisherVerifier asBodyPublisher() {
-      return new BodyPublisherVerifier(encoder.toBody(obj, mediaType));
+      return new BodyPublisherVerifier(encoder.toBody(value, typeRef, hints));
     }
 
     public AbstractStringAssert<?> succeedsWith(String expected) {

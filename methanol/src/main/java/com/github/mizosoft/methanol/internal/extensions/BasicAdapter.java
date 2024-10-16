@@ -22,15 +22,12 @@
 
 package com.github.mizosoft.methanol.internal.extensions;
 
-import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -40,20 +37,17 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Flow.Publisher;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** An adapter for basic types (e.g. {@code String}, {@code byte[]}, etc.). */
+/** An adapter for basic types (e.g., {@code String}, {@code byte[]}). */
 public abstract class BasicAdapter extends AbstractBodyAdapter {
   BasicAdapter() {
     super(MediaType.ANY);
@@ -67,39 +61,53 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
     return BasicDecoder.INSTANCE;
   }
 
-  private static final class BasicEncoder extends BasicAdapter implements Encoder {
+  private static final class BasicEncoder extends BasicAdapter implements BaseEncoder {
     static final BasicEncoder INSTANCE = new BasicEncoder();
 
-    private static final Map<Class<?>, BiFunction<?, MediaType, BodyPublisher>> ENCODERS;
+    private static final Map<TypeRef<?>, BiFunction<?, ? super Charset, ? extends BodyPublisher>>
+        ENCODERS;
 
     static {
-      var encoders = new LinkedHashMap<Class<?>, BiFunction<?, MediaType, BodyPublisher>>();
-      addEncoder(
+      var encoders =
+          new LinkedHashMap<TypeRef<?>, BiFunction<?, ? super Charset, ? extends BodyPublisher>>();
+      putEncoder(
           encoders,
           CharSequence.class,
-          (value, mediaType) ->
-              BodyPublishers.ofString(value.toString(), mediaType.charsetOrDefault(UTF_8)));
-      addEncoder(encoders, InputStream.class, (in, __) -> BodyPublishers.ofInputStream(() -> in));
-      addEncoder(encoders, byte[].class, (bytes, __) -> BodyPublishers.ofByteArray(bytes));
-      addEncoder(encoders, ByteBuffer.class, (buffer, __) -> new ByteBufferBodyPublisher(buffer));
-      addEncoder(encoders, Path.class, (file, __) -> encodeFile(file));
-      addEncoder(encoders, Supplier.class, (supplier, __) -> encodeInputStreamSupplier(supplier));
-      addEncoder(encoders, Iterable.class, (iterable, __) -> encodeByteArrayIterable(iterable));
+          (value, charset) -> BodyPublishers.ofString(value.toString(), charset));
+      putEncoder(encoders, InputStream.class, (in, __) -> BodyPublishers.ofInputStream(() -> in));
+      putEncoder(encoders, byte[].class, (bytes, __) -> BodyPublishers.ofByteArray(bytes));
+      putEncoder(encoders, ByteBuffer.class, (buffer, __) -> new ByteBufferBodyPublisher(buffer));
+      putEncoder(encoders, Path.class, (file, __) -> encodeFile(file));
+      putEncoder(
+          encoders,
+          new TypeRef<Supplier<? extends InputStream>>() {},
+          (supplier, __) -> BodyPublishers.ofInputStream(supplier));
+      putEncoder(
+          encoders,
+          new TypeRef<Iterable<byte[]>>() {},
+          (bytes, __) -> BodyPublishers.ofByteArrays(bytes));
       ENCODERS = Collections.unmodifiableMap(encoders);
     }
 
-    private static <T> void addEncoder(
-        Map<Class<?>, BiFunction<?, MediaType, BodyPublisher>> encoders,
+    private static <T> void putEncoder(
+        Map<TypeRef<?>, BiFunction<?, ? super Charset, ? extends BodyPublisher>> encoders,
         Class<T> type,
-        BiFunction<T, MediaType, BodyPublisher> encoder) {
-      encoders.put(type, encoder);
+        BiFunction<? super T, ? super Charset, ? extends BodyPublisher> encoder) {
+      encoders.put(TypeRef.of(type), encoder);
+    }
+
+    private static <T> void putEncoder(
+        Map<TypeRef<?>, BiFunction<?, ? super Charset, ? extends BodyPublisher>> encoders,
+        TypeRef<T> typeRef,
+        BiFunction<? super T, ? super Charset, ? extends BodyPublisher> encoder) {
+      encoders.put(typeRef, encoder);
     }
 
     private BasicEncoder() {}
 
     @Override
     public boolean supportsType(TypeRef<?> typeRef) {
-      return ENCODERS.keySet().stream().anyMatch(type -> type.isAssignableFrom(typeRef.rawType()));
+      return encoderOf(typeRef) != null;
     }
 
     private static BodyPublisher encodeFile(Path path) {
@@ -110,124 +118,107 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
       }
     }
 
-    private static BodyPublisher encodeInputStreamSupplier(Supplier<?> supplier) {
-      requireNonNull(supplier);
-      return BodyPublishers.fromPublisher(
-          subscriber -> {
-            requireNonNull(subscriber);
-            InputStream in;
-            try {
-              var potentialIn = supplier.get();
-              if (!(potentialIn instanceof InputStream)) {
-                throw new UnsupportedOperationException(
-                    "Expected an InputStream, got: " + potentialIn);
-              }
-              in = (InputStream) potentialIn;
-            } catch (Throwable t) {
-              try {
-                subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-              } catch (Throwable onSubscribeT) {
-                t.addSuppressed(onSubscribeT);
-              } finally {
-                subscriber.onError(t);
-              }
-              return;
-            }
-
-            var lambdaIn = in;
-            BodyPublishers.ofInputStream(() -> lambdaIn).subscribe(subscriber);
-          });
-    }
-
-    private static BodyPublisher encodeByteArrayIterable(Iterable<?> iterable) {
-      return BodyPublishers.ofByteArrays(
-          () ->
-              new Iterator<>() {
-                private final Iterator<?> iterator = iterable.iterator();
-
-                @Override
-                public boolean hasNext() {
-                  return iterator.hasNext();
-                }
-
-                @Override
-                public byte[] next() {
-                  var next = iterator.next();
-                  if (!(next instanceof byte[])) {
-                    throw new UnsupportedOperationException("Expected a byte[], got: " + next);
-                  }
-                  return (byte[]) next;
-                }
-              });
-    }
-
     @SuppressWarnings("unchecked")
-    private static <T> BiFunction<T, MediaType, BodyPublisher> encoderOf(Class<T> type) {
+    private static <T> @Nullable BiFunction<T, Charset, BodyPublisher> encoderOf(TypeRef<T> right) {
       for (var entry : ENCODERS.entrySet()) {
-        if (entry.getKey().isAssignableFrom(type)) {
-          return (BiFunction<T, MediaType, BodyPublisher>) entry.getValue();
+        var left = entry.getKey();
+        if (left.rawType().isAssignableFrom(right.rawType())) {
+          if (left.isRawType()) {
+            return (BiFunction<T, Charset, BodyPublisher>) entry.getValue();
+          }
+
+          // If left has generics we only accept right if it compares covariantly. Note that this
+          // is an ad-hoc comparison that only works for current usage, where encodeable generic
+          // supertypes have only one non-generic argument.
+          assert left.isParameterizedType();
+          if (right
+              .resolveSupertype(left.rawType())
+              .typeArgumentAt(0)
+              .flatMap(
+                  rightArg ->
+                      left.typeArgumentAt(0)
+                          .map(leftArg -> leftArg.rawType().isAssignableFrom(rightArg.rawType())))
+              .orElse(false)) {
+            return (BiFunction<T, Charset, BodyPublisher>) entry.getValue();
+          }
         }
       }
-      throw new UnsupportedOperationException(
-          "Unsupported conversion from an object of type <" + type + ">");
+      return null;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
-      requireSupport(object.getClass());
-      requireCompatibleOrNull(mediaType);
+    public <T> BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints) {
+      requireCompatibleOrNull(hints.mediaTypeOrAny());
+      var encoder = encoderOf(typeRef);
+      if (encoder == null) {
+        throw new UnsupportedOperationException(
+            "Unsupported conversion from an object of type <" + typeRef + ">");
+      }
       return attachMediaType(
-          encoderOf((Class<Object>) object.getClass())
-              .apply(object, mediaType != null ? mediaType : MediaType.ANY),
-          mediaType);
+          encoder.apply(value, hints.mediaTypeOrAny().charsetOrUtf8()), hints.mediaTypeOrAny());
     }
   }
 
-  private static final class BasicDecoder extends BasicAdapter implements Decoder {
+  private static final class BasicDecoder extends BasicAdapter implements BaseDecoder {
     static final BasicDecoder INSTANCE = new BasicDecoder();
 
-    private static final Map<TypeRef<?>, Function<MediaType, BodySubscriber<?>>> DECODERS;
+    private static final Map<TypeRef<?>, Function<? super Charset, ? extends BodySubscriber<?>>>
+        DECODERS;
 
     static {
-      var decoders = new LinkedHashMap<TypeRef<?>, Function<MediaType, BodySubscriber<?>>>();
-      decoders.put(
-          new TypeRef<String>() {},
-          mediaType -> BodySubscribers.ofString(mediaType.charsetOrDefault(UTF_8)));
-      decoders.put(new TypeRef<InputStream>() {}, __ -> BodySubscribers.ofInputStream());
-      decoders.put(
-          new TypeRef<Reader>() {},
-          mediaType -> MoreBodySubscribers.ofReader(mediaType.charsetOrDefault(UTF_8)));
-      decoders.put(new TypeRef<byte[]>() {}, __ -> BodySubscribers.ofByteArray());
-      decoders.put(
-          new TypeRef<ByteBuffer>() {},
+      var decoders =
+          new LinkedHashMap<TypeRef<?>, Function<? super Charset, ? extends BodySubscriber<?>>>();
+      putDecoder(decoders, String.class, BodySubscribers::ofString);
+      putDecoder(decoders, InputStream.class, __ -> BodySubscribers.ofInputStream());
+      putDecoder(decoders, Reader.class, MoreBodySubscribers::ofReader);
+      putDecoder(decoders, byte[].class, __ -> BodySubscribers.ofByteArray());
+      putDecoder(
+          decoders,
+          ByteBuffer.class,
           __ -> BodySubscribers.mapping(BodySubscribers.ofByteArray(), ByteBuffer::wrap));
-      decoders.put(
-          new TypeRef<Stream<String>>() {},
-          mediaType -> BodySubscribers.ofLines(mediaType.charsetOrDefault(UTF_8)));
-      decoders.put(
-          new TypeRef<Publisher<List<ByteBuffer>>>() {}, __ -> new PublisherBodySubscriber());
-      decoders.put(
-          new TypeRef<Stream<String>>() {},
-          mediaType -> BodySubscribers.ofLines(mediaType.charsetOrDefault(UTF_8)));
-      decoders.put(new TypeRef<Void>() {}, __ -> BodySubscribers.discarding());
+      putDecoder(decoders, new TypeRef<>() {}, BodySubscribers::ofLines);
+      putDecoder(decoders, new TypeRef<>() {}, __ -> new PublisherBodySubscriber());
+      putDecoder(decoders, Void.class, __ -> BodySubscribers.discarding());
       DECODERS = Collections.unmodifiableMap(decoders);
+    }
+
+    private static <T> void putDecoder(
+        Map<TypeRef<?>, Function<? super Charset, ? extends BodySubscriber<?>>> decoders,
+        Class<T> type,
+        Function<? super Charset, ? extends BodySubscriber<T>> decoder) {
+      decoders.put(TypeRef.of(type), decoder);
+    }
+
+    private static <T> void putDecoder(
+        Map<TypeRef<?>, Function<? super Charset, ? extends BodySubscriber<?>>> decoders,
+        TypeRef<T> typeRef,
+        Function<? super Charset, ? extends BodySubscriber<T>> decoder) {
+      decoders.put(typeRef, decoder);
     }
 
     private BasicDecoder() {}
 
     @Override
-    public boolean supportsType(TypeRef<?> type) {
-      return DECODERS.containsKey(type);
+    public boolean supportsType(TypeRef<?> typeRef) {
+      return DECODERS.containsKey(typeRef);
+    }
+
+    @Override
+    public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+      requireNonNull(typeRef);
+      requireCompatibleOrNull(hints.mediaTypeOrAny());
+      var decoder = decoderOf(typeRef);
+      if (decoder == null) {
+        throw new UnsupportedOperationException(
+            "Unsupported conversion to an object of type <" + typeRef + ">");
+      }
+      return decoder.apply(hints.effectiveCharsetOrUtf8());
     }
 
     @SuppressWarnings("unchecked")
-    @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, @Nullable MediaType mediaType) {
-      requireSupport(typeRef);
-      requireCompatibleOrNull(mediaType);
-      return (BodySubscriber<T>)
-          castNonNull(DECODERS.get(typeRef)).apply(mediaType != null ? mediaType : MediaType.ANY);
+    private static <T> Function<? super Charset, ? extends BodySubscriber<T>> decoderOf(
+        TypeRef<T> typeRef) {
+      return (Function<? super Charset, ? extends BodySubscriber<T>>) DECODERS.get(typeRef);
     }
   }
 }
