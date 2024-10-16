@@ -20,18 +20,32 @@
  * SOFTWARE.
  */
 
-/**
- * Provides {@link com.github.mizosoft.methanol.BodyAdapter.Encoder} and {@link
- * com.github.mizosoft.methanol.BodyAdapter.Decoder} implementations for the Jackson library. Note
- * that, for the sake of configurability, the adapters are not service-provided by default. You will
- * need to explicitly declare service-providers that delegate to the instances created by {@link
- * JacksonAdapterFactory}.
- */
-module methanol.adapter.jackson {
-  requires transitive methanol;
-  requires transitive com.fasterxml.jackson.databind;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
+package com.github.mizosoft.methanol.internal.extensions;
 
-  exports com.github.mizosoft.methanol.adapter.jackson;
+import static java.util.Objects.requireNonNull;
+
+import java.net.http.HttpRequest.BodyPublisher;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Flow.Subscriber;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+public final class SupplierBodyPublisher<T> implements BodyPublisher {
+  private final Supplier<T> supplier;
+  private final Function<T, BodyPublisher> publisherFactory;
+
+  public SupplierBodyPublisher(Supplier<T> supplier, Function<T, BodyPublisher> publisherFactory) {
+    this.supplier = requireNonNull(supplier);
+    this.publisherFactory = requireNonNull(publisherFactory);
+  }
+
+  @Override
+  public long contentLength() {
+    return -1;
+  }
+
+  @Override
+  public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
+    publisherFactory.apply(supplier.get()).subscribe(subscriber);
+  }
 }

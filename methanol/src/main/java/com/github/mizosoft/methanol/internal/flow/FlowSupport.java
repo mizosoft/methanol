@@ -134,13 +134,16 @@ public class FlowSupport {
   }
 
   public static void rejectMulticast(Subscriber<?> subscriber) {
-    var exception = new IllegalStateException("multiple subscribers not supported");
+    reject(subscriber, new IllegalStateException("Multiple subscribers not supported"));
+  }
+
+  public static void reject(Subscriber<?> subscriber, Throwable cause) {
     try {
       subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     } catch (Throwable t) {
-      exception.addSuppressed(t);
+      cause.addSuppressed(t);
     } finally {
-      subscriber.onError(exception);
+      subscriber.onError(cause);
     }
   }
 

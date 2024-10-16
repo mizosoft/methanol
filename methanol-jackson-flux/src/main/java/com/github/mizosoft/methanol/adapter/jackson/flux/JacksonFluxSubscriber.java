@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,17 +28,15 @@ import static com.fasterxml.jackson.core.JsonToken.START_ARRAY;
 import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.async.ByteArrayFeeder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.util.TokenBuffer;
-import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
 import com.github.mizosoft.methanol.internal.extensions.PublisherBodySubscriber;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.flow.ForwardingSubscriber;
 import java.io.IOException;
-import java.lang.reflect.Type;
+import java.io.UncheckedIOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -64,9 +62,9 @@ class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
   private final ObjectReader reader;
   private final JsonParser parser;
 
-  JacksonFluxSubscriber(ObjectMapper mapper, Type elementType, JsonParser parser) {
+  JacksonFluxSubscriber(ObjectMapper mapper, ObjectReader reader, JsonParser parser) {
     this.mapper = mapper;
-    this.reader = mapper.readerFor(mapper.constructType(elementType));
+    this.reader = reader;
     this.parser = parser;
   }
 
@@ -78,11 +76,11 @@ class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
   @Override
   public CompletionStage<Flux<T>> getBody() {
     return CompletableFuture.completedFuture(
-        decodeFlow(new PossiblyDelayedPublisher(downstream.getBody())));
+        decode(new PossiblyDelayedPublisher(downstream.getBody())));
   }
 
-  private Flux<T> decodeFlow(Flow.Publisher<List<ByteBuffer>> publisher) {
-    JacksonTokenizer tokenizer = new JacksonTokenizer(parser);
+  private Flux<T> decode(Flow.Publisher<List<ByteBuffer>> publisher) {
+    var tokenizer = new JacksonTokenizer(parser);
     return JdkFlowAdapter.flowPublisherToFlux(publisher)
         .concatMapIterable(tokenizer)
         .concatWith(Mono.create(tokenizer::complete))
@@ -90,8 +88,8 @@ class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
             (tokenBuffer, sink) -> {
               try {
                 sink.next(reader.readValue(tokenBuffer.asParser(mapper)));
-              } catch (IOException ioe) {
-                sink.error(ioe);
+              } catch (IOException e) {
+                sink.error(e);
               }
             });
   }
@@ -108,24 +106,13 @@ class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
     public void subscribe(Subscriber<? super List<ByteBuffer>> subscriber) {
       requireNonNull(subscriber);
       publisherFuture.whenComplete(
-          (p, t) -> {
-            if (t != null) {
-              subscribeWithError(subscriber, t);
-            } else if (p != null) {
-              p.subscribe(subscriber);
+          (publisher, ex) -> {
+            if (ex != null) {
+              FlowSupport.reject(subscriber, ex);
+            } else if (publisher != null) {
+              publisher.subscribe(subscriber);
             }
           });
-    }
-
-    private static void subscribeWithError(
-        Subscriber<? super List<ByteBuffer>> subscriber, Throwable error) {
-      try {
-        subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-      } catch (Throwable t) {
-        error.addSuppressed(t);
-      } finally {
-        subscriber.onError(error);
-      }
     }
   }
 
@@ -139,48 +126,46 @@ class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
 
     JacksonTokenizer(JsonParser parser) {
       this.parser = parser;
-      feeder = ((ByteArrayFeeder) parser.getNonBlockingInputFeeder());
+      this.feeder = ((ByteArrayFeeder) parser.getNonBlockingInputFeeder());
     }
 
     @Override
     public List<TokenBuffer> apply(List<ByteBuffer> buffers) {
-      byte[] input = JacksonAdapterUtils.collectBytes(buffers);
-      List<TokenBuffer> tokenized = new ArrayList<>();
+      var input = collect(buffers);
+      var tokenBuffers = new ArrayList<TokenBuffer>();
       try {
         feeder.feedInput(input, 0, input.length);
-        TokenBuffer tokenizedStream;
-        while ((tokenizedStream = tokenizeStream()) != null) {
-          tokenized.add(tokenizedStream);
+        TokenBuffer tokenBuffer;
+        while ((tokenBuffer = tokenize()) != null) {
+          tokenBuffers.add(tokenBuffer);
         }
-      } catch (IOException ioe) {
-        throw JacksonAdapterUtils.throwUnchecked(ioe);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
       }
-      return Collections.unmodifiableList(tokenized);
+      return Collections.unmodifiableList(tokenBuffers);
     }
 
     void complete(MonoSink<TokenBuffer> sink) {
       feeder.endOfInput();
       try {
-        TokenBuffer lastTokenizedStream = tokenizeStream();
-        if (lastTokenizedStream != null) {
-          sink.success(lastTokenizedStream);
+        var lastToken = tokenize();
+        if (lastToken != null) {
+          sink.success(lastToken);
         } else {
           sink.success();
         }
-      } catch (IOException ioe) {
-        sink.error(ioe);
+      } catch (IOException e) {
+        sink.error(e);
       }
     }
 
-    /** Appends tokens to current {@code TokenBuffer}, returning it if current stream tokenized. */
-    private @Nullable TokenBuffer tokenizeStream() throws IOException {
+    private @Nullable TokenBuffer tokenize() throws IOException {
       while (true) {
-        JsonToken token = parser.nextToken();
+        var token = parser.nextToken();
         if (token == null || token == NOT_AVAILABLE) {
           return null;
         }
 
-        // update depth counters
         switch (token) {
           case START_ARRAY:
             arrayDepth++;
@@ -195,27 +180,38 @@ class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
             objectDepth--;
             break;
           default:
-            break; // not interested
+            break;
         }
 
-        // if this is an array document we copy everything but the enclosing `[]`
+        // If this is an array document we copy everything but the enclosing `[]`.
         if (objectDepth > 0
             || ((token != START_ARRAY || arrayDepth > 1)
                 && (token != END_ARRAY || arrayDepth >= 1))) {
-          // check if it's a new tokenBuffer
           if (currentTokenBuffer == null) {
             currentTokenBuffer = new TokenBuffer(parser);
           }
           currentTokenBuffer.copyCurrentEvent(parser);
         }
 
-        // tokenize if it's a "complete" direct child of the document
+        // Tokenize if this is a direct complete child of the enclosing array.
         if (objectDepth == 0 && arrayDepth <= 1 && (token.isScalarValue() || token.isStructEnd())) {
-          TokenBuffer finishedTokenBuffer = currentTokenBuffer;
+          var finishedTokenBuffer = currentTokenBuffer;
           currentTokenBuffer = null;
           return finishedTokenBuffer;
         }
       }
+    }
+
+    private static byte[] collect(List<ByteBuffer> buffers) {
+      int size = buffers.stream().mapToInt(ByteBuffer::remaining).sum();
+      byte[] bytes = new byte[size];
+      int offset = 0;
+      for (var buff : buffers) {
+        int remaining = buff.remaining();
+        buff.get(bytes, offset, buff.remaining());
+        offset += remaining;
+      }
+      return bytes;
     }
   }
 }
