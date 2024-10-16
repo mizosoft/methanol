@@ -133,7 +133,7 @@ class IntegrationTest {
   // implementation of Jakarta's JAXB generate the XML, particularly in the XML declaration.
 
   private static final String EPIC_ART_COURSE_JAVAX_XML_UTF_8 =
-      "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
           + "<course type=\"ART\">"
           + "<enrolled-students>"
           + "<student>"
@@ -146,7 +146,7 @@ class IntegrationTest {
           + "</course>";
 
   private static final String EPIC_ART_COURSE_JAKARTA_XML_UTF_8 =
-      "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>"
+      "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
           + "<course type=\"ART\">"
           + "<enrolled-students>"
           + "<student>"

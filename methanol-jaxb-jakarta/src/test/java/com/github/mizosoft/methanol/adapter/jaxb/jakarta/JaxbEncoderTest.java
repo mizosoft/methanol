@@ -65,7 +65,7 @@ class JaxbEncoderTest {
         .converting(new Point(1, 2))
         .withMediaType("application/xml; charset=utf-16")
         .succeedsWith(
-            "<?xml version=\"1.0\" encoding=\"utf-16\" standalone=\"yes\"?><point x=\"1\" y=\"2\"/>",
+            "<?xml version=\"1.0\" encoding=\"UTF-16\" standalone=\"yes\"?><point x=\"1\" y=\"2\"/>",
             UTF_16);
   }
 
