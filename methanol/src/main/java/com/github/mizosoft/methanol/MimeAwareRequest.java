@@ -24,6 +24,9 @@ package com.github.mizosoft.methanol;
 
 import java.util.Optional;
 
-interface MimeBodyContainer {
-  Optional<MediaType> bodyMediaType();
+/** A request with an {@link MimeBody}. */
+interface MimeAwareRequest {
+
+  /** Returns this request's body if a body exists and is a {@link MimeBody}. */
+  Optional<MimeBody> mimeBody();
 }

@@ -49,6 +49,7 @@ import java.util.concurrent.CompletableFuture;
  * }</pre>
  */
 public interface ResponsePayload extends AutoCloseable {
+
   /** Converts this payload into an object of type {@code T}. */
   default <T> T to(Class<T> type) throws IOException, InterruptedException {
     return to(TypeRef.of(type));
