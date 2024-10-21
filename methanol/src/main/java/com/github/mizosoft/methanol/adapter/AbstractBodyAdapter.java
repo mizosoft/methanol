@@ -150,6 +150,7 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
    * former.
    */
   public interface BaseEncoder extends Encoder {
+
     /**
      * {@inheritDoc}
      *
@@ -172,7 +173,8 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
    * #toDeferredObject(TypeRef, Hints)}, which streaming decoders should override, and defaults
    * {@link #toDeferredObject(TypeRef, MediaType)} to forward to the former.
    */
-  protected interface BaseDecoder extends Decoder {
+  public interface BaseDecoder extends Decoder {
+
     /**
      * {@inheritDoc}
      *

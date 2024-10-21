@@ -180,6 +180,19 @@ class HintsTest {
         .satisfies(optional -> assertHasResponseInfo(optional, responseInfo));
   }
 
+  @Test
+  void clearHints() {
+    assertThat(
+            Hints.newBuilder()
+                .put(MediaType.class, MediaType.TEXT_PLAIN)
+                .put(HttpRequest.class, MutableRequest.GET("https://example.com"))
+                .put(ResponseInfo.class, new ImmutableResponseInfo())
+                .put(String.class, "a")
+                .removeAll()
+                .build())
+        .isEqualTo(Hints.empty());
+  }
+
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private static void assertHasResponseInfo(Optional<ResponseInfo> actual, ResponseInfo expected) {
     assertThat(actual)

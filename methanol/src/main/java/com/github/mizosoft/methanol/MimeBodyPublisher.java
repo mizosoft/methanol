@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ package com.github.mizosoft.methanol;
 import java.net.http.HttpRequest.BodyPublisher;
 
 /** A {@code BodyPublisher} with a {@linkplain MediaType media type}. */
-public interface MimeBodyPublisher extends BodyPublisher, MimeAware {
+public interface MimeBodyPublisher extends BodyPublisher, MimeBody {
 
   /** Returns the body's media type. */
   @Override

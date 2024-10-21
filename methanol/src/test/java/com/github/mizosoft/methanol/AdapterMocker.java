@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,31 +22,46 @@
 
 package com.github.mizosoft.methanol;
 
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
-import java.net.http.HttpRequest;
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
+import java.net.http.HttpRequest.BodyPublisher;
 import java.util.function.Supplier;
 
 public class AdapterMocker {
   private AdapterMocker() {}
 
-  static Encoder mockEncoder(
-      Object payload, MediaType mediaType, HttpRequest.BodyPublisher publisher) {
+  static <T> Encoder mockEncoder(
+      T value, TypeRef<T> typeRef, Hints hints, BodyPublisher publisher) {
     var encoder = mock(Encoder.class);
-    when(encoder.supportsType(TypeRef.of(Object.class))).thenReturn(true);
-    when(encoder.isCompatibleWith(mediaType)).thenReturn(true);
-    when(encoder.toBody(payload, mediaType)).thenReturn(publisher);
+    when(encoder.supportsType(typeRef)).thenReturn(true);
+    when(encoder.isCompatibleWith(hints.mediaTypeOrAny())).thenReturn(true);
+    when(encoder.toBody(value, hints.mediaTypeOrAny())).thenReturn(publisher);
+    when(encoder.toBody(
+            eq(value),
+            eq(typeRef),
+            argThat(
+                hintsArg -> hintsArg.mediaTypeOrAny().isCompatibleWith(hints.mediaTypeOrAny()))))
+        .thenReturn(publisher);
     return encoder;
   }
 
-  static Encoder mockEncoder(
-      Object payload, MediaType mediaType, Supplier<HttpRequest.BodyPublisher> publisherSupplier) {
+  static <T> Encoder mockEncoder(
+      T value, TypeRef<T> typeRef, Hints hints, Supplier<BodyPublisher> publisherSupplier) {
     var encoder = mock(Encoder.class);
-    when(encoder.supportsType(TypeRef.of(Object.class))).thenReturn(true);
-    when(encoder.isCompatibleWith(mediaType)).thenReturn(true);
-    when(encoder.toBody(payload, mediaType)).thenAnswer(__ -> publisherSupplier.get());
+    when(encoder.supportsType(typeRef)).thenReturn(true);
+    when(encoder.isCompatibleWith(hints.mediaTypeOrAny())).thenReturn(true);
+    when(encoder.toBody(value, hints.mediaTypeOrAny())).thenAnswer(__ -> publisherSupplier.get());
+    when(encoder.toBody(
+            eq(value),
+            eq(typeRef),
+            argThat(
+                hintsArg -> hintsArg.mediaTypeOrAny().isCompatibleWith(hints.mediaTypeOrAny()))))
+        .thenAnswer(__ -> publisherSupplier.get());
     return encoder;
   }
 }

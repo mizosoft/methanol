@@ -27,14 +27,19 @@ import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyTha
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
+import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
+import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 class MutableRequestTest {
   @Test
@@ -124,10 +129,14 @@ class MutableRequestTest {
   }
 
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS) // Mockito seems to take some time to load.
   void staticFactoriesWithPayload() {
     var payload = new Object();
+    var typeRef = TypeRef.of(Object.class);
     var publisher = BodyPublishers.ofString("abc");
-    var encoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, publisher);
+    var encoder =
+        AdapterMocker.mockEncoder(
+            payload, TypeRef.of(Object.class), Hints.of(MediaType.TEXT_PLAIN), publisher);
 
     var uriString = "https://example.com";
     var uri = URI.create(uriString);
@@ -142,6 +151,18 @@ class MutableRequestTest {
         .hasUri(uri)
         .isPOST()
         .hasBodyPublisher(publisher);
+    verifyThat(
+            MutableRequest.POST(uriString, payload, typeRef, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPOST()
+        .hasBodyPublisher(publisher);
+    verifyThat(
+            MutableRequest.POST(uri, payload, typeRef, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPOST()
+        .hasBodyPublisher(publisher);
 
     verifyThat(
             MutableRequest.PUT(uriString, payload, MediaType.TEXT_PLAIN).adapterCodec(adapterCodec))
@@ -149,6 +170,18 @@ class MutableRequestTest {
         .isPUT()
         .hasBodyPublisher(publisher);
     verifyThat(MutableRequest.PUT(uri, payload, MediaType.TEXT_PLAIN).adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPUT()
+        .hasBodyPublisher(publisher);
+    verifyThat(
+            MutableRequest.PUT(uriString, payload, typeRef, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPUT()
+        .hasBodyPublisher(publisher);
+    verifyThat(
+            MutableRequest.PUT(uri, payload, typeRef, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec))
         .hasUri(uri)
         .isPUT()
         .hasBodyPublisher(publisher);
@@ -163,6 +196,58 @@ class MutableRequestTest {
         .hasUri(uri)
         .isPATCH()
         .hasBodyPublisher(publisher);
+    verifyThat(
+            MutableRequest.PATCH(uriString, payload, typeRef, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPATCH()
+        .hasBodyPublisher(publisher);
+    verifyThat(
+            MutableRequest.PATCH(uri, payload, typeRef, MediaType.TEXT_PLAIN)
+                .adapterCodec(adapterCodec))
+        .hasUri(uri)
+        .isPATCH()
+        .hasBodyPublisher(publisher);
+  }
+
+  @Test
+  void encoderReceivesRequestAndEncoderHints() {
+    final class HintRecordingEncoder extends AbstractBodyAdapter
+        implements AbstractBodyAdapter.BaseEncoder {
+      Hints lastCallHints = Hints.empty();
+
+      HintRecordingEncoder() {
+        super(MediaType.ANY);
+      }
+
+      @Override
+      public boolean supportsType(TypeRef<?> typeRef) {
+        return typeRef.rawType() == Object.class;
+      }
+
+      @Override
+      public <T> HttpRequest.BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints) {
+        requireSupport(typeRef, hints);
+        lastCallHints = hints;
+        return BodyPublishers.ofString("a");
+      }
+    }
+
+    var encoder = new HintRecordingEncoder();
+    var request =
+        MutableRequest.POST("https://example.com", new Object(), MediaType.of("text", "very-plain"))
+            .adapterCodec(AdapterCodec.newBuilder().encoder(encoder).build())
+            .hint(Integer.class, 1)
+            .hints(builder -> builder.put(String.class, "a"));
+    assertThat(request.bodyPublisher()).isPresent(); // Resolve.
+    assertThat(encoder.lastCallHints)
+        .isEqualTo(
+            Hints.newBuilder()
+                .put(Integer.class, 1)
+                .put(String.class, "a")
+                .put(MediaType.class, MediaType.of("text", "very-plain"))
+                .put(HttpRequest.class, request)
+                .build());
   }
 
   @Test
@@ -363,10 +448,13 @@ class MutableRequestTest {
   }
 
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS) // Mockito seems to take some time to load.
   void httpMethodSettersWithPayload() {
     var payload = new Object();
     var publisher = BodyPublishers.ofString("abc");
-    var encoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, publisher);
+    var encoder =
+        AdapterMocker.mockEncoder(
+            payload, TypeRef.of(Object.class), Hints.of(MediaType.TEXT_PLAIN), publisher);
     var request =
         MutableRequest.create().adapterCodec(AdapterCodec.newBuilder().encoder(encoder).build());
 
@@ -411,7 +499,10 @@ class MutableRequestTest {
         .containsTag(Integer.class, 1)
         .containsTag(new TypeRef<>() {}, List.of("a", "b"))
         .doesNotContainTag(String.class);
-    assertThat(request.tags()).containsValues(1, List.of("a", "b"));
+    assertThat(request.tags())
+        .containsExactlyInAnyOrderEntriesOf(
+            Map.of(
+                TypeRef.of(Integer.class), 1, new TypeRef<List<String>>() {}, List.of("a", "b")));
 
     var immutableRequest = request.toImmutableRequest();
     verifyThat(immutableRequest)
@@ -421,7 +512,7 @@ class MutableRequestTest {
     assertThat(immutableRequest.tags())
         .containsExactlyInAnyOrderEntriesOf(
             Map.of(
-                new TypeRef<Integer>() {}, 1, new TypeRef<List<String>>() {}, List.of("a", "b")));
+                TypeRef.of(Integer.class), 1, new TypeRef<List<String>>() {}, List.of("a", "b")));
   }
 
   @Test
@@ -442,6 +533,67 @@ class MutableRequestTest {
   }
 
   @Test
+  void getEmptyHints() {
+    assertThat(MutableRequest.create().hints()).isEqualTo(Hints.empty());
+  }
+
+  @Test
+  void addHints() {
+    assertThat(
+            MutableRequest.create()
+                .hint(Integer.class, 1)
+                .hint(MediaType.class, MediaType.TEXT_PLAIN)
+                .hints())
+        .isEqualTo(
+            Hints.newBuilder()
+                .put(Integer.class, 1)
+                .put(MediaType.class, MediaType.TEXT_PLAIN)
+                .build());
+  }
+
+  @Test
+  void addHintsWithBuilderConsumer() {
+    assertThat(
+            MutableRequest.create()
+                .hints(
+                    builder ->
+                        builder.put(Integer.class, 1).put(MediaType.class, MediaType.TEXT_PLAIN))
+                .hints())
+        .isEqualTo(
+            Hints.newBuilder()
+                .put(Integer.class, 1)
+                .put(MediaType.class, MediaType.TEXT_PLAIN)
+                .build());
+  }
+
+  @Test
+  void hintsPersist() {
+    assertThat(MutableRequest.create().hint(Integer.class, 1).hints())
+        .isEqualTo(Hints.newBuilder().put(Integer.class, 1).build());
+  }
+
+  @Test
+  void hintsPersistThroughMutableCopy() {
+    assertThat(MutableRequest.create().hint(Integer.class, 1).copy().hints())
+        .isEqualTo(Hints.newBuilder().put(Integer.class, 1).build());
+  }
+
+  @Test
+  void hintsPersistThroughImmutableCopy() {
+    assertThat(MutableRequest.create().hint(Integer.class, 1).toImmutableRequest().hints())
+        .isEqualTo(Hints.newBuilder().put(Integer.class, 1).build());
+  }
+
+  @Test
+  void hintsPersistThroughMutableCopyOfImmutableCopy() {
+    assertThat(
+            MutableRequest.copyOf(
+                    MutableRequest.create().hint(Integer.class, 1).toImmutableRequest())
+                .hints())
+        .isEqualTo(Hints.newBuilder().put(Integer.class, 1).build());
+  }
+
+  @Test
   void setCacheControl() {
     var request =
         MutableRequest.GET("https://example.com")
@@ -459,12 +611,14 @@ class MutableRequestTest {
   }
 
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS) // Mockito seems to take some time to load.
   void bodyPublisherIsCreatedOnce() {
     var payload = new Object();
     var encoder =
         AdapterMocker.mockEncoder(
             payload,
-            MediaType.TEXT_PLAIN,
+            TypeRef.of(Object.class),
+            Hints.of(MediaType.TEXT_PLAIN),
             () -> BodyPublishers.ofString("xyz")); // Return a new publisher each call.
 
     var request =
@@ -479,10 +633,13 @@ class MutableRequestTest {
   }
 
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS) // Mockito seems to take some time to load.
   void copyingPreservesPayload() {
     var payload = new Object();
     var publisher = BodyPublishers.ofString("abc");
-    var encoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, publisher);
+    var encoder =
+        AdapterMocker.mockEncoder(
+            payload, TypeRef.of(Object.class), Hints.of(MediaType.TEXT_PLAIN), publisher);
     var adapterCodec = AdapterCodec.newBuilder().encoder(encoder).build();
 
     verifyThat(
@@ -536,18 +693,21 @@ class MutableRequestTest {
   }
 
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS) // Mockito seems to take some time to load.
   void changeAdapterCodecAfterResolvingPayload() {
     var payload = new Object();
     var firstPublisher = BodyPublishers.ofString("abc");
-    var firstEncoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, firstPublisher);
-
+    var firstEncoder =
+        AdapterMocker.mockEncoder(
+            payload, TypeRef.of(Object.class), Hints.of(MediaType.TEXT_PLAIN), firstPublisher);
     var request = MutableRequest.POST("https://example.com", payload, MediaType.TEXT_PLAIN);
     verifyThat(request.adapterCodec(AdapterCodec.newBuilder().encoder(firstEncoder).build()))
         .hasBodyPublisher(firstPublisher);
 
     var secondPublisher = BodyPublishers.ofString("xyz");
-    var secondEncoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, secondPublisher);
-
+    var secondEncoder =
+        AdapterMocker.mockEncoder(
+            payload, TypeRef.of(Object.class), Hints.of(MediaType.TEXT_PLAIN), secondPublisher);
     verifyThat(request.adapterCodec(AdapterCodec.newBuilder().encoder(secondEncoder).build()))
         .hasBodyPublisher(secondPublisher);
   }

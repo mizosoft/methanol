@@ -28,6 +28,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.BasicAdapter;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -53,6 +54,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * media type, and supports any object type supported by the underlying serializer/deserializer.
  */
 public interface BodyAdapter {
+
   /**
    * Returns {@code true} if the format this adapter uses is {@link
    * MediaType#isCompatibleWith(MediaType) compatible} with the given media type.
@@ -64,6 +66,7 @@ public interface BodyAdapter {
 
   /** A {@code BodyAdapter} that encodes objects into request bodies. */
   interface Encoder extends BodyAdapter {
+
     /**
      * Returns a {@link BodyPublisher} that encodes the given object into a request body using the
      * format specified by the given media type. If the given media type is {@code null}, the
@@ -127,6 +130,7 @@ public interface BodyAdapter {
 
   /** A {@code BodyAdapter} that decodes response bodies into objects. */
   interface Decoder extends BodyAdapter {
+
     /**
      * Returns a {@link BodySubscriber} that decodes the response body into an object of the given
      * type using the format specified by the given media type. If the given media type is {@code
@@ -229,6 +233,7 @@ public interface BodyAdapter {
    * parameter).
    */
   interface Hints {
+
     /** Returns an immutable map of all hints. */
     Map<TypeRef<?>, Object> toMap();
 
@@ -356,6 +361,11 @@ public interface BodyAdapter {
       Builder() {}
 
       Builder(Hints hints) {
+        putAll(hints);
+      }
+
+      @CanIgnoreReturnValue
+      Builder putAll(Hints hints) {
         if (hints instanceof KnownHints) {
           var knownHints = (KnownHints) hints;
           mediaType = knownHints.mediaType.orElse(null);
@@ -367,17 +377,28 @@ public interface BodyAdapter {
           request = (HttpRequest) unknownHints.remove(TypeRef.of(HttpRequest.class));
           responseInfo = (ResponseInfo) unknownHints.remove(TypeRef.of(ResponseInfo.class));
         }
+        return this;
+      }
+
+      @CanIgnoreReturnValue
+      Builder putAll(Builder other) {
+        unknownHints.putAll(other.unknownHints);
+        mediaType = other.mediaType;
+        request = other.request;
+        responseInfo = other.responseInfo;
+        return this;
       }
 
       /**
        * Adds the given request as a hint and a media type hint extracted from either the request's
        * body or {@code Content-Type} header, whichever is present first.
        */
+      @CanIgnoreReturnValue
       public Builder forEncoder(HttpRequest request) {
         this.request = requireNonNull(request);
         this.mediaType =
-            (request instanceof MimeBodyContainer
-                    ? ((MimeBodyContainer) request).bodyMediaType()
+            (request instanceof MimeAwareRequest
+                    ? ((MimeAwareRequest) request).mimeBody().map(MimeBody::mediaType)
                     : Optional.<MediaType>empty())
                 .or(() -> request.headers().firstValue("Content-Type").map(MediaType::parse))
                 .orElse(null);
@@ -388,6 +409,7 @@ public interface BodyAdapter {
        * Adds the given {@code ResponseInfo} as a hint and a media type hint extracted from the
        * response headers if present.
        */
+      @CanIgnoreReturnValue
       public Builder forDecoder(ResponseInfo responseInfo) {
         this.responseInfo = requireNonNull(responseInfo);
         this.mediaType =
@@ -396,11 +418,13 @@ public interface BodyAdapter {
       }
 
       /** Maps the given type to the given hint. */
+      @CanIgnoreReturnValue
       public <T> Builder put(Class<T> type, T value) {
         return put(TypeRef.of(type), value);
       }
 
       /** Maps the given {@code TypeRef} to the given hint. */
+      @CanIgnoreReturnValue
       public <T> Builder put(TypeRef<T> typeRef, T value) {
         requireArgument(
             typeRef.rawType().isInstance(value),
@@ -422,6 +446,7 @@ public interface BodyAdapter {
       }
 
       /** Removes the hint mapped to by the given {@code TypeRef}. */
+      @CanIgnoreReturnValue
       public <T> Builder remove(TypeRef<T> typeRef) {
         var rawType = typeRef.rawType();
         if (rawType == MediaType.class) {
@@ -433,6 +458,16 @@ public interface BodyAdapter {
         } else {
           unknownHints.remove(typeRef);
         }
+        return this;
+      }
+
+      /** Removes all hints added so far. */
+      @CanIgnoreReturnValue
+      public Builder removeAll() {
+        unknownHints.clear();
+        mediaType = null;
+        request = null;
+        responseInfo = null;
         return this;
       }
 

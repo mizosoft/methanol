@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.from;
 
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.testing.HttpClientStub;
 import com.github.mizosoft.methanol.testing.HttpResponseStub;
@@ -356,7 +357,9 @@ class MethanolTest {
   void requestPayloadIsMappedToBodyPublisher() {
     var payload = new Object();
     var publisher = BodyPublishers.ofString("abc");
-    var encoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, publisher);
+    var encoder =
+        AdapterMocker.mockEncoder(
+            payload, TypeRef.of(Object.class), Hints.of(MediaType.TEXT_PLAIN), publisher);
     var backend = new RecordingHttpClient();
     var client =
         Methanol.newBuilder(backend)

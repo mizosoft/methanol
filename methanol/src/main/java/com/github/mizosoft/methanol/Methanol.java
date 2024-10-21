@@ -1118,7 +1118,8 @@ public final class Methanol extends HttpClient {
 
       // Overwrite Content-Type if the request body has a MediaType.
       rewrittenRequest
-          .bodyMediaType()
+          .mimeBody()
+          .map(MimeBody::mediaType)
           .ifPresent(mediaType -> rewrittenRequest.setHeader("Content-Type", mediaType.toString()));
 
       if (request.timeout().isEmpty()) {

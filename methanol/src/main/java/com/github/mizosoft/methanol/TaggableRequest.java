@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.URI;
@@ -37,6 +38,10 @@ import java.util.Optional;
  * An {@code HttpRequest} that can carry arbitrary values, referred to as tags. Tags can be used to
  * carry application-specific data throughout {@link Interceptor interceptors} and listeners. Tags
  * are mapped by their type. One type cannot map to more than one tag.
+ *
+ * <p>A {@code TaggableRequest} also carries the {@link Hints} to be used when encoding the request
+ * body and/or decoding the response body. Hints are like tags but are meant to carry arbitrary
+ * values to {@link BodyAdapter adapters} rather than interceptors or listeners.
  */
 public abstract class TaggableRequest extends HttpRequest {
   TaggableRequest() {}
@@ -52,6 +57,9 @@ public abstract class TaggableRequest extends HttpRequest {
     return Optional.ofNullable((T) tags().get(requireNonNull(typeRef)));
   }
 
+  /** Returns this request's {@link Hints}. */
+  public abstract Hints hints();
+
   abstract Map<TypeRef<?>, Object> tags();
 
   /**
@@ -66,7 +74,6 @@ public abstract class TaggableRequest extends HttpRequest {
 
   /** An {@code HttpRequest.Builder} that allows attaching tags. */
   public interface Builder extends HttpRequest.Builder {
-
     /** Adds a tag mapped to the given object's runtime type. */
     @CanIgnoreReturnValue
     Builder tag(Object value);
