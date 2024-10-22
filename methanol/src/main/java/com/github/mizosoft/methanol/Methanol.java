@@ -86,7 +86,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * An {@code HttpClient} with interceptors, request decoration, HTTP caching and reactive
  * extensions.
  *
- * <p>In addition to implementing the {@link HttpClient} interface, this class allows to:
+ * <p>In addition to implementing the {@link HttpClient} API, this class allows to:
  *
  * <ul>
  *   <li>Specify a {@link BaseBuilder#baseUri(URI) base URI}.
@@ -160,9 +160,9 @@ public final class Methanol extends HttpClient {
             mergedInterceptors.add(
                 new ReadTimeoutInterceptor(timeout, castNonNull(builder.readTimeoutDelayer))));
 
-    var executor = backend.executor().orElse(null);
     if (!caches.isEmpty()) {
-      mergedInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
+      mergedInterceptors.add(
+          new RedirectingInterceptor(redirectPolicy, backend.executor().orElse(null)));
     }
     caches.forEach(cache -> mergedInterceptors.add(cache.interceptor()));
 
@@ -342,6 +342,7 @@ public final class Methanol extends HttpClient {
    */
   public HttpResponse<ResponsePayload> send(HttpRequest request)
       throws IOException, InterruptedException {
+    var adapterCodec = effectiveAdapterCodec(request);
     return send(
         request,
         responseInfo ->
@@ -349,10 +350,11 @@ public final class Methanol extends HttpClient {
                 new PublisherBodySubscriber(),
                 publisher ->
                     new ResponsePayloadImpl(
+                        request,
                         responseInfo,
                         publisher,
                         () -> executor().orElseGet(FallbackExecutorProvider::get),
-                        adapterCodecOrInstalled())));
+                        adapterCodec)));
   }
 
   /**
@@ -362,6 +364,7 @@ public final class Methanol extends HttpClient {
    * is a programming error.
    */
   public CompletableFuture<HttpResponse<ResponsePayload>> sendAsync(HttpRequest request) {
+    var adapterCodec = effectiveAdapterCodec(request);
     return sendAsync(
         request,
         responseInfo ->
@@ -369,10 +372,11 @@ public final class Methanol extends HttpClient {
                 new PublisherBodySubscriber(),
                 publisher ->
                     new ResponsePayloadImpl(
+                        request,
                         responseInfo,
                         publisher,
                         () -> executor().orElseGet(FallbackExecutorProvider::get),
-                        adapterCodecOrInstalled())));
+                        adapterCodec)));
   }
 
   @Override
@@ -391,48 +395,65 @@ public final class Methanol extends HttpClient {
         .forwardAsync(request);
   }
 
-  public <T> HttpResponse<T> send(HttpRequest request, Class<T> bodyType)
+  /**
+   * {@link #send(HttpRequest, BodyHandler) Sends} the given request and converts the response body
+   * into an object of the given type.
+   */
+  public <T> HttpResponse<T> send(HttpRequest request, Class<T> type)
       throws IOException, InterruptedException {
-    return send(request, TypeRef.of(bodyType));
+    return send(request, TypeRef.of(type));
   }
 
-  public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, Class<T> bodyType) {
-    return sendAsync(request, TypeRef.of(bodyType));
+  /**
+   * {@link #sendAsync(HttpRequest, BodyHandler) Asynchronously sends} the given request and
+   * converts the response body into an object of the given type.
+   */
+  public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, Class<T> type) {
+    return sendAsync(request, TypeRef.of(type));
   }
 
-  public <T> HttpResponse<T> send(HttpRequest request, TypeRef<T> bodyType)
+  /**
+   * {@link #send(HttpRequest, BodyHandler) Sends} the given request and converts the response body
+   * into an object of the given type.
+   */
+  public <T> HttpResponse<T> send(HttpRequest request, TypeRef<T> typeRef)
       throws IOException, InterruptedException {
     return new InterceptorChain<>(
             backend,
-            adapterCodecOrInstalled().handlerOf(bodyType, Hints.empty()),
+            effectiveAdapterCodec(request).handlerOf(typeRef, TaggableRequest.hintsOf(request)),
             null,
             mergedInterceptors)
         .forward(request);
   }
 
-  public <T> CompletableFuture<HttpResponse<T>> sendAsync(
-      HttpRequest request, TypeRef<T> bodyType) {
+  /**
+   * {@link #sendAsync(HttpRequest, BodyHandler) Asynchronously sends} the given request and
+   * converts the response body into an object of the given type.
+   */
+  public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, TypeRef<T> typeRef) {
     return new InterceptorChain<>(
             backend,
-            adapterCodecOrInstalled().handlerOf(bodyType, Hints.empty()),
+            effectiveAdapterCodec(request).handlerOf(typeRef, TaggableRequest.hintsOf(request)),
             null,
             mergedInterceptors)
         .forwardAsync(request);
   }
 
-  private AdapterCodec adapterCodecOrInstalled() {
-    return adapterCodec.orElseGet(AdapterCodec::installed);
+  private AdapterCodec effectiveAdapterCodec(HttpRequest request) {
+    return MutableRequest.adapterCodecOf(request)
+        .or(() -> adapterCodec)
+        .orElseGet(AdapterCodec::installed);
   }
 
   @CanIgnoreReturnValue
   private static URI validateUri(URI uri) {
     var scheme = uri.getScheme();
-    requireArgument(scheme != null, "uri has no scheme: %s", uri);
+    requireArgument(scheme != null, "URI has no scheme: %s", uri);
     requireArgument(
-        "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme),
-        "unsupported scheme: %s",
+        scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"),
+        "Unsupported scheme: %s",
         scheme);
-    requireArgument(uri.getHost() != null, "uri has no host: %s", uri);
+    requireArgument(uri.getHost() != null, "URI has no host: %s", uri);
     return uri;
   }
 
@@ -466,17 +487,19 @@ public final class Methanol extends HttpClient {
 
   private static final class ResponsePayloadImpl implements ResponsePayload {
     private final ResponseInfo responseInfo;
+    private final Hints handlerHints;
     private final Publisher<List<ByteBuffer>> publisher;
     private final Supplier<Executor> executorSupplier;
     private final AdapterCodec adapterCodec;
-
     private boolean closed;
 
     ResponsePayloadImpl(
+        HttpRequest request,
         ResponseInfo responseInfo,
         Publisher<List<ByteBuffer>> publisher,
         Supplier<Executor> executorSupplier,
         AdapterCodec adapterCodec) {
+      this.handlerHints = TaggableRequest.hintsOf(request);
       this.responseInfo = responseInfo;
       this.publisher = publisher;
       this.executorSupplier = executorSupplier;
@@ -486,22 +509,22 @@ public final class Methanol extends HttpClient {
     @Override
     public <T> T to(TypeRef<T> typeRef) throws IOException, InterruptedException {
       return Utils.get(
-          handleAsync(adapterCodec.handlerOf(typeRef, Hints.empty()), FlowSupport.SYNC_EXECUTOR));
+          handleAsync(adapterCodec.handlerOf(typeRef, handlerHints), FlowSupport.SYNC_EXECUTOR));
     }
 
     @Override
     public <T> T handleWith(BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
-      return Utils.get(handleAsync(bodyHandler, FlowSupport.SYNC_EXECUTOR));
+      return Utils.get(handleAsync(requireNonNull(bodyHandler), FlowSupport.SYNC_EXECUTOR));
     }
 
     @Override
     public <T> CompletableFuture<T> toAsync(TypeRef<T> typeRef) {
-      return handleAsync(adapterCodec.handlerOf(typeRef, Hints.empty()), executorSupplier.get());
+      return handleAsync(adapterCodec.handlerOf(typeRef, handlerHints), executorSupplier.get());
     }
 
     @Override
     public <T> CompletableFuture<T> handleWithAsync(BodyHandler<T> bodyHandler) {
-      return handleAsync(bodyHandler, executorSupplier.get());
+      return handleAsync(requireNonNull(bodyHandler), executorSupplier.get());
     }
 
     private <T> CompletableFuture<T> handleAsync(BodyHandler<T> bodyHandler, Executor executor) {

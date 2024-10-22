@@ -50,14 +50,17 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * Invoking {@link #toImmutableRequest()} will return an immutable copy that is independent of this
  * instance.
  *
- * <p>{@code MutableRequest} accepts an arbitrary object, referred to as payloads, as the request
- * body. The payload is resolved into a {@code BodyPublisher} only when {@link
+ * <p>{@code MutableRequest} accepts an arbitrary object as the request body, referred to as the
+ * payload. The payload is resolved into a {@code BodyPublisher} only when {@link
  * MutableRequest#bodyPublisher() one is requested}. Resolution is done by this request's {@link
- * #adapterCodec(AdapterCodec) AdapterCodec}.
+ * #adapterCodec(AdapterCodec) AdapterCodec}. Sending the request through a {@link Methanol} client
+ * with an {@code AdapterCodec} sets the request's {@code AdapterCodec} automatically if one is not
+ * already present. Note that a request with an {@code AdapterCodec} overrides the client's {@code
+ * AdapterCodec} both for encoding the request body and decoding the response body.
  *
  * <p>Additionally, this class allows setting a {@code URI} without a host or a scheme or not
  * setting a {@code URI} at all. This is for the case when the request is used with a {@link
- * Methanol} client that has a base URL, with which this request's URL is resolved.
+ * Methanol} client that has a base URL, against which this request's URL is resolved.
  *
  * <p>{@code MutableRequest} also adds some convenience when the {@code HttpRequest} is used
  * immediately after creation:
@@ -558,6 +561,16 @@ public final class MutableRequest extends TaggableRequest
                 self.setMethod(other.method(), other.bodyPublisher().orElse(null));
               }
             });
+  }
+
+  static Optional<AdapterCodec> adapterCodecOf(HttpRequest request) {
+    if (request instanceof MutableRequest) {
+      return ((MutableRequest) request).adapterCodec();
+    } else if (request instanceof ImmutableRequest) {
+      return ((ImmutableRequest) request).adapterCodec;
+    } else {
+      return Optional.empty();
+    }
   }
 
   /** Returns a new {@code MutableRequest}. */

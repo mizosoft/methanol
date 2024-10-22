@@ -48,6 +48,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -55,12 +56,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class RecordingHttpClient extends HttpClient {
   private final BlockingDeque<Call<?>> calls = new LinkedBlockingDeque<>();
   private final AtomicInteger sendCount = new AtomicInteger();
+  private @Nullable Consumer<Call<?>> callHandler;
 
   public RecordingHttpClient() {}
 
-  public void completeLastCall() {
-    var call = lastCall();
-    call.future().complete(defaultResponseFor(call.request()));
+  public RecordingHttpClient handleCalls(@Nullable Consumer<Call<?>> callHandler) {
+    this.callHandler = callHandler;
+    return this;
   }
 
   @SuppressWarnings("unchecked")
@@ -134,7 +136,9 @@ public final class RecordingHttpClient extends HttpClient {
 
     var call = new Call<>(request, responseBodyHandler, null);
     calls.add(call);
-
+    if (callHandler != null) {
+      callHandler.accept(call);
+    }
     try {
       return call.future().get();
     } catch (ExecutionException e) {
@@ -160,6 +164,9 @@ public final class RecordingHttpClient extends HttpClient {
 
     var call = new Call<>(request, responseBodyHandler, null);
     calls.add(call);
+    if (callHandler != null) {
+      callHandler.accept(call);
+    }
     return call.future();
   }
 
@@ -172,16 +179,10 @@ public final class RecordingHttpClient extends HttpClient {
 
     var call = new Call<>(request, responseBodyHandler, pushPromiseHandler);
     calls.add(call);
+    if (callHandler != null) {
+      callHandler.accept(call);
+    }
     return call.future();
-  }
-
-  public static <T> HttpResponse<T> defaultResponseFor(HttpRequest request) {
-    return new ResponseBuilder<T>()
-        .statusCode(HTTP_OK)
-        .request(request)
-        .uri(request.uri())
-        .version(Version.HTTP_1_1)
-        .build();
   }
 
   public static <T> HttpResponse<T> defaultResponseFor(
@@ -199,7 +200,9 @@ public final class RecordingHttpClient extends HttpClient {
     var subscriber =
         bodyHandler.apply(new ImmutableResponseInfo(HTTP_OK, headers(), Version.HTTP_1_1));
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    subscriber.onNext(List.of(responseBody));
+    if (responseBody.hasRemaining()) {
+      subscriber.onNext(List.of(responseBody));
+    }
     subscriber.onComplete();
     try {
       return subscriber.getBody().toCompletableFuture().get();
@@ -247,7 +250,7 @@ public final class RecordingHttpClient extends HttpClient {
     }
 
     public void complete() {
-      assertThat(responseFuture.complete(defaultResponseFor(request))).isTrue();
+      complete(TestUtils.EMPTY_BUFFER);
     }
 
     public void complete(ByteBuffer responseBody) {
