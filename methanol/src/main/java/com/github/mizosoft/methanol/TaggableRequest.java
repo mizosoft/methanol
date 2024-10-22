@@ -72,8 +72,13 @@ public abstract class TaggableRequest extends HttpRequest {
         : MutableRequest.copyOf(request).toImmutableRequest();
   }
 
+  static Hints hintsOf(HttpRequest request) {
+    return request instanceof TaggableRequest ? ((TaggableRequest) request).hints() : Hints.empty();
+  }
+
   /** An {@code HttpRequest.Builder} that allows attaching tags. */
   public interface Builder extends HttpRequest.Builder {
+
     /** Adds a tag mapped to the given object's runtime type. */
     @CanIgnoreReturnValue
     Builder tag(Object value);

@@ -69,7 +69,6 @@ import mockwebserver3.MockWebServer;
 import mockwebserver3.PushPromise;
 import mockwebserver3.RecordedRequest;
 import okhttp3.Headers;
-import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,10 +76,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({ExecutorExtension.class, MockWebServerExtension.class, TestSubscriberExtension.class})
 class MethanolClientTest {
-  static {
-    Assertions.setMaxStackTraceElementsDisplayed(100);
-  }
-
   private MockWebServer server;
   private Methanol.Builder clientBuilder;
   private URI serverUri;

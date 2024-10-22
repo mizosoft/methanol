@@ -66,7 +66,7 @@ class HeadersTimeoutTest {
     clock.advanceSeconds(1);
     assertThat(delayer.taskCount()).isZero();
 
-    recordingClient.completeLastCall();
+    recordingClient.lastCall().complete();
     assertThat(responseFuture).isCompleted();
   }
 
