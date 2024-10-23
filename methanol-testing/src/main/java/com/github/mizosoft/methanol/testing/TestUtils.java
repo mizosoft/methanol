@@ -22,8 +22,12 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import static java.net.HttpURLConnection.HTTP_OK;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.github.mizosoft.methanol.ResponseBuilder;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -31,7 +35,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
+import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandler;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,6 +53,7 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
@@ -155,6 +164,7 @@ public class TestUtils {
     return HttpHeaders.of(headers, (n, v) -> true);
   }
 
+  @CanIgnoreReturnValue
   public static int copyRemaining(ByteBuffer src, ByteBuffer dst) {
     int toCopy = Math.min(src.remaining(), dst.remaining());
     int srcLimit = src.limit();
@@ -218,5 +228,38 @@ public class TestUtils {
 
   public static BufferedReader inputReaderOf(Process process) {
     return new BufferedReader(new InputStreamReader(process.getInputStream(), UTF_8));
+  }
+
+  public static <T> HttpResponse<T> okResponseOf(
+      HttpRequest request, ByteBuffer responseBody, BodyHandler<T> bodyHandler) {
+    return okResponseOf(request, decodeBody(responseBody, bodyHandler));
+  }
+
+  public static <T> HttpResponse<T> okResponseOf(HttpRequest request, T body) {
+    return new ResponseBuilder<T>()
+        .statusCode(HTTP_OK)
+        .request(request)
+        .uri(request.uri())
+        .version(request.version().orElse(HttpClient.Version.HTTP_1_1))
+        .body(body)
+        .build();
+  }
+
+  private static <T> T decodeBody(ByteBuffer responseBody, BodyHandler<T> bodyHandler) {
+    var subscriber =
+        bodyHandler.apply(
+            new ImmutableResponseInfo(HTTP_OK, headers(), HttpClient.Version.HTTP_1_1));
+    subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
+    if (responseBody.hasRemaining()) {
+      subscriber.onNext(List.of(responseBody));
+    }
+    subscriber.onComplete();
+    try {
+      return subscriber.getBody().toCompletableFuture().get();
+    } catch (InterruptedException e) {
+      throw new CompletionException(e);
+    } catch (ExecutionException e) {
+      throw new CompletionException(e.getCause());
+    }
   }
 }

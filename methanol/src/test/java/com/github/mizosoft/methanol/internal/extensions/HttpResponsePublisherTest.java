@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol.internal.extensions;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testing.RecordingHttpClient.defaultResponseFor;
 import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static com.google.common.base.Charsets.UTF_8;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -40,6 +39,7 @@ import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriberContext;
 import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -71,7 +71,7 @@ class HttpResponsePublisherTest {
     var request = GET("https://localhost");
     var client = new RecordingHttpClient();
     var publisher =
-        new HttpResponsePublisher<>(client, request, BodyHandlers.replacing("A"), null, executor);
+        new HttpResponsePublisher<>(client, request, BodyHandlers.ofInputStream(), null, executor);
     var subscriber = subscriberContext.<HttpResponse<?>>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
 
@@ -82,15 +82,24 @@ class HttpResponsePublisherTest {
     subscriber.requestItems(1);
 
     var call = client.awaitCall();
-    call.complete();
     assertThat(client.sendCount()).isOne();
 
+    // Complete the response without completing the body.
+    var bodySubscriber =
+        call.bodyHandler()
+            .apply(
+                new ImmutableResponseInfo(200, TestUtils.headers(/* empty */ ), Version.HTTP_1_1));
+    bodySubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
+    var body = bodySubscriber.getBody().toCompletableFuture().getNow(null);
+    assertThat(body).isNotNull(); // InputStream body completes before subscriber completion.
+    call.future().complete(TestUtils.okResponseOf(call.request(), body));
+
     // As push promises can be received anytime amid receiving the main response body, downstream
-    // waits for body's completion and not just for the response completion (the former may happen
+    // waits for body's completion and not just for the response completion (the former happens
     // after the latter for InputStream bodies and the like).
     assertThat(subscriber.completionCount()).isZero();
 
-    complete(call.bodyHandler());
+    bodySubscriber.onComplete();
     subscriber.awaitCompletion();
     assertThat(subscriber.pollNext()).returns(request, from(HttpResponse::request));
   }
@@ -314,7 +323,7 @@ class HttpResponsePublisherTest {
   private static final class PushPromise<T> {
     private final HttpRequest request;
     private final BodyHandler<T> bodyHandler;
-    final CompletableFuture<HttpResponse<T>> future = new CompletableFuture<>();
+    private final CompletableFuture<HttpResponse<T>> future = new CompletableFuture<>();
 
     PushPromise(HttpRequest request, BodyHandler<T> bodyHandler) {
       this.request = requireNonNull(request);
@@ -322,7 +331,7 @@ class HttpResponsePublisherTest {
     }
 
     void complete(ByteBuffer responseBody) {
-      future.complete(defaultResponseFor(request, responseBody, bodyHandler));
+      future.complete(TestUtils.okResponseOf(request, responseBody, bodyHandler));
     }
 
     void completeExceptionally(Throwable exception) {
