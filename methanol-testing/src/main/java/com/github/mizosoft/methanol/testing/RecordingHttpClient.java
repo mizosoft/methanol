@@ -22,12 +22,8 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static com.github.mizosoft.methanol.testing.TestUtils.headers;
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.github.mizosoft.methanol.ResponseBuilder;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
@@ -39,11 +35,9 @@ import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -185,34 +179,6 @@ public final class RecordingHttpClient extends HttpClient {
     return call.future();
   }
 
-  public static <T> HttpResponse<T> defaultResponseFor(
-      HttpRequest request, ByteBuffer responseBody, BodyHandler<T> bodyHandler) {
-    return new ResponseBuilder<T>()
-        .statusCode(HTTP_OK)
-        .request(request)
-        .uri(request.uri())
-        .version(Version.HTTP_1_1)
-        .body(decodeBody(responseBody, bodyHandler))
-        .build();
-  }
-
-  private static <T> T decodeBody(ByteBuffer responseBody, BodyHandler<T> bodyHandler) {
-    var subscriber =
-        bodyHandler.apply(new ImmutableResponseInfo(HTTP_OK, headers(), Version.HTTP_1_1));
-    subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    if (responseBody.hasRemaining()) {
-      subscriber.onNext(List.of(responseBody));
-    }
-    subscriber.onComplete();
-    try {
-      return subscriber.getBody().toCompletableFuture().get();
-    } catch (InterruptedException e) {
-      throw new CompletionException(e);
-    } catch (ExecutionException e) {
-      throw new CompletionException(e.getCause());
-    }
-  }
-
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public static final class Call<T> {
     private final HttpRequest request;
@@ -254,7 +220,8 @@ public final class RecordingHttpClient extends HttpClient {
     }
 
     public void complete(ByteBuffer responseBody) {
-      assertThat(responseFuture.complete(defaultResponseFor(request, responseBody, bodyHandler)))
+      assertThat(
+              responseFuture.complete(TestUtils.okResponseOf(request, responseBody, bodyHandler)))
           .isTrue();
     }
 
