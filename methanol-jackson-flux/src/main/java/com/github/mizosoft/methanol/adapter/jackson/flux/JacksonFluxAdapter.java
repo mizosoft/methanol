@@ -94,7 +94,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
       return attachMediaType(
           BodyPublishers.fromPublisher(
               FlowAdapters.toFlowPublisher(
-                  encodePublisher(value, typeRef, hints.effectiveCharsetOrUtf8()))),
+                  encodePublisher(value, typeRef, hints.mediaTypeOrAny().charsetOrUtf8()))),
           hints.mediaTypeOrAny());
     }
 
@@ -236,7 +236,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
                 : fluxSubscriber;
       }
       return BodySubscribers.mapping(
-          coerceUtf8(subscriber, hints.effectiveCharsetOrUtf8()), typeRef::uncheckedCast);
+          coerceUtf8(subscriber, hints.mediaTypeOrAny().charsetOrUtf8()), typeRef::uncheckedCast);
     }
 
     private JsonParser createAsyncParser() {

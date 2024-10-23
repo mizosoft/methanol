@@ -212,7 +212,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
         throw new UnsupportedOperationException(
             "Unsupported conversion to an object of type <" + typeRef + ">");
       }
-      return decoder.apply(hints.effectiveCharsetOrUtf8());
+      return decoder.apply(hints.mediaTypeOrAny().charsetOrUtf8());
     }
 
     @SuppressWarnings("unchecked")

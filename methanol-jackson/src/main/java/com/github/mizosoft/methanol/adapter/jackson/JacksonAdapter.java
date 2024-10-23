@@ -70,7 +70,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       byte[] bytes;
       var objectWriter = writerFactory.createWriter(mapper, typeRef);
       try {
-        bytes = getBytes(objectWriter, value, hints.effectiveCharsetOrUtf8());
+        bytes = getBytes(objectWriter, value, hints.mediaTypeOrAny().charsetOrUtf8());
       } catch (IOException e) {
         throw new UncheckedIOException(e);
       }
@@ -130,7 +130,8 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       return BodySubscribers.mapping(
           BodySubscribers.ofByteArray(),
           bytes ->
-              readValueUnchecked(objectReader, bytes, typeRef, hints.effectiveCharsetOrUtf8()));
+              readValueUnchecked(
+                  objectReader, bytes, typeRef, hints.mediaTypeOrAny().charsetOrUtf8()));
     }
 
     @Override
@@ -142,7 +143,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
           inputStream ->
               () ->
                   readValueUnchecked(
-                      objectReader, inputStream, typeRef, hints.effectiveCharsetOrUtf8()));
+                      objectReader, inputStream, typeRef, hints.mediaTypeOrAny().charsetOrUtf8()));
     }
 
     abstract <T> T readValueUnchecked(

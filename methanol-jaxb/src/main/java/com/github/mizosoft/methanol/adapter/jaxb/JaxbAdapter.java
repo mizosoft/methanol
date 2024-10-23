@@ -72,7 +72,8 @@ abstract class JaxbAdapter extends AbstractBodyAdapter {
       var buffer = new ByteArrayOutputStream();
       try {
         var marshaller = jaxbFactory.createMarshaller(typeRef.rawType());
-        marshaller.setProperty(Marshaller.JAXB_ENCODING, hints.effectiveCharsetOrUtf8().name());
+        marshaller.setProperty(
+            Marshaller.JAXB_ENCODING, hints.mediaTypeOrAny().charsetOrUtf8().name());
         marshaller.marshal(value, buffer);
       } catch (JAXBException e) {
         throw new UncheckedJaxbException(e);
@@ -99,7 +100,7 @@ abstract class JaxbAdapter extends AbstractBodyAdapter {
                       typeRef,
                       unmarshaller,
                       new ByteArrayInputStream(bytes),
-                      hints.effectiveCharset().orElse(null))));
+                      hints.mediaTypeOrAny().charset().orElse(null))));
     }
 
     @Override
@@ -110,7 +111,8 @@ abstract class JaxbAdapter extends AbstractBodyAdapter {
           BodySubscribers.ofInputStream(),
           in ->
               () ->
-                  unmarshalValue(typeRef, unmarshaller, in, hints.effectiveCharset().orElse(null)));
+                  unmarshalValue(
+                      typeRef, unmarshaller, in, hints.mediaTypeOrAny().charset().orElse(null)));
     }
 
     private <T> T unmarshalValue(
