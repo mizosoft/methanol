@@ -53,7 +53,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 class BootJarTest {
   private static final String JAR_PATH_PROP =
       "com.github.mizosoft.methanol.springboot.test.bootJarPath";
-  private static final int LAUNCH_BOOT_JAR_TIMEOUT = 2 * TestUtils.VERY_SLOW_TIMEOUT_SECONDS;
+  private static final int LAUNCH_BOOT_JAR_TIMEOUT = TestUtils.VERY_SLOW_TIMEOUT_SECONDS;
 
   // Range for 'dynamic ports'
   private static final int PORT_START = 49152;
