@@ -235,7 +235,7 @@ public interface BodyAdapter {
   interface Hints {
 
     /** Returns an immutable map of all hints. */
-    Map<TypeRef<?>, Object> toMap();
+    Map<Class<?>, Object> toMap();
 
     /** Returns the {@code MediaType} hint. */
     default Optional<MediaType> mediaType() {
@@ -275,12 +275,7 @@ public interface BodyAdapter {
     }
 
     /** Returns the hint mapped to by the given type. */
-    default <T> Optional<T> get(Class<T> type) {
-      return get(TypeRef.of(type));
-    }
-
-    /** Returns the hint mapped to by the given {@code TypeRef}. */
-    <T> Optional<T> get(TypeRef<T> typeRef);
+    <T> Optional<T> get(Class<T> type);
 
     /** Returns a new {@code Builder} containing this object's hints. */
     default Builder mutate() {
@@ -313,7 +308,7 @@ public interface BodyAdapter {
       static final Hints EMPTY_HINTS =
           new Builder.AbstractHints() {
             @Override
-            public Map<TypeRef<?>, Object> toMap() {
+            public Map<Class<?>, Object> toMap() {
               return Map.of();
             }
 
@@ -343,17 +338,12 @@ public interface BodyAdapter {
             }
 
             @Override
-            public <T> Optional<T> get(TypeRef<T> typeRef) {
-              return Optional.empty();
-            }
-
-            @Override
             public Builder mutate() {
               return new Builder();
             }
           };
 
-      private final Map<TypeRef<?>, Object> unknownHints = new HashMap<>();
+      private final Map<Class<?>, Object> unknownHints = new HashMap<>();
       private @Nullable MediaType mediaType;
       private @Nullable HttpRequest request;
       private @Nullable ResponseInfo responseInfo;
@@ -373,9 +363,9 @@ public interface BodyAdapter {
           responseInfo = knownHints.responseInfo.orElse(null);
         } else {
           unknownHints.putAll(hints.toMap());
-          mediaType = (MediaType) unknownHints.remove(TypeRef.of(MediaType.class));
-          request = (HttpRequest) unknownHints.remove(TypeRef.of(HttpRequest.class));
-          responseInfo = (ResponseInfo) unknownHints.remove(TypeRef.of(ResponseInfo.class));
+          mediaType = (MediaType) unknownHints.remove(MediaType.class);
+          request = (HttpRequest) unknownHints.remove(HttpRequest.class);
+          responseInfo = (ResponseInfo) unknownHints.remove(ResponseInfo.class);
         }
         return this;
       }
@@ -420,43 +410,30 @@ public interface BodyAdapter {
       /** Maps the given type to the given hint. */
       @CanIgnoreReturnValue
       public <T> Builder put(Class<T> type, T value) {
-        return put(TypeRef.of(type), value);
-      }
-
-      /** Maps the given {@code TypeRef} to the given hint. */
-      @CanIgnoreReturnValue
-      public <T> Builder put(TypeRef<T> typeRef, T value) {
-        requireArgument(
-            typeRef.rawType().isInstance(value),
-            "Expected %s to be an instance of %s",
-            value,
-            typeRef);
-        var rawType = typeRef.rawType();
-        requireNonNull(value);
-        if (rawType == MediaType.class) {
+        requireArgument(type.isInstance(value), "Expected %s to be an instance of %s", value, type);
+        if (type == MediaType.class) {
           mediaType = (MediaType) value;
-        } else if (rawType == HttpRequest.class) {
+        } else if (type == HttpRequest.class) {
           request = (HttpRequest) value;
-        } else if (rawType == ResponseInfo.class) {
+        } else if (type == ResponseInfo.class) {
           responseInfo = (ResponseInfo) value;
         } else {
-          unknownHints.put(typeRef, value);
+          unknownHints.put(type, value);
         }
         return this;
       }
 
-      /** Removes the hint mapped to by the given {@code TypeRef}. */
+      /** Removes the hint mapped to by the given type. */
       @CanIgnoreReturnValue
-      public <T> Builder remove(TypeRef<T> typeRef) {
-        var rawType = typeRef.rawType();
-        if (rawType == MediaType.class) {
+      public <T> Builder remove(Class<T> type) {
+        if (type == MediaType.class) {
           mediaType = null;
-        } else if (rawType == HttpRequest.class) {
+        } else if (type == HttpRequest.class) {
           request = null;
-        } else if (rawType == ResponseInfo.class) {
+        } else if (type == ResponseInfo.class) {
           responseInfo = null;
         } else {
-          unknownHints.remove(typeRef);
+          unknownHints.remove(type);
         }
         return this;
       }
@@ -480,13 +457,13 @@ public interface BodyAdapter {
         } else {
           var hints = new HashMap<>(unknownHints);
           if (mediaType != null) {
-            hints.put(TypeRef.of(MediaType.class), mediaType);
+            hints.put(MediaType.class, mediaType);
           }
           if (request != null) {
-            hints.put(TypeRef.of(HttpRequest.class), request);
+            hints.put(HttpRequest.class, request);
           }
           if (responseInfo != null) {
-            hints.put(TypeRef.of(ResponseInfo.class), responseInfo);
+            hints.put(ResponseInfo.class, responseInfo);
           }
           return new MapHints(hints);
         }
@@ -519,7 +496,7 @@ public interface BodyAdapter {
         private final Optional<MediaType> mediaType;
         private final Optional<HttpRequest> request;
         private final Optional<ResponseInfo> responseInfo;
-        private @MonotonicNonNull Map<TypeRef<?>, Object> lazyMap;
+        private @MonotonicNonNull Map<Class<?>, Object> lazyMap;
 
         KnownHints(
             @Nullable MediaType mediaType,
@@ -531,28 +508,26 @@ public interface BodyAdapter {
         }
 
         @Override
-        public Map<TypeRef<?>, Object> toMap() {
+        public Map<Class<?>, Object> toMap() {
           var map = lazyMap;
           if (map == null) {
             var lambdaMap = map = new HashMap<>();
-            mediaType.ifPresent(mediaType -> lambdaMap.put(TypeRef.of(MediaType.class), mediaType));
-            request.ifPresent(request -> lambdaMap.put(TypeRef.of(HttpRequest.class), request));
-            responseInfo.ifPresent(
-                responseInfo -> lambdaMap.put(TypeRef.of(ResponseInfo.class), responseInfo));
+            mediaType.ifPresent(mediaType -> lambdaMap.put(MediaType.class, mediaType));
+            request.ifPresent(request -> lambdaMap.put(HttpRequest.class, request));
+            responseInfo.ifPresent(responseInfo -> lambdaMap.put(ResponseInfo.class, responseInfo));
             lazyMap = map;
           }
           return map;
         }
 
         @Override
-        public <T> Optional<T> get(TypeRef<T> typeRef) {
-          var rawType = typeRef.rawType();
+        public <T> Optional<T> get(Class<T> type) {
           Optional<?> result;
-          if (rawType == MediaType.class) {
+          if (type == MediaType.class) {
             result = mediaType;
-          } else if (rawType == HttpRequest.class) {
+          } else if (type == HttpRequest.class) {
             result = request;
-          } else if (rawType == ResponseInfo.class) {
+          } else if (type == ResponseInfo.class) {
             result = responseInfo;
           } else {
             result = Optional.empty();
@@ -589,21 +564,21 @@ public interface BodyAdapter {
       }
 
       private static final class MapHints extends AbstractHints {
-        private final Map<TypeRef<?>, Object> hints;
+        private final Map<Class<?>, Object> hints;
 
-        MapHints(Map<TypeRef<?>, Object> hints) {
+        MapHints(Map<Class<?>, Object> hints) {
           this.hints = Map.copyOf(hints);
         }
 
         @Override
-        public Map<TypeRef<?>, Object> toMap() {
+        public Map<Class<?>, Object> toMap() {
           return hints; // Map is immutable, OK to return directly.
         }
 
         @SuppressWarnings("unchecked")
         @Override
-        public <T> Optional<T> get(TypeRef<T> typeRef) {
-          return Optional.ofNullable((T) hints.get(typeRef));
+        public <T> Optional<T> get(Class<T> type) {
+          return Optional.ofNullable((T) hints.get(type));
         }
       }
     }
