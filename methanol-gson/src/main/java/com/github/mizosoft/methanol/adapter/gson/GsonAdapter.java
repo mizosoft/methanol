@@ -65,7 +65,7 @@ abstract class GsonAdapter extends AbstractBodyAdapter {
       requireSupport(typeRef, hints);
       return attachMediaType(
           BodyPublishers.ofString(
-              gson.toJson(value, typeRef.type()), hints.effectiveCharsetOrUtf8()),
+              gson.toJson(value, typeRef.type()), hints.mediaTypeOrAny().charsetOrUtf8()),
           hints.mediaTypeOrAny());
     }
   }
@@ -79,7 +79,7 @@ abstract class GsonAdapter extends AbstractBodyAdapter {
     public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
       requireSupport(typeRef, hints);
       return BodySubscribers.mapping(
-          BodySubscribers.ofString(hints.effectiveCharsetOrUtf8()),
+          BodySubscribers.ofString(hints.mediaTypeOrAny().charsetOrUtf8()),
           json -> gson.fromJson(json, typeRef.type()));
     }
 
@@ -87,7 +87,7 @@ abstract class GsonAdapter extends AbstractBodyAdapter {
     public <T> BodySubscriber<Supplier<T>> toDeferredObject(TypeRef<T> typeRef, Hints hints) {
       requireSupport(typeRef, hints);
       return BodySubscribers.mapping(
-          MoreBodySubscribers.ofReader(hints.effectiveCharsetOrUtf8()),
+          MoreBodySubscribers.ofReader(hints.mediaTypeOrAny().charsetOrUtf8()),
           reader -> () -> gson.fromJson(reader, typeRef.type()));
     }
   }

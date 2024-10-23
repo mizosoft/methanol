@@ -23,7 +23,6 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
@@ -33,7 +32,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.ResponseInfo;
-import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,7 +112,7 @@ public interface BodyAdapter {
      * encoding any subtype of:
      *
      * <ul>
-     *   <li>{@code CharSequence} (encoded using {@link Hints#effectiveCharsetOrUtf8()})
+     *   <li>{@code CharSequence} (encoded using {@code MediaType}'s charset or UTF-8 if absent)
      *   <li>{@code InputStream}
      *   <li>{@code byte[]}
      *   <li>{@code ByteBuffer}
@@ -206,13 +204,13 @@ public interface BodyAdapter {
      * decoding:
      *
      * <ul>
-     *   <li>{@code String} (decoded using {@link Hints#effectiveCharsetOrUtf8()})
+     *   <li>{@code String} (decoded using {@code MediaType}'s charset or UTF-8 if absent)
      *   <li>{@code InputStream}
-     *   <li>{@code Reader} (decoded using {@link Hints#effectiveCharsetOrUtf8()})
+     *   <li>{@code Reader} (decoded using {@code MediaType}'s charset or UTF-8 if absent)
      *   <li>{@code byte[]}
      *   <li>{@code ByteBuffer}
-     *   <li>{@code Stream<String>} (response body lines; decoded using {@link
-     *       Hints#effectiveCharsetOrUtf8()})
+     *   <li>{@code Stream<String>} (response body lines; {@code MediaType}'s charset or UTF-8 if
+     *       absent)
      *   <li>{@code Publisher<List<ByteBuffer>>}
      *   <li>{@code Void} (discards the response body)
      * </ul>
@@ -245,23 +243,6 @@ public interface BodyAdapter {
     /** Returns either the {@code MediaType} hint or {@link MediaType#ANY} if absent. */
     default MediaType mediaTypeOrAny() {
       return mediaType().orElse(MediaType.ANY);
-    }
-
-    /**
-     * Returns the effective charset to be used for encoding or decoding text formats. The effective
-     * charset is either a hint with type {@link Charset}, or the {@link MediaType#charset()} of the
-     * {@link #mediaType() media type hint}.
-     */
-    default Optional<Charset> effectiveCharset() {
-      return get(Charset.class).or(() -> mediaTypeOrAny().charset());
-    }
-
-    /**
-     * Returns either the {@link #effectiveCharset() effective charset}, or {@link
-     * java.nio.charset.StandardCharsets#UTF_8 UTF-8} if the latter doesn't exist.
-     */
-    default Charset effectiveCharsetOrUtf8() {
-      return effectiveCharset().orElse(UTF_8);
     }
 
     /** Returns the {@code HttpRequest} hint. */
@@ -550,16 +531,6 @@ public interface BodyAdapter {
         @Override
         public Optional<ResponseInfo> responseInfo() {
           return responseInfo;
-        }
-
-        @Override
-        public Optional<Charset> effectiveCharset() {
-          return mediaTypeOrAny().charset();
-        }
-
-        @Override
-        public Charset effectiveCharsetOrUtf8() {
-          return mediaTypeOrAny().charsetOrUtf8();
         }
       }
 
