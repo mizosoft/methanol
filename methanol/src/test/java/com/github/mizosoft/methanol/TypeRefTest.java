@@ -176,12 +176,13 @@ class TypeRefTest {
         .isEqualTo(new TypeRef<Iterable<List<String>[]>>() {});
   }
 
+  interface I1<X, Y, Z> {}
+
   @Test
   void resolveSupertypeWithMemberClassSubtype() {
-    interface I<X, Y, Z> {}
     class C1<T> {
       class C2<R> {
-        class C3<K> implements I<T, R, K> {}
+        class C3<K> implements I1<T, R, K> {}
 
         <K> C3<K> newC3() {
           return new C3<>();
@@ -192,21 +193,22 @@ class TypeRefTest {
         return new C2<>();
       }
     }
-    assertThat(new TypeRef<C1<String>.C2<Integer>.C3<Double>>() {}.resolveSupertype(I.class))
-        .isEqualTo(new TypeRef<I<String, Integer, Double>>() {});
+    assertThat(new TypeRef<C1<String>.C2<Integer>.C3<Double>>() {}.resolveSupertype(I1.class))
+        .isEqualTo(new TypeRef<I1<String, Integer, Double>>() {});
     assertThat(
             new TypeRef<C1<String>.C2<Integer>.C3<Double>>() {}.resolveSupertype(
                 new C1<>().newC2().newC3().getClass()))
         .isEqualTo(new TypeRef<C1<String>.C2<Integer>.C3<Double>>() {});
   }
 
+  interface I2<X, Y, Z, U> {}
+
   @Test
   <U> void resolveSupertypeWithComplexSubstitution() {
-    interface I<X, Y, Z, U> {}
     class C1<T> {
       class C2<R> {
         class C3<K>
-            implements I<
+            implements I2<
                 List<T[]>,
                 Map<List<T[]>, List<? super List<R>>>[][],
                 List<? extends K[]>,
@@ -219,10 +221,10 @@ class TypeRefTest {
     }
     assertThat(
             new TypeRef<C1<String>.C2<Integer>.C3MapOfDoubleToE<Short>>() {}.resolveSupertype(
-                I.class))
+                I2.class))
         .isEqualTo(
             new TypeRef<
-                I<
+                I2<
                     List<String[]>,
                     Map<List<String[]>, List<? super List<Integer>>>[][],
                     List<? extends Map<Double, Short>[]>,
@@ -244,10 +246,12 @@ class TypeRefTest {
         .isEqualTo(TypeRef.of(StringList.TYPE));
   }
 
+  interface RecursiveList<A extends RecursiveList<A>> extends List<A> {}
+
+  interface RecursiveStringList extends RecursiveList<RecursiveStringList> {}
+
   @Test
   void resolveRecursiveTypeVariable() {
-    interface RecursiveList<A extends RecursiveList<A>> extends List<A> {}
-    interface RecursiveStringList extends RecursiveList<RecursiveStringList> {}
     assertThat(TypeRef.of(RecursiveStringList.class).resolveSupertype(List.class))
         .isEqualTo(new TypeRef<List<RecursiveStringList>>() {});
   }
