@@ -250,14 +250,15 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
     /** Adds a form field with the given name, filename and body. */
     @CanIgnoreReturnValue
-    public Builder formPart(String name, String filename, BodyPublisher body) {
-      return part(Part.create(getFormHeaders(name, filename), body));
+    public Builder formPart(String name, String filename, BodyPublisher bodyPublisher) {
+      return part(Part.create(getFormHeaders(name, filename), bodyPublisher));
     }
 
     /** Adds a form field with the given name, filename, body and media type. */
     @CanIgnoreReturnValue
-    public Builder formPart(String name, String filename, BodyPublisher body, MediaType mediaType) {
-      return formPart(name, filename, MoreBodyPublishers.ofMediaType(body, mediaType));
+    public Builder formPart(
+        String name, String filename, BodyPublisher bodyPublisher, MediaType mediaType) {
+      return formPart(name, filename, MoreBodyPublishers.ofMediaType(bodyPublisher, mediaType));
     }
 
     /**

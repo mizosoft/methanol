@@ -74,7 +74,7 @@ public interface ResponsePayload extends AutoCloseable {
   /** Asynchronously converts this payload into an object of (possibly generic) type {@code T}. */
   <T> CompletableFuture<T> toAsync(TypeRef<T> typeRef);
 
-  /** Asynchronously this payload using the given body handler. */
+  /** Asynchronously converts this payload using the given body handler. */
   <T> CompletableFuture<T> handleWithAsync(BodyHandler<T> bodyHandler);
 
   /**

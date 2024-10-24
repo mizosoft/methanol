@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -325,6 +325,13 @@ class MediaTypeTest {
   void charsetOrDefaultWithUnsupportedCharset() {
     assertThat(MediaType.parse("text/plain; charset=baby-yoda"))
         .returns(US_ASCII, from(mediaType -> mediaType.charsetOrDefault(US_ASCII)));
+  }
+
+  @Test
+  void charsetOrUtf8() {
+    assertThat(MediaType.parse("text/plain")).returns(UTF_8, from(MediaType::charsetOrUtf8));
+    assertThat(MediaType.parse("text/plain; charset=ascii"))
+        .returns(US_ASCII, from(MediaType::charsetOrUtf8));
   }
 
   @Test

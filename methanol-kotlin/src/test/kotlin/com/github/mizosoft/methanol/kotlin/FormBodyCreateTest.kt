@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,28 +20,23 @@
  * SOFTWARE.
  */
 
-/** Miscellaneous test utilities used internally. */
-module methanol.testing {
-  requires transitive methanol;
-  requires okhttp3.tls;
-  requires java.logging;
-  requires org.assertj.core;
-  requires org.junit.jupiter.api;
-  requires org.junit.jupiter.params;
-  requires mockwebserver3;
-  requires lettuce.core;
-  requires methanol.redis;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
+package com.github.mizosoft.methanol.kotlin
 
-  exports com.github.mizosoft.methanol.testing;
-  exports com.github.mizosoft.methanol.testing.decoder;
-  exports com.github.mizosoft.methanol.testing.file;
-  exports com.github.mizosoft.methanol.testing.verifiers;
-  exports com.github.mizosoft.methanol.testing.store;
+import assertk.assertThat
+import assertk.assertions.containsOnly
+import kotlin.test.Test
 
-  uses com.github.mizosoft.methanol.testing.MemoryFileSystemProvider;
-
-  provides java.nio.file.spi.FileTypeDetector with
-      com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
+class FormBodyCreateTest {
+  @Test
+  fun createFormBody() {
+    val formBody = FormBody {
+      "x" to "a"
+      "x" to "b"
+      "y" to listOf("a", "b")
+    }
+    assertThat(formBody.queries()).containsOnly(
+      "x" to listOf("a", "b"),
+      "y" to listOf("a", "b")
+    )
+  }
 }

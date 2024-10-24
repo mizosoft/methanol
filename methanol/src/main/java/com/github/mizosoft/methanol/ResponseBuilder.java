@@ -225,7 +225,6 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
 
   @SuppressWarnings("unchecked")
   public HttpResponse<T> build() {
-    requireState(statusCode != UNSET_STATUS_CODE, "statusCode is required");
     if (cacheStatus != null) {
       return buildCacheAwareResponse();
     }
@@ -233,7 +232,7 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
       return buildTrackedResponse();
     }
     return new HttpResponseImpl<>(
-        statusCode,
+        ensureSet(statusCode, "statusCode"),
         ensureSet(uri, "uri"),
         ensureSet(version, "version"),
         headersBuilder.build(),
@@ -245,12 +244,11 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
 
   @SuppressWarnings("unchecked")
   public TrackedResponse<T> buildTrackedResponse() {
-    requireState(statusCode != UNSET_STATUS_CODE, "statusCode is required");
     if (cacheStatus != null) {
       return buildCacheAwareResponse();
     }
     return new TrackedResponseImpl<>(
-        statusCode,
+        ensureSet(statusCode, "statusCode"),
         ensureSet(uri, "uri"),
         ensureSet(version, "version"),
         headersBuilder.build(),
@@ -264,9 +262,8 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
 
   @SuppressWarnings("unchecked")
   public CacheAwareResponse<T> buildCacheAwareResponse() {
-    requireState(statusCode != UNSET_STATUS_CODE, "statusCode is required");
     return new CacheAwareResponseImpl<>(
-        statusCode,
+        ensureSet(statusCode, "statusCode"),
         ensureSet(uri, "uri"),
         ensureSet(version, "version"),
         headersBuilder.build(),

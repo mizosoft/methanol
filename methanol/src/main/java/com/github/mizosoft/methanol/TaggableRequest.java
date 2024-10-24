@@ -62,6 +62,10 @@ public abstract class TaggableRequest extends HttpRequest {
 
   abstract Map<TypeRef<?>, Object> tags();
 
+  static Hints hintsOf(HttpRequest request) {
+    return request instanceof TaggableRequest ? ((TaggableRequest) request).hints() : Hints.empty();
+  }
+
   /**
    * Returns either the given request if it's a {@code TaggableRequest} or a new {@code
    * TaggableRequest} copy with no tags otherwise.
@@ -72,8 +76,26 @@ public abstract class TaggableRequest extends HttpRequest {
         : MutableRequest.copyOf(request).toImmutableRequest();
   }
 
-  static Hints hintsOf(HttpRequest request) {
-    return request instanceof TaggableRequest ? ((TaggableRequest) request).hints() : Hints.empty();
+  /**
+   * Returns the tag associated with the given type if the given request is a {@code
+   * TaggableRequest} and it has a tag with the given type, otherwise returns an empty {@code
+   * Optional}.
+   */
+  public static <T> Optional<T> tagOf(HttpRequest request, Class<T> type) {
+    return request instanceof TaggableRequest
+        ? ((TaggableRequest) request).tag(type)
+        : Optional.empty();
+  }
+
+  /**
+   * Returns the tag associated with the given type if the given request is a {@code
+   * TaggableRequest} and it has a tag with the given type, otherwise returns an empty {@code
+   * Optional}.
+   */
+  public static <T> Optional<T> tagOf(HttpRequest request, TypeRef<T> typeRef) {
+    return request instanceof TaggableRequest
+        ? ((TaggableRequest) request).tag(typeRef)
+        : Optional.empty();
   }
 
   /** An {@code HttpRequest.Builder} that allows attaching tags. */
