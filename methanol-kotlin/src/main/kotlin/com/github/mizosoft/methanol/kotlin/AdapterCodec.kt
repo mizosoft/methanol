@@ -26,7 +26,6 @@ import com.github.mizosoft.methanol.AdapterCodec
 import com.github.mizosoft.methanol.BodyAdapter.Decoder
 import com.github.mizosoft.methanol.BodyAdapter.Encoder
 import com.github.mizosoft.methanol.BodyAdapter.Hints
-import com.github.mizosoft.methanol.MediaType
 import com.github.mizosoft.methanol.TypeRef
 import com.github.mizosoft.methanol.adapter.ForwardingDecoder
 
@@ -66,20 +65,17 @@ private class AdapterCodecFactorySpec(
     // Extend the basic decoder to handle Kotlin's Unit.
     builder.decoder(object : ForwardingDecoder(Decoder.basic()) {
       override fun supportsType(type: TypeRef<*>) =
-        type.rawType() == Unit.javaClass || super.supportsType(type)
+        super.supportsType(type) || (type.isRawType && type.rawType() == Unit.javaClass)
 
-      override fun <T : Any> toObject(
-        objectType: TypeRef<T>,
-        mediaType: MediaType?
-      ): BodySubscriber<T> {
+      override fun <T : Any> toObject(typeRef: TypeRef<T>, hints: Hints): BodySubscriber<T> {
         return when {
-          objectType.rawType() == Unit.javaClass -> {
-            require(isCompatibleWith(mediaType)) { "Adapter not compatible with $mediaType" }
+          typeRef.isRawType && typeRef.rawType() == Unit.javaClass -> {
+            require(isCompatibleWith(hints.mediaTypeOrAny())) { "Adapter not compatible with ${hints.mediaTypeOrAny()}" }
             @Suppress("UNCHECKED_CAST")
             BodySubscribers.replacing(Unit) as BodySubscriber<T>
           }
 
-          else -> super.toObject(objectType, mediaType)
+          else -> super.toObject(typeRef, hints)
         }
       }
     })
