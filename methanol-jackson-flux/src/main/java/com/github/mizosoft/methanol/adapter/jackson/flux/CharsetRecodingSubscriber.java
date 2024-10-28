@@ -38,14 +38,14 @@ import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A middle-ware {@link BodySubscriber} recodes the response body into a different charset from a
- * source charset.
+ * A middle-ware {@link BodySubscriber} that recodes the response body into a different charset from
+ * a source charset.
  */
 final class CharsetRecodingSubscriber<T> extends ForwardingBodySubscriber<T> {
-  private static final int TEMP_BUFFER_SIZE = 4 * 1024;
+  private static final int TEMP_CHAR_BUFFER = 8 * 1024;
   private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
-  private final CharBuffer tempCharBuffer = CharBuffer.allocate(TEMP_BUFFER_SIZE);
+  private final CharBuffer tempCharBuffer = CharBuffer.allocate(TEMP_CHAR_BUFFER);
   private final CharsetDecoder decoder;
   private final CharsetEncoder encoder;
   private @Nullable ByteBuffer leftover;

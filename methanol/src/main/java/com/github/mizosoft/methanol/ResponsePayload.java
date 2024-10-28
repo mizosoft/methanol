@@ -23,19 +23,24 @@
 package com.github.mizosoft.methanol;
 
 import java.io.IOException;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandler;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * A response body that is yet to be handled into the desirable type (see {@link
- * Methanol#send(HttpRequest)}).
+ * A response body that is yet to be handled into the desirable type. This can be useful when the
+ * response body differs in structure (and hence in high-level type) according to whether it has
+ * succeeded or failed. An implementation of {@code ResponsePayload} can be acquired as the response
+ * body through {@link BodyAdapter.Decoder#basic() the basic decoder}. See example below.
  *
- * <p>To avoid resource leaks, it is recommended to use this within a try-with-resources construct
- * immediately after sending the response (regardless of whether the body is converted synchronously
- * or asynchronously):
+ * <p>To avoid resource leaks, use this type within a try-with-resources construct immediately after
+ * sending the response (regardless of whether the body is converted synchronously or
+ * asynchronously):
  *
  * <pre>{@code
+ * var client =
+ *     Methanol.newBuilder()
+ *         .adapterCodec(AdapterCodec.newBuilder().basic().build()) // Install basic adapters.
+ *         .build()
  * var response = client.send(MutableRequest.GET("https://example.com"));
  * try(var body = response.body()) {
  *   if (HttpStatus.isSuccessful(response) {

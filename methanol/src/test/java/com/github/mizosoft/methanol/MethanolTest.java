@@ -404,7 +404,7 @@ class MethanolTest {
 
     var decoder = new HintRecordingDecoder();
     var request =
-        MutableRequest.GET("https://example.com")
+        GET("https://example.com")
             .hint(Integer.class, 1)
             .hints(builder -> builder.put(String.class, "a"));
     var backend = new RecordingHttpClient().handleCalls(Call::complete);
@@ -470,19 +470,17 @@ class MethanolTest {
     var client = Methanol.newBuilder(backend).adapterCodec(clientCodec).build();
 
     client.send(
-        MutableRequest.POST("https://example.com", new Object(), MediaType.TEXT_PLAIN),
-        BodyHandlers.discarding());
+        POST("https://example.com", new Object(), MediaType.TEXT_PLAIN), BodyHandlers.discarding());
     verifyThat(backend.lastCall().request().bodyPublisher().orElseThrow()).succeedsWith("OfClient");
 
     client.send(
-        MutableRequest.POST("https://example.com", new Object(), MediaType.TEXT_PLAIN)
-            .adapterCodec(requestCodec),
+        POST("https://example.com", new Object(), MediaType.TEXT_PLAIN).adapterCodec(requestCodec),
         BodyHandlers.discarding());
     verifyThat(backend.lastCall().request().bodyPublisher().orElseThrow())
         .succeedsWith("OfRequest");
 
     client.send(
-        MutableRequest.POST("https://example.com", new Object(), MediaType.TEXT_PLAIN)
+        POST("https://example.com", new Object(), MediaType.TEXT_PLAIN)
             .adapterCodec(requestCodec)
             .toImmutableRequest(),
         BodyHandlers.discarding());
@@ -520,21 +518,14 @@ class MethanolTest {
         Methanol.newBuilder(new RecordingHttpClient().handleCalls(Call::complete))
             .adapterCodec(clientCodec)
             .build();
-    assertThat(client.send(MutableRequest.GET("https://example.com"), String.class).body())
-        .isEqualTo("OfClient");
+    assertThat(client.send(GET("https://example.com"), String.class).body()).isEqualTo("OfClient");
     assertThat(
-            client
-                .send(
-                    MutableRequest.GET("https://example.com").adapterCodec(requestCodec),
-                    String.class)
-                .body())
+            client.send(GET("https://example.com").adapterCodec(requestCodec), String.class).body())
         .isEqualTo("OfRequest");
     assertThat(
             client
                 .send(
-                    MutableRequest.GET("https://example.com")
-                        .adapterCodec(requestCodec)
-                        .toImmutableRequest(),
+                    GET("https://example.com").adapterCodec(requestCodec).toImmutableRequest(),
                     String.class)
                 .body())
         .isEqualTo("OfRequest");

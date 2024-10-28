@@ -26,7 +26,7 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.extensions.BasicAdapter;
+import com.github.mizosoft.methanol.internal.adapter.BasicAdapter;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -212,6 +212,10 @@ public interface BodyAdapter {
      *   <li>{@code Stream<String>} (response body lines; {@code MediaType}'s charset or UTF-8 if
      *       absent)
      *   <li>{@code Publisher<List<ByteBuffer>>}
+     *   <li>{@link ResponsePayload} (here the decoder expects to receive the {@link ResponseInfo}
+     *       hint, and an {@link AdapterCodec} hint that will be used to convert the payload into
+     *       the desired type; this is done automatically when sending the request through {@link
+     *       Methanol})
      *   <li>{@code Void} (discards the response body)
      * </ul>
      */

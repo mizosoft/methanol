@@ -20,20 +20,33 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.extensions;
+package com.github.mizosoft.methanol.internal.adapter;
 
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.AdapterCodec;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
+import com.github.mizosoft.methanol.ResponsePayload;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutorProvider;
+import com.github.mizosoft.methanol.internal.extensions.ByteBufferBodyPublisher;
+import com.github.mizosoft.methanol.internal.extensions.Handlers;
+import com.github.mizosoft.methanol.internal.extensions.PublisherBodySubscriber;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
@@ -41,7 +54,11 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Flow;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -162,37 +179,68 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
   private static final class BasicDecoder extends BasicAdapter implements BaseDecoder {
     static final BasicDecoder INSTANCE = new BasicDecoder();
 
-    private static final Map<TypeRef<?>, Function<? super Charset, ? extends BodySubscriber<?>>>
+    private static final Map<TypeRef<?>, Function<? super Hints, ? extends BodySubscriber<?>>>
         DECODERS;
 
     static {
       var decoders =
-          new LinkedHashMap<TypeRef<?>, Function<? super Charset, ? extends BodySubscriber<?>>>();
-      putDecoder(decoders, String.class, BodySubscribers::ofString);
+          new LinkedHashMap<TypeRef<?>, Function<? super Hints, ? extends BodySubscriber<?>>>();
+      putDecoder(
+          decoders,
+          String.class,
+          hints -> BodySubscribers.ofString(hints.mediaTypeOrAny().charsetOrUtf8()));
       putDecoder(decoders, InputStream.class, __ -> BodySubscribers.ofInputStream());
-      putDecoder(decoders, Reader.class, MoreBodySubscribers::ofReader);
+      putDecoder(
+          decoders,
+          Reader.class,
+          hints -> MoreBodySubscribers.ofReader(hints.mediaTypeOrAny().charsetOrUtf8()));
       putDecoder(decoders, byte[].class, __ -> BodySubscribers.ofByteArray());
       putDecoder(
           decoders,
           ByteBuffer.class,
           __ -> BodySubscribers.mapping(BodySubscribers.ofByteArray(), ByteBuffer::wrap));
-      putDecoder(decoders, new TypeRef<>() {}, BodySubscribers::ofLines);
+      putDecoder(
+          decoders,
+          ResponsePayload.class,
+          hints ->
+              BodySubscribers.mapping(
+                  new PublisherBodySubscriber(),
+                  publisher ->
+                      new ResponsePayloadImpl(
+                          publisher,
+                          hints
+                              .responseInfo()
+                              .orElseThrow(
+                                  () ->
+                                      new UnsupportedOperationException(
+                                          "Expected a ResponseInfo hint")),
+                          () ->
+                              hints
+                                  .get(PayloadHandlerExecutor.class)
+                                  .map(PayloadHandlerExecutor::get)
+                                  .orElseGet(FallbackExecutorProvider::get),
+                          hints.get(AdapterCodec.class).orElseGet(AdapterCodec::installed),
+                          hints)));
+      putDecoder(
+          decoders,
+          new TypeRef<>() {},
+          hints -> BodySubscribers.ofLines(hints.mediaTypeOrAny().charsetOrUtf8()));
       putDecoder(decoders, new TypeRef<>() {}, __ -> new PublisherBodySubscriber());
       putDecoder(decoders, Void.class, __ -> BodySubscribers.discarding());
       DECODERS = Collections.unmodifiableMap(decoders);
     }
 
     private static <T> void putDecoder(
-        Map<TypeRef<?>, Function<? super Charset, ? extends BodySubscriber<?>>> decoders,
+        Map<TypeRef<?>, Function<? super Hints, ? extends BodySubscriber<?>>> decoders,
         Class<T> type,
-        Function<? super Charset, ? extends BodySubscriber<T>> decoder) {
+        Function<? super Hints, ? extends BodySubscriber<T>> decoder) {
       decoders.put(TypeRef.of(type), decoder);
     }
 
     private static <T> void putDecoder(
-        Map<TypeRef<?>, Function<? super Charset, ? extends BodySubscriber<?>>> decoders,
+        Map<TypeRef<?>, Function<? super Hints, ? extends BodySubscriber<?>>> decoders,
         TypeRef<T> typeRef,
-        Function<? super Charset, ? extends BodySubscriber<T>> decoder) {
+        Function<? super Hints, ? extends BodySubscriber<T>> decoder) {
       decoders.put(typeRef, decoder);
     }
 
@@ -212,13 +260,77 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
         throw new UnsupportedOperationException(
             "Unsupported conversion to an object of type <" + typeRef + ">");
       }
-      return decoder.apply(hints.mediaTypeOrAny().charsetOrUtf8());
+      return decoder.apply(hints);
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> Function<? super Charset, ? extends BodySubscriber<T>> decoderOf(
+    private static <T> Function<? super Hints, ? extends BodySubscriber<T>> decoderOf(
         TypeRef<T> typeRef) {
-      return (Function<? super Charset, ? extends BodySubscriber<T>>) DECODERS.get(typeRef);
+      return (Function<? super Hints, ? extends BodySubscriber<T>>) DECODERS.get(typeRef);
+    }
+  }
+
+  private static final class ResponsePayloadImpl implements ResponsePayload {
+    private final Flow.Publisher<List<ByteBuffer>> publisher;
+    private final HttpResponse.ResponseInfo responseInfo;
+    private final Supplier<Executor> executorSupplier;
+    private final AdapterCodec adapterCodec;
+    private final Hints hints;
+    private boolean closed;
+
+    ResponsePayloadImpl(
+        Flow.Publisher<List<ByteBuffer>> publisher,
+        HttpResponse.ResponseInfo responseInfo,
+        Supplier<Executor> executorSupplier,
+        AdapterCodec adapterCodec,
+        Hints hints) {
+      this.publisher = publisher;
+      this.responseInfo = responseInfo;
+      this.executorSupplier = executorSupplier;
+      this.adapterCodec = adapterCodec;
+      this.hints = hints;
+    }
+
+    @Override
+    public <T> T to(TypeRef<T> typeRef) throws IOException, InterruptedException {
+      return Utils.get(
+          handleAsync(adapterCodec.handlerOf(typeRef, hints), FlowSupport.SYNC_EXECUTOR));
+    }
+
+    @Override
+    public <T> T handleWith(BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
+      return Utils.get(handleAsync(requireNonNull(bodyHandler), FlowSupport.SYNC_EXECUTOR));
+    }
+
+    @Override
+    public <T> CompletableFuture<T> toAsync(TypeRef<T> typeRef) {
+      return handleAsync(adapterCodec.handlerOf(typeRef, hints), executorSupplier.get());
+    }
+
+    @Override
+    public <T> CompletableFuture<T> handleWithAsync(BodyHandler<T> bodyHandler) {
+      return handleAsync(requireNonNull(bodyHandler), executorSupplier.get());
+    }
+
+    private <T> CompletableFuture<T> handleAsync(BodyHandler<T> bodyHandler, Executor executor) {
+      requireState(!closed, "Closed");
+      closed = true;
+      return Handlers.handleAsync(responseInfo, publisher, bodyHandler, executor);
+    }
+
+    @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
+    public void close() {
+      boolean wasOpen = !closed;
+      closed = true;
+      if (wasOpen) {
+        // Discard in background.
+        // TODO set a timeout so slow responses don't just hang in background.
+        // TODO we can optimize this for HTTP2 by cancelling the subscription directly, which sends
+        //      a RST_STREAM and keeps using the connection as per the current implementation.
+        Handlers.handleAsync(
+            responseInfo, publisher, BodyHandlers.discarding(), executorSupplier.get());
+      }
     }
   }
 }

@@ -523,42 +523,39 @@ class MethanolClientTest {
 
   @Test
   void deferredResponsePayload() throws Exception {
-    var client =
-        clientBuilder
-            .adapterCodec(AdapterCodec.newBuilder().decoder(new StringDecoder()).build())
-            .build();
+    var client = clientBuilder.adapterCodec(AdapterCodec.newBuilder().basic().build()).build();
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.send(GET(serverUri)).body()) {
+    try (var body = client.send(GET(serverUri), ResponsePayload.class).body()) {
       assertThat(body.to(String.class)).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.send(GET(serverUri)).body()) {
+    try (var body = client.send(GET(serverUri), ResponsePayload.class).body()) {
       assertThat(body.toAsync(String.class))
           .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.send(GET(serverUri)).body()) {
+    try (var body = client.send(GET(serverUri), ResponsePayload.class).body()) {
       assertThat(body.to(new TypeRef<String>() {})).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.send(GET(serverUri)).body()) {
+    try (var body = client.send(GET(serverUri), ResponsePayload.class).body()) {
       assertThat(body.toAsync(new TypeRef<String>() {}))
           .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.send(GET(serverUri)).body()) {
+    try (var body = client.send(GET(serverUri), ResponsePayload.class).body()) {
       assertThat(body.handleWith(BodyHandlers.ofString())).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    try (var body = client.send(GET(serverUri)).body()) {
+    try (var body = client.send(GET(serverUri), ResponsePayload.class).body()) {
       assertThat(body.handleWithAsync(BodyHandlers.ofString()))
           .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
@@ -567,20 +564,23 @@ class MethanolClientTest {
 
   @Test
   void deferredResponsePayloadWithSendAsync() throws Exception {
-    var client =
-        clientBuilder
-            .adapterCodec(AdapterCodec.newBuilder().decoder(new StringDecoder()).build())
-            .build();
+    var client = clientBuilder.adapterCodec(AdapterCodec.newBuilder().basic().build()).build();
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body =
-        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
+        client
+            .sendAsync(GET(serverUri), ResponsePayload.class)
+            .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .body()) {
       assertThat(body.to(String.class)).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body =
-        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
+        client
+            .sendAsync(GET(serverUri), ResponsePayload.class)
+            .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .body()) {
       assertThat(body.toAsync(String.class))
           .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
@@ -588,13 +588,19 @@ class MethanolClientTest {
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body =
-        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
+        client
+            .sendAsync(GET(serverUri), ResponsePayload.class)
+            .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .body()) {
       assertThat(body.to(new TypeRef<String>() {})).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body =
-        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
+        client
+            .sendAsync(GET(serverUri), ResponsePayload.class)
+            .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .body()) {
       assertThat(body.toAsync(new TypeRef<String>() {}))
           .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
@@ -602,13 +608,19 @@ class MethanolClientTest {
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body =
-        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
+        client
+            .sendAsync(GET(serverUri), ResponsePayload.class)
+            .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .body()) {
       assertThat(body.handleWith(BodyHandlers.ofString())).isEqualTo("Pikachu");
     }
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     try (var body =
-        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body()) {
+        client
+            .sendAsync(GET(serverUri), ResponsePayload.class)
+            .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .body()) {
       assertThat(body.handleWithAsync(BodyHandlers.ofString()))
           .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
           .isEqualTo("Pikachu");
@@ -621,6 +633,7 @@ class MethanolClientTest {
     var bodyCompletion = new CompletableFuture<>();
     var client =
         clientBuilder
+            .adapterCodec(AdapterCodec.newBuilder().basic().build())
             .backendInterceptor(
                 new Interceptor() {
                   @Override
@@ -654,7 +667,7 @@ class MethanolClientTest {
             .build();
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
-    var response = client.send(GET(serverUri));
+    var response = client.send(GET(serverUri), ResponsePayload.class);
     response.body().close();
     assertThat(bodyCompletion).succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS));
   }
@@ -665,6 +678,7 @@ class MethanolClientTest {
     var bodyCompletion = new CompletableFuture<>();
     var client =
         clientBuilder
+            .adapterCodec(AdapterCodec.newBuilder().basic().build())
             .backendInterceptor(
                 new Interceptor() {
                   @Override
@@ -698,7 +712,9 @@ class MethanolClientTest {
 
     server.enqueue(new MockResponse().setBody("Pikachu"));
     var response =
-        client.sendAsync(GET(serverUri)).get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        client
+            .sendAsync(GET(serverUri), ResponsePayload.class)
+            .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
     response.body().close();
     assertThat(bodyCompletion).succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS));
   }

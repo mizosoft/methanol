@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.internal.adapter.BasicAdapter;
 import com.github.mizosoft.methanol.testing.ByteBufferCollector;
 import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import java.io.BufferedReader;
