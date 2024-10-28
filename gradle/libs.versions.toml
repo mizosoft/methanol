@@ -32,7 +32,8 @@ mockito = "5.11.0"
 javafx-platform = "17.0.10"
 quarkus = "3.10.0"
 commons-math3 = "3.6.1"
-kotlin-coroutines = "1.7.3"
+kotlinx-coroutines = "1.9.0"
+kotlinx-serialization = "1.7.3"
 assertk = "0.28.1"
 kotlin-version = "2.0.20"
 versions-plugin = "0.51.0"
@@ -98,7 +99,10 @@ rest-assured = { module = "io.rest-assured:rest-assured" }
 quarkus-bom = { module = "io.quarkus.platform:quarkus-bom", version.ref = "quarkus" }
 commons-math3 = { module = "org.apache.commons:commons-math3", version.ref = "commons-math3" }
 checkerframework-plugin = { module = "org.checkerframework:checkerframework-gradle-plugin", version.ref = "checkerframework-plugin" }
-kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlin-coroutines" }
+kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "kotlinx-serialization" }
 assertk = { module = "com.willowtreeapps.assertk:assertk", version.ref = "assertk" }
 errorprone-plugin = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorprone-plugin" }
 nullaway-plugin = { module = "net.ltgt.gradle:gradle-nullaway-plugin", version.ref = "nullaway-plugin" }

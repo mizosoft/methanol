@@ -23,7 +23,14 @@
 package com.github.mizosoft.methanol.kotlin
 
 import com.github.mizosoft.methanol.testing.ByteBufferCollector
+import com.github.mizosoft.methanol.testing.verifiers.DecoderVerifier
+import kotlinx.serialization.Serializable
 import java.net.http.HttpRequest.BodyPublisher
 import java.nio.charset.StandardCharsets.UTF_8
 
 fun BodyPublisher.readString() = UTF_8.decode(ByteBufferCollector.collect(this)).toString()
+
+inline fun <reified T> DecoderVerifier.converting() = converting(TypeRef<T>())
+
+@Serializable
+data class Point(val x: Int, val y: Int)

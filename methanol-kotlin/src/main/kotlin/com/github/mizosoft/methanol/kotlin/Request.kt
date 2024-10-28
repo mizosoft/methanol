@@ -95,6 +95,11 @@ interface RequestBodySpec {
   fun formBody(block: FormBodySpec.() -> Unit)
 }
 
+@PublishedApi
+internal interface MutableRequestBodySpec {
+  val request: MutableRequest
+}
+
 /** A [spec][Spec] for configuring a [Request][com.github.mizosoft.methanol.kotlin.Request]. */
 @Spec
 interface RequestSpec : BaseRequestSpec, RequestMethodSpec
@@ -176,8 +181,8 @@ internal class RequestFactorySpec(request: MutableRequest = MutableRequest.creat
 
   override fun method(method: String, block: RequestBodySpec.() -> Unit) {
     var called: Boolean = false
-    object : RequestBodySpec {
-      private val request = this@RequestFactorySpec.request // Declare explicit receiver.
+    object : RequestBodySpec, MutableRequestBodySpec {
+      override val request = this@RequestFactorySpec.request // Declare explicit receiver.
 
       override fun body(bodyPublisher: BodyPublisher) {
         called = true
@@ -208,7 +213,7 @@ internal class RequestFactorySpec(request: MutableRequest = MutableRequest.creat
 }
 
 internal class RequestWithKnownMethodFactorySpec(private val method: String) :
-  BaseRequestFactorySpec(), RequestWithKnownMethodSpec {
+  BaseRequestFactorySpec(), RequestWithKnownMethodSpec, MutableRequestBodySpec {
   init {
     if (method.equals("GET", ignoreCase = true)) {
       request.GET()
@@ -341,6 +346,12 @@ inline fun <reified T : Any> Request.tagOf(): T? =
 
 /** Returns this request if it is a [TaggableRequest], or a [TaggableRequest] copy with no tags otherwise. */
 fun Request.toTaggableRequest(): TaggableRequest = TaggableRequest.from(this)
+
+/**  */
+inline fun <reified T> RequestBodySpec.body(payload: T, mediaType: MediaType) {
+  require(this is MutableRequestBodySpec) { "Unknown implementation of RequestBodySpec: ${this::class}" }
+  request.method(request.method(), payload, TypeRef<T>(), mediaType)
+}
 
 /**
  * Associated the given media type with this [BodyPublisher] through a [MimeBodyPublisher]. This

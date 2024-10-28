@@ -32,7 +32,6 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.internal.text.HeaderValueTokenizer;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
-import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -238,10 +237,6 @@ public final class MediaType {
    */
   public boolean isCompatibleWith(MediaType other) {
     return this.includes(other) || other.includes(this);
-  }
-
-  public MediaType withUtf8() {
-    return withCharset(StandardCharsets.UTF_8);
   }
 
   /**
