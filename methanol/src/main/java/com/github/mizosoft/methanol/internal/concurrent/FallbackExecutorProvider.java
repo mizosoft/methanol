@@ -24,22 +24,30 @@ package com.github.mizosoft.methanol.internal.concurrent;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Provides an executor that is used across the library when no executor is supplied by the user.
  */
-public class FallbackExecutor {
+public class FallbackExecutorProvider {
   private static final Lazy<Executor> lazyExecutor =
       Lazy.of(
-          () ->
-              Executors.newCachedThreadPool(
-                  r -> {
-                    var t = new Thread(r);
-                    t.setDaemon(true);
-                    return t;
-                  }));
+          () -> {
+            var threadNumber = new AtomicInteger();
+            return Executors.newCachedThreadPool(
+                r -> {
+                  var t = new Thread(r);
+                  t.setDaemon(true);
+                  t.setName(
+                      "methanol-"
+                          + FallbackExecutorProvider.class.getSimpleName()
+                          + "-thread-"
+                          + threadNumber.getAndIncrement());
+                  return t;
+                });
+          });
 
-  private FallbackExecutor() {}
+  private FallbackExecutorProvider() {}
 
   public static Executor get() {
     return lazyExecutor.get();

@@ -299,8 +299,8 @@ public final class CacheInterceptor implements Interceptor {
       case HTTP_NOT_IMPLEMENTED:
         return true;
       case HTTP_PARTIAL:
-        // Although partial responses are heuristically cacheable, they're not supported by this
-        // implementation.
+      // Although partial responses are heuristically cacheable, they're not supported by this
+      // implementation.
       default:
         return false;
     }
@@ -341,7 +341,8 @@ public final class CacheInterceptor implements Interceptor {
   private static boolean canReplaceStoredHeader(String name) {
     return !(RETAINED_HEADERS.contains(name)
         || RETAINED_HEADER_PREFIXES.stream()
-            .anyMatch(prefix -> Utils.startsWithIgnoreCase(name, prefix)));
+            .anyMatch(prefix -> Utils.startsWithIgnoreCase(name, prefix))
+        || name.equals(":status"));
   }
 
   /** Returns the URIs invalidated by the given exchange as specified by rfc7234 Section 4.4. */

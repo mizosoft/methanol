@@ -34,7 +34,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
-import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutor;
+import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutorProvider;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
@@ -350,7 +350,7 @@ public final class Methanol extends HttpClient {
                     new ResponsePayloadImpl(
                         responseInfo,
                         publisher,
-                        () -> executor().orElseGet(FallbackExecutor::get),
+                        () -> executor().orElseGet(FallbackExecutorProvider::get),
                         adapterCodecOrInstalled())));
   }
 
@@ -370,7 +370,7 @@ public final class Methanol extends HttpClient {
                     new ResponsePayloadImpl(
                         responseInfo,
                         publisher,
-                        () -> executor().orElseGet(FallbackExecutor::get),
+                        () -> executor().orElseGet(FallbackExecutorProvider::get),
                         adapterCodecOrInstalled())));
   }
 
