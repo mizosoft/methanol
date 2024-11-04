@@ -134,12 +134,12 @@ loadScripts(document, 'script');</script>
 <div class="block">Specifies one or more URIs for discovering the topology of the Redis Cluster instance.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#editorLockTtlSeconds(int)" class="member-name-link">editorLockTtlSeconds</a><wbr>(int&nbsp;editorLockTtlSeconds)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#editorLockInactiveTtlSeconds(int)" class="member-name-link">editorLockInactiveTtlSeconds</a><wbr>(int&nbsp;editorLockInactiveTtlSeconds)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Specifies the number of seconds an active entry editor (writer) remains valid.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#staleEntryTtlSeconds(int)" class="member-name-link">staleEntryTtlSeconds</a><wbr>(int&nbsp;staleEntryTtlSeconds)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#staleEntryInactiveTtlSeconds(int)" class="member-name-link">staleEntryInactiveTtlSeconds</a><wbr>(int&nbsp;staleEntryInactiveTtlSeconds)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Specifies the number of seconds a stale entry remains valid for already active readers after
  being deleted or replaced with a new entry by an editor (writer).</div>
@@ -227,10 +227,10 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="editorLockTtlSeconds(int)">
-<h3>editorLockTtlSeconds</h3>
+<section class="detail" id="editorLockInactiveTtlSeconds(int)">
+<h3>editorLockInactiveTtlSeconds</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">editorLockTtlSeconds</span><wbr><span class="parameters">(int&nbsp;editorLockTtlSeconds)</span></div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">editorLockInactiveTtlSeconds</span><wbr><span class="parameters">(int&nbsp;editorLockInactiveTtlSeconds)</span></div>
 <div class="block">Specifies the number of seconds an active entry editor (writer) remains valid. If the given
  number of seconds passes with no signals from the editor (either because of a crash, or it
  was suspended for some reason), any data written by the editor is discarded and the older
@@ -242,10 +242,10 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="staleEntryTtlSeconds(int)">
-<h3>staleEntryTtlSeconds</h3>
+<section class="detail" id="staleEntryInactiveTtlSeconds(int)">
+<h3>staleEntryInactiveTtlSeconds</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
-</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">staleEntryTtlSeconds</span><wbr><span class="parameters">(int&nbsp;staleEntryTtlSeconds)</span></div>
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></span>&nbsp;<span class="element-name">staleEntryInactiveTtlSeconds</span><wbr><span class="parameters">(int&nbsp;staleEntryInactiveTtlSeconds)</span></div>
 <div class="block">Specifies the number of seconds a stale entry remains valid for already active readers after
  being deleted or replaced with a new entry by an editor (writer). This gives said readers a
  chance to finish reading the older entry.</div>

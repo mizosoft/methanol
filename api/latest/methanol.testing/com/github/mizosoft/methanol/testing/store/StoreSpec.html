@@ -116,8 +116,10 @@ loadScripts(document, 'script');</script>
  evaluated) whenever a task is submitted.</div>
 </div>
 <div class="col-first odd-row-color"><code>int</code></div>
-<div class="col-second odd-row-color"><code><a href="#editorLockTtlSeconds()" class="member-name-link">editorLockTtlSeconds</a></code></div>
-<div class="col-last odd-row-color">&nbsp;</div>
+<div class="col-second odd-row-color"><code><a href="#editorLockInactiveTtlSeconds()" class="member-name-link">editorLockInactiveTtlSeconds</a></code></div>
+<div class="col-last odd-row-color">
+<div class="block">The number of seconds an inactive editor lock gets to live.</div>
+</div>
 <div class="col-first even-row-color"><code><a href="StoreConfig.Execution.html" title="enum class in com.github.mizosoft.methanol.testing.store">StoreConfig.Execution</a></code></div>
 <div class="col-second even-row-color"><code><a href="#execution()" class="member-name-link">execution</a></code></div>
 <div class="col-last even-row-color">&nbsp;</div>
@@ -138,8 +140,10 @@ loadScripts(document, 'script');</script>
 <div class="block">Specifies <code>StoreTypes</code> to skip in testing.</div>
 </div>
 <div class="col-first odd-row-color"><code>int</code></div>
-<div class="col-second odd-row-color"><code><a href="#staleEntryLockTtlSeconds()" class="member-name-link">staleEntryLockTtlSeconds</a></code></div>
-<div class="col-last odd-row-color">&nbsp;</div>
+<div class="col-second odd-row-color"><code><a href="#staleEntryInactiveTtlSeconds()" class="member-name-link">staleEntryInactiveTtlSeconds</a></code></div>
+<div class="col-last odd-row-color">
+<div class="block">The number of seconds an inactive stale entry gets to live.</div>
+</div>
 <div class="col-first even-row-color"><code><a href="StoreConfig.StoreType.html" title="enum class in com.github.mizosoft.methanol.testing.store">StoreConfig.StoreType</a>[]</code></div>
 <div class="col-second even-row-color"><code><a href="#tested()" class="member-name-link">tested</a></code></div>
 <div class="col-last even-row-color">&nbsp;</div>
@@ -251,9 +255,10 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="editorLockTtlSeconds()">
-<h3>editorLockTtlSeconds</h3>
-<div class="member-signature"><span class="return-type">int</span>&nbsp;<span class="element-name">editorLockTtlSeconds</span></div>
+<section class="detail" id="editorLockInactiveTtlSeconds()">
+<h3>editorLockInactiveTtlSeconds</h3>
+<div class="member-signature"><span class="return-type">int</span>&nbsp;<span class="element-name">editorLockInactiveTtlSeconds</span></div>
+<div class="block">The number of seconds an inactive editor lock gets to live.</div>
 <dl class="notes">
 <dt>Default:</dt>
 <dd><code>-1</code></dd>
@@ -261,9 +266,10 @@ loadScripts(document, 'script');</script>
 </section>
 </li>
 <li>
-<section class="detail" id="staleEntryLockTtlSeconds()">
-<h3>staleEntryLockTtlSeconds</h3>
-<div class="member-signature"><span class="return-type">int</span>&nbsp;<span class="element-name">staleEntryLockTtlSeconds</span></div>
+<section class="detail" id="staleEntryInactiveTtlSeconds()">
+<h3>staleEntryInactiveTtlSeconds</h3>
+<div class="member-signature"><span class="return-type">int</span>&nbsp;<span class="element-name">staleEntryInactiveTtlSeconds</span></div>
+<div class="block">The number of seconds an inactive stale entry gets to live.</div>
 <dl class="notes">
 <dt>Default:</dt>
 <dd><code>-1</code></dd>

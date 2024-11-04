@@ -117,8 +117,8 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-first">Constructor</div>
 <div class="table-header col-last">Description</div>
 <div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(int,int,int)" class="member-name-link">RedisClusterStoreConfig</a><wbr>(int&nbsp;appVersion,
- int&nbsp;editorLockTimeToLiveSeconds,
- int&nbsp;staleEntryTimeToLiveSeconds)</code></div>
+ int&nbsp;editorLockInactiveTtlSeconds,
+ int&nbsp;staleEntryInactiveTtlSeconds)</code></div>
 <div class="col-last even-row-color">&nbsp;</div>
 </div>
 </section>
@@ -134,11 +134,11 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/OptionalInt.html" title="class or interface in java.util" class="external-link">OptionalInt</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#editorLockTtlSeconds()" class="member-name-link">editorLockTtlSeconds</a>()</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>int</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#editorLockInactiveTtlSeconds()" class="member-name-link">editorLockInactiveTtlSeconds</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/OptionalInt.html" title="class or interface in java.util" class="external-link">OptionalInt</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#staleEntryTtlSeconds()" class="member-name-link">staleEntryTtlSeconds</a>()</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>int</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#staleEntryInactiveTtlSeconds()" class="member-name-link">staleEntryInactiveTtlSeconds</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 </div>
 </div>
@@ -164,8 +164,8 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="&lt;init&gt;(int,int,int)">
 <h3>RedisClusterStoreConfig</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="element-name">RedisClusterStoreConfig</span><wbr><span class="parameters">(int&nbsp;appVersion,
- int&nbsp;editorLockTimeToLiveSeconds,
- int&nbsp;staleEntryTimeToLiveSeconds)</span></div>
+ int&nbsp;editorLockInactiveTtlSeconds,
+ int&nbsp;staleEntryInactiveTtlSeconds)</span></div>
 </section>
 </li>
 </ul>
@@ -177,15 +177,15 @@ loadScripts(document, 'script');</script>
 <h2>Method Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="editorLockTtlSeconds()">
-<h3>editorLockTtlSeconds</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/OptionalInt.html" title="class or interface in java.util" class="external-link">OptionalInt</a></span>&nbsp;<span class="element-name">editorLockTtlSeconds</span>()</div>
+<section class="detail" id="editorLockInactiveTtlSeconds()">
+<h3>editorLockInactiveTtlSeconds</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">int</span>&nbsp;<span class="element-name">editorLockInactiveTtlSeconds</span>()</div>
 </section>
 </li>
 <li>
-<section class="detail" id="staleEntryTtlSeconds()">
-<h3>staleEntryTtlSeconds</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/OptionalInt.html" title="class or interface in java.util" class="external-link">OptionalInt</a></span>&nbsp;<span class="element-name">staleEntryTtlSeconds</span>()</div>
+<section class="detail" id="staleEntryInactiveTtlSeconds()">
+<h3>staleEntryInactiveTtlSeconds</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">int</span>&nbsp;<span class="element-name">staleEntryInactiveTtlSeconds</span>()</div>
 </section>
 </li>
 </ul>
