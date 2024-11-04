@@ -28,6 +28,7 @@ import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.store.redis.RedisStorageExtension;
 import com.github.mizosoft.methanol.testing.Logging;
+import io.lettuce.core.api.StatefulConnection;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
@@ -36,7 +37,6 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreContext {
   private static final int MAX_TAIL_LENGTH = 15;
@@ -50,50 +50,37 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
     Logging.disable("io.lettuce.core.RedisChannelHandler");
   }
 
-  private final RedisSessionSingletonPool<R> sessionPool;
-  private @Nullable R lazySession;
+  final RedisSessionSingletonPool<R> sessionPool;
+  final R session;
 
-  AbstractRedisStoreContext(
-      AbstractRedisStoreConfig config, RedisSessionSingletonPool<R> sessionPool) {
+  AbstractRedisStoreContext(RedisStoreConfig config, RedisSessionSingletonPool<R> sessionPool)
+      throws IOException {
     super(config);
     this.sessionPool = requireNonNull(sessionPool);
+    this.session = sessionPool.acquire();
   }
 
-  abstract void configure(RedisStorageExtension.Builder builder) throws IOException;
-
-  R getSession() throws IOException {
-    var session = lazySession;
-    if (session == null) {
-      session = sessionPool.acquire();
-      lazySession = session;
-    }
-    return session;
-  }
+  abstract void configure(RedisStorageExtension.Builder builder);
 
   @Override
-  Store createStore() throws IOException {
+  Store createStore() {
     var builder = RedisStorageExtension.newBuilder();
     configure(builder);
-    config().editorLockTtlSeconds().ifPresent(builder::editorLockTtlSeconds);
-    config().staleEntryTtlSeconds().ifPresent(builder::staleEntryTtlSeconds);
+    builder.editorLockInactiveTtlSeconds(config().editorLockInactiveTtlSeconds());
+    builder.staleEntryInactiveTtlSeconds(config().staleEntryInactiveTtlSeconds());
     return builder.build().createStore(Runnable::run, config().appVersion());
   }
 
   @Override
-  public AbstractRedisStoreConfig config() {
-    return (AbstractRedisStoreConfig) super.config();
+  public RedisStoreConfig config() {
+    return (RedisStoreConfig) super.config();
   }
 
   @Override
   void close(List<Exception> exceptions) {
     super.close(exceptions);
-
     try {
-      var session = lazySession;
-      if (session != null) {
-        lazySession = null;
-        sessionPool.release(session);
-      }
+      sessionPool.release(session);
     } catch (IOException e) {
       exceptions.add(e);
     }
@@ -101,13 +88,12 @@ abstract class AbstractRedisStoreContext<R extends RedisSession> extends StoreCo
 
   @Override
   void logDebugInfo() {
-    var session = lazySession;
-    if (session != null) {
-      session.logFiles().stream()
-          .map(Unchecked.func(AbstractRedisStoreContext::tail))
-          .forEach(log -> logger.log(Level.WARNING, log));
-    }
+    session.logFiles().stream()
+        .map(Unchecked.func(AbstractRedisStoreContext::tail))
+        .forEach(log -> logger.log(Level.WARNING, log));
   }
+
+  public abstract StatefulConnection<String, String> connect() throws IOException;
 
   /**
    * Returns a string containing at most the last {@value MAX_TAIL_LENGTH} lines of the given file.

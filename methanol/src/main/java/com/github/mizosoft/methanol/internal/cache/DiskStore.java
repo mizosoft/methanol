@@ -49,6 +49,7 @@ import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.UncheckedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
@@ -122,7 +123,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * and clear its directory if persistence isn't needed (e.g. using temp directories for storage). A
  * closed store usually throws an {@code IllegalStateException} when used.
  */
-public final class DiskStore implements Store {
+public final class DiskStore implements Store, TestableStore {
   /*
    * The store's layout on disk is as follows:
    *
@@ -524,6 +525,17 @@ public final class DiskStore implements Store {
 
   long lruTime() {
     return lruClock.get();
+  }
+
+  @Override
+  public List<String> entriesOnUnderlyingStorageForTesting(String key) {
+    var hash = hasher.hash(key);
+    var path = directory.resolve(hash.toHexString() + ENTRY_FILE_SUFFIX);
+    try (var viewer = new Entry(hash).view(key)) {
+      return viewer != null ? List.of(path.toString()) : List.of();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   private static Executor toDebuggingIndexExecutorDelegate(Executor delegate) {
@@ -1325,7 +1337,7 @@ public final class DiskStore implements Store {
   /** An immutable 80-bit hash code. */
   public static final class Hash {
     static final int BYTES = 10;
-    private static final int HEX_STRING_LENGTH = 2 * BYTES;
+    static final int HEX_STRING_LENGTH = 2 * BYTES;
 
     // Upper 64 bits + lower 16 bits in big-endian order.
     private final long upper64Bits;
@@ -1865,12 +1877,12 @@ public final class DiskStore implements Store {
     }
 
     Path tempEntryFile() {
-      var tempEntryFile = lazyTempEntryFile;
-      if (tempEntryFile == null) {
-        tempEntryFile = directory.resolve(hash.toHexString() + TEMP_ENTRY_FILE_SUFFIX);
-        lazyTempEntryFile = tempEntryFile;
+      var entryFile = lazyTempEntryFile;
+      if (entryFile == null) {
+        entryFile = directory.resolve(hash.toHexString() + TEMP_ENTRY_FILE_SUFFIX);
+        lazyTempEntryFile = entryFile;
       }
-      return tempEntryFile;
+      return entryFile;
     }
   }
 

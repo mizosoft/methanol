@@ -37,6 +37,7 @@ import java.util.List;
 public abstract class StoreContext implements AutoCloseable {
   private final StoreConfig config;
   private final List<Store> createdStores = new ArrayList<>();
+  private boolean closed;
 
   StoreContext(StoreConfig config) {
     this.config = requireNonNull(config);
@@ -59,6 +60,11 @@ public abstract class StoreContext implements AutoCloseable {
 
   @Override
   public void close() throws Exception {
+    if (closed) {
+      return;
+    }
+
+    closed = true;
     var exceptions = new ArrayList<Exception>();
     close(exceptions);
     if (exceptions.size() == 1) {
@@ -85,8 +91,10 @@ public abstract class StoreContext implements AutoCloseable {
       return new DiskStoreContext((DiskStoreConfig) config);
     } else if (config instanceof RedisStandaloneStoreConfig) {
       return new RedisStandaloneStoreContext((RedisStandaloneStoreConfig) config);
-    } else {
+    } else if (config instanceof RedisClusterStoreConfig) {
       return new RedisClusterStoreContext((RedisClusterStoreConfig) config);
+    } else {
+      throw new IllegalArgumentException("Unexpected config: " + config);
     }
   }
 }

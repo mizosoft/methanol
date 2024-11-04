@@ -20,31 +20,15 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.testing.store;
+package com.github.mizosoft.methanol.internal.cache;
 
-import io.lettuce.core.api.StatefulConnection;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 
-/** A session with a Redis Standalone or Cluster setup. */
-public interface RedisSession extends AutoCloseable {
-
-  /** Returns the log files attached to this session. */
-  List<Path> logFiles();
-
+public interface TestableStore {
   /**
-   * Resets this session to its initial state. Returns {@code true} if the session is operable after
-   * being reset.
+   * Returns string representations for the resources an entry with the given key occupies on the
+   * underlying store. Implementation must skip intermediary data structures and directly interact
+   * with the underlying store (e.g. filesystem).
    */
-  boolean reset();
-
-  /** Returns {@code true} if this session is operable. */
-  boolean isHealthy();
-
-  /** Returns a connection to the redis server represented by this session. */
-  StatefulConnection<String, String> connect();
-
-  @Override
-  void close() throws IOException;
+  List<String> entriesOnUnderlyingStorageForTesting(String key);
 }

@@ -59,14 +59,12 @@ class ScheduledExecutorServiceDelayer implements Delayer {
             },
             NANOSECONDS.convert(delay),
             NANOSECONDS);
-
     taskCompletionFuture.whenComplete(
         (__, e) -> {
           if (e instanceof CancellationException) {
             taskSubmissionFuture.cancel(false);
           }
         });
-
     return taskCompletionFuture;
   }
 }
