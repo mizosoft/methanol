@@ -441,6 +441,7 @@ abstract class AbstractRedisStore<
 
     static ScanResult from(List<?> cursorAndEntries) {
       var cursor = UTF_8.decode((ByteBuffer) cursorAndEntries.get(0)).toString();
+
       @SuppressWarnings("unchecked")
       var entries = (List<List<ByteBuffer>>) cursorAndEntries.get(1);
       return new ScanResult(
@@ -680,6 +681,7 @@ abstract class AbstractRedisStore<
     }
 
     @Override
+    @SuppressWarnings("FutureReturnValueIgnored")
     public void close() {
       if (closed.compareAndSet(false, true)) {
         // We must run the command asynchronously as blocking risks deadlocks if close() is called
@@ -717,6 +719,7 @@ abstract class AbstractRedisStore<
 
       RedisEntryWriter() {}
 
+      @Override
       public CompletableFuture<Long> write(List<ByteBuffer> srcs, Executor ignored) {
         requireNonNull(srcs);
         requireState(!closed.get(), "Closed");

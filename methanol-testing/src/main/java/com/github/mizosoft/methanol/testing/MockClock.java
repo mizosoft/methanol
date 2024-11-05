@@ -22,21 +22,33 @@
 
 package com.github.mizosoft.methanol.testing;
 
-
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A {@code Clock} that can be advanced manually or automatically with a specified duration. */
 public final class MockClock extends Clock {
+  private static final VarHandle NOW;
+
+  static {
+    try {
+      NOW = MethodHandles.lookup().findVarHandle(MockClock.class, "now", InstantHolder.class);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
   private final ZoneId zoneId;
   private final Instant inception;
-  private final AtomicReference<Instant[]> now;
+
+  @SuppressWarnings("FieldMayBeFinal")
+  private InstantHolder now;
 
   private volatile @Nullable Duration autoAdvance;
 
@@ -55,7 +67,7 @@ public final class MockClock extends Clock {
   public MockClock(ZoneId zoneId, Instant inception) {
     this.zoneId = zoneId;
     this.inception = inception;
-    this.now = new AtomicReference<>(new Instant[] {inception});
+    this.now = new InstantHolder(inception);
   }
 
   @Override
@@ -79,9 +91,8 @@ public final class MockClock extends Clock {
   }
 
   /** Returns the clock's time without advancing it. */
-  @SuppressWarnings("NullAway")
   public Instant peekInstant() {
-    return now.get()[0];
+    return now.instant;
   }
 
   public Instant inception() {
@@ -92,16 +103,15 @@ public final class MockClock extends Clock {
     getAndAdvance(ticks);
   }
 
-  @SuppressWarnings("NullAway")
   private Instant getAndAdvance(Duration ticks) {
     while (true) {
-      var instant = now.get();
-      if (now.compareAndSet(instant, new Instant[] {instant[0].plus(ticks)})) {
+      var past = now;
+      if (NOW.compareAndSet(this, past, new InstantHolder(past.instant.plus(ticks)))) {
         var listener = tickListener;
         if (listener != null) {
-          listener.accept(instant[0], ticks);
+          listener.accept(past.instant, ticks);
         }
-        return instant[0];
+        return past.instant;
       }
     }
   }
@@ -112,5 +122,14 @@ public final class MockClock extends Clock {
 
   public void autoAdvance(@Nullable Duration ticks) {
     this.autoAdvance = ticks;
+  }
+
+  /** Adds an identity to the value-based {@code Instant}. */
+  private static final class InstantHolder {
+    final Instant instant;
+
+    InstantHolder(Instant instant) {
+      this.instant = instant;
+    }
   }
 }

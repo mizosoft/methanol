@@ -301,6 +301,7 @@ public final class MutableRequest extends TaggableRequest
   }
 
   /** Removes all headers added so far. */
+  @Override
   @CanIgnoreReturnValue
   public MutableRequest removeHeaders() {
     headersBuilder.clear();

@@ -87,7 +87,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -979,8 +978,22 @@ public final class DiskStore implements Store {
   }
 
   private static final class DebugIndexOperator extends IndexOperator {
-    private final AtomicReference<@Nullable String> runningOperation = new AtomicReference<>();
+    private static final VarHandle RUNNING_OPERATION;
+
+    static {
+      try {
+        RUNNING_OPERATION =
+            MethodHandles.lookup()
+                .findVarHandle(DebugIndexOperator.class, "runningOperation", String.class);
+      } catch (NoSuchFieldException | IllegalAccessException e) {
+        throw new ExceptionInInitializerError(e);
+      }
+    }
+
     private final AtomicInteger writeCount = new AtomicInteger(0);
+
+    @SuppressWarnings({"FieldCanBeLocal", "UnusedVariable"}) // VarHandle indirection.
+    private @Nullable String runningOperation;
 
     DebugIndexOperator(Path directory, int appVersion) {
       super(directory, appVersion);
@@ -1014,7 +1027,7 @@ public final class DiskStore implements Store {
             () -> "IndexOperator::" + operation + " isn't called by the index executor");
       }
 
-      var currentOperation = runningOperation.compareAndExchange(null, operation);
+      var currentOperation = RUNNING_OPERATION.compareAndExchange(this, null, operation);
       if (currentOperation != null) {
         logger.log(
             Level.ERROR,
@@ -1028,7 +1041,7 @@ public final class DiskStore implements Store {
     }
 
     private void exit() {
-      runningOperation.set(null);
+      runningOperation = null;
     }
 
     int writeCount() {
@@ -1041,6 +1054,18 @@ public final class DiskStore implements Store {
    * time period.
    */
   private static final class IndexWriteScheduler {
+    private static final VarHandle SCHEDULED_WRITE_TASK;
+
+    static {
+      try {
+        SCHEDULED_WRITE_TASK =
+            MethodHandles.lookup()
+                .findVarHandle(IndexWriteScheduler.class, "scheduledWriteTask", WriteTask.class);
+      } catch (NoSuchFieldException | IllegalAccessException e) {
+        throw new ExceptionInInitializerError(e);
+      }
+    }
+
     /** Terminal marker that is set when no more writes are to be scheduled. */
     private static final WriteTask TOMBSTONE =
         new WriteTask() {
@@ -1059,7 +1084,7 @@ public final class DiskStore implements Store {
     private final Duration period;
     private final Delayer delayer;
     private final Clock clock;
-    private final AtomicReference<WriteTask> scheduledWriteTask = new AtomicReference<>();
+    private @MonotonicNonNull WriteTask scheduledWriteTask;
 
     /**
      * A barrier for shutdowns to await the currently running task. Scheduled WriteTasks have the
@@ -1122,7 +1147,7 @@ public final class DiskStore implements Store {
 
       var now = clock.instant();
       while (true) {
-        var currentTask = scheduledWriteTask.get();
+        var currentTask = scheduledWriteTask;
         var nextFireTime = currentTask != null ? currentTask.fireTime() : null;
         Duration delay;
         if (nextFireTime == null) {
@@ -1135,7 +1160,7 @@ public final class DiskStore implements Store {
         }
 
         var newTask = new RunnableWriteTask(now.plus(delay));
-        if (scheduledWriteTask.compareAndSet(currentTask, newTask)) {
+        if (SCHEDULED_WRITE_TASK.compareAndSet(this, currentTask, newTask)) {
           delayer.delay(newTask::runUnchecked, delay, indexExecutor);
           return;
         }
@@ -1150,11 +1175,11 @@ public final class DiskStore implements Store {
     private CompletableFuture<Void> forceScheduleAsync() {
       var now = clock.instant();
       while (true) {
-        var currentTask = scheduledWriteTask.get();
+        var currentTask = scheduledWriteTask;
         requireState(currentTask != TOMBSTONE, "Shutdown");
 
         var newTask = new RunnableWriteTask(now);
-        if (scheduledWriteTask.compareAndSet(currentTask, newTask)) {
+        if (SCHEDULED_WRITE_TASK.compareAndSet(this, currentTask, newTask)) {
           if (currentTask != null) {
             currentTask.cancel();
           }
@@ -1164,7 +1189,7 @@ public final class DiskStore implements Store {
     }
 
     void shutdown() throws InterruptedIOException {
-      scheduledWriteTask.set(TOMBSTONE);
+      scheduledWriteTask = TOMBSTONE;
       try {
         runningTaskAwaiter.awaitAdvanceInterruptibly(runningTaskAwaiter.arriveAndDeregister());
         assert runningTaskAwaiter.isTerminated();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +25,9 @@ package com.github.mizosoft.methanol.internal.decoder;
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import java.io.EOFException;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.Inflater;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -43,6 +44,18 @@ final class DeflateDecoder implements AsyncDecoder {
   /** A tombstone for {@link #inflaterReference} indicating the decoder has been closed. */
   private static final Object CLOSED = new Object();
 
+  private static final VarHandle INFLATER_REFERENCE;
+
+  static {
+    try {
+      INFLATER_REFERENCE =
+          MethodHandles.lookup()
+              .findVarHandle(DeflateDecoder.class, "inflaterReference", Object.class);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
   /**
    * Ideally, we'd have a final {@code Inflater} field created with nowrap set to false, as the
    * deflate content encoding is defined to be in zlib format (zlib-wrapped). However, some servers
@@ -50,8 +63,8 @@ final class DeflateDecoder implements AsyncDecoder {
    * peeked first to know if the inflater is to be created with nowrap set or not (see
    * https://github.com/mizosoft/methanol/issues/25).
    */
-  private final AtomicReference<@MonotonicNonNull Object> inflaterReference =
-      new AtomicReference<>();
+  @SuppressWarnings("unused") // VarHandle indirection.
+  private @MonotonicNonNull Object inflaterReference;
 
   DeflateDecoder() {}
 
@@ -62,7 +75,7 @@ final class DeflateDecoder implements AsyncDecoder {
 
   @Override
   public void decode(ByteSource source, ByteSink sink) throws IOException {
-    var inflaterPlaceholder = inflaterReference.get();
+    var inflaterPlaceholder = inflaterReference;
     if (inflaterPlaceholder == CLOSED) {
       return;
     }
@@ -78,7 +91,7 @@ final class DeflateDecoder implements AsyncDecoder {
       // Tell the Inflater to not expect zlib wrapping if such wrapping couldn't be detected.
       boolean nowrap = !isProbablyZLibHeader(header.getShort());
       inflater = new Inflater(nowrap);
-      if (!inflaterReference.compareAndSet(null, inflater)) {
+      if (!INFLATER_REFERENCE.compareAndSet(this, null, inflater)) {
         inflater.end(); // The decoder was closed concurrently.
         return;
       }
@@ -104,7 +117,7 @@ final class DeflateDecoder implements AsyncDecoder {
 
   @Override
   public void close() {
-    var inflater = inflaterReference.getAndSet(CLOSED);
+    var inflater = INFLATER_REFERENCE.getAndSet(this, CLOSED);
     if (inflater instanceof Inflater) { // Not null or CLOSED
       ((Inflater) inflater).end();
     }

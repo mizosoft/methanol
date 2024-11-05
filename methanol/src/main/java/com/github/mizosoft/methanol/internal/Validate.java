@@ -32,8 +32,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class Validate {
-
-  private Validate() {} // non-instantiable
+  private Validate() {}
 
   public static void requireArgument(boolean argIsValid, String msg) {
     if (!argIsValid) {
