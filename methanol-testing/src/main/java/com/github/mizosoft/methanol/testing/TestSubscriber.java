@@ -215,6 +215,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @Override
+  @SuppressWarnings("GuardedBy")
   public void onSubscribe(Subscription subscription) {
     if (!check(() -> assertThat(subscription).isNotNull())) {
       return;
@@ -259,6 +260,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @Override
+  @SuppressWarnings("GuardedBy")
   public void onNext(T item) {
     if (!check(() -> assertThat(item).isNotNull())) {
       return;
@@ -305,6 +307,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @Override
+  @SuppressWarnings("GuardedBy")
   public void onError(Throwable throwable) {
     if (!check(() -> assertThat(throwable).isNotNull())) {
       return;
@@ -331,6 +334,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @Override
+  @SuppressWarnings("GuardedBy")
   public void onComplete() {
     acquireLatch("onComplete()");
     try {
@@ -349,6 +353,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @GuardedBy("lock")
+  @SuppressWarnings("GuardedBy")
   private void assertNotEndOfStream(String label) {
     assertThat(completionCount + errorCount)
         .withFailMessage(
@@ -403,12 +408,14 @@ public class TestSubscriber<T> implements Subscriber<T> {
     }
   }
 
+  @SuppressWarnings("NullAway")
   private void releaseLatch() {
     var currentThread = Thread.currentThread();
     var currentOwner = latch;
-    assertThat(currentOwner != null && currentOwner.thread == currentThread)
+    assertThat(currentOwner)
         .withFailMessage("Latch not owned by current thread")
-        .isTrue();
+        .isNotNull()
+        .matches(owner -> owner.thread == currentThread);
 
     // We know for sure that there can be no contention here. Contention with another releaseLatch
     // is impossible as the assertion above guarantees the releaser only comes from the owner's

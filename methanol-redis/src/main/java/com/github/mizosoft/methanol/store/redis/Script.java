@@ -167,7 +167,7 @@ enum Script {
       return getAs(keys, values, ScriptOutputType.VALUE, ByteBuffer.class);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "FutureReturnValueIgnored"})
     private <T> CompletableFuture<T> getAs(
         List<K> keys, List<V> values, ScriptOutputType outputType, Class<T> rawReturnType) {
       var keysArray = (K[]) keys.toArray();
