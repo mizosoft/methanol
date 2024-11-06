@@ -439,10 +439,9 @@ abstract class AbstractRedisStore<
       this.entries = entries;
     }
 
+    @SuppressWarnings("unchecked")
     static ScanResult from(List<?> cursorAndEntries) {
       var cursor = UTF_8.decode((ByteBuffer) cursorAndEntries.get(0)).toString();
-
-      @SuppressWarnings("unchecked")
       var entries = (List<List<ByteBuffer>>) cursorAndEntries.get(1);
       return new ScanResult(
           cursor, entries.stream().map(ScanEntry::from).collect(Collectors.toUnmodifiableList()));
