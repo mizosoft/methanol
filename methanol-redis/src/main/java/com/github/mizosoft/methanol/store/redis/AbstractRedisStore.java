@@ -28,9 +28,11 @@ import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElseGet;
+import static java.util.function.Predicate.not;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store;
+import com.github.mizosoft.methanol.internal.cache.TestableStore;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.lettuce.core.KeyValue;
 import io.lettuce.core.RedisException;
@@ -62,8 +64,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -81,7 +83,7 @@ abstract class AbstractRedisStore<
             RedisHashAsyncCommands<String, ByteBuffer>
                 & RedisScriptingAsyncCommands<String, ByteBuffer>
                 & RedisStringAsyncCommands<String, ByteBuffer>>
-    implements Store {
+    implements Store, TestableStore {
   static final Logger logger = System.getLogger(AbstractRedisStore.class.getName());
 
   static final long ANY_ENTRY_VERSION = -1;
@@ -94,8 +96,8 @@ abstract class AbstractRedisStore<
 
   final C connection;
   final RedisConnectionProvider<C> connectionProvider;
-  final int editorLockTtlSeconds;
-  final int staleEntryTtlSeconds;
+  final int editorLockInactiveTtlSeconds;
+  final int staleEntryInactiveTtlSeconds;
   final int appVersion;
 
   /**
@@ -123,18 +125,22 @@ abstract class AbstractRedisStore<
   AbstractRedisStore(
       C connection,
       RedisConnectionProvider<C> connectionProvider,
-      int editorLockTtlSeconds,
-      int staleEntryTtlSeconds,
+      int editorLockInactiveTtlSeconds,
+      int staleEntryInactiveTtlSeconds,
       int appVersion,
       String clockKey) {
     requireArgument(
-        editorLockTtlSeconds > 0, "Expected a positive ttl, got: %s", editorLockTtlSeconds);
+        editorLockInactiveTtlSeconds > 0,
+        "Non-positive editorLockInactiveTtlSeconds: %d",
+        editorLockInactiveTtlSeconds);
     requireArgument(
-        staleEntryTtlSeconds > 0, "Expected a positive ttl, got: %s", staleEntryTtlSeconds);
+        staleEntryInactiveTtlSeconds > 0,
+        "Non-positive staleEntryInactiveTtlSeconds: %d",
+        staleEntryInactiveTtlSeconds);
     this.connection = requireNonNull(connection);
     this.connectionProvider = requireNonNull(connectionProvider);
-    this.editorLockTtlSeconds = editorLockTtlSeconds;
-    this.staleEntryTtlSeconds = staleEntryTtlSeconds;
+    this.editorLockInactiveTtlSeconds = editorLockInactiveTtlSeconds;
+    this.staleEntryInactiveTtlSeconds = staleEntryInactiveTtlSeconds;
     this.appVersion = appVersion;
     this.clockKey = requireNonNull(clockKey);
   }
@@ -159,7 +165,7 @@ abstract class AbstractRedisStore<
         .hmget(entryKey, "metadata", "dataSize", "entryVersion", "dataVersion")
         .thenApply(
             fields ->
-                fields.stream().allMatch(Predicate.not(KeyValue::isEmpty))
+                fields.stream().allMatch(not(KeyValue::isEmpty))
                     ? Optional.of(
                         createViewer(
                             key,
@@ -194,7 +200,8 @@ abstract class AbstractRedisStore<
         .evalOn(asyncCommands())
         .getAsBoolean(
             List.of(entryKey, editorLockKey, wipDataKey),
-            List.of(encode(editorId), encode(targetEntryVersion), encode(editorLockTtlSeconds)))
+            List.of(
+                encode(editorId), encode(targetEntryVersion), encode(editorLockInactiveTtlSeconds)))
         .thenApply(
             isLockAcquired ->
                 isLockAcquired
@@ -228,7 +235,8 @@ abstract class AbstractRedisStore<
     return Script.REMOVE
         .evalOn(commands())
         .getAsBoolean(
-            List.of(entryKey), List.of(encode(targetEntryVersion), encode(staleEntryTtlSeconds)));
+            List.of(entryKey),
+            List.of(encode(targetEntryVersion), encode(staleEntryInactiveTtlSeconds)));
   }
 
   @Override
@@ -290,12 +298,29 @@ abstract class AbstractRedisStore<
   public void flush() {}
 
   String toEntryKey(String key) {
-    requireArgument(key.indexOf('}') == -1, "Malformed key");
+    requireArgument(key.indexOf('}') == -1, "Illegal key");
     return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, key);
   }
 
+  String wipDataKey(Editor editor) {
+    requireArgument(
+        editor instanceof AbstractRedisStore<?, ?, ?>.RedisEditor,
+        "Unrecognized editor: %s",
+        editor);
+    return ((AbstractRedisStore<?, ?, ?>.RedisEditor) editor).wipDataKey();
+  }
+
   void requireNotClosed() {
-    requireState(!closed.get(), "Store is closed");
+    requireState(!closed.get(), "Closed");
+  }
+
+  @Override
+  public List<String> entriesOnUnderlyingStorageForTesting(String key) {
+    return Stream.concat(
+            commands().keys(toEntryKey(key)).stream(),
+            commands().keys(toEntryKey(key) + ":data:*").stream())
+        .filter(not(redisKey -> redisKey.contains(":wip:") || redisKey.endsWith(":stale")))
+        .collect(Collectors.toUnmodifiableList());
   }
 
   static ByteBuffer encode(int value) {
@@ -326,14 +351,6 @@ abstract class AbstractRedisStore<
     private final String pattern;
     private final RedisScriptingCommands<String, ByteBuffer> commands;
 
-    private String cursor = INITIAL_CURSOR_VALUE;
-    private boolean isInitialScan = true;
-
-    private @Nullable Iterator<ScanEntry> entryIterator;
-
-    private @Nullable Viewer nextViewer;
-    private @Nullable Viewer currentViewer;
-
     /**
      * The set of keys seen so far, tracked to avoid returning duplicate entries. This may happen
      * when the SCAN command iterates over the same key multiple times, which is possible if the
@@ -341,6 +358,11 @@ abstract class AbstractRedisStore<
      */
     private final Set<String> seenKeys;
 
+    private String cursor = INITIAL_CURSOR_VALUE;
+    private boolean isInitialScan = true;
+    private @Nullable Iterator<ScanEntry> entryIterator;
+    private @Nullable Viewer nextViewer;
+    private @Nullable Viewer currentViewer;
     private boolean finished;
 
     ScanningViewerIterator(String pattern) {
@@ -538,7 +560,7 @@ abstract class AbstractRedisStore<
 
       /**
        * Position of the next byte to read. This field can be accessed from multiple threads, but
-       * never simultaneously.
+       * never simultaneously. Accesses are synchronized by {@link #readLatch}.
        */
       private long position;
 
@@ -548,7 +570,8 @@ abstract class AbstractRedisStore<
        * detect that while reading, this field's value is set to {@code false} and never changes.
        * After which reading is always directed to the stale data entry.
        *
-       * <p>This field can be accessed from multiple threads, but never simultaneously.
+       * <p>This field can be accessed from multiple threads, but never simultaneously. Accesses are
+       * synchronized by {@link #readLatch}.
        */
       private boolean readingFreshEntry = true;
 
@@ -567,7 +590,7 @@ abstract class AbstractRedisStore<
 
           // We must be careful not to call GETRANGE with `long` arguments as the returned value is
           // a ByteBuffer, which has an `int` capacity.
-          long readableByteCount = Utils.remaining(dsts);
+          long readableByteCount = Math.min(Utils.remaining(dsts), dataSize - position);
           requireArgument(
               readableByteCount <= SOFT_MAX_ARRAY_LENGTH,
               "Too many bytes requested: %d",
@@ -576,7 +599,7 @@ abstract class AbstractRedisStore<
           var rangeFuture =
               readingFreshEntry
                   ? asyncCommands().getrange(dataKey, position, inclusiveLimit)
-                  : getStaleRange(position, inclusiveLimit);
+                  : getRangeOfStaleEntry(position, inclusiveLimit);
           return rangeFuture
               .thenCompose(range -> recoverIfStale(range, position, inclusiveLimit))
               .thenApply(
@@ -597,12 +620,16 @@ abstract class AbstractRedisStore<
         }
       }
 
-      private CompletableFuture<ByteBuffer> getStaleRange(long position, long inclusiveLimit) {
+      private CompletableFuture<ByteBuffer> getRangeOfStaleEntry(
+          long position, long inclusiveLimit) {
         return Script.GET_STALE_RANGE
             .evalOn(asyncCommands())
             .getAsValue(
                 List.of(dataKey),
-                List.of(encode(position), encode(inclusiveLimit), encode(staleEntryTtlSeconds)));
+                List.of(
+                    encode(position),
+                    encode(inclusiveLimit),
+                    encode(staleEntryInactiveTtlSeconds)));
       }
 
       private CompletableFuture<ByteBuffer> recoverIfStale(
@@ -611,13 +638,15 @@ abstract class AbstractRedisStore<
           return CompletableFuture.completedFuture(range);
         }
 
-        requireState(readingFreshEntry, "Stale entry data expired");
-        return getStaleRange(position, inclusiveLimit)
+        requireState(readingFreshEntry, "Stale entry is absent, typically due to expiry");
+        return getRangeOfStaleEntry(position, inclusiveLimit)
             .thenApply(
-                staleRange -> {
-                  requireState(staleRange.hasRemaining(), "Entry data removed");
-                  readingFreshEntry = false;
-                  return staleRange;
+                staleEntryRange -> {
+                  requireState(
+                      staleEntryRange.hasRemaining(),
+                      "Stale entry is absent, typically due to expiry");
+                  readingFreshEntry = false; // Write is protected by readLatch.
+                  return staleEntryRange;
                 });
       }
     }
@@ -646,6 +675,10 @@ abstract class AbstractRedisStore<
       this.editorId = editorId;
     }
 
+    String wipDataKey() {
+      return wipDataKey;
+    }
+
     @Override
     public String key() {
       return requireNonNullElseGet(key, () -> extractHashTag(entryKey));
@@ -668,7 +701,7 @@ abstract class AbstractRedisStore<
                   encode(editorId),
                   metadata,
                   encode(writer.dataSizeIfWritten()), // clientDataSize
-                  encode(staleEntryTtlSeconds),
+                  encode(staleEntryInactiveTtlSeconds),
                   encode(1), // commit
                   encode(clockKey)))
           .thenAccept(
@@ -683,10 +716,11 @@ abstract class AbstractRedisStore<
     @SuppressWarnings("FutureReturnValueIgnored")
     public void close() {
       if (closed.compareAndSet(false, true)) {
-        // We must run the command asynchronously as blocking risks deadlocks if close() is called
-        // from netty's NioEventLoop, which is single-threaded. This will cause us to wait for a
-        // command whose completion cannot be processed. We have no scruples not making sure the
-        // command has executed as even if it hasn't, redis will expire this editor's state anyhow.
+        // We must run the command asynchronously as blocking indefinitely risks deadlocks if
+        // close() is called from netty's NioEventLoop, which is single-threaded. Thus, blocking
+        // will make us wait for a command which cannot be processed. We have no scruples not making
+        // sure the command has executed as even if it hasn't, redis will expire this editor's state
+        // anyhow.
         Script.COMMIT
             .evalOn(asyncCommands())
             .getAsBoolean(
@@ -695,13 +729,13 @@ abstract class AbstractRedisStore<
                     encode(editorId),
                     EMPTY_BUFFER, // metadata
                     encode(-1), // clientDataSize
-                    encode(staleEntryTtlSeconds),
+                    encode(staleEntryInactiveTtlSeconds),
                     encode(0), // commit
                     encode(clockKey)))
             .whenComplete(
-                (__, ex) -> {
-                  if (ex != null) {
-                    logger.log(Level.WARNING, "Exception thrown by closing the editor");
+                (__, e) -> {
+                  if (e != null) {
+                    logger.log(Level.WARNING, "Exception thrown by closing the editor", e);
                   }
                 });
       }
@@ -737,7 +771,8 @@ abstract class AbstractRedisStore<
       private CompletableFuture<Long> append(List<ByteBuffer> srcs) {
         var args =
             new ArrayList<>(
-                List.of(encode(editorId), encode(editorLockTtlSeconds), encode(srcs.size())));
+                List.of(
+                    encode(editorId), encode(editorLockInactiveTtlSeconds), encode(srcs.size())));
         args.addAll(srcs);
         return Script.APPEND
             .evalOn(asyncCommands())
@@ -763,7 +798,12 @@ abstract class AbstractRedisStore<
           totalBytesWritten += written;
           if (totalBytesWritten != serverBytesWritten) {
             RedisEditor.this.close();
-            throw new IllegalStateException("Server/client data inconsistency");
+            throw new IllegalStateException(
+                "Server/client data inconsistency; expected "
+                    + totalBytesWritten
+                    + " bytes to be written so far, but server says "
+                    + serverBytesWritten
+                    + " bytes were written");
           }
           isWritten = true;
           return written;

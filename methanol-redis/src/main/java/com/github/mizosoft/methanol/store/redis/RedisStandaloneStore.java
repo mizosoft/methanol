@@ -37,14 +37,14 @@ class RedisStandaloneStore
   RedisStandaloneStore(
       StatefulRedisConnection<String, ByteBuffer> connection,
       RedisConnectionProvider<StatefulRedisConnection<String, ByteBuffer>> connectionProvider,
-      int editorLockTtlSeconds,
-      int staleEntryTtlSeconds,
+      int editorLockInactiveTtlSeconds,
+      int staleEntryInactiveTtlSeconds,
       int appVersion) {
     super(
         connection,
         connectionProvider,
-        editorLockTtlSeconds,
-        staleEntryTtlSeconds,
+        editorLockInactiveTtlSeconds,
+        staleEntryInactiveTtlSeconds,
         appVersion,
         String.format("methanol:%d:%d:clock", STORE_VERSION, appVersion));
   }
@@ -63,6 +63,6 @@ class RedisStandaloneStore
   boolean removeAllEntries(List<String> entryKeys) {
     return Script.REMOVE_ALL
         .evalOn(commands())
-        .getAsBoolean(entryKeys, List.of(encode(staleEntryTtlSeconds)));
+        .getAsBoolean(entryKeys, List.of(encode(staleEntryInactiveTtlSeconds)));
   }
 }
