@@ -3,7 +3,6 @@ plugins {
   id("conventions.testing")
   id("conventions.coverage")
   id("conventions.publishing")
-  kotlin("plugin.serialization") version libs.versions.kotlin.serialization.plugin.get()
 }
 
 repositories {
@@ -13,11 +12,11 @@ repositories {
 dependencies {
   api(project(":methanol"))
   api(libs.kotlinx.coroutines)
-  implementation(libs.kotlinx.serialization)
+  api(libs.moshi)
   testImplementation(kotlin("test"))
   testImplementation(project(":methanol-testing"))
+  testImplementation(project(":methanol-kotlin"))
   testImplementation(libs.mockwebserver)
   testImplementation(libs.assertk)
-  testImplementation(libs.kotlinx.serialization.json)
-  testImplementation(libs.kotlinx.serialization.protobuf)
+  testImplementation(libs.moshi.kotlin)
 }
