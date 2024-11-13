@@ -33,6 +33,8 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.io.Flushable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.ByteBuffer;
@@ -44,7 +46,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -66,9 +67,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * known length to this publisher.
  */
 public final class WritableBodyPublisher implements BodyPublisher, Flushable, AutoCloseable {
-  private static final int DEFAULT_BUFFER_SIZE = 8 * 1024; // 8Kb
+  private static final VarHandle STATE;
+
+  static {
+    try {
+      STATE =
+          MethodHandles.lookup().findVarHandle(WritableBodyPublisher.class, "state", State.class);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
 
   private static final ByteBuffer CLOSED_SENTINEL = ByteBuffer.allocate(0);
+  private static final int DEFAULT_BUFFER_SIZE = Utils.BUFFER_SIZE;
 
   /** A lock that serializes writing to {@code pipe}. */
   private final Lock writeLock = new ReentrantLock();
@@ -77,7 +88,8 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   private final AtomicBoolean subscribed = new AtomicBoolean();
   private final int bufferSize;
 
-  private final AtomicReference<State> state = new AtomicReference<>(Initial.INSTANCE);
+  @SuppressWarnings("FieldMayBeFinal") // VarHandle indirection.
+  private State state = Initial.INSTANCE;
 
   private interface State {}
 
@@ -151,7 +163,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   public void closeExceptionally(Throwable exception) {
     State prevState;
     while (true) {
-      var currentState = state.get();
+      var currentState = state;
       if (currentState instanceof Closed) {
         FlowSupport.onDroppedException(exception);
         return;
@@ -161,13 +173,13 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
       // If subscribed, we can pass the exception to the subscription & skip storing it.
       if (currentState instanceof Subscribed
-          && state.compareAndSet(currentState, Closed.normally())) {
+          && STATE.compareAndSet(this, currentState, Closed.normally())) {
         break;
       }
 
       // If not subscribed, we must store the exception so the future subscriber consumes it.
       if (currentState == Initial.INSTANCE
-          && state.compareAndSet(currentState, Closed.exceptionally(exception))) {
+          && STATE.compareAndSet(this, currentState, Closed.exceptionally(exception))) {
         break;
       }
     }
@@ -185,13 +197,13 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   public void close() {
     State prevState;
     while (true) {
-      var currentState = state.get();
+      var currentState = state;
       if (currentState instanceof Closed) {
         return;
       }
 
       prevState = currentState;
-      if (state.compareAndSet(currentState, Closed.normally())) {
+      if (STATE.compareAndSet(this, currentState, Closed.normally())) {
         break;
       }
     }
@@ -207,7 +219,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
    * #closeExceptionally}.
    */
   public boolean isClosed() {
-    return state.get() instanceof Closed;
+    return state instanceof Closed;
   }
 
   /**
@@ -230,10 +242,10 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
     if (subscribed.compareAndSet(false, true)) {
       var subscription = new SubscriptionImpl(subscriber);
-      if (state.compareAndSet(Initial.INSTANCE, new Subscribed(subscription))) {
+      if (STATE.compareAndSet(this, Initial.INSTANCE, new Subscribed(subscription))) {
         subscription.fireOrKeepAlive();
       } else {
-        var currentState = state.get();
+        var currentState = state;
         if (currentState instanceof Closed) {
           var exception = ((Closed) currentState).exception;
           if (exception != null) {
@@ -252,10 +264,9 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
-  @SuppressWarnings("NullAway")
   private void fireOrKeepAliveOnNextIf(boolean condition) {
     State currentState;
-    if (condition && (currentState = state.get()) instanceof Subscribed) {
+    if (condition && (currentState = state) instanceof Subscribed) {
       ((Subscribed) currentState).subscription.fireOrKeepAliveOnNext();
     }
   }
@@ -413,9 +424,9 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       // writer to detect asynchronous closure.
       if (flowInterrupted) {
         while (true) {
-          var currentState = state.get();
+          var currentState = state;
           if (!(currentState instanceof Subscribed)
-              || state.compareAndSet(currentState, Closed.normally())) {
+              || STATE.compareAndSet(WritableBodyPublisher.this, currentState, Closed.normally())) {
             return;
           }
         }

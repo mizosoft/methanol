@@ -559,7 +559,7 @@ public final class CacheResponseMetadata {
       return new String[0];
     }
 
-    @SuppressWarnings("removal")
+    @SuppressWarnings({"removal", "deprecation", "RedundantSuppression"})
     @Override
     public javax.security.cert.X509Certificate[] getPeerCertificateChain() {
       throw unsupported();

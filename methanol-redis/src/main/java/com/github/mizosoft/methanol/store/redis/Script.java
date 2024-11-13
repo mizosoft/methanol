@@ -46,7 +46,9 @@ enum Script {
   SCAN_ENTRIES("/scripts/scan_entries.lua", true),
   GET_STALE_RANGE("/scripts/get_stale_range.lua", false);
 
+  @SuppressWarnings("ImmutableEnumChecker") // Effectively immutable.
   private final byte[] content;
+
   private final String shaHex;
   private final boolean isReadOnly;
 
@@ -165,7 +167,7 @@ enum Script {
       return getAs(keys, values, ScriptOutputType.VALUE, ByteBuffer.class);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "FutureReturnValueIgnored"})
     private <T> CompletableFuture<T> getAs(
         List<K> keys, List<V> values, ScriptOutputType outputType, Class<T> rawReturnType) {
       var keysArray = (K[]) keys.toArray();

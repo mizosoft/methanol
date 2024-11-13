@@ -224,7 +224,7 @@ public final class CacheInterceptor implements Interceptor {
   @SuppressWarnings("NullAway")
   private static boolean isNetworkOrServerError(
       @Nullable NetworkResponse networkResponse, @Nullable Throwable exception) {
-    assert networkResponse != null || exception != null;
+    assert networkResponse != null ^ exception != null;
     if (networkResponse != null) {
       return HttpStatus.isServerError(networkResponse.get());
     }

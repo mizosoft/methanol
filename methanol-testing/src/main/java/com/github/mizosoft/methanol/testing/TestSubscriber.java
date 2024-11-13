@@ -28,6 +28,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -40,7 +42,6 @@ import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -53,14 +54,24 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * and the like.
  */
 public class TestSubscriber<T> implements Subscriber<T> {
+  private static final VarHandle LATCH;
+
+  static {
+    try {
+      LATCH = MethodHandles.lookup().findVarHandle(TestSubscriber.class, "latch", LatchOwner.class);
+    } catch (NoSuchFieldException | IllegalAccessException e) {
+      throw new ExceptionInInitializerError(e);
+    }
+  }
+
   private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS);
 
   private final Lock lock = new ReentrantLock();
   private final Condition subscriptionReceived = lock.newCondition();
   private final Condition itemsAvailable = lock.newCondition();
   private final Condition completion = lock.newCondition();
-  private final AtomicReference<LatchOwner> latch = new AtomicReference<>();
   private final List<AssertionError> protocolViolations = new CopyOnWriteArrayList<>();
+  private @Nullable LatchOwner latch;
 
   private static final class LatchOwner {
     final Thread thread;
@@ -204,6 +215,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @Override
+  @SuppressWarnings("GuardedBy")
   public void onSubscribe(Subscription subscription) {
     if (!check(() -> assertThat(subscription).isNotNull())) {
       return;
@@ -248,6 +260,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @Override
+  @SuppressWarnings("GuardedBy")
   public void onNext(T item) {
     if (!check(() -> assertThat(item).isNotNull())) {
       return;
@@ -294,6 +307,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @Override
+  @SuppressWarnings("GuardedBy")
   public void onError(Throwable throwable) {
     if (!check(() -> assertThat(throwable).isNotNull())) {
       return;
@@ -320,6 +334,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @Override
+  @SuppressWarnings("GuardedBy")
   public void onComplete() {
     acquireLatch("onComplete()");
     try {
@@ -338,6 +353,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
   }
 
   @GuardedBy("lock")
+  @SuppressWarnings("GuardedBy")
   private void assertNotEndOfStream(String label) {
     assertThat(completionCount + errorCount)
         .withFailMessage(
@@ -374,14 +390,14 @@ public class TestSubscriber<T> implements Subscriber<T> {
 
   private void acquireLatch(String label) {
     var currentThread = Thread.currentThread();
-    var currentOwner = latch.get();
+    var currentOwner = latch;
     var nextOwner =
         currentOwner != null && currentOwner.thread == currentThread
             ? currentOwner.push(label) // Recursive call.
             : new LatchOwner(currentThread, label, null);
     var currentOwnerBeforeCas = currentOwner;
     if ((currentOwner != null && nextOwner.thread != currentOwner.thread)
-        || (currentOwner = latch.compareAndExchange(currentOwner, nextOwner))
+        || (currentOwner = (LatchOwner) LATCH.compareAndExchange(this, currentOwner, nextOwner))
             != currentOwnerBeforeCas) {
       throw new AssertionError(
           "Concurrent subscriber calls (owner=<"
@@ -392,12 +408,14 @@ public class TestSubscriber<T> implements Subscriber<T> {
     }
   }
 
+  @SuppressWarnings("NullAway")
   private void releaseLatch() {
     var currentThread = Thread.currentThread();
-    var currentOwner = latch.get();
-    assertThat(currentOwner != null && currentOwner.thread == currentThread)
+    var currentOwner = latch;
+    assertThat(currentOwner)
         .withFailMessage("Latch not owned by current thread")
-        .isTrue();
+        .isNotNull()
+        .matches(owner -> owner.thread == currentThread);
 
     // We know for sure that there can be no contention here. Contention with another releaseLatch
     // is impossible as the assertion above guarantees the releaser only comes from the owner's
@@ -405,7 +423,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
     // null or the acquirer has the owner's thread. Absence of the first condition is guaranteed
     // by the assertion above. Absence of the second is guaranteed by the fact that a thread cannot
     // be an acquirer and releaser at the same time.
-    latch.set(currentOwner.pop());
+    latch = currentOwner.pop();
   }
 
   public Subscription awaitSubscription() {
