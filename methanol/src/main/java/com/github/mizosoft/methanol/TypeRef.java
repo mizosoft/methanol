@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
@@ -194,8 +195,8 @@ public abstract class TypeRef<T> {
   @SuppressWarnings("unchecked")
   public final TypeRef<? super T> resolveSupertype(Class<?> supertype) {
     var resolved = resolve(type, supertype);
-    requireArgument(resolved != null, "<%s> is not a supertype of <%>", supertype, type);
-    return (TypeRef<? super T>) TypeRef.of(resolved);
+    requireArgument(resolved != null, "<%s> is not a supertype of <%s>", supertype, type);
+    return (TypeRef<? super T>) TypeRef.of(castNonNull(resolved));
   }
 
   /**
@@ -335,7 +336,8 @@ public abstract class TypeRef<T> {
             "Type specialization <%s> is an array but supertype <%s> isn't",
             spec,
             supertype);
-        return arrayTypeOf(resolve(rawSpec.getComponentType(), supertypeComponent));
+        var resolvedComponent = resolve(rawSpec.getComponentType(), supertypeComponent);
+        return resolvedComponent != null ? arrayTypeOf(resolvedComponent) : null;
       } else {
         return resolve(rawSpec, supertype);
       }
@@ -348,8 +350,9 @@ public abstract class TypeRef<T> {
           "Type specialization <%s> is an array but supertype <%s> isn't",
           spec,
           supertype);
-      return arrayTypeOf(
-          resolve(((GenericArrayType) spec).getGenericComponentType(), supertypeComponent));
+      var resolvedComponent =
+          resolve(((GenericArrayType) spec).getGenericComponentType(), supertypeComponent);
+      return resolvedComponent != null ? arrayTypeOf(resolvedComponent) : null;
     } else if (spec instanceof TypeVariable<?>) {
       return resolveFromAny(((TypeVariable<?>) spec).getBounds(), supertype);
     } else if (spec instanceof WildcardType) {
@@ -536,6 +539,7 @@ public abstract class TypeRef<T> {
       return componentType.equals(((GenericArrayType) obj).getGenericComponentType());
     }
 
+    @Override
     public String toString() {
       return componentType.getTypeName() + "[]";
     }

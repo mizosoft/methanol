@@ -264,7 +264,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> Function<? super Hints, ? extends BodySubscriber<T>> decoderOf(
+    private static <T> @Nullable Function<? super Hints, ? extends BodySubscriber<T>> decoderOf(
         TypeRef<T> typeRef) {
       return (Function<? super Hints, ? extends BodySubscriber<T>>) DECODERS.get(typeRef);
     }
