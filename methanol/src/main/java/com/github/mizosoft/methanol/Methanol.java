@@ -633,7 +633,9 @@ public final class Methanol extends HttpClient {
     @CanIgnoreReturnValue
     public B defaultHeaders(Consumer<HeadersAccumulator<?>> configurator) {
       configurator.accept(defaultHeadersBuilder.asHeadersAccumulator());
-      userAgent = defaultHeadersBuilder.lastValue("User-Agent").orElse(null);
+      defaultHeadersBuilder
+          .lastValue("User-Agent")
+          .ifPresent(userAgent -> this.userAgent = userAgent);
       return self();
     }
 
