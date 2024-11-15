@@ -68,6 +68,7 @@ import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
@@ -365,7 +366,7 @@ public final class Methanol extends HttpClient {
    */
   public <T> HttpResponse<T> send(HttpRequest request, TypeRef<T> typeRef)
       throws IOException, InterruptedException {
-    return new InterceptorChain<>(backend, handlerOf(typeRef, request), null, mergedInterceptors)
+    return new InterceptorChain<>(backend, handlerOf(request, typeRef), null, mergedInterceptors)
         .forward(request);
   }
 
@@ -374,18 +375,27 @@ public final class Methanol extends HttpClient {
    * converts the response body into an object of the given type.
    */
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, TypeRef<T> typeRef) {
-    return new InterceptorChain<>(backend, handlerOf(typeRef, request), null, mergedInterceptors)
+    return new InterceptorChain<>(backend, handlerOf(request, typeRef), null, mergedInterceptors)
         .forwardAsync(request);
   }
 
-  private <T> BodyHandler<T> handlerOf(TypeRef<T> typeRef, HttpRequest request) {
-    var effectiveAdapterCodec = MutableRequest.adapterCodecOf(request).or(() -> adapterCodec);
+  private <T> BodyHandler<T> handlerOf(HttpRequest request, TypeRef<T> typeRef) {
+    var adapterCodec = MutableRequest.adapterCodecOf(request).or(() -> this.adapterCodec);
     var hints = TaggableRequest.hintsOf(request);
-    if (typeRef.isRawType() && typeRef.rawType() == ResponsePayload.class) {
+    var deferredValueTypeRef =
+        typeRef.isParameterizedType() && typeRef.rawType() == Supplier.class
+            ? typeRef
+                .resolveSupertype(Supplier.class)
+                .typeArgumentAt(0)
+                .orElseThrow(AssertionError::new) // A parameterized type must contain a type arg.
+            : null;
+    if ((typeRef.isRawType() && typeRef.rawType() == ResponsePayload.class)
+        || (deferredValueTypeRef != null
+            && deferredValueTypeRef.isRawType()
+            && deferredValueTypeRef.rawType() == ResponsePayload.class)) {
       // Add ResponsePayload-specific hints (see BasicAdapter.Decoder).
       var hintsBuilder = hints.mutate();
-      effectiveAdapterCodec.ifPresent(
-          adapterCodec -> hintsBuilder.put(AdapterCodec.class, adapterCodec));
+      adapterCodec.ifPresent(codec -> hintsBuilder.put(AdapterCodec.class, codec));
       executor()
           .ifPresent(
               executor ->
@@ -393,7 +403,15 @@ public final class Methanol extends HttpClient {
                       PayloadHandlerExecutor.class, new PayloadHandlerExecutor(executor)));
       hints = hintsBuilder.build();
     }
-    return effectiveAdapterCodec.orElseGet(AdapterCodec::installed).handlerOf(typeRef, hints);
+    var effectiveAdapterCodec = adapterCodec.orElseGet(AdapterCodec::installed);
+    if (deferredValueTypeRef != null) {
+      @SuppressWarnings("unchecked")
+      var bodyHandler =
+          (BodyHandler<T>) effectiveAdapterCodec.deferredHandlerOf(deferredValueTypeRef, hints);
+      return bodyHandler;
+    } else {
+      return effectiveAdapterCodec.handlerOf(typeRef, hints);
+    }
   }
 
   @CanIgnoreReturnValue

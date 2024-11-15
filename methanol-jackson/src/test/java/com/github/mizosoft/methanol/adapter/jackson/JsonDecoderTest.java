@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,18 +22,25 @@
 
 package com.github.mizosoft.methanol.adapter.jackson;
 
+import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory.createJsonDecoder;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static java.nio.charset.StandardCharsets.UTF_16;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.github.mizosoft.methanol.AdapterCodec;
+import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -163,5 +170,25 @@ class JsonDecoderTest {
         .converting(Point.class)
         .withMediaType("text/plain")
         .isNotSupported();
+  }
+
+  @Test
+  void deserializeWithClient() throws Exception {
+    var backend =
+        new RecordingHttpClient()
+            .handleCalls(
+                call ->
+                    call.complete(
+                        ByteBuffer.wrap(
+                            "[{\"x\":1, \"y\":2}, {\"x\":3, \"y\":4}]".getBytes(UTF_8))));
+    var client =
+        Methanol.newBuilder(backend)
+            .adapterCodec(
+                AdapterCodec.newBuilder()
+                    .decoder(JacksonAdapterFactory.createJsonDecoder())
+                    .build())
+            .build();
+    assertThat(client.send(GET("https://example.com"), new TypeRef<List<Point>>() {}).body())
+        .containsExactly(new Point(1, 2), new Point(3, 4));
   }
 }
