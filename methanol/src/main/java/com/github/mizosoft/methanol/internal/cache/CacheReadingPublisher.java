@@ -176,6 +176,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       DONE
     }
 
+    /** Whether the entire cache stream has been read. */
     private volatile boolean exhausted;
 
     CacheReadingSubscription(
@@ -197,7 +198,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       var batch = readQueue.poll();
       if (batch != null) {
         buffersPromised.getAndAdd(-batch.size());
-        batch = sliceNonEmptyBuffers(batch);
+        batch = sliceReadableBuffers(batch);
       }
       if (!exhausted) {
         tryScheduleRead(false);
@@ -238,9 +239,19 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
       if (buffersPromised.get() < PREFETCH
           && ((maintainReadingState && state == State.READING)
               || STATE.compareAndSet(this, State.IDLE, State.READING))) {
-        // Re-read buffersPromised twice as it can only decrease if we're here, and if so we want
-        // the decreased quantity to be reflected.
+        // One or more reads might've been scheduled just after reading buffersPromised the first
+        // time but before acquiring the State.READING latch. In such case, we might get a
+        // buffersNeeded = 0 here. This is also why we should read buffersPromised twice so we don't
+        // end up reading more than we need. Note that buffersPromised can only decrease after the
+        // second read by a concurrent consumer as long as we maintain the State.READING latch.
         int buffersNeeded = Math.min(PREFETCH - buffersPromised.get(), MAX_BULK_READ_SIZE);
+        if (buffersNeeded == 0) {
+          STATE.compareAndSet(this, State.READING, State.IDLE);
+          return false;
+        } else if (buffersNeeded < 0) {
+          throw new AssertionError("Negative buffersNeeded: " + buffersNeeded);
+        }
+
         var buffers =
             Stream.generate(() -> ByteBuffer.allocate(bufferSize))
                 .limit(buffersNeeded)
@@ -266,6 +277,7 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     private void onReadCompletion(
         List<ByteBuffer> buffers, @Nullable Long read, @Nullable Throwable exception) {
       assert read != null ^ exception != null;
+      assert !buffers.isEmpty(); // See tryScheduleRead(...).
       if (exception != null) {
         state = State.DONE;
         listener.onReadFailure(exception);
@@ -289,10 +301,10 @@ public final class CacheReadingPublisher implements Publisher<List<ByteBuffer>> 
     }
 
     /**
-     * Removes empty buffers from the end of the list, which can exist when reading at the end of
-     * stream.
+     * Removes non-readable buffers from the end of the list, which can exist when reading at the
+     * end of stream.
      */
-    private List<ByteBuffer> sliceNonEmptyBuffers(List<ByteBuffer> buffers) {
+    private List<ByteBuffer> sliceReadableBuffers(List<ByteBuffer> buffers) {
       if (buffers.get(buffers.size() - 1).hasRemaining()) {
         return buffers;
       }
