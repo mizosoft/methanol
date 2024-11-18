@@ -62,7 +62,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       Boolean.getBoolean(
           "com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.waitForCommit");
 
-  private static final int MAX_BULK_WRITE_SIZE = 8;
+  private static final int SOFT_MAX_BULK_WRITE_SIZE = 8;
 
   private final Publisher<List<ByteBuffer>> upstream;
   private final Editor editor;
@@ -346,17 +346,19 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
                 || STATE.compareAndSet(this, WritingState.IDLE, WritingState.WRITING))) {
           writeQueue.poll(); // Consume.
 
-          // Take this chance to write as much as we can up to a limit.
+          // Take this chance to write as much as we can up to a soft limit. The limit might be
+          // exceeded, although expectedly slightly.
           List<ByteBuffer> moreBuffers;
-          int polledCount = 1; // We've just polled one list.
-          while (polledCount < MAX_BULK_WRITE_SIZE && (moreBuffers = writeQueue.poll()) != null) {
-            if (polledCount == 1) {
+          boolean polledMoreBuffers = false;
+          while (buffers.size() < SOFT_MAX_BULK_WRITE_SIZE
+              && (moreBuffers = writeQueue.poll()) != null) {
+            if (!polledMoreBuffers) {
+              polledMoreBuffers = true;
               buffers = new ArrayList<>(buffers);
             }
             buffers.addAll(moreBuffers);
-            polledCount++;
           }
-          if (polledCount > 1) {
+          if (polledMoreBuffers) {
             buffers = Collections.unmodifiableList(buffers);
           }
 
