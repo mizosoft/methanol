@@ -152,6 +152,7 @@ class BootJarTest {
   }
 
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   void test() throws Exception {
     HttpResponse<Point> response;
     try {
