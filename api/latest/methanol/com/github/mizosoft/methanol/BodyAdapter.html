@@ -90,15 +90,15 @@ loadScripts(document, 'script');</script>
 <section class="class-description" id="class-description">
 <dl class="notes">
 <dt>All Known Subinterfaces:</dt>
-<dd><code><a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code>, <code><a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></dd>
+<dd><code><a href="adapter/AbstractBodyAdapter.BaseDecoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseDecoder</a></code>, <code><a href="adapter/AbstractBodyAdapter.BaseEncoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseEncoder</a></code>, <code><a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code>, <code><a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></dd>
 </dl>
 <dl class="notes">
 <dt>All Known Implementing Classes:</dt>
-<dd><code><a href="adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></code>, <code><a href="internal/extensions/BasicAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions">BasicAdapter</a></code>, <code><a href="../../../../../methanol.testing/com/github/mizosoft/methanol/testing/CharSequenceEncoder.html" title="class in com.github.mizosoft.methanol.testing">CharSequenceEncoder</a></code>, <code><a href="adapter/ForwardingBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingBodyAdapter</a></code>, <code><a href="adapter/ForwardingDecoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingDecoder</a></code>, <code><a href="adapter/ForwardingEncoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingEncoder</a></code>, <code><a href="../../../../../methanol.testing/com/github/mizosoft/methanol/testing/StringDecoder.html" title="class in com.github.mizosoft.methanol.testing">StringDecoder</a></code></dd>
+<dd><code><a href="adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></code>, <code><a href="internal/adapter/BasicAdapter.html" title="class in com.github.mizosoft.methanol.internal.adapter">BasicAdapter</a></code>, <code><a href="../../../../../methanol.testing/com/github/mizosoft/methanol/testing/CharSequenceEncoder.html" title="class in com.github.mizosoft.methanol.testing">CharSequenceEncoder</a></code>, <code><a href="adapter/ForwardingBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingBodyAdapter</a></code>, <code><a href="adapter/ForwardingDecoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingDecoder</a></code>, <code><a href="adapter/ForwardingEncoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingEncoder</a></code>, <code><a href="../../../../../methanol.testing/com/github/mizosoft/methanol/testing/StringDecoder.html" title="class in com.github.mizosoft.methanol.testing">StringDecoder</a></code></dd>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public interface </span><span class="element-name type-name-label">BodyAdapter</span></div>
-<div class="block">An object that converts high objects to or from request or response bodies respectively, using a
+<div class="block">An object that converts objects to or from request or response bodies respectively, using a
  defined format. The two specialized subtypes are <a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> and <a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a>.
 
  <p>A <code>BodyAdapter</code> communicates the format it uses and the set of types it supports through
@@ -127,6 +127,12 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color">
 <div class="block">A <code>BodyAdapter</code> that encodes objects into request bodies.</div>
 </div>
+<div class="col-first even-row-color"><code>static interface&nbsp;</code></div>
+<div class="col-second even-row-color"><code><a href="BodyAdapter.Hints.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></code></div>
+<div class="col-last even-row-color">
+<div class="block">A collections of hints that provide additional context to customize an adapter's
+ encoding/decoding behavior.</div>
+</div>
 </div>
 </section>
 </li>
@@ -147,7 +153,7 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns <code>true</code> if the format this adapter uses is <a href="MediaType.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>compatible</code></a> with the given media type.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>boolean</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#supportsType(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">supportsType</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;type)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#supportsType(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">supportsType</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Returns <code>true</code> if this adapter supports the given type.</div>
 </div>
@@ -175,7 +181,7 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="supportsType(com.github.mizosoft.methanol.TypeRef)">
 <h3>supportsType</h3>
-<div class="member-signature"><span class="return-type">boolean</span>&nbsp;<span class="element-name">supportsType</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;type)</span></div>
+<div class="member-signature"><span class="return-type">boolean</span>&nbsp;<span class="element-name">supportsType</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef)</span></div>
 <div class="block">Returns <code>true</code> if this adapter supports the given type.</div>
 </section>
 </li>

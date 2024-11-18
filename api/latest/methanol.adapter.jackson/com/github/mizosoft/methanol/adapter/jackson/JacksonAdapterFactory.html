@@ -94,7 +94,7 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public class </span><span class="element-name type-name-label">JacksonAdapterFactory</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">Provides <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for the Jackson library.</div>
+<div class="block">Provides <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for JSON using the <a href="https://github.com/FasterXML/jackson">Jackson library</a>.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -129,7 +129,7 @@ loadScripts(document, 'script');</script>
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
@@ -137,7 +137,7 @@ loadScripts(document, 'script');</script>
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4 method-summary-table-tab6"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
@@ -160,7 +160,7 @@ loadScripts(document, 'script');</script>
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns an <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
@@ -168,31 +168,31 @@ loadScripts(document, 'script');</script>
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns an <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#createJsonDecoder()" class="member-name-link">createJsonDecoder</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses a default <code>ObjectMapper</code> for JSON and is only
  compatible with <code>application/json</code>.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)" class="member-name-link">createJsonDecoder</a><wbr>(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is only compatible with
  <code>application/json</code>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#createJsonEncoder()" class="member-name-link">createJsonEncoder</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns an <code>Encoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+<div class="block">Returns an <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses a default <code>ObjectMapper</code> for JSON and is only
  compatible with <code>application/json</code>.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)" class="member-name-link">createJsonEncoder</a><wbr>(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+<div class="block">Returns an <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>ObjectMapper</code> and is only compatible with
  <code>application/json</code>.</div>
 </div>
 </div>
@@ -244,7 +244,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="createJsonEncoder()">
 <h3>createJsonEncoder</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createJsonEncoder</span>()</div>
-<div class="block">Returns an <code>Encoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+<div class="block">Returns an <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses a default <code>ObjectMapper</code> for JSON and is only
  compatible with <code>application/json</code>.</div>
 </section>
 </li>
@@ -252,7 +252,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)">
 <h3>createJsonEncoder</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createJsonEncoder</span><wbr><span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
-<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+<div class="block">Returns an <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>ObjectMapper</code> and is only compatible with
  <code>application/json</code>.</div>
 </section>
 </li>
@@ -262,7 +262,7 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span><wbr><span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</span></div>
-<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns an <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </section>
 </li>
@@ -273,7 +273,7 @@ loadScripts(document, 'script');</script>
  <a href="ObjectWriterFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectWriterFactory</a>&nbsp;writerFactory,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</span></div>
-<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns an <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types. The encoder creates <code>ObjectWriters</code> using the given factory.</div>
 </section>
 </li>
@@ -287,7 +287,7 @@ loadScripts(document, 'script');</script>
 <div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
 <div class="deprecation-comment">Use <a href="#createJsonDecoder()"><code>createJsonDecoder()</code></a>.</div>
 </div>
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses a default <code>ObjectMapper</code> for JSON and is only
  compatible with <code>application/json</code>.</div>
 </section>
 </li>
@@ -301,7 +301,7 @@ loadScripts(document, 'script');</script>
 <div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
 <div class="deprecation-comment">Use <a href="#createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)"><code>createJsonDecoder(ObjectMapper)</code></a>.</div>
 </div>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is only compatible with
  <code>application/json</code>.</div>
 </section>
 </li>
@@ -309,7 +309,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="createJsonDecoder()">
 <h3>createJsonDecoder</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createJsonDecoder</span>()</div>
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses a default <code>ObjectMapper</code> for JSON and is only
  compatible with <code>application/json</code>.</div>
 </section>
 </li>
@@ -317,7 +317,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)">
 <h3>createJsonDecoder</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createJsonDecoder</span><wbr><span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is only compatible with
  <code>application/json</code>.</div>
 </section>
 </li>
@@ -327,7 +327,7 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span><wbr><span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</span></div>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </section>
 </li>
@@ -338,7 +338,7 @@ loadScripts(document, 'script');</script>
  <a href="ObjectReaderFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jackson">ObjectReaderFactory</a>&nbsp;readerFactory,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;firstMediaType,
  <a href="../../../../../../../methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;otherMediaTypes)</span></div>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns a <a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types. The decoder creates <code>ObjectReaders</code> using the given factory.</div>
 </section>
 </li>

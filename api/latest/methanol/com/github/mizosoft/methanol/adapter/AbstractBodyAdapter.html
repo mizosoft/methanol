@@ -97,14 +97,15 @@ loadScripts(document, 'script');</script>
 </dl>
 <dl class="notes">
 <dt>Direct Known Subclasses:</dt>
-<dd><code><a href="../internal/extensions/BasicAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions">BasicAdapter</a></code>, <code><a href="../../../../../../methanol.testing/com/github/mizosoft/methanol/testing/CharSequenceEncoder.html" title="class in com.github.mizosoft.methanol.testing">CharSequenceEncoder</a></code>, <code><a href="../../../../../../methanol.testing/com/github/mizosoft/methanol/testing/StringDecoder.html" title="class in com.github.mizosoft.methanol.testing">StringDecoder</a></code></dd>
+<dd><code><a href="../internal/adapter/BasicAdapter.html" title="class in com.github.mizosoft.methanol.internal.adapter">BasicAdapter</a></code>, <code><a href="../../../../../../methanol.testing/com/github/mizosoft/methanol/testing/CharSequenceEncoder.html" title="class in com.github.mizosoft.methanol.testing">CharSequenceEncoder</a></code>, <code><a href="../../../../../../methanol.testing/com/github/mizosoft/methanol/testing/StringDecoder.html" title="class in com.github.mizosoft.methanol.testing">StringDecoder</a></code></dd>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public abstract class </span><span class="element-name type-name-label">AbstractBodyAdapter</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>
 implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></span></div>
-<div class="block">Abstract <a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that implements <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.isCompatibleWith(MediaType)</code></a> by
- specifying a set of <code>MediaTypes</code> the adapter is compatible with.</div>
+<div class="block">An abstract <a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that implements <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.isCompatibleWith(MediaType)</code></a>
+ by allowing subclasses to specify a set of <a href="../MediaType.html" title="class in com.github.mizosoft.methanol"><code>MediaTypes</code></a> the adapter is compatible
+ with.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -112,9 +113,28 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <li>
 <section class="nested-class-summary" id="nested-class-summary">
 <h2>Nested Class Summary</h2>
+<div class="caption"><span>Nested Classes</span></div>
+<div class="summary-table three-column-summary">
+<div class="table-header col-first">Modifier and Type</div>
+<div class="table-header col-second">Class</div>
+<div class="table-header col-last">Description</div>
+<div class="col-first even-row-color"><code>static interface&nbsp;</code></div>
+<div class="col-second even-row-color"><code><a href="AbstractBodyAdapter.BaseDecoder.html" class="type-name-link" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseDecoder</a></code></div>
+<div class="col-last even-row-color">
+<div class="block">This interface abstracts the more-capable <a href="AbstractBodyAdapter.BaseDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)"><code>AbstractBodyAdapter.BaseDecoder.toObject(TypeRef, Hints)</code></a> method and adds a
+ default implementation for <a href="AbstractBodyAdapter.BaseDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>AbstractBodyAdapter.BaseDecoder.toObject(TypeRef, MediaType)</code></a> that forwards to the former.</div>
+</div>
+<div class="col-first odd-row-color"><code>static interface&nbsp;</code></div>
+<div class="col-second odd-row-color"><code><a href="AbstractBodyAdapter.BaseEncoder.html" class="type-name-link" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseEncoder</a></code></div>
+<div class="col-last odd-row-color">
+<div class="block">This interface abstracts the more-capable <a href="AbstractBodyAdapter.BaseEncoder.html#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)"><code>AbstractBodyAdapter.BaseEncoder.toBody(Object, TypeRef, Hints)</code></a> method and
+ adds a default implementation for <a href="AbstractBodyAdapter.BaseEncoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)"><code>AbstractBodyAdapter.BaseEncoder.toBody(Object, MediaType)</code></a> that forwards to the
+ former.</div>
+</div>
+</div>
 <div class="inherited-list">
 <h2 id="nested-classes-inherited-from-class-com.github.mizosoft.methanol.BodyAdapter">Nested classes/interfaces inherited from interface&nbsp;com.github.mizosoft.methanol.<a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></h2>
-<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
+<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>, <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></code></div>
 </section>
 </li>
 <!-- ======== CONSTRUCTOR SUMMARY ======== -->
@@ -149,22 +169,22 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#attachMediaType(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)" class="member-name-link">attachMediaType</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;publisher,
  @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Converts the given publisher into a <a href="../MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a> only if the given media type is
- not <code>null</code> or <a href="../MediaType.html#hasWildcard()"><code>has a wildcard</code></a>, otherwise the given
- publisher is returned.</div>
+<div class="block">Converts the given publisher into a <a href="../MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a> that has the given media type
+ only if it is not <code>null</code> or <a href="../MediaType.html#hasWildcard()"><code>has a wildcard</code></a>, otherwise the
+ given publisher is returned as-is.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#charsetOrDefault(com.github.mizosoft.methanol.MediaType,java.nio.charset.Charset)" class="member-name-link">charsetOrDefault</a><wbr>(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;defaultCharset)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a> or <code>
- defaultCharset</code> directly if <code>mediaType</code> is null.</div>
+<div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or the given charset
+ if the given media type is <code>null</code>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#charsetOrUtf8(com.github.mizosoft.methanol.MediaType)" class="member-name-link">charsetOrUtf8</a><wbr>(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a> or <code>UTF-8</code>
- directly if <code>mediaType</code> is null.</div>
+<div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or <code>UTF-8</code> if
+ the given media type is <code>null</code>.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Set.html" title="class or interface in java.util" class="external-link">Set</a><wbr>&lt;<a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#compatibleMediaTypes()" class="member-name-link">compatibleMediaTypes</a>()</code></div>
@@ -179,17 +199,26 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected void</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requireCompatibleOrNull(com.github.mizosoft.methanol.MediaType)" class="member-name-link">requireCompatibleOrNull</a><wbr>(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Requires that the given media type is either <code>null</code> or is compatible with this adapter.</div>
+<div class="block">Requires that either this adapter is <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>compatible</code></a>
+ with the given media type, or the given media type is <code>null</code>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected void</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requireSupport(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">requireSupport</a><wbr>(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;type)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requireSupport(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">requireSupport</a><wbr>(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Requires that the given type is supported by this adapter.</div>
+<div class="block">Requires that this adapter <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected void</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requireSupport(java.lang.Class)" class="member-name-link">requireSupport</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;?&gt;&nbsp;type)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requireSupport(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">requireSupport</a><wbr>(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef,
+ <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Requires that the given class is supported by this adapter.</div>
+<div class="block">Requires that this adapter <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type
+ and <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>is compatible with</code></a> the given hints' media
+ type, if any.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected void</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requireSupport(java.lang.Class)" class="member-name-link">requireSupport</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;?&gt;&nbsp;type)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Requires that this adapter <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type.</div>
 </div>
 </div>
 </div>
@@ -248,11 +277,11 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <li>
 <section class="detail" id="requireSupport(com.github.mizosoft.methanol.TypeRef)">
 <h3>requireSupport</h3>
-<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">requireSupport</span><wbr><span class="parameters">(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;type)</span></div>
-<div class="block">Requires that the given type is supported by this adapter.</div>
+<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">requireSupport</span><wbr><span class="parameters">(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef)</span></div>
+<div class="block">Requires that this adapter <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>support</code></a> the given type.</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't support the given type.</dd>
 </dl>
 </section>
 </li>
@@ -260,10 +289,25 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <section class="detail" id="requireSupport(java.lang.Class)">
 <h3>requireSupport</h3>
 <div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">requireSupport</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;?&gt;&nbsp;type)</span></div>
-<div class="block">Requires that the given class is supported by this adapter.</div>
+<div class="block">Requires that this adapter <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>support</code></a> the given raw type.</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't support the given type.</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="requireSupport(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">
+<h3>requireSupport</h3>
+<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">requireSupport</span><wbr><span class="parameters">(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef,
+ <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</span></div>
+<div class="block">Requires that this adapter <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type
+ and <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>is compatible with</code></a> the given hints' media
+ type, if any.</div>
+<dl class="notes">
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't support the given type or is not
+     compatible with the given hints' media type.</dd>
 </dl>
 </section>
 </li>
@@ -271,10 +315,12 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <section class="detail" id="requireCompatibleOrNull(com.github.mizosoft.methanol.MediaType)">
 <h3>requireCompatibleOrNull</h3>
 <div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">requireCompatibleOrNull</span><wbr><span class="parameters">(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Requires that the given media type is either <code>null</code> or is compatible with this adapter.</div>
+<div class="block">Requires that either this adapter is <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>compatible</code></a>
+ with the given media type, or the given media type is <code>null</code>.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter is not <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>compatible</code></a> the given type.</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter is not compatible with the given media
+     type.</dd>
 </dl>
 </section>
 </li>
@@ -283,16 +329,16 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <h3>charsetOrDefault</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></span>&nbsp;<span class="element-name">charsetOrDefault</span><wbr><span class="parameters">(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;defaultCharset)</span></div>
-<div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a> or <code>
- defaultCharset</code> directly if <code>mediaType</code> is null.</div>
+<div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or the given charset
+ if the given media type is <code>null</code>.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="charsetOrUtf8(com.github.mizosoft.methanol.MediaType)">
 <h3>charsetOrUtf8</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></span>&nbsp;<span class="element-name">charsetOrUtf8</span><wbr><span class="parameters">(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a> or <code>UTF-8</code>
- directly if <code>mediaType</code> is null.</div>
+<div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or <code>UTF-8</code> if
+ the given media type is <code>null</code>.</div>
 </section>
 </li>
 <li>
@@ -300,9 +346,9 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <h3>attachMediaType</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">attachMediaType</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;publisher,
  @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Converts the given publisher into a <a href="../MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a> only if the given media type is
- not <code>null</code> or <a href="../MediaType.html#hasWildcard()"><code>has a wildcard</code></a>, otherwise the given
- publisher is returned.</div>
+<div class="block">Converts the given publisher into a <a href="../MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a> that has the given media type
+ only if it is not <code>null</code> or <a href="../MediaType.html#hasWildcard()"><code>has a wildcard</code></a>, otherwise the
+ given publisher is returned as-is.</div>
 </section>
 </li>
 </ul>

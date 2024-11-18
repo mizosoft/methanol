@@ -66,12 +66,24 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" class="type-name-link" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a> - Class in <a href="methanol/com/github/mizosoft/methanol/adapter/package-summary.html">com.github.mizosoft.methanol.adapter</a></dt>
 <dd>
-<div class="block">Abstract <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that implements <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.isCompatibleWith(MediaType)</code></a> by
- specifying a set of <code>MediaTypes</code> the adapter is compatible with.</div>
+<div class="block">An abstract <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that implements <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.isCompatibleWith(MediaType)</code></a>
+ by allowing subclasses to specify a set of <a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol"><code>MediaTypes</code></a> the adapter is compatible
+ with.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#%3Cinit%3E(com.github.mizosoft.methanol.MediaType...)" class="member-name-link">AbstractBodyAdapter(MediaType...)</a> - Constructor for class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
 <dd>
 <div class="block">Creates an <code>AbstractBodyAdapter</code> compatible with the given media types.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html" class="type-name-link" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseDecoder</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/adapter/package-summary.html">com.github.mizosoft.methanol.adapter</a></dt>
+<dd>
+<div class="block">This interface abstracts the more-capable <a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)"><code>AbstractBodyAdapter.BaseDecoder.toObject(TypeRef, Hints)</code></a> method and adds a
+ default implementation for <a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>AbstractBodyAdapter.BaseDecoder.toObject(TypeRef, MediaType)</code></a> that forwards to the former.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseEncoder.html" class="type-name-link" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseEncoder</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/adapter/package-summary.html">com.github.mizosoft.methanol.adapter</a></dt>
+<dd>
+<div class="block">This interface abstracts the more-capable <a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseEncoder.html#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)"><code>AbstractBodyAdapter.BaseEncoder.toBody(Object, TypeRef, Hints)</code></a> method and
+ adds a default implementation for <a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseEncoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)"><code>AbstractBodyAdapter.BaseEncoder.toBody(Object, MediaType)</code></a> that forwards to the
+ former.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractPollableSubscription.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.flow">AbstractPollableSubscription&lt;T&gt;</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/flow/package-summary.html">com.github.mizosoft.methanol.internal.flow</a></dt>
 <dd>
@@ -117,13 +129,12 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" class="type-name-link" title="class in com.github.mizosoft.methanol">AdapterCodec</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">A group of <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>adapters</code></a>, typically targeting different mapping formats, that
- facilitates creating <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> and <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a>
- implementations based on these adapters.</div>
+<div class="block">A group of <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>adapters</code></a> (<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>encoders</code></a> <span class="invalid-tag">invalid input: '&amp;'</span> <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>decoders</code></a>),
+ typically targeting different mapping schemes, that facilitates creating corresponding <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> and <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html" class="type-name-link" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">A builder of <code>AdapterCodec</code>.</div>
+<div class="block">A builder of <code>AdapterCodec</code> instances.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#add(java.lang.String,java.lang.String)" class="member-name-link">add(String, String)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
 <dd>&nbsp;</dd>
@@ -278,9 +289,9 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#attachMediaType(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)" class="member-name-link">attachMediaType(HttpRequest.BodyPublisher, MediaType)</a> - Static method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
 <dd>
-<div class="block">Converts the given publisher into a <a href="methanol/com/github/mizosoft/methanol/MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a> only if the given media type is
- not <code>null</code> or <a href="methanol/com/github/mizosoft/methanol/MediaType.html#hasWildcard()"><code>has a wildcard</code></a>, otherwise the given
- publisher is returned.</div>
+<div class="block">Converts the given publisher into a <a href="methanol/com/github/mizosoft/methanol/MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a> that has the given media type
+ only if it is not <code>null</code> or <a href="methanol/com/github/mizosoft/methanol/MediaType.html#hasWildcard()"><code>has a wildcard</code></a>, otherwise the
+ given publisher is returned as-is.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#authenticator()" class="member-name-link">authenticator()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>&nbsp;</dd>
@@ -359,6 +370,11 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Sets the base <code>URI</code> with which each outgoing requests' <code>URI</code> is <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html#resolve(java.net.URI)" title="class or interface in java.net" class="external-link"><code>resolved</code></a>.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basic()" class="member-name-link">basic()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></dt>
+<dd>
+<div class="block">Adds both the basic <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html#basic()"><code>encoder</code></a> <code>&amp;</code> <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#basic()"><code>decoder</code></a>
+ pair.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#basic()" class="member-name-link">basic()</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></dt>
 <dd>
 <div class="block">Returns the basic decoder.</div>
@@ -367,14 +383,9 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the basic encoder.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/BasicAdapter.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.extensions">BasicAdapter</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/BasicAdapter.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.adapter">BasicAdapter</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/adapter/package-summary.html">com.github.mizosoft.methanol.internal.adapter</a></dt>
 <dd>
-<div class="block">An adapter for basic types (e.g.</div>
-</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basicCodec()" class="member-name-link">basicCodec()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></dt>
-<dd>
-<div class="block">Adds both the basic <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html#basic()"><code>encoder</code></a> <code>&amp;</code> <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#basic()"><code>decoder</code></a>
- pair.</div>
+<div class="block">An adapter for basic types (e.g., <code>String</code>, <code>byte[]</code>).</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basicDecoder()" class="member-name-link">basicDecoder()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></dt>
 <dd>
@@ -394,7 +405,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">BodyAdapter</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">An object that converts high objects to or from request or response bodies respectively, using a
+<div class="block">An object that converts objects to or from request or response bodies respectively, using a
  defined format.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
@@ -405,9 +416,14 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">A <code>BodyAdapter</code> that encodes objects into request bodies.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.spi">BodyAdapterProviders</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/spi/package-summary.html">com.github.mizosoft.methanol.internal.spi</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">Utility class for loading/caching <code>Encoder/Decoder</code> providers.</div>
+<div class="block">A collections of hints that provide additional context to customize an adapter's
+ encoding/decoding behavior.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html" class="type-name-link" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
+<dd>
+<div class="block">A builder of <code>Hint</code> objects.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/BodyAdapterVerifier.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing.verifiers">BodyAdapterVerifier&lt;A,<wbr>VERIFIER&gt;</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/package-summary.html">com.github.mizosoft.methanol.testing.verifiers</a></dt>
 <dd>
@@ -476,7 +492,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#build()" class="member-name-link">build()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></dt>
 <dd>
-<div class="block">Returns a new <code>AdapterCodec</code> for the added encoders and decoders.</div>
+<div class="block">Returns a new <code>AdapterCodec</code> containing the encoders and decoders added so far.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html#build()" class="member-name-link">build()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a></dt>
+<dd>
+<div class="block">Returns a new <code>Hints</code> object containing the hints added so far.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html#build()" class="member-name-link">build()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></dt>
 <dd>
@@ -719,18 +739,22 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#charsetOrDefault(com.github.mizosoft.methanol.MediaType,java.nio.charset.Charset)" class="member-name-link">charsetOrDefault(MediaType, Charset)</a> - Static method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
 <dd>
-<div class="block">Returns either the result of <a href="methanol/com/github/mizosoft/methanol/MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a> or <code>
- defaultCharset</code> directly if <code>mediaType</code> is null.</div>
+<div class="block">Returns either the result of <a href="methanol/com/github/mizosoft/methanol/MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or the given charset
+ if the given media type is <code>null</code>.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MediaType.html#charsetOrDefault(java.nio.charset.Charset)" class="member-name-link">charsetOrDefault(Charset)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></dt>
 <dd>
 <div class="block">Returns either the value of the charset parameter or the given default charset if no such
  parameter exists or if the charset has no support in this JVM.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MediaType.html#charsetOrUtf8()" class="member-name-link">charsetOrUtf8()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></dt>
+<dd>
+<div class="block">Equivalent to calling <code>charsetOrDefault(StandardCharsets.UTF_8)</code>.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#charsetOrUtf8(com.github.mizosoft.methanol.MediaType)" class="member-name-link">charsetOrUtf8(MediaType)</a> - Static method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
 <dd>
-<div class="block">Returns either the result of <a href="methanol/com/github/mizosoft/methanol/MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a> or <code>UTF-8</code>
- directly if <code>mediaType</code> is null.</div>
+<div class="block">Returns either the result of <a href="methanol/com/github/mizosoft/methanol/MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or <code>UTF-8</code> if
+ the given media type is <code>null</code>.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpCache.html#clear()" class="member-name-link">clear()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></dt>
 <dd>
@@ -838,13 +862,9 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.CorruptionMode.html#CM" class="member-name-link">CM</a> - Enum constant in enum class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.CorruptionMode.html" title="enum class in com.github.mizosoft.methanol.testing">MockGzipStream.CorruptionMode</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonAdapterUtils.html#coerceUtf8(java.net.http.HttpResponse.BodySubscriber,java.nio.charset.Charset)" class="member-name-link">coerceUtf8(HttpResponse.BodySubscriber&lt;T&gt;, Charset)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonAdapterUtils.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonAdapterUtils</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ByteBufferCollector.html#collect(java.util.Collection)" class="member-name-link">collect(Collection&lt;ByteBuffer&gt;)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ByteBufferCollector.html" title="class in com.github.mizosoft.methanol.testing">ByteBufferCollector</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ByteBufferCollector.html#collect(java.util.concurrent.Flow.Publisher)" class="member-name-link">collect(Flow.Publisher&lt;ByteBuffer&gt;)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ByteBufferCollector.html" title="class in com.github.mizosoft.methanol.testing">ByteBufferCollector</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonAdapterUtils.html#collectBytes(java.util.List)" class="member-name-link">collectBytes(List&lt;ByteBuffer&gt;)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonAdapterUtils.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonAdapterUtils</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ByteBufferCollector.html#collectMulti(java.util.Collection)" class="member-name-link">collectMulti(Collection&lt;List&lt;ByteBuffer&gt;&gt;)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ByteBufferCollector.html" title="class in com.github.mizosoft.methanol.testing">ByteBufferCollector</a></dt>
 <dd>&nbsp;</dd>
@@ -860,8 +880,6 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/package-summary.html">com.github.mizosoft.methanol.adapter.jackson.flux</a> - package com.github.mizosoft.methanol.adapter.jackson.flux</dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/package-summary.html">com.github.mizosoft.methanol.adapter.jackson.internal</a> - package com.github.mizosoft.methanol.adapter.jackson.internal</dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.jaxb/com/github/mizosoft/methanol/adapter/jaxb/package-summary.html">com.github.mizosoft.methanol.adapter.jaxb</a> - package com.github.mizosoft.methanol.adapter.jaxb</dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/package-summary.html">com.github.mizosoft.methanol.adapter.jaxb.jakarta</a> - package com.github.mizosoft.methanol.adapter.jaxb.jakarta</dt>
@@ -875,6 +893,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/function/package-summary.html">com.github.mizosoft.methanol.function</a> - package com.github.mizosoft.methanol.function</dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/package-summary.html">com.github.mizosoft.methanol.internal</a> - package com.github.mizosoft.methanol.internal</dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/package-summary.html">com.github.mizosoft.methanol.internal.adapter</a> - package com.github.mizosoft.methanol.internal.adapter</dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/annotations/package-summary.html">com.github.mizosoft.methanol.internal.annotations</a> - package com.github.mizosoft.methanol.internal.annotations</dt>
 <dd>&nbsp;</dd>
@@ -937,8 +957,6 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodySubscriberVerifier.html#completedBody()" class="member-name-link">completedBody()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodySubscriberVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">DecoderVerifier.BodySubscriberVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#completeExceptionally(java.lang.Throwable)" class="member-name-link">completeExceptionally(Throwable)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html#completeLastCall()" class="member-name-link">completeLastCall()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#completionCount()" class="member-name-link">completionCount()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
@@ -1029,6 +1047,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html#contentLength()" class="member-name-link">contentLength()</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/SupplierBodyPublisher.html#contentLength()" class="member-name-link">contentLength()</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/SupplierBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">SupplierBodyPublisher</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.html#contentLength()" class="member-name-link">contentLength()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ProgressTracker.Progress.html#contentLength()" class="member-name-link">contentLength()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ProgressTracker.Progress.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.Progress</a></dt>
@@ -1042,6 +1062,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.html#converting(java.lang.Class)" class="member-name-link">converting(Class&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">DecoderVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.html#converting(T)" class="member-name-link">converting(T)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">EncoderVerifier</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.html#converting(T,com.github.mizosoft.methanol.TypeRef)" class="member-name-link">converting(T, TypeRef&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">EncoderVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#cookieHandler()" class="member-name-link">cookieHandler()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>&nbsp;</dd>
@@ -1153,7 +1175,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/GsonAdapterFactory.html#createDecoder()" class="member-name-link">createDecoder()</a> - Static method in class com.github.mizosoft.methanol.adapter.gson.<a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/GsonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.gson">GsonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>Gson</code> instance.</div>
+<div class="block">Returns a <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses a default <code>Gson</code> instance.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/JacksonFluxAdapterFactory.html#createDecoder()" class="member-name-link">createDecoder()</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.flux.<a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/JacksonFluxAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson.flux">JacksonFluxAdapterFactory</a></dt>
 <dd>
@@ -1175,7 +1197,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.adapter.protobuf/com/github/mizosoft/methanol/adapter/protobuf/ProtobufAdapterFactory.html#createDecoder()" class="member-name-link">createDecoder()</a> - Static method in class com.github.mizosoft.methanol.adapter.protobuf.<a href="methanol.adapter.protobuf/com/github/mizosoft/methanol/adapter/protobuf/ProtobufAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.protobuf">ProtobufAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a new <code>Decoder</code> with an empty extension registry.</div>
+<div class="block">Returns a new <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> with an empty extension registry.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/JacksonFluxAdapterFactory.html#createDecoder(com.fasterxml.jackson.databind.ObjectMapper)" class="member-name-link">createDecoder(ObjectMapper)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.flux.<a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/JacksonFluxAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson.flux">JacksonFluxAdapterFactory</a></dt>
 <dd>
@@ -1189,12 +1211,12 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createDecoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.adapter.jackson.ObjectReaderFactory,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)" class="member-name-link">createDecoder(ObjectMapper, ObjectReaderFactory, MediaType, MediaType...)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns a <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createDecoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)" class="member-name-link">createDecoder(ObjectMapper, MediaType, MediaType...)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns a <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </dd>
 <dt><a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/JaxbAdapterFactory.html#createDecoder(com.github.mizosoft.methanol.adapter.jaxb.jakarta.JaxbBindingFactory)" class="member-name-link">createDecoder(JaxbBindingFactory)</a> - Static method in class com.github.mizosoft.methanol.adapter.jaxb.jakarta.<a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/JaxbAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jaxb.jakarta">JaxbAdapterFactory</a></dt>
@@ -1207,17 +1229,17 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/GsonAdapterFactory.html#createDecoder(com.google.gson.Gson)" class="member-name-link">createDecoder(Gson)</a> - Static method in class com.github.mizosoft.methanol.adapter.gson.<a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/GsonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.gson">GsonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>Gson</code> instance.</div>
+<div class="block">Returns a <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>Gson</code> instance.</div>
 </dd>
 <dt><a href="methanol.adapter.protobuf/com/github/mizosoft/methanol/adapter/protobuf/ProtobufAdapterFactory.html#createDecoder(com.google.protobuf.ExtensionRegistryLite)" class="member-name-link">createDecoder(ExtensionRegistryLite)</a> - Static method in class com.github.mizosoft.methanol.adapter.protobuf.<a href="methanol.adapter.protobuf/com/github/mizosoft/methanol/adapter/protobuf/ProtobufAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.protobuf">ProtobufAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a new <code>Decoder</code> that uses the given extension registry.</div>
+<div class="block">Returns a new <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given extension registry.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreConfig.html#createDefault(com.github.mizosoft.methanol.testing.store.StoreConfig.StoreType)" class="member-name-link">createDefault(StoreConfig.StoreType)</a> - Static method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreConfig.html" title="class in com.github.mizosoft.methanol.testing.store">StoreConfig</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/GsonAdapterFactory.html#createEncoder()" class="member-name-link">createEncoder()</a> - Static method in class com.github.mizosoft.methanol.adapter.gson.<a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/GsonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.gson">GsonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Encoder</code> that uses a default <code>Gson</code> instance.</div>
+<div class="block">Returns a <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses a default <code>Gson</code> instance.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/JacksonFluxAdapterFactory.html#createEncoder()" class="member-name-link">createEncoder()</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.flux.<a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/JacksonFluxAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson.flux">JacksonFluxAdapterFactory</a></dt>
 <dd>
@@ -1239,7 +1261,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.adapter.protobuf/com/github/mizosoft/methanol/adapter/protobuf/ProtobufAdapterFactory.html#createEncoder()" class="member-name-link">createEncoder()</a> - Static method in class com.github.mizosoft.methanol.adapter.protobuf.<a href="methanol.adapter.protobuf/com/github/mizosoft/methanol/adapter/protobuf/ProtobufAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.protobuf">ProtobufAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a new <code>Encoder</code>.</div>
+<div class="block">Returns a new <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a>.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/JacksonFluxAdapterFactory.html#createEncoder(com.fasterxml.jackson.databind.ObjectMapper)" class="member-name-link">createEncoder(ObjectMapper)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.flux.<a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/JacksonFluxAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson.flux">JacksonFluxAdapterFactory</a></dt>
 <dd>
@@ -1253,12 +1275,12 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createEncoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.adapter.jackson.ObjectWriterFactory,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)" class="member-name-link">createEncoder(ObjectMapper, ObjectWriterFactory, MediaType, MediaType...)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns an <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createEncoder(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.MediaType,com.github.mizosoft.methanol.MediaType...)" class="member-name-link">createEncoder(ObjectMapper, MediaType, MediaType...)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is compatible with the
+<div class="block">Returns an <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>ObjectMapper</code> and is compatible with the
  given media types.</div>
 </dd>
 <dt><a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/JaxbAdapterFactory.html#createEncoder(com.github.mizosoft.methanol.adapter.jaxb.jakarta.JaxbBindingFactory)" class="member-name-link">createEncoder(JaxbBindingFactory)</a> - Static method in class com.github.mizosoft.methanol.adapter.jaxb.jakarta.<a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/JaxbAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jaxb.jakarta">JaxbAdapterFactory</a></dt>
@@ -1271,7 +1293,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/GsonAdapterFactory.html#createEncoder(com.google.gson.Gson)" class="member-name-link">createEncoder(Gson)</a> - Static method in class com.github.mizosoft.methanol.adapter.gson.<a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/GsonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.gson">GsonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Encoder</code> that uses the given <code>Gson</code> instance.</div>
+<div class="block">Returns a <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>Gson</code> instance.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorContext.html#createExecutor(com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType)" class="member-name-link">createExecutor(ExecutorExtension.ExecutorType)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorContext.html" title="class in com.github.mizosoft.methanol.testing">ExecutorContext</a></dt>
 <dd>&nbsp;</dd>
@@ -1279,22 +1301,22 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonDecoder()" class="member-name-link">createJsonDecoder()</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+<div class="block">Returns a <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses a default <code>ObjectMapper</code> for JSON and is only
  compatible with <code>application/json</code>.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonDecoder(com.fasterxml.jackson.databind.ObjectMapper)" class="member-name-link">createJsonDecoder(ObjectMapper)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+<div class="block">Returns a <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> that uses the given <code>ObjectMapper</code> and is only compatible with
  <code>application/json</code>.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonEncoder()" class="member-name-link">createJsonEncoder()</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns an <code>Encoder</code> that uses a default <code>ObjectMapper</code> for JSON and is only
+<div class="block">Returns an <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses a default <code>ObjectMapper</code> for JSON and is only
  compatible with <code>application/json</code>.</div>
 </dd>
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html#createJsonEncoder(com.fasterxml.jackson.databind.ObjectMapper)" class="member-name-link">createJsonEncoder(ObjectMapper)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a></dt>
 <dd>
-<div class="block">Returns an <code>Encoder</code> that uses the given <code>ObjectMapper</code> and is only compatible with
+<div class="block">Returns an <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that uses the given <code>ObjectMapper</code> and is only compatible with
  <code>application/json</code>.</div>
 </dd>
 <dt><a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/JaxbBindingFactory.html#createMarshaller(java.lang.Class)" class="member-name-link">createMarshaller(Class&lt;?&gt;)</a> - Method in interface com.github.mizosoft.methanol.adapter.jaxb.jakarta.<a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/JaxbBindingFactory.html" title="interface in com.github.mizosoft.methanol.adapter.jaxb.jakarta">JaxbBindingFactory</a></dt>
@@ -1370,7 +1392,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/decoder/Decode.BufferSizeOption.html" class="type-name-link" title="enum class in com.github.mizosoft.methanol.testing.decoder">Decode.BufferSizeOption</a> - Enum Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/decoder/package-summary.html">com.github.mizosoft.methanol.testing.decoder</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/BasicAdapter.html#decoder()" class="member-name-link">decoder()</a> - Static method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/BasicAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions">BasicAdapter</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/BasicAdapter.html#decoder()" class="member-name-link">decoder()</a> - Static method in class com.github.mizosoft.methanol.internal.adapter.<a href="methanol/com/github/mizosoft/methanol/internal/adapter/BasicAdapter.html" title="class in com.github.mizosoft.methanol.internal.adapter">BasicAdapter</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#decoder(com.github.mizosoft.methanol.BodyAdapter.Decoder)" class="member-name-link">decoder(BodyAdapter.Decoder)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></dt>
 <dd>
@@ -1380,8 +1402,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the list of decoders in this codec.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html#decoders()" class="member-name-link">decoders()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html" title="class in com.github.mizosoft.methanol.internal.spi">BodyAdapterProviders</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing.verifiers">DecoderVerifier</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/package-summary.html">com.github.mizosoft.methanol.testing.verifiers</a></dt>
 <dd>
 <div class="block">A small DSL for testing <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Decoder</code></a> implementations.</div>
@@ -1421,18 +1441,14 @@ loadScripts(document, 'script');</script>
 <div class="block">Identifies a provider from this module as default so that it can be overridden by user providers
  with same characteristics.</div>
 </dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html#defaultResponseFor(java.net.http.HttpRequest)" class="member-name-link">defaultResponseFor(HttpRequest)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html#defaultResponseFor(java.net.http.HttpRequest,java.nio.ByteBuffer,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">defaultResponseFor(HttpRequest, ByteBuffer, HttpResponse.BodyHandler&lt;T&gt;)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#deferredHandlerOf(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">deferredHandlerOf(TypeRef&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#deferredHandlerOf(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">deferredHandlerOf(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
 <dd>
 <div class="block">Returns a <code>BodyHandler</code> that lazily decodes the response body into an object of the given
  type.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#deferredSubscriberOf(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">deferredSubscriberOf(TypeRef&lt;T&gt;, MediaType)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#deferredSubscriberOf(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">deferredSubscriberOf(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
 <dd>
-<div class="block">Returns a <code>BodySubscriber</code> that lazily decodes the response body into an object of the
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that lazily decodes the response body into an object of the
  given type.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html#deflate(java.lang.String)" class="member-name-link">deflate(String)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html" title="class in com.github.mizosoft.methanol.testing">TestUtils</a></dt>
@@ -1664,6 +1680,10 @@ loadScripts(document, 'script');</script>
 <div class="block">Emits at most <code>emit</code> items to downstream using <a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#submitOnNext(java.util.concurrent.Flow.Subscriber,T)"><code>AbstractSubscription.submitOnNext(Subscriber, Object)</code></a>
  as long as it returns <code>true</code>.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#empty()" class="member-name-link">empty()</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns a <code>Hints</code> object containing no hints.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheControl.html#empty()" class="member-name-link">empty()</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.html" title="class in com.github.mizosoft.methanol">CacheControl</a></dt>
 <dd>
 <div class="block">Returns a <code>CacheControl</code> with no directives.</div>
@@ -1698,7 +1718,7 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the url-encoded string of this body's queries.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/BasicAdapter.html#encoder()" class="member-name-link">encoder()</a> - Static method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/BasicAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions">BasicAdapter</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/BasicAdapter.html#encoder()" class="member-name-link">encoder()</a> - Static method in class com.github.mizosoft.methanol.internal.adapter.<a href="methanol/com/github/mizosoft/methanol/internal/adapter/BasicAdapter.html" title="class in com.github.mizosoft.methanol.internal.adapter">BasicAdapter</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#encoder(com.github.mizosoft.methanol.BodyAdapter.Encoder)" class="member-name-link">encoder(BodyAdapter.Encoder)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></dt>
 <dd>
@@ -1708,8 +1728,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the list of encoders in this codec.</div>
 </dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html#encoders()" class="member-name-link">encoders()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyAdapterProviders.html" title="class in com.github.mizosoft.methanol.internal.spi">BodyAdapterProviders</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing.verifiers">EncoderVerifier</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/package-summary.html">com.github.mizosoft.methanol.testing.verifiers</a></dt>
 <dd>
 <div class="block">A small DSL for testing <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> implementations.</div>
@@ -1762,6 +1780,8 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns <code>true</code> if the given object is a <code>TypeRef</code> and both instances represent the
  same type.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#equals(java.lang.Object)" class="member-name-link">equals(Object)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#errorCount()" class="member-name-link">errorCount()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#escapeAndQuoteValueIfNeeded(java.lang.String)" class="member-name-link">escapeAndQuoteValueIfNeeded(String)</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
@@ -1770,8 +1790,8 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#exactRawType()" class="member-name-link">exactRawType()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
 <dd>
-<div class="block">Returns the underlying type as a <code>Class&lt;T&gt;</code> for when it is known that <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a> is
- already raw.</div>
+<div class="block">Returns the underlying type as a <code>Class&lt;T&gt;</code> for when it is known that <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a> is a raw
+ type.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#exchange(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">exchange(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>
@@ -1944,8 +1964,18 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingFileChannel.html#force(boolean)" class="member-name-link">force(boolean)</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingFileChannel.html" title="class in com.github.mizosoft.methanol.testing.file">ForwardingFileChannel</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html#forDecoder(java.net.http.HttpResponse.ResponseInfo)" class="member-name-link">forDecoder(HttpResponse.ResponseInfo)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a></dt>
+<dd>
+<div class="block">Adds the given <code>ResponseInfo</code> as a hint and a media type hint extracted from the
+ response headers if present.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/CloseableCopyOnWriteList.html#forEach(java.util.function.Consumer)" class="member-name-link">forEach(Consumer&lt;? super T&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/CloseableCopyOnWriteList.html" title="class in com.github.mizosoft.methanol.testing">CloseableCopyOnWriteList</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html#forEncoder(java.net.http.HttpRequest)" class="member-name-link">forEncoder(HttpRequest)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a></dt>
+<dd>
+<div class="block">Adds the given request as a hint and a media type hint extracted from either the request's
+ body or <code>Content-Type</code> header, whichever is present first.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html#formatHttpDate(java.time.LocalDateTime)" class="member-name-link">formatHttpDate(LocalDateTime)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html" class="type-name-link" title="class in com.github.mizosoft.methanol">FormBodyPublisher</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
@@ -2030,13 +2060,13 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#from(java.lang.Class)" class="member-name-link">from(Class&lt;U&gt;)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
 <dd>
 <div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
-<div class="deprecation-comment">in favor of the better-named <a href="methanol/com/github/mizosoft/methanol/TypeRef.html#of(java.lang.Class)"><code>TypeRef.of(Class)</code></a></div>
+<div class="deprecation-comment">in favor of <a href="methanol/com/github/mizosoft/methanol/TypeRef.html#of(java.lang.Class)"><code>TypeRef.of(Class)</code></a></div>
 </div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#from(java.lang.reflect.Type)" class="member-name-link">from(Type)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
 <dd>
 <div class="deprecation-block"><span class="deprecated-label">Deprecated.</span>
-<div class="deprecation-comment">in favor of the better-named <a href="methanol/com/github/mizosoft/methanol/TypeRef.html#of(java.lang.reflect.Type)"><code>TypeRef.of(Type)</code></a>.</div>
+<div class="deprecation-comment">in favor of <a href="methanol/com/github/mizosoft/methanol/TypeRef.html#of(java.lang.reflect.Type)"><code>TypeRef.of(Type)</code></a>.</div>
 </div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html#from(java.net.http.HttpRequest)" class="member-name-link">from(HttpRequest)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></dt>
@@ -2061,6 +2091,8 @@ loadScripts(document, 'script');</script>
 </dl>
 <h2 class="title" id="I:G">G</h2>
 <dl class="index">
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/PayloadHandlerExecutor.html#get()" class="member-name-link">get()</a> - Method in class com.github.mizosoft.methanol.internal.adapter.<a href="methanol/com/github/mizosoft/methanol/internal/adapter/PayloadHandlerExecutor.html" title="class in com.github.mizosoft.methanol.internal.adapter">PayloadHandlerExecutor</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/RawResponse.html#get()" class="member-name-link">get()</a> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/RawResponse.html" title="class in com.github.mizosoft.methanol.internal.cache">RawResponse</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/FallbackExecutorProvider.html#get()" class="member-name-link">get()</a> - Static method in class com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/FallbackExecutorProvider.html" title="class in com.github.mizosoft.methanol.internal.concurrent">FallbackExecutorProvider</a></dt>
@@ -2077,6 +2109,10 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/CloseableCopyOnWriteList.html#get(int)" class="member-name-link">get(int)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/CloseableCopyOnWriteList.html" title="class in com.github.mizosoft.methanol.testing">CloseableCopyOnWriteList</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#get(java.lang.Class)" class="member-name-link">get(Class&lt;T&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns the hint mapped to by the given type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/LocalCache.html#get(java.net.http.HttpRequest,java.time.Instant)" class="member-name-link">get(HttpRequest, Instant)</a> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/LocalCache.html" title="interface in com.github.mizosoft.methanol.internal.cache">LocalCache</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#get(java.util.concurrent.Future)" class="member-name-link">get(Future&lt;T&gt;)</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
@@ -2097,8 +2133,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds the given count to demand, making sure it doesn't exceed <code>Long.MAX_VALUE</code>.</div>
 </dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html#getBody()" class="member-name-link">getBody()</a> - Method in class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyDecoder.html#getBody()" class="member-name-link">getBody()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a></dt>
 <dd>
 <div class="block">Returns the body's <code>CompletionStage</code>.</div>
@@ -2123,8 +2157,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#getDecoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">getDecoder(TypeRef&lt;?&gt;, MediaType)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></dt>
 <dd>
-<div class="block">Returns an <code>Optional</code> containing a <code>Decoder</code> that supports the given object type
- and media type.</div>
+<div class="block">Returns a decoder that supports the given object type and media type.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#getDeepCompletionCause(java.lang.Throwable)" class="member-name-link">getDeepCompletionCause(Throwable)</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
 <dd>&nbsp;</dd>
@@ -2134,8 +2167,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html#getEncoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">getEncoder(TypeRef&lt;?&gt;, MediaType)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></dt>
 <dd>
-<div class="block">Returns an <code>Optional</code> containing an <code>Encoder</code> that supports the given object type
- and media type.</div>
+<div class="block">Returns the encoder that supports the given object type and media type.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html#getFactory(java.lang.String)" class="member-name-link">getFactory(String)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a></dt>
 <dd>
@@ -2173,7 +2205,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/GsonAdapterFactory.html" class="type-name-link" title="class in com.github.mizosoft.methanol.adapter.gson">GsonAdapterFactory</a> - Class in <a href="methanol.adapter.gson/com/github/mizosoft/methanol/adapter/gson/package-summary.html">com.github.mizosoft.methanol.adapter.gson</a></dt>
 <dd>
-<div class="block">Provides <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for the JSON format using Gson.</div>
+<div class="block">Provides <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for JSON using the <a href="https://github.com/google/gson">Gson library</a>.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheReadingPublisher.Listener.html#guarded()" class="member-name-link">guarded()</a> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheReadingPublisher.Listener.html" title="interface in com.github.mizosoft.methanol.internal.cache">CacheReadingPublisher.Listener</a></dt>
 <dd>&nbsp;</dd>
@@ -2208,9 +2240,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/Handlers.html#handleAsync(java.net.http.HttpResponse,java.net.http.HttpResponse.BodyHandler,java.util.concurrent.Executor)" class="member-name-link">handleAsync(HttpResponse&lt;Flow.Publisher&lt;List&lt;ByteBuffer&gt;&gt;&gt;, HttpResponse.BodyHandler&lt;T&gt;, Executor)</a> - Static method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/Handlers.html" title="class in com.github.mizosoft.methanol.internal.extensions">Handlers</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#handlerOf(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">handlerOf(TypeRef&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html#handleCalls(java.util.function.Consumer)" class="member-name-link">handleCalls(Consumer&lt;RecordingHttpClient.Call&lt;?&gt;&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#handlerOf(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">handlerOf(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
 <dd>
-<div class="block">Returns a <code>BodyHandler</code> that decodes the response body into an object of the given type.</div>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> that decodes the response body into an object of the given type.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/Handlers.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.extensions">Handlers</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></dt>
 <dd>
@@ -2247,6 +2281,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/MockHasher.html#hash(java.lang.String)" class="member-name-link">hash(String)</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/MockHasher.html" title="class in com.github.mizosoft.methanol.testing.store">MockHasher</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Hash.html#%3Cinit%3E(java.nio.ByteBuffer)" class="member-name-link">Hash(ByteBuffer)</a> - Constructor for class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Hash.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Hash</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#hashCode()" class="member-name-link">hashCode()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheControl.html#hashCode()" class="member-name-link">hashCode()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.html" title="class in com.github.mizosoft.methanol">CacheControl</a></dt>
 <dd>&nbsp;</dd>
@@ -2379,6 +2415,22 @@ loadScripts(document, 'script');</script>
 <div class="block">Tokenizes delimited header values into individual components.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html#%3Cinit%3E(java.lang.String)" class="member-name-link">HeaderValueTokenizer(String)</a> - Constructor for class com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/HeaderValueTokenizer.html" title="class in com.github.mizosoft.methanol.internal.text">HeaderValueTokenizer</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#hint(java.lang.Class,T)" class="member-name-link">hint(Class&lt;T&gt;, T)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Adds the given value to this request's <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#hints()" class="member-name-link">hints()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html#hints()" class="member-name-link">hints()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></dt>
+<dd>
+<div class="block">Returns this request's <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#hints(java.util.function.Consumer)" class="member-name-link">hints(Consumer&lt;BodyAdapter.Hints.Builder&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Modifies this request's <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a> by mutating a <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol"><code>BodyAdapter.Hints.Builder</code></a>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#hintsOf(com.github.mizosoft.methanol.MediaType)" class="member-name-link">hintsOf(MediaType)</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheAwareResponse.CacheStatus.html#HIT" class="member-name-link">HIT</a> - Enum constant in enum class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheAwareResponse.CacheStatus.html" title="enum class in com.github.mizosoft.methanol">CacheAwareResponse.CacheStatus</a></dt>
 <dd>
@@ -2674,6 +2726,10 @@ loadScripts(document, 'script');</script>
  the client and evaluated by the cache, rather than conditionalized by the cache and evaluated
  by the origin.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#isGenericArray()" class="member-name-link">isGenericArray()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
+<dd>
+<div class="block">Returns <code>true</code> if <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a> is a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/GenericArrayType.html" title="class or interface in java.lang.reflect" class="external-link"><code>generic array</code></a>.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html#isGET()" class="member-name-link">isGET()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">RequestVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisClusterSession.html#isHealthy()" class="member-name-link">isHealthy()</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisClusterSession.html" title="class in com.github.mizosoft.methanol.testing.store">RedisClusterSession</a></dt>
@@ -2712,6 +2768,10 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html#isOpen()" class="member-name-link">isOpen()</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">WindowsEmulatingFileSystem</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#isParameterizedType()" class="member-name-link">isParameterizedType()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
+<dd>
+<div class="block">Returns <code>true</code> if <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a> is a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/ParameterizedType.html" title="class or interface in java.lang.reflect" class="external-link"><code>parameterized type</code></a>.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html#isPATCH()" class="member-name-link">isPATCH()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">RequestVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html#isPOST()" class="member-name-link">isPOST()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">RequestVerifier</a></dt>
@@ -2726,6 +2786,10 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html#isPUT()" class="member-name-link">isPUT()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">RequestVerifier</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#isRawType()" class="member-name-link">isRawType()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
+<dd>
+<div class="block">Returns <code>true</code> if <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a> is a raw type (i.e.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/LeakDetectingFileSystem.html#isReadOnly()" class="member-name-link">isReadOnly()</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/LeakDetectingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">LeakDetectingFileSystem</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html#isReadOnly()" class="member-name-link">isReadOnly()</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/WindowsEmulatingFileSystem.html" title="class in com.github.mizosoft.methanol.testing.file">WindowsEmulatingFileSystem</a></dt>
@@ -2766,10 +2830,18 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns <code>true</code> if <code>response.statusCode()</code> is a 2xx successful status code.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#isTypeVariable()" class="member-name-link">isTypeVariable()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
+<dd>
+<div class="block">Returns <code>true</code> if <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a> is a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/TypeVariable.html" title="class or interface in java.lang.reflect" class="external-link"><code>type variable</code></a>.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#isValidHeaderName(java.lang.String)" class="member-name-link">isValidHeaderName(String)</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#isValidToken(java.lang.CharSequence)" class="member-name-link">isValidToken(CharSequence)</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#isWildcard()" class="member-name-link">isWildcard()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
+<dd>
+<div class="block">Returns <code>true</code> if <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a> is a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/WildcardType.html" title="class or interface in java.lang.reflect" class="external-link"><code>wildcard</code></a>.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/IterablePublisher.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing">IterablePublisher&lt;T&gt;</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
 <dd>
 <div class="block">A publisher of items obtained from an <code>Iterable&lt;T&gt;</code>.</div>
@@ -2793,18 +2865,12 @@ loadScripts(document, 'script');</script>
 <dl class="index">
 <dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/JacksonAdapterFactory.html" class="type-name-link" title="class in com.github.mizosoft.methanol.adapter.jackson">JacksonAdapterFactory</a> - Class in <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/package-summary.html">com.github.mizosoft.methanol.adapter.jackson</a></dt>
 <dd>
-<div class="block">Provides <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for the Jackson library.</div>
+<div class="block">Provides <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for JSON using the <a href="https://github.com/FasterXML/jackson">Jackson library</a>.</div>
 </dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonAdapterUtils.html" class="type-name-link" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonAdapterUtils</a> - Class in <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/package-summary.html">com.github.mizosoft.methanol.adapter.jackson.internal</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/JacksonFluxAdapterFactory.html" class="type-name-link" title="class in com.github.mizosoft.methanol.adapter.jackson.flux">JacksonFluxAdapterFactory</a> - Class in <a href="methanol.adapter.jackson.flux/com/github/mizosoft/methanol/adapter/jackson/flux/package-summary.html">com.github.mizosoft.methanol.adapter.jackson.flux</a></dt>
 <dd>
 <div class="block">Provides <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for the JSON format using Jackson.</div>
 </dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" class="type-name-link" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber&lt;T&gt;</a> - Class in <a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/package-summary.html">com.github.mizosoft.methanol.adapter.jackson.internal</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html#%3Cinit%3E(com.fasterxml.jackson.databind.ObjectMapper,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.adapter.jackson.ObjectReaderFactory,com.fasterxml.jackson.core.JsonParser)" class="member-name-link">JacksonSubscriber(ObjectMapper, TypeRef&lt;T&gt;, ObjectReaderFactory, JsonParser)</a> - Constructor for class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/JaxbAdapterFactory.html" class="type-name-link" title="class in com.github.mizosoft.methanol.adapter.jaxb.jakarta">JaxbAdapterFactory</a> - Class in <a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/package-summary.html">com.github.mizosoft.methanol.adapter.jaxb.jakarta</a></dt>
 <dd>
 <div class="block">Creates <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for XML using JAXB.</div>
@@ -2944,6 +3010,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Sets the <code>max-stale</code> directive to the given duration.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#mediaType()" class="member-name-link">mediaType()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns the <code>MediaType</code> hint.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html#mediaType()" class="member-name-link">mediaType()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/FormBodyPublisher.html" title="class in com.github.mizosoft.methanol">FormBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/MimeBodyPublisherAdapter.html#mediaType()" class="member-name-link">mediaType()</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/MimeBodyPublisherAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions">MimeBodyPublisherAdapter</a></dt>
@@ -2962,6 +3032,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">A <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types">MIME
  type</a>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#mediaTypeOrAny()" class="member-name-link">mediaTypeOrAny()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns either the <code>MediaType</code> hint or <a href="methanol/com/github/mizosoft/methanol/MediaType.html#ANY"><code>MediaType.ANY</code></a> if absent.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/StorageExtension.html#memory(long)" class="member-name-link">memory(long)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></dt>
 <dd>&nbsp;</dd>
@@ -3064,6 +3138,13 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#method(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">method(String, HttpRequest.BodyPublisher)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#method(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">method(String, T, TypeRef&lt;T&gt;, MediaType)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Sets the request method and sets the payload to the given value with an explicitly specified
+ type.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#mimeBody()" class="member-name-link">mimeBody()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MimeBodyPublisher.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">MimeBodyPublisher</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">A <code>BodyPublisher</code> with a <a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">media type</a>.</div>
@@ -3150,15 +3231,15 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MoreBodyHandlers.html" class="type-name-link" title="class in com.github.mizosoft.methanol">MoreBodyHandlers</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">Factory for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> implementations.</div>
+<div class="block">Static factories for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> implementations.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MoreBodyPublishers.html" class="type-name-link" title="class in com.github.mizosoft.methanol">MoreBodyPublishers</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">Factory for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> implementations.</div>
+<div class="block">Static factories for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> implementations.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MoreBodySubscribers.html" class="type-name-link" title="class in com.github.mizosoft.methanol">MoreBodySubscribers</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">Factory for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
+<div class="block">Static factories for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.html" class="type-name-link" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
@@ -3180,6 +3261,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">A mutable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a> that supports <a href="methanol/com/github/mizosoft/methanol/TaggableRequest.html" title="class in com.github.mizosoft.methanol"><code>tags</code></a>, relative URIs <code>&amp;</code>
  setting arbitrary objects as request bodies.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#mutate()" class="member-name-link">mutate()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns a new <code>Builder</code> containing this object's hints.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:N">N</h2>
@@ -3203,6 +3288,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#newBuilder()" class="member-name-link">newBuilder()</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
 <dd>
 <div class="block">Returns a new <code>AdapterCodec.Builder</code>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#newBuilder()" class="member-name-link">newBuilder()</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns a new <code>Builder</code>.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheControl.html#newBuilder()" class="member-name-link">newBuilder()</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.html" title="class in com.github.mizosoft.methanol">CacheControl</a></dt>
 <dd>
@@ -3313,15 +3402,19 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">A strategy for creating an <code>ObjectWriter</code> for a given type.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#of(com.github.mizosoft.methanol.MediaType)" class="member-name-link">of(MediaType)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns a <code>Hints</code> object containing the given media type.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreContext.html#of(com.github.mizosoft.methanol.testing.store.StoreConfig)" class="member-name-link">of(StoreConfig)</a> - Static method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreContext.html" title="class in com.github.mizosoft.methanol.testing.store">StoreContext</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#of(java.lang.Class)" class="member-name-link">of(Class&lt;U&gt;)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
 <dd>
-<div class="block">Creates a new <code>TypeRef</code> from the given class.</div>
+<div class="block">Returns a new <code>TypeRef</code> who's <a href="methanol/com/github/mizosoft/methanol/TypeRef.html#type()"><code>TypeRef.type()</code></a> is the given class.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#of(java.lang.reflect.Type)" class="member-name-link">of(Type)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
 <dd>
-<div class="block">Creates a new <code>TypeRef</code> for the given type.</div>
+<div class="block">Returns a new <code>TypeRef</code> who's <a href="methanol/com/github/mizosoft/methanol/TypeRef.html#type()"><code>TypeRef.type()</code></a> is the given type.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MediaType.html#of(java.lang.String,java.lang.String)" class="member-name-link">of(String, String)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></dt>
 <dd>
@@ -3399,12 +3492,18 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a completed <code>BodySubscriber</code> of <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Reader.html" title="class or interface in java.io" class="external-link"><code>Reader</code></a> that reads the response body as a
  stream of characters decoded using the given charset.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#ofRuntimeType(T)" class="member-name-link">ofRuntimeType(T)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
+<dd>
+<div class="block">Returns a new <code>TypeRef</code> who's <a href="methanol/com/github/mizosoft/methanol/TypeRef.html#type()"><code>TypeRef.type()</code></a> is the runtime type of the given instance.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MoreBodyPublishers.html#ofWritableByteChannel(com.github.mizosoft.methanol.function.ThrowingConsumer,java.util.concurrent.Executor)" class="member-name-link">ofWritableByteChannel(ThrowingConsumer&lt;? super WritableByteChannel&gt;, Executor)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MoreBodyPublishers.html" title="class in com.github.mizosoft.methanol">MoreBodyPublishers</a></dt>
 <dd>
 <div class="block">Returns a <code>BodyPublisher</code> that reads what's written to the <code>WritableByteChannel</code>
  received by the given task.</div>
 </dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html#onComplete()" class="member-name-link">onComplete()</a> - Method in class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber</a></dt>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html#okResponseOf(java.net.http.HttpRequest,java.nio.ByteBuffer,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">okResponseOf(HttpRequest, ByteBuffer, HttpResponse.BodyHandler&lt;T&gt;)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html" title="class in com.github.mizosoft.methanol.testing">TestUtils</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html#okResponseOf(java.net.http.HttpRequest,T)" class="member-name-link">okResponseOf(HttpRequest, T)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html" title="class in com.github.mizosoft.methanol.testing">TestUtils</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html#onComplete()" class="member-name-link">onComplete()</a> - Method in class com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html" title="class in com.github.mizosoft.methanol.decoder">AsyncBodyDecoder</a></dt>
 <dd>&nbsp;</dd>
@@ -3425,8 +3524,6 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#onComplete()" class="member-name-link">onComplete()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html#onDroppedException(java.lang.Throwable)" class="member-name-link">onDroppedException(Throwable)</a> - Static method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html" title="class in com.github.mizosoft.methanol.internal.flow">FlowSupport</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html#onError(java.lang.Throwable)" class="member-name-link">onError(Throwable)</a> - Method in class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html#onError(java.lang.Throwable)" class="member-name-link">onError(Throwable)</a> - Method in class com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html" title="class in com.github.mizosoft.methanol.decoder">AsyncBodyDecoder</a></dt>
 <dd>&nbsp;</dd>
@@ -3458,8 +3555,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Called when the cache is about to use the network due to a cache miss.</div>
 </dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html#onNext(java.util.List)" class="member-name-link">onNext(List&lt;ByteBuffer&gt;)</a> - Method in class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html#onNext(java.util.List)" class="member-name-link">onNext(List&lt;ByteBuffer&gt;)</a> - Method in class com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html" title="class in com.github.mizosoft.methanol.decoder">AsyncBodyDecoder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html#onNext(java.util.List)" class="member-name-link">onNext(List&lt;ByteBuffer&gt;)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ByteChannelSubscriber</a></dt>
@@ -3494,8 +3589,6 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Called when the cache is ready to serve the response.</div>
 </dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)" class="member-name-link">onSubscribe(Flow.Subscription)</a> - Method in class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonSubscriber.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonSubscriber</a></dt>
-<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html#onSubscribe(java.util.concurrent.Flow.Subscription)" class="member-name-link">onSubscribe(Flow.Subscription)</a> - Method in class com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html" title="class in com.github.mizosoft.methanol.decoder">AsyncBodyDecoder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)" class="member-name-link">onSubscribe(Flow.Subscription)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelSubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ByteChannelSubscriber</a></dt>
@@ -3593,6 +3686,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PATCH(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH(String, T, TypeRef&lt;T&gt;, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PATCH(java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PATCH(HttpRequest.BodyPublisher)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
 <div class="block">Sets the request method to PATCH and sets the body publisher to the given value.</div>
@@ -3605,6 +3702,21 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PATCH(java.net.URI,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH(URI, T, TypeRef&lt;T&gt;, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PATCH(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH(T, TypeRef&lt;T&gt;, MediaType)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Sets the request method to PATCH and sets the payload to the given value with an explicitly
+ specified type.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/PayloadHandlerExecutor.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.adapter">PayloadHandlerExecutor</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/adapter/package-summary.html">com.github.mizosoft.methanol.internal.adapter</a></dt>
+<dd>
+<div class="block">Holds the executor to be used for handling a <a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol"><code>ResponsePayload</code></a>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/PayloadHandlerExecutor.html#%3Cinit%3E(java.util.concurrent.Executor)" class="member-name-link">PayloadHandlerExecutor(Executor)</a> - Constructor for class com.github.mizosoft.methanol.internal.adapter.<a href="methanol/com/github/mizosoft/methanol/internal/adapter/PayloadHandlerExecutor.html" title="class in com.github.mizosoft.methanol.internal.adapter">PayloadHandlerExecutor</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#peekAvailable()" class="member-name-link">peekAvailable()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockDelayer.html#peekEarliestFuture()" class="member-name-link">peekEarliestFuture()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockDelayer.html" title="class in com.github.mizosoft.methanol.testing">MockDelayer</a></dt>
@@ -3634,12 +3746,18 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingFileChannel.html#position(long)" class="member-name-link">position(long)</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingFileChannel.html" title="class in com.github.mizosoft.methanol.testing.file">ForwardingFileChannel</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST(Object, MediaType)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block">Sets the request method to POST and sets the payload to the given value.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST(String, Object, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">POST(String, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST(String, T, TypeRef&lt;T&gt;, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
 </dd>
@@ -3654,6 +3772,15 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.net.URI,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">POST(URI, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(java.net.URI,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST(URI, T, TypeRef&lt;T&gt;, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#POST(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST(T, TypeRef&lt;T&gt;, MediaType)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Sets the request method to POST and sets the payload to the given value with an explicitly
+ specified type.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#postDecorationInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)" class="member-name-link">postDecorationInterceptor(Methanol.Interceptor)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a></dt>
 <dd>
@@ -3726,7 +3853,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.adapter.protobuf/com/github/mizosoft/methanol/adapter/protobuf/ProtobufAdapterFactory.html" class="type-name-link" title="class in com.github.mizosoft.methanol.adapter.protobuf">ProtobufAdapterFactory</a> - Class in <a href="methanol.adapter.protobuf/com/github/mizosoft/methanol/adapter/protobuf/package-summary.html">com.github.mizosoft.methanol.adapter.protobuf</a></dt>
 <dd>
-<div class="block">Providers <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> for google's <a href="https://developers.google.com/protocol-buffers">protocol buffers</a> format.</div>
+<div class="block">Providers <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> for Google's <a href="https://developers.google.com/protocol-buffers">Protocol Buffers</a> format.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#protocolViolations()" class="member-name-link">protocolViolations()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
@@ -3756,9 +3883,14 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/PublisherBodySubscriber.html#%3Cinit%3E()" class="member-name-link">PublisherBodySubscriber()</a> - Constructor for class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/PublisherBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">PublisherBodySubscriber</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#publisherOf(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">publisherOf(Object, MediaType)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#publisherOf(T,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">publisherOf(T, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
 <dd>
-<div class="block">Returns a <code>BodyPublisher</code> that encodes the given object into a request body.</div>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#publisherOf(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">publisherOf(T, TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
+<dd>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body with respect
+ to the given <code>TypeRef</code>.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodySubscriberVerifier.html#publishing(java.lang.String)" class="member-name-link">publishing(String)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodySubscriberVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">DecoderVerifier.BodySubscriberVerifier</a></dt>
 <dd>&nbsp;</dd>
@@ -3779,6 +3911,10 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#pushPromiseHandler()" class="member-name-link">pushPromiseHandler()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html#put(java.lang.Class,T)" class="member-name-link">put(Class&lt;T&gt;, T)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a></dt>
+<dd>
+<div class="block">Maps the given type to the given hint.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/LocalCache.html#put(java.net.http.HttpRequest,com.github.mizosoft.methanol.internal.cache.NetworkResponse,com.github.mizosoft.methanol.internal.cache.CacheResponse)" class="member-name-link">put(HttpRequest, NetworkResponse, CacheResponse)</a> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/LocalCache.html" title="interface in com.github.mizosoft.methanol.internal.cache">LocalCache</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT(Object, MediaType)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
@@ -3793,6 +3929,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT(String, T, TypeRef&lt;T&gt;, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PUT(HttpRequest.BodyPublisher)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#PUT(java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PUT(HttpRequest.BodyPublisher)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
@@ -3804,6 +3944,15 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.net.URI,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PUT(URI, HttpRequest.BodyPublisher)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(java.net.URI,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT(URI, T, TypeRef&lt;T&gt;, MediaType)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#PUT(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT(T, TypeRef&lt;T&gt;, MediaType)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
+<dd>
+<div class="block">Sets the request method to PUT and sets the payload to the given value with an explicitly
+ specified type.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:Q">Q</h2>
@@ -3829,7 +3978,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#rawType()" class="member-name-link">rawType()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
 <dd>
-<div class="block">Returns the <code>Class&lt;? super T&gt;</code> that represents the resolved raw type of <code>T</code>.</div>
+<div class="block">Returns the <code>Class&lt;? super T&gt;</code> that represents the resolved raw type of <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreTesting.html#read(com.github.mizosoft.methanol.internal.cache.Store.EntryReader)" class="member-name-link">read(Store.EntryReader)</a> - Static method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreTesting.html" title="class in com.github.mizosoft.methanol.testing.store">StoreTesting</a></dt>
 <dd>&nbsp;</dd>
@@ -3979,6 +4128,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockExecutor.html#reject(boolean)" class="member-name-link">reject(boolean)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockExecutor.html" title="class in com.github.mizosoft.methanol.testing">MockExecutor</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html#reject(java.util.concurrent.Flow.Subscriber,java.lang.Throwable)" class="member-name-link">reject(Flow.Subscriber&lt;?&gt;, Throwable)</a> - Static method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html" title="class in com.github.mizosoft.methanol.internal.flow">FlowSupport</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html#rejectMulticast(java.util.concurrent.Flow.Subscriber)" class="member-name-link">rejectMulticast(Flow.Subscriber&lt;?&gt;)</a> - Static method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html" title="class in com.github.mizosoft.methanol.internal.flow">FlowSupport</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.redis/com/github/mizosoft/methanol/store/redis/RedisConnectionProvider.html#release(C)" class="member-name-link">release(C)</a> - Method in interface com.github.mizosoft.methanol.store.redis.<a href="methanol.redis/com/github/mizosoft/methanol/store/redis/RedisConnectionProvider.html" title="interface in com.github.mizosoft.methanol.store.redis">RedisConnectionProvider</a></dt>
@@ -3993,6 +4144,10 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#remaining(java.util.List)" class="member-name-link">remaining(List&lt;ByteBuffer&gt;)</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html#remove(java.lang.Class)" class="member-name-link">remove(Class&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a></dt>
+<dd>
+<div class="block">Removes the hint mapped to by the given type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.html#remove(java.lang.String)" class="member-name-link">remove(String)</a> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/MemoryStore.html#remove(java.lang.String)" class="member-name-link">remove(String)</a> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/MemoryStore.html" title="class in com.github.mizosoft.methanol.internal.cache">MemoryStore</a></dt>
@@ -4010,6 +4165,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpCache.html#remove(java.net.URI)" class="member-name-link">remove(URI)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></dt>
 <dd>
 <div class="block">Removes the entry associated with the given URI if one is present.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html#removeAll()" class="member-name-link">removeAll()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a></dt>
+<dd>
+<div class="block">Removes all hints added so far.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/Store.html#removeAll(java.util.List)" class="member-name-link">removeAll(List&lt;String&gt;)</a> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></dt>
 <dd>
@@ -4061,6 +4220,14 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RepeatArgumentsSupport.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing">RepeatArgumentsSupport</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/BodyPublisherVerifier.html#repeatedly(java.util.function.Consumer)" class="member-name-link">repeatedly(Consumer&lt;BodyPublisherVerifier&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/BodyPublisherVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">BodyPublisherVerifier</a></dt>
+<dd>
+<div class="block">Repeats the verification twice to ensure result repeatability.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#request()" class="member-name-link">request()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns the <code>HttpRequest</code> hint.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html#request()" class="member-name-link">request()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html" title="class in com.github.mizosoft.methanol.testing">HttpResponseStub</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#request()" class="member-name-link">request()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
@@ -4107,7 +4274,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#requireCompatibleOrNull(com.github.mizosoft.methanol.MediaType)" class="member-name-link">requireCompatibleOrNull(MediaType)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
 <dd>
-<div class="block">Requires that the given media type is either <code>null</code> or is compatible with this adapter.</div>
+<div class="block">Requires that either this adapter is <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>compatible</code></a>
+ with the given media type, or the given media type is <code>null</code>.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#requiredPushPromiseHandler()" class="member-name-link">requiredPushPromiseHandler()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
@@ -4121,11 +4289,17 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#requireSupport(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">requireSupport(TypeRef&lt;?&gt;)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
 <dd>
-<div class="block">Requires that the given type is supported by this adapter.</div>
+<div class="block">Requires that this adapter <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#requireSupport(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">requireSupport(TypeRef&lt;?&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
+<dd>
+<div class="block">Requires that this adapter <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type
+ and <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>is compatible with</code></a> the given hints' media
+ type, if any.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html#requireSupport(java.lang.Class)" class="member-name-link">requireSupport(Class&lt;?&gt;)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></dt>
 <dd>
-<div class="block">Requires that the given class is supported by this adapter.</div>
+<div class="block">Requires that this adapter <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#requireValidHeader(java.lang.String,java.lang.String)" class="member-name-link">requireValidHeader(String, String)</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
 <dd>&nbsp;</dd>
@@ -4151,15 +4325,24 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberExtension.html#resolveParameter(org.junit.jupiter.api.extension.ParameterContext,org.junit.jupiter.api.extension.ExtensionContext)" class="member-name-link">resolveParameter(ParameterContext, ExtensionContext)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriberExtension.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriberExtension</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#resolveSupertype(java.lang.Class)" class="member-name-link">resolveSupertype(Class&lt;?&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
+<dd>
+<div class="block">Resolves the given supertype into a type with concrete type arguments (if any) that are derived
+ from this type (i.e.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" class="type-name-link" title="class in com.github.mizosoft.methanol">ResponseBuilder&lt;T&gt;</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">A builder of <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse</code></a> instances.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#%3Cinit%3E()" class="member-name-link">ResponseBuilder()</a> - Constructor for class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#responseInfo()" class="member-name-link">responseInfo()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns the <code>ResponseInfo</code> hint.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">ResponsePayload</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">A response body that is yet to be handled into the desirable type (see <a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest)"><code>Methanol.send(HttpRequest)</code></a>).</div>
+<div class="block">A response body that is yet to be handled into the desirable type.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier&lt;T&gt;</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/package-summary.html">com.github.mizosoft.methanol.testing.verifiers</a></dt>
 <dd>
@@ -4188,30 +4371,32 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorExtension.ExecutorType.html#SCHEDULER" class="member-name-link">SCHEDULER</a> - Enum constant in enum class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorExtension.ExecutorType.html" title="enum class in com.github.mizosoft.methanol.testing">ExecutorExtension.ExecutorType</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest)" class="member-name-link">send(HttpRequest)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
-<dd>
-<div class="block">Like <a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)"><code>Methanol.send(HttpRequest, BodyHandler)</code></a> but defers handling the response body into the
- desired type using the provided <a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol"><code>ResponsePayload</code></a>.</div>
-</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,com.github.mizosoft.methanol.TypeRef)" class="member-name-link">send(HttpRequest, TypeRef&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block"><a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)"><code>Sends</code></a> the given request and converts the response body
+ into an object of the given type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,java.lang.Class)" class="member-name-link">send(HttpRequest, Class&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block"><a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)"><code>Sends</code></a> the given request and converts the response body
+ into an object of the given type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">send(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpClientStub.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">send(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpClientStub.html" title="class in com.github.mizosoft.methanol.testing">HttpClientStub</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">send(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest)" class="member-name-link">sendAsync(HttpRequest)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
-<dd>
-<div class="block">Like <a href="methanol/com/github/mizosoft/methanol/Methanol.html#send(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)"><code>Methanol.send(HttpRequest, BodyHandler)</code></a> but defers handling the response body into the
- desired type using the provided <a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol"><code>ResponsePayload</code></a>.</div>
-</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest,com.github.mizosoft.methanol.TypeRef)" class="member-name-link">sendAsync(HttpRequest, TypeRef&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block"><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)"><code>Asynchronously sends</code></a> the given request and
+ converts the response body into an object of the given type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest,java.lang.Class)" class="member-name-link">sendAsync(HttpRequest, Class&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block"><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)"><code>Asynchronously sends</code></a> the given request and
+ converts the response body into an object of the given type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#sendAsync(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">sendAsync(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpClientStub.html#sendAsync(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">sendAsync(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpClientStub.html" title="class in com.github.mizosoft.methanol.testing">HttpClientStub</a></dt>
@@ -4493,6 +4678,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html#subscribe(java.util.concurrent.Flow.Subscriber)" class="member-name-link">subscribe(Flow.Subscriber&lt;? super ByteBuffer&gt;)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ForwardingBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">ForwardingBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/SupplierBodyPublisher.html#subscribe(java.util.concurrent.Flow.Subscriber)" class="member-name-link">subscribe(Flow.Subscriber&lt;? super ByteBuffer&gt;)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/SupplierBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">SupplierBodyPublisher</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.html#subscribe(java.util.concurrent.Flow.Subscriber)" class="member-name-link">subscribe(Flow.Subscriber&lt;? super ByteBuffer&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html#subscribe(java.util.concurrent.Flow.Subscriber)" class="member-name-link">subscribe(Flow.Subscriber&lt;? super ByteBuffer&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></dt>
@@ -4509,9 +4696,9 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittablePublisher.html#subscribe(java.util.concurrent.Flow.Subscriber)" class="member-name-link">subscribe(Flow.Subscriber&lt;? super T&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittablePublisher.html" title="class in com.github.mizosoft.methanol.testing">SubmittablePublisher</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#subscriberOf(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">subscriberOf(TypeRef&lt;T&gt;, MediaType)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
+<dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#subscriberOf(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">subscriberOf(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
 <dd>
-<div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body into an object of the given
  type.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html#subtractAndGetDemand(java.lang.Object,java.lang.invoke.VarHandle,long)" class="member-name-link">subtractAndGetDemand(Object, VarHandle, long)</a> - Static method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/FlowSupport.html" title="class in com.github.mizosoft.methanol.internal.flow">FlowSupport</a></dt>
@@ -4543,6 +4730,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.ObjectConversionStep.html#succeedsWithNormalizingLineEndings(java.lang.String)" class="member-name-link">succeedsWithNormalizingLineEndings(String)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.ObjectConversionStep.html" title="class in com.github.mizosoft.methanol.testing.verifiers">EncoderVerifier.ObjectConversionStep</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/function/Unchecked.html#supplier(com.github.mizosoft.methanol.internal.function.ThrowingSupplier)" class="member-name-link">supplier(ThrowingSupplier&lt;T&gt;)</a> - Static method in class com.github.mizosoft.methanol.internal.function.<a href="methanol/com/github/mizosoft/methanol/internal/function/Unchecked.html" title="class in com.github.mizosoft.methanol.internal.function">Unchecked</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/SupplierBodyPublisher.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.extensions">SupplierBodyPublisher&lt;T&gt;</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/extensions/package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/SupplierBodyPublisher.html#%3Cinit%3E(java.util.function.Supplier,java.util.function.Function)" class="member-name-link">SupplierBodyPublisher(Supplier&lt;T&gt;, Function&lt;T, HttpRequest.BodyPublisher&gt;)</a> - Constructor for class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/SupplierBodyPublisher.html" title="class in com.github.mizosoft.methanol.internal.extensions">SupplierBodyPublisher</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/function/Unchecked.html#supplyAsync(com.github.mizosoft.methanol.internal.function.ThrowingSupplier,java.util.concurrent.Executor)" class="member-name-link">supplyAsync(ThrowingSupplier&lt;T&gt;, Executor)</a> - Static method in class com.github.mizosoft.methanol.internal.function.<a href="methanol/com/github/mizosoft/methanol/internal/function/Unchecked.html" title="class in com.github.mizosoft.methanol.internal.function">Unchecked</a></dt>
 <dd>&nbsp;</dd>
@@ -4713,10 +4904,6 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#throwOnSubscribeAndOnNext(boolean)" class="member-name-link">throwOnSubscribeAndOnNext(boolean)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonAdapterUtils.html#throwUnchecked(java.lang.Throwable)" class="member-name-link">throwUnchecked(Throwable)</a> - Static method in class com.github.mizosoft.methanol.adapter.jackson.internal.<a href="methanol.adapter.jackson/com/github/mizosoft/methanol/adapter/jackson/internal/JacksonAdapterUtils.html" title="class in com.github.mizosoft.methanol.adapter.jackson.internal">JacksonAdapterUtils</a></dt>
-<dd>
-<div class="block">Used when the exception is not handled structurally to avoid unchecked wrapping.</div>
-</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#timeout()" class="member-name-link">timeout()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#timeout(java.time.Duration)" class="member-name-link">timeout(Duration)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
@@ -4780,27 +4967,59 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Asynchronously converts this payload into an object of type <code>T</code>.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseEncoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toBody(Object, MediaType)</a> - Method in interface com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseEncoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseEncoder</a></dt>
+<dd>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body using the
+ format specified by the given media type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingEncoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toBody(Object, MediaType)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingEncoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingEncoder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toBody(Object, MediaType)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></dt>
 <dd>
-<div class="block">Returns a <code>BodyPublisher</code> that encodes the given object into a request body using the
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body using the
  format specified by the given media type.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/CharSequenceEncoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toBody(Object, MediaType)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/CharSequenceEncoder.html" title="class in com.github.mizosoft.methanol.testing">CharSequenceEncoder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseEncoder.html#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toBody(T, TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in interface com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseEncoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseEncoder</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingEncoder.html#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toBody(T, TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingEncoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingEncoder</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toBody(T, TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></dt>
+<dd>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body based on
+ the given <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>, using the given hints <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a> for encoder-specific
+ customization.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.html#toByteArray()" class="member-name-link">toByteArray()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.html" title="class in com.github.mizosoft.methanol.testing">MockGzipStream</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html#toByteArray(java.nio.ByteBuffer)" class="member-name-link">toByteArray(ByteBuffer)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html" title="class in com.github.mizosoft.methanol.testing">TestUtils</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Utils.html#toCompletionException(java.lang.Throwable)" class="member-name-link">toCompletionException(Throwable)</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Utils.html" title="class in com.github.mizosoft.methanol.internal">Utils</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toDeferredObject(TypeRef&lt;T&gt;, MediaType)</a> - Method in interface com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseDecoder</a></dt>
+<dd>
+<div class="block">Returns a completed <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that lazily decodes the response body into an
+ object of the given type using the format specified by the given media type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingDecoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toDeferredObject(TypeRef&lt;T&gt;, MediaType)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingDecoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingDecoder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toDeferredObject(TypeRef&lt;T&gt;, MediaType)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></dt>
 <dd>
-<div class="block">Returns a completed <code>BodySubscriber</code> that lazily decodes the response body into an
+<div class="block">Returns a completed <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that lazily decodes the response body into an
  object of the given type using the format specified by the given media type.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toDeferredObject(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in interface com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseDecoder</a></dt>
+<dd>
+<div class="block">Returns a completed <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that lazily decodes the response body into an
+ object of the given type using the given <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingDecoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toDeferredObject(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingDecoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingDecoder</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toDeferredObject(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></dt>
+<dd>
+<div class="block">Returns a completed <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that lazily decodes the response body into an
+ object of the given type using the given <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/Validate.html#TODO()" class="member-name-link">TODO()</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/Validate.html" title="class in com.github.mizosoft.methanol.internal">Validate</a></dt>
 <dd>&nbsp;</dd>
@@ -4814,15 +5033,33 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/BufferTokenizer.html#tokenizeToLists(java.nio.ByteBuffer,int%5B%5D,int%5B%5D)" class="member-name-link">tokenizeToLists(ByteBuffer, int[], int[])</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/BufferTokenizer.html" title="class in com.github.mizosoft.methanol.testing">BufferTokenizer</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#toMap()" class="member-name-link">toMap()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
+<dd>
+<div class="block">Returns an immutable map of all hints.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toObject(TypeRef&lt;T&gt;, MediaType)</a> - Method in interface com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseDecoder</a></dt>
+<dd>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body into an object of the given
+ type using the format specified by the given media type.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toObject(TypeRef&lt;T&gt;, MediaType)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingDecoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingDecoder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toObject(TypeRef&lt;T&gt;, MediaType)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></dt>
 <dd>
-<div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body into an object of the given
  type using the format specified by the given media type.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/StringDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toObject(TypeRef&lt;T&gt;, MediaType)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/StringDecoder.html" title="class in com.github.mizosoft.methanol.testing">StringDecoder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toObject(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in interface com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.BaseDecoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseDecoder</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toObject(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.adapter.<a href="methanol/com/github/mizosoft/methanol/adapter/ForwardingDecoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingDecoder</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toObject(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></dt>
+<dd>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body into an object of the given
+ type using the given <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/Handlers.html#toPublisherChain(com.github.mizosoft.methanol.Methanol.Interceptor.Chain,java.util.concurrent.Executor)" class="member-name-link">toPublisherChain(Methanol.Interceptor.Chain&lt;T&gt;, Executor)</a> - Static method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/Handlers.html" title="class in com.github.mizosoft.methanol.internal.extensions">Handlers</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheResponseMetadata.html#toResponseBuilder()" class="member-name-link">toResponseBuilder()</a> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheResponseMetadata.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheResponseMetadata</a></dt>
@@ -4921,13 +5158,22 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the underlying <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/Type.html" title="class or interface in java.lang.reflect" class="external-link"><code>Type</code></a>.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#typeArgumentAt(int)" class="member-name-link">typeArgumentAt(int)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
+<dd>
+<div class="block">Returns the type argument of <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a> at the given index, provided that <code>T</code> is a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/ParameterizedType.html" title="class or interface in java.lang.reflect" class="external-link"><code>parameterized type</code></a> that has at least as many arguments as the given index.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#typeArguments()" class="member-name-link">typeArguments()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
+<dd>
+<div class="block">Returns a list of <code>TypeRef&lt;?&gt;</code> corresponding to <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>'s type arguments, provided it
+ is a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/ParameterizedType.html" title="class or interface in java.lang.reflect" class="external-link"><code>parameterized type</code></a>, otherwise an empty list is returned.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html" class="type-name-link" title="class in com.github.mizosoft.methanol">TypeRef&lt;T&gt;</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">A generic object that holds a reference to the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/Type.html" title="class or interface in java.lang.reflect" class="external-link"><code>Type</code></a> of its generic argument <code>T</code>.</div>
+<div class="block">A generic object that holds a reference to the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/Type.html" title="class or interface in java.lang.reflect" class="external-link"><code>Type</code></a> of its generic argument <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#%3Cinit%3E()" class="member-name-link">TypeRef()</a> - Constructor for class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
 <dd>
-<div class="block">Creates a new <code>TypeRef&lt;T&gt;</code> capturing the <code>Type</code> of <code>T</code>.</div>
+<div class="block">Creates a new <code>TypeRef&lt;T&gt;</code> capturing the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/Type.html" title="class or interface in java.lang.reflect" class="external-link"><code>Type</code></a> of <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>.</div>
 </dd>
 </dl>
 <h2 class="title" id="I:U">U</h2>
@@ -4938,7 +5184,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TypeRef.html#uncheckedCast(java.lang.Object)" class="member-name-link">uncheckedCast(Object)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a></dt>
 <dd>
-<div class="block">Performs an unchecked cast of the given object into <code>T</code>, at least ensuring that the given
+<div class="block">Performs an unchecked cast of the given object into <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>, at least ensuring that the given
  value's raw type is assignable to the <a href="methanol/com/github/mizosoft/methanol/TypeRef.html#rawType()"><code>raw type</code></a> of <code>T</code>.</div>
 </dd>
 <dt><a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/UncheckedJaxbException.html" class="type-name-link" title="class in com.github.mizosoft.methanol.adapter.jaxb.jakarta">UncheckedJaxbException</a> - Exception Class in <a href="methanol.adapter.jaxb.jakarta/com/github/mizosoft/methanol/adapter/jaxb/jakarta/package-summary.html">com.github.mizosoft.methanol.adapter.jaxb.jakarta</a></dt>

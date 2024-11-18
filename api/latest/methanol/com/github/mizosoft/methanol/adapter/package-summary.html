@@ -112,14 +112,27 @@ loadScripts(document, 'script');</script>
 </li>
 <li>
 <div id="class-summary">
-<div class="caption"><span>Classes</span></div>
+<div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="class-summary-tab0" role="tab" aria-selected="true" aria-controls="class-summary.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary', 2)" class="active-table-tab">All Classes and Interfaces</button><button id="class-summary-tab1" role="tab" aria-selected="false" aria-controls="class-summary.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary-tab1', 2)" class="table-tab">Interfaces</button><button id="class-summary-tab2" role="tab" aria-selected="false" aria-controls="class-summary.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('class-summary', 'class-summary-tab2', 2)" class="table-tab">Classes</button></div>
+<div id="class-summary.tabpanel" role="tabpanel" aria-labelledby="class-summary-tab0">
 <div class="summary-table two-column-summary">
 <div class="table-header col-first">Class</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color class-summary class-summary-tab2"><a href="AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
-<div class="block">Abstract <a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that implements <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.isCompatibleWith(MediaType)</code></a> by
- specifying a set of <code>MediaTypes</code> the adapter is compatible with.</div>
+<div class="block">An abstract <a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that implements <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.isCompatibleWith(MediaType)</code></a>
+ by allowing subclasses to specify a set of <a href="../MediaType.html" title="class in com.github.mizosoft.methanol"><code>MediaTypes</code></a> the adapter is compatible
+ with.</div>
+</div>
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="AbstractBodyAdapter.BaseDecoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseDecoder</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="block">This interface abstracts the more-capable <a href="AbstractBodyAdapter.BaseDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)"><code>AbstractBodyAdapter.BaseDecoder.toObject(TypeRef, Hints)</code></a> method and adds a
+ default implementation for <a href="AbstractBodyAdapter.BaseDecoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>AbstractBodyAdapter.BaseDecoder.toObject(TypeRef, MediaType)</code></a> that forwards to the former.</div>
+</div>
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="AbstractBodyAdapter.BaseEncoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseEncoder</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="block">This interface abstracts the more-capable <a href="AbstractBodyAdapter.BaseEncoder.html#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)"><code>AbstractBodyAdapter.BaseEncoder.toBody(Object, TypeRef, Hints)</code></a> method and
+ adds a default implementation for <a href="AbstractBodyAdapter.BaseEncoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)"><code>AbstractBodyAdapter.BaseEncoder.toBody(Object, MediaType)</code></a> that forwards to the
+ former.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab2"><a href="ForwardingBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingBodyAdapter</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
@@ -132,6 +145,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color class-summary class-summary-tab2"><a href="ForwardingEncoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingEncoder</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">An <a href="../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Encoder</code></a> that forwards calls to another.</div>
+</div>
 </div>
 </div>
 </div>

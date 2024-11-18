@@ -93,6 +93,10 @@ loadScripts(document, 'script');</script>
 <dd><code><a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></code></dd>
 </dl>
 <dl class="notes">
+<dt>All Known Subinterfaces:</dt>
+<dd><code><a href="adapter/AbstractBodyAdapter.BaseEncoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseEncoder</a></code></dd>
+</dl>
+<dl class="notes">
 <dt>All Known Implementing Classes:</dt>
 <dd><code><a href="../../../../../methanol.testing/com/github/mizosoft/methanol/testing/CharSequenceEncoder.html" title="class in com.github.mizosoft.methanol.testing">CharSequenceEncoder</a></code>, <code><a href="adapter/ForwardingEncoder.html" title="class in com.github.mizosoft.methanol.adapter">ForwardingEncoder</a></code></dd>
 </dl>
@@ -113,7 +117,7 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <h2>Nested Class Summary</h2>
 <div class="inherited-list">
 <h2 id="nested-classes-inherited-from-class-com.github.mizosoft.methanol.BodyAdapter">Nested classes/interfaces inherited from interface&nbsp;com.github.mizosoft.methanol.<a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></h2>
-<code><a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
+<code><a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>, <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></code></div>
 </section>
 </li>
 <!-- ========== METHOD SUMMARY =========== -->
@@ -121,7 +125,7 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <section class="method-summary" id="method-summary">
 <h2>Method Summary</h2>
 <div id="method-summary-table">
-<div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab1" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab1', 3)" class="table-tab">Static Methods</button><button id="method-summary-table-tab2" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab2', 3)" class="table-tab">Instance Methods</button><button id="method-summary-table-tab3" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab3', 3)" class="table-tab">Abstract Methods</button></div>
+<div class="table-tabs" role="tablist" aria-orientation="horizontal"><button id="method-summary-table-tab0" role="tab" aria-selected="true" aria-controls="method-summary-table.tabpanel" tabindex="0" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table', 3)" class="active-table-tab">All Methods</button><button id="method-summary-table-tab1" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab1', 3)" class="table-tab">Static Methods</button><button id="method-summary-table-tab2" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab2', 3)" class="table-tab">Instance Methods</button><button id="method-summary-table-tab3" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab3', 3)" class="table-tab">Abstract Methods</button><button id="method-summary-table-tab5" role="tab" aria-selected="false" aria-controls="method-summary-table.tabpanel" tabindex="-1" onkeydown="switchTab(event)" onclick="show('method-summary-table', 'method-summary-table-tab5', 3)" class="table-tab">Default Methods</button></div>
 <div id="method-summary-table.tabpanel" role="tabpanel" aria-labelledby="method-summary-table-tab0">
 <div class="summary-table three-column-summary">
 <div class="table-header col-first">Modifier and Type</div>
@@ -133,11 +137,10 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <div class="block">Returns the basic encoder.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#getEncoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">getEncoder</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;objectTypeRef,
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#getEncoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">getEncoder</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1">
-<div class="block">Returns an <code>Optional</code> containing an <code>Encoder</code> that supports the given object type
- and media type.</div>
+<div class="block">Returns the encoder that supports the given object type and media type.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#installed()" class="member-name-link">installed</a>()</code></div>
@@ -145,11 +148,20 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <div class="block">Returns an immutable list containing the installed encoders.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toBody</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;object,
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toBody</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;value,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
-<div class="block">Returns a <code>BodyPublisher</code> that encodes the given object into a request body using the
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body using the
  format specified by the given media type.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code>default &lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toBody</a><wbr>(T&nbsp;value,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5">
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body based on
+ the given <a href="TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>, using the given hints <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a> for encoder-specific
+ customization.</div>
 </div>
 </div>
 </div>
@@ -171,15 +183,32 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <li>
 <section class="detail" id="toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)">
 <h3>toBody</h3>
-<div class="member-signature"><span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">toBody</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;object,
+<div class="member-signature"><span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">toBody</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;value,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Returns a <code>BodyPublisher</code> that encodes the given object into a request body using the
- format specified by the given media type. If <code>mediaType</code> is <code>null</code>, the encoder's
- default format parameters (e.g. charset) are be used.</div>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body using the
+ format specified by the given media type. If the given media type is <code>null</code>, the
+ encoder uses its default format parameters (e.g., charset).</div>
 <dl class="notes">
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if the given object's runtime type or the given media
-     type are not supported</dd>
+     type is not supported</dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">
+<h3 id="toBody(java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">toBody</h3>
+<div class="member-signature"><span class="modifiers">default</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">toBody</span><wbr><span class="parameters">(T&nbsp;value,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</span></div>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body based on
+ the given <a href="TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>, using the given hints <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a> for encoder-specific
+ customization.</div>
+<dl class="notes">
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if any of the given type or hints' media type is not
+     supported</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the given object is not an instance of the given type</dd>
 </dl>
 </section>
 </li>
@@ -193,11 +222,10 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <li>
 <section class="detail" id="getEncoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
 <h3>getEncoder</h3>
-<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>&gt;</span>&nbsp;<span class="element-name">getEncoder</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;objectTypeRef,
+<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>&gt;</span>&nbsp;<span class="element-name">getEncoder</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Returns an <code>Optional</code> containing an <code>Encoder</code> that supports the given object type
- and media type. If <code>mediaType</code> is <code>null</code>, any encoder supporting the given object
- type is returned</div>
+<div class="block">Returns the encoder that supports the given object type and media type. If the given media
+ type is <code>null</code>, any encoder supporting the given object type is returned.</div>
 </section>
 </li>
 <li>
@@ -208,11 +236,12 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
  encoding any subtype of:
 
  <ul>
-   <li><code>CharSequence</code> (encoded using the media-type's charset, or <code>UTF-8</code> in case
-       the former is not present)
+   <li><code>CharSequence</code> (encoded using <code>MediaType</code>'s charset or UTF-8 if absent)
    <li><code>InputStream</code>
    <li><code>byte[]</code>
    <li><code>ByteBuffer</code>
+   <li><code>Supplier&lt;InputStream&gt;</code>
+   <li><code>Supplier&lt;ByteBuffer&gt;</code>
    <li><code>Path</code> (represents a file from which the request content is sent)
  </ul></div>
 </section>

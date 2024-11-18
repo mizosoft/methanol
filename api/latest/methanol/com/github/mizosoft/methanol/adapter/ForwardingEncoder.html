@@ -111,7 +111,7 @@ implements <a href="../BodyAdapter.Encoder.html" title="interface in com.github.
 <h2>Nested Class Summary</h2>
 <div class="inherited-list">
 <h2 id="nested-classes-inherited-from-class-com.github.mizosoft.methanol.BodyAdapter">Nested classes/interfaces inherited from interface&nbsp;com.github.mizosoft.methanol.<a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></h2>
-<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
+<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>, <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></code></div>
 </section>
 </li>
 <!-- ======== CONSTRUCTOR SUMMARY ======== -->
@@ -146,11 +146,20 @@ implements <a href="../BodyAdapter.Encoder.html" title="interface in com.github.
 <div class="block">Returns the adapter calls are being forwarded to.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toBody</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;object,
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toBody</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;value,
  @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns a <code>BodyPublisher</code> that encodes the given object into a request body using the
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body using the
  format specified by the given media type.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toBody</a><wbr>(T&nbsp;value,
+ <a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body based on
+ the given <a href="../TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>, using the given hints <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a> for encoder-specific
+ customization.</div>
 </div>
 </div>
 </div>
@@ -204,15 +213,31 @@ implements <a href="../BodyAdapter.Encoder.html" title="interface in com.github.
 <li>
 <section class="detail" id="toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)">
 <h3>toBody</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">toBody</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;object,
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">toBody</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;value,
  @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../BodyAdapter.Encoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)">BodyAdapter.Encoder</a></code></span></div>
-<div class="block">Returns a <code>BodyPublisher</code> that encodes the given object into a request body using the
- format specified by the given media type. If <code>mediaType</code> is <code>null</code>, the encoder's
- default format parameters (e.g. charset) are be used.</div>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body using the
+ format specified by the given media type. If the given media type is <code>null</code>, the
+ encoder uses its default format parameters (e.g., charset).</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="../BodyAdapter.Encoder.html#toBody(java.lang.Object,com.github.mizosoft.methanol.MediaType)">toBody</a></code>&nbsp;in interface&nbsp;<code><a href="../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">
+<h3 id="toBody(java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">toBody</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">toBody</span><wbr><span class="parameters">(T&nbsp;value,
+ <a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../BodyAdapter.Encoder.html#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">BodyAdapter.Encoder</a></code></span></div>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> that encodes the given object into a request body based on
+ the given <a href="../TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>, using the given hints <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a> for encoder-specific
+ customization.</div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="../BodyAdapter.Encoder.html#toBody(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">toBody</a></code>&nbsp;in interface&nbsp;<code><a href="../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></dd>
 </dl>
 </section>
 </li>

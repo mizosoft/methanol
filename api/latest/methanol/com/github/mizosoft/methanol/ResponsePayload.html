@@ -95,13 +95,20 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public interface </span><span class="element-name type-name-label">ResponsePayload</span><span class="extends-implements">
 extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></span></div>
-<div class="block">A response body that is yet to be handled into the desirable type (see <a href="Methanol.html#send(java.net.http.HttpRequest)"><code>Methanol.send(HttpRequest)</code></a>).
+<div class="block">A response body that is yet to be handled into the desirable type. This can be useful when the
+ response body differs in structure (and hence in high-level type) according to whether it has
+ succeeded or failed. An implementation of <code>ResponsePayload</code> can be acquired as the response
+ body through <a href="BodyAdapter.Decoder.html#basic()"><code>the basic decoder</code></a>. See example below.
 
- <p>To avoid resource leaks, it is recommended to use this within a try-with-resources construct
- immediately after sending the response (regardless of whether the body is converted synchronously
- or asynchronously):
+ <p>To avoid resource leaks, use this type within a try-with-resources construct immediately after
+ sending the response (regardless of whether the body is converted synchronously or
+ asynchronously):
 
  <pre><code>
+ var client =
+     Methanol.newBuilder()
+         .adapterCodec(AdapterCodec.newBuilder().basic().build()) // Install basic adapters.
+         .build()
  var response = client.send(MutableRequest.GET("https://example.com"));
  try(var body = response.body()) {
    if (HttpStatus.isSuccessful(response) {

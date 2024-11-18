@@ -109,11 +109,14 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
  Invoking <a href="#toImmutableRequest()"><code>toImmutableRequest()</code></a> will return an immutable copy that is independent of this
  instance.
 
- <p><code>MutableRequest</code> accepts an arbitrary object, referred to as payloads, as the request
- body. The payload is resolved into a <code>BodyPublisher</code> only when <a href="#bodyPublisher()"><code>one is requested</code></a>. Resolution is done by this request's <a href="#adapterCodec(com.github.mizosoft.methanol.AdapterCodec)"><code>AdapterCodec</code></a>.
+ <p><code>MutableRequest</code> accepts an arbitrary object as the request body, referred to as the
+ payload. The payload is resolved into a <code>BodyPublisher</code> only when <a href="#bodyPublisher()"><code>one is requested</code></a>. Resolution is done by this request's <a href="#adapterCodec(com.github.mizosoft.methanol.AdapterCodec)"><code>AdapterCodec</code></a>. Sending the request through a <a href="Methanol.html" title="class in com.github.mizosoft.methanol"><code>Methanol</code></a> client
+ with an <code>AdapterCodec</code> sets the request's <code>AdapterCodec</code> automatically if one is not
+ already present. Note that a request with an <code>AdapterCodec</code> overrides the client's <code>
+ AdapterCodec</code> both for encoding the request body and decoding the response body.
 
  <p>Additionally, this class allows setting a <code>URI</code> without a host or a scheme or not
- setting a <code>URI</code> at all. This is for the case when the request is used with a <a href="Methanol.html" title="class in com.github.mizosoft.methanol"><code>Methanol</code></a> client that has a base URL, with which this request's URL is resolved.
+ setting a <code>URI</code> at all. This is for the case when the request is used with a <a href="Methanol.html" title="class in com.github.mizosoft.methanol"><code>Methanol</code></a> client that has a base URL, against which this request's URL is resolved.
 
  <p><code>MutableRequest</code> also adds some convenience when the <code>HttpRequest</code> is used
  immediately after creation:
@@ -255,36 +258,72 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Adds each of the given <code>HttpHeaders</code>.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#method()" class="member-name-link">method</a>()</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#method(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">method</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;method,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
- <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#hint(java.lang.Class,T)" class="member-name-link">hint</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type,
+ T&nbsp;value)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Adds the given value to this request's <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#hints()" class="member-name-link">hints</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Sets the request method and sets the payload to the given value.</div>
+<div class="block">Returns this request's <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#method(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">method</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;method,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#PATCH(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
- <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Sets the request method to PATCH and sets the payload to the given value.</div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#hints(java.util.function.Consumer)" class="member-name-link">hints</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Consumer.html" title="class or interface in java.util.function" class="external-link">Consumer</a>&lt;<a href="BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a>&gt;&nbsp;hintsMutator)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Modifies this request's <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a> by mutating a <a href="BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol"><code>BodyAdapter.Hints.Builder</code></a>.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PATCH(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#method()" class="member-name-link">method</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#method(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">method</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;method,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Sets the request method and sets the payload to the given value.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#method(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">method</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;method,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#method(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">method</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;method,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Sets the request method and sets the payload to the given value with an explicitly specified
+ type.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;com.github.mizosoft.methanol.MimeBody&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#mimeBody()" class="member-name-link">mimeBody</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#PATCH(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Sets the request method to PATCH and sets the payload to the given value.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PATCH(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PATCH(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PATCH</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PATCH(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PATCH</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PATCH(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </div>
@@ -306,10 +345,28 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PATCH(java.net.URI,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#PATCH(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PATCH</a><wbr>(T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Sets the request method to PATCH and sets the payload to the given value with an explicitly
+ specified type.</div>
+</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#POST(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Sets the request method to POST and sets the payload to the given value.</div>
+</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#POST(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
@@ -323,38 +380,70 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#POST(java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#POST(java.net.URI,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#POST(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
-</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#POST(java.net.URI,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#PUT(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
- <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Sets the request method to PUT and sets the payload to the given value.</div>
-</div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#POST(java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PUT(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#POST(java.net.URI,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PUT(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PUT</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#POST(java.net.URI,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#POST(java.net.URI,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#POST(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">POST</a><wbr>(T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Sets the request method to POST and sets the payload to the given value with an explicitly
+ specified type.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#PUT(java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Sets the request method to PUT and sets the payload to the given value.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PUT(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PUT(java.lang.String,java.net.http.HttpRequest.BodyPublisher)" class="member-name-link">PUT</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PUT(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
 </div>
@@ -373,6 +462,22 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;bodyPublisher)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#PUT(java.net.URI,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#PUT(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">PUT</a><wbr>(T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Sets the request method to PUT and sets the payload to the given value with an explicitly
+ specified type.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#removeHeader(java.lang.String)" class="member-name-link">removeHeader</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;name)</code></div>
@@ -575,6 +680,21 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 </section>
 </li>
 <li>
+<section class="detail" id="hints(java.util.function.Consumer)">
+<h3>hints</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">hints</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Consumer.html" title="class or interface in java.util.function" class="external-link">Consumer</a>&lt;<a href="BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a>&gt;&nbsp;hintsMutator)</span></div>
+<div class="block">Modifies this request's <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a> by mutating a <a href="BodyAdapter.Hints.Builder.html" title="class in com.github.mizosoft.methanol"><code>BodyAdapter.Hints.Builder</code></a>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="hint(java.lang.Class,T)">
+<h3 id="hint(java.lang.Class,java.lang.Object)">hint</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">hint</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type,
+ T&nbsp;value)</span></div>
+<div class="block">Adds the given value to this request's <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+</section>
+</li>
+<li>
 <section class="detail" id="bodyPublisher()">
 <h3>bodyPublisher</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&gt;</span>&nbsp;<span class="element-name">bodyPublisher</span>()</div>
@@ -660,6 +780,18 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#headers()" title="class or interface in java.net.http" class="external-link">headers</a></code>&nbsp;in class&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></code></dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="hints()">
+<h3>hints</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></span>&nbsp;<span class="element-name">hints</span>()</div>
+<div class="block"><span class="description-from-type-label">Description copied from class:&nbsp;<code><a href="TaggableRequest.html#hints()">TaggableRequest</a></code></span></div>
+<div class="block">Returns this request's <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="TaggableRequest.html#hints()">hints</a></code>&nbsp;in class&nbsp;<code><a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></code></dd>
 </dl>
 </section>
 </li>
@@ -821,6 +953,20 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">POST</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Sets the request method to POST and sets the payload to the given value. The media type defines
+ the format used for resolving the payload into a <code>BodyPublisher</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="POST(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="POST(java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">POST</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">POST</span><wbr><span class="parameters">(T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Sets the request method to POST and sets the payload to the given value with an explicitly
+ specified type. The media type defines the format used for resolving the payload into a <code>
+ BodyPublisher</code>.</div>
 </section>
 </li>
 <li>
@@ -843,7 +989,19 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PUT</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Sets the request method to PUT and sets the payload to the given value. The media type defines
- the format used for resolving the payload.</div>
+ the format used for resolving the payload into a <code>BodyPublisher</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="PUT(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="PUT(java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">PUT</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PUT</span><wbr><span class="parameters">(T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Sets the request method to PUT and sets the payload to the given value with an explicitly
+ specified type. The media type defines the format used for resolving the payload into a <code>
+ BodyPublisher</code>.</div>
 </section>
 </li>
 <li>
@@ -861,7 +1019,19 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PATCH</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Sets the request method to PATCH and sets the payload to the given value. The media type
- defines the format used for resolving the payload.</div>
+ defines the format used for resolving the payload into a <code>BodyPublisher</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="PATCH(T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="PATCH(java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">PATCH</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PATCH</span><wbr><span class="parameters">(T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Sets the request method to PATCH and sets the payload to the given value with an explicitly
+ specified type. The media type defines the format used for resolving the payload into a <code>
+ BodyPublisher</code>.</div>
 </section>
 </li>
 <li>
@@ -899,7 +1069,20 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Sets the request method and sets the payload to the given value. The media type defines the
- format used for resolving this payload.</div>
+ format used for resolving this payload into a <code>BodyPublisher</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="method(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="method(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">method</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">method</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;method,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Sets the request method and sets the payload to the given value with an explicitly specified
+ type. The media type defines the format used for resolving this payload into a <code>
+ BodyPublisher</code>.</div>
 </section>
 </li>
 <li>
@@ -943,6 +1126,12 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <dt>Overrides:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a></code>&nbsp;in class&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></code></dd>
 </dl>
+</section>
+</li>
+<li>
+<section class="detail" id="mimeBody()">
+<h3>mimeBody</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;com.github.mizosoft.methanol.MimeBody&gt;</span>&nbsp;<span class="element-name">mimeBody</span>()</div>
 </section>
 </li>
 <li>
@@ -1036,6 +1225,26 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 </section>
 </li>
 <li>
+<section class="detail" id="POST(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="POST(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">POST</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">POST</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="POST(java.net.URI,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="POST(java.net.URI,java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">POST</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">POST</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a POST method.</div>
+</section>
+</li>
+<li>
 <section class="detail" id="PUT(java.lang.String,java.net.http.HttpRequest.BodyPublisher)">
 <h3>PUT</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PUT</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
@@ -1070,6 +1279,26 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 </section>
 </li>
 <li>
+<section class="detail" id="PUT(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="PUT(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">PUT</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PUT</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="PUT(java.net.URI,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="PUT(java.net.URI,java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">PUT</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PUT</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PUT method.</div>
+</section>
+</li>
+<li>
 <section class="detail" id="PATCH(java.lang.String,java.net.http.HttpRequest.BodyPublisher)">
 <h3>PATCH</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PATCH</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
@@ -1099,6 +1328,26 @@ implements <a href="TaggableRequest.Builder.html" title="interface in com.github
 <h3>PATCH</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PATCH</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
  <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;payload,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="PATCH(java.lang.String,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="PATCH(java.lang.String,java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">PATCH</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PATCH</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="PATCH(java.net.URI,T,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
+<h3 id="PATCH(java.net.URI,java.lang.Object,com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">PATCH</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></span>&nbsp;<span class="element-name">PATCH</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&nbsp;uri,
+ T&nbsp;payload,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
  <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Returns a new <code>MutableRequest</code> with the given URI and a PATCH method.</div>
 </section>

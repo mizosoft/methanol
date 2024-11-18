@@ -4,6 +4,7 @@ com.github.mizosoft.methanol.adapter
 com.github.mizosoft.methanol.decoder
 com.github.mizosoft.methanol.function
 com.github.mizosoft.methanol.internal
+com.github.mizosoft.methanol.internal.adapter
 com.github.mizosoft.methanol.internal.annotations
 com.github.mizosoft.methanol.internal.cache
 com.github.mizosoft.methanol.internal.concurrent
@@ -18,7 +19,6 @@ module:methanol.adapter.gson
 com.github.mizosoft.methanol.adapter.gson
 module:methanol.adapter.jackson
 com.github.mizosoft.methanol.adapter.jackson
-com.github.mizosoft.methanol.adapter.jackson.internal
 module:methanol.adapter.jackson.flux
 com.github.mizosoft.methanol.adapter.jackson.flux
 module:methanol.adapter.jaxb

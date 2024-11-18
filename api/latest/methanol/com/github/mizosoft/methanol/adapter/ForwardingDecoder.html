@@ -111,7 +111,7 @@ implements <a href="../BodyAdapter.Decoder.html" title="interface in com.github.
 <h2>Nested Class Summary</h2>
 <div class="inherited-list">
 <h2 id="nested-classes-inherited-from-class-com.github.mizosoft.methanol.BodyAdapter">Nested classes/interfaces inherited from interface&nbsp;com.github.mizosoft.methanol.<a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></h2>
-<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
+<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>, <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></code></div>
 </section>
 </li>
 <!-- ======== CONSTRUCTOR SUMMARY ======== -->
@@ -146,18 +146,32 @@ implements <a href="../BodyAdapter.Decoder.html" title="interface in com.github.
 <div class="block">Returns the adapter calls are being forwarded to.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a><wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Supplier.html" title="class or interface in java.util.function" class="external-link">Supplier</a>&lt;T&gt;&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toDeferredObject</a><wbr>(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;objectType,
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toDeferredObject</a><wbr>(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
  @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns a completed <code>BodySubscriber</code> that lazily decodes the response body into an
+<div class="block">Returns a completed <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that lazily decodes the response body into an
  object of the given type using the format specified by the given media type.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a><wbr>&lt;T&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toObject</a><wbr>(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;objectType,
- @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a><wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Supplier.html" title="class or interface in java.util.function" class="external-link">Supplier</a>&lt;T&gt;&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toDeferredObject</a><wbr>(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
+<div class="block">Returns a completed <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that lazily decodes the response body into an
+ object of the given type using the given <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a><wbr>&lt;T&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">toObject</a><wbr>(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body into an object of the given
  type using the format specified by the given media type.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a><wbr>&lt;T&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">toObject</a><wbr>(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body into an object of the given
+ type using the given <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
 </div>
 </div>
 </div>
@@ -211,12 +225,12 @@ implements <a href="../BodyAdapter.Decoder.html" title="interface in com.github.
 <li>
 <section class="detail" id="toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
 <h3>toObject</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span>&nbsp;<span class="element-name">toObject</span><wbr><span class="parameters">(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;objectType,
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span>&nbsp;<span class="element-name">toObject</span><wbr><span class="parameters">(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
  @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">BodyAdapter.Decoder</a></code></span></div>
-<div class="block">Returns a <code>BodySubscriber</code> that decodes the response body into an object of the given
- type using the format specified by the given media type. If <code>mediaType</code> is <code>
- null</code>, the decoder's default format parameters (e.g. charset) are used.</div>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body into an object of the given
+ type using the format specified by the given media type. If the given media type is <code>
+ null</code>, the decoder's default format parameters (e.g., charset) are used.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="../BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">toObject</a></code>&nbsp;in interface&nbsp;<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></dd>
@@ -224,23 +238,45 @@ implements <a href="../BodyAdapter.Decoder.html" title="interface in com.github.
 </section>
 </li>
 <li>
+<section class="detail" id="toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">
+<h3>toObject</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;</span>&nbsp;<span class="element-name">toObject</span><wbr><span class="parameters">(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">BodyAdapter.Decoder</a></code></span></div>
+<div class="block">Returns a <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body into an object of the given
+ type using the given <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="../BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">toObject</a></code>&nbsp;in interface&nbsp;<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></dd>
+</dl>
+</section>
+</li>
+<li>
 <section class="detail" id="toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">
 <h3>toDeferredObject</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Supplier.html" title="class or interface in java.util.function" class="external-link">Supplier</a>&lt;T&gt;&gt;</span>&nbsp;<span class="element-name">toDeferredObject</span><wbr><span class="parameters">(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;objectType,
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Supplier.html" title="class or interface in java.util.function" class="external-link">Supplier</a>&lt;T&gt;&gt;</span>&nbsp;<span class="element-name">toDeferredObject</span><wbr><span class="parameters">(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
  @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">BodyAdapter.Decoder</a></code></span></div>
-<div class="block">Returns a completed <code>BodySubscriber</code> that lazily decodes the response body into an
+<div class="block">Returns a completed <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that lazily decodes the response body into an
  object of the given type using the format specified by the given media type. If <code>
- mediaType</code> is <code>null</code>, the decoder's default format parameters (e.g. charset) are used.
-
- <p>The default implementation returns a subscriber completed with a supplier that blocks
- ,uninterruptedly, on the subscriber returned by <a href="../BodyAdapter.Decoder.html#toObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.Decoder.toObject(TypeRef, MediaType)</code></a>. Any
- completion exception raised while blocking is rethrown from the supplier as a <code>
- CompletionException</code>. Encoders that support reading from a blocking source should override
- this method to defer reading from such a source until the supplier is called.</div>
+ mediaType</code> is <code>null</code>, the decoder uses its default format parameters (e.g., charset).</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="../BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)">toDeferredObject</a></code>&nbsp;in interface&nbsp;<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></dd>
+</dl>
+</section>
+</li>
+<li>
+<section class="detail" id="toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">
+<h3>toDeferredObject</h3>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/function/Supplier.html" title="class or interface in java.util.function" class="external-link">Supplier</a>&lt;T&gt;&gt;</span>&nbsp;<span class="element-name">toDeferredObject</span><wbr><span class="parameters">(<a href="../TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef,
+ <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a>&nbsp;hints)</span></div>
+<div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">BodyAdapter.Decoder</a></code></span></div>
+<div class="block">Returns a completed <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that lazily decodes the response body into an
+ object of the given type using the given <a href="../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
+<dl class="notes">
+<dt>Specified by:</dt>
+<dd><code><a href="../BodyAdapter.Decoder.html#toDeferredObject(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">toDeferredObject</a></code>&nbsp;in interface&nbsp;<code><a href="../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></dd>
 </dl>
 </section>
 </li>

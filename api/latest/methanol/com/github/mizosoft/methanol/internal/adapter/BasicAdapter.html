@@ -5,7 +5,7 @@
 <title>BasicAdapter (Methanol 1.8.0-SNAPSHOT API)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<meta name="description" content="declaration: module: methanol, package: com.github.mizosoft.methanol.internal.extensions, class: BasicAdapter">
+<meta name="description" content="declaration: module: methanol, package: com.github.mizosoft.methanol.internal.adapter, class: BasicAdapter">
 <meta name="generator" content="javadoc/ClassWriterImpl">
 <link rel="stylesheet" type="text/css" href="../../../../../../../stylesheet.css" title="Style">
 <link rel="stylesheet" type="text/css" href="../../../../../../../script-dir/jquery-ui.min.css" title="Style">
@@ -84,12 +84,12 @@ loadScripts(document, 'script');</script>
 <!-- ======== START OF CLASS DATA ======== -->
 <div class="header">
 <div class="sub-title"><span class="module-label-in-type">Module</span>&nbsp;<a href="../../../../../../module-summary.html">methanol</a></div>
-<div class="sub-title"><span class="package-label-in-type">Package</span>&nbsp;<a href="package-summary.html">com.github.mizosoft.methanol.internal.extensions</a></div>
+<div class="sub-title"><span class="package-label-in-type">Package</span>&nbsp;<a href="package-summary.html">com.github.mizosoft.methanol.internal.adapter</a></div>
 <h1 title="Class BasicAdapter" class="title">Class BasicAdapter</h1>
 </div>
 <div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
 <div class="inheritance"><a href="../../adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">com.github.mizosoft.methanol.adapter.AbstractBodyAdapter</a>
-<div class="inheritance">com.github.mizosoft.methanol.internal.extensions.BasicAdapter</div>
+<div class="inheritance">com.github.mizosoft.methanol.internal.adapter.BasicAdapter</div>
 </div>
 </div>
 <section class="class-description" id="class-description">
@@ -100,7 +100,7 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public abstract class </span><span class="element-name type-name-label">BasicAdapter</span>
 <span class="extends-implements">extends <a href="../../adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></span></div>
-<div class="block">An adapter for basic types (e.g. <code>String</code>, <code>byte[]</code>, etc.).</div>
+<div class="block">An adapter for basic types (e.g., <code>String</code>, <code>byte[]</code>).</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -109,8 +109,11 @@ loadScripts(document, 'script');</script>
 <section class="nested-class-summary" id="nested-class-summary">
 <h2>Nested Class Summary</h2>
 <div class="inherited-list">
+<h2 id="nested-classes-inherited-from-class-com.github.mizosoft.methanol.adapter.AbstractBodyAdapter">Nested classes/interfaces inherited from class&nbsp;com.github.mizosoft.methanol.adapter.<a href="../../adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></h2>
+<code><a href="../../adapter/AbstractBodyAdapter.BaseDecoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseDecoder</a>, <a href="../../adapter/AbstractBodyAdapter.BaseEncoder.html" title="interface in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter.BaseEncoder</a></code></div>
+<div class="inherited-list">
 <h2 id="nested-classes-inherited-from-class-com.github.mizosoft.methanol.BodyAdapter">Nested classes/interfaces inherited from interface&nbsp;com.github.mizosoft.methanol.<a href="../../BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></h2>
-<code><a href="../../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="../../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
+<code><a href="../../BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>, <a href="../../BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a>, <a href="../../BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></code></div>
 </section>
 </li>
 <!-- ========== METHOD SUMMARY =========== -->
@@ -135,7 +138,7 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="inherited-list">
 <h3 id="methods-inherited-from-class-com.github.mizosoft.methanol.adapter.AbstractBodyAdapter">Methods inherited from class&nbsp;com.github.mizosoft.methanol.adapter.<a href="../../adapter/AbstractBodyAdapter.html" title="class in com.github.mizosoft.methanol.adapter">AbstractBodyAdapter</a></h3>
-<code><a href="../../adapter/AbstractBodyAdapter.html#attachMediaType(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)">attachMediaType</a>, <a href="../../adapter/AbstractBodyAdapter.html#charsetOrDefault(com.github.mizosoft.methanol.MediaType,java.nio.charset.Charset)">charsetOrDefault</a>, <a href="../../adapter/AbstractBodyAdapter.html#charsetOrUtf8(com.github.mizosoft.methanol.MediaType)">charsetOrUtf8</a>, <a href="../../adapter/AbstractBodyAdapter.html#compatibleMediaTypes()">compatibleMediaTypes</a>, <a href="../../adapter/AbstractBodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)">isCompatibleWith</a>, <a href="../../adapter/AbstractBodyAdapter.html#requireCompatibleOrNull(com.github.mizosoft.methanol.MediaType)">requireCompatibleOrNull</a>, <a href="../../adapter/AbstractBodyAdapter.html#requireSupport(com.github.mizosoft.methanol.TypeRef)">requireSupport</a>, <a href="../../adapter/AbstractBodyAdapter.html#requireSupport(java.lang.Class)">requireSupport</a></code></div>
+<code><a href="../../adapter/AbstractBodyAdapter.html#attachMediaType(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)">attachMediaType</a>, <a href="../../adapter/AbstractBodyAdapter.html#charsetOrDefault(com.github.mizosoft.methanol.MediaType,java.nio.charset.Charset)">charsetOrDefault</a>, <a href="../../adapter/AbstractBodyAdapter.html#charsetOrUtf8(com.github.mizosoft.methanol.MediaType)">charsetOrUtf8</a>, <a href="../../adapter/AbstractBodyAdapter.html#compatibleMediaTypes()">compatibleMediaTypes</a>, <a href="../../adapter/AbstractBodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)">isCompatibleWith</a>, <a href="../../adapter/AbstractBodyAdapter.html#requireCompatibleOrNull(com.github.mizosoft.methanol.MediaType)">requireCompatibleOrNull</a>, <a href="../../adapter/AbstractBodyAdapter.html#requireSupport(com.github.mizosoft.methanol.TypeRef)">requireSupport</a>, <a href="../../adapter/AbstractBodyAdapter.html#requireSupport(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)">requireSupport</a>, <a href="../../adapter/AbstractBodyAdapter.html#requireSupport(java.lang.Class)">requireSupport</a></code></div>
 <div class="inherited-list">
 <h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
 <code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" title="class or interface in java.lang" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#hashCode()" title="class or interface in java.lang" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
