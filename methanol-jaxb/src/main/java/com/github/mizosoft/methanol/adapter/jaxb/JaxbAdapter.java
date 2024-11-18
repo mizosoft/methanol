@@ -24,7 +24,6 @@ package com.github.mizosoft.methanol.adapter.jaxb;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
@@ -55,84 +54,73 @@ abstract class JaxbAdapter extends AbstractBodyAdapter {
   }
 
   @Override
-  public boolean supportsType(TypeRef<?> type) {
-    if (!(type.type() instanceof Class<?>)) {
-      return false;
-    }
-
-    var clazz = type.rawType();
-    return clazz.isAnnotationPresent(XmlRootElement.class)
-        || clazz.isAnnotationPresent(XmlType.class)
-        || clazz.isAnnotationPresent(XmlEnum.class);
+  public boolean supportsType(TypeRef<?> typeRef) {
+    var rawType = typeRef.rawType();
+    return rawType.isAnnotationPresent(XmlRootElement.class)
+        || rawType.isAnnotationPresent(XmlType.class)
+        || rawType.isAnnotationPresent(XmlEnum.class);
   }
 
-  static final class Encoder extends JaxbAdapter implements BodyAdapter.Encoder {
+  static final class Encoder extends JaxbAdapter implements BaseEncoder {
     Encoder(JaxbBindingFactory factory) {
       super(factory);
     }
 
     @Override
-    public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
-      requireNonNull(object);
-      requireSupport(object.getClass());
-      requireCompatibleOrNull(mediaType);
-      var outputBuffer = new ByteArrayOutputStream();
+    public <T> BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
+      var buffer = new ByteArrayOutputStream();
       try {
-        var marshaller = jaxbFactory.createMarshaller(object.getClass());
-        String encoding;
-        if (mediaType != null && (encoding = mediaType.parameters().get("charset")) != null) {
-          marshaller.setProperty(Marshaller.JAXB_ENCODING, encoding);
-        }
-        marshaller.marshal(object, outputBuffer);
+        var marshaller = jaxbFactory.createMarshaller(typeRef.rawType());
+        marshaller.setProperty(
+            Marshaller.JAXB_ENCODING, hints.mediaTypeOrAny().charsetOrUtf8().name());
+        marshaller.marshal(value, buffer);
       } catch (JAXBException e) {
         throw new UncheckedJaxbException(e);
       }
-      return attachMediaType(BodyPublishers.ofByteArray(outputBuffer.toByteArray()), mediaType);
+      return attachMediaType(
+          BodyPublishers.ofByteArray(buffer.toByteArray()), hints.mediaTypeOrAny());
     }
   }
 
-  static final class Decoder extends JaxbAdapter implements BodyAdapter.Decoder {
+  static final class Decoder extends JaxbAdapter implements BaseDecoder {
     Decoder(JaxbBindingFactory factory) {
       super(factory);
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
-      requireNonNull(objectType);
-      requireSupport(objectType);
-      requireCompatibleOrNull(mediaType);
-      var elementClass = objectType.exactRawType();
-      var charset = charsetOrNull(mediaType);
-      var unmarshaller = createUnmarshallerUnchecked(elementClass);
+    public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
+      var unmarshaller = createUnmarshallerUnchecked(typeRef.rawType());
       return BodySubscribers.mapping(
           BodySubscribers.ofByteArray(),
           bytes ->
-              unmarshalValue(elementClass, unmarshaller, new ByteArrayInputStream(bytes), charset));
+              typeRef.uncheckedCast(
+                  unmarshalValue(
+                      typeRef,
+                      unmarshaller,
+                      new ByteArrayInputStream(bytes),
+                      hints.mediaTypeOrAny().charset().orElse(null))));
     }
 
     @Override
-    public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeRef<T> objectType, @Nullable MediaType mediaType) {
-      requireNonNull(objectType);
-      requireSupport(objectType);
-      requireCompatibleOrNull(mediaType);
-      var elementClass = objectType.exactRawType();
-      var charset = charsetOrNull(mediaType);
-      var unmarshaller = createUnmarshallerUnchecked(elementClass);
+    public <T> BodySubscriber<Supplier<T>> toDeferredObject(TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
+      var unmarshaller = createUnmarshallerUnchecked(typeRef.rawType());
       return BodySubscribers.mapping(
           BodySubscribers.ofInputStream(),
-          in -> () -> unmarshalValue(elementClass, unmarshaller, in, charset));
+          in ->
+              () ->
+                  unmarshalValue(
+                      typeRef, unmarshaller, in, hints.mediaTypeOrAny().charset().orElse(null)));
     }
 
     private <T> T unmarshalValue(
-        Class<T> elementClass,
-        Unmarshaller unmarshaller,
-        InputStream in,
-        @Nullable Charset charset) {
+        TypeRef<T> typeRef, Unmarshaller unmarshaller, InputStream in, @Nullable Charset charset) {
       try {
-        // If the charset is known from the media type, use it for a Reader
-        // to avoid the overhead of having to infer it from the document.
-        return elementClass.cast(
+        // If the charset is known, use it through a Reader to avoid the overhead of having to infer
+        // it  from the document.
+        return typeRef.uncheckedCast(
             charset != null
                 ? unmarshaller.unmarshal(new InputStreamReader(in, charset))
                 : unmarshaller.unmarshal(in));
@@ -147,10 +135,6 @@ abstract class JaxbAdapter extends AbstractBodyAdapter {
       } catch (JAXBException e) {
         throw new UncheckedJaxbException(e);
       }
-    }
-
-    private static @Nullable Charset charsetOrNull(@Nullable MediaType mediaType) {
-      return mediaType != null ? mediaType.charset().orElse(null) : null;
     }
   }
 }

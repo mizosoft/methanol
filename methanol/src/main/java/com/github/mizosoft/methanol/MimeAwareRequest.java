@@ -20,25 +20,13 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.extensions;
+package com.github.mizosoft.methanol;
 
-import static java.util.Objects.requireNonNull;
+import java.util.Optional;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.MimeBodyPublisher;
-import java.net.http.HttpRequest.BodyPublisher;
+/** A request with an {@link MimeBody}. */
+interface MimeAwareRequest {
 
-public final class MimeBodyPublisherAdapter extends ForwardingBodyPublisher
-    implements MimeBodyPublisher {
-  private final MediaType mediaType;
-
-  public MimeBodyPublisherAdapter(BodyPublisher upstream, MediaType mediaType) {
-    super(upstream);
-    this.mediaType = requireNonNull(mediaType);
-  }
-
-  @Override
-  public MediaType mediaType() {
-    return mediaType;
-  }
+  /** Returns this request's body if a body exists and is a {@link MimeBody}. */
+  Optional<MimeBody> mimeBody();
 }

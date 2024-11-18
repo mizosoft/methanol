@@ -26,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import com.github.mizosoft.methanol.function.ThrowingConsumer;
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.MimeBodyPublisherAdapter;
 import java.io.OutputStream;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -35,7 +36,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Factory for additional {@link BodyPublisher} implementations. */
+/** Static factories for additional {@link BodyPublisher} implementations. */
 public class MoreBodyPublishers {
   private MoreBodyPublishers() {}
 
@@ -77,8 +78,7 @@ public class MoreBodyPublishers {
    *     runtime type or the given media type is installed
    */
   public static BodyPublisher ofObject(Object object, @Nullable MediaType mediaType) {
-    return AdapterCodec.installed()
-        .publisherOf(object, mediaType != null ? mediaType : MediaType.ANY);
+    return AdapterCodec.installed().publisherOf(object, Utils.hintsOf(mediaType));
   }
 
   private static <T extends AutoCloseable> BodyPublisher ofBodyWriter(

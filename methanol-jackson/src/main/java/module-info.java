@@ -20,8 +20,6 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.adapter.jackson.JacksonAdapterFactory;
-
 /**
  * Provides {@link com.github.mizosoft.methanol.BodyAdapter.Encoder} and {@link
  * com.github.mizosoft.methanol.BodyAdapter.Decoder} implementations for the Jackson library. Note
@@ -36,6 +34,4 @@ module methanol.adapter.jackson {
   requires static com.google.errorprone.annotations;
 
   exports com.github.mizosoft.methanol.adapter.jackson;
-  exports com.github.mizosoft.methanol.adapter.jackson.internal to
-      methanol.adapter.jackson.flux;
 }

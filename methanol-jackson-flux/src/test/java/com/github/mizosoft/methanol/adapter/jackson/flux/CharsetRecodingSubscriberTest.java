@@ -20,46 +20,34 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapter.jackson;
+package com.github.mizosoft.methanol.adapter.jackson.flux;
 
 import static com.github.mizosoft.methanol.testing.TestUtils.load;
 import static java.nio.charset.StandardCharsets.UTF_16;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
-import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
 import com.github.mizosoft.methanol.testing.BufferTokenizer;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.SubmissionPublisher;
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-class Utf8CoercionTest {
-  private Executor executor;
-
-  @BeforeEach()
-  void setUpExecutor() {
-    executor = Executors.newFixedThreadPool(8);
-  }
-
-  @AfterEach
-  void shutdownExecutor() {
-    TestUtils.shutdown(executor);
-  }
-
+@ExtendWith(ExecutorExtension.class)
+class CharsetRecodingSubscriberTest {
   @Test
-  void ut8Coercion_fromUtf16() {
+  void utf8ToUtf16(Executor executor) {
     var aladinText = new String(load(getClass(), "/aladin_utf8.txt"), UTF_8);
     var aladinBytesUtf16 = UTF_16.encode(aladinText);
-    var subscriber = JacksonAdapterUtils.coerceUtf8(BodySubscribers.ofString(UTF_8), UTF_16);
+    var subscriber =
+        new CharsetRecodingSubscriber<>(BodySubscribers.ofString(UTF_8), UTF_16, UTF_8);
     int[] buffSizes = {1, 32, 555, 1024, 21, 77};
     int[] listSizes = {1, 3, 1};
     executor.execute(
@@ -73,7 +61,7 @@ class Utf8CoercionTest {
         });
 
     assertThat(subscriber.getBody())
-        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS), Assertions.STRING)
+        .succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS), STRING)
         .isEqualToNormalizingNewlines(aladinText);
   }
 }

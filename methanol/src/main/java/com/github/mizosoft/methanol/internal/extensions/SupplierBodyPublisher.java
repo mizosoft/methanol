@@ -24,21 +24,28 @@ package com.github.mizosoft.methanol.internal.extensions;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.MediaType;
-import com.github.mizosoft.methanol.MimeBodyPublisher;
 import java.net.http.HttpRequest.BodyPublisher;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Flow.Subscriber;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
-public final class MimeBodyPublisherAdapter extends ForwardingBodyPublisher
-    implements MimeBodyPublisher {
-  private final MediaType mediaType;
+public final class SupplierBodyPublisher<T> implements BodyPublisher {
+  private final Supplier<T> supplier;
+  private final Function<T, BodyPublisher> publisherFactory;
 
-  public MimeBodyPublisherAdapter(BodyPublisher upstream, MediaType mediaType) {
-    super(upstream);
-    this.mediaType = requireNonNull(mediaType);
+  public SupplierBodyPublisher(Supplier<T> supplier, Function<T, BodyPublisher> publisherFactory) {
+    this.supplier = requireNonNull(supplier);
+    this.publisherFactory = requireNonNull(publisherFactory);
   }
 
   @Override
-  public MediaType mediaType() {
-    return mediaType;
+  public long contentLength() {
+    return -1;
+  }
+
+  @Override
+  public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
+    publisherFactory.apply(supplier.get()).subscribe(subscriber);
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,32 +22,30 @@
 
 package com.github.mizosoft.methanol.adapter.jackson.flux;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Predicate.not;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SequenceWriter;
-import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
-import com.github.mizosoft.methanol.adapter.jackson.ObjectReaderFactory;
-import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonAdapterUtils;
-import com.github.mizosoft.methanol.adapter.jackson.internal.JacksonSubscriber;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
-import java.io.Writer;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -65,150 +63,194 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
     this.mapper = requireNonNull(mapper);
   }
 
-  static final class Encoder extends JacksonFluxAdapter implements BodyAdapter.Encoder {
+  private static Optional<TypeRef<?>> firstSpecifiedTypeArgument(
+      TypeRef<?> subtypeRef, @Nullable Class<?> supertype) {
+    var resolvedSubtypeRef =
+        supertype != null ? subtypeRef.resolveSupertype(supertype) : subtypeRef;
+    return resolvedSubtypeRef.typeArgumentAt(0).filter(not(TypeRef::isTypeVariable));
+  }
+
+  static final class Encoder extends JacksonFluxAdapter implements BaseEncoder {
     Encoder(ObjectMapper mapper) {
       super(mapper);
     }
 
     @Override
-    public boolean supportsType(TypeRef<?> type) {
-      Class<?> clazz = type.rawType();
-      return org.reactivestreams.Publisher.class.isAssignableFrom(clazz)
-          || Flow.Publisher.class.isAssignableFrom(clazz);
+    public boolean supportsType(TypeRef<?> typeRef) {
+      return supportsPublisherSupertype(typeRef, org.reactivestreams.Publisher.class)
+          || supportsPublisherSupertype(typeRef, Flow.Publisher.class);
+    }
+
+    private boolean supportsPublisherSupertype(TypeRef<?> typeRef, Class<?> publisherSupertype) {
+      return publisherSupertype.isAssignableFrom(typeRef.rawType())
+          && firstSpecifiedTypeArgument(typeRef, publisherSupertype)
+              .map(elementTypeRef -> mapper.canSerialize(elementTypeRef.rawType()))
+              .orElse(true); // Optimistically assume we can handle the element if unspecified.
     }
 
     @Override
-    public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
-      requireNonNull(object);
-      requireSupport(object.getClass());
-      requireCompatibleOrNull(mediaType);
-      Charset charset = charsetOrUtf8(mediaType);
-      org.reactivestreams.Publisher<ByteBuffer> body;
-      if (object instanceof Mono) {
-        body = ((Mono<?>) object).map(o -> encodeValue(o, charset));
-      } else {
-        Flux<?> flux =
-            object instanceof org.reactivestreams.Publisher<?>
-                ? Flux.from((org.reactivestreams.Publisher<?>) object)
-                : JdkFlowAdapter.flowPublisherToFlux((Flow.Publisher<?>) object);
-        body = encodeValues(flux, charset);
-      }
+    public <T> BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
       return attachMediaType(
-          BodyPublishers.fromPublisher(FlowAdapters.toFlowPublisher(body)), mediaType);
+          BodyPublishers.fromPublisher(
+              FlowAdapters.toFlowPublisher(
+                  encodePublisher(value, typeRef, hints.mediaTypeOrAny().charsetOrUtf8()))),
+          hints.mediaTypeOrAny());
     }
 
-    private ByteBuffer encodeValue(Object object, Charset charset) {
-      ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
-      try (Writer writer = new OutputStreamWriter(outputBuffer, charset)) {
-        mapper.writeValue(writer, object);
-      } catch (IOException ioe) {
-        throw JacksonAdapterUtils.throwUnchecked(ioe);
+    private org.reactivestreams.Publisher<ByteBuffer> encodePublisher(
+        Object value, TypeRef<?> typeRef, Charset charset) {
+      if (value instanceof Mono<?>) {
+        return ((Mono<?>) value)
+            .map(
+                monoValue ->
+                    encodeValue(
+                        monoValue,
+                        mapper.writerFor(
+                            mapper.constructType(
+                                firstSpecifiedTypeArgument(typeRef, Mono.class)
+                                    .orElseGet(() -> TypeRef.ofRuntimeType(monoValue))
+                                    .type())),
+                        charset));
+      } else {
+        Class<?> publisherSupertype;
+        Flux<?> valueAsFlux;
+        if (value instanceof org.reactivestreams.Publisher<?>) {
+          publisherSupertype = org.reactivestreams.Publisher.class;
+          valueAsFlux = Flux.from((org.reactivestreams.Publisher<?>) value);
+        } else {
+          publisherSupertype = Flow.Publisher.class;
+          valueAsFlux = JdkFlowAdapter.flowPublisherToFlux((Flow.Publisher<?>) value);
+        }
+        return encodeValues(
+            valueAsFlux,
+            firstSpecifiedTypeArgument(typeRef, publisherSupertype)
+                .map(valueTypeRef -> mapper.writerFor(mapper.constructType(valueTypeRef.type())))
+                .orElseGet(mapper::writer),
+            charset);
       }
-      return ByteBuffer.wrap(outputBuffer.toByteArray());
     }
 
-    private Flux<ByteBuffer> encodeValues(Flux<?> values, Charset charset) {
-      ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream();
+    private ByteBuffer encodeValue(Object value, ObjectWriter objectWriter, Charset charset) {
+      try {
+        return ByteBuffer.wrap(
+            charset.equals(UTF_8)
+                ? objectWriter.writeValueAsBytes(value)
+                : objectWriter.writeValueAsString(value).getBytes(charset));
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+
+    private Flux<ByteBuffer> encodeValues(
+        Flux<?> values, ObjectWriter objectWriter, Charset charset) {
+      var buffer = new ByteArrayOutputStream();
       SequenceWriter sequenceWriter;
       try {
-        sequenceWriter =
-            mapper.writer().writeValuesAsArray(new OutputStreamWriter(outputBuffer, charset));
-      } catch (IOException ioe) {
-        throw new UncheckedIOException(ioe);
+        sequenceWriter = objectWriter.writeValuesAsArray(new OutputStreamWriter(buffer, charset));
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
       }
       return values
-          .map(o -> encodeSequenceValue(o, sequenceWriter, outputBuffer))
-          .concatWith(Mono.create(sink -> endSequence(sequenceWriter, outputBuffer, sink)))
+          .map(value -> encodeSequenceValue(value, sequenceWriter, buffer))
+          .concatWith(Mono.create(sink -> endSequence(sink, sequenceWriter, buffer)))
           .map(ByteBuffer::wrap);
     }
 
     private byte[] encodeSequenceValue(
-        Object value, SequenceWriter sequenceWriter, ByteArrayOutputStream outBuffer) {
+        Object value, SequenceWriter sequenceWriter, ByteArrayOutputStream buffer) {
       try {
         sequenceWriter.write(value);
-      } catch (IOException ioe) {
-        throw JacksonAdapterUtils.throwUnchecked(ioe);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
       }
-      byte[] writtenBytes = outBuffer.toByteArray();
-      outBuffer.reset();
+      byte[] writtenBytes = buffer.toByteArray();
+      buffer.reset();
       return writtenBytes;
     }
 
     private void endSequence(
-        SequenceWriter sequenceWriter, ByteArrayOutputStream outBuffer, MonoSink<byte[]> sink) {
+        MonoSink<byte[]> sink, SequenceWriter sequenceWriter, ByteArrayOutputStream buffer) {
       try {
         sequenceWriter.close();
-      } catch (IOException ioe) {
-        sink.error(ioe);
+      } catch (IOException e) {
+        sink.error(e);
         return;
       }
-      // may have flushed data
-      if (outBuffer.size() > 0) {
-        sink.success(outBuffer.toByteArray());
+
+      // We may have already flushed all data.
+      if (buffer.size() > 0) {
+        sink.success(buffer.toByteArray());
       } else {
         sink.success();
       }
     }
   }
 
-  static final class Decoder extends JacksonFluxAdapter implements BodyAdapter.Decoder {
+  static final class Decoder extends JacksonFluxAdapter implements BaseDecoder {
     Decoder(ObjectMapper mapper) {
       super(mapper);
     }
 
     @Override
-    public boolean supportsType(TypeRef<?> type) {
-      Class<?> clazz = type.rawType();
-      return clazz == Flux.class
-          || clazz == Mono.class
-          || clazz == org.reactivestreams.Publisher.class
-          || clazz == Flow.Publisher.class;
+    public boolean supportsType(TypeRef<?> typeRef) {
+      var rawType = typeRef.rawType();
+      return (rawType == Flux.class
+              || rawType == Mono.class
+              || rawType == org.reactivestreams.Publisher.class
+              || rawType == Flow.Publisher.class)
+          && firstSpecifiedTypeArgument(typeRef, null)
+              .map(valueTypeRef -> mapper.canDeserialize(mapper.constructType(valueTypeRef.type())))
+              .orElse(false); // Otherwise we don't know what to decode to.
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
-      requireNonNull(objectType);
-      requireSupport(objectType);
-      requireCompatibleOrNull(mediaType);
-      Type elementType = getFirstTypeArgumentOrParameter(objectType.type());
-      JsonParser asyncParser = createAsyncParser();
-      Class<? super T> rawPublisherType = objectType.rawType();
+    public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
+      // Now we know we have a specified generic type.
+      var valueType = firstSpecifiedTypeArgument(typeRef, null).orElseThrow().type();
+      var objectReader = mapper.readerFor(mapper.constructType(valueType));
+      var asyncParser = createAsyncParser();
+      var rawPublisherType = typeRef.rawType();
       BodySubscriber<?> subscriber;
       if (rawPublisherType == Mono.class) {
         subscriber =
             MoreBodySubscribers.fromAsyncSubscriber(
-                new JacksonSubscriber<>(
-                    mapper, TypeRef.of(elementType), ObjectReaderFactory.getDefault(), asyncParser),
-                s -> CompletableFuture.completedStage(Mono.fromCompletionStage(s.getBody())));
+                BodySubscribers.mapping(
+                    BodySubscribers.ofByteArray(),
+                    bytes -> {
+                      try {
+                        return objectReader.readValue(bytes);
+                      } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                      }
+                    }),
+                baseSubscriber ->
+                    CompletableFuture.completedStage(
+                        Mono.fromCompletionStage(baseSubscriber.getBody())));
       } else {
-        JacksonFluxSubscriber<?> fluxSubscriber =
-            new JacksonFluxSubscriber<>(mapper, elementType, asyncParser);
+        var fluxSubscriber = new JacksonFluxSubscriber<>(mapper, objectReader, asyncParser);
         subscriber =
             rawPublisherType == Flow.Publisher.class
                 ? BodySubscribers.mapping(fluxSubscriber, FlowAdapters::toFlowPublisher)
                 : fluxSubscriber;
       }
       return BodySubscribers.mapping(
-          JacksonAdapterUtils.coerceUtf8(subscriber, charsetOrUtf8(mediaType)),
-          p -> {
-            @SuppressWarnings("unchecked")
-            T publisher = (T) rawPublisherType.cast(p);
-            return publisher;
-          });
+          coerceUtf8(subscriber, hints.mediaTypeOrAny().charsetOrUtf8()), typeRef::uncheckedCast);
     }
 
     private JsonParser createAsyncParser() {
       try {
         return mapper.getFactory().createNonBlockingByteArrayParser();
-      } catch (IOException ioe) {
-        throw new UnsupportedOperationException("couldn't create non-blocking parser", ioe);
+      } catch (IOException e) {
+        throw new UnsupportedOperationException("Couldn't create Jackson's non-blocking parser", e);
       }
     }
 
-    private static Type getFirstTypeArgumentOrParameter(Type type) {
-      return type instanceof ParameterizedType
-          ? ((ParameterizedType) type).getActualTypeArguments()[0]
-          : ((Class<?>) type).getTypeParameters()[0];
+    private static <T> BodySubscriber<T> coerceUtf8(BodySubscriber<T> subscriber, Charset charset) {
+      return charset.equals(UTF_8) || charset.equals(US_ASCII)
+          ? subscriber
+          : new CharsetRecodingSubscriber<>(subscriber, charset, UTF_8);
     }
   }
 }

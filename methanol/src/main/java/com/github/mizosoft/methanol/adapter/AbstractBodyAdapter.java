@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,15 +29,22 @@ import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MimeBodyPublisher;
 import com.github.mizosoft.methanol.MoreBodyPublishers;
+import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.internal.Utils;
 import java.net.http.HttpRequest.BodyPublisher;
+import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.charset.Charset;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * Abstract {@link BodyAdapter} that implements {@link BodyAdapter#isCompatibleWith(MediaType)} by
- * specifying a set of {@code MediaTypes} the adapter is compatible with.
+ * An abstract {@link BodyAdapter} that implements {@link BodyAdapter#isCompatibleWith(MediaType)}
+ * by allowing subclasses to specify a set of {@link MediaType MediaTypes} the adapter is compatible
+ * with.
  */
 public abstract class AbstractBodyAdapter implements BodyAdapter {
   private final Set<MediaType> compatibleMediaTypes;
@@ -49,7 +56,6 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
 
   @Override
   public final boolean isCompatibleWith(MediaType mediaType) {
-    requireNonNull(mediaType);
     return compatibleMediaTypes.stream().anyMatch(mediaType::isCompatibleWith);
   }
 
@@ -59,42 +65,57 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
   }
 
   /**
-   * Requires that the given type is supported by this adapter.
+   * Requires that this adapter {@link BodyAdapter#supportsType(TypeRef) supports} the given type.
    *
-   * @throws UnsupportedOperationException if this adapter doesn't {@link
-   *     BodyAdapter#supportsType(TypeRef) support} the given type.
+   * @throws UnsupportedOperationException if this adapter doesn't support the given type.
    */
-  protected void requireSupport(TypeRef<?> type) {
-    if (!supportsType(type)) {
-      throw new UnsupportedOperationException("unsupported type: " + type);
+  protected void requireSupport(TypeRef<?> typeRef) {
+    requireSupport(typeRef, Hints.empty());
+  }
+
+  /**
+   * Requires that this adapter {@link BodyAdapter#supportsType(TypeRef) supports} the given type.
+   *
+   * @throws UnsupportedOperationException if this adapter doesn't support the given type.
+   */
+  protected void requireSupport(Class<?> type) {
+    requireSupport(TypeRef.of(type), Hints.empty());
+  }
+
+  /**
+   * Requires that this adapter {@link BodyAdapter#supportsType(TypeRef) supports} the given type
+   * and {@link BodyAdapter#isCompatibleWith(MediaType) is compatible with} the given hints' media
+   * type, if any.
+   *
+   * @throws UnsupportedOperationException if this adapter doesn't support the given type or is not
+   *     compatible with the given hints' media type.
+   */
+  protected void requireSupport(TypeRef<?> typeRef, Hints hints) {
+    if (!supportsType(typeRef)) {
+      throw new UnsupportedOperationException("Unsupported type: " + typeRef);
+    }
+    if (!isCompatibleWith(hints.mediaTypeOrAny())) {
+      throw new UnsupportedOperationException(
+          "This adapter is not compatible with: " + hints.mediaTypeOrAny());
     }
   }
 
   /**
-   * Requires that the given class is supported by this adapter.
+   * Requires that either this adapter is {@link BodyAdapter#isCompatibleWith(MediaType) compatible}
+   * with the given media type, or the given media type is {@code null}.
    *
-   * @throws UnsupportedOperationException if this adapter doesn't {@link
-   *     BodyAdapter#supportsType(TypeRef) support} the given raw type.
-   */
-  protected void requireSupport(Class<?> type) {
-    requireSupport(TypeRef.of(type));
-  }
-
-  /**
-   * Requires that the given media type is either {@code null} or is compatible with this adapter.
-   *
-   * @throws UnsupportedOperationException if this adapter is not {@link
-   *     BodyAdapter#isCompatibleWith(MediaType) compatible} the given type.
+   * @throws UnsupportedOperationException if this adapter is not compatible with the given media
+   *     type.
    */
   protected void requireCompatibleOrNull(@Nullable MediaType mediaType) {
     if (mediaType != null && !isCompatibleWith(mediaType)) {
-      throw new UnsupportedOperationException("adapter not compatible with: " + mediaType);
+      throw new UnsupportedOperationException("Adapter not compatible with: " + mediaType);
     }
   }
 
   /**
-   * Returns either the result of {@link MediaType#charsetOrDefault(Charset)} or {@code
-   * defaultCharset} directly if {@code mediaType} is null.
+   * Returns either the result of {@link MediaType#charsetOrDefault(Charset)}, or the given charset
+   * if the given media type is {@code null}.
    */
   public static Charset charsetOrDefault(@Nullable MediaType mediaType, Charset defaultCharset) {
     requireNonNull(defaultCharset);
@@ -102,17 +123,17 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
   }
 
   /**
-   * Returns either the result of {@link MediaType#charsetOrDefault(Charset)} or {@code UTF-8}
-   * directly if {@code mediaType} is null.
+   * Returns either the result of {@link MediaType#charsetOrDefault(Charset)}, or {@code UTF-8} if
+   * the given media type is {@code null}.
    */
   public static Charset charsetOrUtf8(@Nullable MediaType mediaType) {
     return charsetOrDefault(mediaType, UTF_8);
   }
 
   /**
-   * Converts the given publisher into a {@link MimeBodyPublisher} only if the given media type is
-   * not {@code null} or {@link MediaType#hasWildcard() has a wildcard}, otherwise the given
-   * publisher is returned.
+   * Converts the given publisher into a {@link MimeBodyPublisher} that has the given media type
+   * only if it is not {@code null} or {@link MediaType#hasWildcard() has a wildcard}, otherwise the
+   * given publisher is returned as-is.
    */
   public static BodyPublisher attachMediaType(
       BodyPublisher publisher, @Nullable MediaType mediaType) {
@@ -121,5 +142,81 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
       return MoreBodyPublishers.ofMediaType(publisher, mediaType);
     }
     return publisher;
+  }
+
+  /**
+   * This interface abstracts the more-capable {@link #toBody(Object, TypeRef, Hints)} method and
+   * adds a default implementation for {@link #toBody(Object, MediaType)} that forwards to the
+   * former.
+   */
+  public interface BaseEncoder extends Encoder {
+
+    /**
+     * {@inheritDoc}
+     *
+     * @implNote The default implementation is equivalent to {@code return toBody(value,
+     *     TypeRef.ofRuntimeType(value), mediaType != null ? Hints.of(mediaType) : Hints.empty())}.
+     */
+    @Override
+    default BodyPublisher toBody(Object value, @Nullable MediaType mediaType) {
+      return toBody(value, TypeRef.ofRuntimeType(value), Utils.hintsOf(mediaType));
+    }
+
+    @Override
+    <T> BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints);
+  }
+
+  /**
+   * This interface abstracts the more-capable {@link #toObject(TypeRef, Hints)} method and adds a
+   * default implementation for {@link #toObject(TypeRef, MediaType)} that forwards to the former.
+   * Additionally, this interface specifies a naive default implementation for {@link
+   * #toDeferredObject(TypeRef, Hints)}, which streaming decoders should override, and defaults
+   * {@link #toDeferredObject(TypeRef, MediaType)} to forward to the former.
+   */
+  public interface BaseDecoder extends Decoder {
+
+    /**
+     * {@inheritDoc}
+     *
+     * @implSpec The default implementation is equivalent to {@code return toObject(typeRef,
+     *     mediaType != null ? Hints.of(mediaType) : Hints.empty())}.
+     */
+    @Override
+    default <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, @Nullable MediaType mediaType) {
+      return toObject(typeRef, Utils.hintsOf(mediaType));
+    }
+
+    @Override
+    <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints);
+
+    /**
+     * {@inheritDoc}
+     *
+     * @implNote The default implementation is equivalent to {@code return toDeferredObject(typeRef,
+     *     mediaType != null ? Hints.of(mediaType) : Hints.empty())}.
+     */
+    @Override
+    default <T> BodySubscriber<Supplier<T>> toDeferredObject(
+        TypeRef<T> typeRef, @Nullable MediaType mediaType) {
+      return toDeferredObject(typeRef, Utils.hintsOf(mediaType));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @implSpec The default implementation returns a subscriber completed with a supplier that
+     *     blocks, uninterruptedly, on the subscriber returned by {@link #toObject(TypeRef, Hints)}.
+     *     Any exception raised while blocking is rethrown from the supplier as a {@link
+     *     CompletionException}. Decoders that support reading from a blocking source should
+     *     override this method to defer reading from such a source until the supplier is called.
+     */
+    @Override
+    default <T> BodySubscriber<Supplier<T>> toDeferredObject(TypeRef<T> typeRef, Hints hints) {
+      return MoreBodySubscribers.fromAsyncSubscriber(
+          toObject(typeRef, hints),
+          subscriber ->
+              CompletableFuture.completedStage(
+                  () -> subscriber.getBody().toCompletableFuture().join()));
+    }
   }
 }

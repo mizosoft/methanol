@@ -22,12 +22,8 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static com.github.mizosoft.methanol.testing.TestUtils.headers;
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.github.mizosoft.methanol.ResponseBuilder;
-import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
@@ -39,15 +35,14 @@ import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -55,12 +50,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class RecordingHttpClient extends HttpClient {
   private final BlockingDeque<Call<?>> calls = new LinkedBlockingDeque<>();
   private final AtomicInteger sendCount = new AtomicInteger();
+  private @Nullable Consumer<Call<?>> callHandler;
 
   public RecordingHttpClient() {}
 
-  public void completeLastCall() {
-    var call = lastCall();
-    call.future().complete(defaultResponseFor(call.request()));
+  public RecordingHttpClient handleCalls(@Nullable Consumer<Call<?>> callHandler) {
+    this.callHandler = callHandler;
+    return this;
   }
 
   @SuppressWarnings("unchecked")
@@ -134,7 +130,9 @@ public final class RecordingHttpClient extends HttpClient {
 
     var call = new Call<>(request, responseBodyHandler, null);
     calls.add(call);
-
+    if (callHandler != null) {
+      callHandler.accept(call);
+    }
     try {
       return call.future().get();
     } catch (ExecutionException e) {
@@ -160,6 +158,9 @@ public final class RecordingHttpClient extends HttpClient {
 
     var call = new Call<>(request, responseBodyHandler, null);
     calls.add(call);
+    if (callHandler != null) {
+      callHandler.accept(call);
+    }
     return call.future();
   }
 
@@ -172,42 +173,10 @@ public final class RecordingHttpClient extends HttpClient {
 
     var call = new Call<>(request, responseBodyHandler, pushPromiseHandler);
     calls.add(call);
-    return call.future();
-  }
-
-  public static <T> HttpResponse<T> defaultResponseFor(HttpRequest request) {
-    return new ResponseBuilder<T>()
-        .statusCode(HTTP_OK)
-        .request(request)
-        .uri(request.uri())
-        .version(Version.HTTP_1_1)
-        .build();
-  }
-
-  public static <T> HttpResponse<T> defaultResponseFor(
-      HttpRequest request, ByteBuffer responseBody, BodyHandler<T> bodyHandler) {
-    return new ResponseBuilder<T>()
-        .statusCode(HTTP_OK)
-        .request(request)
-        .uri(request.uri())
-        .version(Version.HTTP_1_1)
-        .body(decodeBody(responseBody, bodyHandler))
-        .build();
-  }
-
-  private static <T> T decodeBody(ByteBuffer responseBody, BodyHandler<T> bodyHandler) {
-    var subscriber =
-        bodyHandler.apply(new ImmutableResponseInfo(HTTP_OK, headers(), Version.HTTP_1_1));
-    subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    subscriber.onNext(List.of(responseBody));
-    subscriber.onComplete();
-    try {
-      return subscriber.getBody().toCompletableFuture().get();
-    } catch (InterruptedException e) {
-      throw new CompletionException(e);
-    } catch (ExecutionException e) {
-      throw new CompletionException(e.getCause());
+    if (callHandler != null) {
+      callHandler.accept(call);
     }
+    return call.future();
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
@@ -247,11 +216,12 @@ public final class RecordingHttpClient extends HttpClient {
     }
 
     public void complete() {
-      assertThat(responseFuture.complete(defaultResponseFor(request))).isTrue();
+      complete(TestUtils.EMPTY_BUFFER);
     }
 
     public void complete(ByteBuffer responseBody) {
-      assertThat(responseFuture.complete(defaultResponseFor(request, responseBody, bodyHandler)))
+      assertThat(
+              responseFuture.complete(TestUtils.okResponseOf(request, responseBody, bodyHandler)))
           .isTrue();
     }
 

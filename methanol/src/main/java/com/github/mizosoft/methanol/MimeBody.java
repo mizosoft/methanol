@@ -20,24 +20,11 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.spi;
+package com.github.mizosoft.methanol;
 
-import com.github.mizosoft.methanol.BodyAdapter.Decoder;
-import com.github.mizosoft.methanol.BodyAdapter.Encoder;
-import java.util.List;
+/** A request body that has a {@link MediaType}. */
+interface MimeBody {
 
-/** Utility class for loading/caching {@code Encoder/Decoder} providers. */
-public class BodyAdapterProviders {
-  private static final ServiceProviders<Encoder> encoders = new ServiceProviders<>(Encoder.class);
-  private static final ServiceProviders<Decoder> decoders = new ServiceProviders<>(Decoder.class);
-
-  private BodyAdapterProviders() {}
-
-  public static List<Encoder> encoders() {
-    return encoders.get();
-  }
-
-  public static List<Decoder> decoders() {
-    return decoders.get();
-  }
+  /** Returns this body's media type. */
+  MediaType mediaType();
 }

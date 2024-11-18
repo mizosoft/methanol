@@ -30,10 +30,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.from;
 
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
+import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.testing.HttpClientStub;
 import com.github.mizosoft.methanol.testing.HttpResponseStub;
+import com.github.mizosoft.methanol.testing.ImmutableResponseInfo;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
+import com.github.mizosoft.methanol.testing.RecordingHttpClient.Call;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.net.Authenticator;
 import java.net.CookieManager;
@@ -44,11 +49,15 @@ import java.net.http.HttpClient;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.net.http.HttpResponse.BodySubscribers;
 import java.net.http.HttpResponse.PushPromiseHandler;
+import java.net.http.HttpResponse.ResponseInfo;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -356,7 +365,9 @@ class MethanolTest {
   void requestPayloadIsMappedToBodyPublisher() {
     var payload = new Object();
     var publisher = BodyPublishers.ofString("abc");
-    var encoder = AdapterMocker.mockEncoder(payload, MediaType.TEXT_PLAIN, publisher);
+    var encoder =
+        AdapterMocker.mockEncoder(
+            payload, TypeRef.of(Object.class), Hints.of(MediaType.TEXT_PLAIN), publisher);
     var backend = new RecordingHttpClient();
     var client =
         Methanol.newBuilder(backend)
@@ -365,6 +376,159 @@ class MethanolTest {
     client.sendAsync(
         POST("https://example.com", payload, MediaType.TEXT_PLAIN), BodyHandlers.discarding());
     verifyThat(backend.lastCall().request()).hasBodyPublisher(publisher);
+  }
+
+  @Test
+  void decoderReceivesRequestAndDecoderHints() throws Exception {
+    final class HintRecordingDecoder extends AbstractBodyAdapter
+        implements AbstractBodyAdapter.BaseDecoder {
+      Hints lastCallHints = Hints.empty();
+
+      HintRecordingDecoder() {
+        super(MediaType.ANY);
+      }
+
+      @Override
+      public boolean supportsType(TypeRef<?> typeRef) {
+        return typeRef.type() == Object.class;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+        requireSupport(typeRef, hints);
+        lastCallHints = hints;
+        return (BodySubscriber<T>) BodySubscribers.discarding();
+      }
+    }
+
+    var decoder = new HintRecordingDecoder();
+    var request =
+        GET("https://example.com")
+            .hint(Integer.class, 1)
+            .hints(builder -> builder.put(String.class, "a"));
+    var backend = new RecordingHttpClient().handleCalls(Call::complete);
+    var client =
+        Methanol.newBuilder(backend)
+            .adapterCodec(AdapterCodec.newBuilder().decoder(decoder).build())
+            .build();
+    var headersBuilder = new HeadersBuilder();
+    headersBuilder.add("Content-Type", "text/plain");
+    var responseInfo = new ImmutableResponseInfo(200, headersBuilder.build(), Version.HTTP_1_1);
+
+    client.send(request, Object.class);
+    backend.lastCall().bodyHandler().apply(responseInfo); // Trigger decoder call.
+    assertThat(decoder.lastCallHints)
+        .isEqualTo(
+            Hints.newBuilder()
+                .put(Integer.class, 1)
+                .put(String.class, "a")
+                .put(MediaType.class, MediaType.of("text", "plain"))
+                .put(ResponseInfo.class, responseInfo)
+                .build());
+
+    // Send an immutable copy.
+    client.send(request.toImmutableRequest(), Object.class);
+    assertThat(backend.lastCall().bodyHandler()).isNotNull();
+    backend.lastCall().bodyHandler().apply(responseInfo); // Trigger decoder call.
+    assertThat(decoder.lastCallHints)
+        .isEqualTo(
+            Hints.newBuilder()
+                .put(Integer.class, 1)
+                .put(String.class, "a")
+                .put(MediaType.class, MediaType.of("text", "plain"))
+                .put(ResponseInfo.class, responseInfo)
+                .build());
+  }
+
+  @Test
+  void requestAdapterCodecOverridesThatOfClientForEncoding() throws Exception {
+    final class ReplacingEncoder extends AbstractBodyAdapter
+        implements AbstractBodyAdapter.BaseEncoder {
+      private final String result;
+
+      ReplacingEncoder(String result) {
+        super(MediaType.ANY);
+        this.result = result;
+      }
+
+      @Override
+      public boolean supportsType(TypeRef<?> typeRef) {
+        return typeRef.type() == Object.class;
+      }
+
+      @Override
+      public <T> BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints) {
+        requireSupport(typeRef, hints);
+        return BodyPublishers.ofString(result);
+      }
+    }
+
+    var clientCodec = AdapterCodec.newBuilder().encoder(new ReplacingEncoder("OfClient")).build();
+    var requestCodec = AdapterCodec.newBuilder().encoder(new ReplacingEncoder("OfRequest")).build();
+    var backend = new RecordingHttpClient().handleCalls(Call::complete);
+    var client = Methanol.newBuilder(backend).adapterCodec(clientCodec).build();
+
+    client.send(
+        POST("https://example.com", new Object(), MediaType.TEXT_PLAIN), BodyHandlers.discarding());
+    verifyThat(backend.lastCall().request().bodyPublisher().orElseThrow()).succeedsWith("OfClient");
+
+    client.send(
+        POST("https://example.com", new Object(), MediaType.TEXT_PLAIN).adapterCodec(requestCodec),
+        BodyHandlers.discarding());
+    verifyThat(backend.lastCall().request().bodyPublisher().orElseThrow())
+        .succeedsWith("OfRequest");
+
+    client.send(
+        POST("https://example.com", new Object(), MediaType.TEXT_PLAIN)
+            .adapterCodec(requestCodec)
+            .toImmutableRequest(),
+        BodyHandlers.discarding());
+    verifyThat(backend.lastCall().request().bodyPublisher().orElseThrow())
+        .succeedsWith("OfRequest");
+  }
+
+  @Test
+  void requestAdapterCodecOverridesThatOfClientForDecoding() throws Exception {
+    final class ReplacingDecoder extends AbstractBodyAdapter
+        implements AbstractBodyAdapter.BaseDecoder {
+      private final String result;
+
+      ReplacingDecoder(String result) {
+        super(MediaType.ANY);
+        this.result = result;
+      }
+
+      @Override
+      public boolean supportsType(TypeRef<?> typeRef) {
+        return typeRef.type() == String.class;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+        requireSupport(typeRef, hints);
+        return (BodySubscriber<T>) BodySubscribers.replacing(result);
+      }
+    }
+
+    var clientCodec = AdapterCodec.newBuilder().decoder(new ReplacingDecoder("OfClient")).build();
+    var requestCodec = AdapterCodec.newBuilder().decoder(new ReplacingDecoder("OfRequest")).build();
+    var client =
+        Methanol.newBuilder(new RecordingHttpClient().handleCalls(Call::complete))
+            .adapterCodec(clientCodec)
+            .build();
+    assertThat(client.send(GET("https://example.com"), String.class).body()).isEqualTo("OfClient");
+    assertThat(
+            client.send(GET("https://example.com").adapterCodec(requestCodec), String.class).body())
+        .isEqualTo("OfRequest");
+    assertThat(
+            client
+                .send(
+                    GET("https://example.com").adapterCodec(requestCodec).toImmutableRequest(),
+                    String.class)
+                .body())
+        .isEqualTo("OfRequest");
   }
 
   @Test
@@ -424,6 +588,7 @@ class MethanolTest {
     public <T> HttpResponse<T> send(HttpRequest request, BodyHandler<T> responseBodyHandler) {
       this.request = request;
       this.handler = responseBodyHandler;
+      this.pushHandler = null;
       return new HttpResponseStub<>();
     }
 

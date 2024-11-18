@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,8 +29,8 @@ import static java.nio.charset.StandardCharsets.UTF_16;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.google.gson.GsonBuilder;
-import com.google.gson.stream.MalformedJsonException;
-import java.io.UncheckedIOException;
+import com.google.gson.JsonSyntaxException;
+import java.io.IOException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -54,9 +54,8 @@ class GsonDeferredDecoderTest {
 
   @Test
   void deserializeWithCustomTypeAdapter() {
-    var gson = new GsonBuilder()
-        .registerTypeAdapter(Point.class, new CompactPointAdapter())
-        .create();
+    var gson =
+        new GsonBuilder().registerTypeAdapter(Point.class, new CompactPointAdapter()).create();
     verifyThat(createDecoder(gson))
         .converting(Point.class)
         .withDeferredBody("[1, 2]")
@@ -73,9 +72,8 @@ class GsonDeferredDecoderTest {
 
   @Test
   void deserializeWithGenericsAndCustomTypeAdapter() {
-    var gson = new GsonBuilder()
-        .registerTypeAdapter(Point.class, new CompactPointAdapter())
-        .create();
+    var gson =
+        new GsonBuilder().registerTypeAdapter(Point.class, new CompactPointAdapter()).create();
     verifyThat(createDecoder(gson))
         .converting(new TypeRef<List<Point>>() {})
         .withDeferredBody("[[1, 2], [3, 4]]")
@@ -84,16 +82,10 @@ class GsonDeferredDecoderTest {
 
   @Test
   void deserializeWithLenientGson() {
-    var gson = new GsonBuilder()
-        .setLenient()
-        .create();
+    var gson = new GsonBuilder().setLenient().create();
     verifyThat(createDecoder(gson))
         .converting(Point.class)
-        .withDeferredBody(
-              "{\n"
-            + "  x: '1',\n"
-            + "  y: '2' // This is a comment \n"
-            + "}")
+        .withDeferredBody("{\n" + "  x: '1',\n" + "  y: '2' // This is a comment \n" + "}")
         .succeedsWith(new Point(1, 2));
   }
 
@@ -102,20 +94,19 @@ class GsonDeferredDecoderTest {
     verifyThat(createDecoder())
         .converting(Point.class)
         .withDeferredBody("{x:\"1\", y:\"2\"") // Missing enclosing bracket
-        .failsWith(UncheckedIOException.class) // IOExceptions are rethrown as UncheckedIOExceptions
-        .withCauseInstanceOf(MalformedJsonException.class);
+        .failsWith(JsonSyntaxException.class);
   }
 
   @Test
   void deserializeWithError() {
-    // Upstream errors cause the stream used by the supplier to throw
-    // an IOException with the error as its cause. The IOException is
-    // rethrown as an UncheckedIOException.
+    // Upstream errors cause the stream used by the supplier to throw an IOException with the error
+    // as its cause.
     verifyThat(createDecoder())
         .converting(Point.class)
         .withDeferredFailure(new TestException())
-        .failsWith(UncheckedIOException.class)
+        .failsWith(JsonSyntaxException.class)
         .havingCause()
+        .isInstanceOf(IOException.class)
         .withCauseInstanceOf(TestException.class);
   }
 }

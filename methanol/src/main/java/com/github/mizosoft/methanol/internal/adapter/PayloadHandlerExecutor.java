@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,27 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol;
+package com.github.mizosoft.methanol.internal.adapter;
 
-/** An object, typically representing a request body, that has a {@link MediaType}. */
-interface MimeAware {
+import static java.util.Objects.requireNonNull;
 
-  /** Returns this object's media type. */
-  MediaType mediaType();
+import com.github.mizosoft.methanol.ResponsePayload;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
+
+/**
+ * Holds the executor to be used for handling a {@link ResponsePayload}. Passed to {@link
+ * BasicAdapter.Decoder} as a hint.
+ */
+public final class PayloadHandlerExecutor implements Supplier<Executor> {
+  private final Executor executor;
+
+  public PayloadHandlerExecutor(Executor executor) {
+    this.executor = requireNonNull(executor);
+  }
+
+  @Override
+  public Executor get() {
+    return executor;
+  }
 }

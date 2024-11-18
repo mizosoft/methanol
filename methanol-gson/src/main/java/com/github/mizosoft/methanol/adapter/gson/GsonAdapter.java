@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,31 +24,19 @@ package com.github.mizosoft.methanol.adapter.gson;
 
 import static java.util.Objects.requireNonNull;
 
-import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 import com.google.gson.Gson;
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonWriter;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.UncheckedIOException;
+import com.google.gson.reflect.TypeToken;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
-import java.nio.charset.Charset;
 import java.util.function.Supplier;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 abstract class GsonAdapter extends AbstractBodyAdapter {
-
   final Gson gson;
 
   GsonAdapter(Gson gson) {
@@ -57,84 +45,50 @@ abstract class GsonAdapter extends AbstractBodyAdapter {
   }
 
   @Override
-  public boolean supportsType(TypeRef<?> type) {
+  public boolean supportsType(TypeRef<?> typeRef) {
     try {
-      getAdapter(type);
+      gson.getAdapter(TypeToken.get(typeRef.type()));
       return true;
-    } catch (IllegalArgumentException e) {
-      // Gson::getAdapter throws IAE if it can't de/serialize the type
+    } catch (IllegalArgumentException ignored) {
+      // Gson::getAdapter throws IAE if it can't de/serialize the type.
       return false;
     }
   }
 
-  @SuppressWarnings("unchecked")
-  <T> TypeAdapter<T> getAdapter(TypeRef<T> type) {
-    return (TypeAdapter<T>) gson.getAdapter(com.google.gson.reflect.TypeToken.get(type.type()));
-  }
-
-  static final class Encoder extends GsonAdapter implements BodyAdapter.Encoder {
-
+  static final class Encoder extends GsonAdapter implements BaseEncoder {
     Encoder(Gson gson) {
       super(gson);
     }
 
     @Override
-    public BodyPublisher toBody(Object object, @Nullable MediaType mediaType) {
-      requireNonNull(object);
-      TypeRef<?> runtimeType = TypeRef.of(object.getClass());
-      requireSupport(runtimeType);
-      requireCompatibleOrNull(mediaType);
-      @SuppressWarnings("unchecked")
-      TypeAdapter<Object> adapter = (TypeAdapter<Object>) getAdapter(runtimeType);
-      ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
-      try (JsonWriter writer =
-          gson.newJsonWriter(new OutputStreamWriter(outBuffer, charsetOrUtf8(mediaType)))) {
-        adapter.write(writer, object);
-      } catch (IOException ioe) {
-        throw new AssertionError(ioe); // writing to a memory buffer
-      }
-      return attachMediaType(BodyPublishers.ofByteArray(outBuffer.toByteArray()), mediaType);
+    public <T> BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
+      return attachMediaType(
+          BodyPublishers.ofString(
+              gson.toJson(value, typeRef.type()), hints.mediaTypeOrAny().charsetOrUtf8()),
+          hints.mediaTypeOrAny());
     }
   }
 
-  static final class Decoder extends GsonAdapter implements BodyAdapter.Decoder {
-
+  static final class Decoder extends GsonAdapter implements BaseDecoder {
     Decoder(Gson gson) {
       super(gson);
     }
 
     @Override
-    public <T> BodySubscriber<T> toObject(TypeRef<T> objectType, @Nullable MediaType mediaType) {
-      requireNonNull(objectType);
-      requireSupport(objectType);
-      requireCompatibleOrNull(mediaType);
-      TypeAdapter<T> adapter = getAdapter(objectType);
-      Charset charset = charsetOrUtf8(mediaType);
+    public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
       return BodySubscribers.mapping(
-          BodySubscribers.ofByteArray(),
-          bytes ->
-              toJsonUnchecked(
-                  new InputStreamReader(new ByteArrayInputStream(bytes), charset), adapter));
+          BodySubscribers.ofString(hints.mediaTypeOrAny().charsetOrUtf8()),
+          json -> gson.fromJson(json, typeRef.type()));
     }
 
     @Override
-    public <T> BodySubscriber<Supplier<T>> toDeferredObject(
-        TypeRef<T> objectType, @Nullable MediaType mediaType) {
-      requireNonNull(objectType);
-      requireSupport(objectType);
-      requireCompatibleOrNull(mediaType);
-      TypeAdapter<T> adapter = getAdapter(objectType);
+    public <T> BodySubscriber<Supplier<T>> toDeferredObject(TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
       return BodySubscribers.mapping(
-          MoreBodySubscribers.ofReader(charsetOrUtf8(mediaType)),
-          in -> () -> toJsonUnchecked(in, adapter));
-    }
-
-    private <T> T toJsonUnchecked(Reader in, TypeAdapter<T> adapter) {
-      try {
-        return adapter.read(gson.newJsonReader(in));
-      } catch (IOException ioe) {
-        throw new UncheckedIOException(ioe);
-      }
+          MoreBodySubscribers.ofReader(hints.mediaTypeOrAny().charsetOrUtf8()),
+          reader -> () -> gson.fromJson(reader, typeRef.type()));
     }
   }
 }

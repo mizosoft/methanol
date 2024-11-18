@@ -27,6 +27,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
+import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.ImmutableResponseInfo;
 import java.io.Reader;
@@ -47,7 +48,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Factory for additional {@link BodyHandler} implementations. */
+/** Static factories for additional {@link BodyHandler} implementations. */
 public class MoreBodyHandlers {
   private MoreBodyHandlers() {}
 
@@ -139,7 +140,7 @@ public class MoreBodyHandlers {
    *     installed
    */
   public static <T> BodyHandler<T> ofObject(TypeRef<T> typeRef) {
-    return AdapterCodec.installed().handlerOf(typeRef);
+    return AdapterCodec.installed().handlerOf(typeRef, Hints.empty());
   }
 
   /**
@@ -165,7 +166,7 @@ public class MoreBodyHandlers {
    *     installed
    */
   public static <T> BodyHandler<Supplier<T>> ofDeferredObject(TypeRef<T> typeRef) {
-    return AdapterCodec.installed().deferredHandlerOf(typeRef);
+    return AdapterCodec.installed().deferredHandlerOf(typeRef, Hints.empty());
   }
 
   /**

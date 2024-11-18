@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ import static reactor.adapter.JdkFlowAdapter.publisherToFlowPublisher;
 import com.fasterxml.jackson.databind.exc.InvalidDefinitionException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import java.io.UncheckedIOException;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -118,7 +119,8 @@ public class JacksonFluxEncoderTest {
 
     verifyThat(createEncoder())
         .converting(Mono.just(new UnserializableByDefaultMapper()))
-        .failsWith(InvalidDefinitionException.class);
+        .failsWith(UncheckedIOException.class)
+        .hasCauseInstanceOf(InvalidDefinitionException.class);
   }
 
   @Test

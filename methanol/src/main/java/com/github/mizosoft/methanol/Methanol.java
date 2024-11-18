@@ -25,20 +25,17 @@ package com.github.mizosoft.methanol;
 import static com.github.mizosoft.methanol.internal.Utils.requirePositiveDuration;
 import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
-import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
 
 import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.adapter.PayloadHandlerExecutor;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
-import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutorProvider;
-import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
-import com.github.mizosoft.methanol.internal.extensions.PublisherBodySubscriber;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.InlineMe;
@@ -54,11 +51,8 @@ import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.BodySubscriber;
-import java.net.http.HttpResponse.BodySubscribers;
 import java.net.http.HttpResponse.PushPromiseHandler;
-import java.net.http.HttpResponse.ResponseInfo;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -85,7 +79,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * An {@code HttpClient} with interceptors, request decoration, HTTP caching and reactive
  * extensions.
  *
- * <p>In addition to implementing the {@link HttpClient} interface, this class allows to:
+ * <p>In addition to implementing the {@link HttpClient} API, this class allows to:
  *
  * <ul>
  *   <li>Specify a {@link BaseBuilder#baseUri(URI) base URI}.
@@ -159,9 +153,9 @@ public final class Methanol extends HttpClient {
             mergedInterceptors.add(
                 new ReadTimeoutInterceptor(timeout, castNonNull(builder.readTimeoutDelayer))));
 
-    var executor = backend.executor().orElse(null);
     if (!caches.isEmpty()) {
-      mergedInterceptors.add(new RedirectingInterceptor(redirectPolicy, executor));
+      mergedInterceptors.add(
+          new RedirectingInterceptor(redirectPolicy, backend.executor().orElse(null)));
     }
     caches.forEach(cache -> mergedInterceptors.add(cache.interceptor()));
 
@@ -333,47 +327,6 @@ public final class Methanol extends HttpClient {
     return new InterceptorChain<>(backend, bodyHandler, null, mergedInterceptors).forward(request);
   }
 
-  /**
-   * Like {@link #send(HttpRequest, BodyHandler)} but defers handling the response body into the
-   * desired type using the provided {@link ResponsePayload}. The call completes as soon as the
-   * headers are received. Forgetting to close the returned payload (e.g. using try-with-resources)
-   * is a programming error.
-   */
-  public HttpResponse<ResponsePayload> send(HttpRequest request)
-      throws IOException, InterruptedException {
-    return send(
-        request,
-        responseInfo ->
-            BodySubscribers.mapping(
-                new PublisherBodySubscriber(),
-                publisher ->
-                    new ResponsePayloadImpl(
-                        responseInfo,
-                        publisher,
-                        () -> executor().orElseGet(FallbackExecutorProvider::get),
-                        adapterCodecOrInstalled())));
-  }
-
-  /**
-   * Like {@link #send(HttpRequest, BodyHandler)} but defers handling the response body into the
-   * desired type using the provided {@link ResponsePayload}. The call completes as soon as the
-   * headers are received. Forgetting to close the returned payload (e.g. using try-with-resources)
-   * is a programming error.
-   */
-  public CompletableFuture<HttpResponse<ResponsePayload>> sendAsync(HttpRequest request) {
-    return sendAsync(
-        request,
-        responseInfo ->
-            BodySubscribers.mapping(
-                new PublisherBodySubscriber(),
-                publisher ->
-                    new ResponsePayloadImpl(
-                        responseInfo,
-                        publisher,
-                        () -> executor().orElseGet(FallbackExecutorProvider::get),
-                        adapterCodecOrInstalled())));
-  }
-
   @Override
   public <T> CompletableFuture<HttpResponse<T>> sendAsync(
       HttpRequest request, BodyHandler<T> bodyHandler) {
@@ -390,42 +343,86 @@ public final class Methanol extends HttpClient {
         .forwardAsync(request);
   }
 
-  public <T> HttpResponse<T> send(HttpRequest request, Class<T> bodyType)
+  /**
+   * {@link #send(HttpRequest, BodyHandler) Sends} the given request and converts the response body
+   * into an object of the given type.
+   */
+  public <T> HttpResponse<T> send(HttpRequest request, Class<T> type)
       throws IOException, InterruptedException {
-    return send(request, TypeRef.of(bodyType));
+    return send(request, TypeRef.of(type));
   }
 
-  public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, Class<T> bodyType) {
-    return sendAsync(request, TypeRef.of(bodyType));
+  /**
+   * {@link #sendAsync(HttpRequest, BodyHandler) Asynchronously sends} the given request and
+   * converts the response body into an object of the given type.
+   */
+  public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, Class<T> type) {
+    return sendAsync(request, TypeRef.of(type));
   }
 
-  public <T> HttpResponse<T> send(HttpRequest request, TypeRef<T> bodyType)
+  /**
+   * {@link #send(HttpRequest, BodyHandler) Sends} the given request and converts the response body
+   * into an object of the given type.
+   */
+  public <T> HttpResponse<T> send(HttpRequest request, TypeRef<T> typeRef)
       throws IOException, InterruptedException {
-    return new InterceptorChain<>(
-            backend, adapterCodecOrInstalled().handlerOf(bodyType), null, mergedInterceptors)
+    return new InterceptorChain<>(backend, handlerOf(request, typeRef), null, mergedInterceptors)
         .forward(request);
   }
 
-  public <T> CompletableFuture<HttpResponse<T>> sendAsync(
-      HttpRequest request, TypeRef<T> bodyType) {
-    return new InterceptorChain<>(
-            backend, adapterCodecOrInstalled().handlerOf(bodyType), null, mergedInterceptors)
+  /**
+   * {@link #sendAsync(HttpRequest, BodyHandler) Asynchronously sends} the given request and
+   * converts the response body into an object of the given type.
+   */
+  public <T> CompletableFuture<HttpResponse<T>> sendAsync(HttpRequest request, TypeRef<T> typeRef) {
+    return new InterceptorChain<>(backend, handlerOf(request, typeRef), null, mergedInterceptors)
         .forwardAsync(request);
   }
 
-  private AdapterCodec adapterCodecOrInstalled() {
-    return adapterCodec.orElseGet(AdapterCodec::installed);
+  private <T> BodyHandler<T> handlerOf(HttpRequest request, TypeRef<T> typeRef) {
+    var adapterCodec = MutableRequest.adapterCodecOf(request).or(() -> this.adapterCodec);
+    var hints = TaggableRequest.hintsOf(request);
+    var deferredValueTypeRef =
+        typeRef.isParameterizedType() && typeRef.rawType() == Supplier.class
+            ? typeRef
+                .resolveSupertype(Supplier.class)
+                .typeArgumentAt(0)
+                .orElseThrow(AssertionError::new) // A parameterized type must contain a type arg.
+            : null;
+    if ((typeRef.isRawType() && typeRef.rawType() == ResponsePayload.class)
+        || (deferredValueTypeRef != null
+            && deferredValueTypeRef.isRawType()
+            && deferredValueTypeRef.rawType() == ResponsePayload.class)) {
+      // Add ResponsePayload-specific hints (see BasicAdapter.Decoder).
+      var hintsBuilder = hints.mutate();
+      adapterCodec.ifPresent(codec -> hintsBuilder.put(AdapterCodec.class, codec));
+      executor()
+          .ifPresent(
+              executor ->
+                  hintsBuilder.put(
+                      PayloadHandlerExecutor.class, new PayloadHandlerExecutor(executor)));
+      hints = hintsBuilder.build();
+    }
+    var effectiveAdapterCodec = adapterCodec.orElseGet(AdapterCodec::installed);
+    if (deferredValueTypeRef != null) {
+      @SuppressWarnings("unchecked")
+      var bodyHandler =
+          (BodyHandler<T>) effectiveAdapterCodec.deferredHandlerOf(deferredValueTypeRef, hints);
+      return bodyHandler;
+    } else {
+      return effectiveAdapterCodec.handlerOf(typeRef, hints);
+    }
   }
 
   @CanIgnoreReturnValue
   private static URI validateUri(URI uri) {
     var scheme = uri.getScheme();
-    requireArgument(scheme != null, "uri has no scheme: %s", uri);
+    requireArgument(scheme != null, "URI has no scheme: %s", uri);
     requireArgument(
-        "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme),
-        "unsupported scheme: %s",
+        scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"),
+        "Unsupported scheme: %s",
         scheme);
-    requireArgument(uri.getHost() != null, "uri has no host: %s", uri);
+    requireArgument(uri.getHost() != null, "URI has no host: %s", uri);
     return uri;
   }
 
@@ -455,67 +452,6 @@ public final class Methanol extends HttpClient {
   /** Creates a default {@code Methanol} instance. */
   public static Methanol create() {
     return newBuilder().build();
-  }
-
-  private static final class ResponsePayloadImpl implements ResponsePayload {
-    private final ResponseInfo responseInfo;
-    private final Publisher<List<ByteBuffer>> publisher;
-    private final Supplier<Executor> executorSupplier;
-    private final AdapterCodec adapterCodec;
-
-    private boolean closed;
-
-    ResponsePayloadImpl(
-        ResponseInfo responseInfo,
-        Publisher<List<ByteBuffer>> publisher,
-        Supplier<Executor> executorSupplier,
-        AdapterCodec adapterCodec) {
-      this.responseInfo = responseInfo;
-      this.publisher = publisher;
-      this.executorSupplier = executorSupplier;
-      this.adapterCodec = adapterCodec;
-    }
-
-    @Override
-    public <T> T to(TypeRef<T> typeRef) throws IOException, InterruptedException {
-      return Utils.get(handleAsync(adapterCodec.handlerOf(typeRef), FlowSupport.SYNC_EXECUTOR));
-    }
-
-    @Override
-    public <T> T handleWith(BodyHandler<T> bodyHandler) throws IOException, InterruptedException {
-      return Utils.get(handleAsync(bodyHandler, FlowSupport.SYNC_EXECUTOR));
-    }
-
-    @Override
-    public <T> CompletableFuture<T> toAsync(TypeRef<T> typeRef) {
-      return handleAsync(adapterCodec.handlerOf(typeRef), executorSupplier.get());
-    }
-
-    @Override
-    public <T> CompletableFuture<T> handleWithAsync(BodyHandler<T> bodyHandler) {
-      return handleAsync(bodyHandler, executorSupplier.get());
-    }
-
-    private <T> CompletableFuture<T> handleAsync(BodyHandler<T> bodyHandler, Executor executor) {
-      requireState(!closed, "Closed");
-      closed = true;
-      return Handlers.handleAsync(responseInfo, publisher, bodyHandler, executor);
-    }
-
-    @Override
-    @SuppressWarnings("FutureReturnValueIgnored")
-    public void close() {
-      boolean wasOpen = !closed;
-      closed = true;
-      if (wasOpen) {
-        // Discard in background.
-        // TODO set a timeout so slow responses don't just hang in background.
-        // TODO we can optimize this for HTTP2 by cancelling the subscription directly, which sends
-        //      a RST_STREAM and keeps using the connection as per the current implementation.
-        Handlers.handleAsync(
-            responseInfo, publisher, BodyHandlers.discarding(), executorSupplier.get());
-      }
-    }
   }
 
   /** An object that intercepts requests being sent over a {@code Methanol} client. */
@@ -1110,7 +1046,8 @@ public final class Methanol extends HttpClient {
 
       // Overwrite Content-Type if the request body has a MediaType.
       rewrittenRequest
-          .bodyMediaType()
+          .mimeBody()
+          .map(MimeBody::mediaType)
           .ifPresent(mediaType -> rewrittenRequest.setHeader("Content-Type", mediaType.toString()));
 
       if (request.timeout().isEmpty()) {
