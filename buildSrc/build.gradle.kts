@@ -16,4 +16,5 @@ dependencies {
   implementation(libs.errorprone.plugin)
   implementation(libs.nullaway.plugin)
   implementation(libs.coveralls.plugin)
+  implementation(libs.kotlin.jvm.plugin)
 }

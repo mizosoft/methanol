@@ -145,11 +145,12 @@ public final class MockWebServerExtension
 
       Context() {}
 
-      MockWebServer newServer(boolean useHttps) {
+      MockWebServer newServer(boolean useHttps) throws IOException {
         var server = new MockWebServer();
         if (useHttps) {
           server.useHttps(sslContext.getSocketFactory(), false);
         }
+        server.start();
         servers.add(server);
         return server;
       }

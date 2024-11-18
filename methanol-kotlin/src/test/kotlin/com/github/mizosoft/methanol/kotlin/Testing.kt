@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,15 +20,17 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.blackbox.support;
+package com.github.mizosoft.methanol.kotlin
 
-import com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
-import java.nio.file.spi.FileTypeDetector;
+import com.github.mizosoft.methanol.testing.ByteBufferCollector
+import com.github.mizosoft.methanol.testing.verifiers.DecoderVerifier
+import kotlinx.serialization.Serializable
+import java.net.http.HttpRequest.BodyPublisher
+import java.nio.charset.StandardCharsets.UTF_8
 
-public class RegistryFileTypeDetectorProvider {
-  private RegistryFileTypeDetectorProvider() {}
+fun BodyPublisher.readString() = UTF_8.decode(ByteBufferCollector.collect(this)).toString()
 
-  public static FileTypeDetector provider() {
-    return new RegistryFileTypeDetector();
-  }
-}
+inline fun <reified T> DecoderVerifier.converting() = converting(TypeRef<T>())
+
+@Serializable
+data class Point(val x: Int, val y: Int)

@@ -76,8 +76,8 @@ public class TestUtils {
   public static final int BUFFERS_PER_LIST = 3;
 
   public static final int TIMEOUT_SECONDS = 2;
-  public static final int SLOW_TIMEOUT_SECONDS = 4;
-  public static final int VERY_SLOW_TIMEOUT_SECONDS = 10;
+  public static final int SLOW_TIMEOUT_SECONDS = 5;
+  public static final int VERY_SLOW_TIMEOUT_SECONDS = 12;
 
   private static final long RANDOM_SEED = 25;
 

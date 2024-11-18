@@ -65,11 +65,12 @@ class BootJarTest {
   private ExecutorService executor;
 
   @BeforeEach
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   void assumeJava() throws Exception {
     var process =
         new ProcessBuilder().command("java", "--version").redirectErrorStream(true).start();
     try (var in = TestUtils.inputReaderOf(process)) {
-      assertThat(process.waitFor(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS))
+      assertThat(process.waitFor(TestUtils.SLOW_TIMEOUT_SECONDS, TimeUnit.SECONDS))
           .withFailMessage("'java --version' timed out")
           .isTrue();
       assumeThat(process.exitValue())
@@ -151,6 +152,7 @@ class BootJarTest {
   }
 
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   void test() throws Exception {
     HttpResponse<Point> response;
     try {

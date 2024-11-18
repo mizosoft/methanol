@@ -24,10 +24,11 @@ package com.github.mizosoft.methanol;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.http.HttpHeaders;
+import java.util.List;
 import java.util.function.BiPredicate;
 
 /** An accumulator of header name-value pairs. */
-interface HeadersAccumulator {
+public interface HeadersAccumulator<T extends HeadersAccumulator<T>> {
 
   /**
    * Adds the given header name-value pair.
@@ -35,7 +36,7 @@ interface HeadersAccumulator {
    * @throws IllegalArgumentException if the given header is invalid
    */
   @CanIgnoreReturnValue
-  HeadersAccumulator header(String name, String value);
+  T header(String name, String value);
 
   /**
    * Adds each of the given header name-value pairs. The pairs must be appended to each other in the
@@ -45,11 +46,11 @@ interface HeadersAccumulator {
    *     an uneven or non-positive length
    */
   @CanIgnoreReturnValue
-  HeadersAccumulator headers(String... headers);
+  T headers(String... headers);
 
   /** Adds all the given headers. */
   @CanIgnoreReturnValue
-  HeadersAccumulator headers(HttpHeaders headers);
+  T headers(HttpHeaders headers);
 
   /**
    * Sets the header represented by the given name to the given value, overwriting the previous
@@ -58,17 +59,44 @@ interface HeadersAccumulator {
    * @throws IllegalArgumentException if the given header is invalid
    */
   @CanIgnoreReturnValue
-  HeadersAccumulator setHeader(String name, String value);
+  T setHeader(String name, String value);
+
+  /**
+   * Sets the header represented by the given name to the given values, overwriting the previous
+   * value (if any).
+   *
+   * @throws IllegalArgumentException if the given header is invalid
+   */
+  @CanIgnoreReturnValue
+  T setHeader(String name, List<String> values);
+
+  /**
+   * Sets the header represented by the given name to the given value, only if there was no header
+   * with the given name.
+   *
+   * @throws IllegalArgumentException if the given header is invalid
+   */
+  @CanIgnoreReturnValue
+  T setHeaderIfAbsent(String name, String value);
+
+  /**
+   * Sets the header represented by the given name to the given values, only if there was no header
+   * with the given name.
+   *
+   * @throws IllegalArgumentException if the given header is invalid
+   */
+  @CanIgnoreReturnValue
+  T setHeaderIfAbsent(String name, List<String> values);
 
   /** Removes all the headers added so far. */
   @CanIgnoreReturnValue
-  HeadersAccumulator removeHeaders();
+  T removeHeaders();
 
   /** Removes all the header values associated with the given name. */
   @CanIgnoreReturnValue
-  HeadersAccumulator removeHeader(String name);
+  T removeHeader(String name);
 
   /** Removes all the header name-value pairs matched by the given predicate. */
   @CanIgnoreReturnValue
-  HeadersAccumulator removeHeadersIf(BiPredicate<String, String> filter);
+  T removeHeadersIf(BiPredicate<String, String> filter);
 }

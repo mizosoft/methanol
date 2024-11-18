@@ -199,7 +199,7 @@ public final class MediaType {
     }
   }
 
-  /** Equivalent to calling {@code charsetOrDefault(StandardCharsets.UTF_8)}. */
+  /** Equivalent to calling {@link #charsetOrDefault(Charset) charsetOrDefault(StandardCharsets.UTF_8)}. */
   public Charset charsetOrUtf8() {
     return charsetOrDefault(UTF_8);
   }

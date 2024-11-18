@@ -41,4 +41,7 @@ module methanol.testing {
   exports com.github.mizosoft.methanol.testing.store;
 
   uses com.github.mizosoft.methanol.testing.MemoryFileSystemProvider;
+
+  provides java.nio.file.spi.FileTypeDetector with
+      com.github.mizosoft.methanol.testing.RegistryFileTypeDetector;
 }

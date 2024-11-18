@@ -28,15 +28,19 @@ import static com.github.mizosoft.methanol.internal.Utils.requireValidHeaderValu
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.HeadersAccumulator;
 import java.net.http.HttpHeaders;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.BiPredicate;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public final class HeadersBuilder {
   private final Map<String, List<String>> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+  private @MonotonicNonNull HeadersAccumulatorView lazyAccumulatorView;
 
   public HeadersBuilder() {}
 
@@ -89,10 +93,29 @@ public final class HeadersBuilder {
   }
 
   public void set(String name, String value) {
-    requireValidHeader(name, value);
+    set(name, List.of(value));
+  }
+
+  public void set(String name, List<String> values) {
+    requireValidHeaderName(name);
     var myValues = headers.computeIfAbsent(name, __ -> new ArrayList<>());
     myValues.clear();
-    myValues.add(value);
+    values.forEach(value -> myValues.add(requireValidHeaderValue(value)));
+  }
+
+  public void setIfAbsent(String name, String value) {
+    setIfAbsent(name, List.of(value));
+  }
+
+  public void setIfAbsent(String name, List<String> values) {
+    requireValidHeaderName(name);
+    headers.computeIfAbsent(
+        name,
+        __ -> {
+          var myValues = new ArrayList<String>();
+          values.forEach(value -> myValues.add(requireValidHeaderValue(value)));
+          return myValues;
+        });
   }
 
   public void setLenient(String name, List<String> values) {
@@ -108,13 +131,13 @@ public final class HeadersBuilder {
   public boolean removeIf(BiPredicate<String, String> filter) {
     requireNonNull(filter);
     boolean mutated = false;
-    for (var iter = headers.entrySet().iterator(); iter.hasNext(); ) {
-      var entry = iter.next();
+    for (var iterator = headers.entrySet().iterator(); iterator.hasNext(); ) {
+      var entry = iterator.next();
       var name = entry.getKey();
       var values = entry.getValue();
       mutated |= values.removeIf(value -> filter.test(name, value));
       if (values.isEmpty()) {
-        iter.remove();
+        iterator.remove();
       }
     }
     return mutated;
@@ -124,7 +147,80 @@ public final class HeadersBuilder {
     headers.clear();
   }
 
+  public Optional<String> lastValue(String name) {
+    var values = headers.get(name);
+    return values != null ? Optional.of(values.get(1)) : Optional.empty();
+  }
+
   public HttpHeaders build() {
     return HttpHeaders.of(headers, (n, v) -> true);
+  }
+
+  public HeadersAccumulator<?> asHeadersAccumulator() {
+    return lazyAccumulatorView != null
+        ? lazyAccumulatorView
+        : (lazyAccumulatorView = new HeadersAccumulatorView());
+  }
+
+  private final class HeadersAccumulatorView implements HeadersAccumulator<HeadersAccumulatorView> {
+    @Override
+    public HeadersAccumulatorView header(String name, String value) {
+      add(name, value);
+      return this;
+    }
+
+    @Override
+    public HeadersAccumulatorView headers(String... headers) {
+      addAll(headers);
+      return this;
+    }
+
+    @Override
+    public HeadersAccumulatorView headers(HttpHeaders headers) {
+      addAll(headers);
+      return this;
+    }
+
+    @Override
+    public HeadersAccumulatorView setHeader(String name, String value) {
+      set(name, value);
+      return this;
+    }
+
+    @Override
+    public HeadersAccumulatorView setHeader(String name, List<String> values) {
+      set(name, values);
+      return this;
+    }
+
+    @Override
+    public HeadersAccumulatorView setHeaderIfAbsent(String name, String value) {
+      setIfAbsent(name, value);
+      return this;
+    }
+
+    @Override
+    public HeadersAccumulatorView setHeaderIfAbsent(String name, List<String> values) {
+      setIfAbsent(name, values);
+      return this;
+    }
+
+    @Override
+    public HeadersAccumulatorView removeHeaders() {
+      clear();
+      return this;
+    }
+
+    @Override
+    public HeadersAccumulatorView removeHeader(String name) {
+      remove(name);
+      return this;
+    }
+
+    @Override
+    public HeadersAccumulatorView removeHeadersIf(BiPredicate<String, String> filter) {
+      removeIf(filter);
+      return this;
+    }
   }
 }
