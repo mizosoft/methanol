@@ -28,7 +28,7 @@ import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.AsyncSubscriberAdapter;
-import com.github.mizosoft.methanol.internal.extensions.ByteChannelSubscriber;
+import com.github.mizosoft.methanol.internal.extensions.ByteChannelBodySubscriber;
 import com.github.mizosoft.methanol.internal.extensions.TimeoutBodySubscriber;
 import java.io.Reader;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -104,7 +104,7 @@ public class MoreBodySubscribers {
    * however, that doing so will render the underlying connection unusable for subsequent requests.
    */
   public static BodySubscriber<ReadableByteChannel> ofByteChannel() {
-    return new ByteChannelSubscriber();
+    return new ByteChannelBodySubscriber();
   }
 
   /**

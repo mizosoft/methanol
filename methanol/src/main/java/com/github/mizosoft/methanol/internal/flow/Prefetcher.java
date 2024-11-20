@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,10 +24,19 @@ package com.github.mizosoft.methanol.internal.flow;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 
-/** An object that prefetches items from upstream and maintains a certain number of . */
+/**
+ * An object that manages requests to an upstream subscription according to a prefetching policy.
+ * Callers call {@link #initialize(Upstream)} when they first receive the subscription and {@link
+ * #update(Upstream)} when a received item is consumed. The prefetching policy ensures that the
+ * number of requested but not fulfilled items remains between two values, namely {@code
+ * prefetchThreshold} and {@code prefetch}.
+ *
+ * <p>This class is not thread-safe. Caller must ensure that {@link #initialize(Upstream)} & {@link
+ * #update(Upstream)} are not interleaved and are properly synchronized.
+ */
 public final class Prefetcher {
   private final int prefetch;
-  private final int limit;
+  private final int consumedLimit;
   private int consumed;
 
   public Prefetcher() {
@@ -37,9 +46,9 @@ public final class Prefetcher {
   public Prefetcher(int prefetch, int prefetchThreshold) {
     requireArgument(
         prefetch > 0 && prefetchThreshold >= 0 && prefetchThreshold <= prefetch,
-        "illegal prefetch and/or prefetchThreshold");
+        "Illegal prefetch and/or prefetchThreshold");
     this.prefetch = prefetch;
-    this.limit = prefetch - prefetchThreshold;
+    this.consumedLimit = prefetch - prefetchThreshold;
   }
 
   public void initialize(Upstream upstream) {
@@ -48,18 +57,20 @@ public final class Prefetcher {
 
   public void update(Upstream upstream) {
     int c = ++consumed;
-    if (c >= limit) {
+    if (c >= consumedLimit) {
       consumed = 0;
       upstream.request(c);
     }
   }
+
+  // For testing.
 
   int prefetch() {
     return prefetch;
   }
 
   int prefetchThreshold() {
-    return prefetch - limit;
+    return prefetch - consumedLimit;
   }
 
   int currentWindow() {
