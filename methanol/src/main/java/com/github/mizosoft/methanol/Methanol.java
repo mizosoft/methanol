@@ -53,6 +53,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.PushPromiseHandler;
+import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -322,6 +323,11 @@ public final class Methanol extends HttpClient {
   }
 
   @Override
+  public WebSocket.Builder newWebSocketBuilder() {
+    return backend.newWebSocketBuilder();
+  }
+
+  @Override
   public <T> HttpResponse<T> send(HttpRequest request, BodyHandler<T> bodyHandler)
       throws IOException, InterruptedException {
     return new InterceptorChain<>(backend, bodyHandler, null, mergedInterceptors).forward(request);
@@ -403,6 +409,7 @@ public final class Methanol extends HttpClient {
                       PayloadHandlerExecutor.class, new PayloadHandlerExecutor(executor)));
       hints = hintsBuilder.build();
     }
+
     var effectiveAdapterCodec = adapterCodec.orElseGet(AdapterCodec::installed);
     if (deferredValueTypeRef != null) {
       @SuppressWarnings("unchecked")

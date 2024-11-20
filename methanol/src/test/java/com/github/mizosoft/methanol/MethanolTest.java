@@ -532,6 +532,11 @@ class MethanolTest {
   }
 
   @Test
+  void createsWebSocketBuilders() {
+    Methanol.create().newWebSocketBuilder();
+  }
+
+  @Test
   void illegalBaseUri() {
     var builder = Methanol.newBuilder();
     assertThatIllegalArgumentException()
