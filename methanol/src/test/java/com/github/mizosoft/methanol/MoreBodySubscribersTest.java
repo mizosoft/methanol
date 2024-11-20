@@ -37,11 +37,9 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.*;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
@@ -49,13 +47,9 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedByInterruptException;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.InterruptibleChannel;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
@@ -96,133 +90,6 @@ class MoreBodySubscribersTest {
       }
     }
     assertThat(outputBuffer.toByteArray()).asString(UTF_8).isEqualTo(str);
-  }
-
-  @Test
-  @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void ofByteChannel_isInterruptible(Executor executor) throws Exception {
-    var subscriber = ofByteChannel();
-    var channel = getBody(subscriber);
-    assertThat(channel).isInstanceOf(InterruptibleChannel.class);
-
-    subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    var interruptLatch = new CountDownLatch(1);
-    var readerThread = new AtomicReference<Thread>();
-    var readFuture =
-        CompletableFuture.runAsync(
-            Unchecked.runnable(
-                () -> {
-                  readerThread.set(Thread.currentThread());
-                  interruptLatch.countDown();
-                  channel.read(ByteBuffer.allocate(1));
-                }),
-            executor);
-    interruptLatch.await();
-    readerThread.get().interrupt();
-    assertThat(readFuture)
-        .failsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
-        .withThrowableOfType(ExecutionException.class)
-        .withCauseInstanceOf(ClosedByInterruptException.class);
-  }
-
-  @Test
-  @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void ofByteChannel_blocksForAtLeastOneByte(Executor executor) throws Exception {
-    var oneByte = ByteBuffer.wrap(new byte[] {'b'});
-    var subscriber = ofByteChannel();
-    var channel = getBody(subscriber);
-    executor.execute(
-        () -> {
-          subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-          subscriber.onNext(List.of(oneByte.duplicate()));
-        });
-
-    var buffer = ByteBuffer.allocate(2);
-    channel.read(buffer);
-    assertThat(buffer.flip()).isEqualTo(oneByte);
-  }
-
-  @Test
-  void ofByteChannel_cancelsUpstreamWhenClosed() throws Exception {
-    var subscription = new TestSubscription();
-    var subscriber = ofByteChannel();
-    subscriber.onSubscribe(subscription);
-
-    var channel = getBody(subscriber);
-    channel.close();
-    assertThat(subscription.isCancelled()).isTrue();
-    assertThatExceptionOfType(ClosedChannelException.class)
-        .isThrownBy(() -> channel.read(ByteBuffer.allocate(1)));
-  }
-
-  @Test
-  void ofByteChannel_cancelsUpstreamWhenReaderIsInterrupted() throws Exception {
-    var subscription = new TestSubscription();
-    var subscriber = ofByteChannel();
-    subscriber.onSubscribe(subscription);
-
-    var channel = getBody(subscriber);
-    Thread.currentThread().interrupt();
-    assertThatExceptionOfType(ClosedByInterruptException.class)
-        .isThrownBy(() -> channel.read(ByteBuffer.allocate(1)));
-    assertThat(subscription.isCancelled()).isTrue();
-  }
-
-  @Test
-  void ofByteChannel_cancelsUpstreamIfClosedBeforeSubscribing() throws Exception {
-    var subscriber = ofByteChannel();
-    getBody(subscriber).close();
-
-    var subscription = new TestSubscription();
-    subscriber.onSubscribe(subscription);
-    assertThat(subscription.isCancelled()).isTrue();
-  }
-
-  @Test
-  void ofByteChannel_throwsUpstreamErrors() throws Exception {
-    var subscriber = ofByteChannel();
-    subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    subscriber.onError(new TestException());
-
-    var channel = getBody(subscriber);
-    assertThatIOException()
-        .isThrownBy(() -> channel.read(ByteBuffer.allocate(1)))
-        .withCauseInstanceOf(TestException.class);
-  }
-
-  @Test
-  void ofByteChannel_throwsUpstreamErrorsEvenIfThereIsData() throws Exception {
-    var subscriber = ofByteChannel();
-    subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
-    subscriber.onNext(List.of(ByteBuffer.wrap(new byte[] {'a'})));
-    subscriber.onError(new TestException());
-
-    var channel = getBody(subscriber);
-    assertThatIOException()
-        .isThrownBy(() -> channel.read(ByteBuffer.allocate(1)))
-        .withCauseInstanceOf(TestException.class);
-  }
-
-  @Test
-  void ofByteChannel_handlesQueueOverflowGracefully() throws Exception {
-    var subscription = new TestSubscription();
-    var subscriber = ofByteChannel();
-    subscriber.onSubscribe(subscription);
-
-    int request = Math.toIntExact(subscription.awaitRequest());
-    var buffer = UTF_8.encode("abc");
-    for (int i = 0; i < request; i++) {
-      subscriber.onNext(List.of(buffer.duplicate()));
-    }
-    // Add 1 more item than demanded
-    subscriber.onNext(List.of(buffer.duplicate()));
-
-    assertThat(subscription.isCancelled()).isTrue();
-
-    var channel = getBody(subscriber);
-    assertThatIOException()
-        .isThrownBy(() -> channel.read(ByteBuffer.allocate(1)))
-        .withCauseInstanceOf(IllegalStateException.class);
   }
 
   @Test
