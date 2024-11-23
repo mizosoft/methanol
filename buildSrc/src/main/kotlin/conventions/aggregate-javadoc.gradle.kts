@@ -4,7 +4,6 @@ import extensions.classpath
 import extensions.isIncludedInAggregateJavadoc
 import extensions.javaModuleName
 import extensions.standardOptions
-import org.gradle.api.plugins.JavaLibraryPlugin
 
 plugins {
   `java-library`
@@ -17,7 +16,7 @@ val aggregateJavadoc by tasks.registering(Javadoc::class) {
   setDestinationDir(layout.buildDirectory.get().file("docs/aggregateJavadoc").asFile)
 
   standardOptions {
-    links("https://docs.oracle.com/en/java/javase/17/docs/api/")
+    links("https://docs.oracle.com/en/java/javase/21/docs/api/")
     addBooleanOption("Xdoclint:-missing", true)
   }
 
@@ -30,6 +29,29 @@ val aggregateJavadoc by tasks.registering(Javadoc::class) {
   doFirst {
     if (javadocTool.get().metadata.languageVersion <= JavaLanguageVersion.of(12)) {
       throw GradleException("aggregateJavadoc uses tool options that are only available in Java 12 or higher.")
+    }
+  }
+
+  // Expose the list of packages for each module.
+  doLast {
+    val packagesPerModule = mutableMapOf<String, MutableList<String>>()
+    destinationDir!!.resolve("element-list").bufferedReader().use { reader ->
+      var currentModule = ""
+      while (true) {
+        var line = reader.readLine() ?: break
+        if (line.startsWith("module:")) {
+          currentModule = line.substring("module:".length)
+          packagesPerModule[currentModule] = mutableListOf<String>()
+        } else {
+          packagesPerModule[currentModule]!!.add(line)
+        }
+      }
+    }
+
+    packagesPerModule.forEach { module, packages ->
+      destinationDir!!.resolve("$module/package-list").bufferedWriter().use { writer ->
+        packages.forEach { writer.write(it + System.lineSeparator()) }
+      }
     }
   }
 }
