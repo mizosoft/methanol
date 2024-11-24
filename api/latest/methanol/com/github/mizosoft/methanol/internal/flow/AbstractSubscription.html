@@ -87,13 +87,13 @@ loadScripts(document, 'script');</script>
 <div class="sub-title"><span class="package-label-in-type">Package</span>&nbsp;<a href="package-summary.html">com.github.mizosoft.methanol.internal.flow</a></div>
 <h1 title="Class AbstractSubscription" class="title">Class AbstractSubscription&lt;T&gt;</h1>
 </div>
-<div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
+<div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
 <div class="inheritance">com.github.mizosoft.methanol.internal.flow.AbstractSubscription&lt;T&gt;</div>
 </div>
 <section class="class-description" id="class-description">
 <dl class="notes">
 <dt>All Implemented Interfaces:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></code></dd>
 </dl>
 <dl class="notes">
 <dt>Direct Known Subclasses:</dt>
@@ -101,9 +101,9 @@ loadScripts(document, 'script');</script>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public abstract class </span><span class="element-name type-name-label">AbstractSubscription&lt;T&gt;</span>
-<span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>
-implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></span></div>
-<div class="block">An abstract <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link"><code>Flow.Subscription</code></a> that implements most of the machinery for execution and
+<span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>
+implements <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></span></div>
+<div class="block">An abstract <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link"><code>Flow.Subscription</code></a> that implements most of the machinery for execution and
  backpressure control.</div>
 </section>
 <section class="summary">
@@ -118,8 +118,8 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <div class="table-header col-second">Constructor</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color"><code>protected </code></div>
-<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(java.util.concurrent.Flow.Subscriber,java.util.concurrent.Executor)" class="member-name-link">AbstractSubscription</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</code></div>
+<div class="col-constructor-name even-row-color"><code><a href="#%3Cinit%3E(java.util.concurrent.Flow.Subscriber,java.util.concurrent.Executor)" class="member-name-link">AbstractSubscription</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</code></div>
 <div class="col-last even-row-color">&nbsp;</div>
 </div>
 </section>
@@ -144,13 +144,13 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cancel()" class="member-name-link">cancel</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected final void</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cancelOnComplete(java.util.concurrent.Flow.Subscriber)" class="member-name-link">cancelOnComplete</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cancelOnComplete(java.util.concurrent.Flow.Subscriber)" class="member-name-link">cancelOnComplete</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Calls downstream's <code>onComplete</code> after cancelling this subscription.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected final void</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cancelOnError(java.util.concurrent.Flow.Subscriber,java.lang.Throwable,boolean)" class="member-name-link">cancelOnError</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;exception,
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cancelOnError(java.util.concurrent.Flow.Subscriber,java.lang.Throwable,boolean)" class="member-name-link">cancelOnError</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;exception,
  boolean&nbsp;flowInterrupted)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Calls downstream's <code>onError</code> with the given exception after cancelling this subscription.</div>
@@ -159,7 +159,7 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#currentDemand()" class="member-name-link">currentDemand</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>protected abstract long</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#emit(java.util.concurrent.Flow.Subscriber,long)" class="member-name-link">emit</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#emit(java.util.concurrent.Flow.Subscriber,long)" class="member-name-link">emit</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
  long&nbsp;emit)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Emits at most <code>emit</code> items to downstream using <a href="#submitOnNext(java.util.concurrent.Flow.Subscriber,T)"><code>submitOnNext(Subscriber, Object)</code></a>
@@ -169,7 +169,7 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#fireOrKeepAlive()" class="member-name-link">fireOrKeepAlive</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#fireOrKeepAliveOnError(java.lang.Throwable)" class="member-name-link">fireOrKeepAliveOnError</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;exception)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#fireOrKeepAliveOnError(java.lang.Throwable)" class="member-name-link">fireOrKeepAliveOnError</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;exception)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#fireOrKeepAliveOnNext()" class="member-name-link">fireOrKeepAliveOnNext</a>()</code></div>
@@ -188,7 +188,7 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#request(long)" class="member-name-link">request</a><wbr>(long&nbsp;n)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected final boolean</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#submitOnNext(java.util.concurrent.Flow.Subscriber,T)" class="member-name-link">submitOnNext</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#submitOnNext(java.util.concurrent.Flow.Subscriber,T)" class="member-name-link">submitOnNext</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
  <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&nbsp;item)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Submits given item to the downstream, returning <code>false</code> and cancelling on failure.</div>
@@ -197,8 +197,8 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 </div>
 </div>
 <div class="inherited-list">
-<h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
-<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" title="class or interface in java.lang" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#hashCode()" title="class or interface in java.lang" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
+<h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
+<code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" title="class or interface in java.lang" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#hashCode()" title="class or interface in java.lang" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
 </section>
 </li>
 </ul>
@@ -213,8 +213,8 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <li>
 <section class="detail" id="&lt;init&gt;(java.util.concurrent.Flow.Subscriber,java.util.concurrent.Executor)">
 <h3>AbstractSubscription</h3>
-<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="element-name">AbstractSubscription</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
+<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="element-name">AbstractSubscription</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
 </section>
 </li>
 </ul>
@@ -231,7 +231,7 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <div class="member-signature"><span class="modifiers">public final</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">request</span><wbr><span class="parameters">(long&nbsp;n)</span></div>
 <dl class="notes">
 <dt>Specified by:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscription.html#request(long)" title="class or interface in java.util.concurrent" class="external-link">request</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscription.html#request(long)" title="class or interface in java.util.concurrent" class="external-link">request</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></code></dd>
 </dl>
 </section>
 </li>
@@ -241,7 +241,7 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <div class="member-signature"><span class="modifiers">public final</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">cancel</span>()</div>
 <dl class="notes">
 <dt>Specified by:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscription.html#cancel()" title="class or interface in java.util.concurrent" class="external-link">cancel</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscription.html#cancel()" title="class or interface in java.util.concurrent" class="external-link">cancel</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscription.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscription</a></code></dd>
 </dl>
 </section>
 </li>
@@ -260,13 +260,13 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <li>
 <section class="detail" id="fireOrKeepAliveOnError(java.lang.Throwable)">
 <h3>fireOrKeepAliveOnError</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">fireOrKeepAliveOnError</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;exception)</span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">fireOrKeepAliveOnError</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;exception)</span></div>
 </section>
 </li>
 <li>
 <section class="detail" id="emit(java.util.concurrent.Flow.Subscriber,long)">
 <h3>emit</h3>
-<div class="member-signature"><span class="modifiers">protected abstract</span>&nbsp;<span class="return-type">long</span>&nbsp;<span class="element-name">emit</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
+<div class="member-signature"><span class="modifiers">protected abstract</span>&nbsp;<span class="return-type">long</span>&nbsp;<span class="element-name">emit</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
  long&nbsp;emit)</span></div>
 <div class="block">Emits at most <code>emit</code> items to downstream using <a href="#submitOnNext(java.util.concurrent.Flow.Subscriber,T)"><code>submitOnNext(Subscriber, Object)</code></a>
  as long as it returns <code>true</code>. The actual number of emitted items is returned, may be 0 in
@@ -306,8 +306,8 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <li>
 <section class="detail" id="cancelOnError(java.util.concurrent.Flow.Subscriber,java.lang.Throwable,boolean)">
 <h3>cancelOnError</h3>
-<div class="member-signature"><span class="modifiers">protected final</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">cancelOnError</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
- <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;exception,
+<div class="member-signature"><span class="modifiers">protected final</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">cancelOnError</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
+ <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Throwable.html" title="class or interface in java.lang" class="external-link">Throwable</a>&nbsp;exception,
  boolean&nbsp;flowInterrupted)</span></div>
 <div class="block">Calls downstream's <code>onError</code> with the given exception after cancelling this subscription.
  <code>flowInterrupted</code> tells whether the error interrupted the normal flow of signals.</div>
@@ -316,14 +316,14 @@ implements <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base
 <li>
 <section class="detail" id="cancelOnComplete(java.util.concurrent.Flow.Subscriber)">
 <h3>cancelOnComplete</h3>
-<div class="member-signature"><span class="modifiers">protected final</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">cancelOnComplete</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream)</span></div>
+<div class="member-signature"><span class="modifiers">protected final</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">cancelOnComplete</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream)</span></div>
 <div class="block">Calls downstream's <code>onComplete</code> after cancelling this subscription.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="submitOnNext(java.util.concurrent.Flow.Subscriber,T)">
 <h3 id="submitOnNext(java.util.concurrent.Flow.Subscriber,java.lang.Object)">submitOnNext</h3>
-<div class="member-signature"><span class="modifiers">protected final</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">submitOnNext</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
+<div class="member-signature"><span class="modifiers">protected final</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">submitOnNext</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Flow.Subscriber.html" title="class or interface in java.util.concurrent" class="external-link">Flow.Subscriber</a>&lt;? super <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&gt;&nbsp;downstream,
  <a href="AbstractSubscription.html" title="type parameter in AbstractSubscription">T</a>&nbsp;item)</span></div>
 <div class="block">Submits given item to the downstream, returning <code>false</code> and cancelling on failure. <code>
  false</code> is also returned if the subscription is already cancelled or has pending errors. On such

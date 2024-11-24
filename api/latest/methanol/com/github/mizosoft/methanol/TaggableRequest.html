@@ -87,8 +87,8 @@ loadScripts(document, 'script');</script>
 <div class="sub-title"><span class="package-label-in-type">Package</span>&nbsp;<a href="package-summary.html">com.github.mizosoft.methanol</a></div>
 <h1 title="Class TaggableRequest" class="title">Class TaggableRequest</h1>
 </div>
-<div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
-<div class="inheritance"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">java.net.http.HttpRequest</a>
+<div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
+<div class="inheritance"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">java.net.http.HttpRequest</a>
 <div class="inheritance">com.github.mizosoft.methanol.TaggableRequest</div>
 </div>
 </div>
@@ -99,7 +99,7 @@ loadScripts(document, 'script');</script>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public abstract class </span><span class="element-name type-name-label">TaggableRequest</span>
-<span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></span></div>
+<span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></span></div>
 <div class="block">An <code>HttpRequest</code> that can carry arbitrary values, referred to as tags. Tags can be used to
  carry application-specific data throughout <a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol"><code>interceptors</code></a> and listeners. Tags
  are mapped by their type. One type cannot map to more than one tag.
@@ -126,8 +126,8 @@ loadScripts(document, 'script');</script>
 </div>
 </div>
 <div class="inherited-list">
-<h2 id="nested-classes-inherited-from-class-java.net.http.HttpRequest">Nested classes/interfaces inherited from class&nbsp;java.net.http.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></h2>
-<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublishers.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublishers</a></code></div>
+<h2 id="nested-classes-inherited-from-class-java.net.http.HttpRequest">Nested classes/interfaces inherited from class&nbsp;java.net.http.<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></h2>
+<code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublishers.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublishers</a></code></div>
 </section>
 </li>
 <!-- ========== METHOD SUMMARY =========== -->
@@ -142,7 +142,7 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#from(java.net.http.HttpRequest)" class="member-name-link">from</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#from(java.net.http.HttpRequest)" class="member-name-link">from</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns either the given request if it's a <code>TaggableRequest</code> or a new <code>
  TaggableRequest</code> copy with no tags otherwise.</div>
@@ -152,25 +152,41 @@ loadScripts(document, 'script');</script>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Returns this request's <a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter.Hints</code></a>.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;T&gt;</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;T&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#tag(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">tag</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the tag associated with the given type if present.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;T&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#tag(java.lang.Class)" class="member-name-link">tag</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;T&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#tag(java.lang.Class)" class="member-name-link">tag</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns the tag associated with the given type if present.</div>
 </div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;T&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#tagOf(java.net.http.HttpRequest,com.github.mizosoft.methanol.TypeRef)" class="member-name-link">tagOf</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns the tag associated with the given type if the given request is a <code>
+ TaggableRequest</code> and it has a tag with the given type, otherwise returns an empty <code>
+ Optional</code>.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static &lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;T&gt;</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#tagOf(java.net.http.HttpRequest,java.lang.Class)" class="member-name-link">tagOf</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
+<div class="block">Returns the tag associated with the given type if the given request is a <code>
+ TaggableRequest</code> and it has a tag with the given type, otherwise returns an empty <code>
+ Optional</code>.</div>
+</div>
 </div>
 </div>
 </div>
 <div class="inherited-list">
-<h3 id="methods-inherited-from-class-java.net.http.HttpRequest">Methods inherited from class&nbsp;java.net.http.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></h3>
-<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#bodyPublisher()" title="class or interface in java.net.http" class="external-link">bodyPublisher</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#equals(java.lang.Object)" title="class or interface in java.net.http" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#expectContinue()" title="class or interface in java.net.http" class="external-link">expectContinue</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#hashCode()" title="class or interface in java.net.http" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#headers()" title="class or interface in java.net.http" class="external-link">headers</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#method()" title="class or interface in java.net.http" class="external-link">method</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#newBuilder()" title="class or interface in java.net.http" class="external-link">newBuilder</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#newBuilder(java.net.http.HttpRequest,java.util.function.BiPredicate)" title="class or interface in java.net.http" class="external-link">newBuilder</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#newBuilder(java.net.URI)" title="class or interface in java.net.http" class="external-link">newBuilder</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#timeout()" title="class or interface in java.net.http" class="external-link">timeout</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#uri()" title="class or interface in java.net.http" class="external-link">uri</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html#version()" title="class or interface in java.net.http" class="external-link">version</a></code></div>
+<h3 id="methods-inherited-from-class-java.net.http.HttpRequest">Methods inherited from class&nbsp;java.net.http.<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a></h3>
+<code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#bodyPublisher()" title="class or interface in java.net.http" class="external-link">bodyPublisher</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#equals(java.lang.Object)" title="class or interface in java.net.http" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#expectContinue()" title="class or interface in java.net.http" class="external-link">expectContinue</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#hashCode()" title="class or interface in java.net.http" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#headers()" title="class or interface in java.net.http" class="external-link">headers</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#method()" title="class or interface in java.net.http" class="external-link">method</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#newBuilder()" title="class or interface in java.net.http" class="external-link">newBuilder</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#newBuilder(java.net.http.HttpRequest,java.util.function.BiPredicate)" title="class or interface in java.net.http" class="external-link">newBuilder</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#newBuilder(java.net.URI)" title="class or interface in java.net.http" class="external-link">newBuilder</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#timeout()" title="class or interface in java.net.http" class="external-link">timeout</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#uri()" title="class or interface in java.net.http" class="external-link">uri</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html#version()" title="class or interface in java.net.http" class="external-link">version</a></code></div>
 <div class="inherited-list">
-<h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
-<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
+<h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
+<code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
 </section>
 </li>
 </ul>
@@ -185,14 +201,14 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="tag(java.lang.Class)">
 <h3>tag</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;T&gt;</span>&nbsp;<span class="element-name">tag</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;T&gt;</span>&nbsp;<span class="element-name">tag</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</span></div>
 <div class="block">Returns the tag associated with the given type if present.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="tag(com.github.mizosoft.methanol.TypeRef)">
 <h3>tag</h3>
-<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;T&gt;</span>&nbsp;<span class="element-name">tag</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</span></div>
+<div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;T&gt;</span>&nbsp;<span class="element-name">tag</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</span></div>
 <div class="block">Returns the tag associated with the given type if present.</div>
 </section>
 </li>
@@ -206,9 +222,29 @@ loadScripts(document, 'script');</script>
 <li>
 <section class="detail" id="from(java.net.http.HttpRequest)">
 <h3>from</h3>
-<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></span>&nbsp;<span class="element-name">from</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</span></div>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></span>&nbsp;<span class="element-name">from</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</span></div>
 <div class="block">Returns either the given request if it's a <code>TaggableRequest</code> or a new <code>
  TaggableRequest</code> copy with no tags otherwise.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="tagOf(java.net.http.HttpRequest,java.lang.Class)">
+<h3>tagOf</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;T&gt;</span>&nbsp;<span class="element-name">tagOf</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
+ <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</span></div>
+<div class="block">Returns the tag associated with the given type if the given request is a <code>
+ TaggableRequest</code> and it has a tag with the given type, otherwise returns an empty <code>
+ Optional</code>.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="tagOf(java.net.http.HttpRequest,com.github.mizosoft.methanol.TypeRef)">
+<h3>tagOf</h3>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;T&gt;</span>&nbsp;<span class="element-name">tagOf</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request,
+ <a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</span></div>
+<div class="block">Returns the tag associated with the given type if the given request is a <code>
+ TaggableRequest</code> and it has a tag with the given type, otherwise returns an empty <code>
+ Optional</code>.</div>
 </section>
 </li>
 </ul>

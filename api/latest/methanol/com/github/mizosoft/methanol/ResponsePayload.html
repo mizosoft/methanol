@@ -90,11 +90,11 @@ loadScripts(document, 'script');</script>
 <section class="class-description" id="class-description">
 <dl class="notes">
 <dt>All Superinterfaces:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></code></dd>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public interface </span><span class="element-name type-name-label">ResponsePayload</span><span class="extends-implements">
-extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></span></div>
+extends <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></span></div>
 <div class="block">A response body that is yet to be handled into the desirable type. This can be useful when the
  response body differs in structure (and hence in high-level type) according to whether it has
  succeeded or failed. An implementation of <code>ResponsePayload</code> can be acquired as the response
@@ -140,14 +140,14 @@ extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/ja
 <div class="block">Makes sure the resources held by this payload are released.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;T</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#handleWith(java.net.http.HttpResponse.BodyHandler)" class="member-name-link">handleWith</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;bodyHandler)</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#handleWith(java.net.http.HttpResponse.BodyHandler)" class="member-name-link">handleWith</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;bodyHandler)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Converts this payload using the given body handler.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a><wbr>&lt;T&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#handleWithAsync(java.net.http.HttpResponse.BodyHandler)" class="member-name-link">handleWithAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;bodyHandler)</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a><wbr>&lt;T&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#handleWithAsync(java.net.http.HttpResponse.BodyHandler)" class="member-name-link">handleWithAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;bodyHandler)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
-<div class="block">Asynchronously this payload using the given body handler.</div>
+<div class="block">Asynchronously converts this payload using the given body handler.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;T</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#to(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">to</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</code></div>
@@ -155,17 +155,17 @@ extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/ja
 <div class="block">Converts this payload into an object of (possibly generic) type <code>T</code>.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code>default &lt;T&gt;&nbsp;T</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#to(java.lang.Class)" class="member-name-link">to</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#to(java.lang.Class)" class="member-name-link">to</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5">
 <div class="block">Converts this payload into an object of type <code>T</code>.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a><wbr>&lt;T&gt;</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a><wbr>&lt;T&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#toAsync(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">toAsync</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Asynchronously converts this payload into an object of (possibly generic) type <code>T</code>.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code>default &lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a><wbr>&lt;T&gt;</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#toAsync(java.lang.Class)" class="member-name-link">toAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code>default &lt;T&gt;&nbsp;<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a><wbr>&lt;T&gt;</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#toAsync(java.lang.Class)" class="member-name-link">toAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5">
 <div class="block">Asynchronously converts this payload into an object of type <code>T</code>.</div>
 </div>
@@ -186,14 +186,14 @@ extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/ja
 <li>
 <section class="detail" id="to(java.lang.Class)">
 <h3>to</h3>
-<div class="member-signature"><span class="modifiers">default</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type">T</span>&nbsp;<span class="element-name">to</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</span>
-          throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a>,
-<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></span></div>
+<div class="member-signature"><span class="modifiers">default</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type">T</span>&nbsp;<span class="element-name">to</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</span>
+          throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a>,
+<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></span></div>
 <div class="block">Converts this payload into an object of type <code>T</code>.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></code></dd>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></code></dd>
 </dl>
 </section>
 </li>
@@ -201,49 +201,49 @@ extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/ja
 <section class="detail" id="to(com.github.mizosoft.methanol.TypeRef)">
 <h3>to</h3>
 <div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type">T</span>&nbsp;<span class="element-name">to</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</span>
-  throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a>,
-<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></span></div>
+  throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a>,
+<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></span></div>
 <div class="block">Converts this payload into an object of (possibly generic) type <code>T</code>.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></code></dd>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></code></dd>
 </dl>
 </section>
 </li>
 <li>
 <section class="detail" id="handleWith(java.net.http.HttpResponse.BodyHandler)">
 <h3>handleWith</h3>
-<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type">T</span>&nbsp;<span class="element-name">handleWith</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;bodyHandler)</span>
-          throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a>,
-<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></span></div>
+<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type">T</span>&nbsp;<span class="element-name">handleWith</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;bodyHandler)</span>
+          throws <span class="exceptions"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a>,
+<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></span></div>
 <div class="block">Converts this payload using the given body handler.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></code></dd>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/io/IOException.html" title="class or interface in java.io" class="external-link">IOException</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/InterruptedException.html" title="class or interface in java.lang" class="external-link">InterruptedException</a></code></dd>
 </dl>
 </section>
 </li>
 <li>
 <section class="detail" id="toAsync(java.lang.Class)">
 <h3>toAsync</h3>
-<div class="member-signature"><span class="modifiers">default</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;T&gt;</span>&nbsp;<span class="element-name">toAsync</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</span></div>
+<div class="member-signature"><span class="modifiers">default</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;T&gt;</span>&nbsp;<span class="element-name">toAsync</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;T&gt;&nbsp;type)</span></div>
 <div class="block">Asynchronously converts this payload into an object of type <code>T</code>.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="toAsync(com.github.mizosoft.methanol.TypeRef)">
 <h3>toAsync</h3>
-<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;T&gt;</span>&nbsp;<span class="element-name">toAsync</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</span></div>
+<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;T&gt;</span>&nbsp;<span class="element-name">toAsync</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</span></div>
 <div class="block">Asynchronously converts this payload into an object of (possibly generic) type <code>T</code>.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="handleWithAsync(java.net.http.HttpResponse.BodyHandler)">
 <h3>handleWithAsync</h3>
-<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;T&gt;</span>&nbsp;<span class="element-name">handleWithAsync</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;bodyHandler)</span></div>
-<div class="block">Asynchronously this payload using the given body handler.</div>
+<div class="member-signature"><span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;T&gt;</span>&nbsp;<span class="element-name">handleWithAsync</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodyHandler</a>&lt;T&gt;&nbsp;bodyHandler)</span></div>
+<div class="block">Asynchronously converts this payload using the given body handler.</div>
 </section>
 </li>
 <li>
@@ -254,7 +254,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/ja
  this method does nothing.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/AutoCloseable.html#close()" title="class or interface in java.lang" class="external-link">close</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></code></dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/AutoCloseable.html#close()" title="class or interface in java.lang" class="external-link">close</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></code></dd>
 </dl>
 </section>
 </li>

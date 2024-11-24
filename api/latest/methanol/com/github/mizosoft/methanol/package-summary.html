@@ -108,7 +108,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color class-summary class-summary-tab2"><a href="AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A group of <a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>adapters</code></a> (<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>encoders</code></a> <span class="invalid-tag">invalid input: '&amp;'</span> <a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>decoders</code></a>),
- typically targeting different mapping schemes, that facilitates creating corresponding <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a>, <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> and <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
+ typically targeting different mapping schemes, that facilitates creating corresponding <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> and <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab2"><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
@@ -138,7 +138,7 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab1"><a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;T&gt;</div>
 <div class="col-last odd-row-color class-summary class-summary-tab1">
-<div class="block">A <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body for consumption by a downstream
+<div class="block">A <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> that decodes the response body for consumption by a downstream
  subscriber.</div>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab1"><a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a></div>
@@ -172,157 +172,161 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A builder of <code>FormBodyPublisher</code> instances.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="HeadersAccumulator.html" title="interface in com.github.mizosoft.methanol">HeadersAccumulator</a>&lt;T extends <a href="HeadersAccumulator.html" title="interface in com.github.mizosoft.methanol">HeadersAccumulator</a>&lt;T&gt;&gt;</div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="block">An accumulator of header name-value pairs.</div>
+</div>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">An <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching">HTTP cache</a> that
  resides between a <a href="Methanol.html" title="class in com.github.mizosoft.methanol"><code>Methanol</code></a> client and its backend <code>HttpClient</code>.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">A builder of <code>HttpCaches</code>.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="HttpCache.Listener.html" title="interface in com.github.mizosoft.methanol">HttpCache.Listener</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="HttpCache.Listener.html" title="interface in com.github.mizosoft.methanol">HttpCache.Listener</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">A listener to request/response &amp; read/write events within the cache.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="HttpCache.Stats.html" title="interface in com.github.mizosoft.methanol">HttpCache.Stats</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="HttpCache.Stats.html" title="interface in com.github.mizosoft.methanol">HttpCache.Stats</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">Statistics of an <code>HttpCache</code>.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="HttpCache.StatsRecorder.html" title="interface in com.github.mizosoft.methanol">HttpCache.StatsRecorder</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="HttpCache.StatsRecorder.html" title="interface in com.github.mizosoft.methanol">HttpCache.StatsRecorder</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">Strategy for recoding <code>HttpCache</code> statistics.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab5"><a href="HttpHeadersTimeoutException.html" title="class in com.github.mizosoft.methanol">HttpHeadersTimeoutException</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab5">
+<div class="col-first odd-row-color class-summary class-summary-tab5"><a href="HttpHeadersTimeoutException.html" title="class in com.github.mizosoft.methanol">HttpHeadersTimeoutException</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab5">
 <div class="block">Thrown when all response headers aren't received within a timeout.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab5"><a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol">HttpReadTimeoutException</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab5">
+<div class="col-first even-row-color class-summary class-summary-tab5"><a href="HttpReadTimeoutException.html" title="class in com.github.mizosoft.methanol">HttpReadTimeoutException</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab5">
 <div class="block">Thrown when a body subscriber doesn't receive a requested signal within a timeout.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="HttpStatus.html" title="class in com.github.mizosoft.methanol">HttpStatus</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="HttpStatus.html" title="class in com.github.mizosoft.methanol">HttpStatus</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">Static functions for checking response status codes.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types">MIME
  type</a>.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">An <code>HttpClient</code> with interceptors, request decoration, HTTP caching and reactive
  extensions.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a>&lt;B extends <a href="Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a>&lt;B&gt;&gt;</div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a>&lt;B extends <a href="Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a>&lt;B&gt;&gt;</div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A base <code>Methanol</code> builder allowing to set the non-standard properties.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="Methanol.Builder.html" title="class in com.github.mizosoft.methanol">Methanol.Builder</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="Methanol.Builder.html" title="class in com.github.mizosoft.methanol">Methanol.Builder</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">A builder of <code>Methanol</code> instances.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">An object that intercepts requests being sent over a <code>Methanol</code> client.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a>&lt;T&gt;</div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a>&lt;T&gt;</div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">An object that gives interceptors the ability to relay requests to sibling interceptors, till
  eventually being sent by the client's backend.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="Methanol.WithClientBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.WithClientBuilder</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="Methanol.WithClientBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.WithClientBuilder</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A builder for <code>Methanol</code> instances with a pre-specified backend <code>HttpClient</code>.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol">MimeBodyPublisher</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol">MimeBodyPublisher</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">A <code>BodyPublisher</code> with a <a href="MediaType.html" title="class in com.github.mizosoft.methanol">media type</a>.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MoreBodyHandlers.html" title="class in com.github.mizosoft.methanol">MoreBodyHandlers</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
-<div class="block">Static factories for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> implementations.</div>
-</div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="MoreBodyPublishers.html" title="class in com.github.mizosoft.methanol">MoreBodyPublishers</a></div>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="MoreBodyHandlers.html" title="class in com.github.mizosoft.methanol">MoreBodyHandlers</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
-<div class="block">Static factories for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> implementations.</div>
+<div class="block">Static factories for additional <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> implementations.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MoreBodySubscribers.html" title="class in com.github.mizosoft.methanol">MoreBodySubscribers</a></div>
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MoreBodyPublishers.html" title="class in com.github.mizosoft.methanol">MoreBodyPublishers</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
-<div class="block">Static factories for additional <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
+<div class="block">Static factories for additional <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a> implementations.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="MultipartBodyPublisher.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a></div>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="MoreBodySubscribers.html" title="class in com.github.mizosoft.methanol">MoreBodySubscribers</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="block">Static factories for additional <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
+</div>
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MultipartBodyPublisher.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">A <code>BodyPublisher</code> for <a href="https://tools.ietf.org/html/rfc2046#section-5.1">multipart</a> bodies.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A builder of <code>MultipartBodyPublisher</code> instances.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="MultipartBodyPublisher.Part.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Part</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MultipartBodyPublisher.Part.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Part</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">A part in a multipart request body.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
-<div class="block">A mutable <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a> that supports <a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol"><code>tags</code></a>, relative URIs <code>&amp;</code>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="block">A mutable <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a> that supports <a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol"><code>tags</code></a>, relative URIs <code>&amp;</code>
  setting arbitrary objects as request bodies.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="ProgressTracker.html" title="class in com.github.mizosoft.methanol">ProgressTracker</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="ProgressTracker.html" title="class in com.github.mizosoft.methanol">ProgressTracker</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">A progress tracker for upload and download operations.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="ProgressTracker.Builder.html" title="class in com.github.mizosoft.methanol">ProgressTracker.Builder</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="ProgressTracker.Builder.html" title="class in com.github.mizosoft.methanol">ProgressTracker.Builder</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A builder of <code>ProgressTrackers</code>.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="ProgressTracker.Listener.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.Listener</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="ProgressTracker.Listener.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.Listener</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">A listener of <a href="ProgressTracker.Progress.html" title="interface in com.github.mizosoft.methanol"><code>progress events</code></a>.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="ProgressTracker.MultipartListener.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.MultipartListener</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="ProgressTracker.MultipartListener.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.MultipartListener</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">A <a href="ProgressTracker.Listener.html" title="interface in com.github.mizosoft.methanol"><code>ProgressTracker.Listener</code></a> of <a href="ProgressTracker.MultipartProgress.html" title="interface in com.github.mizosoft.methanol"><code>multipart progress events</code></a>.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="ProgressTracker.MultipartProgress.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.MultipartProgress</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="ProgressTracker.MultipartProgress.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.MultipartProgress</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">A progress event for a multipart body with per-part progress info.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="ProgressTracker.Progress.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.Progress</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="ProgressTracker.Progress.html" title="interface in com.github.mizosoft.methanol">ProgressTracker.Progress</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">A progress event.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;T&gt;</div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
-<div class="block">A builder of <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.net.http/java/net/http/HttpResponse.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse</code></a> instances.</div>
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a>&lt;T&gt;</div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="block">A builder of <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpResponse.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse</code></a> instances.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">A response body that is yet to be handled into the desirable type.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">An extension that provides a storage backend for an <a href="HttpCache.html" title="class in com.github.mizosoft.methanol"><code>HttpCache</code></a>.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="TaggableRequest.html" title="class in com.github.mizosoft.methanol">TaggableRequest</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">An <code>HttpRequest</code> that can carry arbitrary values, referred to as tags.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">An <code>HttpRequest.Builder</code> that allows attaching tags.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="TrackedResponse.html" title="interface in com.github.mizosoft.methanol">TrackedResponse</a>&lt;T&gt;</div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="TrackedResponse.html" title="interface in com.github.mizosoft.methanol">TrackedResponse</a>&lt;T&gt;</div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">A response with recorded send/receive timestamps.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;</div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
-<div class="block">A generic object that holds a reference to the <a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/reflect/Type.html" title="class or interface in java.lang.reflect" class="external-link"><code>Type</code></a> of its generic argument <a href="TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>.</div>
-</div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></div>
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;</div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="block">A generic object that holds a reference to the <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/reflect/Type.html" title="class or interface in java.lang.reflect" class="external-link"><code>Type</code></a> of its generic argument <a href="TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a>.</div>
+</div>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A <code>BodyPublisher</code> that allows streaming the body's content through an <code>OutputStream</code>
  or a <code>WritableByteChannel</code>.</div>
 </div>
