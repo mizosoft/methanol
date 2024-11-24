@@ -5,8 +5,10 @@ JAVADOC_SITE_PATH=api/latest
 # Fail the script if one command fails.
 set -e
 
-# Clean our site directory.
-rm -rf site
+# Ensure MkDocs & used theme are installed.
+python -m venv venv
+chmod +x ./venv/bin/activate && ./venv/bin/activate
+python -m pip install mkdocs-material
 
 # Make the necessary files locatable by MkDocs.
 mkdir -p docs/adapters
@@ -14,28 +16,43 @@ cp -f methanol-gson/README.md docs/adapters/gson.md
 cp -f methanol-jackson/README.md docs/adapters/jackson.md
 cp -f methanol-jackson-flux/README.md docs/adapters/jackson_flux.md
 cp -f methanol-jaxb/README.md docs/adapters/jaxb.md
+cp -f methanol-jaxb-jakarta/README.md docs/adapters/jaxb_jakarta.md
+cp -f methanol-moshi/README.md docs/adapters/moshi.md
 cp -f methanol-protobuf/README.md docs/adapters/protobuf.md
+cp -f methanol-kotlin/README.md docs/kotlin.md
+cp -f methanol-redis/README.md docs/redis.md
 cp -f methanol-brotli/README.md docs/brotli.md
 cp -f methanol-benchmarks/README.md docs/benchmarks.md
 cp -f CHANGELOG.md docs/CHANGELOG.md
 cp -f CONTRIBUTING.md docs/CONTRIBUTING.md
 
-# Ensure MkDocs & used theme are installed.
-python -m venv venv
-chmod +x ./venv/bin/activate && ./venv/bin/activate
-python -m pip install mkdocs-material
+# Clean our site directory.
+rm -rf site
 
-# Generate docs.
+# Build website.
 python -m mkdocs build
+
+# Generate aggregate Javadoc for Java projects.
 ./gradlew aggregateJavadoc
 
-# Copy generated Javadoc site to main site directory.
+# Generate docs for kotlin projects.
+./gradlew dokkaHtmlMultiModule
+
+# Merge Java & Kotlin documentation into the site directory. This seems to work decently as long as
+# we use consistent module & output directory naming (done by the build scripts) and we exclude
+# conflicting/inappropriate files from the Kotlin documentation.
 mkdir -p site/$JAVADOC_SITE_PATH
-cp -rf build/docs/aggregateJavadoc/* site/$JAVADOC_SITE_PATH
+echo "Copying Javadoc files"
+rsync -rv build/docs/aggregateJavadoc/ site/$JAVADOC_SITE_PATH
+echo "Copying KDoc files"
+rsync -rv build/dokka/htmlMultiModule/ site/$JAVADOC_SITE_PATH --exclude="/index.html" \
+ --exclude="/package-list"
 
 # Remove copied files, which is desirable when the script is run locally.
-rm -rf docs/adapters
-rm -f docs/brotli.md
-rm -f docs/benchmarks.md
-rm -f docs/CHANGELOG.md
-rm -f docs/CONTRIBUTING.md
+rm -r docs/adapters
+rm docs/kotlin.md
+rm docs/redis.md
+rm docs/brotli.md
+rm docs/benchmarks.md
+rm docs/CHANGELOG.md
+rm docs/CONTRIBUTING.md
