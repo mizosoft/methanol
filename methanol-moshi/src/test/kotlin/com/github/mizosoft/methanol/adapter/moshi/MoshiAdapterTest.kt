@@ -23,10 +23,11 @@
 package com.github.mizosoft.methanol.adapter.moshi
 
 import com.github.mizosoft.methanol.MediaType
-import com.github.mizosoft.methanol.adapters.moshi.MoshiAdapter.Companion.Decoder
-import com.github.mizosoft.methanol.adapters.moshi.MoshiAdapter.Companion.Encoder
+import com.github.mizosoft.methanol.adapter.moshi.MoshiAdapter.Companion.Decoder
+import com.github.mizosoft.methanol.adapter.moshi.MoshiAdapter.Companion.Encoder
 import com.github.mizosoft.methanol.kotlin.TypeRef
 import com.github.mizosoft.methanol.testing.verifiers.DecoderVerifier
+import com.github.mizosoft.methanol.testing.verifiers.DecoderVerifier.BodyConversionStep
 import com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat
 import com.squareup.moshi.*
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -52,7 +53,8 @@ object CompactPointAdapter {
   }
 }
 
-inline fun <reified T> DecoderVerifier.converting() = converting(TypeRef<T>())
+inline fun <reified T> DecoderVerifier.converting(): BodyConversionStep<T> =
+  converting(TypeRef<T>())
 
 data class Point(val x: Int, val y: Int)
 

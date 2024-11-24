@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.adapters.moshi
+package com.github.mizosoft.methanol.adapter.moshi
 
 import com.github.mizosoft.methanol.BodyAdapter
 import com.github.mizosoft.methanol.BodyAdapter.Hints
@@ -36,8 +36,14 @@ import java.net.http.HttpResponse.BodySubscriber
 import java.net.http.HttpResponse.BodySubscribers
 import java.util.function.Supplier
 
-abstract class MoshiAdapter(internal val moshi: Moshi, vararg mediaTypes: MediaType) :
-  AbstractBodyAdapter(*mediaTypes) {
+/**
+ * A [BodyAdapter] that uses [Moshi](https://github.com/square/moshi) for encoding or decoding
+ * objects.
+ */
+abstract class MoshiAdapter private constructor(
+  internal val moshi: Moshi,
+  vararg mediaTypes: MediaType
+) : AbstractBodyAdapter(*mediaTypes) {
   override fun supportsType(typeRef: TypeRef<*>): Boolean {
     try {
       moshi.adapter<Object>(typeRef.type())
@@ -48,17 +54,33 @@ abstract class MoshiAdapter(internal val moshi: Moshi, vararg mediaTypes: MediaT
   }
 
   companion object {
-    fun Encoder(moshi: Moshi, vararg mediaTypes: MediaType): BodyAdapter.Encoder =
-      MoshiAdapter.Encoder(moshi, *mediaTypes)
-
+    /**
+     * Creates an encoder that uses the given [Moshi] instance for encoding objects and is
+     * compatible with `application/json`.
+     */
     fun Encoder(moshi: Moshi): BodyAdapter.Encoder =
       MoshiAdapter.Encoder(moshi, MediaType.APPLICATION_JSON)
 
-    fun Decoder(moshi: Moshi, vararg mediaTypes: MediaType): BodyAdapter.Decoder =
-      MoshiAdapter.Decoder(moshi, *mediaTypes)
+    /**
+     * Creates an encoder that uses the given [Moshi] instance for encoding objects and is
+     * compatible with the given media types.
+     */
+    fun Encoder(moshi: Moshi, vararg mediaTypes: MediaType): BodyAdapter.Encoder =
+      MoshiAdapter.Encoder(moshi, *mediaTypes)
 
+    /**
+     * Creates a decoder that uses the given [Moshi] instance for decoding objects and is
+     * compatible with `application/json`.
+     */
     fun Decoder(moshi: Moshi): BodyAdapter.Decoder =
       MoshiAdapter.Decoder(moshi, MediaType.APPLICATION_JSON)
+
+    /**
+     * Creates a decoder that uses the given [Moshi] instance for decoding objects and is
+     * compatible with the given media types.
+     */
+    fun Decoder(moshi: Moshi, vararg mediaTypes: MediaType): BodyAdapter.Decoder =
+      MoshiAdapter.Decoder(moshi, *mediaTypes)
   }
 
   private class Encoder(moshi: Moshi, vararg mediaTypes: MediaType) :
