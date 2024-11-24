@@ -1,5 +1,6 @@
 package conventions
 
+import extensions.JAVADOC_JDK_VERSION
 import extensions.classpath
 import extensions.isIncludedInAggregateJavadoc
 import extensions.javaModuleName
@@ -16,7 +17,7 @@ val aggregateJavadoc by tasks.registering(Javadoc::class) {
   setDestinationDir(layout.buildDirectory.get().file("docs/aggregateJavadoc").asFile)
 
   standardOptions {
-    links("https://docs.oracle.com/en/java/javase/21/docs/api/")
+    links("https://docs.oracle.com/en/java/javase/$JAVADOC_JDK_VERSION/docs/api/")
     addBooleanOption("Xdoclint:-missing", true)
   }
 
@@ -58,18 +59,16 @@ val aggregateJavadoc by tasks.registering(Javadoc::class) {
 
 subprojects.filter { it.isIncludedInAggregateJavadoc }
   .forEach { documentedProject ->
-    documentedProject.plugins.withType<JavaLibraryPlugin> {
-      val sourceSets: SourceSetContainer by documentedProject.extensions
-      aggregateJavadoc {
-        source(sourceSets["main"].allJava)
-        classpath {
-          from(sourceSets["main"].compileClasspath)
-        }
-
-        val moduleSourcePath: JavadocOptionFileOption<MutableList<String>> by extensions
-        moduleSourcePath.value.add(
-          "${documentedProject.javaModuleName}=${documentedProject.file("src/main/java")}"
-        )
+    val sourceSets: SourceSetContainer by documentedProject.extensions
+    aggregateJavadoc {
+      source(sourceSets["main"].allJava)
+      classpath {
+        from(sourceSets["main"].compileClasspath)
       }
+
+      val moduleSourcePath: JavadocOptionFileOption<MutableList<String>> by extensions
+      moduleSourcePath.value.add(
+        "${documentedProject.javaModuleName}=${documentedProject.file("src/main/java")}"
+      )
     }
   }

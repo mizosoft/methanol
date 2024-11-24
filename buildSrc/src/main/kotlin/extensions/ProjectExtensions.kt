@@ -31,6 +31,9 @@ import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.the
 
+const val JAVADOC_JDK_VERSION = 11
+const val JAVADOC_URL = "https://mizosoft.github.io/methanol/api/latest"
+
 private const val MODULE_NAME_EXTENSIONS_NAME = "javaModuleName"
 
 private fun Project.findModuleName() =
@@ -101,14 +104,14 @@ val Project.artifactId
 val Project.libs
   get() = the<LibrariesForLibs>()
 
-val Project.javaVersion: String?
+val Project.javaVersion
   get() = project.findProperty("javaVersion")?.toString()
 
-val Project.javaVendor: String?
+val Project.javaVendor
   get() = project.findProperty("javaVendor")?.toString()
 
-val Project.enableErrorprone: Boolean
+val Project.enableErrorprone
   get() = project.hasProperty("enableErrorprone")
 
-val Project.enableCheckerframework: Boolean
+val Project.enableCheckerframework
   get() = project.hasProperty("enableCheckerframework")

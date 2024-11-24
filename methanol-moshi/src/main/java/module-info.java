@@ -20,16 +20,16 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.StorageExtension;
+import com.github.mizosoft.methanol.BodyAdapter;
 
 /**
- * Contains a <a href="https://redis.io/">Redis</a>-backed {@link StorageExtension} implementation.
+ * Contains {@link BodyAdapter} implementations for JSON using <a
+ * href="https://github.com/square/moshi">Moshi</a>. This adapter is mainly targeted for Kotlin,
+ * although it can be used with Java without problems.
  */
-module methanol.redis {
+module methanol.adapter.moshi {
   requires methanol;
-  requires lettuce.core;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
+  requires com.squareup.moshi;
 
-  exports com.github.mizosoft.methanol.store.redis;
+  exports com.github.mizosoft.methanol.adapter.moshi;
 }

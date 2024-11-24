@@ -20,16 +20,11 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.StorageExtension;
-
-/**
- * Contains a <a href="https://redis.io/">Redis</a>-backed {@link StorageExtension} implementation.
- */
-module methanol.redis {
+/** Kotlin DSL for Methanol. */
+module methanol.kotlin {
   requires methanol;
-  requires lettuce.core;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
+  requires kotlinx.coroutines.core;
+  requires kotlinx.serialization.core;
 
-  exports com.github.mizosoft.methanol.store.redis;
+  exports com.github.mizosoft.methanol.kotlin;
 }

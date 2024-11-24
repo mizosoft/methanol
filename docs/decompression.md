@@ -5,7 +5,8 @@ decompression. A workaround is to use an available `InputStream` decompressor (e
 that matches response's `Content-Encoding`. However, such approach is invasive as it forces us to deal
 with `InputStreams`.
 
-The straightforward and recommended solution is to use Methanol's [enhanced HTTP client](enhanced_httpclient.md),
+The straightforward and recommended solution is to use
+Methanol's [enhanced HTTP client](methanol_httpclient),
 which gives you transparent response decompression for `gzip` & `deflate` out of the box.
 
 ```java
