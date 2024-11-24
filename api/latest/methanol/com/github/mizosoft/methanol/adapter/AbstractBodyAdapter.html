@@ -87,7 +87,7 @@ loadScripts(document, 'script');</script>
 <div class="sub-title"><span class="package-label-in-type">Package</span>&nbsp;<a href="package-summary.html">com.github.mizosoft.methanol.adapter</a></div>
 <h1 title="Class AbstractBodyAdapter" class="title">Class AbstractBodyAdapter</h1>
 </div>
-<div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
+<div class="inheritance" title="Inheritance Tree"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">java.lang.Object</a>
 <div class="inheritance">com.github.mizosoft.methanol.adapter.AbstractBodyAdapter</div>
 </div>
 <section class="class-description" id="class-description">
@@ -101,7 +101,7 @@ loadScripts(document, 'script');</script>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public abstract class </span><span class="element-name type-name-label">AbstractBodyAdapter</span>
-<span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>
+<span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>
 implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></span></div>
 <div class="block">An abstract <a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that implements <a href="../BodyAdapter.html#isCompatibleWith(com.github.mizosoft.methanol.MediaType)"><code>BodyAdapter.isCompatibleWith(MediaType)</code></a>
  by allowing subclasses to specify a set of <a href="../MediaType.html" title="class in com.github.mizosoft.methanol"><code>MediaTypes</code></a> the adapter is compatible
@@ -165,28 +165,28 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <div class="table-header col-first">Modifier and Type</div>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#attachMediaType(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)" class="member-name-link">attachMediaType</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;publisher,
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#attachMediaType(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)" class="member-name-link">attachMediaType</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;publisher,
  @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Converts the given publisher into a <a href="../MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a> that has the given media type
  only if it is not <code>null</code> or <a href="../MediaType.html#hasWildcard()"><code>has a wildcard</code></a>, otherwise the
  given publisher is returned as-is.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#charsetOrDefault(com.github.mizosoft.methanol.MediaType,java.nio.charset.Charset)" class="member-name-link">charsetOrDefault</a><wbr>(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType,
- <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;defaultCharset)</code></div>
+ <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;defaultCharset)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or the given charset
  if the given media type is <code>null</code>.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></code></div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#charsetOrUtf8(com.github.mizosoft.methanol.MediaType)" class="member-name-link">charsetOrUtf8</a><wbr>(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
 <div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or <code>UTF-8</code> if
  the given media type is <code>null</code>.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Set.html" title="class or interface in java.util" class="external-link">Set</a><wbr>&lt;<a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&gt;</code></div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html" title="class or interface in java.util" class="external-link">Set</a><wbr>&lt;<a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#compatibleMediaTypes()" class="member-name-link">compatibleMediaTypes</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Returns an immutable set containing the media types this adapter is compatible with.</div>
@@ -216,7 +216,7 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
  type, if any.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>protected void</code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requireSupport(java.lang.Class)" class="member-name-link">requireSupport</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;?&gt;&nbsp;type)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requireSupport(java.lang.Class)" class="member-name-link">requireSupport</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;?&gt;&nbsp;type)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Requires that this adapter <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type.</div>
 </div>
@@ -224,8 +224,8 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 </div>
 </div>
 <div class="inherited-list">
-<h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
-<code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" title="class or interface in java.lang" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#hashCode()" title="class or interface in java.lang" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
+<h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
+<code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" title="class or interface in java.lang" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#hashCode()" title="class or interface in java.lang" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
 <div class="inherited-list">
 <h3 id="methods-inherited-from-class-com.github.mizosoft.methanol.BodyAdapter">Methods inherited from interface&nbsp;com.github.mizosoft.methanol.<a href="../BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></h3>
 <code><a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)">supportsType</a></code></div>
@@ -270,7 +270,7 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <li>
 <section class="detail" id="compatibleMediaTypes()">
 <h3>compatibleMediaTypes</h3>
-<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Set.html" title="class or interface in java.util" class="external-link">Set</a>&lt;<a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&gt;</span>&nbsp;<span class="element-name">compatibleMediaTypes</span>()</div>
+<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Set.html" title="class or interface in java.util" class="external-link">Set</a>&lt;<a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&gt;</span>&nbsp;<span class="element-name">compatibleMediaTypes</span>()</div>
 <div class="block">Returns an immutable set containing the media types this adapter is compatible with.</div>
 </section>
 </li>
@@ -281,18 +281,18 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <div class="block">Requires that this adapter <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't support the given type.</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't support the given type.</dd>
 </dl>
 </section>
 </li>
 <li>
 <section class="detail" id="requireSupport(java.lang.Class)">
 <h3>requireSupport</h3>
-<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">requireSupport</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;?&gt;&nbsp;type)</span></div>
+<div class="member-signature"><span class="modifiers">protected</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">requireSupport</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Class.html" title="class or interface in java.lang" class="external-link">Class</a>&lt;?&gt;&nbsp;type)</span></div>
 <div class="block">Requires that this adapter <a href="../BodyAdapter.html#supportsType(com.github.mizosoft.methanol.TypeRef)"><code>supports</code></a> the given type.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't support the given type.</dd>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't support the given type.</dd>
 </dl>
 </section>
 </li>
@@ -306,7 +306,7 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
  type, if any.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't support the given type or is not
+<dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter doesn't support the given type or is not
      compatible with the given hints' media type.</dd>
 </dl>
 </section>
@@ -319,7 +319,7 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
  with the given media type, or the given media type is <code>null</code>.</div>
 <dl class="notes">
 <dt>Throws:</dt>
-<dd><code><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter is not compatible with the given media
+<dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/UnsupportedOperationException.html" title="class or interface in java.lang" class="external-link">UnsupportedOperationException</a></code> - if this adapter is not compatible with the given media
      type.</dd>
 </dl>
 </section>
@@ -327,8 +327,8 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <li>
 <section class="detail" id="charsetOrDefault(com.github.mizosoft.methanol.MediaType,java.nio.charset.Charset)">
 <h3>charsetOrDefault</h3>
-<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></span>&nbsp;<span class="element-name">charsetOrDefault</span><wbr><span class="parameters">(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType,
- <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;defaultCharset)</span></div>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></span>&nbsp;<span class="element-name">charsetOrDefault</span><wbr><span class="parameters">(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType,
+ <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;defaultCharset)</span></div>
 <div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or the given charset
  if the given media type is <code>null</code>.</div>
 </section>
@@ -336,7 +336,7 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <li>
 <section class="detail" id="charsetOrUtf8(com.github.mizosoft.methanol.MediaType)">
 <h3>charsetOrUtf8</h3>
-<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></span>&nbsp;<span class="element-name">charsetOrUtf8</span><wbr><span class="parameters">(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a></span>&nbsp;<span class="element-name">charsetOrUtf8</span><wbr><span class="parameters">(@Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Returns either the result of <a href="../MediaType.html#charsetOrDefault(java.nio.charset.Charset)"><code>MediaType.charsetOrDefault(Charset)</code></a>, or <code>UTF-8</code> if
  the given media type is <code>null</code>.</div>
 </section>
@@ -344,7 +344,7 @@ implements <a href="../BodyAdapter.html" title="interface in com.github.mizosoft
 <li>
 <section class="detail" id="attachMediaType(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)">
 <h3>attachMediaType</h3>
-<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">attachMediaType</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;publisher,
+<div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a></span>&nbsp;<span class="element-name">attachMediaType</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link">HttpRequest.BodyPublisher</a>&nbsp;publisher,
  @Nullable <a href="../MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
 <div class="block">Converts the given publisher into a <a href="../MimeBodyPublisher.html" title="interface in com.github.mizosoft.methanol"><code>MimeBodyPublisher</code></a> that has the given media type
  only if it is not <code>null</code> or <a href="../MediaType.html#hasWildcard()"><code>has a wildcard</code></a>, otherwise the

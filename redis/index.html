@@ -6,19 +6,19 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Lightweight HTTP extensions for Java">
+        <meta name="description" content="Lightweight HTTP extensions for Java & Kotlin">
       
       
-        <meta name="author" content="Moataz Abdelnasser">
+        <meta name="author" content="mizosoft">
       
       
-        <link rel="canonical" href="https://mizosoft.github.io/methanol/enhanced_httpclient/">
+        <link rel="canonical" href="https://mizosoft.github.io/methanol/redis/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../kotlin/">
       
       
-        <link rel="next" href="../caching/">
+        <link rel="next" href="../brotli/">
       
       
       <link rel="icon" href="../images/flask.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Enhanced HttpClient - Methanol</title>
+        <title>Redis - Methanol</title>
       
     
     
@@ -90,7 +90,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#enhanced-httpclient" class="md-skip">
+        <a href="#methanol-redis" class="md-skip">
           Skip to content
         </a>
       
@@ -126,7 +126,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Enhanced HttpClient
+              Redis
             
           </span>
         </div>
@@ -306,8 +306,6 @@
       
   
   
-    
-  
   
   
     
@@ -319,11 +317,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -337,7 +335,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Documentation
@@ -348,126 +346,14 @@
                 
   
   
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Enhanced HttpClient
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  <span class="md-ellipsis">
-    Enhanced HttpClient
-  </span>
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#transparent-compression" class="md-nav__link">
-    <span class="md-ellipsis">
-      Transparent Compression
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mimebodypublisher" class="md-nav__link">
-    <span class="md-ellipsis">
-      MimeBodyPublisher
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#reactive-dispatching" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reactive Dispatching
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mutablerequest" class="md-nav__link">
-    <span class="md-ellipsis">
-      MutableRequest
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
   
   
     <li class="md-nav__item">
-      <a href="../caching/" class="md-nav__link">
+      <a href="../methanol_httpclient/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Caching
+    Methanol HttpClient
   </span>
   
 
@@ -510,6 +396,27 @@
   
   <span class="md-ellipsis">
     Interceptors
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../caching/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Caching
   </span>
   
 
@@ -658,6 +565,76 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../kotlin/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Kotlin DSL
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Redis
+  </span>
+  
+
+      </a>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../brotli/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Brotli
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     
     
     
@@ -671,10 +648,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
             
   
   <span class="md-ellipsis">
@@ -685,8 +662,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             Adapters
           </label>
@@ -783,6 +760,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../adapters/jaxb_jakarta/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    methanol-jaxb-jakarta
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../adapters/protobuf/" class="md-nav__link">
         
   
@@ -797,29 +795,30 @@
 
               
             
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../brotli/" class="md-nav__link">
+      <a href="../adapters/moshi/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Brotli
+    methanol-moshi
   </span>
   
 
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -884,65 +883,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#transparent-compression" class="md-nav__link">
-    <span class="md-ellipsis">
-      Transparent Compression
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mimebodypublisher" class="md-nav__link">
-    <span class="md-ellipsis">
-      MimeBodyPublisher
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#reactive-dispatching" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reactive Dispatching
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mutablerequest" class="md-nav__link">
-    <span class="md-ellipsis">
-      MutableRequest
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -959,121 +899,8 @@
   
 
 
-<h1 id="enhanced-httpclient">Enhanced HttpClient<a class="headerlink" href="#enhanced-httpclient" title="Permanent link">&para;</a></h1>
-<p>Methanol has a special <code>HttpClient</code> that extends the standard one with interesting new features.
-Unsurprisingly, the client is named <code>Methanol</code>.</p>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<p>In addition to <a href="../interceptors/">interceptors</a> and <a href="../caching/">caching</a>, <code>Methanol</code> can apply default properties to your requests.
-Think resolving with a base URI, adding default request headers, default timeouts, etc.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-<span class="w">    </span><span class="p">.</span><span class="na">cache</span><span class="p">(...)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(...)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">userAgent</span><span class="p">(</span><span class="s">&quot;Will Smith&quot;</span><span class="p">)</span><span class="w">                     </span><span class="c1">// Custom User-Agent</span>
-<span class="w">    </span><span class="p">.</span><span class="na">baseUri</span><span class="p">(</span><span class="s">&quot;https://api.github.com&quot;</span><span class="p">)</span><span class="w">           </span><span class="c1">// Base URI to resolve requests&#39; URI against</span>
-<span class="w">    </span><span class="p">.</span><span class="na">defaultHeader</span><span class="p">(</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// Default request headers</span>
-<span class="w">    </span><span class="p">.</span><span class="na">requestTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">20</span><span class="p">))</span><span class="w">      </span><span class="c1">// Default request timeout</span>
-<span class="w">    </span><span class="p">.</span><span class="na">headersTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span><span class="w">       </span><span class="c1">// Timeout for receiving response headers</span>
-<span class="w">    </span><span class="p">.</span><span class="na">readTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span><span class="w">          </span><span class="c1">// Timeout for single reads</span>
-<span class="w">    </span><span class="p">.</span><span class="na">autoAcceptEncoding</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span><span class="w">                   </span><span class="c1">// Transparent response compression, this is true by default</span>
-
-<span class="c1">// Continue using as a standard HttpClient.Builder!</span>
-<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="na">executor</span><span class="p">(...)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">executor</span><span class="p">(</span><span class="n">Executors</span><span class="p">.</span><span class="na">newFixedThreadPool</span><span class="p">(</span><span class="mi">16</span><span class="p">))</span>
-<span class="w">    </span><span class="p">.</span><span class="na">connectTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
-<span class="w">    </span><span class="p">...</span>
-<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
-</code></pre></div>
-<p>You can also build from an existing <code>HttpClient</code> instance. However, you can't install an <code>HttpCache</code>
-in such case.</p>
-<div class="highlight"><pre><span></span><code><span class="n">HttpClient</span><span class="w"> </span><span class="n">prebuiltClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...</span>
-<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">(</span><span class="n">prebuiltClient</span><span class="p">)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(...)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">userAgent</span><span class="p">(</span><span class="s">&quot;Will Smith&quot;</span><span class="p">)</span>
-<span class="w">     </span><span class="p">...</span>
-<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
-</code></pre></div>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p><code>Methanol</code> is an <code>HttpClient</code>. It implements the same API like <code>send</code> &amp; <code>sendAsync</code>, which you can
-continue using as usual.</p>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Default properties don't override those the request already has. For instance, a client with a
-default <code>Accept: text/html</code> will not override a request's <code>Accept: application/json</code>.</p>
-</div>
-<h3 id="transparent-compression">Transparent Compression<a class="headerlink" href="#transparent-compression" title="Permanent link">&para;</a></h3>
-<p>If <code>autoAcceptEncoding</code> is enabled, the client complements requests with an <code>Accept-Encoding</code> header
-which accepts all supported encodings (i.e. available <a href="../decompression/"><code>BodyDecoder</code></a> providers). Additionally,
-the response is transparently decompressed according to its <code>Content-Encoding</code>.</p>
-<p>Since <code>deflate</code> &amp; <code>gzip</code> are supported out of the box, they're always included in <code>Accept-Encoding</code>.
-For instance, if <a href="https://github.com/mizosoft/methanol/tree/master/methanol-brotli">brotli</a> is installed, requests will typically have: <code>Accept-Encoding: deflate, gzip, br</code>.
-If you want specific encodings to be applied, add <code>Accept-Encoding</code> as a default header or explicitly
-set one in your request.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Default Header</label><label for="__tabbed_1_2">Request Header</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="c1">// Advertise brotli decompression</span>
-<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-<span class="w">    </span><span class="p">.</span><span class="na">defaultHeader</span><span class="p">(</span><span class="s">&quot;Accept-Encoding&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;br&quot;</span><span class="p">)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="c1">// Advertise brotli decompression</span>
-<span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">header</span><span class="p">(</span><span class="s">&quot;Accept-Encoding&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;br&quot;</span><span class="p">);</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<h3 id="mimebodypublisher">MimeBodyPublisher<a class="headerlink" href="#mimebodypublisher" title="Permanent link">&para;</a></h3>
-<p><code>Methanol</code> automatically sets a request's <code>Content-Type</code> if it has a <a href="../media_types/#mimebodypublisher"><code>MimeBodyPublisher</code></a>.
-If the request already has a <code>Content-Type</code>, it's overwritten. This makes sense as a body knows its media type
-better than a containing request mistakenly setting a different one.</p>
-<h3 id="reactive-dispatching">Reactive Dispatching<a class="headerlink" href="#reactive-dispatching" title="Permanent link">&para;</a></h3>
-<p>If you like reactive streams, use <code>Methanol::exchange</code>, which is like <code>sendAsync</code> but returns
-<code>Publisher&lt;HttpResponse&lt;T&gt;&gt;</code> sources instead.</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Without HTTP/2 Push</label><label for="__tabbed_2_2">With HTTP/2 Push</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span>
-
-<span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://http2-push.appspot.com/?nopush&quot;</span><span class="p">);</span>
-<span class="kd">var</span><span class="w"> </span><span class="n">publisher</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">exchange</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;page.html&quot;</span><span class="p">)));</span>
-
-<span class="n">JdkFlowAdapter</span><span class="p">.</span><span class="na">flowPublisherToFlux</span><span class="p">(</span><span class="n">publisher</span><span class="p">)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">doOnNext</span><span class="p">(</span><span class="n">response</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span><span class="s">&quot;%s: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()))</span>
-<span class="w">    </span><span class="p">.</span><span class="na">blockLast</span><span class="p">();</span>
-</code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span>
-
-<span class="kd">var</span><span class="w"> </span><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://http2-push.appspot.com&quot;</span><span class="p">);</span>
-<span class="kd">var</span><span class="w"> </span><span class="n">publisher</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">exchange</span><span class="p">(</span>
-<span class="w">    </span><span class="n">request</span><span class="p">,</span><span class="w"> </span>
-<span class="w">    </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;page.html&quot;</span><span class="p">)),</span><span class="w"> </span>
-<span class="w">    </span><span class="n">pushPromise</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">pushPromise</span><span class="p">.</span><span class="na">uri</span><span class="p">().</span><span class="na">getPath</span><span class="p">()).</span><span class="na">getFileName</span><span class="p">()));</span>
-
-<span class="n">JdkFlowAdapter</span><span class="p">.</span><span class="na">flowPublisherToFlux</span><span class="p">(</span><span class="n">publisher</span><span class="p">)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">doOnNext</span><span class="p">(</span><span class="n">response</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">out</span><span class="p">.</span><span class="na">printf</span><span class="p">(</span><span class="s">&quot;%s: %s%n&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">,</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()))</span>
-<span class="w">    </span><span class="p">.</span><span class="na">blockLast</span><span class="p">();</span>
-</code></pre></div>
-</div>
-</div>
-</div>
-<h2 id="mutablerequest">MutableRequest<a class="headerlink" href="#mutablerequest" title="Permanent link">&para;</a></h2>
-<p><code>MutableRequest</code> is an <code>HttpRequest</code> that implements <code>HttpRequest.Builder</code> for settings request's
-properties. This drops immutability in favor of some convenience when the request is sent immediately.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">MutableReqeust</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="n">uri</span><span class="p">),</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofString</span><span class="p">());</span>
-</code></pre></div>
-<p>Additionally, <code>MutableRequest</code> accepts relative URIs (standard <code>HttpRequest.Builder</code> doesn't). This
-is a complementing feature to <code>Methanol</code>'s base URIs, against which relative ones are resolved.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>You can use <code>MutableRequest::toImmutableRequest</code> to get an immutable <code>HttpRequest</code> snapshot.</p>
-</div>
+<h1 id="methanol-redis">methanol-redis<a class="headerlink" href="#methanol-redis" title="Permanent link">&para;</a></h1>
+<p>Coming Soon!</p>
 
 
 
@@ -1111,7 +938,7 @@ is a complementing feature to <code>Methanol</code>'s base URIs, against which r
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2021 Moataz Abdelnasser
+      Copyright &copy; 2024 mizosoft
     </div>
   
   

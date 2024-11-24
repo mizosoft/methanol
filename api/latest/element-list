@@ -25,10 +25,14 @@ module:methanol.adapter.jaxb
 com.github.mizosoft.methanol.adapter.jaxb
 module:methanol.adapter.jaxb.jakarta
 com.github.mizosoft.methanol.adapter.jaxb.jakarta
+module:methanol.adapter.moshi
+com.github.mizosoft.methanol.adapter.moshi
 module:methanol.adapter.protobuf
 com.github.mizosoft.methanol.adapter.protobuf
 module:methanol.brotli
 com.github.mizosoft.methanol.brotli.internal
+module:methanol.kotlin
+com.github.mizosoft.methanol.kotlin
 module:methanol.redis
 com.github.mizosoft.methanol.store.redis
 module:methanol.testing
