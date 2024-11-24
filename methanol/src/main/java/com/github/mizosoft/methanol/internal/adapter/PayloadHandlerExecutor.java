@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.adapter;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.ResponsePayload;
+import com.github.mizosoft.methanol.internal.Utils;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
@@ -42,5 +43,10 @@ public final class PayloadHandlerExecutor implements Supplier<Executor> {
   @Override
   public Executor get() {
     return executor;
+  }
+
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this) + "[executor=" + executor + "]";
   }
 }

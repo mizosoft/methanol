@@ -69,7 +69,7 @@ class JacksonFluxSubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
   }
 
   @Override
-  protected Subscriber<List<ByteBuffer>> downstream() {
+  protected Subscriber<List<ByteBuffer>> delegate() {
     return downstream;
   }
 

@@ -293,6 +293,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
     store.close();
   }
 
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this) + "[store=" + store + "]";
+  }
+
   /** Returns an interceptor that serves responses from this cache if applicable. */
   Interceptor interceptor() {
     return new CacheInterceptor(this::createLocalCache, listener, executor, clock);

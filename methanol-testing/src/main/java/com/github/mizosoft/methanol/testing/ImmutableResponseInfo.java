@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -57,4 +57,20 @@ public final class ImmutableResponseInfo implements ResponseInfo {
   public Version version() {
     return version;
   }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName()
+        + "[statusCode="
+        + statusCode
+        + ", headers="
+        + headers
+        + ", version="
+        + version
+        + "]";
+  }
+
+  // Ideally, we'd implement equals & hashCode. But JDK's implementation doesn't have them
+  // implemented, and implementing them here would create inconsistencies if both implementations
+  // are ever compared.
 }

@@ -297,6 +297,20 @@ abstract class AbstractRedisStore<
   @Override
   public void flush() {}
 
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this)
+        + "[editorLockInactiveTtlSeconds="
+        + editorLockInactiveTtlSeconds
+        + ", staleEntryInactiveTtlSeconds="
+        + staleEntryInactiveTtlSeconds
+        + ", appVersion="
+        + appVersion
+        + ", "
+        + (closed.get() ? "CLOSED" : "OPEN")
+        + "]";
+  }
+
   String toEntryKey(String key) {
     requireArgument(key.indexOf('}') == -1, "Illegal key");
     return String.format("methanol:%d:%d:{%s}", STORE_VERSION, appVersion, key);

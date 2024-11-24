@@ -263,6 +263,11 @@ abstract class AbstractHttpCacheTest {
     public void flush() throws IOException {
       delegate.flush();
     }
+
+    @Override
+    public String toString() {
+      return Utils.toStringIdentityPrefix(this) + "[delegate=" + delegate + "]";
+    }
   }
 
   static class ForwardingViewer implements Viewer {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.internal.flow;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
 
@@ -34,32 +35,37 @@ public abstract class ForwardingSubscriber<T> implements Subscriber<T> {
   protected ForwardingSubscriber() {}
 
   /** Returns the downstream to which signals are forwarded. */
-  protected abstract Subscriber<? super T> downstream();
+  protected abstract Subscriber<? super T> delegate();
 
   @Override
   public void onSubscribe(Subscription subscription) {
     requireNonNull(subscription);
     if (upstream.setOrCancel(subscription)) {
-      downstream().onSubscribe(subscription);
+      delegate().onSubscribe(subscription);
     }
   }
 
   @Override
   public void onNext(T item) {
     requireNonNull(item);
-    downstream().onNext(item);
+    delegate().onNext(item);
   }
 
   @Override
   public void onError(Throwable throwable) {
     requireNonNull(throwable);
     upstream.clear();
-    downstream().onError(throwable);
+    delegate().onError(throwable);
   }
 
   @Override
   public void onComplete() {
     upstream.clear();
-    downstream().onComplete();
+    delegate().onComplete();
+  }
+
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this) + "[delegate=" + delegate() + "]";
   }
 }

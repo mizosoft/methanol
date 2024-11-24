@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.internal.concurrent;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -159,9 +160,8 @@ public final class SerialExecutor implements Executor {
 
   @Override
   public String toString() {
-    return "SerialExecutor@"
-        + Integer.toHexString(hashCode())
-        + "{delegate="
+    return Utils.toStringIdentityPrefix(this)
+        + "[delegate="
         + delegate
         + ", running="
         + isRunningBitSet()
@@ -169,7 +169,7 @@ public final class SerialExecutor implements Executor {
         + isKeepAliveBitSet()
         + ", shutdown="
         + isShutdownBitSet()
-        + "}";
+        + "]";
   }
 
   private static boolean isRunningBitSet(int s) {

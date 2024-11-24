@@ -56,6 +56,18 @@ public final class ImmutableResponseInfo implements ResponseInfo {
     return version;
   }
 
+  @Override
+  public String toString() {
+    return getClass().getSimpleName()
+        + "[statusCode="
+        + statusCode
+        + ", headers="
+        + headers
+        + ", version="
+        + version
+        + "]";
+  }
+
   public static ResponseInfo from(HttpResponse<?> response) {
     return new ImmutableResponseInfo(response.statusCode(), response.headers(), response.version());
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -83,5 +83,27 @@ public final class DiskStoreConfig extends StoreConfig {
 
   public boolean dispatchEagerly() {
     return dispatchEagerly;
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName()
+        + "[fileSystemType="
+        + fileSystemType
+        + ", execution="
+        + execution
+        + ", indexUpdateDelaySeconds="
+        + indexUpdateDelaySeconds
+        + ", mockTime="
+        + mockTime
+        + ", autoAdvanceClock="
+        + autoAdvanceClock
+        + ", dispatchEagerly="
+        + dispatchEagerly
+        + ", maxSize="
+        + maxSize()
+        + ", appVersion="
+        + appVersion()
+        + "]";
   }
 }

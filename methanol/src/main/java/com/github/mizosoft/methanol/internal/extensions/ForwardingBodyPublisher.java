@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,29 +24,35 @@ package com.github.mizosoft.methanol.internal.extensions;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Flow.Subscriber;
 
 public class ForwardingBodyPublisher implements BodyPublisher {
-  private final BodyPublisher upstream;
+  private final BodyPublisher delegate;
 
-  protected ForwardingBodyPublisher(BodyPublisher upstream) {
-    this.upstream = requireNonNull(upstream);
+  protected ForwardingBodyPublisher(BodyPublisher delegate) {
+    this.delegate = requireNonNull(delegate);
   }
 
-  protected final BodyPublisher upstream() {
-    return upstream;
+  protected final BodyPublisher delegate() {
+    return delegate;
   }
 
   @Override
   public long contentLength() {
-    return upstream.contentLength();
+    return delegate.contentLength();
   }
 
   @Override
   public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
     requireNonNull(subscriber);
-    upstream.subscribe(subscriber);
+    delegate.subscribe(subscriber);
+  }
+
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this) + "[delegate=" + delegate + "]";
   }
 }

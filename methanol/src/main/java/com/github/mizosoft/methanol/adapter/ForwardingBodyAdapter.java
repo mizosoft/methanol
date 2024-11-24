@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.adapter;
 import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.internal.Utils;
 
 /** A {@link BodyAdapter} that forwards calls to another. */
 public abstract class ForwardingBodyAdapter implements BodyAdapter {
@@ -41,5 +42,10 @@ public abstract class ForwardingBodyAdapter implements BodyAdapter {
   @Override
   public boolean supportsType(TypeRef<?> type) {
     return delegate().supportsType(type);
+  }
+
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this) + "[delegate=" + delegate() + "]";
   }
 }

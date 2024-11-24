@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,19 +30,19 @@ import java.util.concurrent.CompletionStage;
 
 public class ForwardingBodySubscriber<T> extends ForwardingSubscriber<List<ByteBuffer>>
     implements BodySubscriber<T> {
-  private final BodySubscriber<T> downstream;
+  private final BodySubscriber<T> delegate;
 
-  protected ForwardingBodySubscriber(BodySubscriber<T> downstream) {
-    this.downstream = downstream;
+  protected ForwardingBodySubscriber(BodySubscriber<T> delegate) {
+    this.delegate = delegate;
   }
 
   @Override
-  protected final BodySubscriber<T> downstream() {
-    return downstream;
+  protected final BodySubscriber<T> delegate() {
+    return delegate;
   }
 
   @Override
   public CompletionStage<T> getBody() {
-    return downstream.getBody();
+    return delegate.getBody();
   }
 }

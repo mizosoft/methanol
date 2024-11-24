@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.time.Clock;
@@ -84,6 +85,16 @@ public final class MockClock extends Clock {
   public Instant instant() {
     var ticks = autoAdvance;
     return ticks != null ? getAndAdvance(ticks) : peekInstant();
+  }
+
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this)
+        + "[zoneId="
+        + zoneId
+        + ", inception="
+        + inception
+        + "]";
   }
 
   public void onTick(@Nullable BiConsumer<Instant, Duration> listener) {

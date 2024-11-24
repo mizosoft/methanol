@@ -287,4 +287,8 @@ public class Utils {
   public static Hints hintsOf(@Nullable MediaType mediaType) {
     return mediaType != null ? Hints.of(mediaType) : Hints.empty();
   }
+
+  public static String toStringIdentityPrefix(Object object) {
+    return object.getClass().getSimpleName() + "@" + Integer.toHexString(object.hashCode());
+  }
 }
