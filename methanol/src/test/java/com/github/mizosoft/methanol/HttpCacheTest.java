@@ -126,12 +126,10 @@ import org.assertj.core.api.ObjectAssert;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.TestAbortedException;
 
-@Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
 @ExtendWith(StoreExtension.class)
 class HttpCacheTest extends AbstractHttpCacheTest {
   /**

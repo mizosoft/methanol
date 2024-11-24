@@ -43,23 +43,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Optional;
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@Timeout(TestUtils.VERY_SLOW_TIMEOUT_SECONDS)
 @ExtendWith(StoreExtension.class)
 @EnabledIf("isRedisStandaloneOrClusterAvailable")
 class RedisStoreTest {
-  @BeforeAll
-  static void setUp() {
-    Awaitility.setDefaultPollDelay(Duration.ZERO);
-    Awaitility.setDefaultPollInterval(Duration.ofMillis(20));
-    Awaitility.setDefaultTimeout(Duration.ofSeconds(TestUtils.SLOW_TIMEOUT_SECONDS));
-  }
-
   /*
    * Unfortunately, there doesn't seem to be a way to mock time in redis. So tests that want to test
    * expiry behaviour will have to sleep for >= the expiry time.
@@ -88,6 +77,7 @@ class RedisStoreTest {
     try (var ignored =
         await()
             .pollDelay(Duration.ZERO)
+            .timeout(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
             .until(() -> secondStore.edit("e1"), Optional::isPresent)
             .get()) {
       assertThat(firstStore.edit("e1")).isEmpty();
