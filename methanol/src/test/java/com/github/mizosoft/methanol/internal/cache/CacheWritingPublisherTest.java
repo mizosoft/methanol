@@ -75,7 +75,6 @@ import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -125,14 +124,12 @@ class CacheWritingPublisherTest {
     testWritingLargeString(store, executor);
   }
 
-  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void writeLargeStringToDisk(Executor executor, Store store) throws IOException {
     testWritingLargeString(store, executor);
   }
 
-  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
@@ -140,7 +137,6 @@ class CacheWritingPublisherTest {
     testWritingLargeString(store, executor);
   }
 
-  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")

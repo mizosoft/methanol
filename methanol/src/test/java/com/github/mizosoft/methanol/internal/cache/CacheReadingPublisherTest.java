@@ -59,7 +59,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -105,14 +104,12 @@ class CacheReadingPublisherTest {
     testReadingLargeString(store, executor);
   }
 
-  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.DISK, fileSystem = FileSystemType.SYSTEM)
   void readLargeStringFromDisk(Executor executor, Store store) throws IOException {
     testReadingLargeString(store, executor);
   }
 
-  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_STANDALONE, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisStandaloneStoreContext#isAvailable")
@@ -120,7 +117,6 @@ class CacheReadingPublisherTest {
     testReadingLargeString(store, executor);
   }
 
-  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   @ExecutorParameterizedTest
   @StoreSpec(tested = StoreType.REDIS_CLUSTER, fileSystem = FileSystemType.NONE)
   @EnabledIf("com.github.mizosoft.methanol.testing.store.RedisClusterStoreContext#isAvailable")

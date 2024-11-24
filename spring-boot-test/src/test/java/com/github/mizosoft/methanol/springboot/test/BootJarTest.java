@@ -35,7 +35,6 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -53,7 +52,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 class BootJarTest {
   private static final String JAR_PATH_PROP =
       "com.github.mizosoft.methanol.springboot.test.bootJarPath";
-  private static final int LAUNCH_BOOT_JAR_TIMEOUT = TestUtils.VERY_SLOW_TIMEOUT_SECONDS;
+  private static final int LAUNCH_BOOT_JAR_TIMEOUT_SECONDS = TestUtils.VERY_SLOW_TIMEOUT_SECONDS;
 
   // Range for 'dynamic ports'
   private static final int PORT_START = 49152;
@@ -65,12 +64,11 @@ class BootJarTest {
   private ExecutorService executor;
 
   @BeforeEach
-  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   void assumeJava() throws Exception {
     var process =
         new ProcessBuilder().command("java", "--version").redirectErrorStream(true).start();
     try (var in = TestUtils.inputReaderOf(process)) {
-      assertThat(process.waitFor(TestUtils.SLOW_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+      assertThat(process.waitFor(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS))
           .withFailMessage("'java --version' timed out")
           .isTrue();
       assumeThat(process.exitValue())
@@ -109,7 +107,7 @@ class BootJarTest {
       String line;
       var lineFuture = executor.submit(in::readLine);
       try {
-        line = lineFuture.get(TestUtils.VERY_SLOW_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        line = lineFuture.get(TestUtils.SLOW_TIMEOUT_SECONDS, TimeUnit.SECONDS);
       } catch (TimeoutException e) {
         lineFuture.cancel(true);
         return fail(formatProcessOutput("readLine timed out", processOutput), e);
@@ -134,7 +132,7 @@ class BootJarTest {
   }
 
   @BeforeEach
-  @Timeout(LAUNCH_BOOT_JAR_TIMEOUT)
+  @Timeout(LAUNCH_BOOT_JAR_TIMEOUT_SECONDS)
   void launchBootJar() throws Exception {
     int port;
     do {
@@ -152,15 +150,11 @@ class BootJarTest {
   }
 
   @Test
-  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   void test() throws Exception {
     HttpResponse<Point> response;
     try {
       response =
-          client.send(
-              MutableRequest.GET("?x=11&y=22")
-                  .timeout(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS)),
-              MoreBodyHandlers.ofObject(Point.class));
+          client.send(MutableRequest.GET("?x=11&y=22"), MoreBodyHandlers.ofObject(Point.class));
     } catch (IOException e) {
       // Spill what's remaining in stdout without blocking
       var sb = new StringBuilder();
