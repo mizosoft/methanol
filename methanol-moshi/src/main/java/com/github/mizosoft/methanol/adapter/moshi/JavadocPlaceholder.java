@@ -20,16 +20,8 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.StorageExtension;
+package com.github.mizosoft.methanol.adapter.moshi;
 
-/**
- * Contains a <a href="https://redis.io/">Redis</a>-backed {@link StorageExtension} implementation.
- */
-module methanol.redis {
-  requires methanol;
-  requires lettuce.core;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
-
-  exports com.github.mizosoft.methanol.store.redis;
+public class JavadocPlaceholder {
+  private JavadocPlaceholder() {}
 }

@@ -2,9 +2,9 @@ site_name: Methanol
 repo_name: mizosoft/methanol
 repo_url: https://github.com/mizosoft/methanol/
 site_url: https://mizosoft.github.io/methanol/
-site_description: 'Lightweight HTTP extensions for Java'
-site_author: Moataz Abdelnasser
-copyright: Copyright &copy; 2021 Moataz Abdelnasser
+site_description: 'Lightweight HTTP extensions for Java & Kotlin'
+site_author: mizosoft
+copyright: Copyright &copy; 2024 mizosoft
 
 extra_css:
   - css/style.css
@@ -63,22 +63,26 @@ nav:
   - Overview: index.md
   - 🔗 Javadoc: api/latest/
   - Documentation:
-    - Enhanced HttpClient: enhanced_httpclient.md
-    - Caching: caching.md
+    - Methanol HttpClient: methanol_httpclient.md
     - Object Mapping: object_mapping.md
     - Interceptors: interceptors.md
+    - Caching: caching.md
     - Decompression: decompression.md
     - Media Types: media_types.md
     - Multipart & Forms: multipart_and_forms.md
     - Progress Tracking: progress_tracking.md
     - Interruptible Reading: interruptible_reading.md
     - WritableBodyPublisher: writablebodypublisher.md
+  - Kotlin DSL: kotlin.md
+  - Redis: redis.md
+  - Brotli: brotli.md
   - Adapters:
     - methanol-gson: adapters/gson.md
     - methanol-jackson: adapters/jackson.md
     - methanol-jackson-flux: adapters/jackson_flux.md
     - methanol-jaxb: adapters/jaxb.md
+    - methanol-jaxb-jakarta: adapters/jaxb_jakarta.md
     - methanol-protobuf: adapters/protobuf.md
-  - Brotli: brotli.md
+    - methanol-moshi: adapters/moshi.md
   - Benchmarks: benchmarks.md
   - Change Log: CHANGELOG.md
