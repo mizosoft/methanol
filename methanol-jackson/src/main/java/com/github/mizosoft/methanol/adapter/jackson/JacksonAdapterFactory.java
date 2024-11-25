@@ -39,15 +39,15 @@ import java.io.IOException;
 import java.io.Writer;
 
 /**
- * Provides {@link BodyAdapter} implementations for JSON using the <a
- * href="https://github.com/FasterXML/jackson">Jackson library</a>.
+ * Contains static factory methods for <a href="https://github.com/FasterXML/jackson">Jackson</a>
+ * {@link BodyAdapter adapters}.
  */
 public class JacksonAdapterFactory {
-  private JacksonAdapterFactory() {} // Non-instantiable.
+  private JacksonAdapterFactory() {}
 
   /**
-   * Returns an {@code Encoder} that uses a default {@code ObjectMapper} for JSON and is only
-   * compatible with {@code application/json}.
+   * Creates an encoder that uses a default {@code ObjectMapper} for JSON and is only compatible
+   * with {@code application/json}.
    *
    * @deprecated Use {@link #createJsonEncoder()}.
    */
@@ -60,8 +60,8 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns an {@code Encoder} that uses the given {@code ObjectMapper} and is only compatible with
-   * {@code application/json}.
+   * Creates an encoder that uses the given {@code ObjectMapper} and is only compatible with {@code
+   * application/json}.
    *
    * @deprecated Use {@link #createJsonEncoder(ObjectMapper)}.
    */
@@ -74,24 +74,24 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns an {@link Encoder} that uses a default {@code ObjectMapper} for JSON and is only
-   * compatible with {@code application/json}.
+   * Creates an encoder that uses a default {@code ObjectMapper} for JSON and is only compatible
+   * with {@code application/json}.
    */
   public static Encoder createJsonEncoder() {
     return createJsonEncoder(new JsonMapper());
   }
 
   /**
-   * Returns an {@link Encoder} that uses the given {@code ObjectMapper} and is only compatible with
-   * {@code application/json}.
+   * Creates an encoder that uses the given {@code ObjectMapper} and is only compatible with {@code
+   * application/json}.
    */
   public static Encoder createJsonEncoder(ObjectMapper mapper) {
     return createEncoder(mapper, MediaType.APPLICATION_JSON);
   }
 
   /**
-   * Returns an {@link Encoder} that uses the given {@code ObjectMapper} and is compatible with the
-   * given media types.
+   * Creates an encoder that uses the given {@code ObjectMapper} and is compatible with the given
+   * media types.
    */
   public static Encoder createEncoder(
       ObjectMapper mapper, MediaType firstMediaType, MediaType... otherMediaTypes) {
@@ -99,8 +99,8 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns an {@link Encoder} that uses the given {@code ObjectMapper} and is compatible with the
-   * given media types. The encoder creates {@code ObjectWriters} using the given factory.
+   * Creates an encoder that uses the given {@code ObjectMapper} and is compatible with the given
+   * media types. The encoder creates {@code ObjectWriters} using the given factory.
    */
   public static Encoder createEncoder(
       ObjectMapper mapper,
@@ -115,8 +115,8 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns a {@link Decoder} that uses a default {@code ObjectMapper} for JSON and is only
-   * compatible with {@code application/json}.
+   * Creates a decoder that uses a default {@code ObjectMapper} for JSON and is only compatible with
+   * {@code application/json}.
    *
    * @deprecated Use {@link #createJsonDecoder()}.
    */
@@ -129,8 +129,8 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns a {@link Decoder} that uses the given {@code ObjectMapper} and is only compatible with
-   * {@code application/json}.
+   * Creates a decoder that uses the given {@code ObjectMapper} and is only compatible with {@code
+   * application/json}.
    *
    * @deprecated Use {@link #createJsonDecoder(ObjectMapper)}.
    */
@@ -143,24 +143,24 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns a {@link Decoder} that uses a default {@code ObjectMapper} for JSON and is only
-   * compatible with {@code application/json}.
+   * Creates a decoder that uses a default {@code ObjectMapper} for JSON and is only compatible with
+   * {@code application/json}.
    */
   public static Decoder createJsonDecoder() {
     return createJsonDecoder(new JsonMapper());
   }
 
   /**
-   * Returns a {@link Decoder} that uses the given {@code ObjectMapper} and is only compatible with
-   * {@code application/json}.
+   * Creates a decoder that uses the given {@code ObjectMapper} and is only compatible with {@code
+   * application/json}.
    */
   public static Decoder createJsonDecoder(ObjectMapper mapper) {
     return createDecoder(mapper, MediaType.APPLICATION_JSON);
   }
 
   /**
-   * Returns a {@link Decoder} that uses the given {@code ObjectMapper} and is compatible with the
-   * given media types.
+   * Creates a decoder that uses the given {@code ObjectMapper} and is compatible with the given
+   * media types.
    */
   public static Decoder createDecoder(
       ObjectMapper mapper, MediaType firstMediaType, MediaType... otherMediaTypes) {
@@ -168,8 +168,8 @@ public class JacksonAdapterFactory {
   }
 
   /**
-   * Returns a {@link Decoder} that uses the given {@code ObjectMapper} and is compatible with the
-   * given media types. The decoder creates {@code ObjectReaders} using the given factory.
+   * Creates a decoder that uses the given {@code ObjectMapper} and is compatible with the given
+   * media types. The decoder creates {@code ObjectReaders} using the given factory.
    */
   public static Decoder createDecoder(
       ObjectMapper mapper,

@@ -20,13 +20,11 @@
  * SOFTWARE.
  */
 
+import com.github.mizosoft.methanol.BodyAdapter;
+
 /**
- * Provides publisher-based {@link com.github.mizosoft.methanol.BodyAdapter.Encoder} and {@link
- * com.github.mizosoft.methanol.BodyAdapter.Decoder} implementations for JSON using the Jackson
- * library and Project Rector. Note that, for the sake of configurability, the adapters are not
- * service-provided by default. You will need to explicitly declare service-providers that delegate
- * to the instances created by {@link
- * com.github.mizosoft.methanol.adapter.jackson.flux.JacksonFluxAdapterFactory}.
+ * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@code &} <a
+ * href="https://projectreactor.io/">Project Reactor</a> streaming {@link BodyAdapter adapters}.
  */
 module methanol.adapter.jackson.flux {
   requires transitive methanol;

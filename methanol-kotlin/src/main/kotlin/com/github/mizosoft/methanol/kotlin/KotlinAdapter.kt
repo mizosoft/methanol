@@ -33,8 +33,15 @@ import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodySubscriber
 import java.net.http.HttpResponse.BodySubscribers
 
-abstract class KotlinAdapter(internal val format: SerialFormat, vararg mediaTypes: MediaType) :
-  AbstractBodyAdapter(*mediaTypes) {
+/**
+ * A [BodyAdapter] that uses the [serialization package](https://kotlinlang.org/docs/serialization.html)
+ * for encoding or decoding Kotlin objects using any format represented by [SerialFormat]. The given
+ * [SerialFormat] is expected to be a [StringFormat] or a [BinaryFormat], with a preference for the
+ * former if both.
+ */
+abstract class KotlinAdapter private constructor(
+  internal val format: SerialFormat, vararg mediaTypes: MediaType
+) : AbstractBodyAdapter(*mediaTypes) {
   init {
     if (!(format is StringFormat || format is BinaryFormat)) {
       throw IllegalArgumentException(
@@ -51,9 +58,24 @@ abstract class KotlinAdapter(internal val format: SerialFormat, vararg mediaType
     format.serializersModule.serializerOrNull(typeRef.type()) != null
 
   companion object {
+
+    /**
+     * Creates an encoder that uses the given [SerialFormat] for encoding objects and is compatible
+     * with the given media types.
+     *
+     * @throws IllegalArgumentException if the given [SerialFormat] is neither a [StringFormat] nor
+     *   a [BinaryFormat]
+     */
     fun Encoder(format: SerialFormat, vararg mediaTypes: MediaType): BodyAdapter.Encoder =
       KotlinAdapter.Encoder(format, *mediaTypes)
 
+    /**
+     * Creates a decoder that uses the given [SerialFormat] for decoding objects and is compatible
+     * with the given media types.
+     *
+     * @throws IllegalArgumentException if the given [SerialFormat] is neither a [StringFormat] nor
+     *   a [BinaryFormat]
+     */
     fun Decoder(format: SerialFormat, vararg mediaTypes: MediaType): BodyAdapter.Decoder =
       KotlinAdapter.Decoder(format, *mediaTypes)
   }

@@ -21,7 +21,7 @@
  */
 
 /**
- * Provides brotli decompression for Methanol.
+ * Provides <a href="https://github.com/google/brotli">Brotli</a> decompression for Methanol.
  *
  * @provides com.github.mizosoft.methanol.BodyDecoder.Factory
  */

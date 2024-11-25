@@ -23,9 +23,9 @@
 package com.github.mizosoft.methanol.adapter.moshi
 
 import com.github.mizosoft.methanol.MediaType
+import com.github.mizosoft.methanol.TypeRef
 import com.github.mizosoft.methanol.adapter.moshi.MoshiAdapter.Companion.Decoder
 import com.github.mizosoft.methanol.adapter.moshi.MoshiAdapter.Companion.Encoder
-import com.github.mizosoft.methanol.kotlin.TypeRef
 import com.github.mizosoft.methanol.testing.verifiers.DecoderVerifier
 import com.github.mizosoft.methanol.testing.verifiers.DecoderVerifier.BodyConversionStep
 import com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat
@@ -54,7 +54,7 @@ object CompactPointAdapter {
 }
 
 inline fun <reified T> DecoderVerifier.converting(): BodyConversionStep<T> =
-  converting(TypeRef<T>())
+  converting(object : TypeRef<T>() {})
 
 data class Point(val x: Int, val y: Int)
 
@@ -88,7 +88,7 @@ class MoshiAdapterJsonTest {
         Moshi.Builder().add(KotlinJsonAdapterFactory()).build(),
         MediaType.APPLICATION_JSON
       )
-    ).converting(listOf(Point(1, 2), Point(3, 4)), TypeRef<List<Point>>())
+    ).converting(listOf(Point(1, 2), Point(3, 4)), object : TypeRef<List<Point>>() {})
       .succeedsWith("[{\"x\":1,\"y\":2},{\"x\":3,\"y\":4}]")
   }
 

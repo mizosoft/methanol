@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (c) 2024 Moataz Hussein
+=======
+ * Copyright (c) 2024 Moataz Abdelnasser
+>>>>>>> 0e52d60a (Javadoc touch-ups)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,13 +25,10 @@
  */
 
 import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.adapter.jaxb.jakarta.JaxbAdapterFactory;
 
 /**
- * Provides {@link BodyAdapter.Encoder} and {@link BodyAdapter.Decoder} implementations for XML
- * using JAXB. Note that, for the sake of configurability, the adapters are not service-provided by
- * default. You will need to explicitly declare service-providers that delegate to the instances
- * created by {@link JaxbAdapterFactory}.
+ * Contains <a href="https://eclipse-ee4j.github.io/jaxb-ri/">Jakarta JAXB</a> {@link BodyAdapter
+ * adapters}.
  */
 module methanol.adapter.jaxb.jakarta {
   requires transitive methanol;

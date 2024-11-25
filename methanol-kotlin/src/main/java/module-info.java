@@ -22,7 +22,8 @@
 
 /** Kotlin DSL for Methanol. */
 module methanol.kotlin {
-  requires methanol;
+  requires transitive methanol;
+  requires kotlin.stdlib;
   requires kotlinx.coroutines.core;
   requires kotlinx.serialization.core;
 

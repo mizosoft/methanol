@@ -28,29 +28,34 @@ import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 
-/** Provides {@link BodyAdapter} implementations for the JSON format using Jackson. */
+/**
+ * Contains static factory methods for <a href="https://github.com/FasterXML/jackson">Jackson</a>
+ * {@code &} <a href="https://projectreactor.io/">Project Reactor</a> streaming {@link BodyAdapter
+ * adapters}. Encoders support encoding to any subtype of {@link
+ * java.util.concurrent.Flow.Publisher} or {@link org.reactivestreams.Publisher}. Decoders support
+ * decoding to {@link reactor.core.publisher.Flux}, {@link reactor.core.publisher.Mono}, {@link
+ * java.util.concurrent.Flow.Publisher}, or {@link org.reactivestreams.Publisher}.
+ */
 public class JacksonFluxAdapterFactory {
+  private JacksonFluxAdapterFactory() {}
 
-  private JacksonFluxAdapterFactory() {} // non-instantiable
-
-  /** Returns a {@code Encoder} that uses a default {@code ObjectMapper} instance. */
+  /** Creates an encoder that uses a default {@code ObjectMapper} instance. */
   public static Encoder createEncoder() {
     return createEncoder(new JsonMapper());
   }
 
-  /** Returns a {@code Encoder} that uses the given {@code ObjectMapper} instance. */
+  /** Creates an encoder that uses the given {@code ObjectMapper} instance. */
   public static Encoder createEncoder(ObjectMapper mapper) {
     return new JacksonFluxAdapter.Encoder(mapper);
   }
 
-  /** Returns a {@code Decoder} that uses a default {@code ObjectMapper} instance. */
+  /** Creates a decoder that uses a default {@code ObjectMapper} instance. */
   public static Decoder createDecoder() {
     return createDecoder(new JsonMapper());
   }
 
-  /** Returns a {@code Decoder} that uses the given {@code ObjectMapper} instance. */
+  /** Creates a decoder that uses the given {@code ObjectMapper} instance. */
   public static Decoder createDecoder(ObjectMapper mapper) {
     return new JacksonFluxAdapter.Decoder(mapper);
   }
 }
-

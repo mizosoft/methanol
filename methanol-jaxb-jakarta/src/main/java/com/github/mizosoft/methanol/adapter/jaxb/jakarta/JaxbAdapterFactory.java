@@ -22,29 +22,35 @@
 
 package com.github.mizosoft.methanol.adapter.jaxb.jakarta;
 
+import com.github.mizosoft.methanol.BodyAdapter;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 
-/** Creates {@link com.github.mizosoft.methanol.BodyAdapter} implementations for XML using JAXB. */
+/**
+ * Contains static factory methods for <a href="https://eclipse-ee4j.github.io/jaxb-ri/">Jakarta
+ * JAXB</a> {@link BodyAdapter adapters}.
+ */
 public class JaxbAdapterFactory {
   private JaxbAdapterFactory() {}
 
-  /** Returns a new {@code Encoder} using the default caching factory. */
+  /**
+   * Creates an encoder using the {@link JaxbBindingFactory#create() default JaxbBindingFactory}.
+   */
   public static Encoder createEncoder() {
     return createEncoder(JaxbBindingFactory.create());
   }
 
-  /** Returns a new {@code Encoder} using the given factory. */
+  /** Creates an encoder using the given {@code JaxbBindingFactory}. */
   public static Encoder createEncoder(JaxbBindingFactory jaxbFactory) {
     return new JaxbAdapter.Encoder(jaxbFactory);
   }
 
-  /** Returns a new {@code Decoder} using the default caching factory. */
+  /** Creates a decoder using the {@link JaxbBindingFactory#create() default JaxbBindingFactory}. */
   public static Decoder createDecoder() {
     return createDecoder(JaxbBindingFactory.create());
   }
 
-  /** Returns a new {@code Decoder} using the given factory. */
+  /** Creates a decoder using the given {@code JaxbBindingFactory}. */
   public static Decoder createDecoder(JaxbBindingFactory jaxbFactory) {
     return new JaxbAdapter.Decoder(jaxbFactory);
   }

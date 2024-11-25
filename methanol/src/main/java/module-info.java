@@ -1,5 +1,5 @@
 /*
- * Copyright (c)  Moataz Hussein
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
  * @uses com.github.mizosoft.methanol.BodyDecoder.Factory
  * @uses com.github.mizosoft.methanol.BodyAdapter.Encoder
  * @uses com.github.mizosoft.methanol.BodyAdapter.Decoder
- * @provides com.github.mizosoft.methanol.BodyDecoder.Factory For the gzip and deflate encodings.
+ * @provides com.github.mizosoft.methanol.BodyDecoder.Factory for the gzip and deflate encodings
  */
 module methanol {
   requires transitive java.net.http;

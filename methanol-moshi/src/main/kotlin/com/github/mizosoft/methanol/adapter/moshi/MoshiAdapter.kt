@@ -54,6 +54,7 @@ abstract class MoshiAdapter private constructor(
   }
 
   companion object {
+
     /**
      * Creates an encoder that uses the given [Moshi] instance for encoding objects and is
      * compatible with `application/json`.
