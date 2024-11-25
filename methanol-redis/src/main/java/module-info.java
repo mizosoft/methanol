@@ -23,7 +23,7 @@
 import com.github.mizosoft.methanol.StorageExtension;
 
 /**
- * Contains a <a href="https://redis.io/">Redis</a>-backed {@link StorageExtension} implementation.
+ * Contains <a href="https://redis.io/">Redis</a>-backed {@link StorageExtension} implementations.
  */
 module methanol.redis {
   requires methanol;
