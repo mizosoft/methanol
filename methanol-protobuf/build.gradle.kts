@@ -1,7 +1,7 @@
 plugins {
   id("conventions.java-library")
+  id("conventions.java-testing")
   id("conventions.static-analysis")
-  id("conventions.testing")
   id("conventions.coverage")
   id("conventions.publishing")
   alias(libs.plugins.protobuf)
@@ -10,8 +10,6 @@ plugins {
 dependencies {
   api(project(":methanol"))
   api(libs.protobuf.java)
-
-  testImplementation(project(":methanol-testing"))
 }
 
 protobuf {

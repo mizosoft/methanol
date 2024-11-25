@@ -44,7 +44,8 @@ module methanol {
       methanol.testing;
   exports com.github.mizosoft.methanol.internal.extensions to
       methanol.adapter.jackson,
-      methanol.adapter.jackson.flux;
+      methanol.adapter.jackson.flux,
+      methanol.kotlin;
   exports com.github.mizosoft.methanol.internal.cache to
       methanol.redis,
       methanol.testing;

@@ -1,6 +1,6 @@
 plugins {
   id("conventions.kotlin-library")
-  id("conventions.testing")
+  id("conventions.kotlin-testing")
   id("conventions.coverage")
   id("conventions.publishing")
 }

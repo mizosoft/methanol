@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.adapter.moshi;
 
+/** Placeholder to generate skeletal Javadoc for this Kotlin project. */
 public class JavadocPlaceholder {
   private JavadocPlaceholder() {}
 }
