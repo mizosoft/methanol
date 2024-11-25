@@ -23,13 +23,14 @@
 import com.github.mizosoft.methanol.BodyAdapter;
 
 /**
- * Contains {@link BodyAdapter} implementations for JSON using <a
- * href="https://github.com/square/moshi">Moshi</a>. This adapter is mainly targeted for Kotlin,
- * although it can be used with Java without problems.
+ * Contains <a href="https://github.com/square/moshi">Moshi</a> {@link BodyAdapter adapters}. This
+ * adapter is mainly targeted for Kotlin, although it can be used with Java without problems.
  */
 module methanol.adapter.moshi {
-  requires methanol;
+  requires transitive methanol;
   requires com.squareup.moshi;
+  requires okio;
+  requires kotlin.stdlib;
 
   exports com.github.mizosoft.methanol.adapter.moshi;
 }
