@@ -1,7 +1,7 @@
 plugins {
   id("conventions.java-library")
+  id("conventions.java-testing")
   id("conventions.static-analysis")
-  id("conventions.testing")
   id("conventions.coverage")
   alias(libs.plugins.protobuf)
   alias(libs.plugins.extraJavaModuleInfo)
