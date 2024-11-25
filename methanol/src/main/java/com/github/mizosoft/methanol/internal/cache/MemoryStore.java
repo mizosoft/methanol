@@ -138,6 +138,11 @@ public final class MemoryStore implements Store {
   @Override
   public void flush() {}
 
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this) + "[maxSize=" + maxSize + ", size=" + size + "]";
+  }
+
   /**
    * Marks the given entry for eviction and decrements its last committed size. Called before
    * removal from the LRU map. Returns the current size after decrementing the evicted entry's size.

@@ -83,7 +83,7 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
   }
 
   @Override
-  protected S downstream() {
+  protected S delegate() {
     return downstream;
   }
 
@@ -122,7 +122,6 @@ public abstract class TimeoutSubscriber<T, S extends Subscriber<? super T>>
         scheduleTimeout(currentTimeoutTask.index + 1);
       } catch (RuntimeException | Error e) {
         cancelOnError(this::onError, e);
-        return;
       }
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,4 +53,9 @@ public abstract class RawResponse {
       BodyHandler<T> handler, Executor executor);
 
   public abstract RawResponse with(Consumer<ResponseBuilder<?>> mutator);
+
+  @Override
+  public String toString() {
+    return response.toString();
+  }
 }

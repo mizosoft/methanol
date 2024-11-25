@@ -43,9 +43,9 @@ class ForwardingSubscriberTest {
   }
 
   @Test
-  void forwardsBodyToDownstream() {
+  void forwardsBodyToDelegate() {
     var subscriber = new TestForwardingSubscriber();
-    var downstream = subscriber.downstream();
+    var downstream = subscriber.delegate();
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     downstream.awaitSubscription();
     subscriber.onNext(1);
@@ -59,7 +59,7 @@ class ForwardingSubscriberTest {
   @Test
   void forwardsErrorCompletion() {
     var subscriber = new TestForwardingSubscriber();
-    var downstream = subscriber.downstream();
+    var downstream = subscriber.delegate();
     subscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     subscriber.onNext(1);
     subscriber.onNext(2);
@@ -84,7 +84,7 @@ class ForwardingSubscriberTest {
     TestForwardingSubscriber() {}
 
     @Override
-    protected TestSubscriber<Integer> downstream() {
+    protected TestSubscriber<Integer> delegate() {
       return downstream;
     }
   }

@@ -24,7 +24,7 @@ package com.github.mizosoft.methanol.testing.store;
 
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 
-class RedisStoreConfig extends StoreConfig {
+abstract class RedisStoreConfig extends StoreConfig {
   private final int editorLockInactiveTtlSeconds;
   private final int staleEntryInactiveTtlSeconds;
 
@@ -58,6 +58,16 @@ class RedisStoreConfig extends StoreConfig {
 
   int staleEntryInactiveTtlSeconds() {
     return staleEntryInactiveTtlSeconds;
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName()
+        + "[editorLockInactiveTtlSeconds="
+        + editorLockInactiveTtlSeconds
+        + ", staleEntryInactiveTtlSeconds="
+        + staleEntryInactiveTtlSeconds
+        + "]";
   }
 
   enum RedisStoreType {

@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.concurrent;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import java.time.Duration;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -66,5 +67,10 @@ class ScheduledExecutorServiceDelayer implements Delayer {
           }
         });
     return taskCompletionFuture;
+  }
+
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this) + "[scheduler=" + scheduler + "]";
   }
 }

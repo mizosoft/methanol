@@ -28,6 +28,7 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import com.github.mizosoft.methanol.BodyAdapter.Hints;
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.spi.ServiceProviders;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -168,6 +169,16 @@ public final class AdapterCodec {
 
   Optional<Decoder> lookupDecoder(TypeRef<?> typeRef, Hints hints) {
     return lookup(decoders, typeRef, hints);
+  }
+
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this)
+        + "[encoders="
+        + encoders
+        + ", decoders="
+        + decoders
+        + "]";
   }
 
   private static <T extends BodyAdapter> Optional<T> lookup(

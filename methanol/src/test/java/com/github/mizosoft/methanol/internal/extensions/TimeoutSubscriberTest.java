@@ -58,7 +58,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutOnSecondItem() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     var upstreamSubscription = new TestSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
 
@@ -100,7 +100,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutOnFirstItem() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     var upstreamSubscription = new TestSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
 
@@ -125,7 +125,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutBeforeOnComplete() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
 
     // A timeout is scheduled for this request
@@ -153,7 +153,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutBeforeOnError() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
 
     downstream.requestItems(3);
@@ -181,7 +181,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutAfterOnError() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(2), delayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
 
     downstream.requestItems(2);
@@ -204,7 +204,7 @@ class TimeoutSubscriberTest {
   @Test
   void schedulingTimeouts() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     assertThat(delayer.taskCount()).isZero();
 
@@ -232,7 +232,7 @@ class TimeoutSubscriberTest {
   @Test
   void timeoutAfterCancellation() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     timeoutSubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
 
     downstream.requestItems(1);
@@ -256,7 +256,7 @@ class TimeoutSubscriberTest {
           throw new RejectedExecutionException();
         };
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), rejectingDelayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     var upstreamSubscription = new TestSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
 
@@ -278,7 +278,7 @@ class TimeoutSubscriberTest {
           return this.delayer.delay(task, timeout, executor);
         };
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), rejectingDelayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     var upstreamSubscription = new TestSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
 
@@ -296,7 +296,7 @@ class TimeoutSubscriberTest {
   @Test
   void moreOnNextThanRequested() {
     var timeoutSubscriber = new TestTimeoutSubscriber(Duration.ofSeconds(1), delayer);
-    var downstream = timeoutSubscriber.downstream();
+    var downstream = timeoutSubscriber.delegate();
     var upstreamSubscription = new TestSubscription();
     timeoutSubscriber.onSubscribe(upstreamSubscription);
 
@@ -326,8 +326,8 @@ class TimeoutSubscriberTest {
     }
 
     @Override
-    protected TestSubscriber<Integer> downstream() {
-      return super.downstream();
+    protected TestSubscriber<Integer> delegate() {
+      return super.delegate();
     }
 
     @Override

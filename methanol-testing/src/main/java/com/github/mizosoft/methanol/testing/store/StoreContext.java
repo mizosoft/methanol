@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.testing.store;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.testing.AggregateException;
 import java.io.IOException;
@@ -82,6 +83,11 @@ public abstract class StoreContext implements AutoCloseable {
         exceptions.add(e);
       }
     }
+  }
+
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this) + "[config=" + config() + "]";
   }
 
   public static StoreContext of(StoreConfig config) throws IOException {

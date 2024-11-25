@@ -55,6 +55,9 @@ public abstract class StoreConfig {
     return appVersion;
   }
 
+  @Override
+  public abstract String toString();
+
   public static StoreConfig createDefault(StoreType storeType) {
     switch (storeType) {
       case MEMORY:

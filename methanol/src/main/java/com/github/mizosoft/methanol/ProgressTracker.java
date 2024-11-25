@@ -29,6 +29,7 @@ import static java.util.Objects.requireNonNullElse;
 
 import com.github.mizosoft.methanol.MultipartBodyPublisher.Part;
 import com.github.mizosoft.methanol.MultipartBodyPublisher.PartSequenceListener;
+import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.ForwardingBodyPublisher;
 import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -142,6 +143,18 @@ public final class ProgressTracker {
             handler.apply(responseInfo),
             listener,
             responseInfo.headers().firstValueAsLong("Content-Length").orElse(-1));
+  }
+
+  @Override
+  public String toString() {
+    return Utils.toStringIdentityPrefix(this)
+        + "[bytesTransferredThreshold="
+        + bytesTransferredThreshold()
+        + ", timePassedThreshold="
+        + timePassedThreshold()
+        + ", enclosedProgress="
+        + enclosedProgress()
+        + "]";
   }
 
   /** Returns a default {@code ProgressTracker} with no thresholds or executor. */
@@ -579,7 +592,7 @@ public final class ProgressTracker {
     }
 
     @Override
-    protected Subscriber<? super B> downstream() {
+    protected Subscriber<? super B> delegate() {
       return downstream;
     }
 
@@ -590,7 +603,7 @@ public final class ProgressTracker {
         try {
           listenerSubscription.onSubscribe();
         } finally {
-          downstream().onSubscribe(subscription);
+          delegate().onSubscribe(subscription);
         }
       }
     }
@@ -712,7 +725,7 @@ public final class ProgressTracker {
     @Override
     public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
       requireNonNull(subscriber);
-      upstream().subscribe(new TrackingSubscriber(subscriber, listener, options, contentLength()));
+      delegate().subscribe(new TrackingSubscriber(subscriber, listener, options, contentLength()));
     }
 
     private static final class TrackingSubscriber
@@ -756,7 +769,7 @@ public final class ProgressTracker {
     @Override
     public void subscribe(Subscriber<? super ByteBuffer> subscriber) {
       requireNonNull(subscriber);
-      upstream()
+      delegate()
           .subscribe(
               new MultipartTrackingSubscriber(
                   subscriber, listener, options, contentLength(), parts.get(0)));

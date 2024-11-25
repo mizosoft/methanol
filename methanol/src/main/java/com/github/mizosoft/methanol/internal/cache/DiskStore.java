@@ -418,6 +418,29 @@ public final class DiskStore implements Store, TestableStore {
     indexWriteScheduler.forceSchedule();
   }
 
+  @Override
+  public String toString() {
+    boolean closed;
+    closeLock.readLock().lock();
+    try {
+      closed = this.closed;
+    } finally {
+      closeLock.readLock().unlock();
+    }
+    return Utils.toStringIdentityPrefix(this)
+        + "[directory="
+        + directory
+        + ", appVersion="
+        + appVersion
+        + ", maxSize="
+        + maxSize
+        + ", size="
+        + size
+        + ", "
+        + (closed ? "CLOSED" : "OPEN")
+        + "]";
+  }
+
   private Set<IndexEntry> indexEntriesSnapshot() {
     var snapshot = new HashSet<IndexEntry>();
     for (var entry : entries.values()) {
