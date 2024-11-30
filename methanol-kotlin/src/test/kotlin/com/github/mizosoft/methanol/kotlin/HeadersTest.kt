@@ -26,7 +26,7 @@ import assertk.assertThat
 import assertk.assertions.containsOnly
 import kotlin.test.Test
 
-class HeadersCreateTest {
+class HeadersTest {
   @Test
   fun addHeaders() {
     val headers = Headers {
