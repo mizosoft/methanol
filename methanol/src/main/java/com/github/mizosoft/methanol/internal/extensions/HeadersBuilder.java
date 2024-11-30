@@ -149,7 +149,7 @@ public final class HeadersBuilder {
 
   public Optional<String> lastValue(String name) {
     var values = headers.get(name);
-    return values != null ? Optional.of(values.get(1)) : Optional.empty();
+    return values != null ? Optional.of(values.get(values.size() - 1)) : Optional.empty();
   }
 
   public HttpHeaders build() {
