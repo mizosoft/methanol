@@ -116,9 +116,9 @@ public interface BodyAdapter {
      *   <li>{@code InputStream}
      *   <li>{@code byte[]}
      *   <li>{@code ByteBuffer}
-     *   <li>{@code Supplier<InputStream>}
-     *   <li>{@code Supplier<ByteBuffer>}
      *   <li>{@code Path} (represents a file from which the request content is sent)
+     *   <li>{@code Supplier<? extends InputStream>}
+     *   <li>{@code Iterable<byte[]>}
      * </ul>
      */
     static Encoder basic() {
@@ -211,11 +211,11 @@ public interface BodyAdapter {
      *   <li>{@code ByteBuffer}
      *   <li>{@code Stream<String>} (response body lines; {@code MediaType}'s charset or UTF-8 if
      *       absent)
-     *   <li>{@code Publisher<List<ByteBuffer>>}
      *   <li>{@link ResponsePayload} (here the decoder expects to receive the {@link ResponseInfo}
      *       hint, and an {@link AdapterCodec} hint that will be used to convert the payload into
      *       the desired type; this is done automatically when sending the request through {@link
      *       Methanol})
+     *   <li>{@code Publisher<List<ByteBuffer>>} (a replaying publisher for the response body)
      *   <li>{@code Void} (discards the response body)
      * </ul>
      */
