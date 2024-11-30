@@ -40,16 +40,23 @@ interface FactorySpec<T> {
   fun make(): T
 }
 
-/** A [Spec] for configuring map-like properties with string keys and multi string values. */
+/**
+ * A [Spec] in the context of which Kotlin's [kotlin.to] is disabled to avoid conflicts with
+ * similarly named spec-defined functions.
+ */
 @Spec
-interface StringNameMultiStringValueSpec {
+interface PairCreationDisablingSpec {
   @Deprecated(
-    message = "You probably mean to call a different `to`. Make sure the key is a String and the value is either a String or a List<String>.",
+    message = "You probably mean to call a different `to`. Make sure this `to` corresponds to one that is defined by this spec.",
     level = DeprecationLevel.ERROR
   )
   infix fun <A, B> A.to(that: B): Pair<A, B> =
-    error("You probably mean to call a different `to`. Make sure the key is a String and the value is either a String or a List<String>.")
+    error("You probably mean to call a different `to`. Make sure this `to` corresponds to one that is defined by this spec.")
+}
 
+/** A [Spec] for configuring map-like properties with string keys and multi string values. */
+@Spec
+interface StringNameMultiStringValueSpec : PairCreationDisablingSpec {
   infix fun String.to(value: String)
 
   infix fun String.to(values: List<String>)
