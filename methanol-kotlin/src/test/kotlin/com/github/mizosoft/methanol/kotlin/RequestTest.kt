@@ -31,10 +31,13 @@ import assertk.assertions.hasValue
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
 import assertk.assertions.isPresent
+import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import assertk.assertions.prop
 import com.github.mizosoft.methanol.MediaType
+import com.github.mizosoft.methanol.MimeBodyPublisher
 import java.net.URI
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
@@ -173,8 +176,8 @@ class RequestTest {
         +listOf(MyTag)
       }
     }
-    assertThat(request.tagOf<MyTag>()).isEqualTo(MyTag)
-    assertThat(request.tagOf<List<MyTag>>()).isEqualTo(listOf(MyTag))
+    assertThat(request.tag<MyTag>()).isEqualTo(MyTag)
+    assertThat(request.tag<List<MyTag>>()).isEqualTo(listOf(MyTag))
   }
 
   @Test
@@ -283,6 +286,28 @@ class RequestTest {
     assertThat(request.bodyPublisher()).isPresent().given {
       assertThat(it.readString()).isEqualTo("a")
     }
+  }
+
+  @Test
+  fun toTaggableRequest() {
+    val tag = Any()
+    val request = Request {
+      tags {
+        +tag
+      }
+    } as Request
+    assertThat(request.toTaggableRequest().tag<Any>()).isSameInstanceAs(tag)
+    assertThat(
+      Request.newBuilder(URI.create("https://example.com")).build().toTaggableRequest().tag<Any>()
+    ).isNull()
+  }
+
+  @Test
+  fun withMediaType() {
+    assertThat(BodyPublishers.ofString("Hello").withMediaType(MediaType.TEXT_PLAIN))
+      .isInstanceOf(MimeBodyPublisher::class)
+      .prop(MimeBodyPublisher::mediaType)
+      .isEqualTo(MediaType.TEXT_PLAIN)
   }
 }
 

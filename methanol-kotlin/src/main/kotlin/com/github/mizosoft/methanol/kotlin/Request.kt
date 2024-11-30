@@ -356,7 +356,7 @@ class HintsSpec(@PublishedApi internal val builder: Hints.Builder) {
  * Returns the tag associated with the given type if this request is a [TaggableRequest] and it has
  * such a tag, or {@code null} otherwise.
  */
-inline fun <reified T : Any> Request.tagOf(): T? =
+inline fun <reified T : Any> Request.tag(): T? =
   TaggableRequest.tagOf(this, object : TypeRef<T>() {}).orElse(null)
 
 /** Returns this request if it is a [TaggableRequest], or a [TaggableRequest] copy with no tags otherwise. */
