@@ -40,7 +40,7 @@ import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-class RequestCreateTest {
+class RequestTest {
   @Test
   fun uri() {
     val uri = URI.create("https://example.com")

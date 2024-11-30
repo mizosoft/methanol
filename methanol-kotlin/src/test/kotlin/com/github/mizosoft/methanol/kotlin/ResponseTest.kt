@@ -28,7 +28,7 @@ import com.github.mizosoft.methanol.ResponseBuilder
 import java.net.URI
 import kotlin.test.Test
 
-class ResponseExtensionsTest {
+class ResponseTest {
   private val responseBuilder =
     ResponseBuilder.create<Unit>()
       .uri(URI.create("https://example.com"))
