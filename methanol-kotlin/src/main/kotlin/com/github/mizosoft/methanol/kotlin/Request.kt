@@ -266,9 +266,9 @@ internal class FormBodyFactorySpec(
   override fun make(): FormBody = builder.build()
 }
 
-/** A [spec][Spec] for configuring a [MultipartPartBody][com.github.mizosoft.methanol.kotlin.MultipartBody]. */
+/** A [spec][Spec] for configuring a [MultipartBody][com.github.mizosoft.methanol.kotlin.MultipartBody]. */
 @Spec
-interface MultipartBodySpec {
+interface MultipartBodySpec : PairCreationDisablingSpec {
   infix fun String.to(value: String)
 
   fun String.to(value: String, charset: Charset)
