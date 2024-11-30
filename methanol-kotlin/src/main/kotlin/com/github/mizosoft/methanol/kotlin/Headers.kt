@@ -29,12 +29,17 @@ import java.net.http.HttpHeaders
 /** A [spec][Spec] for configuring [Headers][com.github.mizosoft.methanol.kotlin.Headers]. */
 @Spec
 interface HeadersSpec : StringNameMultiStringValueSpec {
+
+  /** Sets the header with this name to the given value. */
   infix fun String.onlyTo(value: String)
 
+  /** Sets the header with this name to the given values. */
   infix fun String.onlyTo(values: List<String>)
 
+  /** Sets the header with this name to the given value only if there's no header with this name. */
   infix fun String.onlyToIfAbsent(value: String)
 
+  /** Sets the header with this name to the given values only if there's no header with this name. */
   infix fun String.onlyToIfAbsent(values: List<String>)
 }
 
@@ -80,3 +85,23 @@ fun Headers(block: HeadersSpec.() -> Unit) = HeadersFactorySpec().apply(block).m
 @Suppress("FunctionName")
 fun Headers(headers: Headers, block: HeadersSpec.() -> Unit) =
   HeadersFactorySpec(HeadersBuilder().also { it.addAll(headers) }).apply(block).make()
+
+/** Returns all header values associated with the given name. */
+operator fun Headers.get(name: String): List<String> = allValues(name)
+
+/**
+ * Returns a string representation for this [Headers] that is similar to how it would appear in an
+ * HTTP/1.1 response. [valueToString] can be used to control how header values appear, or whether
+ * they appear at all, in the returned string. You can use this to hide/exclude sensitive headers.
+ */
+fun Headers.toHttpString(
+  valueToString: (String, String) -> String? = { name, value -> value }
+) = buildString {
+  for ((name, values) in map()) {
+    for (value in values) {
+      valueToString(name, value)?.let {
+        appendLine("$name: $it")
+      }
+    }
+  }
+}
