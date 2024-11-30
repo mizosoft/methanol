@@ -13,7 +13,7 @@ repositories {
 dependencies {
   api(project(":methanol"))
   api(libs.kotlinx.coroutines)
-  implementation(libs.kotlinx.serialization)
+  api(libs.kotlinx.serialization)
   testImplementation(kotlin("test"))
   testImplementation(project(":methanol-testing"))
   testImplementation(libs.mockwebserver)
