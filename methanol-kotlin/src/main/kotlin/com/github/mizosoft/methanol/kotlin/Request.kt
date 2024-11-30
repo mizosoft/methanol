@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.kotlin
 
 import com.github.mizosoft.methanol.AdapterCodec
+import com.github.mizosoft.methanol.BodyAdapter.Hints
 import com.github.mizosoft.methanol.CacheControl
 import com.github.mizosoft.methanol.FormBodyPublisher
 import com.github.mizosoft.methanol.MediaType
@@ -64,6 +65,8 @@ interface BaseRequestSpec {
   fun timeout(timeout: Duration)
 
   fun tags(block: TagsSpec.() -> Unit)
+
+  fun hints(block: HintsSpec.() -> Unit)
 }
 
 /** A [spec][Spec] for configuring a [Request][com.github.mizosoft.methanol.kotlin.Request]'s method and body. */
@@ -154,6 +157,10 @@ internal open class BaseRequestFactorySpec(val request: MutableRequest = Mutable
     TagsSpec(request).apply(block)
   }
 
+  override fun hints(block: HintsSpec.() -> Unit) {
+    request.hints { builder -> HintsSpec(builder).block() }
+  }
+
   override fun make(): TaggableRequest = request.toImmutableRequest()
 }
 
@@ -180,7 +187,7 @@ internal class RequestFactorySpec(request: MutableRequest = MutableRequest.creat
   }
 
   override fun method(method: String, block: RequestBodySpec.() -> Unit) {
-    var called: Boolean = false
+    var called = false
     object : RequestBodySpec, MutableRequestBodySpec {
       override val request = this@RequestFactorySpec.request // Declare explicit receiver.
 
@@ -329,11 +336,19 @@ internal class MultipartBodyFactorySpec(
   override fun make(): MultipartBody = builder.build()
 }
 
-/** A [spec][Spec] for configuring request tags, which are a set of arbitrary values mapped to by their type. */
+/** A [spec][Spec] for configuring [request tags][TaggableRequest]. */
 @Spec
 class TagsSpec(@PublishedApi internal val builder: TaggableRequest.Builder) {
   inline operator fun <reified T> T.unaryPlus() {
     builder.tag(object : TypeRef<T>() {}, this)
+  }
+}
+
+/** A [spec][Spec] for configuring the [hints][Hints] passed to the encoder and/or decoder. */
+@Spec
+class HintsSpec(@PublishedApi internal val builder: Hints.Builder) {
+  inline operator fun <reified T> T.unaryPlus() {
+    builder.put(T::class.java, this)
   }
 }
 
@@ -347,7 +362,6 @@ inline fun <reified T : Any> Request.tagOf(): T? =
 /** Returns this request if it is a [TaggableRequest], or a [TaggableRequest] copy with no tags otherwise. */
 fun Request.toTaggableRequest(): TaggableRequest = TaggableRequest.from(this)
 
-/**  */
 inline fun <reified T> RequestBodySpec.body(payload: T, mediaType: MediaType) {
   require(this is MutableRequestBodySpec) { "Unknown implementation of RequestBodySpec: ${this::class}" }
   request.method(request.method(), payload, TypeRef<T>(), mediaType)
