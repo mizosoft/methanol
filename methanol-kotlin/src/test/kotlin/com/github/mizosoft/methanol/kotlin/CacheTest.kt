@@ -31,7 +31,7 @@ import java.nio.file.Path
 import java.util.concurrent.Executor
 import kotlin.test.Test
 
-class CacheCreateTest {
+class CacheTest {
   @Test
   fun createMemoryCache() {
     val cache = Cache {

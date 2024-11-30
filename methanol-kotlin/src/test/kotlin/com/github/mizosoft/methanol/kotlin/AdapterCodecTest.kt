@@ -22,45 +22,39 @@
 
 package com.github.mizosoft.methanol.kotlin
 
+import assertk.all
 import assertk.assertThat
-import assertk.assertions.containsOnly
+import assertk.assertions.hasSize
+import assertk.assertions.prop
+import com.github.mizosoft.methanol.AdapterCodec
+import com.github.mizosoft.methanol.BodyAdapter.Decoder
+import com.github.mizosoft.methanol.BodyAdapter.Encoder
+import com.github.mizosoft.methanol.MediaType
+import com.github.mizosoft.methanol.TypeRef
 import kotlin.test.Test
-import kotlin.time.Duration.Companion.seconds
 
-class CacheControlCreateTest {
+class AdapterCodecTest {
   @Test
-  fun createCacheControl() {
-    val cacheControl = CacheControl {
-      maxAge(1.seconds)
-      minFresh(2.seconds)
-      maxStale(3.seconds)
-      staleIfError(4.seconds)
-      noCache()
-      noStore()
-      noTransform()
-      onlyIfCached()
-      +"my-directive"
-      "my-directive-with-value" to "my-value"
+  fun createAdapterCodec() {
+    val adapterCodec = AdapterCodec {
+      +object : Encoder {
+        override fun isCompatibleWith(mediaType: MediaType) = TODO("Not yet implemented")
+        override fun supportsType(type: TypeRef<*>) = TODO("Not yet implemented")
+        override fun toBody(`object`: Any, mediaType: MediaType?) = TODO("Not yet implemented")
+      }
+      +object : Decoder {
+        override fun isCompatibleWith(mediaType: MediaType) = TODO("Not yet implemented")
+        override fun supportsType(type: TypeRef<*>?) = TODO("Not yet implemented")
+        override fun <T : Any?> toObject(
+          objectType: TypeRef<T>,
+          mediaType: MediaType?
+        ) = TODO("Not yet implemented")
+      }
+      basic()
     }
-    assertThat(cacheControl.directives()).containsOnly(
-      "max-age" to "1",
-      "min-fresh" to "2",
-      "max-stale" to "3",
-      "stale-if-error" to "4",
-      "no-cache" to "",
-      "no-store" to "",
-      "no-transform" to "",
-      "only-if-cached" to "",
-      "my-directive" to "",
-      "my-directive-with-value" to "my-value"
-    )
-  }
-
-  @Test
-  fun anyMaxStale() {
-    val cacheControl = CacheControl {
-      anyMaxStale()
+    assertThat(adapterCodec).all {
+      prop(AdapterCodec::encoders).hasSize(2)
+      prop(AdapterCodec::decoders).hasSize(2)
     }
-    assertThat(cacheControl.directives()).containsOnly("max-stale" to "")
   }
 }
