@@ -24,6 +24,8 @@ package com.github.mizosoft.methanol.kotlin
 
 import assertk.assertThat
 import assertk.assertions.containsOnly
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
 import kotlin.test.Test
 
 class HeadersTest {
@@ -85,6 +87,59 @@ class HeadersTest {
       "X" to listOf("A"),
       "Y" to listOf("A", "B"),
       "Z" to listOf("A")
+    )
+  }
+
+  @Test
+  fun getHeaderValues() {
+    var headers = Headers {
+      "X" to listOf("A", "B")
+    }
+    assertThat(headers["X"]).containsOnly("A", "B")
+    assertThat(headers["Y"]).isEmpty()
+  }
+
+  @Test
+  fun httpString() {
+    var headers = Headers {
+      "X" to listOf("A", "B")
+      "Y" to listOf("A", "B")
+    }
+    assertThat(headers.toHttpString()).isEqualTo(
+      """
+      X: A
+      X: B
+      Y: A
+      Y: B${System.lineSeparator()}
+    """.trimIndent()
+    )
+    assertThat(
+      headers.toHttpString(
+        valueToString = { name, value ->
+          when (name) {
+            "X" -> {
+              when (value) {
+                "B" -> null
+                else -> value
+              }
+            }
+
+            "Y" -> {
+              when (value) {
+                "B" -> "***"
+                else -> value
+              }
+            }
+
+            else -> value
+          }
+        }
+      )).isEqualTo(
+      """
+      X: A
+      Y: A
+      Y: ***${System.lineSeparator()}
+    """.trimIndent()
     )
   }
 }
