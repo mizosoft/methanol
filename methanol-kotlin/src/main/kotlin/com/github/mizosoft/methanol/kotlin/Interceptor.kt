@@ -83,7 +83,7 @@ internal fun Interceptor.toMethanolInterceptor() = object : Methanol.Interceptor
     chain: Methanol.Interceptor.Chain<T>
   ): Response<T> {
     val coroutineContext =
-      request.tagOf<CoroutineScopeHolder>()?.scope?.coroutineContext ?: EmptyCoroutineContext
+      request.tag<CoroutineScopeHolder>()?.scope?.coroutineContext ?: EmptyCoroutineContext
     return runBlocking(coroutineContext) {
       this@toMethanolInterceptor.intercept(request, chain.toCoroutineChain())
     }
@@ -94,7 +94,7 @@ internal fun Interceptor.toMethanolInterceptor() = object : Methanol.Interceptor
     chain: Methanol.Interceptor.Chain<T>
   ): CompletableFuture<Response<T>> {
     val coroutineScope =
-      request.tagOf<CoroutineScopeHolder>()?.scope ?: CoroutineScope(Dispatchers.Default)
+      request.tag<CoroutineScopeHolder>()?.scope ?: CoroutineScope(Dispatchers.Default)
     return coroutineScope.future {
       this@toMethanolInterceptor.intercept(request, chain.toCoroutineChain())
     }
