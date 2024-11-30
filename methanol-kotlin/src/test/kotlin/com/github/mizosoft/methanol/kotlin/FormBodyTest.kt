@@ -22,39 +22,21 @@
 
 package com.github.mizosoft.methanol.kotlin
 
-import assertk.all
 import assertk.assertThat
-import assertk.assertions.hasSize
-import assertk.assertions.prop
-import com.github.mizosoft.methanol.AdapterCodec
-import com.github.mizosoft.methanol.BodyAdapter.Decoder
-import com.github.mizosoft.methanol.BodyAdapter.Encoder
-import com.github.mizosoft.methanol.MediaType
-import com.github.mizosoft.methanol.TypeRef
+import assertk.assertions.containsOnly
 import kotlin.test.Test
 
-class AdapterCodecCreateTest {
+class FormBodyTest {
   @Test
-  fun createAdapterCodec() {
-    val adapterCodec = AdapterCodec {
-      +object : Encoder {
-        override fun isCompatibleWith(mediaType: MediaType) = TODO("Not yet implemented")
-        override fun supportsType(type: TypeRef<*>) = TODO("Not yet implemented")
-        override fun toBody(`object`: Any, mediaType: MediaType?) = TODO("Not yet implemented")
-      }
-      +object : Decoder {
-        override fun isCompatibleWith(mediaType: MediaType) = TODO("Not yet implemented")
-        override fun supportsType(type: TypeRef<*>?) = TODO("Not yet implemented")
-        override fun <T : Any?> toObject(
-          objectType: TypeRef<T>,
-          mediaType: MediaType?
-        ) = TODO("Not yet implemented")
-      }
-      basic()
+  fun createFormBody() {
+    val formBody = FormBody {
+      "x" to "a"
+      "x" to "b"
+      "y" to listOf("a", "b")
     }
-    assertThat(adapterCodec).all {
-      prop(AdapterCodec::encoders).hasSize(2)
-      prop(AdapterCodec::decoders).hasSize(2)
-    }
+    assertThat(formBody.queries()).containsOnly(
+      "x" to listOf("a", "b"),
+      "y" to listOf("a", "b")
+    )
   }
 }

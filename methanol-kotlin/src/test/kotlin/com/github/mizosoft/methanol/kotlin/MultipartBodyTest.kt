@@ -40,7 +40,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
 
-class MultipartBodyCreateTest {
+class MultipartBodyTest {
   @Test
   fun textPart() {
     val multipartBody = MultipartBody {

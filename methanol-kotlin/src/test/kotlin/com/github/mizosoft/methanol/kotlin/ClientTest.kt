@@ -53,7 +53,7 @@ import kotlin.test.Test
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-class ClientCreateTest {
+class ClientTest {
   @Test
   fun userAgent() {
     val client = Client {
