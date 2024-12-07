@@ -18,9 +18,11 @@ include("methanol-samples")
 include("methanol-samples:crawler")
 include("methanol-samples:download-progress")
 include("methanol-samples:upload-progress")
+include("methanol-samples:kotlin")
 include("spring-boot-test")
 include("methanol-redis")
 include("methanol-kotlin")
+include("methanol-kotlin-examples")
 include("methanol-moshi")
 
 // Load local properties while giving precedence to properties defined through CLI.

@@ -2,7 +2,7 @@ name: Publish site
 
 on:
   push:
-    branches: [ master, doc-updates ]
+    branches: [ master ]
 
 env:
   BASE_JAVA: 11
