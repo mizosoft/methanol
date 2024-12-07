@@ -37,13 +37,18 @@ import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.InlineMe;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.net.Authenticator;
 import java.net.CookieHandler;
+import java.net.InetAddress;
 import java.net.ProxySelector;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -102,8 +107,52 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * backend.
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-public final class Methanol extends HttpClient {
+public class Methanol extends HttpClient {
   private static final Logger logger = System.getLogger(Methanol.class.getName());
+
+  private static final @Nullable MethodHandle SHUTDOWN; // Since Java 21.
+  private static final @Nullable MethodHandle AWAIT_TERMINATION; // Since Java 21.
+  private static final @Nullable MethodHandle IS_TERMINATED; // Since Java 21.
+  private static final @Nullable MethodHandle SHUTDOWN_NOW; // Since Java 21.
+  private static final @Nullable MethodHandle CLOSE; // Since Java 21.
+
+  static {
+    var lookup = MethodHandles.lookup();
+    MethodHandle shutdown;
+    try {
+      shutdown =
+          lookup.findVirtual(HttpClient.class, "shutdown", MethodType.methodType(void.class));
+    } catch (NoSuchMethodException e) {
+      shutdown = null;
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(e);
+    }
+
+    if (shutdown == null) {
+      SHUTDOWN = null;
+      AWAIT_TERMINATION = null;
+      IS_TERMINATED = null;
+      SHUTDOWN_NOW = null;
+      CLOSE = null;
+    } else {
+      SHUTDOWN = shutdown;
+      try {
+        AWAIT_TERMINATION =
+            lookup.findVirtual(
+                HttpClient.class,
+                "awaitTermination",
+                MethodType.methodType(boolean.class, Duration.class));
+        IS_TERMINATED =
+            lookup.findVirtual(
+                HttpClient.class, "isTerminated", MethodType.methodType(boolean.class));
+        SHUTDOWN_NOW =
+            lookup.findVirtual(HttpClient.class, "shutdownNow", MethodType.methodType(void.class));
+        CLOSE = lookup.findVirtual(HttpClient.class, "close", MethodType.methodType(void.class));
+      } catch (NoSuchMethodException | IllegalAccessException e) {
+        throw new IllegalStateException(e);
+      }
+    }
+  }
 
   private final HttpClient backend;
   private final Redirect redirectPolicy;
@@ -448,7 +497,7 @@ public final class Methanol extends HttpClient {
 
   /** Returns a new {@link Methanol.Builder}. */
   public static Builder newBuilder() {
-    return new Builder();
+    return Builder.create();
   }
 
   /** Returns a new {@link Methanol.WithClientBuilder} with a prebuilt backend. */
@@ -459,6 +508,69 @@ public final class Methanol extends HttpClient {
   /** Creates a default {@code Methanol} instance. */
   public static Methanol create() {
     return newBuilder().build();
+  }
+
+  private static final class MethanolForJava21AndLater extends Methanol {
+    MethanolForJava21AndLater(BaseBuilder<?> builder) {
+      super(builder);
+    }
+
+    // @Override
+    @SuppressWarnings("Since15")
+    public void shutdown() {
+      try {
+        castNonNull(SHUTDOWN).invokeExact(underlyingClient());
+      } catch (Throwable e) {
+        Unchecked.propagateIfUnchecked(e);
+        throw new RuntimeException(e);
+      }
+    }
+
+    // @Override
+    @SuppressWarnings("Since15")
+    public boolean awaitTermination(Duration duration) throws InterruptedException {
+      try {
+        return (boolean) castNonNull(AWAIT_TERMINATION).invokeExact(underlyingClient(), duration);
+      } catch (Throwable e) {
+        Unchecked.propagateIfUnchecked(e);
+        if (e instanceof InterruptedException) {
+          throw (InterruptedException) e;
+        }
+        throw new RuntimeException(e);
+      }
+    }
+
+    // @Override
+    @SuppressWarnings("Since15")
+    public boolean isTerminated() {
+      try {
+        return (boolean) castNonNull(IS_TERMINATED).invokeExact(underlyingClient());
+      } catch (Throwable e) {
+        Unchecked.propagateIfUnchecked(e);
+        throw new RuntimeException(e);
+      }
+    }
+
+    // @Override
+    @SuppressWarnings("Since15")
+    public void shutdownNow() {
+      try {
+        castNonNull(SHUTDOWN_NOW).invokeExact(underlyingClient());
+      } catch (Throwable e) {
+        Unchecked.propagateIfUnchecked(e);
+        throw new RuntimeException(e);
+      }
+    }
+
+    // @Override
+    public void close() {
+      try {
+        castNonNull(CLOSE).invokeExact(underlyingClient());
+      } catch (Throwable e) {
+        Unchecked.propagateIfUnchecked(e);
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   /** An object that intercepts requests being sent over a {@code Methanol} client. */
@@ -764,7 +876,7 @@ public final class Methanol extends HttpClient {
 
     /** Creates a new {@code Methanol} instance. */
     public Methanol build() {
-      return new Methanol(this);
+      return SHUTDOWN != null ? new MethanolForJava21AndLater(this) : new Methanol(this);
     }
 
     abstract B self();
@@ -800,12 +912,29 @@ public final class Methanol extends HttpClient {
   }
 
   /** A builder of {@code Methanol} instances. */
-  public static final class Builder extends BaseBuilder<Builder> implements HttpClient.Builder {
-    private final HttpClient.Builder backendBuilder;
+  public static class Builder extends BaseBuilder<Builder> implements HttpClient.Builder {
+    private static final @Nullable MethodHandle LOCAL_ADDRESS; // Since Java 19.
 
-    Builder() {
-      backendBuilder = HttpClient.newBuilder();
+    static {
+      MethodHandle localAddress;
+      try {
+        localAddress =
+            MethodHandles.lookup()
+                .findVirtual(
+                    HttpClient.Builder.class,
+                    "localAddress",
+                    MethodType.methodType(HttpClient.Builder.class, InetAddress.class));
+      } catch (NoSuchMethodException e) {
+        localAddress = null;
+      } catch (IllegalAccessException e) {
+        throw new IllegalStateException(e);
+      }
+      LOCAL_ADDRESS = localAddress;
     }
+
+    final HttpClient.Builder backendBuilder = HttpClient.newBuilder();
+
+    private Builder() {}
 
     /** Sets the {@link HttpCache} to be used by the client. */
     @CanIgnoreReturnValue
@@ -913,6 +1042,32 @@ public final class Methanol extends HttpClient {
         backendBuilder.followRedirects(redirectPolicy);
       }
       return backendBuilder.build();
+    }
+
+    static Builder create() {
+      return LOCAL_ADDRESS != null ? new BuilderForJava19AndLater() : new Builder();
+    }
+
+    private static final class BuilderForJava19AndLater extends Builder {
+      BuilderForJava19AndLater() {}
+
+      // Note that the return type MUST be exactly the same as the overridden method's return type
+      // (in HttpClient.Builder). This is because we compile under Java 11 (or later with a
+      // --release 11 flag). When the override is covariant, the JVM will call the super interface
+      // method and not this one, because the exact return type is part of the method signature, and
+      // the compiler doesn't generate a synthetic method with the overridden function's signature
+      // because it didn't exist while compiling.
+      // @Override
+      @SuppressWarnings("Since15")
+      public HttpClient.Builder localAddress(InetAddress localAddr) {
+        try {
+          castNonNull(LOCAL_ADDRESS).invoke(backendBuilder, localAddr);
+          return this;
+        } catch (Throwable e) {
+          Unchecked.propagateIfUnchecked(e);
+          throw new RuntimeException(e);
+        }
+      }
     }
   }
 

@@ -96,6 +96,9 @@ class MutableRequestTest {
     verifyThat(MutableRequest.GET(uriString)).hasUri(uri).isGET().hasNoBody();
     verifyThat(MutableRequest.GET(uri)).hasUri(uri).isGET().hasNoBody();
 
+    verifyThat(MutableRequest.HEAD(uriString)).hasUri(uri).isHEAD().hasNoBody();
+    verifyThat(MutableRequest.HEAD(uri)).hasUri(uri).isHEAD().hasNoBody();
+
     verifyThat(MutableRequest.DELETE(uriString)).hasUri(uri).isDELETE().hasNoBody();
     verifyThat(MutableRequest.DELETE(uri)).hasUri(uri).isDELETE().hasNoBody();
 
@@ -440,6 +443,8 @@ class MutableRequestTest {
 
     verifyThat(request.GET()).isGET().hasNoBody();
 
+    verifyThat(request.HEAD()).isHEAD().hasNoBody();
+
     verifyThat(request.PUT(publisher)).isPUT().hasBodyPublisher(publisher);
 
     verifyThat(request.PATCH(publisher)).isPATCH().hasBodyPublisher(publisher);
@@ -465,6 +470,8 @@ class MutableRequestTest {
     verifyThat(request.PATCH(payload, MediaType.TEXT_PLAIN)).isPATCH().hasBodyPublisher(publisher);
 
     verifyThat(request.GET()).isGET().hasNoBody();
+
+    verifyThat(request.POST(payload, MediaType.TEXT_PLAIN).HEAD()).isHEAD().hasNoBody();
   }
 
   @Test
