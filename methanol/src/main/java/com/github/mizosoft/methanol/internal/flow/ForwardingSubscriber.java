@@ -66,6 +66,6 @@ public abstract class ForwardingSubscriber<T> implements Subscriber<T> {
 
   @Override
   public String toString() {
-    return Utils.toStringIdentityPrefix(this) + "[delegate=" + delegate() + "]";
+    return Utils.forwardingObjectToString(this, delegate());
   }
 }

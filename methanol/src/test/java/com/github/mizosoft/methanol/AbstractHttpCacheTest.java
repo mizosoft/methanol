@@ -252,7 +252,7 @@ abstract class AbstractHttpCacheTest {
 
     @Override
     public String toString() {
-      return Utils.toStringIdentityPrefix(this) + "[delegate=" + delegate + "]";
+      return Utils.forwardingObjectToString(this, delegate);
     }
   }
 

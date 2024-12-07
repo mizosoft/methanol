@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.testing.file;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.util.Iterator;
@@ -60,5 +61,10 @@ class ForwardingDirectoryStream<T> implements DirectoryStream<T>, ForwardingObje
   @Override
   public Spliterator<T> spliterator() {
     return delegate.spliterator();
+  }
+
+  @Override
+  public String toString() {
+    return Utils.forwardingObjectToString(this, delegate);
   }
 }
