@@ -42,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
@@ -66,6 +67,9 @@ import com.github.mizosoft.methanol.internal.cache.MemoryStore;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.ThrowingBiConsumer;
+import com.github.mizosoft.methanol.internal.function.Unchecked;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.Logging;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension.UseHttps;
 import com.github.mizosoft.methanol.testing.TestException;
@@ -98,6 +102,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -164,11 +169,21 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
   private void setUpCache(
       Store store, @Nullable StatsRecorder statsRecorder, @Nullable Listener listener) {
+    // Wait for writes to not agitate tests that expect so.
+    setUpCache(store, statsRecorder, listener, true);
+  }
+
+  private void setUpCache(
+      Store store,
+      @Nullable StatsRecorder statsRecorder,
+      @Nullable Listener listener,
+      boolean synchronizeWrites) {
     var cacheBuilder =
         HttpCache.newBuilder()
             .clock(clock)
-            .cacheOn(InternalStorageExtension.singleton(new EditAwaitableStore(store, editAwaiter)))
-            .executor(executor);
+            .cacheOn(InternalStorageExtension.singleton(store))
+            .executor(executor)
+            .synchronizeWrites(synchronizeWrites);
     if (statsRecorder != null) {
       cacheBuilder.statsRecorder(statsRecorder);
     }
@@ -194,26 +209,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
       assertThat(store.maxSize()).isEqualTo(12);
       assertThat(cache.directory()).isEmpty();
       assertThat(cache.size()).isZero();
-    }
-  }
-
-  <T> void testForEach(
-      ThrowingBiConsumer<Store, T> tester, StoreContext storeContext, List<? extends T> values)
-      throws IOException {
-    for (var value : values) {
-      var store = storeContext.createAndRegisterStore();
-      try (store) {
-        tester.accept(store, value);
-
-        // Clean up for next test.
-        store.dispose();
-        clientBuilder.clearInterceptors();
-        ((QueueDispatcher) server.getDispatcher()).clear();
-      } catch (TestAbortedException e) {
-        logger.log(Level.INFO, "Skipping test with a failed assumption: " + e.getMessage());
-      } catch (Throwable t) {
-        fail("Test failed when running with <" + value + ">", t);
-      }
     }
   }
 
@@ -398,7 +393,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     verifyThat(send(serverUri)).isConditionalHit().hasBody("Jigglypuff");
 
     var instantRevalidationSentAndReceived = clock.instant();
-    verifyThat(awaitCacheHit())
+    verifyThat(send(serverUri))
         .isCacheHit()
         .hasBody("Jigglypuff")
         .containsHeader("X-Version", "v2")
@@ -432,7 +427,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         .networkResponse()
         .containsHeader("Content-Length", "0");
 
-    verifyThat(awaitCacheHit())
+    verifyThat(send(serverUri))
         .isCacheHit()
         .hasBody("Pikachu")
         .containsHeader("X-Version", "v2")
@@ -2231,6 +2226,31 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     }
   }
 
+  @StoreParameterizedTest
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
+  void concurrentUnsynchronizedCacheWrites(Store store) {
+    setUpCache(store, null, null, false);
+
+    int threadCount = 8;
+    var futures = new ArrayList<CompletableFuture<Void>>();
+    for (int i = 0; i < threadCount; i++) {
+      var body = "Pikachu".repeat(1000);
+      futures.add(
+          Unchecked.runAsync(
+              () -> {
+                CacheAwareResponse<String> response;
+                do {
+                  server.enqueue(
+                      new MockResponse().setBody(body).setHeader("Cache-Control", "max-age=1"));
+                  response = (CacheAwareResponse<String>) send(serverUri);
+                } while (response.cacheStatus() != CacheStatus.HIT);
+                verifyThat(response).isCacheHit().hasBody(body);
+              },
+              executor));
+    }
+    assertAll(futures.stream().map(future -> future::get));
+  }
+
   /**
    * Test that an invalidated response causes the URIs referenced via Location & Content-Location to
    * also get invalidated (https://tools.ietf.org/html/rfc7234#section-4.4).
@@ -3489,6 +3509,27 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     }
   }
 
+  @SuppressWarnings("CatchMayIgnoreException")
+  private <T> void testForEach(
+      ThrowingBiConsumer<Store, T> tester, StoreContext storeContext, List<? extends T> values)
+      throws IOException {
+    for (var value : values) {
+      var store = storeContext.createAndRegisterStore();
+      try (store) {
+        tester.accept(store, value);
+
+        // Clean up for next test.
+        store.dispose();
+        clientBuilder.clearInterceptors();
+        ((QueueDispatcher) server.getDispatcher()).clear();
+      } catch (TestAbortedException e) {
+        logger.log(Level.INFO, "Skipping test with a failed assumption: " + e.getMessage());
+      } catch (Throwable t) {
+        fail("Test failed when running with <" + value + ">", t);
+      }
+    }
+  }
+
   private void putInCache(MockResponse response) throws IOException, InterruptedException {
     if (response.getBody() == null) {
       response.setBody("");
@@ -3515,7 +3556,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     assertNotStored(GET(uri));
   }
 
-  private void assertNotStored(MutableRequest request) throws Exception {
+  private void assertNotStored(HttpRequest request) throws Exception {
     try (var viewer =
         Utils.get(cache.store().view(HttpCache.toStoreKey(request), FlowSupport.SYNC_EXECUTOR))
             .orElse(null)) {
@@ -3523,21 +3564,20 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     }
 
     var cacheControl = CacheControl.newBuilder().onlyIfCached().anyMaxStale().build();
-    verifyThat(send(request.cacheControl(cacheControl))).isCacheUnsatisfaction();
+    verifyThat(send(MutableRequest.copyOf(request).cacheControl(cacheControl)))
+        .isCacheUnsatisfaction();
 
-    var dispatcher = server.getDispatcher();
+    var prevDispatcher = server.getDispatcher();
     boolean prevFailOnUnavailableResponses = failOnUnavailableResponses;
     failOnUnavailableResponses = false;
     try {
-      server.setDispatcher(new QueueDispatcher());
-      ((QueueDispatcher) server.getDispatcher())
-          .setFailFast(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
-      verifyThat(send(request.copy().removeHeader("Cache-Control")))
-          .hasCode(HTTP_UNAVAILABLE)
-          .isCacheMiss();
+      var dispatcher = new QueueDispatcher();
+      dispatcher.setFailFast(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
+      server.setDispatcher(dispatcher);
+      verifyThat(send(request)).hasCode(HTTP_UNAVAILABLE).isCacheMiss();
     } finally {
       failOnUnavailableResponses = prevFailOnUnavailableResponses;
-      server.setDispatcher(dispatcher);
+      server.setDispatcher(prevDispatcher);
     }
   }
 

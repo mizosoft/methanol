@@ -53,6 +53,6 @@ public class ForwardingBodyPublisher implements BodyPublisher {
 
   @Override
   public String toString() {
-    return Utils.toStringIdentityPrefix(this) + "[delegate=" + delegate + "]";
+    return Utils.forwardingObjectToString(this, delegate);
   }
 }

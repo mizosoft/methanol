@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,27 +25,14 @@ package com.github.mizosoft.methanol.internal.cache;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.StorageExtension;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
+@FunctionalInterface
 public interface InternalStorageExtension extends StorageExtension {
   Store createStore(Executor executor, int appVersion);
 
-  CompletableFuture<? extends Store> createStoreAsync(Executor executor, int appVersion);
-
   static InternalStorageExtension singleton(Store store) {
     requireNonNull(store);
-    return new InternalStorageExtension() {
-      @Override
-      public Store createStore(Executor executor, int appVersion) {
-        return store;
-      }
-
-      @Override
-      public CompletableFuture<? extends Store> createStoreAsync(
-          Executor executor, int appVersion) {
-        return CompletableFuture.completedFuture(store);
-      }
-    };
+    return (__, ___) -> store;
   }
 }

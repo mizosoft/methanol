@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.testing.file;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
@@ -109,5 +110,10 @@ public class ForwardingAsynchronousFileChannel extends AsynchronousFileChannel
   @Override
   public boolean isOpen() {
     return delegate.isOpen();
+  }
+
+  @Override
+  public String toString() {
+    return Utils.forwardingObjectToString(this, delegate);
   }
 }

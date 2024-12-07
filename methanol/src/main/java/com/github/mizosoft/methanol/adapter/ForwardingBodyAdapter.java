@@ -46,6 +46,6 @@ public abstract class ForwardingBodyAdapter implements BodyAdapter {
 
   @Override
   public String toString() {
-    return Utils.toStringIdentityPrefix(this) + "[delegate=" + delegate() + "]";
+    return Utils.forwardingObjectToString(this, delegate());
   }
 }

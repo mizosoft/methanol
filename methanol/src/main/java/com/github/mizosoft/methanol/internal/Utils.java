@@ -291,4 +291,8 @@ public class Utils {
   public static String toStringIdentityPrefix(Object object) {
     return object.getClass().getSimpleName() + "@" + Integer.toHexString(object.hashCode());
   }
+
+  public static String forwardingObjectToString(Object forwardingObject, Object delegate) {
+    return toStringIdentityPrefix(forwardingObject) + "[delegate=" + delegate + "]";
+  }
 }
