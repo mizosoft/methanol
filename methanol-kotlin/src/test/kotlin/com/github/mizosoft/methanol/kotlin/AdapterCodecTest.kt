@@ -33,7 +33,7 @@ import com.github.mizosoft.methanol.MediaType
 import com.github.mizosoft.methanol.TypeRef
 import kotlin.test.Test
 
-class AdapterCodecCreateTest {
+class AdapterCodecTest {
   @Test
   fun createAdapterCodec() {
     val adapterCodec = AdapterCodec {

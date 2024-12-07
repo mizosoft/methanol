@@ -36,10 +36,16 @@ interface AdapterCodecSpec {
 
   operator fun Decoder.unaryPlus()
 
+  /** Adds the [basic encoder][Encoder.basic]. */
   fun basicEncoder()
 
+  /**
+   * Adds the [basic decoder][Decoder.basic]. In addition to the basic types specified by [Decoder.basic],
+   * the added decoder supports Kotlin's [Unit], which tells the decoder to discard the response body.
+   */
   fun basicDecoder()
 
+  /** Shorthand for calling both [basicEncoder] & [basicDecoder]. */
   fun basic() {
     basicEncoder()
     basicDecoder()

@@ -20,47 +20,17 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.kotlin
+import com.github.mizosoft.methanol.BodyAdapter;
 
-import assertk.assertThat
-import assertk.assertions.containsOnly
-import kotlin.test.Test
-import kotlin.time.Duration.Companion.seconds
+/**
+ * Contains <a href="https://github.com/square/moshi">Moshi</a> {@link BodyAdapter adapters}. This
+ * adapter is mainly targeted for Kotlin, although it can be used with Java without problems.
+ */
+module methanol.adapter.moshi {
+  requires transitive methanol;
+  requires com.squareup.moshi;
+  requires okio;
+  requires kotlin.stdlib;
 
-class CacheControlCreateTest {
-  @Test
-  fun createCacheControl() {
-    val cacheControl = CacheControl {
-      maxAge(1.seconds)
-      minFresh(2.seconds)
-      maxStale(3.seconds)
-      staleIfError(4.seconds)
-      noCache()
-      noStore()
-      noTransform()
-      onlyIfCached()
-      +"my-directive"
-      "my-directive-with-value" to "my-value"
-    }
-    assertThat(cacheControl.directives()).containsOnly(
-      "max-age" to "1",
-      "min-fresh" to "2",
-      "max-stale" to "3",
-      "stale-if-error" to "4",
-      "no-cache" to "",
-      "no-store" to "",
-      "no-transform" to "",
-      "only-if-cached" to "",
-      "my-directive" to "",
-      "my-directive-with-value" to "my-value"
-    )
-  }
-
-  @Test
-  fun anyMaxStale() {
-    val cacheControl = CacheControl {
-      anyMaxStale()
-    }
-    assertThat(cacheControl.directives()).containsOnly("max-stale" to "")
-  }
+  exports com.github.mizosoft.methanol.adapter.moshi;
 }

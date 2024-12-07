@@ -461,7 +461,7 @@ public final class Methanol extends HttpClient {
     return newBuilder().build();
   }
 
-  /** An object that intercepts requests being sent over a {@code Methanol} client. */
+  /** An object that intercepts requests before being sent and responses before being returned. */
   public interface Interceptor {
 
     /**
@@ -617,7 +617,7 @@ public final class Methanol extends HttpClient {
     @CanIgnoreReturnValue
     public B defaultHeader(String name, String value) {
       defaultHeadersBuilder.add(name, value);
-      if ("User-Agent".equalsIgnoreCase(name)) {
+      if (name.equalsIgnoreCase("User-Agent")) {
         userAgent = value;
       }
       return self();

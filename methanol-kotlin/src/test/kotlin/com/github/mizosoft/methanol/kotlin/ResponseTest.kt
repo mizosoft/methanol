@@ -23,68 +23,43 @@
 package com.github.mizosoft.methanol.kotlin
 
 import assertk.assertThat
-import assertk.assertions.containsOnly
+import assertk.assertions.isTrue
+import com.github.mizosoft.methanol.ResponseBuilder
+import java.net.URI
 import kotlin.test.Test
 
-class HeadersCreateTest {
+class ResponseTest {
+  private val responseBuilder =
+    ResponseBuilder<Unit>()
+      .uri(URI.create("https://example.com"))
+      .request(Request {
+        uri("https://example.com")
+      })
+      .version(HttpVersion.HTTP_1_1)
+
+
   @Test
-  fun addHeaders() {
-    val headers = Headers {
-      "X" to "A"
-      "X" to "B"
-      "Y" to listOf("A", "B")
-    }
-    assertThat(headers.map()).containsOnly(
-      "X" to listOf("A", "B"),
-      "Y" to listOf("A", "B")
-    )
+  fun informationalResponseIsInformational() {
+    assertThat(responseBuilder.statusCode(100).build().isInformational()).isTrue()
   }
 
   @Test
-  fun setHeaders() {
-    val headers = Headers {
-      "X" to "A"
-      "Y" to listOf("A", "B")
-      "X" onlyTo listOf("C", "D")
-      "Y" onlyTo "C"
-      "Z" to "A"
-    }
-    assertThat(headers.map()).containsOnly(
-      "X" to listOf("C", "D"),
-      "Y" to listOf("C"),
-      "Z" to listOf("A")
-    )
+  fun successfulResponseIsSuccessful() {
+    assertThat(responseBuilder.statusCode(200).build().isSuccessful()).isTrue()
   }
 
   @Test
-  fun modifyHeaders() {
-    val headers = Headers(Headers {
-      "X" to "A"
-      "Y" to listOf("A", "B")
-    }) {
-      "Z" to "A"
-      "Y" onlyTo "A"
-    }
-    assertThat(headers.map()).containsOnly(
-      "X" to listOf("A"),
-      "Y" to listOf("A"),
-      "Z" to listOf("A")
-    )
+  fun redirectionResponseIsRedirection() {
+    assertThat(responseBuilder.statusCode(300).build().isRedirection()).isTrue()
   }
 
   @Test
-  fun setHeadersIfAbsent() {
-    val headers = Headers(Headers {
-      "X" to "A"
-      "Y" to listOf("A", "B")
-    }) {
-      "Y" onlyToIfAbsent "A"
-      "Z" onlyToIfAbsent "A"
-    }
-    assertThat(headers.map()).containsOnly(
-      "X" to listOf("A"),
-      "Y" to listOf("A", "B"),
-      "Z" to listOf("A")
-    )
+  fun clientErrorResponseIsClientError() {
+    assertThat(responseBuilder.statusCode(400).build().isClientError()).isTrue()
+  }
+
+  @Test
+  fun serverErrorResponseIsServerError() {
+    assertThat(responseBuilder.statusCode(500).build().isServerError()).isTrue()
   }
 }

@@ -22,8 +22,7 @@ HttpResponse<String> uploadGif() throws IOException, InterruptedException {
       .filePart("image", Path.of("dancing-stick-bug.gif"), MediaType.IMAGE_GIF)
       .build();
   var request = MutableRequest.POST("https://api.imgur.com/3/image", multipartBody)
-      .header("Authorization", "Client-ID " + CLIENT_ID); 
-      
+      .header("Authorization", "Client-ID " + CLIENT_ID);
   return client.send(request, BodyHandlers.ofString());
 }
 ```
@@ -55,8 +54,7 @@ HttpResponse<String> uploadPng(String title, InputStream pngImageInputStream)
          "image", title + ".png", MoreBodyPublishers.ofMediaType(imagePart, MediaType.IMAGE_PNG))
      .build();
   var request = MutableRequest.POST("https://api.imgur.com/3/image", multipartBody)
-      .header("Authorization", "Client-ID " + CLIENT_ID); 
-        
+      .header("Authorization", "Client-ID " + CLIENT_ID);
   return client.send(request, BodyHandlers.ofString());
 }
 ```
