@@ -1,76 +1,33 @@
 # Enhanced HttpClient
 
-Methanol has a special `HttpClient` that extends the standard one with interesting new features.
+Methanol has a special `HttpClient` that extends the standard one with interesting features.
 Unsurprisingly, the client is named `Methanol`.
 
 ## Usage
 
-In addition to [interceptors] and [caching], `Methanol` can apply default properties to your
-requests.
+In addition to [interceptors] and [caching], `Methanol` can apply default properties to your requests.
 Think resolving with a base URI, adding default request headers, default timeouts, etc.
 
 ```java
 var builder = Methanol.newBuilder()
-    .cache(...)
-    .
+    .userAgent("Will Smith")                     // Custom User-Agent
+    .baseUri("https://api.github.com")           // Base URI to resolve requests' URI against
+    .defaultHeader("Accept","application/json")  // Default request headers
+    .requestTimeout(Duration.ofSeconds(20))      // Default request timeout
+    .headersTimeout(Duration.ofSeconds(5))       // Timeout for receiving response headers
+    .readTimeout(Duration.ofSeconds(5))          // Timeout for single reads
+    .autoAcceptEncoding(true);                   // Transparent response compression, this is true by default
 
-interceptor(...)
-    .
-
-userAgent("Will Smith")                     // Custom User-Agent
-    .
-
-baseUri("https://api.github.com")           // Base URI to resolve requests' URI against
-    .
-
-defaultHeader("Accept","application/json") // Default request headers
-    .
-
-requestTimeout(Duration.ofSeconds(20))      // Default request timeout
-    .
-
-headersTimeout(Duration.ofSeconds(5))       // Timeout for receiving response headers
-    .
-
-readTimeout(Duration.ofSeconds(5))          // Timeout for single reads
-    .
-
-autoAcceptEncoding(true);                   // Transparent response compression, this is true by default
-
-// Continue using as a standard HttpClient.Builder!
-var client = builder.executor(...)
-    .
-
-executor(Executors.newFixedThreadPool(16))
-    .
-
-connectTimeout(Duration.ofSeconds(30))
-    ...
-    .
-
-build();
+// Continue using as a standard HttpClient.Builder.
+var client = builder.connectTimeout(Duration.ofSeconds(30)).build();
 ```
 
-You can also build from an existing `HttpClient` instance. However, you can't install an `HttpCache`
-in such case.
+You can also build from an existing `HttpClient` instance. However, you can't install an `HttpCache` in such case.
 
 ```java
-HttpClient prebuiltClient = ...
-var client = Methanol.newBuilder(prebuiltClient)
-    .interceptor(...)
-    .
-
-userAgent("Will Smith")
-     ...
-         .
-
-build();
-
+var prebuiltClient = HttpClient.newHttpClient();
+var client = Methanol.newBuilder(prebuiltClient).build();
 ```
-
-!!! tip
-`Methanol` is an `HttpClient`. It implements the same API like `send` & `sendAsync`, which you can
-continue using as usual.
 
 !!! note
 Default properties don't override those the request already has. For instance, a client with a
@@ -80,15 +37,13 @@ default `Accept: text/html` will not override a request's `Accept: application/j
 
 If `autoAcceptEncoding` is enabled, the client complements requests with an `Accept-Encoding` header
 which accepts all supported encodings (i.e. available [`BodyDecoder`](decompression.md) providers).
-Additionally,
-the response is transparently decompressed according to its `Content-Encoding`.
+Additionally, the response is transparently decompressed.
 
 Since `deflate` & `gzip` are supported out of the box, they're always included in `Accept-Encoding`.
 For instance, if [brotli][methanol-brotli] is installed, requests will typically have:
-`Accept-Encoding: deflate, gzip, br`.
+`Accept-Encoding: gzip, deflate, br`.
 If you want specific encodings to be applied, add `Accept-Encoding` as a default header or
-explicitly
-set one in your request.
+explicitly set one in your request.
 
 === "Default Header"
 
@@ -109,11 +64,9 @@ set one in your request.
 
 ### MimeBodyPublisher
 
-`Methanol` automatically sets a request's `Content-Type` if it has a [
-`MimeBodyPublisher`](media_types.md#mimebodypublisher).
+`Methanol` automatically sets a request's `Content-Type` if it has a [`MimeBodyPublisher`](media_types.md#mimebodypublisher).
 If the request already has a `Content-Type`, it's overwritten. This makes sense as a body knows its
-media type
-better than a containing request mistakenly setting a different one.
+media type better than the containing request.
 
 ### Reactive Dispatching
 
@@ -151,19 +104,19 @@ If you like reactive streams, use `Methanol::exchange`, which is like `sendAsync
 
 ## MutableRequest
 
-`MutableRequest` is an `HttpRequest` that implements `HttpRequest.Builder` for settings request's
-properties. This drops immutability in favor of some convenience when the request is sent
-immediately.
+`MutableRequest` is an `HttpRequest` with additional properties. It implements `HttpRequest.Builder` for settings request's fields.
 
 ```java
-var response = client.send(MutableReqeust.GET(uri), BodyHandlers.ofString());
+var response = client.send(
+    MutableReqeust.GET(uri).header("Accept", "application/json"),
+    BodyHandlers.ofString());
 ```
 
-Additionally, `MutableRequest` accepts relative URIs (standard `HttpRequest.Builder` doesn't). This
-is a complementing feature to `Methanol`'s base URIs, against which relative ones are resolved.
+`MutableRequest` accepts relative URIs (standard `HttpRequest.Builder` doesn't).
+This complements `Methanol`'s base URIs, against which relative ones are resolved.
 
 !!! tip
-You can use `MutableRequest::toImmutableRequest` to get an immutable `HttpRequest` snapshot.
+Use `MutableRequest::toImmutableRequest` to get an immutable `HttpRequest` snapshot.
 
 [interceptors]: interceptors.md
 

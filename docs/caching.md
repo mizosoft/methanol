@@ -1,48 +1,45 @@
 # Caching
 
-Methanol comes with an [RFC-compliant][rfc7234] HTTP cache that supports both disk & memory storage
-backends.
+Methanol comes with an [RFC-compliant][rfc7234] HTTP cache that supports disk & memory storage backends.
+There's also an [extension](https://mizosoft.github.io/methanol/redis/) for Redis.
 
 ## Setup
 
-An `HttpCache` is utilized by injecting it into a `Methanol` client. First, it needs to know where
-it stores entries and how much space it can occupy.
+An `HttpCache` is utilized by injecting it into a `Methanol` client.
 
 === "Disk"
 
     ```java
-    // Select a size limit thats suitable for your application
+    // Select a size limit thats suitable for your application.
     long maxSizeInBytes = 100 * 1024 * 1024; // 100 MBs
-
     var cache = HttpCache.newBuilder()
-        .cacheOnDisk(Path.of("my-cache-dir"), maxSizeInBytes)
+        .cacheOnDisk(Path.of(".cache"), maxSizeInBytes)
         .build();
 
-    // The cache intercepts requests you send through this client
+    // The cache intercepts requests you send through this client.
     var client = Methanol.newBuilder()
         .cache(cache)
         .build();
 
-    // It's important that you close the disk cache after you're done
+    // Don't forget to close the cache when you're done!
     cache.close();
     ```
 
 === "Memory"
 
     ```java
-    // Select a size limit thats suitable for your application
+    // Select a size limit thats suitable for your application.
     long maxSizeInBytes = 50 * 1024 * 1024; // 50 MBs
-
     var cache = HttpCache.newBuilder()
         .cacheOnMemory(maxSizeInBytes)
         .build();
 
-    // The cache intercepts requests you send through this client
+    // The cache intercepts requests you send through this client.
     var client = Methanol.newBuilder()
         .cache(cache)
         .build();
 
-    // No need to close, but doing so avoids surprises if you later switch to disk
+    // Don't forget to close the cache when you're done!
     cache.close();
     ```
 
@@ -56,13 +53,28 @@ it stores entries and how much space it can occupy.
     an `IOException` if it's initialized with a directory that's already in use by another instance
     in the same or a different JVM. Note that you can use the same `HttpCache` with multiple clients.
 
+An HTTP client can also be configured with a chain of caches, typically in the order of decreasing locality.
+The chain is invoked in the given order, and a cache either returns the response if it has a suitable one,
+or forwards to the next cache (or finally to the network) otherwise.
+
+```java
+var memoryCache = HttpCache.newBuilder()
+    .cacheOnMemory(100 * 1024 * 1024)
+    .build();
+var diskCache = HttpCache.newBuilder()
+    .cacheOnDisk(Path.of(".cache"), 500 * 1024 * 1024)
+    .build();
+var client = Methanol.newBuilder()
+    .cacheChain(List.of(memoryCache, diskCache))
+    .build();
+```
+
 ## Usage
 
 An HTTP cache is a transparent layer between you and the origin server. Its main goal is to save
 time & bandwidth by avoiding network if requested resources are locally retrievable. It does so
-while preserving the typical HTTP client-server semantics. Thus, it should be OK for modules to
-start using a cache-configured `Methanol` (and hence `HttpClient`) instance as a drop-in replacement
-without further setup.
+while preserving the typical HTTP client-server semantics. Thus, applications can start using a
+cache-configured HTTP client instance as a drop-in replacement without further setup.
 
 ## CacheControl
 
@@ -116,8 +128,8 @@ var cacheControl = CacheControl.newBuilder()
 You can specify how fresh you'd like the response to be by putting a lower bound on its freshness value.
 
 ```java
-var cacheControl = CacheControl.newBuilder() 
-    .minFresh(Duration.ofMinutes(10)) // Accept a response that stays fresh for at least the next 10 minutes
+var cacheControl = CacheControl.newBuilder()
+    .minFresh(Duration.ofSeconds(30)) // Accept a response that stays fresh for at least the next 30 seconds
     .build();
 ```
 
@@ -135,7 +147,7 @@ like `If-None-Match` & `If-Modified-Since`, if it can serve the stale response a
 If the server doesn't mind, the cache serves said response without re-downloading its payload.
 Otherwise, the response is re-fetched.
 
-You can let the cache tolerate some stalness so it doesn't trigger revalidation.
+You can let the cache tolerate some staleness so it doesn't trigger revalidation.
 
 === "Bounded Staleness"
 
@@ -188,8 +200,7 @@ var cacheControl = CacheControl.newBuilder()
     .build();
 ```
 
-A perfect use-case is when network is down or the app is offline. You'd want to get a cached
-response if it's there or otherwise nothing.
+A perfect use-case is when network is down. You may want to get a cached response if it's there or otherwise nothing.
 
 ### Prohibiting Storage
 
@@ -210,8 +221,8 @@ immediately even if it's stale, but ensure it is freshened for later access. Tha
 `stale-while-revalidate` does.
 
 If the directive is found on a stale response, the cache serves it immediately provided it satisfies
-allowed staleness. What's interesting is that an  asynchronous revalidation is triggered and the response
-is updated in background, keeping things fresh.
+allowed staleness. Meanwhile, an asynchronous revalidation is triggered and the response is updated
+in background, keeping things fresh.
 
 ## Invalidation
 
@@ -219,18 +230,18 @@ is updated in background, keeping things fresh.
 
 ```java
 var cache = HttpCache.newBuilder()
-    .cacheOnDisk(Path.of("my-cache-dir"), 100 * 1024 * 1024)
+    .cacheOnDisk(Path.of(".cache"), 500 * 1024 * 1024)
     .build();
 
-// Remove the entry mapped to a particular URI
+// Remove the entry mapped to a particular URI.
 cache.remove(URI.create("https://i.imgur.com/NYvl8Sy.mp4"));
 
-// Remove the response variant matching a particular request
+// Remove the response variant matching a particular request.
 cache.remove(
     MutableRequest.GET(URI.create("https://i.imgur.com/NYvl8Sy.mp4"))
         .header("Accept-Encoding", "gzip"));
 
-// Remove specific entries by examining their URIs
+// Remove specific entries by examining their URIs.
 var iterator = cache.uris();
 while (iterator.hasNext()) {
   var uri = iterator.next();  
@@ -239,7 +250,7 @@ while (iterator.hasNext()) {
   }
 }
 
-// Remove all entries
+// Remove all entries.
 cache.clear();
 
 // Dispose of the cache by deleting its entries then closing it in an atomic fashion.
@@ -252,7 +263,7 @@ cache.dispose();
 
 Cache operation typically involves 3 scenarios.
 
- * **Cache Hit**: The blessed scenario; everything was entirely served from cache and no network was
+* **Cache Hit**: The desired scenario; everything was entirely served from cache and no network was
    used.
  * **Conditional Cache Hit**: The cache had to contact the origin to revalidate its copy of the
    response and the server decided it was valid. The cache uses server's response to update some 
@@ -269,7 +280,7 @@ can use to know which of the previous scenarios was the case.
 
 ```java
 var cache = HttpCache.newBuilder()
-    .cacheOnDisk(Path.of("my-cache-dir"), 100 * 1024 * 1024)
+    .cacheOnDisk(Path.of(".cache"), 500 * 1024 * 1024)
     .build();
 var client = Methanol.newBuilder()
     .cache(cache)
@@ -320,7 +331,7 @@ correspond to a specific `URI`.
 
     ```java 
     var cache = HttpCache.newBuilder()
-        .cacheOnDisk(Path.of("my-cache-dir"), 100 * 1024 * 1024)
+        .cacheOnDisk(Path.of(".cache"), 500 * 1024 * 1024)
         .build();
 
     var stats = cache.stats();
@@ -331,9 +342,9 @@ correspond to a specific `URI`.
 === "URI-specific Stats"
 
     ```java
-    // Per URI statistics aren't recorder by default
+    // Per URI statistics aren't recoded by default
     var cache = HttpCache.newBuilder()
-        .cacheOnDisk(Path.of("my-cache-dir"), 100 * 1024 * 1024)
+        .cacheOnDisk(Path.of(".cache"), 500 * 1024 * 1024)
         .statsRecorder(StatsRecorder.createConcurrentPerUriRecorder())
         .build();
 
@@ -349,9 +360,11 @@ See [`HttpCache.Stats`][httpcache-stats] for all recorded statistics.
 * The cache only stores responses to GETs. This is typical for most caches.
 * The cache never stores [partial responses][partial-content-mdn].  
 * Only the most recent response [variant][vary-mdn] can be stored.
-* The cache doesn't store responses that have a `Vary` header with any of the values: `Cookie`, 
-  `Cookie2`, `Authorization`, `Proxy-Authroization`. That's because the `HttpClient` can implicitly
-  add these to requests, so Methanol won't be able to access their values to match responses against.
+* The cache doesn't store responses that have a `Vary` header with any of the values: `Cookie`,
+  `Cookie2`, `Authorization`, `Proxy-Authroization`. The first two if the client has a configured
+  `CookieHandler`, the latter two if the client has a configured `Authentciator`. That's because
+  `HttpClient` can implicitly add these to requests, so Methanol won't be able to access their
+  values to match requests against.
 
 [rfc7234]: https://tools.ietf.org/html/rfc7234
 [range-requests-mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests

@@ -20,33 +20,37 @@
  * SOFTWARE.
  */
 
-package conventions
+package com.github.mizosoft.methanol.samples.kotlin
 
-import extensions.javaModuleName
-import org.jetbrains.dokka.gradle.DokkaTaskPartial
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.dsl.jvm.JvmTargetValidationMode
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.github.mizosoft.methanol.CacheAwareResponse
+import com.github.mizosoft.methanol.kotlin.BodyHandlers
+import com.github.mizosoft.methanol.kotlin.Client
+import com.github.mizosoft.methanol.kotlin.close
+import com.github.mizosoft.methanol.kotlin.get
+import java.nio.file.Path
+import kotlin.time.Duration.Companion.seconds
 
-plugins {
-  id("org.jetbrains.kotlin.jvm")
-  id("org.jetbrains.dokka")
-}
-
-tasks.withType<KotlinCompile>().configureEach {
-  compilerOptions {
-    jvmTarget.set(JvmTarget.JVM_11)
-
-    // We don't include Java sources in Kotlin projects, so perceived target incompatibility causes
-    // no issues.
-    jvmTargetValidationMode.set(JvmTargetValidationMode.IGNORE)
+object CachingClient {
+  val client = Client {
+    userAgent("Chuck Norris")
+    cache {
+      onDisk(Path.of(".cache"), 500 * 1024 * 1024) // Occupy at most 500Mb on disk.
+    }
   }
-}
 
-tasks.withType<DokkaTaskPartial> {
-  try {
-    moduleName = project.javaModuleName
-  } catch (_: IllegalStateException) {
-    project.logger.warn("Couldn't get Java module name for Kotlin project (${project.name})")
+  suspend fun run() {
+    val response =
+      client.get("https://i.imgur.com/V79ulbT.gif", BodyHandlers.ofFile(Path.of("popcat.gif"))) {
+        cacheControl {
+          maxAge(5.seconds) // Override server's max-age.
+        }
+      } as CacheAwareResponse<Path>
+    println(
+      "$response - ${response.cacheStatus()} (Cached for ${response.headers()["Age"].firstOrNull() ?: -1} seconds)"
+    )
+  }
+
+  fun closeCache() {
+    client.caches().close()
   }
 }

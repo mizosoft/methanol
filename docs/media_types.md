@@ -1,9 +1,9 @@
 # Mime
 
-[Media types][mime-types-mdn] are the web's notion for file extensions. They're typically present in
-requests and responses as `Content-Type` directives. Methanol's `MediaType` greatly facilitates the
+[Media types][mime-types-mdn] are the web's notion for file extensions. They're present in
+requests and responses as `Content-Type` directives. Methanol's `MediaType` facilitates the
 representation and manipulation of media types.
-    
+
 ## MediaType
 
 You can create a `MediaType` from its individual components or parse one from a `Content-Type` string.
@@ -32,8 +32,7 @@ You can create a `MediaType` from its individual components or parse one from a 
  
 ### Media Ranges
 
-A `MediaType` also defines a [media range][media-ranges-rfc] to which one or more media types belong,
-including itself.
+A `MediaType` also defines a [media range][media-ranges-rfc] to which one or more media types belong, including itself.
 
 ```java
 var anyTextType = MediaType.parse("text/*");
@@ -59,13 +58,11 @@ assertTrue(textHtml.isCompatibleWith(anyTextType));
 
 ## MimeBodyPublisher
 
-`MimeBodyPublisher` is a mixin-style interface that associates a `MediaType` with a `BodyPublisher`. 
-It's recognized by `Methanol` and [multipart bodies](multipart_and_forms.md#multipart-bodies) in that
-it gets the appropriate `Content-Type` header implicitly added.
+`MimeBodyPublisher` is a mixin-style interface that associates a `MediaType` with a `BodyPublisher`.
+It's recognized by `Methanol` and [multipart bodies](multipart_and_forms.md#multipart-bodies) in that it gets the appropriate `Content-Type` header implicitly added.
 
-You can adapt an arbitrary `BodyPublisher` into a `MimeBodyPublisher`. Here's a factory method that
-creates `MimeBodyPublihers` for files. The file's media type is probed from the system, falling
-back to `application/octet-stream` if that doesn't work. 
+You can adapt an arbitrary `BodyPublisher` into a `MimeBodyPublisher`. Here's a factory method that creates `MimeBodyPublihers` for files.
+The file's media type is probed from the system, falling back to `application/octet-stream` if that doesn't work.
 
 ```java
 static MimeBodyPublisher ofMimeFile(Path file) throws FileNotFoundException {
@@ -87,7 +84,6 @@ final Methanol client = Methanol.create();
 
 <T> HttpResponse<T> post(String url, Path file, BodyHandler<T> handler)
     throws IOException, InterruptedException {
-    
   // Request's Content-Type is implicitly added
   return client.send(MutableRequest.POST(url, ofMimeFile(file)), handler);
 }
