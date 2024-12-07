@@ -430,6 +430,8 @@ public final class DiskStore implements Store, TestableStore {
     return Utils.toStringIdentityPrefix(this)
         + "[directory="
         + directory
+        + ", fileSystem="
+        + directory.getFileSystem()
         + ", appVersion="
         + appVersion
         + ", maxSize="
@@ -639,7 +641,8 @@ public final class DiskStore implements Store, TestableStore {
    * are deletable when opened with FILE_SHARE_DELETE, which is NIO's case). The reason seems to be
    * that 'deletion' in such case merely tags the file for physical deletion when all open handles
    * are closed. However, it appears that handles in Windows are associated with the names of files
-   * they're opened for (https://devblogs.microsoft.com/oldnewthing/20040607-00/?p=38993).
+   * they're opened for (<a
+   * href="https://devblogs.microsoft.com/oldnewthing/20040607-00/?p=38993">check this blog</a>).
    *
    * <p>This causes problems when an entry is deleted while being viewed. We're prevented from using
    * that entry's file name in case it's recreated (i.e. by committing an edit) while at least one

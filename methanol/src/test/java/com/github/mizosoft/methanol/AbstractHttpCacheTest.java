@@ -23,16 +23,13 @@
 package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static com.github.mizosoft.methanol.internal.cache.HttpDates.formatHttpDate;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.EntryReader;
@@ -43,7 +40,6 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
-import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -61,10 +57,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Phaser;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.QueueDispatcher;
@@ -75,12 +67,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({MockWebServerExtension.class, ExecutorExtension.class})
 abstract class AbstractHttpCacheTest {
-  AwaitableExecutor executor;
+  Executor executor;
   Methanol.Builder clientBuilder;
   MockWebServer server;
   URI serverUri;
   MockClock clock;
-  EditAwaiter editAwaiter;
   boolean failOnUnavailableResponses = true;
   Duration advanceOnSend = Duration.ZERO;
 
@@ -89,11 +80,10 @@ abstract class AbstractHttpCacheTest {
   @BeforeEach
   @ExecutorSpec(ExecutorType.CACHED_POOL)
   void setUp(Executor executor, Methanol.Builder builder, MockWebServer server) {
-    this.executor = new AwaitableExecutor(executor);
+    this.executor = executor;
     this.server = server;
     this.serverUri = server.url("/").uri();
     this.clock = new MockClock();
-    this.editAwaiter = new EditAwaiter();
     this.clientBuilder =
         builder
             .executor(executor)
@@ -167,13 +157,9 @@ abstract class AbstractHttpCacheTest {
       BodyHandler<String> bodyHandler,
       @Nullable PushPromiseHandler<String> pushPromiseHandler)
       throws IOException, InterruptedException {
-    var response =
-        pushPromiseHandler != null
-            ? Utils.get(client.sendAsync(request, bodyHandler, pushPromiseHandler))
-            : client.send(request, bodyHandler);
-    executor.await();
-    editAwaiter.await();
-    return response;
+    return pushPromiseHandler != null
+        ? Utils.get(client.sendAsync(request, bodyHandler, pushPromiseHandler))
+        : client.send(request, bodyHandler);
   }
 
   HttpResponse<String> sendUnchecked(HttpRequest request) {
@@ -353,146 +339,6 @@ abstract class AbstractHttpCacheTest {
     @Override
     public void close() {
       delegate.close();
-    }
-  }
-
-  /**
-   * An object that allows awaiting ongoing edits. By design, {@link CacheWritingPublisher} doesn't
-   * make downstream completion wait for the entire body to be written to cache. So if writes take
-   * time, the response entry is committed a while after the response is completed. This however
-   * agitates tests as they expect things to happen sequentially. This is solved by waiting for all
-   * open editors to close after each client.send(...).
-   */
-  static final class EditAwaiter {
-    private final Phaser phaser = new Phaser(1); // Register self.
-
-    EditAwaiter() {}
-
-    Editor register(Editor editor) {
-      return new NotifyingEditor(editor, phaser);
-    }
-
-    void await() {
-      try {
-        phaser.awaitAdvanceInterruptibly(
-            phaser.arrive(), TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
-      } catch (InterruptedException | TimeoutException e) {
-        fail("Timed out / interrupted while waiting for editors to be closed", e);
-      }
-    }
-
-    /** An Editor that notifies (arrives at) a Phaser when closed or committed. */
-    private static final class NotifyingEditor extends ForwardingEditor {
-      private final Phaser phaser;
-      private final AtomicBoolean closed = new AtomicBoolean();
-
-      NotifyingEditor(Editor delegate, Phaser phaser) {
-        super(delegate);
-        this.phaser = phaser;
-        requireState(phaser.register() >= 0, "Phaser terminated");
-      }
-
-      @Override
-      public void close() {
-        try {
-          super.close();
-        } finally {
-          if (closed.compareAndSet(false, true)) {
-            phaser.arriveAndDeregister();
-          }
-        }
-      }
-    }
-  }
-
-  static final class EditAwaitableStore extends ForwardingStore {
-    private final EditAwaiter editAwaiter;
-
-    EditAwaitableStore(Store delegate, EditAwaiter editAwaiter) {
-      super(delegate);
-      this.editAwaiter = requireNonNull(editAwaiter);
-    }
-
-    @Override
-    public Optional<Viewer> view(String key) throws IOException {
-      return super.view(key).map(EditAwaitableViewer::new);
-    }
-
-    @Override
-    public CompletableFuture<Optional<Viewer>> view(String key, Executor executor) {
-      return super.view(key, executor).thenApply(viewer -> viewer.map(EditAwaitableViewer::new));
-    }
-
-    @Override
-    public Optional<Editor> edit(String key) throws IOException {
-      return super.edit(key).map(editAwaiter::register);
-    }
-
-    @Override
-    public CompletableFuture<Optional<Editor>> edit(String key, Executor executor) {
-      return super.edit(key, executor).thenApply(editor -> editor.map(editAwaiter::register));
-    }
-
-    @Override
-    public String toString() {
-      return delegate.toString();
-    }
-
-    private final class EditAwaitableViewer extends ForwardingViewer {
-      EditAwaitableViewer(Viewer delegate) {
-        super(delegate);
-      }
-
-      @Override
-      public Optional<Editor> edit() throws IOException {
-        return super.edit().map(editAwaiter::register);
-      }
-
-      @Override
-      public CompletableFuture<Optional<Editor>> edit(Executor executor) {
-        return super.edit(executor).thenApply(editor -> editor.map(editAwaiter::register));
-      }
-    }
-  }
-
-  /** An executor that allows blocking until a delegate executor has no scheduled tasks. */
-  static final class AwaitableExecutor implements Executor {
-    private final Executor delegate;
-    private final Phaser phaser = new Phaser(1); // Register self.
-
-    AwaitableExecutor(Executor delegate) {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public void execute(Runnable command) {
-      var deregister = new AtomicBoolean();
-      phaser.register();
-      try {
-        delegate.execute(
-            () -> {
-              try {
-                command.run();
-              } finally {
-                if (deregister.compareAndSet(false, true)) {
-                  phaser.arriveAndDeregister();
-                }
-              }
-            });
-      } catch (RuntimeException | Error e) {
-        if (deregister.compareAndSet(false, true)) {
-          phaser.arriveAndDeregister();
-        }
-      }
-    }
-
-    void await() {
-      try {
-        phaser.awaitAdvanceInterruptibly(
-            phaser.arrive(), TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
-      } catch (InterruptedException | TimeoutException e) {
-        fail("Timed out / interrupted while waiting for tasks to finish", e);
-      }
     }
   }
 }

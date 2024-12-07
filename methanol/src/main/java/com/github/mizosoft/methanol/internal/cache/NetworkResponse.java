@@ -39,7 +39,10 @@ public final class NetworkResponse extends PublisherResponse {
   }
 
   public NetworkResponse writingWith(
-      Editor editor, Executor executor, CacheWritingPublisher.Listener writeListener) {
+      Editor editor,
+      Executor executor,
+      CacheWritingPublisher.Listener listener,
+      boolean synchronizeWrites) {
     return new NetworkResponse(
         response,
         new CacheWritingPublisher(
@@ -47,7 +50,8 @@ public final class NetworkResponse extends PublisherResponse {
             editor,
             CacheResponseMetadata.from(response).encode(),
             executor,
-            writeListener));
+            listener,
+            synchronizeWrites));
   }
 
   /** Discards the response body in background. */
