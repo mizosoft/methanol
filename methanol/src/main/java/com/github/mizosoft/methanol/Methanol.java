@@ -589,7 +589,7 @@ public class Methanol extends HttpClient {
     }
   }
 
-  /** An object that intercepts requests being sent over a {@code Methanol} client. */
+  /** An object that intercepts requests before being sent and responses before being returned. */
   public interface Interceptor {
 
     /**

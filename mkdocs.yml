@@ -64,15 +64,14 @@ nav:
   - 🔗 Javadoc: api/latest/
   - Documentation:
     - Methanol HttpClient: methanol_httpclient.md
-    - Object Mapping: object_mapping.md
+    - Object Mapping: adapters.md
     - Interceptors: interceptors.md
     - Caching: caching.md
     - Decompression: decompression.md
     - Media Types: media_types.md
     - Multipart & Forms: multipart_and_forms.md
     - Progress Tracking: progress_tracking.md
-    - Interruptible Reading: interruptible_reading.md
-    - WritableBodyPublisher: writablebodypublisher.md
+    - Streaming Requests: streaming_requests.md
   - Kotlin DSL: kotlin.md
   - Redis: redis.md
   - Brotli: brotli.md

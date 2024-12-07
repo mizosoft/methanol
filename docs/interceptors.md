@@ -6,9 +6,8 @@ and to responses in their way back.
 
 ## Writing Interceptors
 
-Interceptors sit between a `Methanol` client and its underlying `HttpClient`, referred to as its
-backend. When registered, an interceptor is invoked each `send` or `sendAsync`
-call. Here's an interceptor that logs requests and their responses.
+Interceptors sit between a `Methanol` client and its underlying `HttpClient`, referred to as its backend.
+When registered, an interceptor is invoked each `send` or `sendAsync` call. Here's an interceptor that logs requests and their responses.
 
 ```java
 public final class LoggingInterceptor implements Methanol.Interceptor {
@@ -56,11 +55,9 @@ public final class LoggingInterceptor implements Methanol.Interceptor {
 }
 ```
 
-`HttpClient` has blocking and asynchronous APIs, so interceptors must implement two methods
-matching each. An interceptor is given a `Chain<T>` so it can forward requests to 
-its next sibling, or to the backend in case there's no more interceptors in the chain. The backend is
-where requests finally get sent. Typically, an interceptor calls its chain's `forward` or `forwardAsync`
-after it has done its job.
+`HttpClient` has blocking and asynchronous APIs, so interceptors must implement two methods matching each.
+An interceptor is given a `Chain<T>` so it can forward requests to its next sibling, or to the backend in case there are no more interceptors in the chain.
+The backend is where requests finally get sent. Typically, an interceptor calls its chain's `forward` or `forwardAsync` after it has done its job.
 
 If your interceptor only modifies requests, prefer passing a lambda to `Interceptor::create`.
 
@@ -74,25 +71,20 @@ var expectContinueInterceptor = Interceptor.create(request ->
 
 ## Intercepting Bodies
 
-A powerful property of interceptors is their control over how responses are received by their
-caller. An interceptor can transform its chain's `BodyHandler` using
-`Chain::withBodyHandler` before it forwards requests. A transformed `BodyHandler` typically applies the handler the chain previously
-had, then wraps the resulted `BodySubscriber`, so it intercepts the response body as it's being received
-by the caller. This is how `Methanol` does transparent decompression & cache writes.
+A powerful property of interceptors is their control over how responses are received by their caller.
+An interceptor can transform its chain's `BodyHandler` before it forwards requests.
+A transformed `BodyHandler` typically applies the handler the chain previously had, then wraps the resulted `BodySubscriber`, so it intercepts the response body as it's being received by the caller.
+This is how `Methanol` does transparent decompression & cache writes.
 
-Note that this applies to requests too. You can transform a request body by wrapping its 
-`BodyPublisher`, if it's got any. `BodyPublisher` & `BodySubscriber` APIs can be nicely layered to
-apply different transformations.
-
-<!-- TODO mention retries -->
+Note that this applies to requests too. You can transform a request body by wrapping its `BodyPublisher`.
+`BodyPublisher` & `BodySubscriber` APIs can be nicely layered to apply different transformations.
 
 ## Invocation Order
 
 An interceptor can be either a *client* or a *backend* interceptor. Client interceptors sit between
-the application and `Methanol`'s internal interceptors. They are called as soon as the client
-receives a request. Backend interceptors sit between `Methanol` and its backend `HttpClient`. They
-get invoked right before the request gets sent. This has a number
-of implications.
+the application and `Methanol`'s internal interceptors. They are called as soon as the client receives a request.
+Backend interceptors sit between `Methanol` and its backend `HttpClient`. They get invoked right before the request gets sent.
+This has a number of implications.
 
 ### Client Interceptors
 
@@ -102,9 +94,8 @@ of implications.
 
 ### Backend Interceptors
 
-* Observe the request after the client applies things like the base URI and default
-  headers. Additionally, they see
-  intermediate headers added by the client or the cache like `Accept-Encoding` & `If-None-Math`.
+* Observe the request after the client applies things like the base URI and default headers.
+  Additionally, they see intermediate headers added by the client or the cache like `Accept-Encoding` & `If-None-Math`.
 * Receive the response body just as transmitted by the backend. For instance, a transformed
   `BodyHandler` receives a compressed body if the response comes with a `Content-Encoding` header.
 * May not always be invoked. This is the case when a cache decides it doesn't need network and hence
@@ -117,8 +108,8 @@ of implications.
 
 ## Registration
 
-You can register client and backend interceptors with `interceptor(...)` and `backendInterceptor(...)`
-respectively. Interceptors in each group get invoked in registration order.
+You can register client and backend interceptors with `interceptor(...)` and `backendInterceptor(...)` respectively.
+Interceptors in each group get invoked in registration order.
 
 === "Client Interceptors"
 
@@ -139,11 +130,10 @@ respectively. Interceptors in each group get invoked in registration order.
 ## Short-circuiting
 
 Both client & backend interceptors can refrain from forwarding a request. They're allowed to
-short-circuit a request's path by returning a fabricated response. This makes them good candidates
-for testing. You can mock responses with client interceptors to investigate requests just
-as sent by your application. Moreover, responses can be mocked with backend interceptors to explore
-requests as they get sent. This makes backend interceptors suitable for testing how your application
-interacts with the cache.
+short-circuit a request's path by returning a fabricated response. This makes them good candidates for testing.
+You can mock responses with client interceptors to investigate requests just as sent by your application.
+Moreover, responses can be mocked with backend interceptors to explore requests as they get sent.
+This makes backend interceptors suitable for testing how your application interacts with the cache.
 
 ## Limitations
 
