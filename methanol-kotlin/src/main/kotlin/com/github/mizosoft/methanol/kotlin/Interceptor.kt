@@ -32,8 +32,8 @@ import java.util.concurrent.CompletableFuture
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
- * An object that intercepts the request before being sent and the response before being returned.
- * The [intercept] function is a suspending function, meaning it is invoked as a coroutine. The
+ * An object that intercepts requests before being sent and responses before being returned. The
+ * [intercept] function is a suspending function, meaning it is invoked as a coroutine. The
  * coroutine shares the [kotlin.coroutines.CoroutineContext] used when the HTTP call is first
  * initiated. Typically, this means that all interceptors, along with the HTTP call, are invoked
  * within the same [CoroutineScope], and thus typically the same parent [kotlinx.coroutines.Job].
@@ -53,7 +53,7 @@ interface Interceptor {
 
     fun <U> with(
       bodyHandler: BodyHandler<U>,
-      pushPromiseHandler: PushPromiseHandler<U>? = null
+      pushPromiseHandler: PushPromiseHandler<U>?
     ): Chain<U>
   }
 }
