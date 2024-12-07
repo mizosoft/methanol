@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Abdelnasser
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,60 +28,32 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.internal.cache.DiskStore;
 import com.github.mizosoft.methanol.internal.cache.InternalStorageExtension;
 import com.github.mizosoft.methanol.internal.cache.MemoryStore;
-import com.github.mizosoft.methanol.internal.cache.Store;
-import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 
 /** An extension that provides a storage backend for an {@link HttpCache}. */
 public interface StorageExtension {
   static StorageExtension memory(long maxSize) {
     requireArgument(maxSize > 0, "non-positive maxSize: %d", maxSize);
-    return new InternalStorageExtension() {
-      @Override
-      public Store createStore(Executor executor, int appVersion) {
-        return new MemoryStore(maxSize);
-      }
-
-      @Override
-      public CompletableFuture<? extends Store> createStoreAsync(
-          Executor executor, int appVersion) {
-        return CompletableFuture.completedFuture(new MemoryStore(maxSize));
-      }
-    };
+    return (InternalStorageExtension) (executor, appVersion) -> new MemoryStore(maxSize);
   }
 
   static StorageExtension disk(Path directory, long maxSize) {
     requireNonNull(directory);
-    requireArgument(maxSize > 0, "non-positive maxSize: %d", maxSize);
-    return new InternalStorageExtension() {
-      @Override
-      public Store createStore(Executor executor, int appVersion) {
-        try {
-          return builder(directory, maxSize, executor, appVersion).build();
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-      }
-
-      @Override
-      public CompletableFuture<? extends Store> createStoreAsync(
-          Executor executor, int appVersion) {
-        var builder = builder(directory, maxSize, executor, appVersion);
-        return Unchecked.supplyAsync(builder::build, executor);
-      }
-
-      private DiskStore.Builder builder(
-          Path directory, long maxSize, Executor executor, int appVersion) {
-        return DiskStore.newBuilder()
-            .directory(directory)
-            .maxSize(maxSize)
-            .executor(executor)
-            .appVersion(appVersion);
-      }
-    };
+    requireArgument(maxSize > 0, "Non-positive maxSize: %d", maxSize);
+    return (InternalStorageExtension)
+        (executor, appVersion) -> {
+          try {
+            return DiskStore.newBuilder()
+                .directory(directory)
+                .maxSize(maxSize)
+                .executor(executor)
+                .appVersion(appVersion)
+                .build();
+          } catch (IOException e) {
+            throw new UncheckedIOException(e);
+          }
+        };
   }
 }

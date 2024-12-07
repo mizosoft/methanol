@@ -1097,17 +1097,6 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return this;
     }
 
-    private Executor getExecutor(boolean[] isDefaultExecutor) {
-      var executor = this.executor;
-      if (executor != null) {
-        isDefaultExecutor[0] = false;
-      } else {
-        executor = FallbackExecutorProvider.get();
-        isDefaultExecutor[0] = true;
-      }
-      return executor;
-    }
-
     private InternalStorageExtension storageExtension() {
       var storeExtension = this.storageExtension;
       requireState(storeExtension != null, "a storage backend must be specified");
@@ -1116,19 +1105,16 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     /** Creates a new {@code HttpCache}. */
     public HttpCache build() {
-      var isDefaultExecutor = new boolean[1];
-      var executor = getExecutor(isDefaultExecutor);
+      var executor = this.executor;
+      boolean isDefaultExecutor;
+      if (executor != null) {
+        isDefaultExecutor = false;
+      } else {
+        executor = FallbackExecutorProvider.get();
+        isDefaultExecutor = true;
+      }
       var store = storageExtension().createStore(executor, CACHE_VERSION);
-      return new HttpCache(store, executor, isDefaultExecutor[0], this);
-    }
-
-    /** Asynchronously creates a new {@code HttpCache}. */
-    public CompletableFuture<HttpCache> buildAsync() {
-      var isDefaultExecutor = new boolean[1];
-      var executor = getExecutor(isDefaultExecutor);
-      return storageExtension()
-          .createStoreAsync(executor, CACHE_VERSION)
-          .thenApply(store -> new HttpCache(store, executor, isDefaultExecutor[0], this));
+      return new HttpCache(store, executor, isDefaultExecutor, this);
     }
   }
 }

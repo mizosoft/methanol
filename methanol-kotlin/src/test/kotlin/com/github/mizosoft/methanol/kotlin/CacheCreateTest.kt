@@ -56,17 +56,15 @@ class CacheCreateTest {
           executor: Executor,
           appVersion: Int
         ) = object : Store {
-          override fun maxSize() = 69L
+          override fun maxSize() = 12L
           override fun view(
             key: String,
             executor: Executor
           ) = TODO("Not yet implemented")
-
           override fun edit(
             key: String,
             executor: Executor
           ) = TODO("Not yet implemented")
-
           override fun iterator() = TODO("Not yet implemented")
           override fun remove(key: String) = TODO("Not yet implemented")
           override fun clear() = TODO("Not yet implemented")
@@ -75,13 +73,8 @@ class CacheCreateTest {
           override fun close() = TODO("Not yet implemented")
           override fun flush() = TODO("Not yet implemented")
         }
-
-        override fun createStoreAsync(
-          executor: Executor,
-          appVersion: Int
-        ) = TODO("Not yet implemented")
       })
     }
-    assertThat(cache.maxSize()).isEqualTo(69L)
+    assertThat(cache.maxSize()).isEqualTo(12L)
   }
 }
