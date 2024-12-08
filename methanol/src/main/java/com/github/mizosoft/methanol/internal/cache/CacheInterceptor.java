@@ -183,12 +183,9 @@ public final class CacheInterceptor implements Interceptor {
 
   private CompletableFuture<Optional<CacheResponse>> getCacheResponse(
       HttpRequest request, Instant requestTime, ChainAdapter chainAdapter, LocalCache cache) {
-    if (!"GET".equalsIgnoreCase(request.method())
-        || hasUnsupportedPreconditions(request.headers())
-        || chainAdapter.chain.pushPromiseHandler().isPresent()) {
-      return CompletableFuture.completedFuture(Optional.empty());
-    }
-    return cache.get(request, requestTime);
+    return isSupported(request) && chainAdapter.chain.pushPromiseHandler().isEmpty()
+        ? cache.get(request, requestTime)
+        : CompletableFuture.completedFuture(Optional.empty());
   }
 
   private void handleAsyncRevalidation(
@@ -204,15 +201,21 @@ public final class CacheInterceptor implements Interceptor {
     }
   }
 
-  private static boolean hasUnsupportedPreconditions(HttpHeaders requestHeaders) {
-    return requestHeaders.map().keySet().stream()
-        .anyMatch(CacheInterceptor::isUnsupportedPrecondition);
+  private static boolean isSupported(HttpRequest request) {
+    return isSupportedRequestMethod(request.method())
+        && request.headers().map().keySet().stream()
+            .allMatch(CacheInterceptor::isSupportedRequestHeader);
   }
 
-  private static boolean isUnsupportedPrecondition(String name) {
-    return "If-Match".equalsIgnoreCase(name)
-        || "If-Unmodified-Since".equalsIgnoreCase(name)
-        || "If-Range".equalsIgnoreCase(name);
+  private static boolean isSupportedRequestMethod(String method) {
+    return method.equalsIgnoreCase("GET");
+  }
+
+  private static boolean isSupportedRequestHeader(String name) {
+    // The only headers we don't support are preconditions that we don't evaluate.
+    return !name.startsWith("If-")
+        || name.equalsIgnoreCase("If-None-Match")
+        || name.equalsIgnoreCase("If-Modified-Since");
   }
 
   /**
@@ -221,10 +224,10 @@ public final class CacheInterceptor implements Interceptor {
    * fields, it's rendered uncacheable as we can't access the corresponding values from requests.
    */
   private static boolean isImplicitField(String name) {
-    return "Cookie".equalsIgnoreCase(name)
-        || "Cookie2".equalsIgnoreCase(name)
-        || "Authorization".equalsIgnoreCase(name)
-        || "Proxy-Authorization".equalsIgnoreCase(name);
+    return name.equalsIgnoreCase("Cookie")
+        || name.equalsIgnoreCase("Cookie2")
+        || name.equalsIgnoreCase("Authorization")
+        || name.equalsIgnoreCase("Proxy-Authorization");
   }
 
   @SuppressWarnings("NullAway")
