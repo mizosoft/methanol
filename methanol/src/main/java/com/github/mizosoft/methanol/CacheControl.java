@@ -586,7 +586,9 @@ public final class CacheControl {
         case "max-stale":
           if (argument.isEmpty()) {
             anyMaxStale = true;
+            maxStale = null;
           } else {
+            anyMaxStale = false;
             maxStale = parseDeltaSeconds(argument);
           }
           break;

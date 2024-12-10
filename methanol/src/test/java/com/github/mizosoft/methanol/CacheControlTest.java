@@ -196,6 +196,7 @@ class CacheControlTest {
     var cacheControl =
         CacheControl.newBuilder().maxStale(Duration.ofSeconds(1)).anyMaxStale().build();
     assertThat(cacheControl.maxStale()).isEmpty();
+    assertThat(cacheControl.anyMaxStale()).isTrue();
     assertThat(cacheControl).hasToString("max-stale");
   }
 
@@ -204,6 +205,25 @@ class CacheControlTest {
     var cacheControl =
         CacheControl.newBuilder().anyMaxStale().maxStale(Duration.ofSeconds(1)).build();
     assertThat(cacheControl.maxStale()).hasValue(Duration.ofSeconds(1));
+    assertThat(cacheControl.anyMaxStale()).isFalse();
+    assertThat(cacheControl).hasToString("max-stale=1");
+  }
+
+  @Test
+  void plainAnyMaxStaleAfterMaxStale() {
+    var cacheControl =
+        CacheControl.newBuilder().directive("max-stale", "1").directive("max-stale").build();
+    assertThat(cacheControl.maxStale()).isEmpty();
+    assertThat(cacheControl.anyMaxStale()).isTrue();
+    assertThat(cacheControl).hasToString("max-stale");
+  }
+
+  @Test
+  void plainMaxStaleAfterAnyMaxStaleInParsing() {
+    var cacheControl =
+        CacheControl.newBuilder().directive("max-stale").directive("max-stale", "1").build();
+    assertThat(cacheControl.maxStale()).hasValue(Duration.ofSeconds(1));
+    assertThat(cacheControl.anyMaxStale()).isFalse();
     assertThat(cacheControl).hasToString("max-stale=1");
   }
 
