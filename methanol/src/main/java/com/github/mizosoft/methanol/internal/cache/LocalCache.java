@@ -35,7 +35,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface LocalCache {
   CompletableFuture<Optional<CacheResponse>> get(HttpRequest request);
 
-  CompletableFuture<Void> update(CacheResponse cacheResponse);
+  CompletableFuture<Boolean> update(CacheResponse cacheResponse);
 
   CompletableFuture<Optional<NetworkResponse>> put(
       HttpRequest request,

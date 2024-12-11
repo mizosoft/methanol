@@ -74,6 +74,10 @@ public final class ResponseVerifier<T> {
   @CanIgnoreReturnValue
   public ResponseVerifier<T> hasCode(int code) {
     assertThat(response.statusCode()).isEqualTo(code);
+    response
+        .headers()
+        .firstValue(":status")
+        .ifPresent(status -> assertThat(status).isEqualTo(Integer.toString(code)));
     return this;
   }
 
@@ -344,7 +348,6 @@ public final class ResponseVerifier<T> {
                             .collect(Collectors.toUnmodifiableList()));
               }
             });
-
     return this;
   }
 
