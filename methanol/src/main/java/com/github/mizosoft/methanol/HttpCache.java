@@ -64,6 +64,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -298,9 +299,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   /** Returns an interceptor that serves responses from this cache if applicable. */
-  Interceptor interceptor() {
+  Interceptor interceptor(Predicate<String> implicitHeaderPredicate) {
     return new CacheInterceptor(
-        this::createLocalCache, listener, executor, clock, synchronizeWrites);
+        this::createLocalCache,
+        listener,
+        executor,
+        clock,
+        synchronizeWrites,
+        implicitHeaderPredicate);
   }
 
   private LocalCache createLocalCache(Executor executor) {
@@ -519,7 +525,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
           statsRecorder.recordHit(request.uri());
           break;
         default:
-          throw new AssertionError("unexpected status: " + response.cacheStatus());
+          throw new AssertionError("Unexpected status: " + response.cacheStatus());
       }
     }
 

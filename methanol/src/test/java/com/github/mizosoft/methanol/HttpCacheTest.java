@@ -87,10 +87,13 @@ import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.net.Authenticator;
 import java.net.ConnectException;
+import java.net.CookieManager;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.net.http.HttpClient;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
@@ -117,6 +120,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
@@ -1113,9 +1117,38 @@ class HttpCacheTest extends AbstractHttpCacheTest {
    */
   @StoreParameterizedTest
   void responsesVaryingOnImplicitHeadersAreNotStored(StoreContext storeContext) throws Exception {
+    class ImplicitField {
+      final String header;
+      final Consumer<HttpClient.Builder> configurator;
+
+      ImplicitField(String header, Consumer<HttpClient.Builder> configurator) {
+        this.header = header;
+        this.configurator = configurator;
+      }
+
+      @Override
+      public String toString() {
+        return header;
+      }
+    }
+
     testForEach(
         (store, implicitField) -> {
           setUpCache(store);
+
+          server.enqueue(
+              new MockResponse()
+                  .setHeader("Cache-Control", "max-age=1")
+                  .setHeader("Vary", "Accept-Encoding, " + implicitField)
+                  .setBody("aaa"));
+          verifyThat(send(serverUri)).isCacheMiss().hasBody("aaa");
+          verifyThat(send(serverUri)).isCacheHit().hasBody("aaa");
+
+          // Apply the configuration, resulting in the response being uncacheable.
+          implicitField.configurator.accept(clientBuilder);
+          client = clientBuilder.build();
+
+          cache.remove(serverUri);
           server.enqueue(
               new MockResponse()
                   .setHeader("Cache-Control", "max-age=1")
@@ -1128,7 +1161,15 @@ class HttpCacheTest extends AbstractHttpCacheTest {
               .isEmpty();
         },
         storeContext,
-        List.of("Cookie", "Cookie2", "Authorization", "Proxy-Authorization"));
+        List.of(
+            new ImplicitField(
+                    "Authorization", builder -> builder.authenticator(new Authenticator() {})),
+                new ImplicitField(
+                    "Proxy-Authorization",
+                    builder -> builder.authenticator(new Authenticator() {})),
+            new ImplicitField("Cookie", builder -> builder.cookieHandler(new CookieManager())),
+                new ImplicitField(
+                    "Cookie2", builder -> builder.cookieHandler(new CookieManager()))));
   }
 
   @StoreParameterizedTest
@@ -1571,7 +1612,9 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
     // Don't let the cache intercept redirects
     clientBuilder =
-        Methanol.newBuilder().interceptor(cache.interceptor()).followRedirects(Redirect.ALWAYS);
+        Methanol.newBuilder()
+            .interceptor(cache.interceptor(__ -> false))
+            .followRedirects(Redirect.ALWAYS);
     client = clientBuilder.build();
 
     // The cache only sees the second response
@@ -3590,7 +3633,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
         // Clean up for next test.
         store.dispose();
-        clientBuilder.clearInterceptors();
+        resetClientBuilder();
         ((QueueDispatcher) server.getDispatcher()).clear();
       } catch (TestAbortedException e) {
         logger.log(Level.INFO, "Skipping test with a failed assumption: " + e.getMessage());
