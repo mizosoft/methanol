@@ -70,13 +70,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 abstract class AbstractHttpCacheTest {
   Executor executor;
   MethanolBuilderFactory clientBuilderFactory;
-  Methanol.Builder clientBuilder;
   MockWebServer server;
   URI serverUri;
   MockClock clock;
   boolean failOnUnavailableResponses;
   Duration advanceOnSend;
-  Methanol client; // Must be set by subclass to apply cache setup.
+
+  private Methanol.@Nullable Builder clientBuilder;
+  private @Nullable Methanol client;
 
   @BeforeEach
   @ExecutorSpec(ExecutorType.CACHED_POOL)
@@ -86,64 +87,86 @@ abstract class AbstractHttpCacheTest {
     this.serverUri = server.url("/").uri();
     this.clock = new MockClock();
     this.clientBuilderFactory = builderFactory;
-    resetClientBuilder();
     ((QueueDispatcher) server.getDispatcher())
         .setFailFast(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
   }
 
-  void resetClientBuilder() {
+  Methanol.Builder resetClientBuilder() {
     failOnUnavailableResponses = true;
     advanceOnSend = Duration.ZERO;
-    clientBuilder =
-        clientBuilderFactory
-            .get()
-            .executor(executor)
-            .backendInterceptor(
-                new Interceptor() {
-                  @Override
-                  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
-                      throws IOException, InterruptedException {
-                    var response = chain.forward(request);
-                    if (failOnUnavailableResponses) {
-                      assertThat(response.statusCode())
-                          .withFailMessage(
-                              "Server has no queued responses, expected something to be cached?")
-                          .isNotEqualTo(HTTP_UNAVAILABLE);
-                    }
-                    clock.advance(advanceOnSend);
-                    return response;
-                  }
+    client = null;
+    clientBuilder = newClientBuilder();
+    return clientBuilder;
+  }
 
-                  @Override
-                  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-                      HttpRequest request, Chain<T> chain) {
-                    return chain
-                        .forwardAsync(request)
-                        .thenApply(
-                            response -> {
-                              if (failOnUnavailableResponses) {
-                                assertThat(response.statusCode())
-                                    .withFailMessage(
-                                        "Server has no queued responses, expected something to be cached?")
-                                    .isNotEqualTo(HTTP_UNAVAILABLE);
-                              }
-                              clock.advance(advanceOnSend);
-                              return response;
-                            });
-                  }
-                });
+  private Methanol.Builder newClientBuilder() {
+    return clientBuilderFactory
+        .get()
+        .executor(executor)
+        .backendInterceptor(
+            new Interceptor() {
+              @Override
+              public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+                  throws IOException, InterruptedException {
+                var response = chain.forward(request);
+                if (failOnUnavailableResponses) {
+                  assertThat(response.statusCode())
+                      .withFailMessage(
+                          "Server has no queued responses, expected something to be cached?")
+                      .isNotEqualTo(HTTP_UNAVAILABLE);
+                }
+                clock.advance(advanceOnSend);
+                return response;
+              }
+
+              @Override
+              public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+                  HttpRequest request, Chain<T> chain) {
+                return chain
+                    .forwardAsync(request)
+                    .thenApply(
+                        response -> {
+                          if (failOnUnavailableResponses) {
+                            assertThat(response.statusCode())
+                                .withFailMessage(
+                                    "Server has no queued responses, expected something to be cached?")
+                                .isNotEqualTo(HTTP_UNAVAILABLE);
+                          }
+                          clock.advance(advanceOnSend);
+                          return response;
+                        });
+              }
+            });
+  }
+
+  private Methanol.Builder clientBuilder() {
+    var clientBuilder = this.clientBuilder;
+    if (clientBuilder == null) {
+      clientBuilder = newClientBuilder();
+      this.clientBuilder = clientBuilder;
+    }
+    return clientBuilder;
+  }
+
+  Methanol client() {
+    var client = this.client;
+    if (client == null) {
+      client = clientBuilder().build();
+      this.client = client;
+    }
+    return client;
   }
 
   HttpResponse<String> send() throws IOException, InterruptedException {
-    return send(client, serverUri);
+    return send(client(), serverUri);
   }
 
   HttpResponse<String> send(URI uri) throws IOException, InterruptedException {
-    return send(client, GET(uri));
+    return send(client(), GET(uri));
   }
 
   HttpResponse<String> send(HttpRequest request) throws IOException, InterruptedException {
-    return send(client, request);
+    return send(client(), request);
   }
 
   HttpResponse<String> send(Methanol client) throws IOException, InterruptedException {

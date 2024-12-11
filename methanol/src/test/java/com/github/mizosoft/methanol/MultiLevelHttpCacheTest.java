@@ -50,8 +50,13 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   void setUp() throws IOException {
     memoryCacheSetup = createCacheSetup(StoreType.MEMORY);
     diskCacheSetup = createCacheSetup(StoreType.DISK);
-    client =
-        clientBuilder.cacheChain(List.of(memoryCacheSetup.cache, diskCacheSetup.cache)).build();
+    resetClientBuilder();
+  }
+
+  @Override
+  Methanol.Builder resetClientBuilder() {
+    return super.resetClientBuilder()
+        .cacheChain(List.of(memoryCacheSetup.cache, diskCacheSetup.cache));
   }
 
   private CacheSetup createCacheSetup(StoreType storeType) throws IOException {
@@ -74,7 +79,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   @Test
   void cacheHit() throws Exception {
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
-    verifyThat(send(client)) // Memory cache response.
+    verifyThat(send()) // Memory cache response.
         .isCacheMiss()
         .hasBody("Pikachu")
         .networkResponse() // Disk cache response.
@@ -82,7 +87,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
         .hasNoBody() // The body is only present in the top-level response.
         .networkResponse() // Actual network response.
         .hasNoBody();
-    verifyThat(send(client)).isCacheHit().hasBody("Pikachu");
+    verifyThat(send()).isCacheHit().hasBody("Pikachu");
 
     verifyThat(send(memoryCacheSetup.client)).isCacheHit().hasBody("Pikachu");
     verifyThat(send(diskCacheSetup.client)).isCacheHit().hasBody("Pikachu");
@@ -96,7 +101,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
             .setHeader("ETag", "\"1\"")
             .setHeader("X-Version", "1")
             .setBody("Pikachu"));
-    verifyThat(send(client)).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
 
     clock.advanceSeconds(2);
 
@@ -115,7 +120,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
         .containsHeader("X-Version", "2")
         .containsRequestHeader("If-None-Match", "\"1\"")
         .hasNoBody();
-    verifyThat(send(client)).isCacheHit().containsHeader("X-Version", "2").hasBody("Pikachu");
+    verifyThat(send()).isCacheHit().containsHeader("X-Version", "2").hasBody("Pikachu");
 
     verifyThat(send(memoryCacheSetup.client))
         .isCacheHit()
@@ -134,7 +139,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("ETag", "\"1\"")
             .setBody("Pikachu"));
-    verifyThat(send(client)).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
 
     clock.advanceSeconds(2);
 
@@ -156,7 +161,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
         .containsHeader("ETag", "\"2\"")
         .containsRequestHeader("If-None-Match", "\"1\"")
         .hasNoBody();
-    verifyThat(send(client)).isCacheHit().containsHeader("ETag", "\"2\"").hasBody("Mew");
+    verifyThat(send()).isCacheHit().containsHeader("ETag", "\"2\"").hasBody("Mew");
 
     verifyThat(send(memoryCacheSetup.client))
         .isCacheHit()
@@ -176,7 +181,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
             .setHeader("ETag", "\"1\"")
             .setHeader("X-Version", "1")
             .setBody("Pikachu"));
-    verifyThat(send(client)).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
 
     clock.advanceSeconds(2);
 
@@ -197,7 +202,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
         .isExternallyConditionalCacheHit()
         .containsRequestHeader("If-None-Match", "\"1\"")
         .hasNoBody();
-    verifyThat(send(client)).isCacheHit().containsHeader("X-Version", "2").hasBody("Pikachu");
+    verifyThat(send()).isCacheHit().containsHeader("X-Version", "2").hasBody("Pikachu");
   }
 
   @Test
@@ -209,7 +214,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
             .setHeader("Last-Modified", formatHttpDate(lastModified))
             .setHeader("X-Version", "1")
             .setBody("Pikachu"));
-    verifyThat(send(client)).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
 
     clock.advanceSeconds(2);
 
@@ -230,7 +235,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
         .isExternallyConditionalCacheHit()
         .containsRequestHeader("If-Modified-Since", formatHttpDate(lastModified))
         .hasNoBody();
-    verifyThat(send(client)).isCacheHit().containsHeader("X-Version", "2").hasBody("Pikachu");
+    verifyThat(send()).isCacheHit().containsHeader("X-Version", "2").hasBody("Pikachu");
   }
 
   private static final class CacheSetup {
