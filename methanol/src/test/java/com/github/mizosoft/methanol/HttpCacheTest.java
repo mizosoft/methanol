@@ -3021,17 +3021,17 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
   @StoreParameterizedTest
   void errorsWhileWritingDiscardsCaching(Store store) throws Exception {
-    var faultyStore = new FailingStore(store);
-    setUpCache(faultyStore);
+    var failingStore = new FailingStore(store);
+    setUpCache(failingStore);
 
     // Write failure is ignored & the response completes normally nevertheless.
-    faultyStore.allowReads = true;
+    failingStore.allowWrites = false;
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     verifyThat(send()).isCacheMiss().hasBody("Pikachu");
     assertNotStored(serverUri);
 
     // Allow the response to be cached
-    faultyStore.allowWrites = true;
+    failingStore.allowWrites = true;
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     verifyThat(send()).isCacheMiss().hasBody("Pikachu");
     verifyThat(send()).isCacheHit().hasBody("Pikachu");
@@ -3040,7 +3040,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     clock.advanceSeconds(2);
 
     // Attempted revalidation throws & cache update is discarded
-    faultyStore.allowWrites = false;
+    failingStore.allowWrites = false;
     server.enqueue(
         new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Charmander"));
     verifyThat(send()).isConditionalMiss().hasBody("Charmander");
@@ -3056,14 +3056,118 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
   @StoreParameterizedTest
   void errorsWhileReadingArePropagated(Store store) throws Exception {
-    var faultyStore = new FailingStore(store);
-    faultyStore.allowWrites = true;
-    setUpCache(faultyStore);
+    var failingStore = new FailingStore(store);
+    var listener = new RecordingListener(EventCategory.READ_WRITE);
+    setUpCache(failingStore, null, listener);
+
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+    listener.assertNext(OnWriteSuccess.class);
 
-    // Read failure is propagated
+    // Read failure is propagated.
+    failingStore.allowReads = false;
     assertThatThrownBy(this::send).isInstanceOf(TestException.class);
+    listener.assertNext(OnReadFailure.class);
+  }
+
+  @StoreParameterizedTest
+  void errorsWhileRetrievalFallBackToNetwork(Store store) throws Exception {
+    var failingStore = new FailingStore(store);
+    var listener = new RecordingListener(EventCategory.READ_WRITE);
+    setUpCache(failingStore, null, listener);
+
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+    listener.assertNext(OnWriteSuccess.class);
+    verifyThat(send()).isCacheHit().hasBody("Pikachu");
+    listener.assertNext(OnReadSuccess.class);
+
+    // Retrieval failure is ignored.
+    failingStore.allowViews = false;
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+    listener.assertNext(OnReadFailure.class);
+    listener.assertNext(OnWriteSuccess.class); // The fallback network response is written.
+
+    failingStore.allowViews = true;
+    verifyThat(send()).isCacheHit().hasBody("Pikachu");
+    listener.assertNext(OnReadSuccess.class);
+  }
+
+  @StoreParameterizedTest
+  void errorsOnInsertingDiscardsCaching(Store store) throws Exception {
+    var failingStore = new FailingStore(store);
+    var listener = new RecordingListener(EventCategory.READ_WRITE);
+    setUpCache(failingStore, null, listener);
+
+    // Fail on first insertion.
+    failingStore.allowEdits = false;
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+    listener.assertNext(OnWriteFailure.class);
+
+    failingStore.allowEdits = true;
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Mew"));
+    verifyThat(send()).isCacheMiss().hasBody("Mew");
+    listener.assertNext(OnWriteSuccess.class);
+
+    // Make response stale.
+    clock.advanceSeconds(2);
+
+    // Fail to edit on failed revalidation update.
+    failingStore.allowEdits = false;
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Mewtwo"));
+    verifyThat(send()).isConditionalMiss().hasBody("Mewtwo");
+    listener.assertNext(OnWriteFailure.class);
+  }
+
+  @StoreParameterizedTest
+  void errorsWhileInsertingForUpdateDiscardsCaching(Store store) throws Exception {
+    var failingStore = new FailingStore(store);
+    var listener = new RecordingListener(EventCategory.READ_WRITE);
+    setUpCache(failingStore, null, listener);
+
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1")
+            .setHeader("X-Version", "1")
+            .setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+    listener.assertNext(OnWriteSuccess.class);
+    verifyThat(send()).isCacheHit().hasBody("Pikachu");
+    listener.assertNext(OnReadSuccess.class);
+
+    // Make response stale.
+    clock.advanceSeconds(2);
+
+    // Fail on successful revalidation update.
+    failingStore.allowEdits = false;
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_NOT_MODIFIED).setHeader("X-Version", "2"));
+    verifyThat(send())
+        .isConditionalHit()
+        .hasCode(200)
+        .containsHeader("X-Version", "2")
+        .hasBody("Pikachu");
+    listener.assertNext(OnWriteFailure.class); // Cache metadata update fails.
+    listener.assertNext(OnReadSuccess.class); // Cache response is read.
+
+    failingStore.allowEdits = true;
+    server.enqueue(
+        new MockResponse().setResponseCode(HTTP_NOT_MODIFIED).setHeader("X-Version", "3"));
+    verifyThat(send())
+        .isConditionalHit()
+        .hasCode(200)
+        .containsHeader("X-Version", "3")
+        .hasBody("Pikachu");
+    listener.assertNext(OnWriteSuccess.class); // Cache metadata is updated.
+    listener.assertNext(OnReadSuccess.class); // Cache response is read.
+    verifyThat(send())
+        .isCacheHit()
+        .hasCode(200)
+        .containsHeader("X-Version", "3")
+        .hasBody("Pikachu");
+    listener.assertNext(OnReadSuccess.class);
   }
 
   @StoreParameterizedTest
@@ -3238,10 +3342,8 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
   @StoreParameterizedTest
   void writeStats(Store store) throws Exception {
-    var faultyStore = new FailingStore(store);
-    faultyStore.allowReads = true;
-    faultyStore.allowWrites = true;
-    setUpCache(faultyStore, StatsRecorder.createConcurrentPerUriRecorder());
+    var failingStore = new FailingStore(store);
+    setUpCache(failingStore, StatsRecorder.createConcurrentPerUriRecorder());
     server.setDispatcher(
         new Dispatcher() {
           @Override
@@ -3261,7 +3363,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     // writeSuccessCount = 3, b.writeSuccessCount = 1
     verifyThat(send(serverUri.resolve("/b"))).isCacheMiss();
 
-    faultyStore.allowWrites = false;
+    failingStore.allowWrites = false;
 
     assertThat(cache.remove(serverUri.resolve("/b"))).isTrue();
 
@@ -3327,8 +3429,9 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     var listener = new RecordingListener(EventCategory.REQUEST_RESPONSE);
     setUpCache(store, null, listener);
 
-    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     var request = GET(serverUri).tag(Integer.class, 1);
+
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     send(request);
     listener.assertNext(OnRequest.class, request);
     listener
@@ -3386,12 +3489,13 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   @StoreParameterizedTest
   void readWriteListener(Store store) throws Exception {
     var listener = new RecordingListener(EventCategory.READ_WRITE);
-    var faultyStore = new FailingStore(store);
-    setUpCache(faultyStore, null, listener);
-
-    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    var failingStore = new FailingStore(store);
+    setUpCache(failingStore, null, listener);
 
     var request = GET(serverUri).tag(Integer.class, 1);
+
+    failingStore.allowWrites = false;
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     send(request);
     listener
         .assertNext(OnWriteFailure.class, request)
@@ -3399,12 +3503,12 @@ class HttpCacheTest extends AbstractHttpCacheTest {
             event -> Utils.getDeepCompletionCause(event.exception)) // Can be a CompletionException
         .isInstanceOf(TestException.class);
 
+    failingStore.allowWrites = true;
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
-
-    faultyStore.allowWrites = true;
     send(request);
     listener.assertNext(OnWriteSuccess.class, request);
 
+    failingStore.allowReads = false;
     assertThatExceptionOfType(TestException.class).isThrownBy(() -> send(request));
     listener
         .assertNext(OnReadFailure.class, request)
@@ -3412,7 +3516,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
             event -> Utils.getDeepCompletionCause(event.exception)) // Can be a CompletionException
         .isInstanceOf(TestException.class);
 
-    faultyStore.allowReads = true;
+    failingStore.allowReads = true;
     send(request);
     listener.assertNext(OnReadSuccess.class, request);
   }
@@ -3441,6 +3545,10 @@ class HttpCacheTest extends AbstractHttpCacheTest {
       } catch (InterruptedException e) {
         return fail("Unexpected exception", e);
       }
+    }
+
+    <T extends Event> ObjectAssert<T> assertNext(Class<T> expected) {
+      return assertThat(pollNext()).asInstanceOf(InstanceOfAssertFactories.type(expected));
     }
 
     <T extends Event> ObjectAssert<T> assertNext(Class<T> expected, TaggableRequest request) {
@@ -3662,8 +3770,10 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   }
 
   private static final class FailingStore extends ForwardingStore {
-    volatile boolean allowReads = false;
-    volatile boolean allowWrites = false;
+    volatile boolean allowReads = true;
+    volatile boolean allowWrites = true;
+    volatile boolean allowViews = true;
+    volatile boolean allowEdits = true;
 
     FailingStore(Store delegate) {
       super(delegate);
@@ -3671,22 +3781,32 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
     @Override
     public Optional<Viewer> view(String key) throws IOException {
+      if (!allowViews) {
+        throw new TestException();
+      }
       return super.view(key).map(FailingViewer::new);
     }
 
     @Override
     public CompletableFuture<Optional<Viewer>> view(String key, Executor executor) {
-      return super.view(key, executor).thenApply(viewer -> viewer.map(FailingViewer::new));
+      return allowViews
+          ? super.view(key, executor).thenApply(viewer -> viewer.map(FailingViewer::new))
+          : CompletableFuture.failedFuture(new TestException());
     }
 
     @Override
     public Optional<Editor> edit(String key) throws IOException {
+      if (!allowEdits) {
+        throw new TestException();
+      }
       return super.edit(key).map(FailingEditor::new);
     }
 
     @Override
     public CompletableFuture<Optional<Editor>> edit(String key, Executor executor) {
-      return super.edit(key, executor).thenApply(editor -> editor.map(FailingEditor::new));
+      return allowEdits
+          ? super.edit(key, executor).thenApply(editor -> editor.map(FailingEditor::new))
+          : CompletableFuture.failedFuture(new TestException());
     }
 
     private final class FailingEditor extends ForwardingEditor {
@@ -3739,7 +3859,7 @@ class HttpCacheTest extends AbstractHttpCacheTest {
       public void close() {
         super.close();
         if (committed && failedAtLeastOnce) {
-          fail("edit is committed despite prohibited writes");
+          fail("Edit is committed despite prohibited writes");
         }
       }
     }
@@ -3781,12 +3901,17 @@ class HttpCacheTest extends AbstractHttpCacheTest {
 
       @Override
       public Optional<Editor> edit() throws IOException {
+        if (!allowEdits) {
+          throw new TestException();
+        }
         return super.edit().map(FailingEditor::new);
       }
 
       @Override
       public CompletableFuture<Optional<Editor>> edit(Executor executor) {
-        return super.edit(executor).thenApply(editor -> editor.map(FailingEditor::new));
+        return allowEdits
+            ? super.edit(executor).thenApply(editor -> editor.map(FailingEditor::new))
+            : CompletableFuture.failedFuture(new TestException());
       }
     }
   }
