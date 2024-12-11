@@ -37,6 +37,8 @@ interface CacheSpec {
   fun on(storageExtension: StorageExtension)
 
   fun executor(executor: Executor)
+
+  fun synchronizeWrites(synchronizeWrites: Boolean = true)
 }
 
 private class CacheFactorySpec(private val builder: HttpCache.Builder = Cache.newBuilder()) :
@@ -55,6 +57,10 @@ private class CacheFactorySpec(private val builder: HttpCache.Builder = Cache.ne
 
   override fun executor(executor: Executor) {
     builder.executor(executor)
+  }
+
+  override fun synchronizeWrites(synchronizeWrites: Boolean) {
+    builder.synchronizeWrites(synchronizeWrites)
   }
 
   override fun make(): Cache = builder.build()
