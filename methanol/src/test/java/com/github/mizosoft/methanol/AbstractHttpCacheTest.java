@@ -40,6 +40,7 @@ import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.MockClock;
 import com.github.mizosoft.methanol.testing.MockWebServerExtension;
+import com.github.mizosoft.methanol.testing.MockWebServerExtension.MethanolBuilderFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
@@ -68,24 +69,34 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith({MockWebServerExtension.class, ExecutorExtension.class})
 abstract class AbstractHttpCacheTest {
   Executor executor;
+  MethanolBuilderFactory clientBuilderFactory;
   Methanol.Builder clientBuilder;
   MockWebServer server;
   URI serverUri;
   MockClock clock;
-  boolean failOnUnavailableResponses = true;
-  Duration advanceOnSend = Duration.ZERO;
-
+  boolean failOnUnavailableResponses;
+  Duration advanceOnSend;
   Methanol client; // Must be set by subclass to apply cache setup.
 
   @BeforeEach
   @ExecutorSpec(ExecutorType.CACHED_POOL)
-  void setUp(Executor executor, Methanol.Builder builder, MockWebServer server) {
+  void setUp(Executor executor, MethanolBuilderFactory builderFactory, MockWebServer server) {
     this.executor = executor;
     this.server = server;
     this.serverUri = server.url("/").uri();
     this.clock = new MockClock();
-    this.clientBuilder =
-        builder
+    this.clientBuilderFactory = builderFactory;
+    resetClientBuilder();
+    ((QueueDispatcher) server.getDispatcher())
+        .setFailFast(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
+  }
+
+  void resetClientBuilder() {
+    failOnUnavailableResponses = true;
+    advanceOnSend = Duration.ZERO;
+    clientBuilder =
+        clientBuilderFactory
+            .get()
             .executor(executor)
             .backendInterceptor(
                 new Interceptor() {
@@ -121,9 +132,6 @@ abstract class AbstractHttpCacheTest {
                             });
                   }
                 });
-
-    ((QueueDispatcher) server.getDispatcher())
-        .setFailFast(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
   }
 
   HttpResponse<String> send() throws IOException, InterruptedException {

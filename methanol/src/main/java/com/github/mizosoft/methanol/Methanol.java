@@ -74,6 +74,7 @@ import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import javax.net.ssl.SSLContext;
@@ -207,10 +208,27 @@ public class Methanol extends HttpClient {
       mergedInterceptors.add(
           new RedirectingInterceptor(redirectPolicy, backend.executor().orElse(null)));
     }
-    caches.forEach(cache -> mergedInterceptors.add(cache.interceptor()));
+    caches.forEach(
+        cache -> mergedInterceptors.add(cache.interceptor(implicitHeaderPredicateOf(backend))));
 
     mergedInterceptors.addAll(backendInterceptors);
     this.mergedInterceptors = Collections.unmodifiableList(mergedInterceptors);
+  }
+
+  private static Predicate<String> implicitHeaderPredicateOf(HttpClient client) {
+    Predicate<String> predicate = name -> name.equalsIgnoreCase("Host");
+    if (client.authenticator().isPresent()) {
+      predicate =
+          predicate.or(
+              name ->
+                  name.equalsIgnoreCase("Authorization")
+                      || name.equalsIgnoreCase("Proxy-Authorization"));
+    }
+    if (client.cookieHandler().isPresent()) {
+      predicate =
+          predicate.or(name -> name.equalsIgnoreCase("Cookie") || name.equalsIgnoreCase("Cookie2"));
+    }
+    return predicate;
   }
 
   /**
@@ -882,14 +900,6 @@ public class Methanol extends HttpClient {
     abstract B self();
 
     abstract HttpClient buildBackend();
-
-    // Currently used in tests.
-    @CanIgnoreReturnValue
-    B clearInterceptors() {
-      interceptors.clear();
-      backendInterceptors.clear();
-      return self();
-    }
   }
 
   /** A builder for {@code Methanol} instances with a pre-specified backend {@code HttpClient}. */

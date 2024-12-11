@@ -81,6 +81,7 @@ import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -137,18 +138,21 @@ public final class CacheInterceptor implements Interceptor {
   private final Executor executor;
   private final Clock clock;
   private final boolean synchronizeWrites;
+  private final Predicate<String> implicitHeaderPredicate;
 
   public CacheInterceptor(
       LocalCache.Factory cacheFactory,
       Listener listener,
       Executor executor,
       Clock clock,
-      boolean synchronizeWrites) {
+      boolean synchronizeWrites,
+      Predicate<String> implicitHeaderPredicate) {
     this.cacheFactory = requireNonNull(cacheFactory);
     this.listener = requireNonNull(listener);
     this.executor = requireNonNull(executor);
     this.clock = requireNonNull(clock);
     this.synchronizeWrites = synchronizeWrites;
+    this.implicitHeaderPredicate = requireNonNull(implicitHeaderPredicate);
   }
 
   @Override
@@ -175,55 +179,8 @@ public final class CacheInterceptor implements Interceptor {
         .exchange();
   }
 
-  private static boolean isSupported(HttpRequest request) {
-    return isSupportedRequestMethod(request.method())
-        && request.headers().map().keySet().stream()
-            .allMatch(CacheInterceptor::isSupportedRequestHeader);
-  }
-
-  private static boolean isSupportedRequestMethod(String method) {
-    return method.equalsIgnoreCase("GET");
-  }
-
-  private static boolean isSupportedRequestHeader(String name) {
-    // The only headers we don't support are preconditions that we don't evaluate.
-    return !name.startsWith("If-")
-        || name.equalsIgnoreCase("If-None-Match")
-        || name.equalsIgnoreCase("If-Modified-Since");
-  }
-
-  /**
-   * Returns true if the given field name can be implicitly added by HttpClient's own filters. This
-   * can happen if an Authenticator or a CookieHandler is installed. If a response varies with such
-   * fields, it's rendered uncacheable as we can't access the corresponding values from requests.
-   */
-  private static boolean isImplicitField(String name) {
-    return name.equalsIgnoreCase("Cookie")
-        || name.equalsIgnoreCase("Cookie2")
-        || name.equalsIgnoreCase("Authorization")
-        || name.equalsIgnoreCase("Proxy-Authorization");
-  }
-
-  @SuppressWarnings("NullAway")
-  private static boolean isNetworkOrServerError(
-      @Nullable NetworkResponse networkResponse, @Nullable Throwable exception) {
-    assert networkResponse != null ^ exception != null;
-    if (networkResponse != null) {
-      return HttpStatus.isServerError(networkResponse.get());
-    }
-
-    // Situational errors for network usage are considered for stale-if-error treatment, as they're
-    // similar to 5xx response codes (but on the client side), which are perfect candidates for
-    // stale-if-error.
-    var cause = Utils.getDeepCompletionCause(exception); // Might be a CompletionException.
-    if (cause instanceof UncheckedIOException) {
-      cause = cause.getCause();
-    }
-    return cause instanceof ConnectException || cause instanceof UnknownHostException;
-  }
-
   /** Returns whether the given network response can be cached. Based on rfc7234 Section 3. */
-  private static boolean isCacheable(HttpRequest request, TrackedResponse<?> response) {
+  private boolean isCacheable(HttpRequest request, TrackedResponse<?> response) {
     if (!isSupported(request)
         || !request.uri().equals(response.uri())
         || !request.method().equalsIgnoreCase(response.request().method())) {
@@ -250,10 +207,17 @@ public final class CacheInterceptor implements Interceptor {
       return false;
     }
 
+    Set<String> varyFields;
+    try {
+      // Don't crash because of server's ill-formed Cache-Control.
+      varyFields = CacheResponseMetadata.varyFields(response.headers());
+    } catch (IllegalArgumentException e) {
+      logger.log(Level.WARNING, "Invalid response Vary", e);
+      return false;
+    }
+
     // Skip if the response is unmatchable or varies with fields what we can't access.
-    Set<String> varyFields = CacheResponseMetadata.varyFields(response.headers());
-    if (varyFields.contains("*")
-        || varyFields.stream().anyMatch(CacheInterceptor::isImplicitField)) {
+    if (varyFields.contains("*") || varyFields.stream().anyMatch(implicitHeaderPredicate)) {
       return false;
     }
 
@@ -262,6 +226,41 @@ public final class CacheInterceptor implements Interceptor {
         || responseCacheControl.isPrivate()
         || isHeuristicallyCacheable(response.statusCode())
         || response.headers().firstValue("Expires").filter(HttpDates::isHttpDate).isPresent();
+  }
+
+  private static boolean isSupported(HttpRequest request) {
+    return isSupportedRequestMethod(request.method())
+        && request.headers().map().keySet().stream()
+            .allMatch(CacheInterceptor::isSupportedRequestHeader);
+  }
+
+  private static boolean isSupportedRequestMethod(String method) {
+    return method.equalsIgnoreCase("GET");
+  }
+
+  private static boolean isSupportedRequestHeader(String name) {
+    // The only headers we don't support are preconditions that we don't evaluate.
+    return !name.startsWith("If-")
+        || name.equalsIgnoreCase("If-None-Match")
+        || name.equalsIgnoreCase("If-Modified-Since");
+  }
+
+  @SuppressWarnings("NullAway")
+  private static boolean isNetworkOrServerError(
+      @Nullable NetworkResponse networkResponse, @Nullable Throwable exception) {
+    assert networkResponse != null ^ exception != null;
+    if (networkResponse != null) {
+      return HttpStatus.isServerError(networkResponse.get());
+    }
+
+    // Situational errors for network usage are considered for stale-if-error treatment, as they're
+    // similar to 5xx response codes (but on the client side), which are perfect candidates for
+    // stale-if-error.
+    var cause = Utils.getDeepCompletionCause(exception); // Might be a CompletionException.
+    if (cause instanceof UncheckedIOException) {
+      cause = cause.getCause();
+    }
+    return cause instanceof ConnectException || cause instanceof UnknownHostException;
   }
 
   /**
