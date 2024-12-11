@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.kotlin
 
 import com.github.mizosoft.methanol.HttpCache
 import com.github.mizosoft.methanol.StorageExtension
+import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.Executor
 
@@ -85,6 +86,29 @@ typealias Cache = HttpCache
 
 /** A series of caches invoked sequentially during an HTTP call. */
 typealias CacheChain = List<Cache>
+
+/** Closes all caches in this chain. */
+fun CacheChain.close() {
+  var closeException: IOException? = null
+  for (cache in this) {
+    try {
+      cache.close()
+    } catch (e: IOException) {
+      if (closeException != null) {
+        closeException.addSuppressed(e)
+      } else {
+        closeException = e
+      }
+    }
+  }
+
+  if (closeException != null) {
+    throw closeException
+  }
+}
+
+/** Returns an [AutoCloseable] that closes all caches in this chain when invoked. */
+fun CacheChain.closeable() = AutoCloseable { close() }
 
 /** Creates a new [com.github.mizosoft.methanol.kotlin.Cache] as configured by the given spec block. */
 @Suppress("FunctionName")
