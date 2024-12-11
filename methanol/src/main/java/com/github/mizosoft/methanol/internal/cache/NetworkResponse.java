@@ -34,14 +34,18 @@ import java.util.function.Consumer;
 
 /** A {@code RawResponse} that came from the network and may be written to cache. */
 public final class NetworkResponse extends PublisherResponse {
-  private NetworkResponse(TrackedResponse<?> response, Publisher<List<ByteBuffer>> publisher) {
+  private final boolean isCacheUpdating;
+
+  private NetworkResponse(
+      TrackedResponse<?> response, Publisher<List<ByteBuffer>> publisher, boolean isCacheUpdating) {
     super(response, publisher);
+    this.isCacheUpdating = isCacheUpdating;
   }
 
   public NetworkResponse writingWith(
       Editor editor,
       Executor executor,
-      CacheWritingPublisher.Listener listener,
+      CacheWritingPublisher.Listener writeListener,
       boolean synchronizeWrites) {
     return new NetworkResponse(
         response,
@@ -50,8 +54,9 @@ public final class NetworkResponse extends PublisherResponse {
             editor,
             CacheResponseMetadata.from(response).encode(),
             executor,
-            listener,
-            synchronizeWrites));
+            writeListener,
+            synchronizeWrites),
+        true);
   }
 
   /** Discards the response body in background. */
@@ -60,14 +65,18 @@ public final class NetworkResponse extends PublisherResponse {
     handleAsync(BodyHandlers.discarding(), executor);
   }
 
+  public boolean isCacheUpdating() {
+    return isCacheUpdating;
+  }
+
   @Override
   public NetworkResponse with(Consumer<ResponseBuilder<?>> mutator) {
     var builder = ResponseBuilder.newBuilder(response);
     mutator.accept(builder);
-    return new NetworkResponse(builder.buildTrackedResponse(), publisher);
+    return new NetworkResponse(builder.buildTrackedResponse(), publisher, isCacheUpdating);
   }
 
-  public static NetworkResponse from(TrackedResponse<Publisher<List<ByteBuffer>>> response) {
-    return new NetworkResponse(response, response.body());
+  public static NetworkResponse of(TrackedResponse<Publisher<List<ByteBuffer>>> response) {
+    return new NetworkResponse(response, response.body(), false);
   }
 }

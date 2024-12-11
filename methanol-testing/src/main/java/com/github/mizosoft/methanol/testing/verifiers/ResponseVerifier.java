@@ -391,7 +391,6 @@ public final class ResponseVerifier<T> {
   public ResponseVerifier<T> isCacheUnsatisfaction() {
     hasCacheStatus(UNSATISFIABLE);
     hasNoNetworkResponse();
-    hasNoCacheResponse();
     assertThat(response.statusCode()).isEqualTo(HTTP_GATEWAY_TIMEOUT);
     return this;
   }

@@ -29,7 +29,6 @@ import static com.github.mizosoft.methanol.internal.cache.HttpDates.tryParseHttp
 import com.github.mizosoft.methanol.CacheControl;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.ResponseBuilder;
-import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.util.Compare;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
@@ -44,11 +43,8 @@ import java.util.Optional;
  * without contacting the origin, based on the caching rules imposed by the server & client.
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-class CacheStrategy {
+public final class CacheStrategy {
   private static final Duration ONE_DAY = Duration.ofDays(1);
-
-  private final CacheControl requestCacheControl;
-  private final CacheControl responseCacheControl;
 
   /** The age of the cached response. */
   private final Duration age;
@@ -63,43 +59,102 @@ class CacheStrategy {
   private final Optional<String> etag;
   private final boolean usesHeuristicFreshness;
 
-  CacheStrategy(Factory factory, Instant now) {
-    requestCacheControl = factory.requestCacheControl;
-    responseCacheControl = factory.responseCacheControl;
+  private enum Servability {
+    NONE,
+    FRESH,
+    STALE,
+    STALE_WHILE_REVALIDATING,
+    STALE_ON_ERROR
+  }
+
+  private final Servability servability;
+
+  private CacheStrategy(Factory factory, Instant now) {
+    var requestCacheControl = factory.requestCacheControl;
+    var responseCacheControl = factory.responseCacheControl;
     age = factory.computeAge(now);
-    freshness = factory.computeFreshnessLifetime().minus(age);
-    staleness = freshness.negated();
     usesHeuristicFreshness = factory.usesHeuristicFreshness();
     lastModified = factory.lastModified;
     etag = factory.cacheResponseHeaders.firstValue("ETag");
-  }
-
-  boolean canServeCacheResponse(StalenessRule stalenessRule) {
+    freshness = factory.computeFreshnessLifetime().minus(age);
+    staleness = freshness.negated();
     if (requestCacheControl.noCache() || responseCacheControl.noCache()) {
-      return false;
+      servability = Servability.NONE;
+    } else if (!freshness.isNegative() && !freshness.isZero()) {
+      // From rfc7234 Section 4.2:
+      // ---
+      //   The calculation to determine if a response is fresh is:
+      //
+      //   response_is_fresh = (freshness_lifetime > current_age)
+      // ---
+      //
+      // So:
+      //   response_is_fresh = ((freshness = freshness_lifetime - current_age) > 0)
+      //
+      // If the request has a Cache-Control: min-fresh=x, we have:
+      //   response_is_fresh = ((freshness = freshness_lifetime - current_age) >= x)
+      servability =
+          requestCacheControl.minFresh().isEmpty()
+                  || freshness.compareTo(requestCacheControl.minFresh().get()) >= 0
+              ? Servability.FRESH
+              : Servability.NONE;
+    } else if (responseCacheControl.mustRevalidate()) {
+      servability = Servability.NONE;
+    } else if (requestCacheControl.maxStale().isPresent() || requestCacheControl.anyMaxStale()) {
+      // max-stale is only applicable to requests.
+      servability =
+          requestCacheControl
+                      .maxStale()
+                      .map(maxStale -> staleness.compareTo(maxStale) <= 0)
+                      .orElse(false)
+                  || requestCacheControl.anyMaxStale()
+              ? Servability.STALE
+              : Servability.NONE;
+    } else if (responseCacheControl.staleWhileRevalidate().isPresent()) {
+      // stale-while-revalidate is only applicable to responses.
+      servability =
+          responseCacheControl
+                  .staleWhileRevalidate()
+                  .map(staleWhileRevalidate -> staleness.compareTo(staleWhileRevalidate) <= 0)
+                  .orElse(false)
+              ? Servability.STALE_WHILE_REVALIDATING
+              : Servability.NONE;
+    } else if (requestCacheControl.staleIfError().isPresent()
+        || responseCacheControl.staleIfError().isPresent()) {
+      // stale-while-revalidate is only applicable to responses.
+      servability =
+          requestCacheControl
+                  .staleIfError()
+                  .or(responseCacheControl::staleIfError)
+                  .map(staleIfError -> staleness.compareTo(staleIfError) <= 0)
+                  .orElse(false)
+              ? Servability.STALE_ON_ERROR
+              : Servability.NONE;
+    } else {
+      servability = Servability.NONE;
     }
-
-    // From rfc7234 Section 4.2:
-    // ---
-    //   The calculation to determine if a response is fresh is:
-    //
-    //   response_is_fresh = (freshness_lifetime > current_age)
-    // ---
-    //
-    // So:
-    //   response_is_fresh = ((freshness = freshness_lifetime - current_age) > 0)
-    //
-    // If the request has a Cache-Control: min-fresh=x, we have:
-    //   response_is_fresh = ((freshness = freshness_lifetime - current_age) >= x)
-    if (!freshness.isNegative() && !freshness.isZero()) {
-      return requestCacheControl.minFresh().isEmpty()
-          || freshness.compareTo(requestCacheControl.minFresh().get()) >= 0;
-    }
-    return !responseCacheControl.mustRevalidate()
-        && stalenessRule.permits(staleness, requestCacheControl, responseCacheControl);
   }
 
-  void addCacheHeaders(ResponseBuilder<?> builder) {
+  public boolean isCacheResponseServable() {
+    switch (servability) {
+      case FRESH:
+      case STALE:
+      case STALE_WHILE_REVALIDATING:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  public boolean isCacheResponseServableOnError() {
+    return servability == Servability.STALE_ON_ERROR;
+  }
+
+  public boolean requiresBackgroundRevalidation() {
+    return servability == Servability.STALE_WHILE_REVALIDATING;
+  }
+
+  public void addCacheHeaders(ResponseBuilder<?> builder) {
     builder.setHeader("Age", Long.toString(age.toSeconds()));
     if (freshness.isNegative()) {
       builder.header("Warning", "110 - \"Response is Stale\"");
@@ -109,7 +164,7 @@ class CacheStrategy {
     }
   }
 
-  HttpRequest conditionalize(HttpRequest request) {
+  public HttpRequest conditionalize(HttpRequest request) {
     return etag.isEmpty() && lastModified.isEmpty()
         ? request
         : MutableRequest.copyOf(request)
@@ -124,35 +179,43 @@ class CacheStrategy {
             .toImmutableRequest();
   }
 
-  static CacheStrategy create(HttpRequest request, TrackedResponse<?> cacheResponse, Instant now) {
-    return new Factory(request, cacheResponse).create(now);
+  static CacheStrategy create(
+      CacheResponse cacheResponse, CacheControl requestCacheControl, Instant now) {
+    return new Factory(cacheResponse, requestCacheControl).create(now);
   }
 
-  static final class Factory {
+  private static final class Factory {
+    final CacheResponse cacheResponse;
+    final CacheControl requestCacheControl;
+    final CacheControl responseCacheControl;
     final Instant timeRequestSent;
     final Instant timeResponseReceived;
     final HttpHeaders cacheResponseHeaders;
-    final CacheControl requestCacheControl;
-    final CacheControl responseCacheControl;
     final LocalDateTime date;
     final Optional<Duration> maxAge;
     final Optional<LocalDateTime> expires;
     final Optional<LocalDateTime> lastModified;
 
-    Factory(HttpRequest request, TrackedResponse<?> cacheResponse) {
-      timeRequestSent = cacheResponse.timeRequestSent();
-      timeResponseReceived = cacheResponse.timeResponseReceived();
-      cacheResponseHeaders = cacheResponse.headers();
-      requestCacheControl = CacheControl.parse(request.headers());
-      responseCacheControl = CacheControl.parse(cacheResponse.headers());
-      maxAge = requestCacheControl.maxAge().or(responseCacheControl::maxAge);
-      lastModified =
-          cacheResponse.headers().firstValue("Last-Modified").flatMap(HttpDates::tryParseHttpDate);
+    Factory(CacheResponse cacheResponse, CacheControl requestCacheControl) {
+      this.cacheResponse = cacheResponse;
+      this.requestCacheControl = requestCacheControl;
+      this.responseCacheControl = CacheControl.parse(cacheResponse.get().headers());
+      this.timeRequestSent = cacheResponse.get().timeRequestSent();
+      this.timeResponseReceived = cacheResponse.get().timeResponseReceived();
+      this.cacheResponseHeaders = cacheResponse.get().headers();
+      this.maxAge = requestCacheControl.maxAge().or(responseCacheControl::maxAge);
+      this.lastModified =
+          cacheResponse
+              .get()
+              .headers()
+              .firstValue("Last-Modified")
+              .flatMap(HttpDates::tryParseHttpDate);
 
       // As per rfc7231 Section 7.1.1.2, we must use the time the response was received as the value
       // of on absent Date field.
-      date =
+      this.date =
           cacheResponse
+              .get()
               .headers()
               .firstValue("Date")
               .flatMap(HttpDates::tryParseHttpDate)
@@ -169,8 +232,9 @@ class CacheStrategy {
       // represent. This has the advantage over approaches like falling back to an arbitrary amount
       // of time before the response's date, say a minute, in that it won't accidentally pass even
       // if the user passes in a 'max-stale=60', still satisfying the server's assumed intentions.
-      expires =
+      this.expires =
           cacheResponse
+              .get()
               .headers()
               .firstValue("Expires")
               .map(expiresValues -> tryParseHttpDate(expiresValues).orElse(LocalDateTime.MIN));
@@ -220,49 +284,6 @@ class CacheStrategy {
 
     CacheStrategy create(Instant now) {
       return new CacheStrategy(this, now);
-    }
-  }
-
-  /** A rule for accepting stale responses upto a maximum staleness. */
-  enum StalenessRule {
-    MAX_STALE {
-      @Override
-      Optional<Duration> maxStale(
-          CacheControl requestCacheControl, CacheControl responseCacheControl) {
-        // max-stale is only applicable to requests.
-        return requestCacheControl.anyMaxStale()
-            ? Optional.of(Duration.ofSeconds(Long.MAX_VALUE)) // Accept any staleness.
-            : requestCacheControl.maxStale();
-      }
-    },
-
-    STALE_WHILE_REVALIDATE {
-      @Override
-      Optional<Duration> maxStale(
-          CacheControl requestCacheControl, CacheControl responseCacheControl) {
-        // stale-while-revalidate is only applicable to responses.
-        return responseCacheControl.staleWhileRevalidate();
-      }
-    },
-
-    STALE_IF_ERROR {
-      @Override
-      Optional<Duration> maxStale(
-          CacheControl requestCacheControl, CacheControl responseCacheControl) {
-        // stale-if-error is applicable to requests and responses, but the former overrides the
-        // latter.
-        return requestCacheControl.staleIfError().or(responseCacheControl::staleIfError);
-      }
-    };
-
-    abstract Optional<Duration> maxStale(
-        CacheControl requestCacheControl, CacheControl responseCacheControl);
-
-    boolean permits(
-        Duration staleness, CacheControl requestCacheControl, CacheControl responseCacheControl) {
-      return maxStale(requestCacheControl, responseCacheControl)
-          .map(maxStaleness -> staleness.compareTo(maxStaleness) <= 0)
-          .orElse(false);
     }
   }
 }
