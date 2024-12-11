@@ -592,18 +592,24 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     private CompletableFuture<Optional<CacheRetrieval>> retrieveCacheResponse(Instant requestTime) {
-      return isSupported(request) && chainAdapter.chain.pushPromiseHandler().isEmpty()
-          ? cache
-              .get(request)
-              .thenApply(
-                  optionalCacheResponse ->
-                      optionalCacheResponse.map(
-                          cacheResponse ->
-                              new CacheRetrieval(
-                                  cacheResponse,
-                                  CacheStrategy.create(
-                                      cacheResponse, requestCacheControl, requestTime))))
-          : CompletableFuture.completedFuture(Optional.empty());
+      if (!isSupported(request) || chainAdapter.chain.pushPromiseHandler().isPresent()) {
+        return CompletableFuture.completedFuture(Optional.empty());
+      }
+      return cache
+          .get(request)
+          .exceptionally(
+              exception -> {
+                listener.onReadFailure(request, exception);
+                return Optional.empty();
+              })
+          .thenApply(
+              optionalCacheResponse ->
+                  optionalCacheResponse.map(
+                      cacheResponse ->
+                          new CacheRetrieval(
+                              cacheResponse,
+                              CacheStrategy.create(
+                                  cacheResponse, requestCacheControl, requestTime))));
     }
 
     private CompletableFuture<RawResponse> exchange(
@@ -654,7 +660,7 @@ public final class CacheInterceptor implements Interceptor {
             .put(request, networkResponse, cacheRetrieval != null ? cacheRetrieval.response : null)
             .exceptionally(
                 exception -> {
-                  logger.log(Level.WARNING, "Cache update failure", exception);
+                  listener.onWriteFailure(request, exception);
                   return Optional.empty();
                 })
             .thenApply(
@@ -797,13 +803,11 @@ public final class CacheInterceptor implements Interceptor {
       var cacheUpdateFuture =
           cache
               .update(updatedCacheResponse)
-              .whenComplete(
-                  (__, ex) -> {
-                    if (ex != null) {
-                      listener.onWriteFailure(request, ex);
-                    } else {
-                      listener.onWriteSuccess(request);
-                    }
+              .thenRun(() -> listener.onWriteSuccess(request))
+              .exceptionally(
+                  exception -> {
+                    listener.onWriteFailure(request, exception);
+                    return null;
                   });
       var servableResponse =
           updatedCacheResponse.with(
