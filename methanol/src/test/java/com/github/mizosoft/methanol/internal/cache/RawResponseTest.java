@@ -69,7 +69,7 @@ class RawResponseTest {
         ResponseBuilder.newBuilder(responseTemplate)
             .body(strPublisher("Indiana Jones", UTF_8, threadPool))
             .buildTrackedResponse();
-    var rawResponse = NetworkResponse.from(response);
+    var rawResponse = NetworkResponse.of(response);
     assertEqualResponses(response, rawResponse.get());
 
     var handledResponse = rawResponse.handleAsync(BodyHandlers.ofString(), threadPool).get();
@@ -96,7 +96,7 @@ class RawResponseTest {
             .header("Content-Type", "text/plain; charset=UTF-16")
             .body(strPublisher("Hans Solo", UTF_16, threadPool))
             .buildTrackedResponse();
-    var rawResponse = NetworkResponse.from(response);
+    var rawResponse = NetworkResponse.of(response);
     assertEqualResponses(response, rawResponse.get());
 
     var handledResponse = rawResponse.handle(BodyHandlers.ofString());
@@ -110,7 +110,7 @@ class RawResponseTest {
         ResponseBuilder.newBuilder(responseTemplate)
             .body((Publisher<List<ByteBuffer>>) EmptyPublisher.<List<ByteBuffer>>instance())
             .buildTrackedResponse();
-    var rawResponse = NetworkResponse.from(response);
+    var rawResponse = NetworkResponse.of(response);
     var mutated =
         rawResponse.with(builder -> builder.statusCode(369).header("X-My-Header", "Hello!"));
     var expected =
@@ -152,7 +152,7 @@ class RawResponseTest {
   }
 
   private RawResponse failingWith(Supplier<Throwable> supplier) {
-    return NetworkResponse.from(
+    return NetworkResponse.of(
         ResponseBuilder.newBuilder(responseTemplate)
             .body((Publisher<List<ByteBuffer>>) new FailingPublisher<List<ByteBuffer>>(supplier))
             .buildTrackedResponse());
@@ -196,7 +196,7 @@ class RawResponseTest {
   }
 
   public static class TestExceptionIntArg extends IOException {
-    public TestExceptionIntArg(int someImportantValue) {}
+    public TestExceptionIntArg(int ignored) {}
   }
 
   public static class NonIOCheckedTestException extends Exception {}

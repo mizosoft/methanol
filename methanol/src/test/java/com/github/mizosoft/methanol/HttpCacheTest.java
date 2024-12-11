@@ -41,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.Assertions.from;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -131,10 +132,12 @@ import org.assertj.core.api.ObjectAssert;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.TestAbortedException;
 
+@Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
 @ExtendWith(StoreExtension.class)
 class HttpCacheTest extends AbstractHttpCacheTest {
   /**
@@ -671,15 +674,6 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         .containsHeader("X-Version", "v1")
         .containsHeaders(validators1.toMultimap());
 
-    // Retain updated response's freshness
-    clock.advanceSeconds(1);
-
-    verifyThat(send(serverUri))
-        .isCacheHit()
-        .hasBody("DOUBLE STONKS!")
-        .containsHeader("X-Version", "v2")
-        .containsHeaders(validators2.toMultimap());
-
     var sentRequest = server.takeRequest();
     if (config.lastModified) {
       assertThat(sentRequest.getHeaders().getInstant("If-Modified-Since"))
@@ -688,6 +682,15 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     if (config.etag) {
       assertThat(sentRequest.getHeader("If-None-Match")).isEqualTo("1");
     }
+
+    // Retain updated response's freshness
+    clock.advanceSeconds(1);
+
+    verifyThat(send(serverUri))
+        .isCacheHit()
+        .hasBody("DOUBLE STONKS!")
+        .containsHeader("X-Version", "v2")
+        .containsHeaders(validators2.toMultimap());
   }
 
   @StoreParameterizedTest
@@ -1602,12 +1605,14 @@ class HttpCacheTest extends AbstractHttpCacheTest {
     // Make response stale by 2 seconds
     clock.advanceSeconds(3);
 
+    var updatedDateInstant = clock.instant();
+    var updatedLastModifiedInstant = updatedDateInstant.minusSeconds(1);
     server.enqueue(
         new MockResponse()
             .setHeader("Cache-Control", "max-age=1, stale-while-revalidate=2")
             .setHeader("ETag", "2")
-            .setHeader("Last-Modified", instantToHttpDateString(clock.instant().minusSeconds(1)))
-            .setHeader("Date", instantToHttpDateString(clock.instant()))
+            .setHeader("Last-Modified", instantToHttpDateString(updatedLastModifiedInstant))
+            .setHeader("Date", instantToHttpDateString(updatedDateInstant))
             .setBody("Ricardo"));
     verifyThat(send(serverUri))
         .isCacheHit()
@@ -1627,7 +1632,9 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         .hasBody("Ricardo")
         .containsHeader("ETag", "2")
         .doesNotContainHeader("Warning")
-        .containsHeader("Age", "0");
+        .containsHeader("Age", "0")
+        .containsHeader("Date", instantToHttpDateString(updatedDateInstant))
+        .containsHeader("Last-Modified", instantToHttpDateString(updatedLastModifiedInstant));
   }
 
   @StoreParameterizedTest
@@ -1667,6 +1674,69 @@ class HttpCacheTest extends AbstractHttpCacheTest {
         .hasBody("Ricardo")
         .containsHeader("ETag", "2")
         .doesNotContainHeader("Warning");
+  }
+
+  @StoreParameterizedTest
+  void maxStaleTakesPrecedenceOverStaleWhileRevalidate(Store store) throws Exception {
+    setUpCache(store);
+
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1, stale-while-revalidate=2")
+            .setHeader("ETag", "1")
+            .setBody("Pikachu"));
+    verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send(serverUri)).isCacheHit().hasBody("Pikachu");
+    server.takeRequest(); // Remove intial request.
+
+    // Make response stale by 2 seconds.
+    clock.advanceSeconds(3);
+
+    // stale-while-revalidate applies.
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1, stale-while-revalidate=2")
+            .setHeader("ETag", "2")
+            .setBody("Mew"));
+    verifyThat(send(GET(serverUri).cacheControl(CacheControl.newBuilder().onlyIfCached().build())))
+        .isCacheHit()
+        .hasBody("Pikachu");
+    assertThat(server.takeRequest())
+        .returns("1", from(request -> request.getHeader("If-None-Match")));
+    verifyThat(awaitCacheHit()).hasBody("Mew");
+
+    // Make response stale by 2 seconds.
+    clock.advanceSeconds(3);
+
+    // stale-while-revalidate doesn't apply when max-stale is more restrictive.
+    verifyThat(
+            send(
+                GET(serverUri)
+                    .cacheControl(
+                        CacheControl.newBuilder()
+                            .onlyIfCached()
+                            .maxStale(Duration.ofSeconds(1))
+                            .build())))
+        .isCacheUnsatisfaction();
+  }
+
+  @StoreParameterizedTest
+  void staleIfErrorOnNoErrors(Store store) throws Exception {
+    setUpCache(store);
+
+    server.enqueue(
+        new MockResponse()
+            .setHeader("Cache-Control", "max-age=1, stale-if-error=1")
+            .setBody("Pikachu"));
+    verifyThat(send(serverUri)).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send(serverUri)).isCacheHit().hasBody("Pikachu");
+
+    // Make response stale by 1 second.
+    clock.advanceSeconds(2);
+
+    // stale-if-error should only be evaluated on error.
+    verifyThat(send(GET(serverUri).cacheControl(CacheControl.newBuilder().onlyIfCached().build())))
+        .isCacheUnsatisfaction();
   }
 
   @StoreParameterizedTest
@@ -3544,9 +3614,11 @@ class HttpCacheTest extends AbstractHttpCacheTest {
    * response is being updated in background.
    */
   private HttpResponse<String> awaitCacheHit() {
-    var request = GET(serverUri).header("Cache-Control", "max-stale=0, only-if-cached");
+    var request =
+        GET(serverUri)
+            .cacheControl(CacheControl.newBuilder().maxStale(Duration.ZERO).onlyIfCached().build());
     return await()
-        .atMost(Duration.ofSeconds(10))
+        .atMost(Duration.ofSeconds(TestUtils.SLOW_TIMEOUT_SECONDS))
         .until(
             () -> send(request),
             response -> ((CacheAwareResponse<String>) response).cacheStatus() == CacheStatus.HIT);

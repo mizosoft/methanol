@@ -54,7 +54,6 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -380,16 +379,15 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public CompletableFuture<Optional<CacheResponse>> get(
-        HttpRequest request, Instant requestTime) {
+    public CompletableFuture<Optional<CacheResponse>> get(HttpRequest request) {
       return store
           .view(toStoreKey(request), executor)
-          .thenApply(viewer -> readCacheResponse(viewer, request, requestTime));
+          .thenApply(viewer -> readCacheResponse(viewer, request));
     }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private Optional<CacheResponse> readCacheResponse(
-        Optional<Viewer> viewer, HttpRequest request, Instant requestTime) {
+        Optional<Viewer> viewer, HttpRequest request) {
       var cacheResponse =
           viewer
               .map(HttpCache::tryRecoverMetadata)
@@ -400,9 +398,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
                           metadata.toResponseBuilder().buildTrackedResponse(),
                           viewer.orElseThrow(), // We're sure we have a Viewer here.
                           executor,
-                          toReadListener(listener, request),
-                          request,
-                          requestTime));
+                          toReadListener(listener, request)));
       if (cacheResponse.isEmpty()) {
         viewer.ifPresent(Viewer::close);
       }
@@ -430,9 +426,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
     public CompletableFuture<Optional<NetworkResponse>> put(
         HttpRequest request,
         NetworkResponse networkResponse,
-        @Nullable CacheResponse cacheResponse) {
+        @Nullable CacheResponse existingCacheResponse) {
       var editorFuture =
-          cacheResponse != null ? cacheResponse.edit() : store.edit(toStoreKey(request), executor);
+          existingCacheResponse != null
+              ? existingCacheResponse.edit()
+              : store.edit(toStoreKey(request), executor);
       return editorFuture.thenApply(
           optionalEditor ->
               optionalEditor.map(
