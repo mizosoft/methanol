@@ -98,6 +98,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
   private final LocalCache asyncLocalCache;
   private final LocalCache syncLocalCache;
 
+  private volatile boolean disable;
+
   private HttpCache(Store store, Executor executor, boolean isDefaultExecutor, Builder builder) {
     this.store = requireNonNull(store);
     this.executor = requireNonNull(executor);
@@ -270,6 +272,26 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   /**
+   * Sets whether this cache is enabled. A disabled cache neither reads from nor writes to
+   * underlying storage, just as if it was never installed. Caches start enabled, and can be later
+   * disabled and re-enabled any number of times.
+   *
+   * <p>This function is intended to be used to disable the cache when underlying storage
+   * disconnects or becomes faulty, and consequently reading from or writing to the cache always
+   * fails. This can be detected when too many {@link Listener#onWriteFailure(HttpRequest,
+   * Throwable) write} and/or {@link Listener#onReadFailure(HttpRequest, Throwable) read} failures
+   * occur.
+   */
+  public void enable(boolean on) {
+    disable = !on;
+  }
+
+  /** Returns whether this cache is {@link #enable(boolean) enabled}. */
+  public boolean isEnabled() {
+    return !disable;
+  }
+
+  /**
    * Atomically clears and closes this cache.
    *
    * @throws IllegalStateException if closed
@@ -386,6 +408,9 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public CompletableFuture<Optional<CacheResponse>> get(HttpRequest request) {
+      if (disable) {
+        return CompletableFuture.completedFuture(Optional.empty());
+      }
       return store
           .view(toStoreKey(request), executor)
           .thenApply(viewer -> readCacheResponse(viewer, request));
@@ -412,7 +437,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public CompletableFuture<Void> update(CacheResponse cacheResponse) {
+    public CompletableFuture<Boolean> update(CacheResponse cacheResponse) {
+      if (disable) {
+        return CompletableFuture.completedFuture(false);
+      }
       return cacheResponse
           .edit()
           .thenCompose(
@@ -424,8 +452,9 @@ public final class HttpCache implements AutoCloseable, Flushable {
                                   .commit(
                                       CacheResponseMetadata.from(cacheResponse.get()).encode(),
                                       executor)
+                                  .thenApply(__ -> true)
                                   .whenComplete((__, ___) -> editor.close()))
-                      .orElseGet(() -> CompletableFuture.completedFuture(null)));
+                      .orElseGet(() -> CompletableFuture.completedFuture(false)));
     }
 
     @Override
@@ -433,6 +462,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
         HttpRequest request,
         NetworkResponse networkResponse,
         @Nullable CacheResponse existingCacheResponse) {
+      if (disable) {
+        return CompletableFuture.completedFuture(Optional.empty());
+      }
+
       var editorFuture =
           existingCacheResponse != null
               ? existingCacheResponse.edit()
@@ -450,6 +483,9 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public CompletableFuture<Boolean> removeAll(List<URI> uris) {
+      if (disable) {
+        return CompletableFuture.completedFuture(false);
+      }
       return Unchecked.supplyAsync(
           () ->
               store.removeAll(
@@ -1107,7 +1143,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return storeExtension;
     }
 
-    /** Creates a new {@code HttpCache}. */
+    /**
+     * Creates a new {@code HttpCache}.
+     *
+     * @throws java.io.UncheckedIOException if a problem occurs while creating the cache
+     */
     public HttpCache build() {
       var executor = this.executor;
       boolean isDefaultExecutor;

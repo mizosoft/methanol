@@ -50,6 +50,10 @@ import java.util.concurrent.Executor;
  * indexing purposes. Thus, a store's {@link #maxSize} is not exact and might be slightly exceeded
  * as necessary.
  *
+ * <p>Entries on a store are volatile. It is not guaranteed that an entry can be {@link
+ * #view(String) viewed} any time, even if immediately, after it has been {@link
+ * Editor#commit(ByteBuffer) committed}.
+ *
  * <p>Functions that are expected to be called frequently have two variants: one synchronous, and
  * another asynchronous variant that takes an additional {@link Executor} parameter. The former has
  * a default implementation that calls the latter and waits for the result. The executor parameter
@@ -223,7 +227,7 @@ public interface Store extends Closeable, Flushable {
     /**
      * Synchronous variant of {@link #commit(ByteBuffer, Executor)}.
      *
-     * @throws IllegalStateException if closed
+     * @throws IllegalStateException if the edit couldn't be committed, usually due to closure
      */
     default void commit(ByteBuffer metadata) throws IOException {
       Utils.getIo(commit(metadata, FlowSupport.SYNC_EXECUTOR));

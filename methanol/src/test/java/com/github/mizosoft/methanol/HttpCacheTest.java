@@ -2978,11 +2978,54 @@ class HttpCacheTest extends AbstractHttpCacheTest {
   }
 
   @StoreParameterizedTest
+  @StoreSpec(skipped = StoreType.MEMORY)
+  void disposeCache(StoreContext storeContext) throws Exception {
+    setUpCache(storeContext.createAndRegisterStore());
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send()).isCacheHit().hasBody("Pikachu");
+
+    cache.dispose();
+
+    setUpCache(storeContext.createAndRegisterStore());
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+  }
+
+  @StoreParameterizedTest
   void cacheSize(Store store) throws Exception {
     setUpCache(store);
     server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
     verifyThat(send()).isCacheMiss().hasBody("Pikachu");
     assertThat(cache.size()).isEqualTo(cache.store().size());
+  }
+
+  @StoreParameterizedTest
+  void disableCache(Store store) throws Exception {
+    setUpCache(store);
+
+    cache.enable(false);
+    assertThat(cache.isEnabled()).isFalse();
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+
+    cache.enable(true);
+    assertThat(cache.isEnabled()).isTrue();
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+    verifyThat(send()).isCacheHit().hasBody("Pikachu");
+
+    cache.enable(false);
+    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    verifyThat(send()).isCacheMiss().hasBody("Pikachu");
+
+    cache.enable(true);
+    verifyThat(send()).isCacheHit().hasBody("Pikachu");
+
+    // Make response stale.
+    clock.advanceSeconds(1);
   }
 
   @StoreParameterizedTest

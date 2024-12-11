@@ -181,7 +181,7 @@ public final class CacheInterceptor implements Interceptor {
 
   /** Returns whether the given network response can be cached. Based on rfc7234 Section 3. */
   private boolean isCacheable(HttpRequest request, TrackedResponse<?> response) {
-    if (!isSupported(request)
+    if (isNotSupported(request)
         || !request.uri().equals(response.uri())
         || !request.method().equalsIgnoreCase(response.request().method())) {
       return false;
@@ -228,9 +228,9 @@ public final class CacheInterceptor implements Interceptor {
         || response.headers().firstValue("Expires").filter(HttpDates::isHttpDate).isPresent();
   }
 
-  private static boolean isSupported(HttpRequest request) {
-    return isSupportedRequestMethod(request.method())
-        && request.headers().map().keySet().stream()
+  private static boolean isNotSupported(HttpRequest request) {
+    return !isSupportedRequestMethod(request.method())
+        || !request.headers().map().keySet().stream()
             .allMatch(CacheInterceptor::isSupportedRequestHeader);
   }
 
@@ -592,7 +592,7 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     private CompletableFuture<Optional<CacheRetrieval>> retrieveCacheResponse(Instant requestTime) {
-      if (!isSupported(request) || chainAdapter.chain.pushPromiseHandler().isPresent()) {
+      if (isNotSupported(request) || chainAdapter.chain.pushPromiseHandler().isPresent()) {
         return CompletableFuture.completedFuture(Optional.empty());
       }
       return cache
@@ -803,7 +803,12 @@ public final class CacheInterceptor implements Interceptor {
       var cacheUpdateFuture =
           cache
               .update(updatedCacheResponse)
-              .thenRun(() -> listener.onWriteSuccess(request))
+              .thenAccept(
+                  updated -> {
+                    if (updated) {
+                      listener.onWriteSuccess(request);
+                    }
+                  })
               .exceptionally(
                   exception -> {
                     listener.onWriteFailure(request, exception);
