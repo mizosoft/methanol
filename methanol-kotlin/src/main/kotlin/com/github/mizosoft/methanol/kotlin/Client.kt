@@ -70,7 +70,11 @@ interface ClientSpec {
 
   fun cache(block: CacheSpec.() -> Unit)
 
+  fun cache(cache: Cache)
+
   fun cacheChain(block: CacheChainSpec.() -> Unit)
+
+  fun cacheChain(cacheChain: CacheChain)
 
   fun cookieHandler(cookieHandler: CookieHandler)
 
@@ -157,8 +161,16 @@ private class ClientFactorySpec(private val builder: Methanol.Builder = Methanol
     builder.cache(Cache(block))
   }
 
+  override fun cache(cache: Cache) {
+    builder.cache(cache)
+  }
+
   override fun cacheChain(block: CacheChainSpec.() -> Unit) {
     builder.cacheChain(CacheChain(block))
+  }
+
+  override fun cacheChain(cacheChain: CacheChain) {
+    builder.cacheChain(cacheChain)
   }
 
   override fun cookieHandler(cookieHandler: CookieHandler) {
