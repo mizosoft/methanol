@@ -59,6 +59,11 @@ public final class RequestVerifier {
   }
 
   @CanIgnoreReturnValue
+  public RequestVerifier isHEAD() {
+    return hasMethod("HEAD");
+  }
+
+  @CanIgnoreReturnValue
   public RequestVerifier isPOST() {
     return hasMethod("POST");
   }

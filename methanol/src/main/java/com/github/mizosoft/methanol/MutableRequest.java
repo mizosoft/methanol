@@ -390,6 +390,13 @@ public final class MutableRequest extends TaggableRequest
     return setMethod("GET", null);
   }
 
+  // @Override
+  @SuppressWarnings("Since15")
+  @CanIgnoreReturnValue
+  public MutableRequest HEAD() {
+    return setMethod("HEAD", null);
+  }
+
   @Override
   @CanIgnoreReturnValue
   public MutableRequest POST(BodyPublisher bodyPublisher) {
@@ -618,6 +625,16 @@ public final class MutableRequest extends TaggableRequest
   /** Returns a new {@code MutableRequest} with the given URI and a GET method. */
   public static MutableRequest GET(URI uri) {
     return new MutableRequest().uri(uri); // default is GET
+  }
+
+  /** Returns a new {@code MutableRequest} with the given URI and a HEAD method. */
+  public static MutableRequest HEAD(String uri) {
+    return new MutableRequest().uri(uri).HEAD();
+  }
+
+  /** Returns a new {@code MutableRequest} with the given URI and a HEAD method. */
+  public static MutableRequest HEAD(URI uri) {
+    return new MutableRequest().uri(uri).HEAD();
   }
 
   /** Returns a new {@code MutableRequest} with the given URI and a DELETE method. */
