@@ -138,7 +138,7 @@ public final class RedisClusterSession implements RedisSession {
             RedisStandaloneSession.start(
                 Map.of(
                     "cluster-enabled", "yes",
-                    "cluster-node-timeout", "10000",
+                    "cluster-node-timeout", "5000",
                     "save", "", // Disable rdb snapshotting.
 
                     // Having no delay in disk-less sync makes the cluster operable sooner than

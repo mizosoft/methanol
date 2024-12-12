@@ -132,13 +132,19 @@ public final class CacheInterceptor implements Interceptor {
   private final Listener listener;
   private final Executor executor;
   private final Clock clock;
+  private final boolean synchronizeWrites;
 
   public CacheInterceptor(
-      LocalCache.Factory cacheFactory, Listener listener, Executor executor, Clock clock) {
+      LocalCache.Factory cacheFactory,
+      Listener listener,
+      Executor executor,
+      Clock clock,
+      boolean synchronizeWrites) {
     this.cacheFactory = requireNonNull(cacheFactory);
     this.listener = requireNonNull(listener);
     this.executor = requireNonNull(executor);
     this.clock = requireNonNull(clock);
+    this.synchronizeWrites = synchronizeWrites;
   }
 
   @Override
@@ -614,17 +620,21 @@ public final class CacheInterceptor implements Interceptor {
         networkResponse.discard(executor);
 
         var updatedCacheResponse = updateCacheResponse(cacheResponse, networkResponse);
-        cache
-            .update(updatedCacheResponse)
-            .whenComplete(
-                (__, ex) -> {
-                  if (ex != null) {
-                    listener.onWriteFailure(request, ex);
-                  } else {
-                    listener.onWriteSuccess(request);
-                  }
-                });
-        return CompletableFuture.completedFuture(withCacheResponse(updatedCacheResponse));
+        var cacheUpdateFuture =
+            cache
+                .update(updatedCacheResponse)
+                .whenComplete(
+                    (__, ex) -> {
+                      if (ex != null) {
+                        listener.onWriteFailure(request, ex);
+                      } else {
+                        listener.onWriteSuccess(request);
+                      }
+                    });
+        var updatedExchange = withCacheResponse(updatedCacheResponse);
+        return synchronizeWrites
+            ? cacheUpdateFuture.handle((__, ___) -> updatedExchange)
+            : CompletableFuture.completedFuture(updatedExchange);
       }
 
       if (isCacheable(request, networkResponse.get())) {

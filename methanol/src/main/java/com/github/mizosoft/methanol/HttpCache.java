@@ -89,6 +89,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
   private final boolean isDefaultExecutor;
   private final StatsRecorder statsRecorder;
   private final Clock clock;
+  private final boolean synchronizeWrites;
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private final Optional<Listener> userListener;
@@ -104,13 +105,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
     this.statsRecorder =
         requireNonNullElseGet(builder.statsRecorder, StatsRecorder::createConcurrentRecorder);
     this.clock = requireNonNullElse(builder.clock, Utils.systemMillisUtc());
+    this.synchronizeWrites = builder.synchronizeWrites;
     this.userListener = Optional.ofNullable(builder.listener);
     this.listener =
         new CompositeListener(
             userListener.orElse(DisabledListener.INSTANCE),
             new StatsRecordingListener(statsRecorder));
-    this.asyncLocalCache = new AsyncLocalCache(executor);
-    this.syncLocalCache = new AsyncLocalCache(FlowSupport.SYNC_EXECUTOR);
+    this.asyncLocalCache = new LocalCacheImpl(executor);
+    this.syncLocalCache = new LocalCacheImpl(FlowSupport.SYNC_EXECUTOR);
   }
 
   Store store() {
@@ -164,8 +166,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
    * this method (or {@link #initializeAsync()}) during its startup sequence to allow the cache to
    * operate directly when it's first used.
    *
-   * @deprecated As of {@code 1.8.0}, a cache is always initialized when created. For background
-   *     initialization, please use {@link Builder#buildAsync()}.
+   * @deprecated As of {@code 1.8.0}, a cache is always initialized when created.
    */
   @Deprecated(since = "1.8.0", forRemoval = true)
   public void initialize() {}
@@ -173,8 +174,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
   /**
    * Asynchronously {@link #initialize() initializes} this cache
    *
-   * @deprecated As of {@code 1.8.0}, a cache is always initialized when created. For background
-   *     initialization, please use {@link Builder#buildAsync()}.
+   * @deprecated As of {@code 1.8.0}, a cache is always initialized when created.
    */
   @Deprecated(since = "1.8.0", forRemoval = true)
   @SuppressWarnings("InlineMeSuggester") // Inlining is meaningless.
@@ -300,7 +300,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
   /** Returns an interceptor that serves responses from this cache if applicable. */
   Interceptor interceptor() {
-    return new CacheInterceptor(this::createLocalCache, listener, executor, clock);
+    return new CacheInterceptor(
+        this::createLocalCache, listener, executor, clock, synchronizeWrites);
   }
 
   private LocalCache createLocalCache(Executor executor) {
@@ -309,7 +310,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     } else if (executor == this.executor) {
       return asyncLocalCache;
     } else {
-      return new AsyncLocalCache(executor);
+      return new LocalCacheImpl(executor);
     }
   }
 
@@ -371,10 +372,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
     };
   }
 
-  private final class AsyncLocalCache implements LocalCache {
+  private final class LocalCacheImpl implements LocalCache {
     private final Executor executor;
 
-    AsyncLocalCache(Executor executor) {
+    LocalCacheImpl(Executor executor) {
       this.executor = executor;
     }
 
@@ -437,7 +438,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
               optionalEditor.map(
                   editor ->
                       networkResponse.writingWith(
-                          editor, executor, toWriteListener(listener, request))));
+                          editor,
+                          executor,
+                          toWriteListener(listener, request),
+                          synchronizeWrites)));
     }
 
     @Override
@@ -1021,6 +1025,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     @MonotonicNonNull StatsRecorder statsRecorder;
     @MonotonicNonNull Listener listener;
     @MonotonicNonNull Clock clock;
+    boolean synchronizeWrites;
 
     Builder() {}
 
@@ -1071,21 +1076,25 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return this;
     }
 
+    /**
+     * Sets whether response completion waits for corresponding cache writes to complete. If this
+     * setting is false, which is the default, cache writes may continue in background even after
+     * the corresponding response is completed. Setting this to true makes sure that cache writing
+     * is done after the corresponding response is completed.
+     *
+     * <p>To increase concurrency, this setting should generally be left unset. It is intended to be
+     * set to true if predictability is desired, typically in situations like testing.
+     */
+    @CanIgnoreReturnValue
+    public Builder synchronizeWrites(boolean synchronizeWrites) {
+      this.synchronizeWrites = synchronizeWrites;
+      return this;
+    }
+
     @CanIgnoreReturnValue
     Builder clock(Clock clock) {
       this.clock = requireNonNull(clock);
       return this;
-    }
-
-    private Executor getExecutor(boolean[] isDefaultExecutor) {
-      var executor = this.executor;
-      if (executor != null) {
-        isDefaultExecutor[0] = false;
-      } else {
-        executor = FallbackExecutorProvider.get();
-        isDefaultExecutor[0] = true;
-      }
-      return executor;
     }
 
     private InternalStorageExtension storageExtension() {
@@ -1096,19 +1105,16 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     /** Creates a new {@code HttpCache}. */
     public HttpCache build() {
-      var isDefaultExecutor = new boolean[1];
-      var executor = getExecutor(isDefaultExecutor);
+      var executor = this.executor;
+      boolean isDefaultExecutor;
+      if (executor != null) {
+        isDefaultExecutor = false;
+      } else {
+        executor = FallbackExecutorProvider.get();
+        isDefaultExecutor = true;
+      }
       var store = storageExtension().createStore(executor, CACHE_VERSION);
-      return new HttpCache(store, executor, isDefaultExecutor[0], this);
-    }
-
-    /** Asynchronously creates a new {@code HttpCache}. */
-    public CompletableFuture<HttpCache> buildAsync() {
-      var isDefaultExecutor = new boolean[1];
-      var executor = getExecutor(isDefaultExecutor);
-      return storageExtension()
-          .createStoreAsync(executor, CACHE_VERSION)
-          .thenApply(store -> new HttpCache(store, executor, isDefaultExecutor[0], this));
+      return new HttpCache(store, executor, isDefaultExecutor, this);
     }
   }
 }

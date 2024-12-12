@@ -41,7 +41,6 @@ import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 abstract class AbstractRedisStorageExtension<
@@ -70,20 +69,16 @@ abstract class AbstractRedisStorageExtension<
   @Override
   public Store createStore(Executor executor, int appVersion) {
     try {
-      return Utils.get(createStoreAsync(executor, appVersion));
+      return Utils.get(
+          connectionProvider
+              .connectAsync()
+              .thenApply(connection -> createStore(connection, appVersion))
+              .toCompletableFuture());
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     } catch (InterruptedException e) {
       throw new UncheckedIOException(Utils.toInterruptedIOException(e));
     }
-  }
-
-  @Override
-  public CompletableFuture<? extends Store> createStoreAsync(Executor executor, int appVersion) {
-    return connectionProvider
-        .connectAsync()
-        .thenApply(connection -> createStore(connection, appVersion))
-        .toCompletableFuture();
   }
 
   abstract AbstractRedisStore<C, CMD, ASYNC_CMD> createStore(C connection, int appVersion);

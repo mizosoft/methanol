@@ -58,10 +58,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> {
   private static final Logger logger = System.getLogger(CacheWritingPublisher.class.getName());
 
-  private static final boolean DEFAULT_WAIT_FOR_COMMIT =
-      Boolean.getBoolean(
-          "com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.waitForCommit");
-
   private static final int SOFT_MAX_BULK_WRITE_SIZE = 8;
 
   private final Publisher<List<ByteBuffer>> upstream;
@@ -77,7 +73,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
 
   public CacheWritingPublisher(
       Publisher<List<ByteBuffer>> upstream, Editor editor, ByteBuffer metadata, Executor executor) {
-    this(upstream, editor, metadata, executor, DisabledListener.INSTANCE, DEFAULT_WAIT_FOR_COMMIT);
+    this(upstream, editor, metadata, executor, DisabledListener.INSTANCE, false);
   }
 
   public CacheWritingPublisher(
@@ -86,7 +82,7 @@ public final class CacheWritingPublisher implements Publisher<List<ByteBuffer>> 
       ByteBuffer metadata,
       Executor executor,
       Listener listener) {
-    this(upstream, editor, metadata, executor, listener, DEFAULT_WAIT_FOR_COMMIT);
+    this(upstream, editor, metadata, executor, listener, false);
   }
 
   public CacheWritingPublisher(

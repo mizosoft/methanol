@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.testing.file;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -206,5 +207,10 @@ class ForwardingFileSystemProvider extends FileSystemProvider implements Forward
   public void setAttribute(Path path, String attribute, Object value, LinkOption... options)
       throws IOException {
     delegate.setAttribute(path, attribute, value, options);
+  }
+
+  @Override
+  public String toString() {
+    return Utils.forwardingObjectToString(this, delegate);
   }
 }

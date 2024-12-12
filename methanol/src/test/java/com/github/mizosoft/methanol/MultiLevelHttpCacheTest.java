@@ -59,9 +59,7 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
     var cache =
         HttpCache.newBuilder()
             .executor(executor)
-            .cacheOn(
-                InternalStorageExtension.singleton(
-                    new EditAwaitableStore(storeContext.createAndRegisterStore(), editAwaiter)))
+            .cacheOn(InternalStorageExtension.singleton(storeContext.createAndRegisterStore()))
             .clock(clock)
             .build();
     return new CacheSetup(storeContext, cache);

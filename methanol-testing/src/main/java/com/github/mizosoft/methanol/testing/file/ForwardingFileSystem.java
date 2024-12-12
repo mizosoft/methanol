@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.testing.file;
 
 import static java.util.Objects.requireNonNull;
 
+import com.github.mizosoft.methanol.internal.Utils;
 import java.io.IOException;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
@@ -104,5 +105,10 @@ class ForwardingFileSystem extends FileSystem implements ForwardingObject {
   @Override
   public WatchService newWatchService() throws IOException {
     return delegate.newWatchService();
+  }
+
+  @Override
+  public String toString() {
+    return Utils.forwardingObjectToString(this, delegate);
   }
 }
