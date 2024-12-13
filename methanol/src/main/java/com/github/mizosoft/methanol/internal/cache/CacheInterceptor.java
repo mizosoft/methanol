@@ -62,6 +62,7 @@ import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Instant;
@@ -74,9 +75,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
+import java.util.concurrent.Flow.Subscription;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -87,15 +92,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class CacheInterceptor implements Interceptor {
   private static final Logger logger = System.getLogger(CacheInterceptor.class.getName());
 
-  private static final Set<String> RETAINED_HEADERS;
-  private static final Set<String> RETAINED_HEADER_PREFIXES;
+  private static final Set<String> RETAINED_STORED_HEADERS;
+  private static final Set<String> RETAINED_STORED_HEADER_PREFIXES;
 
   static {
     // Replacing stored headers with these names (or prefixes) from a 304 response is prohibited.
     // These lists are based on Chromium's http_response_headers.cc (see lists kNonUpdatedHeaders &
     // kNonUpdatedHeaderPrefixes).
-    RETAINED_HEADERS = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-    RETAINED_HEADERS.addAll(
+    RETAINED_STORED_HEADERS = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    RETAINED_STORED_HEADERS.addAll(
         Set.of(
             "Connection",
             "Proxy-Connection",
@@ -116,7 +121,7 @@ public final class CacheInterceptor implements Interceptor {
             "Content-Length",
             "X-Frame-Options",
             "X-XSS-Protection"));
-    RETAINED_HEADER_PREFIXES = Set.of("X-Content-", "X-Webkit-");
+    RETAINED_STORED_HEADER_PREFIXES = Set.of("X-Content-", "X-Webkit-");
   }
 
   /** Matcher for valid characters in an entity-tag, as specified by rfc7232 Section 2.3. */
@@ -133,18 +138,21 @@ public final class CacheInterceptor implements Interceptor {
   private final Executor executor;
   private final Clock clock;
   private final boolean synchronizeWrites;
+  private final Predicate<String> implicitHeaderPredicate;
 
   public CacheInterceptor(
       LocalCache.Factory cacheFactory,
       Listener listener,
       Executor executor,
       Clock clock,
-      boolean synchronizeWrites) {
+      boolean synchronizeWrites,
+      Predicate<String> implicitHeaderPredicate) {
     this.cacheFactory = requireNonNull(cacheFactory);
     this.listener = requireNonNull(listener);
     this.executor = requireNonNull(executor);
     this.clock = requireNonNull(clock);
     this.synchronizeWrites = synchronizeWrites;
+    this.implicitHeaderPredicate = requireNonNull(implicitHeaderPredicate);
   }
 
   @Override
@@ -163,91 +171,16 @@ public final class CacheInterceptor implements Interceptor {
 
   private CompletableFuture<RawResponse> exchange(
       HttpRequest request, Chain<?> chain, boolean async) {
-    listener.onRequest(request);
-
-    var requestTime = clock.instant();
-    var chainAdapter = new ChainAdapter(Handlers.toPublisherChain(chain, executor), async);
-    var cache = cacheFactory.instance(async ? executor : FlowSupport.SYNC_EXECUTOR);
-    return getCacheResponse(request, requestTime, chainAdapter, cache)
-        .thenApply(
-            cacheResponse ->
-                new Exchange(request, cacheResponse.orElse(null), requestTime, chainAdapter, cache))
-        .thenCompose(Exchange::evaluate)
-        .thenApply(Exchange::serveResponse)
-        .thenApply(
-            response -> {
-              listener.onResponse(request, (CacheAwareResponse<?>) response.get());
-              return response;
-            });
-  }
-
-  private CompletableFuture<Optional<CacheResponse>> getCacheResponse(
-      HttpRequest request, Instant requestTime, ChainAdapter chainAdapter, LocalCache cache) {
-    if (!"GET".equalsIgnoreCase(request.method())
-        || hasUnsupportedPreconditions(request.headers())
-        || chainAdapter.chain.pushPromiseHandler().isPresent()) {
-      return CompletableFuture.completedFuture(Optional.empty());
-    }
-    return cache.get(request, requestTime);
-  }
-
-  private void handleAsyncRevalidation(
-      @Nullable Exchange networkExchange, @Nullable Throwable exception) {
-    var networkResponse = networkExchange != null ? networkExchange.networkResponse : null;
-    assert networkResponse != null || exception != null;
-    if (networkResponse != null) {
-      // Make sure the network response is released properly. If we're updating a cache entry,
-      // discarding will drain the response body into cache in background.
-      networkResponse.discard(executor);
-    } else {
-      logger.log(Level.WARNING, "Asynchronous revalidation failure", exception);
-    }
-  }
-
-  private static boolean hasUnsupportedPreconditions(HttpHeaders requestHeaders) {
-    return requestHeaders.map().keySet().stream()
-        .anyMatch(CacheInterceptor::isUnsupportedPrecondition);
-  }
-
-  private static boolean isUnsupportedPrecondition(String name) {
-    return "If-Match".equalsIgnoreCase(name)
-        || "If-Unmodified-Since".equalsIgnoreCase(name)
-        || "If-Range".equalsIgnoreCase(name);
-  }
-
-  /**
-   * Returns true if the given field name can be implicitly added by HttpClient's own filters. This
-   * can happen if an Authenticator or a CookieHandler is installed. If a response varies with such
-   * fields, it's rendered uncacheable as we can't access the corresponding values from requests.
-   */
-  private static boolean isImplicitField(String name) {
-    return "Cookie".equalsIgnoreCase(name)
-        || "Cookie2".equalsIgnoreCase(name)
-        || "Authorization".equalsIgnoreCase(name)
-        || "Proxy-Authorization".equalsIgnoreCase(name);
-  }
-
-  @SuppressWarnings("NullAway")
-  private static boolean isNetworkOrServerError(
-      @Nullable NetworkResponse networkResponse, @Nullable Throwable exception) {
-    assert networkResponse != null ^ exception != null;
-    if (networkResponse != null) {
-      return HttpStatus.isServerError(networkResponse.get());
-    }
-
-    // Situational errors for network usage are considered for stale-if-error treatment, as
-    // they're similar to 5xx response codes (but on the client side), which are perfect candidates
-    // for stale-if-error.
-    var cause = Utils.getDeepCompletionCause(exception); // Might be a CompletionException.
-    if (cause instanceof UncheckedIOException) {
-      cause = cause.getCause();
-    }
-    return cause instanceof ConnectException || cause instanceof UnknownHostException;
+    return new Exchange(
+            request,
+            cacheFactory.instance(async ? executor : FlowSupport.SYNC_EXECUTOR),
+            new ChainAdapter(Handlers.toPublisherChain(chain, executor), async))
+        .exchange();
   }
 
   /** Returns whether the given network response can be cached. Based on rfc7234 Section 3. */
-  private static boolean isCacheable(HttpRequest request, TrackedResponse<?> response) {
-    if (!"GET".equalsIgnoreCase(request.method())
+  private boolean isCacheable(HttpRequest request, TrackedResponse<?> response) {
+    if (isNotSupported(request)
         || !request.uri().equals(response.uri())
         || !request.method().equalsIgnoreCase(response.request().method())) {
       return false;
@@ -273,10 +206,17 @@ public final class CacheInterceptor implements Interceptor {
       return false;
     }
 
+    Set<String> varyFields;
+    try {
+      // Don't crash because of server's ill-formed Vary.
+      varyFields = CacheResponseMetadata.varyFields(response.headers());
+    } catch (IllegalArgumentException e) {
+      logger.log(Level.WARNING, "Invalid response Vary", e);
+      return false;
+    }
+
     // Skip if the response is unmatchable or varies with fields what we can't access.
-    Set<String> varyFields = CacheResponseMetadata.varyFields(response.headers());
-    if (varyFields.contains("*")
-        || varyFields.stream().anyMatch(CacheInterceptor::isImplicitField)) {
+    if (varyFields.contains("*") || varyFields.stream().anyMatch(implicitHeaderPredicate)) {
       return false;
     }
 
@@ -285,6 +225,41 @@ public final class CacheInterceptor implements Interceptor {
         || responseCacheControl.isPrivate()
         || isHeuristicallyCacheable(response.statusCode())
         || response.headers().firstValue("Expires").filter(HttpDates::isHttpDate).isPresent();
+  }
+
+  private static boolean isNotSupported(HttpRequest request) {
+    return !isSupportedRequestMethod(request.method())
+        || !request.headers().map().keySet().stream()
+            .allMatch(CacheInterceptor::isSupportedRequestHeader);
+  }
+
+  private static boolean isSupportedRequestMethod(String method) {
+    return method.equalsIgnoreCase("GET");
+  }
+
+  private static boolean isSupportedRequestHeader(String name) {
+    // The only headers we don't support are preconditions that we don't evaluate.
+    return !name.startsWith("If-")
+        || name.equalsIgnoreCase("If-None-Match")
+        || name.equalsIgnoreCase("If-Modified-Since");
+  }
+
+  @SuppressWarnings("NullAway")
+  private static boolean isNetworkOrServerError(
+      @Nullable NetworkResponse networkResponse, @Nullable Throwable exception) {
+    assert networkResponse != null ^ exception != null;
+    if (networkResponse != null) {
+      return HttpStatus.isServerError(networkResponse.get());
+    }
+
+    // Situational errors for network usage are considered for stale-if-error treatment, as they're
+    // similar to 5xx response codes (but on the client side), which are perfect candidates for
+    // stale-if-error.
+    var cause = Utils.getDeepCompletionCause(exception); // Might be a CompletionException.
+    if (cause instanceof UncheckedIOException) {
+      cause = cause.getCause();
+    }
+    return cause instanceof ConnectException || cause instanceof UnknownHostException;
   }
 
   /**
@@ -340,13 +315,14 @@ public final class CacheInterceptor implements Interceptor {
             });
 
     // Remove 1xx Warning codes.
-    builder.removeIf((name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
+    builder.removeIf((name, value) -> name.equalsIgnoreCase("Warning") && value.startsWith("1"));
     return builder.build();
   }
 
-  private static boolean canReplaceStoredHeader(String name) {
-    return !(RETAINED_HEADERS.contains(name)
-        || RETAINED_HEADER_PREFIXES.stream()
+  // Visible for testing.
+  public static boolean canReplaceStoredHeader(String name) {
+    return !(RETAINED_STORED_HEADERS.contains(name)
+        || RETAINED_STORED_HEADER_PREFIXES.stream()
             .anyMatch(prefix -> Utils.startsWithIgnoreCase(name, prefix))
         || name.equals(":status"));
   }
@@ -380,10 +356,10 @@ public final class CacheInterceptor implements Interceptor {
    * Based on rfc7231 Section 4.2.1.
    */
   private static boolean isUnsafe(String method) {
-    return !"GET".equalsIgnoreCase(method)
-        && !"HEAD".equalsIgnoreCase(method)
-        && !"OPTIONS".equalsIgnoreCase(method)
-        && !"TRACE".equalsIgnoreCase(method);
+    return !method.equalsIgnoreCase("GET")
+        && !method.equalsIgnoreCase("HEAD")
+        && !method.equalsIgnoreCase("OPTIONS")
+        && !method.equalsIgnoreCase("TRACE");
   }
 
   /**
@@ -504,12 +480,6 @@ public final class CacheInterceptor implements Interceptor {
             .buildTrackedResponse();
   }
 
-  private static void closeIfPresent(@Nullable CacheResponse c) {
-    if (c != null) {
-      c.close();
-    }
-  }
-
   /**
    * An object that masks synchronous chain calls as {@code CompletableFuture} calls that are
    * executed on the caller thread. This is important in order to share major logic between {@code
@@ -537,112 +507,168 @@ public final class CacheInterceptor implements Interceptor {
     }
   }
 
-  private final class Exchange {
-    private final HttpRequest request;
-    private final @Nullable CacheResponse cacheResponse;
-    private final @Nullable NetworkResponse networkResponse;
-    private final Instant requestTime;
-    private final CacheControl requestCacheControl;
-    private final ChainAdapter chainAdapter;
-    private final LocalCache cache;
+  private static final class DrainingBodySubscriber implements BodySubscriber<Void> {
+    private final CompletableFuture<Void> completion = new CompletableFuture<>();
+    private final AtomicBoolean subscribed = new AtomicBoolean();
 
-    Exchange(
-        HttpRequest request,
-        @Nullable CacheResponse cacheResponse,
-        Instant requestTime,
-        ChainAdapter chainAdapter,
-        LocalCache cache) {
-      this(
-          request,
-          CacheControl.parse(request.headers()),
-          cacheResponse,
-          null,
-          requestTime,
-          chainAdapter,
-          cache);
+    DrainingBodySubscriber() {}
+
+    @Override
+    public CompletionStage<Void> getBody() {
+      return completion;
     }
 
-    private Exchange(
-        HttpRequest request,
-        CacheControl requestCacheControl,
-        @Nullable CacheResponse cacheResponse,
-        @Nullable NetworkResponse networkResponse,
-        Instant requestTime,
-        ChainAdapter chainAdapter,
-        LocalCache cache) {
-      this.request = request;
-      this.cacheResponse = cacheResponse;
-      this.networkResponse = networkResponse;
-      this.requestTime = requestTime;
-      this.requestCacheControl = requestCacheControl;
-      this.chainAdapter = chainAdapter;
-      this.cache = cache;
-    }
-
-    /** Evaluates this exchange and returns an exchange that's ready to serve the response. */
-    @SuppressWarnings("FutureReturnValueIgnored")
-    CompletableFuture<Exchange> evaluate() {
-      if (cacheResponse != null && cacheResponse.isServable()) {
-        return CompletableFuture.completedFuture(this);
+    @Override
+    public void onSubscribe(Subscription subscription) {
+      requireNonNull(subscription);
+      if (subscribed.compareAndSet(false, true)) {
+        subscription.request(Long.MAX_VALUE);
+      } else {
+        subscription.cancel();
       }
+    }
 
-      // Return immediately after firing async revalidation if stale-while-revalidate applies.
-      if (cacheResponse != null && cacheResponse.isServableWhileRevalidating()) {
-        // TODO implement a bounding policy on asynchronous revalidation & find a mechanism to
-        //      notify caller for revalidation's completion.
-        listener.onNetworkUse(request, cacheResponse.get());
-        backgroundNetworkExchange()
-            .thenCompose(Exchange::updateCache)
-            .whenComplete(CacheInterceptor.this::handleAsyncRevalidation);
-        return CompletableFuture.completedFuture(this);
+    @Override
+    public void onNext(List<ByteBuffer> item) {
+      requireNonNull(item);
+    }
+
+    @Override
+    public void onError(Throwable throwable) {
+      completion.completeExceptionally(throwable);
+    }
+
+    @Override
+    public void onComplete() {
+      completion.complete(null);
+    }
+  }
+
+  private static class CacheRetrieval {
+    final CacheResponse response;
+    final CacheStrategy strategy;
+
+    CacheRetrieval(CacheResponse response, CacheStrategy strategy) {
+      this.response = response;
+      this.strategy = strategy;
+    }
+  }
+
+  private final class Exchange {
+    final HttpRequest request;
+    final CacheControl requestCacheControl;
+    final LocalCache cache;
+    final ChainAdapter chainAdapter;
+
+    Exchange(HttpRequest request, LocalCache cache, ChainAdapter chainAdapter) {
+      this.request = request;
+      this.requestCacheControl = CacheControl.parse(request.headers());
+      this.cache = cache;
+      this.chainAdapter = chainAdapter;
+    }
+
+    CompletableFuture<RawResponse> exchange() {
+      listener.onRequest(request);
+      var requestTime = clock.instant();
+      return retrieveCacheResponse(requestTime)
+          .thenCompose(
+              optionalCacheRetrieval ->
+                  optionalCacheRetrieval
+                      .map(
+                          cacheRetrieval ->
+                              exchange(requestTime, cacheRetrieval)
+                                  .whenComplete(
+                                      (__, ex) -> {
+                                        // Make sure the CacheResponse is always released.
+                                        if (ex != null) {
+                                          cacheRetrieval.response.close();
+                                        }
+                                      }))
+                      .orElseGet(() -> exchange(requestTime, null)))
+          .thenApply(
+              response -> {
+                listener.onResponse(request, (CacheAwareResponse<?>) response.get());
+                return response;
+              });
+    }
+
+    private CompletableFuture<Optional<CacheRetrieval>> retrieveCacheResponse(Instant requestTime) {
+      if (isNotSupported(request) || chainAdapter.chain.pushPromiseHandler().isPresent()) {
+        return CompletableFuture.completedFuture(Optional.empty());
+      }
+      return cache
+          .get(request)
+          .exceptionally(
+              exception -> {
+                listener.onReadFailure(request, exception);
+                return Optional.empty();
+              })
+          .thenApply(
+              optionalCacheResponse ->
+                  optionalCacheResponse.map(
+                      cacheResponse ->
+                          new CacheRetrieval(
+                              cacheResponse,
+                              CacheStrategy.create(
+                                  requestCacheControl, cacheResponse, requestTime))));
+    }
+
+    private CompletableFuture<RawResponse> exchange(
+        Instant requestTime, @Nullable CacheRetrieval cacheRetrieval) {
+      if (cacheRetrieval != null && cacheRetrieval.strategy.isCacheResponseServable()) {
+        if (cacheRetrieval.strategy.requiresBackgroundRevalidation()) {
+          revalidateInBackground(requestTime, cacheRetrieval);
+        }
+        return CompletableFuture.completedFuture(serveFromCache(requestTime, cacheRetrieval));
       }
 
       // Don't use the network if the request prohibits it.
       if (requestCacheControl.onlyIfCached()) {
-        return CompletableFuture.completedFuture(this);
+        return CompletableFuture.completedFuture(
+            serveUnsatisfiableRequest(requestTime, cacheRetrieval));
       }
 
-      listener.onNetworkUse(request, cacheResponse != null ? cacheResponse.get() : null);
-      return networkExchange()
-          .handle(this::handleNetworkOrServerError)
-          .thenCompose(Exchange::updateCache);
+      listener.onNetworkUse(request, cacheRetrieval != null ? cacheRetrieval.response.get() : null);
+      return exchangeWithNetwork(
+              cacheRetrieval != null ? cacheRetrieval.strategy.conditionalize(request) : request,
+              requestTime)
+          .handle(
+              (networkResponse, exception) ->
+                  handleNetworkOrServerError(networkResponse, exception, cacheRetrieval))
+          .thenCompose(networkResponse -> exchange(requestTime, cacheRetrieval, networkResponse));
     }
 
-    @SuppressWarnings("FutureReturnValueIgnored")
-    private CompletableFuture<Exchange> updateCache() {
+    @SuppressWarnings({"NullAway", "FutureReturnValueIgnored"})
+    private CompletableFuture<RawResponse> exchange(
+        Instant requestTime,
+        @Nullable CacheRetrieval cacheRetrieval,
+        @Nullable NetworkResponse networkResponse) {
+      assert cacheRetrieval != null || networkResponse != null;
+
+      // A null networkResponse indicates that network has failed but the cache response is
+      // servable, as specified by stale-if-error.
       if (networkResponse == null) {
-        return CompletableFuture.completedFuture(this);
+        return CompletableFuture.completedFuture(serveFromCache(requestTime, cacheRetrieval));
       }
 
-      // On successful revalidation, update the stored response as specified by rfc7234 Section
-      // 4.3.3.
-      if (cacheResponse != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
-        networkResponse.discard(executor);
-
-        var updatedCacheResponse = updateCacheResponse(cacheResponse, networkResponse);
-        var cacheUpdateFuture =
-            cache
-                .update(updatedCacheResponse)
-                .whenComplete(
-                    (__, ex) -> {
-                      if (ex != null) {
-                        listener.onWriteFailure(request, ex);
-                      } else {
-                        listener.onWriteSuccess(request);
-                      }
-                    });
-        var updatedExchange = withCacheResponse(updatedCacheResponse);
-        return synchronizeWrites
-            ? cacheUpdateFuture.handle((__, ___) -> updatedExchange)
-            : CompletableFuture.completedFuture(updatedExchange);
+      // If we have a cacheRetrieval, this may be a successful revalidation.
+      if (cacheRetrieval != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
+        networkResponse.discard(executor); // Release.
+        return serveFromCacheAfterUpdating(cacheRetrieval, networkResponse);
       }
 
       if (isCacheable(request, networkResponse.get())) {
         return cache
-            .put(request, networkResponse, cacheResponse)
+            .put(request, networkResponse, cacheRetrieval != null ? cacheRetrieval.response : null)
+            .exceptionally(
+                exception -> {
+                  listener.onWriteFailure(request, exception);
+                  return Optional.empty();
+                })
             .thenApply(
                 cacheUpdatingNetworkResponse ->
-                    cacheUpdatingNetworkResponse.map(this::withNetworkResponse).orElse(this));
+                    serveFromNetwork(
+                        cacheUpdatingNetworkResponse.orElse(networkResponse), cacheRetrieval));
       }
 
       // An uncacheable response might invalidate itself and other related responses.
@@ -657,74 +683,168 @@ public final class CacheInterceptor implements Interceptor {
                   }
                 });
       }
-      return CompletableFuture.completedFuture(this);
+      return CompletableFuture.completedFuture(serveFromNetwork(networkResponse, cacheRetrieval));
     }
 
-    RawResponse serveResponse() {
-      if (networkResponse == null) {
-        // No network was used. We may have a servable cache response.
-        if (cacheResponse != null
-            && (cacheResponse.isServable()
-                || cacheResponse.isServableWhileRevalidating()
-                || cacheResponse.isServableOnError())) {
-          // As per rfc7234 Section 4.3.2, preconditions should be evaluated only for 200 & 206. We
-          // don't cache 206, so only 200 is considered.
-          if (cacheResponse.get().statusCode() == HTTP_OK
-              && !evaluatePreconditions(request, cacheResponse.get())) {
-            cacheResponse.close();
-            return NetworkResponse.from(
-                new ResponseBuilder<>()
-                    .uri(request.uri())
-                    .request(request)
-                    .cacheStatus(CacheStatus.HIT)
-                    .statusCode(HTTP_NOT_MODIFIED)
-                    .version(Version.HTTP_1_1)
-                    .cacheResponse(cacheResponse.get())
-                    .headers(cacheResponse.get().headers())
-                    .timeRequestSent(requestTime)
-                    .timeResponseReceived(clock.instant())
-                    .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
-                    .buildCacheAwareResponse());
-          }
+    private CompletableFuture<NetworkResponse> exchangeWithNetwork(
+        HttpRequest request, Instant requestTime) {
+      return exchangeWithNetwork(request, requestTime, chainAdapter::forward);
+    }
 
-          var cacheResponse = this.cacheResponse.withCacheHeaders();
-          return cacheResponse.with(
-              builder ->
-                  builder
-                      .request(request)
-                      .cacheStatus(CacheStatus.HIT)
-                      .cacheResponse(cacheResponse.get())
-                      .timeRequestSent(requestTime)
-                      .timeResponseReceived(clock.instant()));
+    private CompletableFuture<NetworkResponse> exchangeWithNetworkInBackground(
+        HttpRequest request, Instant requestTime) {
+      return exchangeWithNetwork(
+          request, requestTime, chainAdapter.chain::forwardAsync); // Ensure asynchronous execution.
+    }
+
+    private CompletableFuture<NetworkResponse> exchangeWithNetwork(
+        HttpRequest request,
+        Instant requestTime,
+        Function<HttpRequest, CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>>>
+            forwarder) {
+      return forwarder
+          .apply(request)
+          .thenApply(
+              response -> NetworkResponse.of(toTrackedResponse(response, requestTime, clock)));
+    }
+
+    @SuppressWarnings("FutureReturnValueIgnored")
+    private void revalidateInBackground(Instant requestTime, CacheRetrieval cacheRetrieval) {
+      // TODO implement a bounding policy on asynchronous revalidation & find a mechanism to
+      //      notify caller for revalidation's completion.
+      listener.onNetworkUse(request, cacheRetrieval.response.get());
+      exchangeWithNetworkInBackground(cacheRetrieval.strategy.conditionalize(request), requestTime)
+          .thenCompose(networkResponse -> exchange(requestTime, cacheRetrieval, networkResponse))
+          .whenComplete(this::handleBackgroundRevalidation);
+    }
+
+    @SuppressWarnings({"NullAway", "FutureValueIsIgnored"})
+    private void handleBackgroundRevalidation(
+        @Nullable RawResponse response, @Nullable Throwable exception) {
+      assert response != null ^ exception != null;
+      if (response instanceof NetworkResponse) {
+        // Make sure the network response is released properly. If we're updating a cache entry, the
+        // entire response body must be consumed.
+        var networkResponse = (NetworkResponse) response;
+        if (networkResponse.isCacheUpdating()) {
+          networkResponse
+              .handleAsync(__ -> new DrainingBodySubscriber(), executor)
+              .whenComplete(
+                  (__, ex) -> {
+                    if (ex != null) {
+                      logger.log(Level.WARNING, "Asynchronous revalidation failure", ex);
+                    }
+                  });
+        } else {
+          networkResponse.discard(executor);
         }
+      } else if (exception != null) {
+        logger.log(Level.WARNING, "Asynchronous revalidation failure", exception);
+      }
+    }
 
-        // Neither cache nor network was applicable due to 'only-if-cached'. Serve a 504 Gateway
-        // Timeout response as per rfc7234 Section 5.2.1.7.
-        closeIfPresent(cacheResponse);
-        return NetworkResponse.from(
-            new ResponseBuilder<>()
-                .uri(request.uri())
-                .request(request)
-                .cacheStatus(CacheStatus.UNSATISFIABLE)
-                .statusCode(HTTP_GATEWAY_TIMEOUT)
-                .version(Version.HTTP_1_1)
-                .timeRequestSent(requestTime)
-                .timeResponseReceived(clock.instant())
-                .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
-                .buildCacheAwareResponse());
+    /**
+     * Handles an error in a network exchange, falling back to the cache response (indicated by
+     * returning null) if one that satisfies stale-if-error is available.
+     */
+    @SuppressWarnings("NullAway")
+    private @Nullable NetworkResponse handleNetworkOrServerError(
+        @Nullable NetworkResponse networkResponse,
+        @Nullable Throwable exception,
+        @Nullable CacheRetrieval cacheRetrieval) {
+      assert networkResponse != null ^ exception != null;
+      if (isNetworkOrServerError(networkResponse, exception)
+          && cacheRetrieval != null
+          && cacheRetrieval.strategy.isCacheResponseServableOnError()) {
+        if (networkResponse != null) {
+          networkResponse.discard(executor);
+        }
+        return null;
       }
 
-      if (cacheResponse != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
+      // stale-if-error isn't satisfied. Forward exception or networkResponse as is.
+      if (exception != null) {
+        if (cacheRetrieval != null) {
+          cacheRetrieval.response.close();
+        }
+        throw Utils.toCompletionException(exception);
+      }
+      return networkResponse;
+    }
+
+    private RawResponse serveFromCache(Instant requestTime, CacheRetrieval cacheRetrieval) {
+      // As per rfc7234 Section 4.3.2, preconditions should be evaluated only for 200 & 206. We
+      // don't cache 206, so only 200 is considered.
+      var cacheResponse = cacheRetrieval.response;
+      if (cacheResponse.get().statusCode() != HTTP_OK
+          || evaluatePreconditions(request, cacheResponse.get())) {
         return cacheResponse.with(
             builder ->
                 builder
                     .request(request)
-                    .cacheStatus(CacheStatus.CONDITIONAL_HIT)
-                    .cacheResponse(cacheResponse.get())
-                    .networkResponse(networkResponse.get()));
+                    .cacheStatus(CacheStatus.HIT)
+                    .cacheResponse(cacheResponse.get()) // Use original cache response.
+                    .with(cacheRetrieval.strategy::addCacheHeaders)
+                    .timeRequestSent(requestTime)
+                    .timeResponseReceived(clock.instant()));
       }
 
-      closeIfPresent(cacheResponse);
+      // The cache response wasn't selected by request's preconditions. This is like a server's
+      // successful revalidation but done by us.
+      cacheResponse.close();
+      return NetworkResponse.of(
+          new ResponseBuilder<>()
+              .uri(request.uri())
+              .request(request)
+              .cacheStatus(CacheStatus.HIT)
+              .statusCode(HTTP_NOT_MODIFIED)
+              .version(Version.HTTP_1_1)
+              .cacheResponse(cacheResponse.get())
+              .headers(cacheResponse.get().headers())
+              .with(cacheRetrieval.strategy::addCacheHeaders)
+              .timeRequestSent(requestTime)
+              .timeResponseReceived(clock.instant())
+              .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
+              .buildCacheAwareResponse());
+    }
+
+    private CompletableFuture<RawResponse> serveFromCacheAfterUpdating(
+        CacheRetrieval cacheRetrieval, NetworkResponse networkResponse) {
+      var cacheResponse = cacheRetrieval.response;
+      var updatedCacheResponse = updateCacheResponse(cacheResponse, networkResponse);
+      var cacheUpdateFuture =
+          cache
+              .update(updatedCacheResponse)
+              .thenAccept(
+                  updated -> {
+                    if (updated) {
+                      listener.onWriteSuccess(request);
+                    }
+                  })
+              .exceptionally(
+                  exception -> {
+                    listener.onWriteFailure(request, exception);
+                    return null;
+                  });
+      var servableResponse =
+          updatedCacheResponse.with(
+              builder ->
+                  builder
+                      .request(request)
+                      .cacheStatus(CacheStatus.CONDITIONAL_HIT)
+                      .cacheResponse(cacheResponse.get()) // Use original cache response.
+                      .networkResponse(networkResponse.get()));
+      return synchronizeWrites
+          ? cacheUpdateFuture.thenApply(__ -> servableResponse)
+          : CompletableFuture.completedFuture(servableResponse);
+    }
+
+    private RawResponse serveFromNetwork(
+        NetworkResponse networkResponse, @Nullable CacheRetrieval cacheRetrieval) {
+      var cacheResponse = cacheRetrieval != null ? cacheRetrieval.response : null;
+      if (cacheResponse != null) {
+        cacheResponse.close();
+      }
       return networkResponse.with(
           builder ->
               builder
@@ -734,72 +854,23 @@ public final class CacheInterceptor implements Interceptor {
                   .networkResponse(networkResponse.get()));
     }
 
-    private CompletableFuture<Exchange> networkExchange() {
-      return networkExchange(chainAdapter::forward);
-    }
-
-    private CompletableFuture<Exchange> backgroundNetworkExchange() {
-      return networkExchange(chainAdapter.chain::forwardAsync); // Ensure asynchronous execution.
-    }
-
-    private CompletableFuture<Exchange> networkExchange(
-        Function<HttpRequest, CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>>>
-            forwarder) {
-      var networkRequest =
-          cacheResponse != null ? cacheResponse.conditionalize(this.request) : this.request;
-      return forwarder
-          .apply(networkRequest)
-          .thenApply(
-              response -> NetworkResponse.from(toTrackedResponse(response, requestTime, clock)))
-          .thenApply(this::withNetworkResponse);
-    }
-
-    /**
-     * Handles an error in a network exchange, falling back to the cache response if one that
-     * satisfies stale-if-error is available.
-     */
-    @SuppressWarnings("NullAway")
-    private Exchange handleNetworkOrServerError(
-        @Nullable Exchange networkExchange, @Nullable Throwable exception) {
-      var networkResponse = networkExchange != null ? networkExchange.networkResponse : null;
-      assert networkResponse != null || exception != null;
-      if (cacheResponse != null
-          && cacheResponse.isServableOnError()
-          && isNetworkOrServerError(networkResponse, exception)) {
-        if (networkResponse != null) {
-          networkResponse.discard(executor);
-        }
-        return this;
+    private RawResponse serveUnsatisfiableRequest(
+        Instant requestTime, @Nullable CacheRetrieval cacheRetrieval) {
+      if (cacheRetrieval != null) {
+        cacheRetrieval.response.close();
       }
-
-      // stale-if-error isn't satisfied. Forward exception or networkExchange as is.
-      if (exception != null) {
-        closeIfPresent(cacheResponse);
-        throw Utils.toCompletionException(exception);
-      }
-      return networkExchange;
-    }
-
-    private Exchange withCacheResponse(@Nullable CacheResponse cacheResponse) {
-      return new Exchange(
-          request,
-          requestCacheControl,
-          cacheResponse,
-          networkResponse,
-          requestTime,
-          chainAdapter,
-          cache);
-    }
-
-    private Exchange withNetworkResponse(@Nullable NetworkResponse networkResponse) {
-      return new Exchange(
-          request,
-          requestCacheControl,
-          cacheResponse,
-          networkResponse,
-          requestTime,
-          chainAdapter,
-          cache);
+      return NetworkResponse.of(
+          new ResponseBuilder<>()
+              .uri(request.uri())
+              .request(request)
+              .cacheStatus(CacheStatus.UNSATISFIABLE)
+              .cacheResponse(cacheRetrieval != null ? cacheRetrieval.response.get() : null)
+              .statusCode(HTTP_GATEWAY_TIMEOUT)
+              .version(Version.HTTP_1_1)
+              .timeRequestSent(requestTime)
+              .timeResponseReceived(clock.instant())
+              .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
+              .buildCacheAwareResponse());
     }
   }
 }

@@ -26,13 +26,10 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
-import com.github.mizosoft.methanol.internal.cache.CacheStrategy.StalenessRule;
 import com.github.mizosoft.methanol.internal.cache.Store.Editor;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
 import java.io.Closeable;
-import java.net.http.HttpRequest;
 import java.nio.ByteBuffer;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -43,41 +40,31 @@ import java.util.function.Consumer;
 /** A {@code RawResponse} retrieved from cache. */
 public final class CacheResponse extends PublisherResponse implements Closeable {
   private final Viewer viewer;
-  private final CacheStrategy strategy;
   private final Executor executor;
 
   public CacheResponse(
       TrackedResponse<?> response,
       Viewer viewer,
       Executor executor,
-      CacheReadingPublisher.Listener readListener,
-      HttpRequest request,
-      Instant now) {
-    this(
-        response,
-        new CacheReadingPublisher(viewer, executor, readListener),
-        viewer,
-        executor,
-        CacheStrategy.create(request, response, now));
+      CacheReadingPublisher.Listener readListener) {
+    this(response, new CacheReadingPublisher(viewer, executor, readListener), viewer, executor);
   }
 
   private CacheResponse(
       TrackedResponse<?> response,
       Publisher<List<ByteBuffer>> body,
       Viewer viewer,
-      Executor executor,
-      CacheStrategy strategy) {
+      Executor executor) {
     super(response, body);
     this.viewer = requireNonNull(viewer);
     this.executor = requireNonNull(executor);
-    this.strategy = requireNonNull(strategy);
   }
 
   @Override
   public CacheResponse with(Consumer<ResponseBuilder<?>> mutator) {
     var builder = ResponseBuilder.newBuilder(response);
     mutator.accept(builder);
-    return new CacheResponse(builder.buildTrackedResponse(), publisher, viewer, executor, strategy);
+    return new CacheResponse(builder.buildTrackedResponse(), publisher, viewer, executor);
   }
 
   @Override
@@ -87,26 +74,5 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
 
   public CompletableFuture<Optional<Editor>> edit() {
     return viewer.edit(executor);
-  }
-
-  public boolean isServable() {
-    return strategy.canServeCacheResponse(StalenessRule.MAX_STALE);
-  }
-
-  public boolean isServableWhileRevalidating() {
-    return strategy.canServeCacheResponse(StalenessRule.STALE_WHILE_REVALIDATE);
-  }
-
-  public boolean isServableOnError() {
-    return strategy.canServeCacheResponse(StalenessRule.STALE_IF_ERROR);
-  }
-
-  public HttpRequest conditionalize(HttpRequest request) {
-    return strategy.conditionalize(request);
-  }
-
-  /** Add the additional cache headers advised by rfc7234 like Age and Warning. */
-  public CacheResponse withCacheHeaders() {
-    return with(strategy::addCacheHeaders);
   }
 }

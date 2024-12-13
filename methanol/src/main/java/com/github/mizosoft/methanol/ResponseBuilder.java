@@ -39,6 +39,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiPredicate;
+import java.util.function.Consumer;
 import javax.net.ssl.SSLSession;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -78,8 +79,14 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
   public ResponseBuilder() {}
 
   @CanIgnoreReturnValue
+  public ResponseBuilder<T> with(Consumer<ResponseBuilder<T>> mutator) {
+    mutator.accept(this);
+    return this;
+  }
+
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> statusCode(int statusCode) {
-    requireArgument(statusCode >= 0, "negative status code");
+    requireArgument(statusCode >= 0, "Negative status code");
     this.statusCode = statusCode;
     return this;
   }

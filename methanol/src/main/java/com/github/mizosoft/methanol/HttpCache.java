@@ -54,7 +54,6 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.nio.file.Path;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -65,6 +64,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -97,6 +97,8 @@ public final class HttpCache implements AutoCloseable, Flushable {
   private final Listener listener;
   private final LocalCache asyncLocalCache;
   private final LocalCache syncLocalCache;
+
+  private volatile boolean disable;
 
   private HttpCache(Store store, Executor executor, boolean isDefaultExecutor, Builder builder) {
     this.store = requireNonNull(store);
@@ -270,6 +272,26 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   /**
+   * Sets whether this cache is enabled. A disabled cache neither reads from nor writes to
+   * underlying storage, just as if it was never installed. Caches start enabled, and can be later
+   * disabled and re-enabled any number of times.
+   *
+   * <p>This function is intended to be used to disable the cache when underlying storage
+   * disconnects or becomes faulty, and consequently reading from or writing to the cache always
+   * fails. This can be detected when too many {@link Listener#onWriteFailure(HttpRequest,
+   * Throwable) write} and/or {@link Listener#onReadFailure(HttpRequest, Throwable) read} failures
+   * occur.
+   */
+  public void enable(boolean on) {
+    disable = !on;
+  }
+
+  /** Returns whether this cache is {@link #enable(boolean) enabled}. */
+  public boolean isEnabled() {
+    return !disable;
+  }
+
+  /**
    * Atomically clears and closes this cache.
    *
    * @throws IllegalStateException if closed
@@ -299,9 +321,14 @@ public final class HttpCache implements AutoCloseable, Flushable {
   }
 
   /** Returns an interceptor that serves responses from this cache if applicable. */
-  Interceptor interceptor() {
+  Interceptor interceptor(Predicate<String> implicitHeaderPredicate) {
     return new CacheInterceptor(
-        this::createLocalCache, listener, executor, clock, synchronizeWrites);
+        this::createLocalCache,
+        listener,
+        executor,
+        clock,
+        synchronizeWrites,
+        implicitHeaderPredicate);
   }
 
   private LocalCache createLocalCache(Executor executor) {
@@ -380,16 +407,18 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public CompletableFuture<Optional<CacheResponse>> get(
-        HttpRequest request, Instant requestTime) {
+    public CompletableFuture<Optional<CacheResponse>> get(HttpRequest request) {
+      if (disable) {
+        return CompletableFuture.completedFuture(Optional.empty());
+      }
       return store
           .view(toStoreKey(request), executor)
-          .thenApply(viewer -> readCacheResponse(viewer, request, requestTime));
+          .thenApply(viewer -> readCacheResponse(viewer, request));
     }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     private Optional<CacheResponse> readCacheResponse(
-        Optional<Viewer> viewer, HttpRequest request, Instant requestTime) {
+        Optional<Viewer> viewer, HttpRequest request) {
       var cacheResponse =
           viewer
               .map(HttpCache::tryRecoverMetadata)
@@ -400,9 +429,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
                           metadata.toResponseBuilder().buildTrackedResponse(),
                           viewer.orElseThrow(), // We're sure we have a Viewer here.
                           executor,
-                          toReadListener(listener, request),
-                          request,
-                          requestTime));
+                          toReadListener(listener, request)));
       if (cacheResponse.isEmpty()) {
         viewer.ifPresent(Viewer::close);
       }
@@ -410,7 +437,10 @@ public final class HttpCache implements AutoCloseable, Flushable {
     }
 
     @Override
-    public CompletableFuture<Void> update(CacheResponse cacheResponse) {
+    public CompletableFuture<Boolean> update(CacheResponse cacheResponse) {
+      if (disable) {
+        return CompletableFuture.completedFuture(false);
+      }
       return cacheResponse
           .edit()
           .thenCompose(
@@ -422,17 +452,24 @@ public final class HttpCache implements AutoCloseable, Flushable {
                                   .commit(
                                       CacheResponseMetadata.from(cacheResponse.get()).encode(),
                                       executor)
+                                  .thenApply(__ -> true)
                                   .whenComplete((__, ___) -> editor.close()))
-                      .orElseGet(() -> CompletableFuture.completedFuture(null)));
+                      .orElseGet(() -> CompletableFuture.completedFuture(false)));
     }
 
     @Override
     public CompletableFuture<Optional<NetworkResponse>> put(
         HttpRequest request,
         NetworkResponse networkResponse,
-        @Nullable CacheResponse cacheResponse) {
+        @Nullable CacheResponse existingCacheResponse) {
+      if (disable) {
+        return CompletableFuture.completedFuture(Optional.empty());
+      }
+
       var editorFuture =
-          cacheResponse != null ? cacheResponse.edit() : store.edit(toStoreKey(request), executor);
+          existingCacheResponse != null
+              ? existingCacheResponse.edit()
+              : store.edit(toStoreKey(request), executor);
       return editorFuture.thenApply(
           optionalEditor ->
               optionalEditor.map(
@@ -446,6 +483,9 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     @Override
     public CompletableFuture<Boolean> removeAll(List<URI> uris) {
+      if (disable) {
+        return CompletableFuture.completedFuture(false);
+      }
       return Unchecked.supplyAsync(
           () ->
               store.removeAll(
@@ -521,7 +561,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
           statsRecorder.recordHit(request.uri());
           break;
         default:
-          throw new AssertionError("unexpected status: " + response.cacheStatus());
+          throw new AssertionError("Unexpected status: " + response.cacheStatus());
       }
     }
 
@@ -1103,7 +1143,11 @@ public final class HttpCache implements AutoCloseable, Flushable {
       return storeExtension;
     }
 
-    /** Creates a new {@code HttpCache}. */
+    /**
+     * Creates a new {@code HttpCache}.
+     *
+     * @throws java.io.UncheckedIOException if a problem occurs while creating the cache
+     */
     public HttpCache build() {
       var executor = this.executor;
       boolean isDefaultExecutor;

@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import javax.net.ssl.SSLContext;
 import mockwebserver3.MockWebServer;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -72,7 +73,9 @@ public final class MockWebServerExtension
       ParameterContext parameterContext, ExtensionContext extensionContext)
       throws ParameterResolutionException {
     var type = parameterContext.getParameter().getType();
-    return type == MockWebServer.class || type == Methanol.Builder.class;
+    return type == MockWebServer.class
+        || type == Methanol.Builder.class
+        || type == MethanolBuilderFactory.class;
   }
 
   @Override
@@ -93,6 +96,8 @@ public final class MockWebServerExtension
       }
     } else if (type == Methanol.Builder.class) {
       return servers.newClientBuilder(executable, useHttps);
+    } else if (type == MethanolBuilderFactory.class) {
+      return (MethanolBuilderFactory) () -> servers.newClientBuilder(executable, useHttps);
     } else {
       throw new UnsupportedOperationException("unsupported type: " + type.toString());
     }
@@ -101,6 +106,9 @@ public final class MockWebServerExtension
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
   public @interface UseHttps {}
+
+  @FunctionalInterface
+  public interface MethanolBuilderFactory extends Supplier<Methanol.Builder> {}
 
   /**
    * Creates {@code MockWebServers} and {@code Methanol.Builder} possibly sharing the same {@code

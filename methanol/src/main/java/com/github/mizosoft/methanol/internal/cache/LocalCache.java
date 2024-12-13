@@ -25,7 +25,6 @@ package com.github.mizosoft.methanol.internal.cache;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.net.URI;
 import java.net.http.HttpRequest;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -34,12 +33,14 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A response cache that provides APIs for retrieval, metadata updates, insertion and removal. */
 public interface LocalCache {
-  CompletableFuture<Optional<CacheResponse>> get(HttpRequest request, Instant requestTime);
+  CompletableFuture<Optional<CacheResponse>> get(HttpRequest request);
 
-  CompletableFuture<Void> update(CacheResponse cacheResponse);
+  CompletableFuture<Boolean> update(CacheResponse cacheResponse);
 
   CompletableFuture<Optional<NetworkResponse>> put(
-      HttpRequest request, NetworkResponse networkResponse, @Nullable CacheResponse cacheResponse);
+      HttpRequest request,
+      NetworkResponse networkResponse,
+      @Nullable CacheResponse existingCacheResponse);
 
   @CanIgnoreReturnValue
   CompletableFuture<Boolean> removeAll(List<URI> uris);
