@@ -108,11 +108,11 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
     server.enqueue(
         new MockResponse().setHeader("X-Version", "2").setResponseCode(HTTP_NOT_MODIFIED));
     verifyThat(send())
-        .isConditionalMiss()
+        .isConditionalCacheMiss()
         .containsHeader("X-Version", "2")
         .hasBody("Pikachu")
         .networkResponse()
-        .isConditionalHit()
+        .isConditionalCacheHit()
         .containsHeader("X-Version", "2")
         .containsRequestHeader("If-None-Match", "\"1\"")
         .hasNoBody()
@@ -149,11 +149,11 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
             .setHeader("ETag", "\"2\"")
             .setBody("Mew"));
     verifyThat(send())
-        .isConditionalMiss()
+        .isConditionalCacheMiss()
         .containsHeader("ETag", "\"2\"")
         .hasBody("Mew")
         .networkResponse()
-        .isConditionalMiss()
+        .isConditionalCacheMiss()
         .containsHeader("ETag", "\"2\"")
         .containsRequestHeader("If-None-Match", "\"1\"")
         .hasNoBody()
@@ -189,13 +189,13 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_NOT_MODIFIED).setHeader("X-Version", "2"));
     verifyThat(send(diskCacheSetup.client))
-        .isConditionalHit()
+        .isConditionalCacheHit()
         .containsHeader("X-Version", "2")
         .hasBody("Pikachu");
 
     // A conditional hit is served from the disk cache (no network).
     verifyThat(send())
-        .isConditionalHit()
+        .isConditionalCacheHit()
         .containsHeader("X-Version", "2")
         .hasBody("Pikachu")
         .networkResponse()
@@ -222,13 +222,13 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
     server.enqueue(
         new MockResponse().setResponseCode(HTTP_NOT_MODIFIED).setHeader("X-Version", "2"));
     verifyThat(send(diskCacheSetup.client))
-        .isConditionalHit()
+        .isConditionalCacheHit()
         .containsHeader("X-Version", "2")
         .hasBody("Pikachu");
 
     // A conditional hit is served from the disk cache (no network).
     verifyThat(send())
-        .isConditionalHit()
+        .isConditionalCacheHit()
         .containsHeader("X-Version", "2")
         .hasBody("Pikachu")
         .networkResponse()

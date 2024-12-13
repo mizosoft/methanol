@@ -92,15 +92,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class CacheInterceptor implements Interceptor {
   private static final Logger logger = System.getLogger(CacheInterceptor.class.getName());
 
-  private static final Set<String> RETAINED_HEADERS;
-  private static final Set<String> RETAINED_HEADER_PREFIXES;
+  private static final Set<String> RETAINED_STORED_HEADERS;
+  private static final Set<String> RETAINED_STORED_HEADER_PREFIXES;
 
   static {
     // Replacing stored headers with these names (or prefixes) from a 304 response is prohibited.
     // These lists are based on Chromium's http_response_headers.cc (see lists kNonUpdatedHeaders &
     // kNonUpdatedHeaderPrefixes).
-    RETAINED_HEADERS = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-    RETAINED_HEADERS.addAll(
+    RETAINED_STORED_HEADERS = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    RETAINED_STORED_HEADERS.addAll(
         Set.of(
             "Connection",
             "Proxy-Connection",
@@ -121,7 +121,7 @@ public final class CacheInterceptor implements Interceptor {
             "Content-Length",
             "X-Frame-Options",
             "X-XSS-Protection"));
-    RETAINED_HEADER_PREFIXES = Set.of("X-Content-", "X-Webkit-");
+    RETAINED_STORED_HEADER_PREFIXES = Set.of("X-Content-", "X-Webkit-");
   }
 
   /** Matcher for valid characters in an entity-tag, as specified by rfc7232 Section 2.3. */
@@ -171,7 +171,6 @@ public final class CacheInterceptor implements Interceptor {
 
   private CompletableFuture<RawResponse> exchange(
       HttpRequest request, Chain<?> chain, boolean async) {
-    listener.onRequest(request);
     return new Exchange(
             request,
             cacheFactory.instance(async ? executor : FlowSupport.SYNC_EXECUTOR),
@@ -316,13 +315,14 @@ public final class CacheInterceptor implements Interceptor {
             });
 
     // Remove 1xx Warning codes.
-    builder.removeIf((name, value) -> "Warning".equalsIgnoreCase(name) && value.startsWith("1"));
+    builder.removeIf((name, value) -> name.equalsIgnoreCase("Warning") && value.startsWith("1"));
     return builder.build();
   }
 
-  private static boolean canReplaceStoredHeader(String name) {
-    return !(RETAINED_HEADERS.contains(name)
-        || RETAINED_HEADER_PREFIXES.stream()
+  // Visible for testing.
+  public static boolean canReplaceStoredHeader(String name) {
+    return !(RETAINED_STORED_HEADERS.contains(name)
+        || RETAINED_STORED_HEADER_PREFIXES.stream()
             .anyMatch(prefix -> Utils.startsWithIgnoreCase(name, prefix))
         || name.equals(":status"));
   }
@@ -356,10 +356,10 @@ public final class CacheInterceptor implements Interceptor {
    * Based on rfc7231 Section 4.2.1.
    */
   private static boolean isUnsafe(String method) {
-    return !"GET".equalsIgnoreCase(method)
-        && !"HEAD".equalsIgnoreCase(method)
-        && !"OPTIONS".equalsIgnoreCase(method)
-        && !"TRACE".equalsIgnoreCase(method);
+    return !method.equalsIgnoreCase("GET")
+        && !method.equalsIgnoreCase("HEAD")
+        && !method.equalsIgnoreCase("OPTIONS")
+        && !method.equalsIgnoreCase("TRACE");
   }
 
   /**
@@ -568,19 +568,20 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     CompletableFuture<RawResponse> exchange() {
+      listener.onRequest(request);
       var requestTime = clock.instant();
       return retrieveCacheResponse(requestTime)
           .thenCompose(
-              cacheRetrieval ->
-                  cacheRetrieval
+              optionalCacheRetrieval ->
+                  optionalCacheRetrieval
                       .map(
-                          localCacheRetrieval ->
-                              exchange(requestTime, localCacheRetrieval)
+                          cacheRetrieval ->
+                              exchange(requestTime, cacheRetrieval)
                                   .whenComplete(
                                       (__, ex) -> {
                                         // Make sure the CacheResponse is always released.
                                         if (ex != null) {
-                                          localCacheRetrieval.response.close();
+                                          cacheRetrieval.response.close();
                                         }
                                       }))
                       .orElseGet(() -> exchange(requestTime, null)))
@@ -768,13 +769,13 @@ public final class CacheInterceptor implements Interceptor {
       var cacheResponse = cacheRetrieval.response;
       if (cacheResponse.get().statusCode() != HTTP_OK
           || evaluatePreconditions(request, cacheResponse.get())) {
-        var modifiedCacheResponse = cacheResponse.with(cacheRetrieval.strategy::addCacheHeaders);
-        return modifiedCacheResponse.with(
+        return cacheResponse.with(
             builder ->
                 builder
                     .request(request)
                     .cacheStatus(CacheStatus.HIT)
-                    .cacheResponse(modifiedCacheResponse.get())
+                    .cacheResponse(cacheResponse.get()) // Use original cache response.
+                    .with(cacheRetrieval.strategy::addCacheHeaders)
                     .timeRequestSent(requestTime)
                     .timeResponseReceived(clock.instant()));
       }
@@ -791,6 +792,7 @@ public final class CacheInterceptor implements Interceptor {
               .version(Version.HTTP_1_1)
               .cacheResponse(cacheResponse.get())
               .headers(cacheResponse.get().headers())
+              .with(cacheRetrieval.strategy::addCacheHeaders)
               .timeRequestSent(requestTime)
               .timeResponseReceived(clock.instant())
               .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
@@ -799,7 +801,8 @@ public final class CacheInterceptor implements Interceptor {
 
     private CompletableFuture<RawResponse> serveFromCacheAfterUpdating(
         CacheRetrieval cacheRetrieval, NetworkResponse networkResponse) {
-      var updatedCacheResponse = updateCacheResponse(cacheRetrieval.response, networkResponse);
+      var cacheResponse = cacheRetrieval.response;
+      var updatedCacheResponse = updateCacheResponse(cacheResponse, networkResponse);
       var cacheUpdateFuture =
           cache
               .update(updatedCacheResponse)
@@ -820,7 +823,7 @@ public final class CacheInterceptor implements Interceptor {
                   builder
                       .request(request)
                       .cacheStatus(CacheStatus.CONDITIONAL_HIT)
-                      .cacheResponse(cacheRetrieval.response.get()) // Use older cache response.
+                      .cacheResponse(cacheResponse.get()) // Use original cache response.
                       .networkResponse(networkResponse.get()));
       return synchronizeWrites
           ? cacheUpdateFuture.thenApply(__ -> servableResponse)
