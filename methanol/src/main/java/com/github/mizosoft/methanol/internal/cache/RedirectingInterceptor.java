@@ -22,19 +22,15 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
-import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
-import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_SEE_OTHER;
 import static java.util.Objects.requireNonNull;
-import static java.util.Objects.requireNonNullElseGet;
 
 import com.github.mizosoft.methanol.HttpStatus;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.MutableRequest;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutorProvider;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
@@ -75,9 +71,9 @@ public final class RedirectingInterceptor implements Interceptor {
   /** The executor used for invoking the response handler. */
   private final Executor handlerExecutor;
 
-  public RedirectingInterceptor(Redirect policy, @Nullable Executor handlerExecutor) {
+  public RedirectingInterceptor(Redirect policy, Executor handlerExecutor) {
     this.policy = requireNonNull(policy);
-    this.handlerExecutor = requireNonNullElseGet(handlerExecutor, FallbackExecutorProvider::get);
+    this.handlerExecutor = requireNonNull(handlerExecutor);
   }
 
   @Override
@@ -98,97 +94,67 @@ public final class RedirectingInterceptor implements Interceptor {
 
   private <T> CompletableFuture<HttpResponse<T>> doIntercept(
       HttpRequest request, Chain<T> chain, boolean async) {
-    return new Redirector(
-            request, new SendAdapter(Handlers.toPublisherChain(chain, handlerExecutor), async))
-        .sendAndFollowUp()
-        .thenApply(Redirector::requiredResponse)
+    return new Exchange(
+            request, new ChainAdapter(Handlers.toPublisherChain(chain, handlerExecutor), async))
+        .exchange()
         .thenCompose(
             response -> Handlers.handleAsync(response, chain.bodyHandler(), handlerExecutor));
   }
 
-  private static final class SendAdapter {
+  private static final class ChainAdapter {
     private final Chain<Publisher<List<ByteBuffer>>> chain;
     private final boolean async;
 
-    SendAdapter(Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
+    ChainAdapter(Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
       this.chain = chain;
       this.async = async;
     }
 
-    CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> send(HttpRequest request) {
+    CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> forward(HttpRequest request) {
       return async
           ? chain.forwardAsync(request)
           : Unchecked.supplyAsync(() -> chain.forward(request), FlowSupport.SYNC_EXECUTOR);
     }
   }
 
-  private final class Redirector {
+  private final class Exchange {
+    private final AtomicInteger redirectCount = new AtomicInteger();
     private final HttpRequest request;
-    private final SendAdapter sendAdapter;
-    private final AtomicInteger redirectCount;
-    private final @Nullable HttpResponse<Publisher<List<ByteBuffer>>> response;
-    private final @Nullable HttpResponse<Publisher<List<ByteBuffer>>> previousResponse;
+    private final ChainAdapter chainAdapter;
 
-    Redirector(HttpRequest request, SendAdapter sendAdapter) {
-      this(request, sendAdapter, new AtomicInteger(), null, null);
-    }
-
-    private Redirector(
-        HttpRequest request,
-        SendAdapter sendAdapter,
-        AtomicInteger redirectCount,
-        @Nullable HttpResponse<Publisher<List<ByteBuffer>>> response,
-        @Nullable HttpResponse<Publisher<List<ByteBuffer>>> previousResponse) {
+    Exchange(HttpRequest request, ChainAdapter chainAdapter) {
       this.request = request;
-      this.sendAdapter = sendAdapter;
-      this.redirectCount = redirectCount;
-      this.response = response;
-      this.previousResponse = previousResponse;
+      this.chainAdapter = chainAdapter;
     }
 
-    HttpResponse<Publisher<List<ByteBuffer>>> requiredResponse() {
-      requireState(response != null, "absent response");
-      return castNonNull(response);
+    CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> exchange() {
+      return chainAdapter.forward(request).thenCompose(this::exchange);
     }
 
-    private Redirector withResponse(HttpResponse<Publisher<List<ByteBuffer>>> response) {
-      HttpResponse<Publisher<List<ByteBuffer>>> newResponse;
-      if (previousResponse == null) {
-        newResponse = response;
-      } else {
-        var previousResponseWithoutBody =
-            ResponseBuilder.newBuilder(previousResponse).dropBody().build();
-        newResponse =
-            ResponseBuilder.newBuilder(response)
-                .previousResponse(previousResponseWithoutBody)
-                .build();
-      }
-      return new Redirector(request, sendAdapter, redirectCount, newResponse, null);
-    }
-
-    CompletableFuture<Redirector> sendAndFollowUp() {
-      return sendAdapter
-          .send(request)
-          .thenApply(this::withResponse)
-          .thenCompose(Redirector::followUp);
-    }
-
-    @SuppressWarnings("FutureReturnValueIgnored")
-    CompletableFuture<Redirector> followUp() {
-      var response = requiredResponse();
+    CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> exchange(
+        HttpResponse<Publisher<List<ByteBuffer>>> response) {
       HttpRequest redirectRequest;
-      if (redirectCount.incrementAndGet() > MAX_REDIRECTS
-          || (redirectRequest = createRedirectRequest(response)) == null) {
-        // Reached destination or exceeded allowed redirects.
-        return CompletableFuture.completedFuture(this);
+      if ((redirectRequest = createRedirectRequest(response)) == null
+          || redirectCount.incrementAndGet() >= MAX_REDIRECTS) {
+        // Reached destination or exceeded allowed retries.
+        return CompletableFuture.completedFuture(response);
       }
 
       // Properly release the redirecting response body.
-      Handlers.handleAsync(response, BodyHandlers.discarding(), handlerExecutor);
+      Handlers.handleAsync(
+          response,
+          BodyHandlers.discarding(),
+          chainAdapter.async ? handlerExecutor : FlowSupport.SYNC_EXECUTOR);
 
       // Follow redirection.
-      return new Redirector(redirectRequest, sendAdapter, redirectCount, null, response)
-          .sendAndFollowUp();
+      return chainAdapter
+          .forward(redirectRequest)
+          .thenCompose(
+              redirectResponse ->
+                  exchange(
+                      ResponseBuilder.newBuilder(redirectResponse)
+                          .previousResponse(ResponseBuilder.newBuilder(response).dropBody().build())
+                          .build()));
     }
 
     public @Nullable HttpRequest createRedirectRequest(HttpResponse<?> response) {
@@ -263,16 +229,16 @@ public final class RedirectingInterceptor implements Interceptor {
       }
 
       switch (statusCode) {
-          // 300: MultipleChoice => don't follow
-          // 304: Not Modified => don't follow
-          // 305: Proxy Redirect => don't follow.
-          // 306: Unused => don't follow
+        // 300: MultipleChoice => don't follow
+        // 304: Not Modified => don't follow
+        // 305: Proxy Redirect => don't follow.
+        // 306: Unused => don't follow
         case 300:
         case 304:
         case 305:
         case 306:
           return false;
-          // 301, 302, 303, 307, 308: OK to follow.
+        // 301, 302, 303, 307, 308: OK to follow.
         default:
           return true;
       }
