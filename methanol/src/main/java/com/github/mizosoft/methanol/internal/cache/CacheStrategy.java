@@ -180,12 +180,11 @@ public final class CacheStrategy {
   }
 
   static CacheStrategy create(
-      CacheResponse cacheResponse, CacheControl requestCacheControl, Instant now) {
-    return new Factory(cacheResponse, requestCacheControl).create(now);
+      CacheControl requestCacheControl, CacheResponse cacheResponse, Instant now) {
+    return new Factory(requestCacheControl, cacheResponse).create(now);
   }
 
   private static final class Factory {
-    final CacheResponse cacheResponse;
     final CacheControl requestCacheControl;
     final CacheControl responseCacheControl;
     final Instant timeRequestSent;
@@ -196,8 +195,7 @@ public final class CacheStrategy {
     final Optional<LocalDateTime> expires;
     final Optional<LocalDateTime> lastModified;
 
-    Factory(CacheResponse cacheResponse, CacheControl requestCacheControl) {
-      this.cacheResponse = cacheResponse;
+    Factory(CacheControl requestCacheControl, CacheResponse cacheResponse) {
       this.requestCacheControl = requestCacheControl;
       this.responseCacheControl = CacheControl.parse(cacheResponse.get().headers());
       this.timeRequestSent = cacheResponse.get().timeRequestSent();

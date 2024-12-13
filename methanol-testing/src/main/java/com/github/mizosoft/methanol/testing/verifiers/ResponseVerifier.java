@@ -102,12 +102,6 @@ public final class ResponseVerifier<T> {
   }
 
   @CanIgnoreReturnValue
-  public ResponseVerifier<T> containsHeader(String name, List<String> values) {
-    assertThat(response.headers().allValues(name)).as(name).isEqualTo(values);
-    return this;
-  }
-
-  @CanIgnoreReturnValue
   public ResponseVerifier<T> doesNotContainHeader(String name) {
     assertDoesNotContainHeader(response.headers(), name);
     return this;
@@ -445,7 +439,6 @@ public final class ResponseVerifier<T> {
     return this;
   }
 
-  @CanIgnoreReturnValue
   private void assertEqualToNetworkResponse(TrackedResponse<?> networkResponse) {
     hasUri(networkResponse.uri())
         .hasCode(networkResponse.statusCode())

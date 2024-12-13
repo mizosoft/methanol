@@ -208,7 +208,7 @@ public final class CacheInterceptor implements Interceptor {
 
     Set<String> varyFields;
     try {
-      // Don't crash because of server's ill-formed Cache-Control.
+      // Don't crash because of server's ill-formed Vary.
       varyFields = CacheResponseMetadata.varyFields(response.headers());
     } catch (IllegalArgumentException e) {
       logger.log(Level.WARNING, "Invalid response Vary", e);
@@ -610,7 +610,7 @@ public final class CacheInterceptor implements Interceptor {
                           new CacheRetrieval(
                               cacheResponse,
                               CacheStrategy.create(
-                                  cacheResponse, requestCacheControl, requestTime))));
+                                  requestCacheControl, cacheResponse, requestTime))));
     }
 
     private CompletableFuture<RawResponse> exchange(
@@ -638,6 +638,7 @@ public final class CacheInterceptor implements Interceptor {
           .thenCompose(networkResponse -> exchange(requestTime, cacheRetrieval, networkResponse));
     }
 
+    @SuppressWarnings({"NullAway", "FutureReturnValueIgnored"})
     private CompletableFuture<RawResponse> exchange(
         Instant requestTime,
         @Nullable CacheRetrieval cacheRetrieval,
@@ -707,6 +708,7 @@ public final class CacheInterceptor implements Interceptor {
               response -> NetworkResponse.of(toTrackedResponse(response, requestTime, clock)));
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     private void revalidateInBackground(Instant requestTime, CacheRetrieval cacheRetrieval) {
       // TODO implement a bounding policy on asynchronous revalidation & find a mechanism to
       //      notify caller for revalidation's completion.
@@ -716,7 +718,7 @@ public final class CacheInterceptor implements Interceptor {
           .whenComplete(this::handleBackgroundRevalidation);
     }
 
-    @SuppressWarnings("NullAway")
+    @SuppressWarnings({"NullAway", "FutureValueIsIgnored"})
     private void handleBackgroundRevalidation(
         @Nullable RawResponse response, @Nullable Throwable exception) {
       assert response != null ^ exception != null;
@@ -725,7 +727,14 @@ public final class CacheInterceptor implements Interceptor {
         // entire response body must be consumed.
         var networkResponse = (NetworkResponse) response;
         if (networkResponse.isCacheUpdating()) {
-          networkResponse.handleAsync(__ -> new DrainingBodySubscriber(), executor);
+          networkResponse
+              .handleAsync(__ -> new DrainingBodySubscriber(), executor)
+              .whenComplete(
+                  (__, ex) -> {
+                    if (ex != null) {
+                      logger.log(Level.WARNING, "Asynchronous revalidation failure", ex);
+                    }
+                  });
         } else {
           networkResponse.discard(executor);
         }
