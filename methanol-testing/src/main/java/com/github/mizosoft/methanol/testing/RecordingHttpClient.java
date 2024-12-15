@@ -208,14 +208,14 @@ public class RecordingHttpClient extends HttpClient {
       complete(TestUtils.EMPTY_BUFFER);
     }
 
-    public void complete(Consumer<ResponseBuilder<T>> mutator) {
+    public void complete(Consumer<? super ResponseBuilder<T>> mutator) {
       complete(
-          new ResponseBuilder<T>()
+          ResponseBuilder.<T>create()
               .statusCode(HTTP_OK)
               .request(request)
               .uri(request.uri())
               .version(request.version().orElse(HttpClient.Version.HTTP_1_1))
-              .with(mutator)
+              .apply(mutator)
               .build());
     }
 

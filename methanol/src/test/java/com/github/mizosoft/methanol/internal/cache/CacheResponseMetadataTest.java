@@ -222,7 +222,7 @@ class CacheResponseMetadataTest {
     var uri = URI.create("https://www.example.com");
     var timeSent = Instant.ofEpochSecond(1605276170);
     var timeReceived = timeSent.plus(Duration.ofSeconds(1));
-    return new ResponseBuilder<>()
+    return ResponseBuilder.create()
         .uri(uri)
         .statusCode(200)
         .headers(headers(responseHeaders))

@@ -51,7 +51,7 @@ abstract class PublisherResponse extends RawResponse {
 
   private static TrackedResponse<?> dropBody(TrackedResponse<?> response) {
     return response.body() != null
-        ? ResponseBuilder.newBuilder(response).dropBody().buildTrackedResponse()
+        ? ResponseBuilder.from(response).dropBody().buildTrackedResponse()
         : response;
   }
 }
