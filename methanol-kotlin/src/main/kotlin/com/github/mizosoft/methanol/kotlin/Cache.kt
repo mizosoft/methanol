@@ -39,6 +39,8 @@ interface CacheSpec {
 
   fun executor(executor: Executor)
 
+  fun listener(listener: CacheListener)
+
   fun synchronizeWrites(synchronizeWrites: Boolean = true)
 }
 
@@ -54,6 +56,10 @@ private class CacheFactorySpec(private val builder: HttpCache.Builder = Cache.ne
 
   override fun on(storageExtension: StorageExtension) {
     builder.cacheOn(storageExtension)
+  }
+
+  override fun listener(listener: CacheListener) {
+    builder.listener(listener)
   }
 
   override fun executor(executor: Executor) {
@@ -83,6 +89,8 @@ private class CacheChainFactorySpec(private val caches: MutableList<Cache> = Arr
 }
 
 typealias Cache = HttpCache
+
+typealias CacheListener = HttpCache.Listener
 
 /** A series of caches invoked sequentially during an HTTP call. */
 typealias CacheChain = List<Cache>

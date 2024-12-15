@@ -210,9 +210,9 @@ public final class CacheInterceptor implements Interceptor {
 
     Set<String> varyFields;
     try {
-      // Don't crash because of server's ill-formed Vary.
       varyFields = CacheResponseMetadata.varyFields(response.headers());
     } catch (IllegalArgumentException e) {
+      // Don't crash because of server's ill-formed Vary.
       logger.log(Level.WARNING, "Invalid response Vary", e);
       return false;
     }
