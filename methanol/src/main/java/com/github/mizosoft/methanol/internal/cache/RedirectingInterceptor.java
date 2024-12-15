@@ -33,7 +33,6 @@ import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
-import com.github.mizosoft.methanol.internal.function.Unchecked;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -81,40 +80,28 @@ public final class RedirectingInterceptor implements Interceptor {
       throws IOException, InterruptedException {
     return policy == Redirect.NEVER
         ? chain.forward(request)
-        : Utils.get(doIntercept(request, chain, false));
+        : Utils.get(exchange(request, chain, false));
   }
 
   @Override
   public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
       HttpRequest request, Chain<T> chain) {
-    return policy == Redirect.NEVER
-        ? chain.forwardAsync(request)
-        : doIntercept(request, chain, true);
+    return policy == Redirect.NEVER ? chain.forwardAsync(request) : exchange(request, chain, true);
   }
 
-  private <T> CompletableFuture<HttpResponse<T>> doIntercept(
+  private <T> CompletableFuture<HttpResponse<T>> exchange(
       HttpRequest request, Chain<T> chain, boolean async) {
+    var publisherChain = Handlers.toPublisherChain(chain, handlerExecutor);
     return new Exchange(
-            request, new ChainAdapter(Handlers.toPublisherChain(chain, handlerExecutor), async))
+            request,
+            async ? ChainAdapter.async(publisherChain) : ChainAdapter.syncOnCaller(publisherChain))
         .exchange()
         .thenCompose(
-            response -> Handlers.handleAsync(response, chain.bodyHandler(), handlerExecutor));
-  }
-
-  private static final class ChainAdapter {
-    private final Chain<Publisher<List<ByteBuffer>>> chain;
-    private final boolean async;
-
-    ChainAdapter(Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
-      this.chain = chain;
-      this.async = async;
-    }
-
-    CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> forward(HttpRequest request) {
-      return async
-          ? chain.forwardAsync(request)
-          : Unchecked.supplyAsync(() -> chain.forward(request), FlowSupport.SYNC_EXECUTOR);
-    }
+            response ->
+                Handlers.handleAsync(
+                    response,
+                    chain.bodyHandler(),
+                    async ? handlerExecutor : FlowSupport.SYNC_EXECUTOR));
   }
 
   private final class Exchange {
@@ -141,10 +128,7 @@ public final class RedirectingInterceptor implements Interceptor {
       }
 
       // Properly release the redirecting response body.
-      Handlers.handleAsync(
-          response,
-          BodyHandlers.discarding(),
-          chainAdapter.async ? handlerExecutor : FlowSupport.SYNC_EXECUTOR);
+      Handlers.handleAsync(response, BodyHandlers.discarding(), handlerExecutor);
 
       // Follow redirection.
       return chainAdapter
@@ -186,7 +170,7 @@ public final class RedirectingInterceptor implements Interceptor {
       return responseHeaders
           .firstValue("Location")
           .map(request.uri()::resolve)
-          .orElseThrow(() -> new UncheckedIOException(new IOException("invalid redirection")));
+          .orElseThrow(() -> new UncheckedIOException(new IOException("Invalid redirection")));
     }
 
     // jdk.internal.net.http.RedirectFilter.redirectedMethod
@@ -217,7 +201,7 @@ public final class RedirectingInterceptor implements Interceptor {
         case NORMAL:
           return newScheme.equalsIgnoreCase(oldScheme) || newScheme.equalsIgnoreCase("https");
         default:
-          throw new AssertionError("unexpected policy: " + policy);
+          throw new AssertionError("Unexpected policy: " + policy);
       }
     }
 

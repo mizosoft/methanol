@@ -135,7 +135,7 @@ public final class CacheInterceptor implements Interceptor {
 
   private final LocalCache.Factory cacheFactory;
   private final Listener listener;
-  private final Executor executor;
+  private final Executor handlerExecutor;
   private final Clock clock;
   private final boolean synchronizeWrites;
   private final Predicate<String> implicitHeaderPredicate;
@@ -143,13 +143,13 @@ public final class CacheInterceptor implements Interceptor {
   public CacheInterceptor(
       LocalCache.Factory cacheFactory,
       Listener listener,
-      Executor executor,
+      Executor handlerExecutor,
       Clock clock,
       boolean synchronizeWrites,
       Predicate<String> implicitHeaderPredicate) {
     this.cacheFactory = requireNonNull(cacheFactory);
     this.listener = requireNonNull(listener);
-    this.executor = requireNonNull(executor);
+    this.handlerExecutor = requireNonNull(handlerExecutor);
     this.clock = requireNonNull(clock);
     this.synchronizeWrites = synchronizeWrites;
     this.implicitHeaderPredicate = requireNonNull(implicitHeaderPredicate);
@@ -165,16 +165,17 @@ public final class CacheInterceptor implements Interceptor {
   public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
       HttpRequest request, Chain<T> chain) {
     return exchange(request, chain, true)
-        .thenCompose(rawResponse -> rawResponse.handleAsync(chain.bodyHandler(), executor))
+        .thenCompose(rawResponse -> rawResponse.handleAsync(chain.bodyHandler(), handlerExecutor))
         .thenApply(Function.identity()); // TrackedResponse<T> -> HttpResponse<T>
   }
 
   private CompletableFuture<RawResponse> exchange(
       HttpRequest request, Chain<?> chain, boolean async) {
+    var publisherChain = Handlers.toPublisherChain(chain, handlerExecutor);
     return new Exchange(
             request,
-            cacheFactory.instance(async ? executor : FlowSupport.SYNC_EXECUTOR),
-            new ChainAdapter(Handlers.toPublisherChain(chain, executor), async))
+            cacheFactory.instance(async),
+            async ? ChainAdapter.async(publisherChain) : ChainAdapter.syncOnCaller(publisherChain))
         .exchange();
   }
 
@@ -480,33 +481,6 @@ public final class CacheInterceptor implements Interceptor {
             .buildTrackedResponse();
   }
 
-  /**
-   * An object that masks synchronous chain calls as {@code CompletableFuture} calls that are
-   * executed on the caller thread. This is important in order to share major logic between {@code
-   * intercept} and {@code interceptAsync}, which facilitates implementation & maintenance.
-   */
-  private static final class ChainAdapter {
-    final Chain<Publisher<List<ByteBuffer>>> chain;
-    private final boolean async;
-
-    ChainAdapter(Chain<Publisher<List<ByteBuffer>>> chain, boolean async) {
-      this.chain = chain;
-      this.async = async;
-    }
-
-    CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> forward(HttpRequest request) {
-      if (async) {
-        return chain.forwardAsync(request);
-      }
-
-      try {
-        return CompletableFuture.completedFuture(chain.forward(request));
-      } catch (Throwable t) {
-        return CompletableFuture.failedFuture(t);
-      }
-    }
-  }
-
   private static final class DrainingBodySubscriber implements BodySubscriber<Void> {
     private final CompletableFuture<Void> completion = new CompletableFuture<>();
     private final AtomicBoolean subscribed = new AtomicBoolean();
@@ -593,7 +567,7 @@ public final class CacheInterceptor implements Interceptor {
     }
 
     private CompletableFuture<Optional<CacheRetrieval>> retrieveCacheResponse(Instant requestTime) {
-      if (isNotSupported(request) || chainAdapter.chain.pushPromiseHandler().isPresent()) {
+      if (isNotSupported(request) || chainAdapter.chain().pushPromiseHandler().isPresent()) {
         return CompletableFuture.completedFuture(Optional.empty());
       }
       return cache
@@ -653,7 +627,7 @@ public final class CacheInterceptor implements Interceptor {
 
       // If we have a cacheRetrieval, this may be a successful revalidation.
       if (cacheRetrieval != null && networkResponse.get().statusCode() == HTTP_NOT_MODIFIED) {
-        networkResponse.discard(executor); // Release.
+        networkResponse.discard(handlerExecutor); // Release.
         return serveFromCacheAfterUpdating(cacheRetrieval, networkResponse);
       }
 
@@ -694,7 +668,9 @@ public final class CacheInterceptor implements Interceptor {
     private CompletableFuture<NetworkResponse> exchangeWithNetworkInBackground(
         HttpRequest request, Instant requestTime) {
       return exchangeWithNetwork(
-          request, requestTime, chainAdapter.chain::forwardAsync); // Ensure asynchronous execution.
+          request,
+          requestTime,
+          chainAdapter.chain()::forwardAsync); // Ensure asynchronous execution.
     }
 
     private CompletableFuture<NetworkResponse> exchangeWithNetwork(
@@ -728,7 +704,7 @@ public final class CacheInterceptor implements Interceptor {
         var networkResponse = (NetworkResponse) response;
         if (networkResponse.isCacheUpdating()) {
           networkResponse
-              .handleAsync(__ -> new DrainingBodySubscriber(), executor)
+              .handleAsync(__ -> new DrainingBodySubscriber(), handlerExecutor)
               .whenComplete(
                   (__, ex) -> {
                     if (ex != null) {
@@ -736,7 +712,7 @@ public final class CacheInterceptor implements Interceptor {
                     }
                   });
         } else {
-          networkResponse.discard(executor);
+          networkResponse.discard(handlerExecutor); // Release.
         }
       } else if (exception != null) {
         logger.log(Level.WARNING, "Asynchronous revalidation failure", exception);
@@ -757,7 +733,7 @@ public final class CacheInterceptor implements Interceptor {
           && cacheRetrieval != null
           && cacheRetrieval.strategy.isCacheResponseServableOnError()) {
         if (networkResponse != null) {
-          networkResponse.discard(executor);
+          networkResponse.discard(handlerExecutor); // Release.
         }
         return null;
       }
