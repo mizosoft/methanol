@@ -52,6 +52,8 @@ import java.util.concurrent.CompletableFuture;
  *   }
  * }
  * }</pre>
+ *
+ * <p>Note this class is not safe to be accessed by multiple threads.
  */
 public interface ResponsePayload extends AutoCloseable {
 
