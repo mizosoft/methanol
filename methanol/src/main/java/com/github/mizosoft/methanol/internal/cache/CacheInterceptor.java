@@ -522,10 +522,26 @@ public final class CacheInterceptor implements Interceptor {
   private static class CacheRetrieval {
     final CacheResponse response;
     final CacheStrategy strategy;
+    final boolean owned;
 
     CacheRetrieval(CacheResponse response, CacheStrategy strategy) {
+      this(response, strategy, true);
+    }
+
+    CacheRetrieval(CacheResponse response, CacheStrategy strategy, boolean owned) {
       this.response = response;
       this.strategy = strategy;
+      this.owned = owned;
+    }
+
+    CacheRetrieval unowned() {
+      return new CacheRetrieval(response, strategy, false);
+    }
+
+    void closeResponse() {
+      if (owned) {
+        response.close();
+      }
     }
   }
 
@@ -556,7 +572,7 @@ public final class CacheInterceptor implements Interceptor {
                                       (__, ex) -> {
                                         // Make sure the CacheResponse is always released.
                                         if (ex != null) {
-                                          cacheRetrieval.response.close();
+                                          cacheRetrieval.closeResponse();
                                         }
                                       }))
                       .orElseGet(() -> exchange(requestTime, null)))
@@ -592,7 +608,7 @@ public final class CacheInterceptor implements Interceptor {
         Instant requestTime, @Nullable CacheRetrieval cacheRetrieval) {
       if (cacheRetrieval != null && cacheRetrieval.strategy.isCacheResponseServable()) {
         if (cacheRetrieval.strategy.requiresBackgroundRevalidation()) {
-          revalidateInBackground(requestTime, cacheRetrieval);
+          revalidateInBackground(requestTime, cacheRetrieval.unowned());
         }
         return CompletableFuture.completedFuture(serveFromCache(requestTime, cacheRetrieval));
       }
@@ -742,7 +758,7 @@ public final class CacheInterceptor implements Interceptor {
       // stale-if-error isn't satisfied. Forward exception or networkResponse as is.
       if (exception != null) {
         if (cacheRetrieval != null) {
-          cacheRetrieval.response.close();
+          cacheRetrieval.closeResponse();
         }
         throw Utils.toCompletionException(exception);
       }
@@ -768,7 +784,7 @@ public final class CacheInterceptor implements Interceptor {
 
       // The cache response wasn't selected by request's preconditions. This is like a server's
       // successful revalidation but done by us.
-      cacheResponse.close();
+      cacheRetrieval.closeResponse();
       return NetworkResponse.of(
           ResponseBuilder.create()
               .uri(request.uri())
@@ -818,23 +834,22 @@ public final class CacheInterceptor implements Interceptor {
 
     private RawResponse serveFromNetwork(
         NetworkResponse networkResponse, @Nullable CacheRetrieval cacheRetrieval) {
-      var cacheResponse = cacheRetrieval != null ? cacheRetrieval.response : null;
-      if (cacheResponse != null) {
-        cacheResponse.close();
+      if (cacheRetrieval != null && !cacheRetrieval.owned) {
+        cacheRetrieval.closeResponse();
       }
       return networkResponse.with(
           builder ->
               builder
                   .request(request)
                   .cacheStatus(CacheStatus.MISS)
-                  .cacheResponse(cacheResponse != null ? cacheResponse.get() : null)
+                  .cacheResponse(cacheRetrieval != null ? cacheRetrieval.response.get() : null)
                   .networkResponse(networkResponse.get()));
     }
 
     private RawResponse serveUnsatisfiableRequest(
         Instant requestTime, @Nullable CacheRetrieval cacheRetrieval) {
       if (cacheRetrieval != null) {
-        cacheRetrieval.response.close();
+        cacheRetrieval.closeResponse();
       }
       return NetworkResponse.of(
           ResponseBuilder.create()
