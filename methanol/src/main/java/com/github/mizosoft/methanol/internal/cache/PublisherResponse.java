@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
@@ -37,7 +39,7 @@ abstract class PublisherResponse extends RawResponse {
 
   PublisherResponse(TrackedResponse<?> response, Publisher<List<ByteBuffer>> publisher) {
     super(dropBody(response));
-    this.publisher = publisher;
+    this.publisher = requireNonNull(publisher);
   }
 
   @Override
