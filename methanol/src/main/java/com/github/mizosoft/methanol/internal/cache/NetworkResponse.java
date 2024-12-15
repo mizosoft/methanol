@@ -71,9 +71,10 @@ public final class NetworkResponse extends PublisherResponse {
 
   @Override
   public NetworkResponse with(Consumer<ResponseBuilder<?>> mutator) {
-    var builder = ResponseBuilder.newBuilder(response);
-    mutator.accept(builder);
-    return new NetworkResponse(builder.buildTrackedResponse(), publisher, isCacheUpdating);
+    return new NetworkResponse(
+        ResponseBuilder.from(response).apply(mutator).buildTrackedResponse(),
+        publisher,
+        isCacheUpdating);
   }
 
   public static NetworkResponse of(TrackedResponse<Publisher<List<ByteBuffer>>> response) {

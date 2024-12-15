@@ -30,7 +30,7 @@ import kotlin.test.Test
 
 class ResponseExtensionsTest {
   private val responseBuilder =
-    ResponseBuilder<Unit>()
+    ResponseBuilder.create<Unit>()
       .uri(URI.create("https://example.com"))
       .request(Request {
         uri("https://example.com")

@@ -156,7 +156,7 @@ public final class CacheResponseMetadata {
   }
 
   public ResponseBuilder<?> toResponseBuilder() {
-    return new ResponseBuilder<>()
+    return ResponseBuilder.create()
         .uri(uri)
         .request(
             MutableRequest.create(uri)

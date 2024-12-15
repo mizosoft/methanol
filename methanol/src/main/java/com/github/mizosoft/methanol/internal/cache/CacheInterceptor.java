@@ -476,7 +476,7 @@ public final class CacheInterceptor implements Interceptor {
       HttpResponse<T> response, Instant requestTime, Clock clock) {
     return response instanceof TrackedResponse<?>
         ? (TrackedResponse<T>) response
-        : ResponseBuilder.newBuilder(response)
+        : ResponseBuilder.from(response)
             .timeRequestSent(requestTime)
             .timeResponseReceived(clock.instant())
             .buildTrackedResponse();
@@ -761,7 +761,7 @@ public final class CacheInterceptor implements Interceptor {
                     .request(request)
                     .cacheStatus(CacheStatus.HIT)
                     .cacheResponse(cacheResponse.get()) // Use original cache response.
-                    .with(cacheRetrieval.strategy::addCacheHeaders)
+                    .apply(cacheRetrieval.strategy::addCacheHeaders)
                     .timeRequestSent(requestTime)
                     .timeResponseReceived(clock.instant()));
       }
@@ -770,7 +770,7 @@ public final class CacheInterceptor implements Interceptor {
       // successful revalidation but done by us.
       cacheResponse.close();
       return NetworkResponse.of(
-          new ResponseBuilder<>()
+          ResponseBuilder.create()
               .uri(request.uri())
               .request(request)
               .cacheStatus(CacheStatus.HIT)
@@ -778,7 +778,7 @@ public final class CacheInterceptor implements Interceptor {
               .version(Version.HTTP_1_1)
               .cacheResponse(cacheResponse.get())
               .headers(cacheResponse.get().headers())
-              .with(cacheRetrieval.strategy::addCacheHeaders)
+              .apply(cacheRetrieval.strategy::addCacheHeaders)
               .timeRequestSent(requestTime)
               .timeResponseReceived(clock.instant())
               .body(FlowSupport.<List<ByteBuffer>>emptyPublisher())
@@ -837,7 +837,7 @@ public final class CacheInterceptor implements Interceptor {
         cacheRetrieval.response.close();
       }
       return NetworkResponse.of(
-          new ResponseBuilder<>()
+          ResponseBuilder.create()
               .uri(request.uri())
               .request(request)
               .cacheStatus(CacheStatus.UNSATISFIABLE)

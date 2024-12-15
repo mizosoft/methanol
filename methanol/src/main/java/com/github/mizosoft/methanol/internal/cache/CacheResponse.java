@@ -62,9 +62,11 @@ public final class CacheResponse extends PublisherResponse implements Closeable 
 
   @Override
   public CacheResponse with(Consumer<ResponseBuilder<?>> mutator) {
-    var builder = ResponseBuilder.newBuilder(response);
-    mutator.accept(builder);
-    return new CacheResponse(builder.buildTrackedResponse(), publisher, viewer, executor);
+    return new CacheResponse(
+        ResponseBuilder.from(response).apply(mutator).buildTrackedResponse(),
+        publisher,
+        viewer,
+        executor);
   }
 
   @Override

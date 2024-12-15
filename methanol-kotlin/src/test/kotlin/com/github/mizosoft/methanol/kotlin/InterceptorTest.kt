@@ -27,14 +27,9 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isTrue
 import com.github.mizosoft.methanol.ResponseBuilder
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.future.await
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
 import kotlin.coroutines.coroutineContext
@@ -55,7 +50,7 @@ class InterceptorTest {
             chain: Interceptor.Chain<T>
           ): Response<T> {
             interceptorCoroutineName = coroutineContext[CoroutineName]
-            return ResponseBuilder<T>()
+            return ResponseBuilder.create<T>()
               .statusCode(200)
               .uri(request.uri())
               .request(request)
@@ -86,7 +81,7 @@ class InterceptorTest {
             chain: Interceptor.Chain<T>
           ): Response<T> {
             interceptorCoroutineName = coroutineContext[CoroutineName]
-            return ResponseBuilder<T>()
+            return ResponseBuilder.create<T>()
               .statusCode(200)
               .uri(request.uri())
               .request(request)
@@ -122,7 +117,7 @@ class InterceptorTest {
               cancelParentJob.countDown()
               channelReceiveJob.complete(launch { channel.receive() })
             }
-            return ResponseBuilder<T>()
+            return ResponseBuilder.create<T>()
               .statusCode(200)
               .uri(request.uri())
               .request(request)
@@ -165,7 +160,7 @@ class InterceptorTest {
               cancelParentJob.countDown()
               channelReceiveJob.complete(launch { channel.receive() })
             }
-            return ResponseBuilder<T>()
+            return ResponseBuilder.create<T>()
               .statusCode(200)
               .uri(request.uri())
               .request(request)
@@ -203,7 +198,7 @@ class InterceptorTest {
             chain: Interceptor.Chain<T>
           ): Response<T> {
             interceptorCoroutineName = coroutineContext[CoroutineName]
-            return ResponseBuilder<T>()
+            return ResponseBuilder.create<T>()
               .statusCode(200)
               .uri(request.uri())
               .request(request)
