@@ -56,7 +56,7 @@ public class Handlers {
       BodyHandler<T> handler,
       Executor executor) {
     return handleAsync(ImmutableResponseInfo.from(response), publisher, handler, executor)
-        .thenApply(body -> ResponseBuilder.newBuilder(response).body(body).build());
+        .thenApply(body -> ResponseBuilder.from(response).body(body).build());
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")

@@ -238,7 +238,7 @@ public class TestUtils {
   }
 
   public static <T> HttpResponse<T> okResponseOf(HttpRequest request, T body) {
-    return new ResponseBuilder<T>()
+    return ResponseBuilder.create()
         .statusCode(HTTP_OK)
         .request(request)
         .uri(request.uri())

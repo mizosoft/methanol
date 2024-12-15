@@ -76,10 +76,10 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
   private @Nullable TrackedResponse<?> cacheResponse;
   private @MonotonicNonNull CacheStatus cacheStatus;
 
-  public ResponseBuilder() {}
+  private ResponseBuilder() {}
 
   @CanIgnoreReturnValue
-  public ResponseBuilder<T> with(Consumer<ResponseBuilder<T>> mutator) {
+  public ResponseBuilder<T> apply(Consumer<? super ResponseBuilder<T>> mutator) {
     mutator.accept(this);
     return this;
   }
@@ -300,9 +300,15 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
     return this;
   }
 
-  public static <T> ResponseBuilder<T> newBuilder(HttpResponse<T> response) {
+  /** Returns a new {@code ResponseBuilder}. */
+  public static <T> ResponseBuilder<T> create() {
+    return new ResponseBuilder<>();
+  }
+
+  /** Returns a new {@code ResponseBuilder} that copies the given response's state. */
+  public static <T> ResponseBuilder<T> from(HttpResponse<T> response) {
     var builder =
-        new ResponseBuilder<T>()
+        new ResponseBuilder<>()
             .statusCode(response.statusCode())
             .uri(response.uri())
             .version(response.version())

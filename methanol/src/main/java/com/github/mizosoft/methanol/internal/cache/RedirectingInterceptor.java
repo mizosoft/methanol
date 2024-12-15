@@ -136,8 +136,8 @@ public final class RedirectingInterceptor implements Interceptor {
           .thenCompose(
               redirectResponse ->
                   exchange(
-                      ResponseBuilder.newBuilder(redirectResponse)
-                          .previousResponse(ResponseBuilder.newBuilder(response).dropBody().build())
+                      ResponseBuilder.from(redirectResponse)
+                          .previousResponse(ResponseBuilder.from(response).dropBody().build())
                           .build()));
     }
 

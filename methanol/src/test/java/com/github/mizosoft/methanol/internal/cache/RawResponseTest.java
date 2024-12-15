@@ -53,7 +53,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(ExecutorExtension.class)
 class RawResponseTest {
   final TrackedResponse<?> responseTemplate =
-      new ResponseBuilder<>()
+      ResponseBuilder.create()
           .uri(URI.create("https://example.com"))
           .request(GET("https://example.com"))
           .statusCode(200)
@@ -66,7 +66,7 @@ class RawResponseTest {
   @ExecutorSpec(ExecutorType.CACHED_POOL)
   void handleAsync(Executor threadPool) throws Exception {
     var response =
-        ResponseBuilder.newBuilder(responseTemplate)
+        ResponseBuilder.from(responseTemplate)
             .body(strPublisher("Indiana Jones", UTF_8, threadPool))
             .buildTrackedResponse();
     var rawResponse = NetworkResponse.of(response);
@@ -92,7 +92,7 @@ class RawResponseTest {
   @ExecutorSpec(ExecutorType.CACHED_POOL)
   void handleSync(Executor threadPool) throws IOException, InterruptedException {
     var response =
-        ResponseBuilder.newBuilder(responseTemplate)
+        ResponseBuilder.from(responseTemplate)
             .header("Content-Type", "text/plain; charset=UTF-16")
             .body(strPublisher("Hans Solo", UTF_16, threadPool))
             .buildTrackedResponse();
@@ -107,14 +107,14 @@ class RawResponseTest {
   @Test
   void with() {
     var response =
-        ResponseBuilder.newBuilder(responseTemplate)
+        ResponseBuilder.from(responseTemplate)
             .body((Publisher<List<ByteBuffer>>) EmptyPublisher.<List<ByteBuffer>>instance())
             .buildTrackedResponse();
     var rawResponse = NetworkResponse.of(response);
     var mutated =
         rawResponse.with(builder -> builder.statusCode(369).header("X-My-Header", "Hello!"));
     var expected =
-        ResponseBuilder.newBuilder(response)
+        ResponseBuilder.from(response)
             .statusCode(369)
             .header("X-My-Header", "Hello!")
             .buildTrackedResponse();
@@ -153,7 +153,7 @@ class RawResponseTest {
 
   private RawResponse failingWith(Supplier<Throwable> supplier) {
     return NetworkResponse.of(
-        ResponseBuilder.newBuilder(responseTemplate)
+        ResponseBuilder.from(responseTemplate)
             .body((Publisher<List<ByteBuffer>>) new FailingPublisher<List<ByteBuffer>>(supplier))
             .buildTrackedResponse());
   }

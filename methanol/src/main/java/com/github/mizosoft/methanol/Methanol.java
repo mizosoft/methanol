@@ -1258,7 +1258,7 @@ public class Methanol extends HttpClient {
     private static <T> HttpResponse<T> stripContentEncoding(HttpResponse<T> response) {
       // Don't strip if the response wasn't compressed.
       return response.headers().map().containsKey("Content-Encoding")
-          ? ResponseBuilder.newBuilder(response)
+          ? ResponseBuilder.from(response)
               .removeHeader("Content-Encoding")
               .removeHeader("Content-Length")
               .build()
