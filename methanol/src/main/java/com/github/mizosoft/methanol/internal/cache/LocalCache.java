@@ -28,7 +28,6 @@ import java.net.http.HttpRequest;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A response cache that provides APIs for retrieval, metadata updates, insertion and removal. */
@@ -47,6 +46,6 @@ public interface LocalCache {
 
   @FunctionalInterface
   interface Factory {
-    LocalCache instance(Executor executor);
+    LocalCache instance(boolean async);
   }
 }

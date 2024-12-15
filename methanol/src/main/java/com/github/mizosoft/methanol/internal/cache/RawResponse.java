@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.internal.cache;
 
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.Utils;
@@ -37,7 +39,7 @@ public abstract class RawResponse {
   final TrackedResponse<?> response;
 
   RawResponse(TrackedResponse<?> response) {
-    this.response = response;
+    this.response = requireNonNull(response);
   }
 
   public TrackedResponse<?> get() {

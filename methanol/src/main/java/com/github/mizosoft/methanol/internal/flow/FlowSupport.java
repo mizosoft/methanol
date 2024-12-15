@@ -72,7 +72,16 @@ public class FlowSupport {
           };
 
   /** An executor that executes the runnable in the calling thread. */
-  public static final Executor SYNC_EXECUTOR = Runnable::run;
+  public static final Executor SYNC_EXECUTOR = SyncExecutor.INSTANCE;
+
+  private enum SyncExecutor implements Executor {
+    INSTANCE;
+
+    @Override
+    public void execute(Runnable command) {
+      command.run();
+    }
+  }
 
   private FlowSupport() {} // non-instantiable
 

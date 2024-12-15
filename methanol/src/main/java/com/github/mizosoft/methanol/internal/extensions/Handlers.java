@@ -24,6 +24,8 @@ package com.github.mizosoft.methanol.internal.extensions;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.ResponseBuilder;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.PushPromiseHandler;
@@ -37,6 +39,8 @@ import java.util.function.Function;
 
 /** Static functions for converting the response body into a usable body type. */
 public class Handlers {
+  private static final Logger logger = System.getLogger(Handlers.class.getName());
+
   private Handlers() {}
 
   public static <T> CompletableFuture<HttpResponse<T>> handleAsync(
@@ -64,7 +68,13 @@ public class Handlers {
     var subscriber = handler.apply(responseInfo);
 
     // Publisher::subscribe can initiate body flow synchronously, which might block.
-    CompletableFuture.runAsync(() -> publisher.subscribe(subscriber), executor);
+    CompletableFuture.runAsync(() -> publisher.subscribe(subscriber), executor)
+        .whenComplete(
+            (__, ex) -> {
+              if (ex != null) {
+                logger.log(Level.WARNING, "Exception thrown by publisher::subscribe", ex);
+              }
+            });
 
     // BodySubscriber::getBody can block (see BodySubscribers::mapping's javadoc).
     return CompletableFuture.supplyAsync(subscriber::getBody, executor)

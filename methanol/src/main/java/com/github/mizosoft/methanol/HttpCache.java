@@ -323,22 +323,12 @@ public final class HttpCache implements AutoCloseable, Flushable {
   /** Returns an interceptor that serves responses from this cache if applicable. */
   Interceptor interceptor(Predicate<String> implicitHeaderPredicate) {
     return new CacheInterceptor(
-        this::createLocalCache,
+        async -> async ? asyncLocalCache : syncLocalCache,
         listener,
         executor,
         clock,
         synchronizeWrites,
         implicitHeaderPredicate);
-  }
-
-  private LocalCache createLocalCache(Executor executor) {
-    if (executor == FlowSupport.SYNC_EXECUTOR) {
-      return syncLocalCache;
-    } else if (executor == this.executor) {
-      return asyncLocalCache;
-    } else {
-      return new LocalCacheImpl(executor);
-    }
   }
 
   static String toStoreKey(HttpRequest request) {

@@ -218,6 +218,9 @@ public class Utils {
       return future.get();
     } catch (ExecutionException e) {
       throw rethrowExecutionExceptionCause(e);
+    } catch (InterruptedException e) {
+      future.cancel(true);
+      throw e;
     }
   }
 

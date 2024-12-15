@@ -98,6 +98,11 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
   }
 
   @CanIgnoreReturnValue
+  public ResponseBuilder<T> uri(String uri) {
+    return uri(URI.create(uri));
+  }
+
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> version(Version version) {
     this.version = requireNonNull(version);
     return this;
