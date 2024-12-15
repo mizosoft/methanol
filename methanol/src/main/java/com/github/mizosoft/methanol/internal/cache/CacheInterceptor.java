@@ -46,6 +46,7 @@ import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.TrackedResponse;
 import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.concurrent.CancellationPropagatingFuture;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -544,7 +545,7 @@ public final class CacheInterceptor implements Interceptor {
     CompletableFuture<RawResponse> exchange() {
       listener.onRequest(request);
       var requestTime = clock.instant();
-      return retrieveCacheResponse(requestTime)
+      return CancellationPropagatingFuture.of(retrieveCacheResponse(requestTime))
           .thenCompose(
               optionalCacheRetrieval ->
                   optionalCacheRetrieval

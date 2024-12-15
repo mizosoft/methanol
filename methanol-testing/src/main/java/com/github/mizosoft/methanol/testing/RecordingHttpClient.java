@@ -22,8 +22,12 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.mizosoft.methanol.ResponseBuilder;
+import com.github.mizosoft.methanol.internal.Utils;
+import com.github.mizosoft.methanol.internal.concurrent.CancellationPropagatingFuture;
 import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
@@ -38,7 +42,6 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,7 +50,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class RecordingHttpClient extends HttpClient {
+public class RecordingHttpClient extends HttpClient {
   private final BlockingDeque<Call<?>> calls = new LinkedBlockingDeque<>();
   private final AtomicInteger sendCount = new AtomicInteger();
   private @Nullable Consumer<Call<?>> callHandler;
@@ -129,26 +132,11 @@ public final class RecordingHttpClient extends HttpClient {
     sendCount.incrementAndGet();
 
     var call = new Call<>(request, responseBodyHandler, null);
-    calls.add(call);
     if (callHandler != null) {
       callHandler.accept(call);
     }
-    try {
-      return call.future().get();
-    } catch (ExecutionException e) {
-      var cause = e.getCause();
-      if (cause instanceof RuntimeException) {
-        throw (RuntimeException) cause;
-      } else if (cause instanceof Error) {
-        throw (Error) cause;
-      } else if (cause instanceof IOException) {
-        throw (IOException) cause;
-      } else if (cause instanceof InterruptedException) {
-        throw (InterruptedException) cause;
-      } else {
-        throw new IOException(cause);
-      }
-    }
+    calls.add(call);
+    return Utils.get(call.future());
   }
 
   @Override
@@ -157,10 +145,10 @@ public final class RecordingHttpClient extends HttpClient {
     sendCount.incrementAndGet();
 
     var call = new Call<>(request, responseBodyHandler, null);
-    calls.add(call);
     if (callHandler != null) {
       callHandler.accept(call);
     }
+    calls.add(call);
     return call.future();
   }
 
@@ -172,19 +160,20 @@ public final class RecordingHttpClient extends HttpClient {
     sendCount.incrementAndGet();
 
     var call = new Call<>(request, responseBodyHandler, pushPromiseHandler);
-    calls.add(call);
     if (callHandler != null) {
       callHandler.accept(call);
     }
+    calls.add(call);
     return call.future();
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public static final class Call<T> {
+    private final CompletableFuture<HttpResponse<T>> responseFuture =
+        CancellationPropagatingFuture.create();
     private final HttpRequest request;
     private final BodyHandler<T> bodyHandler;
     private final Optional<PushPromiseHandler<T>> pushPromiseHandler;
-    private final CompletableFuture<HttpResponse<T>> responseFuture = new CompletableFuture<>();
 
     private Call(
         HttpRequest request,
@@ -219,10 +208,23 @@ public final class RecordingHttpClient extends HttpClient {
       complete(TestUtils.EMPTY_BUFFER);
     }
 
+    public void complete(Consumer<ResponseBuilder<T>> mutator) {
+      complete(
+          new ResponseBuilder<T>()
+              .statusCode(HTTP_OK)
+              .request(request)
+              .uri(request.uri())
+              .version(request.version().orElse(HttpClient.Version.HTTP_1_1))
+              .with(mutator)
+              .build());
+    }
+
     public void complete(ByteBuffer responseBody) {
-      assertThat(
-              responseFuture.complete(TestUtils.okResponseOf(request, responseBody, bodyHandler)))
-          .isTrue();
+      complete(TestUtils.okResponseOf(request, responseBody, bodyHandler));
+    }
+
+    public void complete(HttpResponse<T> response) {
+      assertThat(responseFuture.complete(response)).isTrue();
     }
 
     public void completeExceptionally(Throwable exception) {

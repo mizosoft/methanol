@@ -3,6 +3,7 @@ package com.github.mizosoft.methanol.internal.cache;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
+import com.github.mizosoft.methanol.internal.concurrent.CancellationPropagatingFuture;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.ByteBuffer;
@@ -28,7 +29,7 @@ final class ChainAdapter {
 
   CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> forward(HttpRequest request) {
     if (syncCallerThread == null || syncCallerThread != Thread.currentThread()) {
-      return chain.forwardAsync(request);
+      return CancellationPropagatingFuture.of(chain.forwardAsync(request));
     }
 
     try {
