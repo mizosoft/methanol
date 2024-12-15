@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.internal.spi;
 
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -69,6 +70,7 @@ public class BodyDecoderFactoryProviders {
                   } else {
                     return f2;
                   }
-                }));
+                },
+                LinkedHashMap::new));
   }
 }
