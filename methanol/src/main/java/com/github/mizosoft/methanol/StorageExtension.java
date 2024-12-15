@@ -34,12 +34,20 @@ import java.nio.file.Path;
 
 /** An extension that provides a storage backend for an {@link HttpCache}. */
 public interface StorageExtension {
-  static StorageExtension memory(long maxSize) {
-    requireArgument(maxSize > 0, "non-positive maxSize: %d", maxSize);
+
+  /** Returns a {@code StorageExtension} for saving data in memory, not exceeding the given size. */
+  static StorageExtension inMemory(long maxSize) {
+    requireArgument(maxSize > 0, "Non-positive maxSize: %d", maxSize);
     return (InternalStorageExtension) (executor, appVersion) -> new MemoryStore(maxSize);
   }
 
-  static StorageExtension disk(Path directory, long maxSize) {
+  /**
+   * Returns a {@code StorageExtension} for saving data on disk under the given directory, not
+   * exceeding the given size.
+   *
+   * @throws IllegalArgumentException if {@code maxSize} is not positive
+   */
+  static StorageExtension onDisk(Path directory, long maxSize) {
     requireNonNull(directory);
     requireArgument(maxSize > 0, "Non-positive maxSize: %d", maxSize);
     return (InternalStorageExtension)
