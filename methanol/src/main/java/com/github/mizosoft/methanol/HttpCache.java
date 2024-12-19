@@ -1062,7 +1062,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     /** Specifies that HTTP responses are to be cached on memory with the given size bound. */
     @CanIgnoreReturnValue
     public Builder cacheOnMemory(long maxSize) {
-      return cacheOn(StorageExtension.memory(maxSize));
+      return cacheOn(StorageExtension.inMemory(maxSize));
     }
 
     /**
@@ -1071,15 +1071,16 @@ public final class HttpCache implements AutoCloseable, Flushable {
      */
     @CanIgnoreReturnValue
     public Builder cacheOnDisk(Path directory, long maxSize) {
-      return cacheOn(StorageExtension.disk(directory, maxSize));
+      return cacheOn(StorageExtension.onDisk(directory, maxSize));
     }
 
+    /** Specifies that HTTP responses are to be persisted on the given storage extension. */
     @CanIgnoreReturnValue
     public Builder cacheOn(StorageExtension storageExtension) {
       requireNonNull(storageExtension);
       requireArgument(
           storageExtension instanceof InternalStorageExtension,
-          "unrecognized StorageExtension: %s",
+          "Unrecognized StorageExtension: %s",
           storageExtension);
       this.storageExtension = (InternalStorageExtension) storageExtension;
       return this;
@@ -1129,7 +1130,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
 
     private InternalStorageExtension storageExtension() {
       var storeExtension = this.storageExtension;
-      requireState(storeExtension != null, "a storage backend must be specified");
+      requireState(storeExtension != null, "A storage backend must be specified");
       return storeExtension;
     }
 

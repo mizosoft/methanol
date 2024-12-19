@@ -32,8 +32,8 @@ import java.util.concurrent.CompletableFuture
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
- * An object that intercepts the request before being sent and the response before being returned.
- * The [intercept] function is a suspending function, meaning it is invoked as a coroutine. The
+ * An object that intercepts requests before being sent and responses before being returned. The
+ * [intercept] function is a suspending function, meaning it is invoked as a coroutine. The
  * coroutine shares the [kotlin.coroutines.CoroutineContext] used when the HTTP call is first
  * initiated. Typically, this means that all interceptors, along with the HTTP call, are invoked
  * within the same [CoroutineScope], and thus typically the same parent [kotlinx.coroutines.Job].
@@ -53,7 +53,7 @@ interface Interceptor {
 
     fun <U> with(
       bodyHandler: BodyHandler<U>,
-      pushPromiseHandler: PushPromiseHandler<U>? = null
+      pushPromiseHandler: PushPromiseHandler<U>?
     ): Chain<U>
   }
 }
@@ -83,7 +83,7 @@ internal fun Interceptor.toMethanolInterceptor() = object : Methanol.Interceptor
     chain: Methanol.Interceptor.Chain<T>
   ): Response<T> {
     val coroutineContext =
-      request.tagOf<CoroutineScopeHolder>()?.scope?.coroutineContext ?: EmptyCoroutineContext
+      request.tag<CoroutineScopeHolder>()?.scope?.coroutineContext ?: EmptyCoroutineContext
     return runBlocking(coroutineContext) {
       this@toMethanolInterceptor.intercept(request, chain.toCoroutineChain())
     }
@@ -94,7 +94,7 @@ internal fun Interceptor.toMethanolInterceptor() = object : Methanol.Interceptor
     chain: Methanol.Interceptor.Chain<T>
   ): CompletableFuture<Response<T>> {
     val coroutineScope =
-      request.tagOf<CoroutineScopeHolder>()?.scope ?: CoroutineScope(Dispatchers.Default)
+      request.tag<CoroutineScopeHolder>()?.scope ?: CoroutineScope(Dispatchers.Default)
     return coroutineScope.future {
       this@toMethanolInterceptor.intercept(request, chain.toCoroutineChain())
     }
