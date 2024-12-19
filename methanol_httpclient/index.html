@@ -1055,15 +1055,11 @@ Think resolving with a base URI, adding default request headers, default timeout
 <span class="w">    </span><span class="p">.</span><span class="na">readTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span><span class="w">          </span><span class="c1">// Timeout for single reads</span>
 <span class="w">    </span><span class="p">.</span><span class="na">autoAcceptEncoding</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span><span class="w">                   </span><span class="c1">// Transparent response compression, this is true by default</span>
 
-<span class="c1">// Continue using as a standard HttpClient.Builder!</span>
-<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="na">executor</span><span class="p">(...)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">executor</span><span class="p">(</span><span class="n">Executors</span><span class="p">.</span><span class="na">newFixedThreadPool</span><span class="p">(</span><span class="mi">16</span><span class="p">))</span>
-<span class="w">    </span><span class="p">.</span><span class="na">connectTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
-<span class="w">    </span><span class="c1">// ...</span>
-<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
+<span class="c1">// Continue using as a standard HttpClient.Builder.</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="na">connectTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">)).</span><span class="na">build</span><span class="p">();</span>
 </code></pre></div>
 <p>You can also build from an existing <code>HttpClient</code> instance. However, you can't install an <code>HttpCache</code> in such case.</p>
-<div class="highlight"><pre><span></span><code><span class="n">HttpClient</span><span class="w"> </span><span class="n">prebuiltClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpClient</span><span class="p">.</span><span class="na">newHttpClient</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">prebuiltClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpClient</span><span class="p">.</span><span class="na">newHttpClient</span><span class="p">();</span>
 <span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">(</span><span class="n">prebuiltClient</span><span class="p">).</span><span class="na">build</span><span class="p">();</span>
 </code></pre></div>
 <div class="admonition note">
