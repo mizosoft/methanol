@@ -1064,17 +1064,13 @@
 <span class="w">        </span><span class="p">.</span><span class="na">adapterCodec</span><span class="p">(</span><span class="n">adapterCodec</span><span class="p">)</span>
 <span class="w">        </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 
-<span class="kd">record</span> <span class="nc">Person</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="p">}</span>
+<span class="kd">record</span> <span class="nc">Person</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
 
 <span class="kd">var</span><span class="w"> </span><span class="n">bruceLee</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Person</span><span class="p">(</span><span class="s">&quot;Bruce Lee&quot;</span><span class="p">);</span>
 <span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span>
 <span class="w">    </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">POST</span><span class="p">(</span><span class="s">&quot;.../echo&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">bruceLee</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_XML</span><span class="p">),</span>
 <span class="w">    </span><span class="n">Person</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
-
-<span class="n">assertThat</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()).</span>
-
-<span class="n">isEqualTo</span><span class="p">(</span><span class="n">bruceLee</span><span class="p">);</span>
+<span class="n">assertThat</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()).</span><span class="na">isEqualTo</span><span class="p">(</span><span class="n">bruceLee</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="legacy-adapters">Legacy Adapters<a class="headerlink" href="#legacy-adapters" title="Permanent link">&para;</a></h2>
 <p>See <a href="https://mizosoft.github.io/methanol/legacy_adapters/">Legacy Adapters</a></p>

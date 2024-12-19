@@ -1047,56 +1047,24 @@ Unsurprisingly, the client is named <code>Methanol</code>.</p>
 <p>In addition to <a href="../interceptors/">interceptors</a> and <a href="../caching/">caching</a>, <code>Methanol</code> can apply default properties to your requests.
 Think resolving with a base URI, adding default request headers, default timeouts, etc.</p>
 <div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">builder</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-<span class="w">    </span><span class="p">.</span><span class="na">cache</span><span class="p">(...)</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">interceptor</span><span class="p">(...)</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">userAgent</span><span class="p">(</span><span class="s">&quot;Will Smith&quot;</span><span class="p">)</span><span class="w">                     </span><span class="c1">// Custom User-Agent</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">baseUri</span><span class="p">(</span><span class="s">&quot;https://api.github.com&quot;</span><span class="p">)</span><span class="w">           </span><span class="c1">// Base URI to resolve requests&#39; URI against</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">defaultHeader</span><span class="p">(</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="s">&quot;application/json&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// Default request headers</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">requestTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">20</span><span class="p">))</span><span class="w">      </span><span class="c1">// Default request timeout</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">headersTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span><span class="w">       </span><span class="c1">// Timeout for receiving response headers</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">readTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span><span class="w">          </span><span class="c1">// Timeout for single reads</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">autoAcceptEncoding</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span><span class="w">                   </span><span class="c1">// Transparent response compression, this is true by default</span>
+<span class="w">    </span><span class="p">.</span><span class="na">userAgent</span><span class="p">(</span><span class="s">&quot;Will Smith&quot;</span><span class="p">)</span><span class="w">                     </span><span class="c1">// Custom User-Agent</span>
+<span class="w">    </span><span class="p">.</span><span class="na">baseUri</span><span class="p">(</span><span class="s">&quot;https://api.github.com&quot;</span><span class="p">)</span><span class="w">           </span><span class="c1">// Base URI to resolve requests&#39; URI against</span>
+<span class="w">    </span><span class="p">.</span><span class="na">defaultHeader</span><span class="p">(</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="s">&quot;application/json&quot;</span><span class="p">)</span><span class="w">  </span><span class="c1">// Default request headers</span>
+<span class="w">    </span><span class="p">.</span><span class="na">requestTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">20</span><span class="p">))</span><span class="w">      </span><span class="c1">// Default request timeout</span>
+<span class="w">    </span><span class="p">.</span><span class="na">headersTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span><span class="w">       </span><span class="c1">// Timeout for receiving response headers</span>
+<span class="w">    </span><span class="p">.</span><span class="na">readTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span><span class="w">          </span><span class="c1">// Timeout for single reads</span>
+<span class="w">    </span><span class="p">.</span><span class="na">autoAcceptEncoding</span><span class="p">(</span><span class="kc">true</span><span class="p">);</span><span class="w">                   </span><span class="c1">// Transparent response compression, this is true by default</span>
 
 <span class="c1">// Continue using as a standard HttpClient.Builder!</span>
 <span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">builder</span><span class="p">.</span><span class="na">executor</span><span class="p">(...)</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">executor</span><span class="p">(</span><span class="n">Executors</span><span class="p">.</span><span class="na">newFixedThreadPool</span><span class="p">(</span><span class="mi">16</span><span class="p">))</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">connectTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
-<span class="w">    </span><span class="p">...</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">build</span><span class="p">();</span>
+<span class="w">    </span><span class="p">.</span><span class="na">executor</span><span class="p">(</span><span class="n">Executors</span><span class="p">.</span><span class="na">newFixedThreadPool</span><span class="p">(</span><span class="mi">16</span><span class="p">))</span>
+<span class="w">    </span><span class="p">.</span><span class="na">connectTimeout</span><span class="p">(</span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">30</span><span class="p">))</span>
+<span class="w">    </span><span class="c1">// ...</span>
+<span class="w">    </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 </code></pre></div>
 <p>You can also build from an existing <code>HttpClient</code> instance. However, you can't install an <code>HttpCache</code> in such case.</p>
-<div class="highlight"><pre><span></span><code><span class="n">HttpClient</span><span class="w"> </span><span class="n">prebuiltClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">...</span>
-<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">(</span><span class="n">prebuiltClient</span><span class="p">)</span>
-<span class="w">    </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(...)</span>
-<span class="w">    </span><span class="p">.</span>
-
-<span class="n">userAgent</span><span class="p">(</span><span class="s">&quot;Will Smith&quot;</span><span class="p">)</span>
-<span class="w">     </span><span class="p">...</span>
-<span class="w">         </span><span class="p">.</span>
-
-<span class="n">build</span><span class="p">();</span>
+<div class="highlight"><pre><span></span><code><span class="n">HttpClient</span><span class="w"> </span><span class="n">prebuiltClient</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">HttpClient</span><span class="p">.</span><span class="na">newHttpClient</span><span class="p">();</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">(</span><span class="n">prebuiltClient</span><span class="p">).</span><span class="na">build</span><span class="p">();</span>
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

@@ -1083,17 +1083,13 @@
 <span class="w">        </span><span class="p">.</span><span class="na">adapterCodec</span><span class="p">(</span><span class="n">adapterCodec</span><span class="p">)</span>
 <span class="w">        </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 
-<span class="kd">record</span> <span class="nc">Person</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="p">}</span>
+<span class="kd">record</span> <span class="nc">Person</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
 
 <span class="kd">var</span><span class="w"> </span><span class="n">bruceLee</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Person</span><span class="p">(</span><span class="s">&quot;Bruce Lee&quot;</span><span class="p">);</span>
 <span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span>
 <span class="w">    </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">POST</span><span class="p">(</span><span class="s">&quot;.../echo&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">bruceLee</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">),</span>
 <span class="w">    </span><span class="n">Person</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
-
-<span class="n">assertThat</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()).</span>
-
-<span class="n">isEqualTo</span><span class="p">(</span><span class="n">bruceLee</span><span class="p">);</span>
+<span class="n">assertThat</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()).</span><span class="na">isEqualTo</span><span class="p">(</span><span class="n">bruceLee</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="formats">Formats<a class="headerlink" href="#formats" title="Permanent link">&para;</a></h2>
 <p><code>ObjectMapper</code> implementations can be paired with one or more <code>MediaTypes</code> to create adapters for any format supported by Jackson.

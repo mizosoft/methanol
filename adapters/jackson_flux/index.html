@@ -1119,15 +1119,9 @@ Body completion is handled by the returned publisher source. Additionally, the d
 <span class="w">        </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">POST</span><span class="p">(</span>
 <span class="w">            </span><span class="s">&quot;.../echo&quot;</span><span class="p">,</span>
 <span class="w">            </span><span class="n">Flux</span><span class="p">.</span><span class="na">just</span><span class="p">(</span><span class="n">bruceLee</span><span class="p">,</span><span class="w"> </span><span class="n">jackieChan</span><span class="p">),</span>
-<span class="w">            </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">),</span>
-<span class="w">        </span><span class="k">new</span><span class="w"> </span><span class="n">TypeRef</span><span class="o">&lt;</span><span class="n">Flux</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;&gt;</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="p">});</span>
-
-<span class="n">assertThat</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">().</span>
-
-<span class="n">toIterable</span><span class="p">()).</span>
-
-<span class="n">containsExactly</span><span class="p">(</span><span class="n">bruceLee</span><span class="p">,</span><span class="w"> </span><span class="n">jackieChan</span><span class="p">);</span>
+<span class="w">            </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">),</span><span class="w"> </span>
+<span class="w">        </span><span class="k">new</span><span class="w"> </span><span class="n">TypeRef</span><span class="o">&lt;</span><span class="n">Flux</span><span class="o">&lt;</span><span class="n">Person</span><span class="o">&gt;&gt;</span><span class="p">()</span><span class="w"> </span><span class="p">{});</span>
+<span class="n">assertThat</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">().</span><span class="na">toIterable</span><span class="p">()).</span><span class="na">containsExactly</span><span class="p">(</span><span class="n">bruceLee</span><span class="p">,</span><span class="w"> </span><span class="n">jackieChan</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="legacy-adapters">Legacy Adapters<a class="headerlink" href="#legacy-adapters" title="Permanent link">&para;</a></h2>
 <p>See <a href="https://mizosoft.github.io/methanol/legacy_adapters/">Legacy Adapters</a></p>

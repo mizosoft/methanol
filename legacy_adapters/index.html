@@ -1122,18 +1122,14 @@ static methods, instead of being bundled in a per-client <a href="https://mizoso
 recommended way to use adapters. The legacy way is not deprecated but might be in the future.</p>
 <h2 id="compatibility">Compatibility<a class="headerlink" href="#compatibility" title="Permanent link">&para;</a></h2>
 <p>If you have adapters installed as service providers, they can still be used with the newer, non-static APIs.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">record</span> <span class="nc">Person</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="p">}</span>
+<div class="highlight"><pre><span></span><code><span class="kd">record</span> <span class="nc">Person</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
 
 <span class="c1">// The client will fall back to an AdapterCodec of installed adapters, if any.</span>
 <span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span>
 <span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span>
 <span class="w">    </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">POST</span><span class="p">(</span><span class="s">&quot;.../echo&quot;</span><span class="p">,</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">Person</span><span class="p">(</span><span class="s">&quot;Bruce Lee&quot;</span><span class="p">),</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">),</span>
 <span class="w">    </span><span class="n">Person</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
-
-<span class="n">assertThat</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()).</span>
-
-<span class="n">isEqualTo</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">Person</span><span class="p">(</span><span class="s">&quot;Bruce Lee&quot;</span><span class="p">));</span>
+<span class="n">assertThat</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()).</span><span class="na">isEqualTo</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">Person</span><span class="p">(</span><span class="s">&quot;Bruce Lee&quot;</span><span class="p">));</span>
 </code></pre></div>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <p>The legacy way to register adapters is through <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceLoader.html">service providers</a>.
@@ -1189,38 +1185,41 @@ annotationProcessor &quot;com.google.auto.service:auto-service:$autoServiceVersi
 <span class="nt">&lt;/dependency&gt;</span>
 </code></pre></div>
 <p>Configure the annotation processor with the compiler plugin.</p>
-<div class="highlight"><pre><span></span><code><span class="nt">&lt;plugin&gt;</span>
-<span class="w">  </span><span class="nt">&lt;artifactId&gt;</span>maven-compiler-plugin<span class="nt">&lt;/artifactId&gt;</span>
-<span class="w">  </span><span class="nt">&lt;configuration&gt;</span>
-<span class="w">    </span><span class="nt">&lt;annotationProcessorPaths&gt;</span>
-<span class="w">      </span><span class="nt">&lt;path&gt;</span>
-<span class="w">        </span><span class="nt">&lt;groupId&gt;</span>com.google.auto.service<span class="nt">&lt;/groupId&gt;</span>
-<span class="w">        </span><span class="nt">&lt;artifactId&gt;</span>auto-service<span class="nt">&lt;/artifactId&gt;</span>
-<span class="w">        </span><span class="nt">&lt;version&gt;</span>${autoServiceVersion}<span class="nt">&lt;/version&gt;</span>
-<span class="w">      </span><span class="nt">&lt;/path&gt;</span>
-<span class="w">    </span><span class="nt">&lt;/annotationProcessorPaths&gt;</span>
-<span class="w">  </span><span class="nt">&lt;/configuration&gt;</span>
-<span class="nt">&lt;/plugin&gt;</span>
-</code></pre></div>
-<p>Next, add this class to your project:</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonJsonAdapters</span><span class="w"> </span><span class="p">{</span>
-<span class="w">  </span><span class="kd">private</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="w"> </span><span class="n">mapper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ObjectMapper</span><span class="p">();</span>
+<p>```xml Person(String name) {
+}
+<plugin>
+  <artifactId>maven-compiler-plugin</artifactId>
+  <configuration>
+    <annotationProcessorPaths>
+      <path>
+        <groupId>com.google.auto.service</groupId>
+        <artifactId>auto-service</artifactId>
+        <version>${autoServiceVersion}</version>
+      </path>
+    </annotationProcessorPaths>
+  </configuration>
+</plugin>
+<div class="highlight"><pre><span></span><code>Next, add this class to your project:
 
-<span class="w">  </span><span class="nd">@AutoService</span><span class="p">(</span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Encoder</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
-<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Encoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingEncoder</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">Encoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">}</span>
+```java
+public class JacksonJsonAdapters {
+  private static final ObjectMapper mapper = new ObjectMapper();
 
-<span class="w">  </span><span class="nd">@AutoService</span><span class="p">(</span><span class="n">BodyAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
-<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Decoder</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">ForwardingDecoder</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="nf">Decoder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<span class="w">      </span><span class="kd">super</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">));</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
+  @AutoService(BodyAdapter.Encoder.class)
+  public static class Encoder extends ForwardingEncoder {
+    public Encoder() {
+      super(JacksonAdapterFactory.createJsonEncoder(mapper));
+    }
+  }
+
+  @AutoService(BodyAdapter.Decoder.class)
+  public static class Decoder extends ForwardingDecoder {
+    public Decoder() {
+      super(JacksonAdapterFactory.createJsonDecoder(mapper));
+    }
+  }
+}
+</code></pre></div></p>
 <h4 id="manual-configuration">Manual Configuration<a class="headerlink" href="#manual-configuration" title="Permanent link">&para;</a></h4>
 <p>You can also write the configuration files manually. First, add this class to your project:</p>
 <div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">JacksonJsonAdapters</span><span class="w"> </span><span class="p">{</span>
@@ -1240,7 +1239,8 @@ annotationProcessor &quot;com.google.auto.service:auto-service:$autoServiceVersi
 <span class="p">}</span>
 </code></pre></div>
 <p>Next, create two provider-configuration files in the resource directory: <code>META-INF/services</code>,
-one for the encoder and the other for the decoder. Each file must contain the fully qualified
+one for  Person(String name) {
+}the encoder and the other for the decoder. Each file must contain the fully qualified
 name of the implementation class.</p>
 <p>Let's say the above class is in a package named <code>com.example</code>. You'll want to have one file for the
 encoder named:</p>
