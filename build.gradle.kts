@@ -3,6 +3,7 @@ import extensions.Version
 plugins {
   id("conventions.aggregate-coverage")
   id("conventions.aggregate-javadoc")
+  id("conventions.aggregate-dokka")
   id("conventions.aggregate-testing")
   alias(libs.plugins.nexus.publish)
   alias(libs.plugins.versions)

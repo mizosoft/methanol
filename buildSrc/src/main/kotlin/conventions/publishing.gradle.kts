@@ -33,7 +33,7 @@ publishing {
         developers {
           developer {
             id = "mizosoft"
-            name = "Moataz Hussein"
+            name = "mizosoft"
             email = "moataz.nasser20@gmail.com"
             url = "https://github.com/mizosoft"
           }

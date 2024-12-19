@@ -24,6 +24,7 @@ package com.github.mizosoft.methanol.kotlin
 
 import com.github.mizosoft.methanol.HttpCache
 import com.github.mizosoft.methanol.StorageExtension
+import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.Executor
 
@@ -37,6 +38,10 @@ interface CacheSpec {
   fun on(storageExtension: StorageExtension)
 
   fun executor(executor: Executor)
+
+  fun listener(listener: CacheListener)
+
+  fun synchronizeWrites(synchronizeWrites: Boolean = true)
 }
 
 private class CacheFactorySpec(private val builder: HttpCache.Builder = Cache.newBuilder()) :
@@ -53,8 +58,16 @@ private class CacheFactorySpec(private val builder: HttpCache.Builder = Cache.ne
     builder.cacheOn(storageExtension)
   }
 
+  override fun listener(listener: CacheListener) {
+    builder.listener(listener)
+  }
+
   override fun executor(executor: Executor) {
     builder.executor(executor)
+  }
+
+  override fun synchronizeWrites(synchronizeWrites: Boolean) {
+    builder.synchronizeWrites(synchronizeWrites)
   }
 
   override fun make(): Cache = builder.build()
@@ -77,8 +90,33 @@ private class CacheChainFactorySpec(private val caches: MutableList<Cache> = Arr
 
 typealias Cache = HttpCache
 
+typealias CacheListener = HttpCache.Listener
+
 /** A series of caches invoked sequentially during an HTTP call. */
 typealias CacheChain = List<Cache>
+
+/** Closes all caches in this chain. */
+fun CacheChain.close() {
+  var closeException: IOException? = null
+  for (cache in this) {
+    try {
+      cache.close()
+    } catch (e: IOException) {
+      if (closeException != null) {
+        closeException.addSuppressed(e)
+      } else {
+        closeException = e
+      }
+    }
+  }
+
+  if (closeException != null) {
+    throw closeException
+  }
+}
+
+/** Returns an [AutoCloseable] that closes all caches in this chain when invoked. */
+fun CacheChain.closeable() = AutoCloseable { close() }
 
 /** Creates a new [com.github.mizosoft.methanol.kotlin.Cache] as configured by the given spec block. */
 @Suppress("FunctionName")

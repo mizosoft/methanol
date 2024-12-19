@@ -9,6 +9,9 @@ import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.the
 
+const val JAVADOC_JDK_VERSION = 11
+const val JAVADOC_URL = "https://mizosoft.github.io/methanol/api/latest"
+
 private const val MODULE_NAME_EXTENSIONS_NAME = "javaModuleName"
 
 private fun Project.findModuleName() =
@@ -33,32 +36,44 @@ val Project.javaModuleName: String
 fun Project.projectOrNull(name: String) = findProject(name)
 
 val Project.isIncludedInCoverageReport
-  get() = project !in setOf(
-    project(":methanol-testing"),
-    project(":methanol-benchmarks"),
-    project(":methanol-samples"),
-    project(":methanol-samples:crawler"),
-    project(":methanol-samples:download-progress"),
-    project(":methanol-samples:upload-progress"),
+  get() = project in setOf(
+    project(":methanol"),
     project(":methanol-blackbox"),
+    project(":methanol-brotli"),
+    project(":methanol-gson"),
+    project(":methanol-jackson"),
+    project(":methanol-jackson-flux"),
+    project(":methanol-jaxb"),
+    project(":methanol-jaxb-jakarta"),
+    project(":methanol-kotlin"),
+    project(":methanol-moshi"),
+    project(":methanol-protobuf"),
+    project(":methanol-redis"),
+    projectOrNull(":quarkus-native-test"), // Optionally included in build.
+    projectOrNull(":native-image-test"), // Optionally included in build.
     project(":spring-boot-test"),
-    projectOrNull(":methanol-brotli:brotli-jni"), // Optionally included.
-    projectOrNull(":quarkus-native-test"), // Optionally included.
-    projectOrNull(":native-image-test") // Optionally included.
   )
 
 val Project.isIncludedInAggregateJavadoc
-  get() = project !in setOf(
-    project(":methanol-benchmarks"),
-    project(":methanol-samples"),
-    project(":methanol-samples:crawler"),
-    project(":methanol-samples:download-progress"),
-    project(":methanol-samples:upload-progress"),
-    project(":methanol-blackbox"),
-    project(":spring-boot-test"),
-    projectOrNull(":methanol-brotli:brotli-jni"), // Optionally included.
-    projectOrNull(":quarkus-native-test"), // Optionally included.
-    projectOrNull(":native-image-test") // Optionally included.
+  get() = project in setOf(
+    project(":methanol"),
+    project(":methanol-brotli"),
+    project(":methanol-gson"),
+    project(":methanol-jackson"),
+    project(":methanol-jackson-flux"),
+    project(":methanol-jaxb"),
+    project(":methanol-jaxb-jakarta"),
+    project(":methanol-kotlin"),
+    project(":methanol-moshi"),
+    project(":methanol-protobuf"),
+    project(":methanol-redis"),
+    project(":methanol-testing"),
+  )
+
+val Project.isIncludedInAggregateDokka
+  get() = project in setOf(
+    project(":methanol-kotlin"),
+    project(":methanol-moshi"),
   )
 
 val Project.artifactId
@@ -67,14 +82,14 @@ val Project.artifactId
 val Project.libs
   get() = the<LibrariesForLibs>()
 
-val Project.javaVersion: String?
+val Project.javaVersion
   get() = project.findProperty("javaVersion")?.toString()
 
-val Project.javaVendor: String?
+val Project.javaVendor
   get() = project.findProperty("javaVendor")?.toString()
 
-val Project.enableErrorprone: Boolean
+val Project.enableErrorprone
   get() = project.hasProperty("enableErrorprone")
 
-val Project.enableCheckerframework: Boolean
+val Project.enableCheckerframework
   get() = project.hasProperty("enableCheckerframework")

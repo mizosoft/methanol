@@ -58,7 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Flow;
+import java.util.concurrent.Flow.Publisher;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -271,7 +271,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
   }
 
   private static final class ResponsePayloadImpl implements ResponsePayload {
-    private final Flow.Publisher<List<ByteBuffer>> publisher;
+    private final Publisher<List<ByteBuffer>> publisher;
     private final HttpResponse.ResponseInfo responseInfo;
     private final Supplier<Executor> executorSupplier;
     private final AdapterCodec adapterCodec;
@@ -279,7 +279,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
     private boolean closed;
 
     ResponsePayloadImpl(
-        Flow.Publisher<List<ByteBuffer>> publisher,
+        Publisher<List<ByteBuffer>> publisher,
         HttpResponse.ResponseInfo responseInfo,
         Supplier<Executor> executorSupplier,
         AdapterCodec adapterCodec,
