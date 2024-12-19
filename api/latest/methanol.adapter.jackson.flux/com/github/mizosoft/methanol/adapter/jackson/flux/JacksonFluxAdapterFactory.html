@@ -94,7 +94,9 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public class </span><span class="element-name type-name-label">JacksonFluxAdapterFactory</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></span></div>
-<div class="block">Provides <a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> implementations for the JSON format using Jackson.</div>
+<div class="block">Contains static factory methods for <a href="https://github.com/FasterXML/jackson">Jackson</a>
+ <code>&amp;</code> <a href="https://projectreactor.io/">Project Reactor</a> streaming <a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>adapters</code></a>. Encoders support encoding to any subtype of <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Flow.Publisher.html" title="class or interface in java.util.concurrent" class="external-link"><code>Flow.Publisher</code></a> or <code>Publisher</code>. Decoders support
+ decoding to <code>Flux</code>, <code>Mono</code>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Flow.Publisher.html" title="class or interface in java.util.concurrent" class="external-link"><code>Flow.Publisher</code></a>, or <code>Publisher</code>.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -112,22 +114,22 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#createDecoder()" class="member-name-link">createDecoder</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="block">Creates a decoder that uses a default <code>ObjectMapper</code> instance.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#createDecoder(com.fasterxml.jackson.databind.ObjectMapper)" class="member-name-link">createDecoder</a><wbr>(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="block">Creates a decoder that uses the given <code>ObjectMapper</code> instance.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#createEncoder()" class="member-name-link">createEncoder</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>Encoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="block">Creates an encoder that uses a default <code>ObjectMapper</code> instance.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code>static <a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4"><code><a href="#createEncoder(com.fasterxml.jackson.databind.ObjectMapper)" class="member-name-link">createEncoder</a><wbr>(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1 method-summary-table-tab4">
-<div class="block">Returns a <code>Encoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="block">Creates an encoder that uses the given <code>ObjectMapper</code> instance.</div>
 </div>
 </div>
 </div>
@@ -150,28 +152,28 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="createEncoder()">
 <h3>createEncoder</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span>()</div>
-<div class="block">Returns a <code>Encoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="block">Creates an encoder that uses a default <code>ObjectMapper</code> instance.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="createEncoder(com.fasterxml.jackson.databind.ObjectMapper)">
 <h3>createEncoder</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></span>&nbsp;<span class="element-name">createEncoder</span><wbr><span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
-<div class="block">Returns a <code>Encoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="block">Creates an encoder that uses the given <code>ObjectMapper</code> instance.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="createDecoder()">
 <h3>createDecoder</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span>()</div>
-<div class="block">Returns a <code>Decoder</code> that uses a default <code>ObjectMapper</code> instance.</div>
+<div class="block">Creates a decoder that uses a default <code>ObjectMapper</code> instance.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="createDecoder(com.fasterxml.jackson.databind.ObjectMapper)">
 <h3>createDecoder</h3>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="../../../../../../../../methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></span>&nbsp;<span class="element-name">createDecoder</span><wbr><span class="parameters">(com.fasterxml.jackson.databind.ObjectMapper&nbsp;mapper)</span></div>
-<div class="block">Returns a <code>Decoder</code> that uses the given <code>ObjectMapper</code> instance.</div>
+<div class="block">Creates a decoder that uses the given <code>ObjectMapper</code> instance.</div>
 </section>
 </li>
 </ul>

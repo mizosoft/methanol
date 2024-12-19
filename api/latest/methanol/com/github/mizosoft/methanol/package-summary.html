@@ -110,8 +110,9 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color class-summary class-summary-tab2"><a href="AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab2">
-<div class="block">A group of <a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>adapters</code></a> (<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>encoders</code></a> <span class="invalid-tag">invalid input: '&amp;'</span> <a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>decoders</code></a>),
- typically targeting different mapping schemes, that facilitates creating corresponding <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> and <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a> implementations.</div>
+<div class="block">A group of <a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>adapters</code></a> (<a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol"><code>encoders</code></a> <code>&amp;</code> <a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol"><code>decoders</code></a>), typically targeting different mapping schemes, that facilitates creating
+ corresponding <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.BodyPublisher.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.BodyPublisher</code></a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodyHandler.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodyHandler</code></a> and <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.BodySubscriber</code></a>
+ implementations.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab2"><a href="AdapterCodec.Builder.html" title="class in com.github.mizosoft.methanol">AdapterCodec.Builder</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
@@ -124,11 +125,11 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab1"><a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab1">
-<div class="block">A <code>BodyAdapter</code> that decodes response bodies into objects.</div>
+<div class="block">A <a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that decodes response bodies into objects.</div>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab1"><a href="BodyAdapter.Encoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Encoder</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab1">
-<div class="block">A <code>BodyAdapter</code> that encodes objects into request bodies.</div>
+<div class="block">A <a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that encodes objects into request bodies.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab1"><a href="BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab1">
@@ -146,7 +147,7 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab1"><a href="BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab1">
-<div class="block">A factory of <code>BodyDecoders</code> for some defined encoding.</div>
+<div class="block">A factory of <a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyDecoder</code></a> instances for some defined encoding.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab1"><a href="CacheAwareResponse.html" title="interface in com.github.mizosoft.methanol">CacheAwareResponse</a>&lt;T&gt;</div>
 <div class="col-last odd-row-color class-summary class-summary-tab1">
@@ -232,7 +233,7 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first even-row-color class-summary class-summary-tab1"><a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a></div>
 <div class="col-last even-row-color class-summary class-summary-tab1">
-<div class="block">An object that intercepts requests being sent over a <code>Methanol</code> client.</div>
+<div class="block">An object that intercepts requests before being sent and responses before being returned.</div>
 </div>
 <div class="col-first odd-row-color class-summary class-summary-tab1"><a href="Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a>&lt;T&gt;</div>
 <div class="col-last odd-row-color class-summary class-summary-tab1">

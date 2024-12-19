@@ -173,7 +173,7 @@ implements <a href="../BodyDecoder.html" title="interface in com.github.mizosoft
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#executor()" class="member-name-link">executor</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns an <code>Optional</code> containing this decoder's executor.</div>
+<div class="block">Returns this decoder's executor if one is specified.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>void</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#onComplete()" class="member-name-link">onComplete</a>()</code></div>
@@ -254,8 +254,8 @@ implements <a href="../BodyDecoder.html" title="interface in com.github.mizosoft
 <h3>encoding</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></span>&nbsp;<span class="element-name">encoding</span>()</div>
 <div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../BodyDecoder.html#encoding()">BodyDecoder</a></code></span></div>
-<div class="block">Returns the encoding used by this decoder. Normally, this corresponds to the value of the
- <code>Content-Type</code> header.</div>
+<div class="block">Returns the encoding used by this decoder. This corresponds to the value of the <code>
+ Content-Type</code> header.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="../BodyDecoder.html#encoding()">encoding</a></code>&nbsp;in interface&nbsp;<code><a href="../BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;<a href="AsyncBodyDecoder.html" title="type parameter in AsyncBodyDecoder">T</a>&gt;</code></dd>
@@ -267,8 +267,7 @@ implements <a href="../BodyDecoder.html" title="interface in com.github.mizosoft
 <h3>executor</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&gt;</span>&nbsp;<span class="element-name">executor</span>()</div>
 <div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../BodyDecoder.html#executor()">BodyDecoder</a></code></span></div>
-<div class="block">Returns an <code>Optional</code> containing this decoder's executor. An empty optional is returned
- if the decoder is in "synchronous" mode.</div>
+<div class="block">Returns this decoder's executor if one is specified.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="../BodyDecoder.html#executor()">executor</a></code>&nbsp;in interface&nbsp;<code><a href="../BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;<a href="AsyncBodyDecoder.html" title="type parameter in AsyncBodyDecoder">T</a>&gt;</code></dd>

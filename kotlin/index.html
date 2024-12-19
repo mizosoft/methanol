@@ -15,14 +15,14 @@
         <link rel="canonical" href="https://mizosoft.github.io/methanol/kotlin/">
       
       
-        <link rel="prev" href="../writablebodypublisher/">
+        <link rel="prev" href="../streaming_requests/">
       
       
         <link rel="next" href="../redis/">
       
       
       <link rel="icon" href="../images/flask.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.45">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
     
     
       
@@ -30,7 +30,7 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.0253249f.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.6f8fc17f.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
@@ -206,7 +206,7 @@
         <a href="https://github.com/mizosoft/methanol/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
     mizosoft/methanol
@@ -252,7 +252,7 @@
       <a href="https://github.com/mizosoft/methanol/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
   </div>
   <div class="md-source__repository">
     mizosoft/methanol
@@ -370,7 +370,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../object_mapping/" class="md-nav__link">
+      <a href="../adapters/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -517,32 +517,11 @@
   
   
     <li class="md-nav__item">
-      <a href="../interruptible_reading/" class="md-nav__link">
+      <a href="../streaming_requests/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
-    Interruptible Reading
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../writablebodypublisher/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    WritableBodyPublisher
+    Streaming Requests
   </span>
   
 
@@ -575,6 +554,17 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Kotlin DSL
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -584,6 +574,196 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gradle" class="md-nav__link">
+    <span class="md-ellipsis">
+      Gradle
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-post-string" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get &amp; Post String
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Get & Post String">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-string" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get String
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-string" class="md-nav__link">
+    <span class="md-ellipsis">
+      Post String
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-post-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get &amp; Post JSON
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Get & Post JSON">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get JSON
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Post JSON
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multipart-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multipart &amp; Forms
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multipart & Forms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multipart-bodies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multipart Bodies
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#form-bodies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Form Bodies
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      Caching
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interceptors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interceptors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interceptors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#coroutines" class="md-nav__link">
+    <span class="md-ellipsis">
+      Coroutines
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -883,6 +1063,185 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gradle" class="md-nav__link">
+    <span class="md-ellipsis">
+      Gradle
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-post-string" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get &amp; Post String
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Get & Post String">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-string" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get String
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-string" class="md-nav__link">
+    <span class="md-ellipsis">
+      Post String
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-post-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get &amp; Post JSON
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Get & Post JSON">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get JSON
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Post JSON
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multipart-forms" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multipart &amp; Forms
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multipart & Forms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multipart-bodies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multipart Bodies
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#form-bodies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Form Bodies
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      Caching
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interceptors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interceptors
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interceptors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#coroutines" class="md-nav__link">
+    <span class="md-ellipsis">
+      Coroutines
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -900,7 +1259,389 @@
 
 
 <h1 id="methanol-kotlin">methanol-kotlin<a class="headerlink" href="#methanol-kotlin" title="Permanent link">&para;</a></h1>
-<p>Coming Soon!</p>
+<p><em>note: coming soon!</em></p>
+<p>Kotlin extensions for Methanol, which include:</p>
+<ul>
+<li>A DSL for HTTP requests.</li>
+<li>Adapters for <a href="https://kotlinlang.org/docs/serialization.html">Kotlin Serialization</a>.</li>
+</ul>
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<h3 id="gradle">Gradle<a class="headerlink" href="#gradle" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="n">implementation</span><span class="p">(</span><span class="s">&quot;com.github.mizosoft.methanol:methanol-kotlin:1.8.0&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
+<p>Most types and functions in this module are defined as type aliases and extension functions to core Methanol &amp; JDK HTTP client libraries.
+They have a different, more Kotlin-like feel, however. The best way to get familiar is to go through the examples.
+There's also the <a href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/index.html">KDocs</a>
+for a comprehensive list of what is provided. For advanced usage, it's a good idea to be familiar with the Java libraries this module extends.</p>
+<p>Almost everything in this module is configured with lambda expressions that are resolved against a particular <a href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-spec/index.html?query=annotation%20class%20Spec">Spec</a>.
+Look up the KDocs/source of a spec to know all what it can configure.</p>
+<p>Runnable code examples are linked at the end of each section. If you're going to copy from the snippets, add these imports:</p>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="nn">com.github.mizosoft.methanol.*</span>
+<span class="k">import</span><span class="w"> </span><span class="nn">com.github.mizosoft.methanol.kotlin.*</span>
+</code></pre></div>
+<h3 id="get-post-string">Get &amp; Post String<a class="headerlink" href="#get-post-string" title="Permanent link">&para;</a></h3>
+<p>Let's get started by creating our client.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="nv">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Client</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">adapterCodec</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">basic</span><span class="p">()</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Here, we're configuring a <a href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-client-spec/index.html">ClientSpec</a>.
+The only thing we'll configure for now is the client's <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.html"><code>AdapterCodec</code></a>,
+which tells it how to map high level types to &amp; from HTTP bodies. <code>basic()</code> is good enough for, well, basic types, like <code>String</code> &amp; <code>InputStream</code>.
+Trace through <a href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-adapter-codec-spec/basic-encoder.html"><code>basicEncoder</code></a> &amp; <a href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-adapter-codec-spec/basic-decoder.html"><code>basicDecoder</code></a>
+for all the supported basic types.</p>
+<h4 id="get-string">Get String<a class="headerlink" href="#get-string" title="Permanent link">&para;</a></h4>
+<p>Now let's GET a string from a URL.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">runGet</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">get</span><span class="o">&lt;</span><span class="kt">String</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;https://www.cl.cam.ac.uk/~mgk25/ucs/examples/UTF-8-demo.txt&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">require</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">isSuccessful</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;Unsuccessful response: </span><span class="si">$</span><span class="n">response</span><span class="s"> - </span><span class="si">${</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()</span><span class="si">}</span><span class="s">&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">())</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Known HTTP verbs have corresponding client-defined functions, like the <code>client::get</code> above. Each HTTP verb function returns
+a <code>Response</code> whose <code>Response::body</code> is already converted into the specified type. These functions are suspending, meaning they run as part of a <a href="https://kotlinlang.org/docs/coroutines-overview.html">coroutine</a>.</p>
+<h4 id="post-string">Post String<a class="headerlink" href="#post-string" title="Permanent link">&para;</a></h4>
+<p>HTTP verb functions take an optional request configuration block next to the URI. We can use it to specify the body of body-bearing requests.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">runPost</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">response</span><span class="p">:</span><span class="w"> </span><span class="n">Response</span><span class="o">&lt;</span><span class="kt">String</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">post</span><span class="p">(</span><span class="s">&quot;https://api.github.com/markdown/raw&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">body</span><span class="p">(</span>
+<span class="w">      </span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">        &gt; He who has a ***why*** can bear almost any ***how***.</span>
+<span class="s">        &gt;  - Friedrich Nietzsche</span>
+<span class="s">      &quot;&quot;&quot;</span><span class="p">.</span><span class="na">trimIndent</span><span class="p">(),</span>
+<span class="w">      </span><span class="n">MediaType</span><span class="p">.</span><span class="na">TEXT_MARKDOWN</span>
+<span class="w">    </span><span class="p">)</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">require</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">isSuccessful</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;Unsuccessful response: </span><span class="si">$</span><span class="n">response</span><span class="s"> - </span><span class="si">${</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()</span><span class="si">}</span><span class="s">&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">())</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Next to what we want to send, we pass <code>body</code> a <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MediaType.html"><code>MediaType</code></a>
+signifying the desired mapping format. This <code>MediaType</code> becomes the request's <code>Content-Type</code>.</p>
+<p>Note that we specified the response body type on the left of <code>client.post(...)</code>. We could have written <code>val response = client.post&lt;String&gt;(...)</code>,
+but that can hurt readability since <code>String</code> in this expression is what we're getting, not what we're posting; the latter is defined by <code>body</code>. You can use either way, though.</p>
+<p><a href="https://github.com/mizosoft/methanol/blob/master/methanol-samples/kotlin/src/main/kotlin/com/github/mizosoft/methanol/samples/kotlin/GetPostString.kt">Runnable Example</a>.</p>
+<h3 id="get-post-json">Get &amp; Post JSON<a class="headerlink" href="#get-post-json" title="Permanent link">&para;</a></h3>
+<p>Let's get more sophisticated. The basic adapter is nice, but it ain't much. We can make the client understand JSON through Kotlin Serialization.
+You'll first need to apply the serialization plugin in your build script &amp; pull in <code>kotlinx-serialization-json</code> as specified <a href="https://kotlinlang.org/docs/serialization.html#example-json-serialization">here</a>.</p>
+<p>Now we redefine our client.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="nv">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Client</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">baseUri</span><span class="p">(</span><span class="s">&quot;https://api.github.com/&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">defaultHeaders</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="s">&quot;Accept&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="s">&quot;application/vnd.github+json&quot;</span>
+<span class="w">    </span><span class="s">&quot;X-GitHub-Api-Version&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="s">&quot;2022-11-28&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">adapterCodec</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">basic</span><span class="p">()</span>
+<span class="w">    </span><span class="o">+</span><span class="n">KotlinAdapter</span><span class="p">.</span><span class="na">Encoder</span><span class="p">(</span>
+<span class="w">      </span><span class="n">Json</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span>
+<span class="w">    </span><span class="p">)</span>
+<span class="w">    </span><span class="o">+</span><span class="n">KotlinAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="p">(</span><span class="n">Json</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">ignoreUnknownKeys</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="w"> </span><span class="c1">// For brevity, we&#39;ll skip most fields.</span>
+<span class="w">    </span><span class="p">},</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">)</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>This time our client has more configuration, most of which is self-descriptive. The interesting part is how we configure the <code>AdapterCodec</code>.
+We add (hence the <code>+</code>) an encoder &amp; a decoder that use <code>kotlinx-serialization-json</code>'s <a href="https://kotlinlang.org/api/kotlinx.serialization/kotlinx-serialization-json/kotlinx.serialization.json/-json/"><code>Json</code></a>.
+<code>KotlinAdapter.Encoder</code> &amp; <code>KotlinAdapter.Decoder</code> are pluggable, and hence can work with all the <a href="https://kotlinlang.org/docs/serialization.html#formats">supported formats</a>.
+You'll just need to pass the desired <a href="https://kotlinlang.org/api/kotlinx.serialization/kotlinx-serialization-core/kotlinx.serialization/-serial-format/">SerialFormat</a>, and one or more <code>MediaType</code>s signifying that format.</p>
+<p>Note that we keep the basic adapter to still be able to send &amp; receive basic types. <code>AdapterCodec</code> will figure out which adapter to use.
+You can also add adapters for other formats, say <code>application/protobuf</code>. The first adapter (in addition order) that can handle
+the object type based on the given <code>MediaType</code> is selected.</p>
+<h4 id="get-json">Get JSON<a class="headerlink" href="#get-json" title="Permanent link">&para;</a></h4>
+<p>Now it's a matter of type specification.</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@Serializable</span>
+<span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">Repository</span><span class="p">(</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">description</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="p">,</span>
+<span class="w">  </span><span class="nd">@SerialName</span><span class="p">(</span><span class="s">&quot;full_name&quot;</span><span class="p">)</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">fullName</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span>
+<span class="p">)</span>
+
+<span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">runGet</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">get</span><span class="o">&lt;</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Repository</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="s">&quot;users/mizosoft/starred?per_page=10&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">().</span><span class="na">forEach</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">repo</span><span class="w"> </span><span class="o">-&gt;</span>
+<span class="w">    </span><span class="n">println</span><span class="p">(</span><span class="s">&quot;</span><span class="si">${</span><span class="n">repo</span><span class="p">.</span><span class="na">fullName</span><span class="si">}</span><span class="s">\n\t</span><span class="si">${</span><span class="n">repo</span><span class="p">.</span><span class="na">description</span><span class="si">}</span><span class="s">&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h4 id="post-json">Post JSON<a class="headerlink" href="#post-json" title="Permanent link">&para;</a></h4>
+<p>For posts, specify the <code>MediaType</code> next to your payload.</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@Serializable</span>
+<span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">Markdown</span><span class="p">(</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">text</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="p">,</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">context</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="p">,</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">mode</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span>
+<span class="p">)</span>
+
+<span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">runPost</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">response</span><span class="p">:</span><span class="w"> </span><span class="n">Response</span><span class="o">&lt;</span><span class="kt">String</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">post</span><span class="p">(</span><span class="s">&quot;markdown&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">body</span><span class="p">(</span>
+<span class="w">      </span><span class="n">Markdown</span><span class="p">(</span>
+<span class="w">        </span><span class="s">&quot;this code very fast: #437&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="s">&quot;torvalds/linux&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="s">&quot;gfm&quot;</span>
+<span class="w">      </span><span class="p">),</span>
+<span class="w">      </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span>
+<span class="w">    </span><span class="p">)</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">())</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>[Runnable Example](<a href="https://github.com/mizosoft/methanol/blob/master/methanol-samples/kotlin/src/main/kotlin/com/github/mizosoft/methanol/samples/kotlin/GetPostJson.kt">Runnable Example</a>.</p>
+<h3 id="multipart-forms">Multipart &amp; Forms<a class="headerlink" href="#multipart-forms" title="Permanent link">&para;</a></h3>
+<p>Now let's say we want to upload some cat memes to <a href="https://imgur.com/">Imgur</a> using their <a href="https://api.imgur.com/endpoints/image">API</a>.</p>
+<h4 id="multipart-bodies">Multipart Bodies<a class="headerlink" href="#multipart-bodies" title="Permanent link">&para;</a></h4>
+<p><code>multipart/format-data</code> bodies are perfect for that task. We'll be making use of the JSON decoder from above to extract the image link.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// You can get your own clien ID here: https://api.imgur.com/oauth2/addclient.</span>
+<span class="kd">val</span><span class="w"> </span><span class="nv">imgurClientId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">getProperty</span><span class="p">(</span><span class="s">&quot;imgur.client.id&quot;</span><span class="p">)</span>
+
+<span class="kd">val</span><span class="w"> </span><span class="nv">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Client</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">baseUri</span><span class="p">(</span><span class="s">&quot;https://api.imgur.com/3/&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">defaultHeaders</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="s">&quot;Authorization&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="s">&quot;Client-ID </span><span class="si">$</span><span class="n">imgurClientId</span><span class="s">&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">adapterCodec</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">basic</span><span class="p">()</span>
+<span class="w">    </span><span class="o">+</span><span class="n">KotlinAdapter</span><span class="p">.</span><span class="na">Decoder</span><span class="p">(</span><span class="n">Json</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">ignoreUnknownKeys</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">},</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">)</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nd">@Serializable</span>
+<span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">ImgurResponse</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="nv">status</span><span class="p">:</span><span class="w"> </span><span class="kt">Int</span><span class="p">,</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">success</span><span class="p">:</span><span class="w"> </span><span class="kt">Boolean</span><span class="p">,</span><span class="w"> </span><span class="kd">val</span><span class="w"> </span><span class="nv">data</span><span class="p">:</span><span class="w"> </span><span class="n">T?)</span>
+
+<span class="nd">@Serializable</span>
+<span class="kd">data</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nc">Image</span><span class="p">(</span><span class="kd">val</span><span class="w"> </span><span class="nv">link</span><span class="p">:</span><span class="w"> </span><span class="kt">String</span><span class="p">)</span>
+
+<span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">multipartUpload</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">response</span><span class="p">:</span><span class="w"> </span><span class="n">Response</span><span class="o">&lt;</span><span class="n">ImgurResponse</span><span class="o">&lt;</span><span class="n">Image</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">post</span><span class="p">(</span><span class="s">&quot;image&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">multipartBody</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="s">&quot;image&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;images/popcat.gif&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// File&#39;s Content-Type will be looked-up automatically.</span>
+<span class="w">      </span><span class="s">&quot;title&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="s">&quot;PopCat&quot;</span>
+<span class="w">      </span><span class="s">&quot;description&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="s">&quot;A cat that pops&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">require</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">().</span><span class="na">success</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="s">&quot;Unsuccessful response: </span><span class="si">$</span><span class="n">response</span><span class="s"> - </span><span class="si">${</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()</span><span class="si">}</span><span class="s">&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="s">&quot;Uploaded: </span><span class="si">${</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">().</span><span class="na">data</span><span class="o">!!</span><span class="p">.</span><span class="na">link</span><span class="si">}</span><span class="s">&quot;</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The <a href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-request-body-spec/multipart-body.html"><code>multipartBody</code></a>
+block makes it easy to configure <code>multipart/form-data</code> bodies as key-value pairs. It can also be used to configure any kind of <code>multipart/*</code> body.</p>
+<h4 id="form-bodies">Form Bodies<a class="headerlink" href="#form-bodies" title="Permanent link">&para;</a></h4>
+<p>It turns out that Imgur's upload API also accepts <code>application/x-www-form-urlencoded</code> submissions, which may result in more efficient uploads if we
+have the image bytes in memory. <a href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-request-body-spec/form-body.html"><code>formBody</code></a> is here to help.</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@OptIn</span><span class="p">(</span><span class="n">ExperimentalEncodingApi</span><span class="o">::</span><span class="n">class</span><span class="p">)</span><span class="w"> </span><span class="c1">// In order to use Kotlin&#39;s Base64.</span>
+<span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">formUpload</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">response</span><span class="p">:</span><span class="w"> </span><span class="n">Response</span><span class="o">&lt;</span><span class="n">ImgurResponse</span><span class="o">&lt;</span><span class="n">Image</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">post</span><span class="p">(</span><span class="s">&quot;image&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">formBody</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="s">&quot;image&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">Base64</span><span class="p">.</span><span class="na">Default</span><span class="p">.</span><span class="na">encode</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;images/popcat.gif&quot;</span><span class="p">).</span><span class="na">readBytes</span><span class="p">())</span>
+<span class="w">      </span><span class="s">&quot;type&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="s">&quot;base64&quot;</span>
+<span class="w">      </span><span class="s">&quot;title&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="s">&quot;PopCat&quot;</span>
+<span class="w">      </span><span class="s">&quot;description&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="s">&quot;A cat that pops&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">require</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">().</span><span class="na">success</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="s">&quot;Unsuccessful response: </span><span class="si">$</span><span class="n">response</span><span class="s"> - </span><span class="si">${</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">()</span><span class="si">}</span><span class="s">&quot;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="n">println</span><span class="p">(</span><span class="s">&quot;Uploaded: </span><span class="si">${</span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">().</span><span class="na">data</span><span class="o">!!</span><span class="p">.</span><span class="na">link</span><span class="si">}</span><span class="s">&quot;</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>When using <code>multipartBody</code> or <code>formBody</code>, the request's <code>Content-Type</code> will be set for you.</p>
+<p><a href="https://github.com/mizosoft/methanol/blob/master/methanol-samples/kotlin/src/main/kotlin/com/github/mizosoft/methanol/samples/kotlin/MultipartAndFormUploads.kt">Runnable Example</a>.</p>
+<h3 id="caching">Caching<a class="headerlink" href="#caching" title="Permanent link">&para;</a></h3>
+<p>Methanol provides an HTTP caching solution, which supports disk, memory &amp; redis storage backends.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="nv">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Client</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">userAgent</span><span class="p">(</span><span class="s">&quot;Chuck Norris&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">cache</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">onDisk</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;.cache&quot;</span><span class="p">),</span><span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">1024</span><span class="p">)</span><span class="w"> </span><span class="c1">// Occupy at most 500Mb on disk.</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>The cache will be used automatically as you use the client. You can communicate with it using request's <code>Cache-Control</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">response</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">client</span><span class="p">.</span><span class="na">get</span><span class="p">(</span><span class="s">&quot;https://i.imgur.com/V79ulbT.gif&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">ofFile</span><span class="p">(</span><span class="n">Path</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">&quot;popcat.gif&quot;</span><span class="p">)))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">cacheControl</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">maxAge</span><span class="p">(</span><span class="m">5.</span><span class="n">seconds</span><span class="p">)</span><span class="w"> </span><span class="c1">// Override server&#39;s max-age.</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">CacheAwareResponse</span><span class="o">&lt;</span><span class="n">Path</span><span class="o">&gt;</span>
+<span class="w">  </span><span class="n">println</span><span class="p">(</span>
+<span class="w">    </span><span class="s">&quot;</span><span class="si">$</span><span class="n">response</span><span class="s"> - </span><span class="si">${</span><span class="n">response</span><span class="p">.</span><span class="na">cacheStatus</span><span class="p">()</span><span class="si">}</span><span class="s"> (Cached for </span><span class="si">${</span><span class="n">response</span><span class="p">.</span><span class="na">headers</span><span class="p">()</span><span class="o">[</span><span class="s">&quot;</span><span class="n">Age</span><span class="s">&quot;</span><span class="o">]</span><span class="p">.</span><span class="na">firstOrNull</span><span class="p">()</span><span class="w"> </span><span class="o">?:</span><span class="w"> </span><span class="o">-</span><span class="m">1</span><span class="si">}</span><span class="s"> seconds)&quot;</span>
+<span class="w">  </span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Run this example multiple times within 5 seconds and then apart.</p>
+<p>You can also set up a chain of caches, typically in the order of decreasing locality.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="nv">redisUrl</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">getProperty</span><span class="p">(</span><span class="s">&quot;redis.url&quot;</span><span class="p">)</span>
+
+<span class="kd">val</span><span class="w"> </span><span class="nv">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Client</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">userAgent</span><span class="p">(</span><span class="s">&quot;Chuck Norris&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">cacheChain</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">+</span><span class="n">Cache</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">inMemory</span><span class="p">(</span><span class="m">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">1024</span><span class="p">)</span><span class="w"> </span><span class="c1">// Occupy at most 100Mb in memory.</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="o">+</span><span class="n">Cache</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">onDisk</span><span class="p">(</span><span class="m">500</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">204</span><span class="p">)</span><span class="w"> </span><span class="c1">// Occupy at most 500Mb on disk.</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Here, we're calling the <a href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-cache.html"><code>Cache</code></a>
+constructor, and prepend a <code>+</code> to add it to the chain. The chain is invoked in the order of addition.</p>
+<p>In case of a single cache or a cache chain, it's always a good practice to close it when you're done.</p>
+<div class="highlight"><pre><span></span><code><span class="n">client</span><span class="p">.</span><span class="na">caches</span><span class="p">().</span><span class="na">close</span><span class="p">()</span>
+</code></pre></div>
+<p>You can learn more about caching <a href="https://mizosoft.github.io/methanol/caching/">here</a>.</p>
+<p><a href="https://github.com/mizosoft/methanol/blob/master/methanol-samples/kotlin/src/main/kotlin/com/github/mizosoft/methanol/samples/kotlin/CachingClient.kt">Runnable Example</a>.</p>
+<h3 id="interceptors">Interceptors<a class="headerlink" href="#interceptors" title="Permanent link">&para;</a></h3>
+<p>So far, if we wanted to validate the response, we had to do so each time we get it. We may also want to log the request/response exchange, or send some metrics to a monitoring framework. This is a perfect usage for interceptors.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">object</span><span class="w"> </span><span class="nc">LoggingInterceptor</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">Interceptor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">logger</span><span class="p">:</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">Logger</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">getLogger</span><span class="p">(</span><span class="n">LoggingInterceptor</span><span class="o">::</span><span class="n">class</span><span class="p">.</span><span class="na">simpleName</span><span class="p">)</span>
+<span class="w">  </span><span class="kd">val</span><span class="w"> </span><span class="nv">requestIdGenerator</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">AtomicInteger</span><span class="p">()</span>
+
+<span class="w">  </span><span class="kd">override</span><span class="w"> </span><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">intercept</span><span class="p">(</span>
+<span class="w">    </span><span class="n">request</span><span class="p">:</span><span class="w"> </span><span class="n">Request</span><span class="p">,</span>
+<span class="w">    </span><span class="n">chain</span><span class="p">:</span><span class="w"> </span><span class="n">Interceptor</span><span class="p">.</span><span class="na">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span>
+<span class="w">  </span><span class="p">):</span><span class="w"> </span><span class="n">Response</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">requestId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">requestIdGenerator</span><span class="p">.</span><span class="na">getAndIncrement</span><span class="p">()</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">System</span><span class="p">.</span><span class="na">currentTimeMillis</span><span class="p">()</span>
+<span class="w">    </span><span class="n">logger</span><span class="p">.</span><span class="na">log</span><span class="p">(</span><span class="n">Level</span><span class="p">.</span><span class="na">INFO</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="s">&quot;</span><span class="si">$</span><span class="n">requestId</span><span class="s">: sending </span><span class="si">$</span><span class="n">request</span><span class="s"> \n</span><span class="si">${</span><span class="n">request</span><span class="p">.</span><span class="na">headers</span><span class="p">().</span><span class="na">toHttpString</span><span class="p">()</span><span class="si">}</span><span class="s">&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">chain</span><span class="p">.</span><span class="na">forward</span><span class="p">(</span><span class="n">request</span><span class="p">).</span><span class="na">also</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">-&gt;</span>
+<span class="w">      </span><span class="n">logger</span><span class="p">.</span><span class="na">log</span><span class="p">(</span><span class="n">Level</span><span class="p">.</span><span class="na">INFO</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="s">&quot;</span><span class="si">$</span><span class="n">requestId</span><span class="s">: received </span><span class="si">$</span><span class="n">response</span><span class="s"> in </span><span class="si">${</span><span class="p">(</span><span class="n">System</span><span class="p">.</span><span class="na">currentTimeMillis</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start</span><span class="p">).</span><span class="na">milliseconds</span><span class="si">}</span><span class="s"> \n&quot;</span><span class="w"> </span><span class="o">+</span>
+<span class="w">            </span><span class="n">request</span><span class="p">.</span><span class="na">headers</span><span class="p">().</span><span class="na">toHttpString</span><span class="p">()</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">      </span><span class="n">require</span><span class="p">(</span><span class="n">response</span><span class="p">.</span><span class="na">isSuccessful</span><span class="p">())</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s">&quot;Unsuccessful response: </span><span class="si">$</span><span class="n">response</span><span class="s">&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">val</span><span class="w"> </span><span class="nv">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Client</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">interceptors</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">+</span><span class="n">LoggingInterceptor</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">userAgent</span><span class="p">(</span><span class="s">&quot;Dave Bautista&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">adapterCodec</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">basic</span><span class="p">()</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">client</span><span class="p">.</span><span class="na">get</span><span class="o">&lt;</span><span class="kt">Unit</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;https://httpbin.org/gzip&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">headers</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="s">&quot;Accept&quot;</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_OCTET_STREAM</span><span class="p">.</span><span class="na">toString</span><span class="p">()</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>More than one interceptor can be added. Together, they form a chain that is invoked in the order of addition.</p>
+<p>Running this code gives:</p>
+<div class="highlight"><pre><span></span><code>Dec 06, 2024 1:10:47 PM com.github.mizosoft.methanol.samples.kotlin.ClientInterceptor$LoggingInterceptor intercept
+INFO: 0: sending https://httpbin.org/gzip GET
+Accept: application/octet-stream
+
+Dec 06, 2024 1:10:48 PM com.github.mizosoft.methanol.samples.kotlin.ClientInterceptor$LoggingInterceptor intercept
+INFO: 0: received (GET https://httpbin.org/gzip) 200 in 1.631s
+:status: 200
+access-control-allow-credentials: true
+access-control-allow-origin: *
+content-type: application/json
+date: Fri, 06 Dec 2024 11:10:48 GMT
+server: gunicorn/19.9.0
+</code></pre></div>
+<p>If you squint, you'll notice that the request headers don't contain a <code>User-Agent</code>, although we've configured the client with one.
+Additionally, the response lacks typical headers like <code>Content-Length</code> &amp; <code>Content-Encoding</code>.</p>
+<p>Let's instead add <code>LoggingInterceptor</code> as what we'll call a backend interceptor.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="nv">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Client</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">backendInterceptors</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">+</span><span class="n">LoggingInterceptor</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">userAgent</span><span class="p">(</span><span class="s">&quot;Arnold Schwarzenegger&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="n">adapterCodec</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">basic</span><span class="p">()</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Running this code gives:</p>
+<div class="highlight"><pre><span></span><code>Dec 06, 2024 2:02:55 PM com.github.mizosoft.methanol.samples.kotlin.ClientInterceptor$LoggingInterceptor intercept
+INFO: 0: sending https://httpbin.org/gzip GET
+Accept: application/octet-stream
+Accept-Encoding: deflate, gzip
+User-Agent: Dave Bautista
+
+Dec 06, 2024 2:02:56 PM com.github.mizosoft.methanol.samples.kotlin.ClientInterceptor$LoggingInterceptor intercept
+INFO: 0: received (GET https://httpbin.org/gzip) 200 in 1.602s
+:status: 200
+access-control-allow-credentials: true
+access-control-allow-origin: *
+content-encoding: gzip
+content-length: 241
+content-type: application/json
+date: Fri, 06 Dec 2024 12:02:56 GMT
+server: gunicorn/19.9.0
+</code></pre></div>
+<p>Now we can see a <code>User-Agent</code>, an <code>Accept-Encoding</code> added implicitly by the client, and the typical response headers.</p>
+<p>Client interceptors (which we added first within the <code>interceptors</code> block) see the request just as given to the client,
+and the response after the client does some changes (e.g. decompression). Backend interceptors see the request
+just before sending it, and the response just as received.</p>
+<p>Note that Kotlin's <a href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-interceptor/index.html?query=interface%20Interceptor"><code>Interceptor</code></a>
+is a different interface from core library's <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/Methanol.Interceptor.html"><code>Methanol.Interceptor</code></a>.
+This is so that Kotlin's interceptors can support coroutines; they are functionally the same, however.
+You can learn more about interceptors <a href="https://mizosoft.github.io/methanol/interceptors/#client-interceptors">here</a>.</p>
+<p><a href="https://github.com/mizosoft/methanol/blob/master/methanol-samples/kotlin/src/main/kotlin/com/github/mizosoft/methanol/samples/kotlin/Interceptors.kt">Runnable Example</a>.</p>
+<h4 id="coroutines">Coroutines<a class="headerlink" href="#coroutines" title="Permanent link">&para;</a></h4>
+<p>HTTP verb functions are suspending, which is also the case with <code>Interceptor::intercept</code>. In fact, the entire interceptor chain
+along with the ultimate HTTP call all share the same <a href="https://kotlinlang.org/docs/coroutine-context-and-dispatchers.html">coroutine context</a>. This implies that cancelling the HTTP call also cancels whatever some interceptor is doing.</p>
+<div class="highlight"><pre><span></span><code><span class="kd">val</span><span class="w"> </span><span class="nv">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Client</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">interceptors</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">+</span><span class="k">object</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nc">Interceptor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">override</span><span class="w"> </span><span class="kd">suspend</span><span class="w"> </span><span class="kd">fun</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">intercept</span><span class="p">(</span>
+<span class="w">        </span><span class="n">request</span><span class="p">:</span><span class="w"> </span><span class="n">Request</span><span class="p">,</span>
+<span class="w">        </span><span class="n">chain</span><span class="p">:</span><span class="w"> </span><span class="n">Interceptor</span><span class="p">.</span><span class="na">Chain</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span>
+<span class="w">      </span><span class="p">):</span><span class="w"> </span><span class="n">Response</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">println</span><span class="p">(</span><span class="s">&quot;Invoking interceptor with </span><span class="si">${</span><span class="n">coroutineContext</span><span class="o">[</span><span class="n">CoroutineName</span><span class="o">]</span><span class="si">}</span><span class="s">&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="n">delay</span><span class="p">(</span><span class="m">1000L</span><span class="p">)</span>
+<span class="w">          </span><span class="n">chain</span><span class="p">.</span><span class="na">forward</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+<span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">e</span><span class="p">:</span><span class="w"> </span><span class="n">CancellationException</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="n">println</span><span class="p">(</span><span class="s">&quot;Cancelled interceptor&quot;</span><span class="p">)</span>
+<span class="w">          </span><span class="k">throw</span><span class="w"> </span><span class="n">e</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="n">adapterCodec</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">basic</span><span class="p">()</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="kd">fun</span><span class="w"> </span><span class="nf">run</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="n">runBlocking</span><span class="p">(</span><span class="n">CoroutineName</span><span class="p">(</span><span class="s">&quot;MyCoroutine&quot;</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">val</span><span class="w"> </span><span class="nv">job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">launch</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">client</span><span class="p">.</span><span class="na">get</span><span class="o">&lt;</span><span class="kt">String</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;https://httpbin.org/get&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">delay</span><span class="p">(</span><span class="m">500</span><span class="p">)</span>
+<span class="w">    </span><span class="n">job</span><span class="p">.</span><span class="na">cancel</span><span class="p">()</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Running the code gives the following output.</p>
+<div class="highlight"><pre><span></span><code>Calling interceptor with CoroutineName(MyCoroutine)
+Cancelled interceptor
+</code></pre></div>
 
 
 
@@ -956,7 +1697,7 @@
     
     
     <a href="https://github.com/mizosoft" target="_blank" rel="noopener" title="mizosoft on GitHub" class="md-social__link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
     </a>
   
 </div>
@@ -974,7 +1715,7 @@
     <script id="__config" type="application/json">{"base": "..", "features": ["navigation.top", "navigation.sections"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.83f73b43.min.js"></script>
+      <script src="../assets/javascripts/bundle.88dd0f4e.min.js"></script>
       
     
   </body>

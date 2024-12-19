@@ -110,83 +110,88 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">Metadata for each response entry in the cache.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="CacheWritingPublisher.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher</a></div>
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="CacheStrategy.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheStrategy</a></div>
 <div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="block">A strategy for determining whether a stored response is fresh enough for the cache to serve
+ without contacting the origin, based on the caching rules imposed by the server <span class="invalid-tag">invalid input: '&amp;'</span> client.</div>
+</div>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="CacheWritingPublisher.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A <code>Publisher</code> that writes the body stream into cache while simultaneously forwarding it to
  downstream.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="CacheWritingPublisher.Listener.html" title="interface in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher.Listener</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">&nbsp;</div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="DiskStore.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="CacheWritingPublisher.Listener.html" title="interface in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher.Listener</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">&nbsp;</div>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="DiskStore.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A persistent <a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache"><code>Store</code></a> implementation that saves entries on disk under a specified directory.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">&nbsp;</div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="DiskStore.Hash.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Hash</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">&nbsp;</div>
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="DiskStore.Hash.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Hash</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">An immutable 80-bit hash code.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="DiskStore.Hasher.html" title="interface in com.github.mizosoft.methanol.internal.cache">DiskStore.Hasher</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="DiskStore.Hasher.html" title="interface in com.github.mizosoft.methanol.internal.cache">DiskStore.Hasher</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">A function that computes an 80-bit hash from a string key.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="FileIO.html" title="class in com.github.mizosoft.methanol.internal.cache">FileIO</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="FileIO.html" title="class in com.github.mizosoft.methanol.internal.cache">FileIO</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">Read/Write utilities that make sure exactly the requested bytes are read/written.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">Helpers for parsing/formatting HTTP dates.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="InternalStorageExtension.html" title="interface in com.github.mizosoft.methanol.internal.cache">InternalStorageExtension</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">&nbsp;</div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="LocalCache.html" title="interface in com.github.mizosoft.methanol.internal.cache">LocalCache</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="InternalStorageExtension.html" title="interface in com.github.mizosoft.methanol.internal.cache">InternalStorageExtension</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">&nbsp;</div>
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="LocalCache.html" title="interface in com.github.mizosoft.methanol.internal.cache">LocalCache</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">A response cache that provides APIs for retrieval, metadata updates, insertion and removal.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="LocalCache.Factory.html" title="interface in com.github.mizosoft.methanol.internal.cache">LocalCache.Factory</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">&nbsp;</div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="MemoryStore.html" title="class in com.github.mizosoft.methanol.internal.cache">MemoryStore</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="LocalCache.Factory.html" title="interface in com.github.mizosoft.methanol.internal.cache">LocalCache.Factory</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">&nbsp;</div>
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="MemoryStore.html" title="class in com.github.mizosoft.methanol.internal.cache">MemoryStore</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block"><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache"><code>Store</code></a> implementation that stores entries in memory.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="NetworkResponse.html" title="class in com.github.mizosoft.methanol.internal.cache">NetworkResponse</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="NetworkResponse.html" title="class in com.github.mizosoft.methanol.internal.cache">NetworkResponse</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">A <code>RawResponse</code> that came from the network and may be written to cache.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab2"><a href="RawResponse.html" title="class in com.github.mizosoft.methanol.internal.cache">RawResponse</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab2">
+<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="RawResponse.html" title="class in com.github.mizosoft.methanol.internal.cache">RawResponse</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab2">
 <div class="block">A response with a "raw" body that is yet to be handled.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab2"><a href="RedirectingInterceptor.html" title="class in com.github.mizosoft.methanol.internal.cache">RedirectingInterceptor</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab2">
+<div class="col-first even-row-color class-summary class-summary-tab2"><a href="RedirectingInterceptor.html" title="class in com.github.mizosoft.methanol.internal.cache">RedirectingInterceptor</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab2">
 <div class="block">An <a href="../../Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol"><code>Methanol.Interceptor</code></a> that follows redirects.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">A repository of binary data entries each identified by a string key.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="Store.Editor.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Editor</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">Writes an entry's metadata block and data stream.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="Store.EntryReader.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.EntryReader</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="Store.EntryReader.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.EntryReader</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">A reader for an entry's data stream.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="Store.EntryWriter.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.EntryWriter</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab1">
+<div class="col-first even-row-color class-summary class-summary-tab1"><a href="Store.EntryWriter.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.EntryWriter</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab1">
 <div class="block">A writer for an entry's data stream.</div>
 </div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">
 <div class="block">Reads an entry's metadata block and data stream.</div>
 </div>
-<div class="col-first odd-row-color class-summary class-summary-tab5"><a href="StoreCorruptionException.html" title="class in com.github.mizosoft.methanol.internal.cache">StoreCorruptionException</a></div>
-<div class="col-last odd-row-color class-summary class-summary-tab5">&nbsp;</div>
-<div class="col-first even-row-color class-summary class-summary-tab1"><a href="TestableStore.html" title="interface in com.github.mizosoft.methanol.internal.cache">TestableStore</a></div>
-<div class="col-last even-row-color class-summary class-summary-tab1">&nbsp;</div>
+<div class="col-first even-row-color class-summary class-summary-tab5"><a href="StoreCorruptionException.html" title="class in com.github.mizosoft.methanol.internal.cache">StoreCorruptionException</a></div>
+<div class="col-last even-row-color class-summary class-summary-tab5">&nbsp;</div>
+<div class="col-first odd-row-color class-summary class-summary-tab1"><a href="TestableStore.html" title="interface in com.github.mizosoft.methanol.internal.cache">TestableStore</a></div>
+<div class="col-last odd-row-color class-summary class-summary-tab1">&nbsp;</div>
 </div>
 </div>
 </div>

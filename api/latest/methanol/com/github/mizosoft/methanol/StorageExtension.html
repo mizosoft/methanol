@@ -109,12 +109,17 @@ loadScripts(document, 'script');</script>
 <div class="table-header col-second">Method</div>
 <div class="table-header col-last">Description</div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#disk(java.nio.file.Path,long)" class="member-name-link">disk</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;directory,
- long&nbsp;maxSize)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab1">&nbsp;</div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#inMemory(long)" class="member-name-link">inMemory</a><wbr>(long&nbsp;maxSize)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab1">
+<div class="block">Returns a <code>StorageExtension</code> for saving data in memory, not exceeding the given size.</div>
+</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab1"><code>static <a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#memory(long)" class="member-name-link">memory</a><wbr>(long&nbsp;maxSize)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab1">&nbsp;</div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#onDisk(java.nio.file.Path,long)" class="member-name-link">onDisk</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;directory,
+ long&nbsp;maxSize)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1">
+<div class="block">Returns a <code>StorageExtension</code> for saving data on disk under the given directory, not
+ exceeding the given size.</div>
+</div>
 </div>
 </div>
 </section>
@@ -129,16 +134,23 @@ loadScripts(document, 'script');</script>
 <h2>Method Details</h2>
 <ul class="member-list">
 <li>
-<section class="detail" id="memory(long)">
-<h3>memory</h3>
-<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></span>&nbsp;<span class="element-name">memory</span><wbr><span class="parameters">(long&nbsp;maxSize)</span></div>
+<section class="detail" id="inMemory(long)">
+<h3>inMemory</h3>
+<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></span>&nbsp;<span class="element-name">inMemory</span><wbr><span class="parameters">(long&nbsp;maxSize)</span></div>
+<div class="block">Returns a <code>StorageExtension</code> for saving data in memory, not exceeding the given size.</div>
 </section>
 </li>
 <li>
-<section class="detail" id="disk(java.nio.file.Path,long)">
-<h3>disk</h3>
-<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></span>&nbsp;<span class="element-name">disk</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;directory,
+<section class="detail" id="onDisk(java.nio.file.Path,long)">
+<h3>onDisk</h3>
+<div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></span>&nbsp;<span class="element-name">onDisk</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/Path.html" title="class or interface in java.nio.file" class="external-link">Path</a>&nbsp;directory,
  long&nbsp;maxSize)</span></div>
+<div class="block">Returns a <code>StorageExtension</code> for saving data on disk under the given directory, not
+ exceeding the given size.</div>
+<dl class="notes">
+<dt>Throws:</dt>
+<dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if <code>maxSize</code> is not positive</dd>
+</dl>
 </section>
 </li>
 </ul>

@@ -99,7 +99,8 @@ loadScripts(document, 'script');</script>
  number of requested but not fulfilled items remains between two values, namely <code>
  prefetchThreshold</code> and <code>prefetch</code>.
 
- <p>This class is not thread-safe. Caller must ensure that <a href="#initialize(com.github.mizosoft.methanol.internal.flow.Upstream)"><code>initialize(Upstream)</code></a> <span class="invalid-tag">invalid input: '&amp;'</span> <a href="#update(com.github.mizosoft.methanol.internal.flow.Upstream)"><code>update(Upstream)</code></a> are not interleaved and are properly synchronized.</div>
+ <p>This class is not thread-safe. Caller must ensure that <a href="#initialize(com.github.mizosoft.methanol.internal.flow.Upstream)"><code>initialize(Upstream)</code></a> <code>&amp;</code>
+ <a href="#update(com.github.mizosoft.methanol.internal.flow.Upstream)"><code>update(Upstream)</code></a> are not interleaved and are properly synchronized.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">

@@ -1,1 +1,1 @@
-sourceset_dependencies = '{":methanol-moshi:dokkaHtmlPartial/main":[],":methanol-kotlin:dokkaHtmlPartial/main":[]}'
+sourceset_dependencies = '{":methanol-moshi:dokkaHtmlPartial/main":[],":methanol-samples:kotlin:dokkaHtmlPartial/main":[],":methanol-kotlin:dokkaHtmlPartial/main":[]}'

@@ -98,7 +98,7 @@ loadScripts(document, 'script');</script>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/AutoCloseable.html" title="class or interface in java.lang" class="external-link">AutoCloseable</a></code></dd>
 </dl>
 <hr>
-<div class="type-signature"><span class="modifiers">public final class </span><span class="element-name type-name-label">Methanol</span>
+<div class="type-signature"><span class="modifiers">public class </span><span class="element-name type-name-label">Methanol</span>
 <span class="extends-implements">extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpClient.html" title="class or interface in java.net.http" class="external-link">HttpClient</a></span></div>
 <div class="block">An <code>HttpClient</code> with interceptors, request decoration, HTTP caching and reactive
  extensions.
@@ -139,7 +139,7 @@ loadScripts(document, 'script');</script>
 <div class="col-last even-row-color">
 <div class="block">A base <code>Methanol</code> builder allowing to set the non-standard properties.</div>
 </div>
-<div class="col-first odd-row-color"><code>static final class&nbsp;</code></div>
+<div class="col-first odd-row-color"><code>static class&nbsp;</code></div>
 <div class="col-second odd-row-color"><code><a href="Methanol.Builder.html" class="type-name-link" title="class in com.github.mizosoft.methanol">Methanol.Builder</a></code></div>
 <div class="col-last odd-row-color">
 <div class="block">A builder of <code>Methanol</code> instances.</div>
@@ -147,7 +147,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color"><code>static interface&nbsp;</code></div>
 <div class="col-second even-row-color"><code><a href="Methanol.Interceptor.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a></code></div>
 <div class="col-last even-row-color">
-<div class="block">An object that intercepts requests being sent over a <code>Methanol</code> client.</div>
+<div class="block">An object that intercepts requests before being sent and responses before being returned.</div>
 </div>
 <div class="col-first odd-row-color"><code>static final class&nbsp;</code></div>
 <div class="col-second odd-row-color"><code><a href="Methanol.WithClientBuilder.html" class="type-name-link" title="class in com.github.mizosoft.methanol">Methanol.WithClientBuilder</a></code></div>
@@ -189,9 +189,7 @@ loadScripts(document, 'script');</script>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#baseUri()" class="member-name-link">baseUri</a>()</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Returns this client's base <code>URI</code>.</div>
-</div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">&nbsp;</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a>&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#cache()" class="member-name-link">cache</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
@@ -403,7 +401,6 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="baseUri()">
 <h3>baseUri</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/net/URI.html" title="class or interface in java.net" class="external-link">URI</a>&gt;</span>&nbsp;<span class="element-name">baseUri</span>()</div>
-<div class="block">Returns this client's base <code>URI</code>.</div>
 </section>
 </li>
 <li>

@@ -132,13 +132,13 @@ implements <a href="../../../../../../../methanol/com/github/mizosoft/methanol/B
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a><wbr>&lt;T&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#create(java.net.http.HttpResponse.BodySubscriber)" class="member-name-link">create</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Creates and returns a <code>BodyDecoder</code> with the given downstream.</div>
+<div class="block">Creates a <code>BodyDecoder</code> with the given downstream.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>&lt;T&gt;&nbsp;<a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a><wbr>&lt;T&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)" class="member-name-link">create</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
  <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Creates and returns a <code>BodyDecoder</code> with the given downstream and executor.</div>
+<div class="block">Creates a <code>BodyDecoder</code> with the given downstream and executor.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#encoding()" class="member-name-link">encoding</a>()</code></div>
@@ -201,14 +201,10 @@ implements <a href="../../../../../../../methanol/com/github/mizosoft/methanol/B
 <h3>create</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;T&gt;</span>&nbsp;<span class="element-name">create</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream)</span></div>
 <div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html#create(java.net.http.HttpResponse.BodySubscriber)">BodyDecoder.Factory</a></code></span></div>
-<div class="block">Creates and returns a <code>BodyDecoder</code> with the given downstream.</div>
+<div class="block">Creates a <code>BodyDecoder</code> with the given downstream.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html#create(java.net.http.HttpResponse.BodySubscriber)">create</a></code>&nbsp;in interface&nbsp;<code><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a></code></dd>
-<dt>Type Parameters:</dt>
-<dd><code>T</code> - the body type</dd>
-<dt>Parameters:</dt>
-<dd><code>downstream</code> - the downstream subscriber</dd>
 </dl>
 </section>
 </li>
@@ -218,15 +214,10 @@ implements <a href="../../../../../../../methanol/com/github/mizosoft/methanol/B
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="type-parameters">&lt;T&gt;</span>&nbsp;<span class="return-type"><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.html" title="interface in com.github.mizosoft.methanol">BodyDecoder</a>&lt;T&gt;</span>&nbsp;<span class="element-name">create</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;T&gt;&nbsp;downstream,
  <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor)</span></div>
 <div class="block"><span class="description-from-type-label">Description copied from interface:&nbsp;<code><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html#create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)">BodyDecoder.Factory</a></code></span></div>
-<div class="block">Creates and returns a <code>BodyDecoder</code> with the given downstream and executor.</div>
+<div class="block">Creates a <code>BodyDecoder</code> with the given downstream and executor.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html#create(java.net.http.HttpResponse.BodySubscriber,java.util.concurrent.Executor)">create</a></code>&nbsp;in interface&nbsp;<code><a href="../../../../../../../methanol/com/github/mizosoft/methanol/BodyDecoder.Factory.html" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a></code></dd>
-<dt>Type Parameters:</dt>
-<dd><code>T</code> - the body type</dd>
-<dt>Parameters:</dt>
-<dd><code>downstream</code> - the downstream subscriber</dd>
-<dd><code>executor</code> - the decoder's executor</dd>
 </dl>
 </section>
 </li>

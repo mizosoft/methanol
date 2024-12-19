@@ -115,10 +115,10 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.htt
  read-only <code>ByteBuffers</code>, which up on being passed, are no longer referenced by the decoder.
 
  <p>Optionally, a <code>BodyDecoder</code> can have an <code>Executor</code>. If present, the executor is
- used to deliver downstream signals (that is, downstream's onXXXX methods are dispatched to the
- executor). This can lead to overlapped processing between the two subscribers. If an executor is
- not present, the decoder processes and supplies downstream items in the same thread, which is
- normally the upstream thread supplying the compressed <code>ByteBuffers</code>.</div>
+ used to deliver downstream signals. This can lead to overlapped processing between the two
+ subscribers. If an executor is not present, the decoder processes and supplies downstream items
+ in the same thread, which is normally the upstream thread supplying the compressed <code>
+ ByteBuffers</code>.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -134,7 +134,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.htt
 <div class="col-first even-row-color"><code>static interface&nbsp;</code></div>
 <div class="col-second even-row-color"><code><a href="BodyDecoder.Factory.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">BodyDecoder.Factory</a></code></div>
 <div class="col-last even-row-color">
-<div class="block">A factory of <code>BodyDecoders</code> for some defined encoding.</div>
+<div class="block">A factory of <a href="BodyDecoder.html" title="interface in com.github.mizosoft.methanol"><code>BodyDecoder</code></a> instances for some defined encoding.</div>
 </div>
 </div>
 </section>
@@ -163,7 +163,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.htt
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a><wbr>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#executor()" class="member-name-link">executor</a>()</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
-<div class="block">Returns an <code>Optional</code> containing this decoder's executor.</div>
+<div class="block">Returns this decoder's executor if one is specified.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code>default <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/CompletionStage.html" title="class or interface in java.util.concurrent" class="external-link">CompletionStage</a><wbr>&lt;<a href="BodyDecoder.html" title="type parameter in BodyDecoder">T</a>&gt;</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#getBody()" class="member-name-link">getBody</a>()</code></div>
@@ -191,16 +191,15 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.htt
 <section class="detail" id="encoding()">
 <h3>encoding</h3>
 <div class="member-signature"><span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a></span>&nbsp;<span class="element-name">encoding</span>()</div>
-<div class="block">Returns the encoding used by this decoder. Normally, this corresponds to the value of the
- <code>Content-Type</code> header.</div>
+<div class="block">Returns the encoding used by this decoder. This corresponds to the value of the <code>
+ Content-Type</code> header.</div>
 </section>
 </li>
 <li>
 <section class="detail" id="executor()">
 <h3>executor</h3>
 <div class="member-signature"><span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&gt;</span>&nbsp;<span class="element-name">executor</span>()</div>
-<div class="block">Returns an <code>Optional</code> containing this decoder's executor. An empty optional is returned
- if the decoder is in "synchronous" mode.</div>
+<div class="block">Returns this decoder's executor if one is specified.</div>
 </section>
 </li>
 <li>
@@ -214,10 +213,7 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.htt
 <section class="detail" id="getBody()">
 <h3>getBody</h3>
 <div class="member-signature"><span class="modifiers">default</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/CompletionStage.html" title="class or interface in java.util.concurrent" class="external-link">CompletionStage</a>&lt;<a href="BodyDecoder.html" title="type parameter in BodyDecoder">T</a>&gt;</span>&nbsp;<span class="element-name">getBody</span>()</div>
-<div class="block">Returns the body's <code>CompletionStage</code>.
-
- <p>Since this subscriber only acts as a processing stage, the default implementation simply
- returns the body completion stage of the downstream.</div>
+<div class="block">Returns the body's <code>CompletionStage</code>.</div>
 <dl class="notes">
 <dt>Specified by:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html#getBody()" title="class or interface in java.net.http" class="external-link">getBody</a></code>&nbsp;in interface&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.BodySubscriber.html" title="class or interface in java.net.http" class="external-link">HttpResponse.BodySubscriber</a>&lt;<a href="BodyDecoder.html" title="type parameter in BodyDecoder">T</a>&gt;</code></dd>

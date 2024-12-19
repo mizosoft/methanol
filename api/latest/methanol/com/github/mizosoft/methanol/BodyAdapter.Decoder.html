@@ -107,7 +107,7 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public static interface </span><span class="element-name type-name-label">BodyAdapter.Decoder</span><span class="extends-implements">
 extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol">BodyAdapter</a></span></div>
-<div class="block">A <code>BodyAdapter</code> that decodes response bodies into objects.</div>
+<div class="block">A <a href="BodyAdapter.html" title="interface in com.github.mizosoft.methanol"><code>BodyAdapter</code></a> that decodes response bodies into objects.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
@@ -140,7 +140,7 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#getDecoder(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.MediaType)" class="member-name-link">getDecoder</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab1">
-<div class="block">Returns a decoder that supports the given object type and media type.</div>
+<div class="block">Returns a registered decoder that supports the given object type and media type, if any.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/List.html" title="class or interface in java.util" class="external-link">List</a><wbr>&lt;<a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>&gt;</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#installed()" class="member-name-link">installed</a>()</code></div>
@@ -261,8 +261,9 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
 <h3>getDecoder</h3>
 <div class="member-signature"><span class="modifiers">static</span>&nbsp;<span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Optional.html" title="class or interface in java.util" class="external-link">Optional</a>&lt;<a href="BodyAdapter.Decoder.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Decoder</a>&gt;</span>&nbsp;<span class="element-name">getDecoder</span><wbr><span class="parameters">(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;?&gt;&nbsp;typeRef,
  @Nullable <a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
-<div class="block">Returns a decoder that supports the given object type and media type. If the given media type
- is <code>null</code>, any decoder supporting the given object type is returned.</div>
+<div class="block">Returns a registered decoder that supports the given object type and media type, if any. If
+ the given media type is <code>null</code>, any decoder supporting the given object type is
+ returned.</div>
 </section>
 </li>
 <li>
@@ -280,10 +281,10 @@ extends <a href="BodyAdapter.html" title="interface in com.github.mizosoft.metha
    <li><code>ByteBuffer</code>
    <li><code>Stream&lt;String&gt;</code> (response body lines; <code>MediaType</code>'s charset or UTF-8 if
        absent)
-   <li><code>Publisher&lt;List&lt;ByteBuffer&gt;&gt;</code>
    <li><a href="ResponsePayload.html" title="interface in com.github.mizosoft.methanol"><code>ResponsePayload</code></a> (here the decoder expects to receive the <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpResponse.ResponseInfo.html" title="class or interface in java.net.http" class="external-link"><code>HttpResponse.ResponseInfo</code></a>
        hint, and an <a href="AdapterCodec.html" title="class in com.github.mizosoft.methanol"><code>AdapterCodec</code></a> hint that will be used to convert the payload into
        the desired type; this is done automatically when sending the request through <a href="Methanol.html" title="class in com.github.mizosoft.methanol"><code>Methanol</code></a>)
+   <li><code>Publisher&lt;List&lt;ByteBuffer&gt;&gt;</code> (a replaying publisher for the response body)
    <li><code>Void</code> (discards the response body)
  </ul></div>
 </section>

@@ -98,10 +98,11 @@ loadScripts(document, 'script');</script>
  encoding/decoding behavior. Typically, an adapter receives a <code>Hints</code> object that contains
  the <a href="MediaType.html" title="class in com.github.mizosoft.methanol"><code>MediaType</code></a> of the intended format as advertised by the request or response.
  Additionally, an encoder receives a <code>Hints</code> objects containing the <a href="#request()"><code>request()</code></a>,
- and a decoder receives one that contains the <a href="#responseInfo()"><code>responseInfo()</code></a>. Hints, however, are
- optional, and adapters should exhibit default behavior in the absence thereof (for instance, a
- JSON adapter should use UTF-8 in the absence of a <code>MediaType</code> containing a charset
- parameter).</div>
+ and a decoder receives one that contains the <a href="#responseInfo()"><code>responseInfo()</code></a>. Some hints are optional,
+ and adapters substitute with default values in the absence thereof (for instance, a JSON
+ adapter may use UTF-8 in the absence of a <code>MediaType</code> containing a charset parameter). If
+ a hint is required by the adapter, it throws an <code>UnsupportedOperationException</code> in the
+ absence of such.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">

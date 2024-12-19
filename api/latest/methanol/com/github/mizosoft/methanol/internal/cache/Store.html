@@ -112,6 +112,8 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
  indexing purposes. Thus, a store's <a href="#maxSize()"><code>maxSize()</code></a> is not exact and might be slightly exceeded
  as necessary.
 
+ <p>Entries on a store are volatile. It is not guaranteed that an entry can be <a href="#view(java.lang.String)"><code>viewed</code></a> any time, even if immediately, after it has been <a href="Store.Editor.html#commit(java.nio.ByteBuffer)"><code>committed</code></a>.
+
  <p>Functions that are expected to be called frequently have two variants: one synchronous, and
  another asynchronous variant that takes an additional <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link"><code>Executor</code></a> parameter. The former has
  a default implementation that calls the latter and waits for the result. The executor parameter

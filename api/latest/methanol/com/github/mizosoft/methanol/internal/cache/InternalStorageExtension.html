@@ -96,8 +96,13 @@ loadScripts(document, 'script');</script>
 <dt>All Known Subinterfaces:</dt>
 <dd><code><a href="../../../../../../../methanol.redis/com/github/mizosoft/methanol/store/redis/RedisStorageExtension.html" title="interface in com.github.mizosoft.methanol.store.redis">RedisStorageExtension</a></code></dd>
 </dl>
+<dl class="notes">
+<dt>Functional Interface:</dt>
+<dd>This is a functional interface and can therefore be used as the assignment target for a lambda expression or method reference.</dd>
+</dl>
 <hr>
-<div class="type-signature"><span class="modifiers">public interface </span><span class="element-name type-name-label">InternalStorageExtension</span><span class="extends-implements">
+<div class="type-signature"><span class="annotations"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/FunctionalInterface.html" title="class or interface in java.lang" class="external-link">@FunctionalInterface</a>
+</span><span class="modifiers">public interface </span><span class="element-name type-name-label">InternalStorageExtension</span><span class="extends-implements">
 extends <a href="../../StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></span></div>
 </section>
 <section class="summary">
@@ -117,13 +122,9 @@ extends <a href="../../StorageExtension.html" title="interface in com.github.miz
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#createStore(java.util.concurrent.Executor,int)" class="member-name-link">createStore</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
  int&nbsp;appVersion)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">&nbsp;</div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a><wbr>&lt;? extends <a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a>&gt;</code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#createStoreAsync(java.util.concurrent.Executor,int)" class="member-name-link">createStoreAsync</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
- int&nbsp;appVersion)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">&nbsp;</div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab1"><code>static <a href="InternalStorageExtension.html" title="interface in com.github.mizosoft.methanol.internal.cache">InternalStorageExtension</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab1"><code><a href="#singleton(com.github.mizosoft.methanol.internal.cache.Store)" class="member-name-link">singleton</a><wbr>(<a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a>&nbsp;store)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab1">&nbsp;</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab1"><code>static <a href="InternalStorageExtension.html" title="interface in com.github.mizosoft.methanol.internal.cache">InternalStorageExtension</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab1"><code><a href="#singleton(com.github.mizosoft.methanol.internal.cache.Store)" class="member-name-link">singleton</a><wbr>(<a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a>&nbsp;store)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab1">&nbsp;</div>
 </div>
 </div>
 </div>
@@ -142,13 +143,6 @@ extends <a href="../../StorageExtension.html" title="interface in com.github.miz
 <section class="detail" id="createStore(java.util.concurrent.Executor,int)">
 <h3>createStore</h3>
 <div class="member-signature"><span class="return-type"><a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a></span>&nbsp;<span class="element-name">createStore</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
- int&nbsp;appVersion)</span></div>
-</section>
-</li>
-<li>
-<section class="detail" id="createStoreAsync(java.util.concurrent.Executor,int)">
-<h3>createStoreAsync</h3>
-<div class="member-signature"><span class="return-type"><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link">CompletableFuture</a>&lt;? extends <a href="Store.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store</a>&gt;</span>&nbsp;<span class="element-name">createStoreAsync</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/Executor.html" title="class or interface in java.util.concurrent" class="external-link">Executor</a>&nbsp;executor,
  int&nbsp;appVersion)</span></div>
 </section>
 </li>
