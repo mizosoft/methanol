@@ -1,5 +1,6 @@
 package conventions
 
+import extensions.JAVADOC_JDK_VERSION
 import extensions.javaVendor
 import extensions.javaVersion
 import extensions.standardOptions
@@ -36,7 +37,7 @@ tasks.withType<JavaCompile> {
 
 tasks.withType<Javadoc> {
   standardOptions {
-    links("https://docs.oracle.com/en/java/javase/17/docs/api/")
+    links("https://docs.oracle.com/en/java/javase/$JAVADOC_JDK_VERSION/docs/api/")
     addBooleanOption("Xdoclint:-missing", true)
   }
 }
