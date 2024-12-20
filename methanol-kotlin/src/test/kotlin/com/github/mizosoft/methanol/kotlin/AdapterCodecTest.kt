@@ -22,69 +22,39 @@
 
 package com.github.mizosoft.methanol.kotlin
 
+import assertk.all
 import assertk.assertThat
-import assertk.assertions.containsOnly
+import assertk.assertions.hasSize
+import assertk.assertions.prop
+import com.github.mizosoft.methanol.AdapterCodec
+import com.github.mizosoft.methanol.BodyAdapter.Decoder
+import com.github.mizosoft.methanol.BodyAdapter.Encoder
+import com.github.mizosoft.methanol.MediaType
+import com.github.mizosoft.methanol.TypeRef
 import kotlin.test.Test
 
-class HeadersCreateTest {
+class AdapterCodecTest {
   @Test
-  fun addHeaders() {
-    val headers = Headers {
-      "X" to "A"
-      "X" to "B"
-      "Y" to listOf("A", "B")
+  fun createAdapterCodec() {
+    val adapterCodec = AdapterCodec {
+      +object : Encoder {
+        override fun isCompatibleWith(mediaType: MediaType) = TODO("Not yet implemented")
+        override fun supportsType(type: TypeRef<*>) = TODO("Not yet implemented")
+        override fun toBody(`object`: Any, mediaType: MediaType?) = TODO("Not yet implemented")
+      }
+      +object : Decoder {
+        override fun isCompatibleWith(mediaType: MediaType) = TODO("Not yet implemented")
+        override fun supportsType(type: TypeRef<*>?) = TODO("Not yet implemented")
+        override fun <T : Any?> toObject(
+          objectType: TypeRef<T>,
+          mediaType: MediaType?
+        ) = TODO("Not yet implemented")
+      }
+      basic()
     }
-    assertThat(headers.map()).containsOnly(
-      "X" to listOf("A", "B"),
-      "Y" to listOf("A", "B")
-    )
-  }
-
-  @Test
-  fun setHeaders() {
-    val headers = Headers {
-      "X" to "A"
-      "Y" to listOf("A", "B")
-      "X" onlyTo listOf("C", "D")
-      "Y" onlyTo "C"
-      "Z" to "A"
+    assertThat(adapterCodec).all {
+      prop(AdapterCodec::encoders).hasSize(2)
+      prop(AdapterCodec::decoders).hasSize(2)
     }
-    assertThat(headers.map()).containsOnly(
-      "X" to listOf("C", "D"),
-      "Y" to listOf("C"),
-      "Z" to listOf("A")
-    )
-  }
-
-  @Test
-  fun modifyHeaders() {
-    val headers = Headers(Headers {
-      "X" to "A"
-      "Y" to listOf("A", "B")
-    }) {
-      "Z" to "A"
-      "Y" onlyTo "A"
-    }
-    assertThat(headers.map()).containsOnly(
-      "X" to listOf("A"),
-      "Y" to listOf("A"),
-      "Z" to listOf("A")
-    )
-  }
-
-  @Test
-  fun setHeadersIfAbsent() {
-    val headers = Headers(Headers {
-      "X" to "A"
-      "Y" to listOf("A", "B")
-    }) {
-      "Y" onlyToIfAbsent "A"
-      "Z" onlyToIfAbsent "A"
-    }
-    assertThat(headers.map()).containsOnly(
-      "X" to listOf("A"),
-      "Y" to listOf("A", "B"),
-      "Z" to listOf("A")
-    )
   }
 }
