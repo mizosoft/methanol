@@ -44,11 +44,11 @@ import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
+import java.net.http.HttpResponse.ResponseInfo;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
@@ -58,7 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Flow;
+import java.util.concurrent.Flow.Publisher;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -271,16 +271,16 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
   }
 
   private static final class ResponsePayloadImpl implements ResponsePayload {
-    private final Flow.Publisher<List<ByteBuffer>> publisher;
-    private final HttpResponse.ResponseInfo responseInfo;
+    private final Publisher<List<ByteBuffer>> publisher;
+    private final ResponseInfo responseInfo;
     private final Supplier<Executor> executorSupplier;
     private final AdapterCodec adapterCodec;
     private final Hints hints;
     private boolean closed;
 
     ResponsePayloadImpl(
-        Flow.Publisher<List<ByteBuffer>> publisher,
-        HttpResponse.ResponseInfo responseInfo,
+        Publisher<List<ByteBuffer>> publisher,
+        ResponseInfo responseInfo,
         Supplier<Executor> executorSupplier,
         AdapterCodec adapterCodec,
         Hints hints) {
@@ -289,6 +289,16 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
       this.executorSupplier = executorSupplier;
       this.adapterCodec = adapterCodec;
       this.hints = hints;
+    }
+
+    @Override
+    public boolean is(MediaType mediaType) {
+      return mediaType.includes(
+          responseInfo
+              .headers()
+              .firstValue("Content-Type")
+              .map(MediaType::parse)
+              .orElse(MediaType.ANY));
     }
 
     @Override
