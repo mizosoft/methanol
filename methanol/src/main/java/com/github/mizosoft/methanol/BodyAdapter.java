@@ -28,6 +28,9 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.adapter.BasicAdapter;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -170,7 +173,13 @@ public interface BodyAdapter {
           toObject(typeRef, mediaType),
           subscriber ->
               CompletableFuture.completedStage(
-                  () -> subscriber.getBody().toCompletableFuture().join()));
+                  () -> {
+                    try {
+                      return Utils.getIo(subscriber.getBody().toCompletableFuture());
+                    } catch (IOException e) {
+                      throw new UncheckedIOException(e);
+                    }
+                  }));
     }
 
     /**

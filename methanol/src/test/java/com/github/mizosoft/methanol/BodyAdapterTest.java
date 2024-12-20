@@ -28,7 +28,6 @@ import com.github.mizosoft.methanol.BodyAdapter.Decoder;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
-import java.util.concurrent.CompletionException;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -46,8 +45,7 @@ class BodyAdapterTest {
     verifyThat(new ReplacingDecoder("abc"))
         .converting(String.class)
         .withDeferredFailure(new TestException())
-        .failsWith(CompletionException.class)
-        .withCauseInstanceOf(TestException.class);
+        .failsWith(TestException.class);
   }
 
   private static final class ReplacingDecoder implements Decoder {

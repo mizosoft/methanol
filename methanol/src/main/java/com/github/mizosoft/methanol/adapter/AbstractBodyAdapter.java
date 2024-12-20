@@ -32,6 +32,8 @@ import com.github.mizosoft.methanol.MoreBodyPublishers;
 import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.internal.Utils;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.charset.Charset;
@@ -216,7 +218,13 @@ public abstract class AbstractBodyAdapter implements BodyAdapter {
           toObject(typeRef, hints),
           subscriber ->
               CompletableFuture.completedStage(
-                  () -> subscriber.getBody().toCompletableFuture().join()));
+                  () -> {
+                    try {
+                      return Utils.getIo(subscriber.getBody().toCompletableFuture());
+                    } catch (IOException e) {
+                      throw new UncheckedIOException(e);
+                    }
+                  }));
     }
   }
 }
