@@ -23,9 +23,7 @@
 package com.github.mizosoft.methanol.internal.extensions;
 
 import static com.github.mizosoft.methanol.MutableRequest.GET;
-import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static com.google.common.base.Charsets.UTF_8;
-import static java.net.HttpURLConnection.HTTP_OK;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -35,11 +33,14 @@ import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorParameterizedTest;
 import com.github.mizosoft.methanol.testing.HttpClientStub;
+import com.github.mizosoft.methanol.testing.ImmutableResponseInfo;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
+import com.github.mizosoft.methanol.testing.RecordingHttpClient.Call;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriberContext;
 import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
 import com.github.mizosoft.methanol.testing.TestUtils;
+import java.io.InputStream;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -72,7 +73,7 @@ class HttpResponsePublisherTest {
     var client = new RecordingHttpClient();
     var publisher =
         new HttpResponsePublisher<>(client, request, BodyHandlers.ofInputStream(), null, executor);
-    var subscriber = subscriberContext.<HttpResponse<?>>createSubscriber().autoRequest(0);
+    var subscriber = subscriberContext.<HttpResponse<InputStream>>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
 
     // The request isn't sent until the first demand from downstream.
@@ -92,7 +93,7 @@ class HttpResponsePublisherTest {
     bodySubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     var body = bodySubscriber.getBody().toCompletableFuture().getNow(null);
     assertThat(body).isNotNull(); // InputStream body completes before subscriber completion.
-    call.future().complete(TestUtils.okResponseOf(call.request(), body));
+    call.future().complete(call.okResponse(new ImmutableResponseInfo(), body));
 
     // As push promises can be received anytime amid receiving the main response body, downstream
     // waits for body's completion and not just for the response completion (the former happens
@@ -273,8 +274,7 @@ class HttpResponsePublisherTest {
   }
 
   private static <T> void complete(BodyHandler<T> bodyHandler) {
-    var bodySubscriber =
-        bodyHandler.apply(new ImmutableResponseInfo(HTTP_OK, headers(), Version.HTTP_2));
+    var bodySubscriber = bodyHandler.apply(new ImmutableResponseInfo());
     bodySubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     bodySubscriber.onComplete();
   }
@@ -331,7 +331,9 @@ class HttpResponsePublisherTest {
     }
 
     void complete(ByteBuffer responseBody) {
-      future.complete(TestUtils.okResponseOf(request, responseBody, bodyHandler));
+      future.complete(
+          new Call<>(request, bodyHandler, null)
+              .okHandledResponse(new ImmutableResponseInfo(), responseBody));
     }
 
     void completeExceptionally(Throwable exception) {

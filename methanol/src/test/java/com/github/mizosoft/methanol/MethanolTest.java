@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.from;
 import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import com.github.mizosoft.methanol.internal.extensions.ForwardingBodySubscriber;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.testing.HttpClientStub;
 import com.github.mizosoft.methanol.testing.HttpResponseStub;
@@ -40,6 +41,7 @@ import com.github.mizosoft.methanol.testing.ImmutableResponseInfo;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient.Call;
 import com.github.mizosoft.methanol.testing.TestUtils;
+import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieManager;
 import java.net.InetSocketAddress;
@@ -58,6 +60,7 @@ import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.net.http.HttpResponse.ResponseInfo;
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -67,6 +70,7 @@ import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+@SuppressWarnings("resource")
 class MethanolTest {
   @Test
   void defaultFields() {
@@ -529,6 +533,77 @@ class MethanolTest {
                     String.class)
                 .body())
         .isEqualTo("OfRequest");
+  }
+
+  @Test
+  void responsePayloadClosure() throws Exception {
+    var backend =
+        new RecordingHttpClient().handleCalls(call -> call.complete(ByteBuffer.allocate(1)));
+    var subscriberCompletion = new CompletableFuture<>();
+    var client =
+        Methanol.newBuilder(backend)
+            .adapterCodec(AdapterCodec.newBuilder().basic().build())
+            .interceptor(
+                new Interceptor() {
+                  @Override
+                  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+                      throws IOException, InterruptedException {
+                    return chain
+                        .with(
+                            bodyHandler ->
+                                responseInfo ->
+                                    new ForwardingBodySubscriber<>(
+                                        bodyHandler.apply(responseInfo)) {
+
+                                      @Override
+                                      public void onError(Throwable throwable) {
+                                        super.onError(throwable);
+                                        subscriberCompletion.completeExceptionally(throwable);
+                                      }
+
+                                      @Override
+                                      public void onComplete() {
+                                        super.onComplete();
+                                        subscriberCompletion.complete(null);
+                                      }
+                                    })
+                        .forward(request);
+                  }
+
+                  @Override
+                  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+                      HttpRequest request, Chain<T> chain) {
+                    throw new UnsupportedOperationException("Unexpected");
+                  }
+                })
+            .build();
+    var response = client.send(MutableRequest.GET("https://examples.com"), ResponsePayload.class);
+    response.body().close();
+    assertThat(subscriberCompletion).succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS));
+  }
+
+  @Test
+  void responsePayloadMediaTypeMatching() throws Exception {
+    var backend =
+        new RecordingHttpClient()
+            .handleCalls(
+                call ->
+                    call.complete(
+                        new ImmutableResponseInfo(headers("Content-Type", "application/json")),
+                        TestUtils.EMPTY_BUFFER));
+    var client =
+        Methanol.newBuilder(backend)
+            .adapterCodec(AdapterCodec.newBuilder().basic().build())
+            .build();
+    var response = client.send(MutableRequest.GET("https://example.com"), ResponsePayload.class);
+    var payload = response.body();
+    assertThat(payload.is(MediaType.ANY)).isTrue();
+    assertThat(payload.is(MediaType.APPLICATION_ANY)).isTrue();
+    assertThat(payload.is(MediaType.APPLICATION_JSON)).isTrue();
+    assertThat(payload.is(MediaType.APPLICATION_XML)).isFalse();
+    assertThat(payload.isAnyOf(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON)).isTrue();
+    assertThat(payload.isAnyOf(MediaType.APPLICATION_XML, MediaType.APPLICATION_X_PROTOBUF))
+        .isFalse();
   }
 
   @Test
