@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -37,7 +38,10 @@ public class MockExecutor implements Executor {
   private final Lock lock = new ReentrantLock();
   private final Condition notEmpty = lock.newCondition();
 
+  @GuardedBy("lock")
   private boolean reject;
+
+  @GuardedBy("lock")
   private boolean executeDirectly;
 
   public MockExecutor() {}
@@ -142,13 +146,18 @@ public class MockExecutor implements Executor {
 
   @Override
   public String toString() {
-    return super.toString()
-        + "{tasks="
-        + tasks
-        + ", reject="
-        + reject
-        + ", executeDirectly="
-        + executeDirectly
-        + "}";
+    lock.lock();
+    try {
+      return super.toString()
+          + "{tasks="
+          + tasks
+          + ", reject="
+          + reject
+          + ", executeDirectly="
+          + executeDirectly
+          + "}";
+    } finally {
+      lock.unlock();
+    }
   }
 }
