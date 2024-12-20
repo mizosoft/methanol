@@ -263,9 +263,9 @@ class MediaTypeTest {
   void parseQuotedValueWithQuotedPairs() {
     var escapedValue = "\\\"\\\\\\a"; // \"\\\a unescaped to -> "\a
     var unescapedValue = "\"\\a"; // "\a
-    var reespacedValue = "\\\"\\\\a"; // \"\\a (only backslash and quotes are re-quoted)
+    var reEscapedValue = "\\\"\\\\a"; // \"\\a (only backslash and quotes are re-quoted)
     assertThat(MediaType.parse("text/plain; a=\"" + escapedValue + "\""))
-        .hasToString("text/plain; a=\"" + reespacedValue + "\"")
+        .hasToString("text/plain; a=\"" + reEscapedValue + "\"")
         .extracting(MediaType::parameters, MAP)
         .containsExactly(entry("a", unescapedValue));
   }
@@ -361,6 +361,27 @@ class MediaTypeTest {
   }
 
   @Test
+  void inclusionWithStructuredSyntaxSuffix() {
+    assertInclusion(MediaType.parse("application/json"), MediaType.parse("application/x+json"));
+    assertInclusion(
+        MediaType.parse("application/json"), MediaType.parse("application/vnd.me+json"));
+    assertThat(
+            MediaType.parse("application/vnd.me+json")
+                .includes(MediaType.parse("application/json")))
+        .isFalse();
+    assertThat(
+            MediaType.parse("application/json").includes(MediaType.parse("application/vnd.me+xml")))
+        .isFalse();
+    assertThat(
+            MediaType.parse("application/vnd.me+xml").includes(MediaType.parse("application/json")))
+        .isFalse();
+    assertThat(MediaType.parse("application/json").includes(MediaType.parse("application/+")))
+        .isFalse();
+    assertThat(MediaType.parse("application/+").includes(MediaType.parse("application/json")))
+        .isFalse();
+  }
+
+  @Test
   void equalsAndHashcode() {
     assertThat(MediaType.parse("text/plain; charset=utf-8; a=pikachu"))
         .isEqualTo(MediaType.parse("text/plain; charset=utf-8; a=pikachu"));
@@ -379,7 +400,7 @@ class MediaTypeTest {
                 Map.of(
                     "a", "pikachu",
                     "charset", "utf-8")));
-    assertThat(MediaType.parse("text/plain").equals("text/plain")).isFalse();
+    assertThat(MediaType.parse("text/plain")).isNotEqualTo("text/plain");
   }
 
   // Exceptional behaviour

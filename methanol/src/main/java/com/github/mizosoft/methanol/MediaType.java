@@ -187,7 +187,6 @@ public final class MediaType {
    * Returns either the value of the charset parameter or the given default charset if no such
    * parameter exists or if the charset has no support in this JVM.
    *
-   * @param defaultCharset the charset to fall back to
    * @throws IllegalCharsetNameException if a charset parameter exists the value of which is invalid
    */
   public Charset charsetOrDefault(Charset defaultCharset) {
@@ -199,13 +198,16 @@ public final class MediaType {
     }
   }
 
-  /** Equivalent to calling {@link #charsetOrDefault(Charset) charsetOrDefault(StandardCharsets.UTF_8)}. */
+  /**
+   * Equivalent to calling {@link #charsetOrDefault(Charset)
+   * charsetOrDefault(StandardCharsets.UTF_8)}.
+   */
   public Charset charsetOrUtf8() {
     return charsetOrDefault(UTF_8);
   }
 
   /**
-   * Return {@code true} if this media type is {@code *}{@code /*} or if it has a wildcard subtype.
+   * Returns {@code true} if this media type is {@code *}{@code /*} or if it has a wildcard subtype.
    */
   public boolean hasWildcard() {
     return type.equals(WILDCARD) || subtype.equals(WILDCARD);
@@ -216,24 +218,27 @@ public final class MediaType {
    * former's parameters is a subset of the latter's and either the former is a {@link
    * #hasWildcard() wildcard type} that includes the latter or both have equal concrete type and
    * subtype.
-   *
-   * @param other the other media type
    */
   public boolean includes(MediaType other) {
-    return includesType(other.type, other.subtype)
+    return includes(other.type, other.subtype)
         && other.parameters.entrySet().containsAll(parameters.entrySet());
   }
 
-  private boolean includesType(String otherType, String otherSubtype) {
-    return type.equals(WILDCARD)
-        || (type.equals(otherType) && (subtype.equals(WILDCARD) || subtype.equals(otherSubtype)));
+  private boolean includes(String otherType, String otherSubtype) {
+    return type.equals(WILDCARD) || (type.equals(otherType) && includesSubtype(otherSubtype));
+  }
+
+  private boolean includesSubtype(String otherSubtype) {
+    int structuredSuffixIndex;
+    return subtype.equals(WILDCARD)
+        || subtype.equals(otherSubtype)
+        || ((structuredSuffixIndex = otherSubtype.lastIndexOf('+')) != -1
+            && otherSubtype.regionMatches(structuredSuffixIndex + 1, subtype, 0, subtype.length()));
   }
 
   /**
    * Returns whether this media type is compatible with the given one. Two media types are
    * compatible if either of them {@link #includes(MediaType) includes} the other.
-   *
-   * @param other the other media type
    */
   public boolean isCompatibleWith(MediaType other) {
     return this.includes(other) || other.includes(this);
@@ -242,8 +247,6 @@ public final class MediaType {
   /**
    * Returns a new {@code MediaType} with this instance's type, subtype and parameters but with the
    * name of the given charset as the value of the charset parameter.
-   *
-   * @param charset the new type's charset
    */
   public MediaType withCharset(Charset charset) {
     requireNonNull(charset);
@@ -257,8 +260,6 @@ public final class MediaType {
    * Returns a new {@code MediaType} with this instance's type, subtype and parameters but with the
    * value of the parameter specified by the given name set to the given value.
    *
-   * @param name the parameter's name
-   * @param value the parameter's value
    * @throws IllegalArgumentException if the given name or value is invalid
    */
   public MediaType withParameter(String name, String value) {
@@ -269,7 +270,6 @@ public final class MediaType {
    * Returns a new {@code MediaType} with this instance's type, subtype and parameters but with each
    * of the given parameters' names set to their corresponding values.
    *
-   * @param parameters the parameters to add or replace
    * @throws IllegalArgumentException if any of the given parameters is invalid
    */
   public MediaType withParameters(Map<String, String> parameters) {
@@ -278,7 +278,7 @@ public final class MediaType {
 
   /**
    * Tests the given object for equality with this instance. {@code true} is returned if the given
-   * object is a {@code MediaType} and both instances's type, subtype and parameters are equal.
+   * object is a {@code MediaType} and both instances' type, subtype and parameters are equal.
    *
    * @param obj the object to test for equality
    */
@@ -328,8 +328,6 @@ public final class MediaType {
   /**
    * Returns a new {@code MediaType} with the given type and subtype.
    *
-   * @param type the general type
-   * @param subtype the subtype
    * @throws IllegalArgumentException if the given type or subtype is invalid
    */
   public static MediaType of(String type, String subtype) {
@@ -339,9 +337,6 @@ public final class MediaType {
   /**
    * Returns a new {@code MediaType} with the given type, subtype and parameters.
    *
-   * @param type the general type
-   * @param subtype the subtype
-   * @param parameters the parameters
    * @throws IllegalArgumentException if the given type, subtype or any of the given parameters is
    *     invalid
    */
@@ -387,7 +382,6 @@ public final class MediaType {
   /**
    * Parses the given string into a {@code MediaType} instance.
    *
-   * @param value the media type string
    * @throws IllegalArgumentException if the given string is an invalid media type
    */
   public static MediaType parse(String value) {
