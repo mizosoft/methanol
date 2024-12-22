@@ -33,11 +33,11 @@ jobs:
             ./install-redis-ubuntu.sh
           fi
 
-      - name: Compile
+      - name: Compile Java
         uses: ./.github/actions/gradle
         with:
-          java: ${{ matrix.java }}
-          gradle-args: compileJava compileTestJava compileTckTestJava -PenableErrorprone
+          java: 23
+          gradle-args: compileJava -PenableErrorprone
 
       - name: Run tests
         uses: ./.github/actions/gradle
