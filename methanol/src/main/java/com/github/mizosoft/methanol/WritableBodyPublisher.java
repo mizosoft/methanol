@@ -124,7 +124,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   }
 
   @GuardedBy("writeLock")
-  private @Nullable ByteBuffer sinkBuffer;
+  private @Nullable ByteBuffer prequeueBuffer;
 
   private @MonotonicNonNull WritableByteChannel lazyChannel;
   private @MonotonicNonNull OutputStream lazyOutputStream;
@@ -132,7 +132,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   private volatile boolean submittedSentinel;
 
   private WritableBodyPublisher(int bufferSize) {
-    requireArgument(bufferSize > 0, "non-positive buffer size");
+    requireArgument(bufferSize > 0, "Non-positive buffer size");
     this.bufferSize = bufferSize;
   }
 
@@ -229,7 +229,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
    */
   @Override
   public void flush() {
-    requireState(!isClosed(), "closed");
+    requireState(!isClosed(), "Closed");
     fireOrKeepAliveOnNextIf(flushBuffer());
   }
 
@@ -282,9 +282,9 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
   @GuardedBy("writeLock")
   private boolean unguardedFlushBuffer() {
-    var buffer = sinkBuffer;
+    var buffer = prequeueBuffer;
     if (buffer != null && buffer.position() > 0) {
-      sinkBuffer = null;
+      prequeueBuffer = null;
       pipe.offer(buffer.flip().asReadOnlyBuffer());
       return true;
     }
@@ -297,7 +297,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       try {
         if (!submittedSentinel) {
           submittedSentinel = true;
-          flushBuffer();
+          unguardedFlushBuffer();
           pipe.offer(CLOSED_SENTINEL);
         }
       } finally {
@@ -333,32 +333,30 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       boolean signalsAvailable = false;
       writeLock.lock();
       try {
-        var buffer = sinkBuffer;
         do {
-          if (buffer == null) {
-            buffer = ByteBuffer.allocate(bufferSize);
+          if (prequeueBuffer == null) {
+            prequeueBuffer = ByteBuffer.allocate(bufferSize);
           }
-          written += Utils.copyRemaining(src, buffer);
-          if (!buffer.hasRemaining()) {
-            pipe.offer(buffer.flip().asReadOnlyBuffer());
+          written += Utils.copyRemaining(src, prequeueBuffer);
+          if (!prequeueBuffer.hasRemaining()) {
+            var buffer = prequeueBuffer.flip().asReadOnlyBuffer();
+            prequeueBuffer = null;
+            pipe.add(buffer);
             signalsAvailable = true;
-            buffer = null;
           }
         } while (src.hasRemaining() && isOpen());
 
-        if (isClosed()) { // Check if asynchronously closed.
-          sinkBuffer = null;
+        // Check if asynchronously closed.
+        if (isClosed()) {
+          prequeueBuffer = null;
           if (written <= 0) { // Only report if no bytes were written.
             throw new AsynchronousCloseException();
           }
           return written;
-        } else {
-          sinkBuffer = buffer;
         }
       } finally {
         writeLock.unlock();
       }
-
       fireOrKeepAliveOnNextIf(signalsAvailable);
       return written;
     }
@@ -401,7 +399,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         WritableBodyPublisher.this.flush();
       } catch (IllegalStateException e) {
         // Throw a more appropriate exception for an OutputStream.
-        throw new IOException("closed", e);
+        throw new IOException("Closed", e);
       }
     }
 
@@ -418,8 +416,6 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
     @Override
     protected void abort(boolean flowInterrupted) {
-      pipe.clear();
-
       // Make sure state also reflects unexpected cancellations. This also allows a possibly active
       // writer to detect asynchronous closure.
       if (flowInterrupted) {
