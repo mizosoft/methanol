@@ -22,12 +22,12 @@
 
 package com.github.mizosoft.methanol.testing;
 
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.ResponseBuilder;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.concurrent.CancellationPropagatingFuture;
+import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieHandler;
@@ -37,13 +37,19 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.PushPromiseHandler;
+import java.net.http.HttpResponse.ResponseInfo;
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import javax.net.ssl.SSLContext;
@@ -175,7 +181,7 @@ public class RecordingHttpClient extends HttpClient {
     private final BodyHandler<T> bodyHandler;
     private final Optional<PushPromiseHandler<T>> pushPromiseHandler;
 
-    private Call(
+    public Call(
         HttpRequest request,
         BodyHandler<T> bodyHandler,
         @Nullable PushPromiseHandler<T> pushPromiseHandler) {
@@ -204,23 +210,20 @@ public class RecordingHttpClient extends HttpClient {
       return responseFuture;
     }
 
+    public void complete(T body) {
+      complete(okResponse(new ImmutableResponseInfo(), body));
+    }
+
     public void complete() {
       complete(TestUtils.EMPTY_BUFFER);
     }
 
-    public void complete(Consumer<? super ResponseBuilder<T>> mutator) {
-      complete(
-          ResponseBuilder.<T>create()
-              .statusCode(HTTP_OK)
-              .request(request)
-              .uri(request.uri())
-              .version(request.version().orElse(HttpClient.Version.HTTP_1_1))
-              .apply(mutator)
-              .build());
+    public void complete(ByteBuffer responseBody) {
+      complete(okHandledResponse(new ImmutableResponseInfo(), responseBody));
     }
 
-    public void complete(ByteBuffer responseBody) {
-      complete(TestUtils.okResponseOf(request, responseBody, bodyHandler));
+    public void complete(ResponseInfo responseInfo, ByteBuffer responseBody) {
+      complete(okHandledResponse(responseInfo, responseBody));
     }
 
     public void complete(HttpResponse<T> response) {
@@ -229,6 +232,37 @@ public class RecordingHttpClient extends HttpClient {
 
     public void completeExceptionally(Throwable exception) {
       assertThat(responseFuture.completeExceptionally(exception)).isTrue();
+    }
+
+    public HttpResponse<T> okHandledResponse(ResponseInfo responseInfo, ByteBuffer responseBody) {
+      return okResponse(responseInfo, decodeBody(responseInfo, responseBody));
+    }
+
+    public HttpResponse<T> okResponse(ResponseInfo responseInfo, T body) {
+      return ResponseBuilder.<T>create()
+          .statusCode(responseInfo.statusCode())
+          .headers(responseInfo.headers())
+          .version(responseInfo.version())
+          .request(request)
+          .uri(request.uri())
+          .body(body)
+          .build();
+    }
+
+    private T decodeBody(ResponseInfo responseInfo, ByteBuffer responseBody) {
+      var subscriber = bodyHandler.apply(responseInfo);
+      try (var publisher = new SubmittablePublisher<List<ByteBuffer>>(FlowSupport.SYNC_EXECUTOR)) {
+        publisher.subscribe(subscriber);
+        publisher.submit(List.of(responseBody));
+      }
+      try {
+        return subscriber
+            .getBody()
+            .toCompletableFuture()
+            .get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      } catch (ExecutionException | InterruptedException | TimeoutException e) {
+        throw new CompletionException(e instanceof ExecutionException ? e.getCause() : e);
+      }
     }
   }
 }

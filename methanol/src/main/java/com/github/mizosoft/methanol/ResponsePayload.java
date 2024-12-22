@@ -55,6 +55,19 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface ResponsePayload extends AutoCloseable {
 
+  /** Returns true if this payload has the given media type. */
+  boolean is(MediaType mediaType);
+
+  /** Returns true if this payload has any of the given media types. */
+  default boolean isAnyOf(MediaType... mediaTypes) {
+    for (var mediaType : mediaTypes) {
+      if (is(mediaType)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Converts this payload into an object of type {@code T}. */
   default <T> T to(Class<T> type) throws IOException, InterruptedException {
     return to(TypeRef.of(type));

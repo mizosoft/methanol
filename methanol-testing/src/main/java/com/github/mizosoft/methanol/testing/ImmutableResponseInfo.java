@@ -37,6 +37,10 @@ public final class ImmutableResponseInfo implements ResponseInfo {
     this(HTTP_OK, TestUtils.headers(/* empty */ ), Version.HTTP_1_1);
   }
 
+  public ImmutableResponseInfo(HttpHeaders headers) {
+    this(HTTP_OK, headers, Version.HTTP_1_1);
+  }
+
   public ImmutableResponseInfo(int statusCode, HttpHeaders headers, Version version) {
     this.statusCode = statusCode;
     this.headers = headers;

@@ -72,6 +72,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+@SuppressWarnings("resource")
 @ExtendWith({ExecutorExtension.class, MockWebServerExtension.class, TestSubscriberExtension.class})
 class MethanolClientTest {
   private MockWebServer server;
