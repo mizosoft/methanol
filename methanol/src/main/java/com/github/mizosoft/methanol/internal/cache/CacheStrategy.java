@@ -40,7 +40,7 @@ import java.util.Optional;
 
 /**
  * A strategy for determining whether a stored response is fresh enough for the cache to serve
- * without contacting the origin, based on the caching rules imposed by the server & client.
+ * without contacting the origin, based on the caching rules imposed by the server and client.
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class CacheStrategy {

@@ -47,6 +47,6 @@ tasks.withType<DokkaTaskPartial> {
   try {
     moduleName = project.javaModuleName
   } catch (_: IllegalStateException) {
-    project.logger.warn("Couldn't get Java module name for Kotlin project (${project.name})")
+    project.logger.warn("Couldn't get Java module name for Kotlin project (${project.displayName})")
   }
 }
