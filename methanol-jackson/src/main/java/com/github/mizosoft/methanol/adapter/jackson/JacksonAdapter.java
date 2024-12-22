@@ -59,6 +59,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       this.writerFactory = requireNonNull(writerFactory);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public boolean supportsType(TypeRef<?> typeRef) {
       return mapper.canSerialize(typeRef.rawType());
@@ -118,6 +119,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
       this.readerFactory = requireNonNull(readerFactory);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public boolean supportsType(TypeRef<?> typeRef) {
       return mapper.canDeserialize(mapper.constructType(typeRef.type()));
