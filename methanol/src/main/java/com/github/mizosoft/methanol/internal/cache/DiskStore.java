@@ -18,6 +18,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
+ *
  */
 
 package com.github.mizosoft.methanol.internal.cache;
@@ -139,8 +140,8 @@ public final class DiskStore implements Store, TestableStore {
    *                    4-bytes-app-version
    *                    8-bytes-entry-count
    *   <index-entry> = 10-bytes-entry-hash
-   *                        8-bytes-last-used-millis (maintained for LRU eviction)
-   *                        8-bytes-entry-size
+   *                   8-bytes-last-used-millis (maintained for LRU eviction)
+   *                   8-bytes-entry-size
    *
    *   <entry> = <data> <entry-epilogue>
    *   <data> = byte*
@@ -164,9 +165,10 @@ public final class DiskStore implements Store, TestableStore {
    * single read.
    *
    * An effort is made to ensure store operations on disk are atomic. Index and entry writers first
-   * do their work on a temp file. After they're done, a channel::force is issued then the previous
-   * version of the file, if any, is atomically replaced. Viewers opened for an entry see a constant
-   * snapshot of that entry's data even if the entry is removed or edited one or more times.
+   * do their work on a temp file. After they're done, the previous version of the file, if any, is
+   * atomically replaced. Index writes ensure there's a channel::force before the atomic move. Viewers
+   * opened for an entry see a constant snapshot of that entry's data even if the entry is removed or
+   * edited one or more times.
    */
 
   private static final Logger logger = System.getLogger(DiskStore.class.getName());

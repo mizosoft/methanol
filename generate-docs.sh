@@ -73,6 +73,7 @@ rsync -rv build/dokka/htmlMultiModule/ site/$JAVADOC_SITE_PATH --exclude="/index
 
 # Remove copied files, which is desirable when the script is run locally.
 rm -r docs/adapters
+rm docs/index.md
 rm docs/kotlin.md
 rm docs/redis.md
 rm docs/brotli.md

@@ -1,9 +1,6 @@
 name: Build
 
-on:
-  push:
-    branches:
-      - master
+on: [ push, pull_request, workflow_dispatch ]
 
 env:
   BASE_JAVA: 11

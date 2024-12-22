@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,5 +23,23 @@
 package com.github.mizosoft.methanol.samples.kotlin
 
 suspend fun main() {
-  // TODO run the examples.
+  System.setProperty("imgur.client.id", "187e3cdbaa11b1a")
+  listOf<Example<*>>(
+    Example<CachingClient>(CachingClient) { run() },
+    Example<Coroutines>(Coroutines) { run() },
+    Example<GetPostJson>(GetPostJson) { runGet() },
+    Example<GetPostJson>(GetPostJson) { runPost() },
+    Example<GetPostString>(GetPostString) { runGet() },
+    Example<GetPostString>(GetPostString) { runPost() },
+    Example<Interceptors>(Interceptors) { run() },
+    Example<MultipartAndFormUploads>(MultipartAndFormUploads) { multipartUpload() },
+    Example<MultipartAndFormUploads>(MultipartAndFormUploads) { formUpload() },
+  ).forEach { it.run() }
+  CachingClient.closeCache()
+}
+
+data class Example<T>(val receiver: T, val fn: suspend T.() -> Unit) {
+  suspend fun run() {
+    receiver.fn()
+  }
 }

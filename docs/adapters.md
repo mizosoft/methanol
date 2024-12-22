@@ -5,20 +5,20 @@ with that in mind. However, available `BodyPublisher` & `BodySubscriber` impleme
 implementing your own can be tricky. Methanol builds upon these APIs with an extensible object mapping mechanism
 that treats your objects as first-citizen HTTP bodies.
 
-## Setup
+## Usage
 
 A serialization library can be integrated with Methanol through a corresponding adapter.
 Adapters for the most popular serialization libraries are provided by separate modules.
 
 * [`methanol-gson`](adapters/gson.md): JSON with Gson
-* [`methanol-jackson`](adapters/jackson.md): JSON with Jackson (but also XML, protocol buffers and other formats support by Jackson)
+* [`methanol-jackson`](adapters/jackson.md): JSON with Jackson (but also XML, Protocol Buffers, and other formats support by Jackson)
 * [`methanol-jackson-flux`](adapters/jackson_flux.md): Streaming JSON with Jackson and Reactor
 * [`methanol-jaxb`](adapters/jaxb.md): XML with JAXB
 * [`methanol-jaxb-jakarta`](adapters/jaxb.md): XML with JAXB (Jakarta version)
-* [`methanol-protobuf`](adapters/protobuf.md): Google's Protocol Buffers
-* [`methanol-moshi`](adapters/moshi.md): JSON with Moshi, mainly for Kotlin
+* [`methanol-protobuf`](adapters/protobuf.md): Protocol Buffers
+* [`methanol-moshi`](adapters/moshi.md): JSON with Moshi, intended for Kotlin
 
-We'll pick `methanol-jackson` for the examples presented here, which interact with GitHub's REST API.
+We'll pick `methanol-jackson` for some of the examples presented here, which interact with GitHub's REST API.
 
 ```java
 var mapper = new JsonMapper();
@@ -39,9 +39,10 @@ var client =
 An `AdapterCodec` groups together one or more adapters, possibly targeting different mapping schemes. It helps `Methanol`
 to select the correct adapter based on the request's or response's [`MediaType`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MediaType.html).
 
-The [`basic()`][adaptercodec_basic_javadoc] calls adds the basic adapter, which encodes & decodes basic types like `String` & `InputStream`.
+[`basic()`][adaptercodec_basic_javadoc] adds the basic adapter, which encodes & decodes basic types like `String` & `InputStream`.
+Trace through the Javadoc for all supported basic types.
 
-## Receiving Objects
+### Receiving Objects
 
 To get an `HttpResponse<T>`, give `Methanol::send` a `T.class`.
 
@@ -67,7 +68,7 @@ List<GitHubIssue> getIssues(String owner, String repo) throws IOException, Inter
 }
 ```
 
-## Sending Objects
+### Sending Objects
 
 Each `MutableRequest` can have a payload as its body. A payload is an arbitrary object that is not yet resolved into a `BodyPublisher`.
 When the request is sent, the payload will be resolved with the client's `AdapterCodec`.
@@ -90,7 +91,7 @@ An adapter provides an [`Encoder`][encoder_javadoc] and/or a [`Decoder`][decoder
 An `Encoder` creates `BodyPublisher` instances that stream a given object's serialized form.
 Similarly, a `Decoder` creates `BodySubscriber<T>` instances that convert the response body into `T`.
 Encoders & decoders are given [`Hints`][hints_javadoc] to customize their behavior.
-One notable hint is the `MediaType`, which can be used to further describe the desired mapping format (e.g. specify a character set).
+One notable hint is the `MediaType`, which can be used to further describe the desired mapping format (e.g. specify a charset).
 
 ### Example - An HTML Adapter
 
@@ -131,7 +132,7 @@ public abstract class JsoupAdapter extends AbstractBodyAdapter {
 ```
 
 !!! tip
-Make sure your encoders call `AbstractBodyAdapter::attachMediaType` so the created `BodyPublisher` can be converted to a `MimeBodyPublisher`.
+Make sure your encoders call `AbstractBodyAdapter::attachMediaType`, so the created `BodyPublisher` can be converted to a `MimeBodyPublisher`.
 That way, requests get the correct `Content-Type` header added by `Methanol`.
 
 ## Buffering vs Streaming

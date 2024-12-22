@@ -138,7 +138,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
     } catch (RuntimeException | Error e) {
       // This is a problem because we cannot call downstream here as that would ruin the execution
       // context guarantee. SubmissionPublisher's behaviour here is followed (cancel & rethrow).
-      logger.log(Level.ERROR, "couldn't execute subscription's signaller task", e);
+      logger.log(Level.ERROR, "Couldn't execute subscription's signaller task", e);
       cancel();
       throw e;
     }
@@ -220,7 +220,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
         downstream.onError(exception);
       } catch (Throwable t) {
         t.addSuppressed(exception);
-        logger.log(Level.WARNING, () -> "Exception thrown by subscriber's onError", t);
+        logger.log(Level.WARNING, "Exception thrown by subscriber's onError", t);
       }
     } else {
       FlowSupport.onDroppedException(exception);

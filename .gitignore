@@ -5,6 +5,7 @@ build/
 venv/
 site/
 **/.vscode/
+.cache
 
 *.iml
 TODO

@@ -358,7 +358,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
             .whenComplete(
                 (__, ex) -> {
                   if (ex != null) {
-                    logger.log(Level.WARNING, () -> "Exception while discarding response body", ex);
+                    logger.log(Level.WARNING, "Exception while discarding response body", ex);
                   }
                 });
       }
