@@ -70,7 +70,11 @@ interface ClientSpec {
 
   fun cache(block: CacheSpec.() -> Unit)
 
+  fun cache(cache: Cache)
+
   fun cacheChain(block: CacheChainSpec.() -> Unit)
+
+  fun cacheChain(cacheChain: CacheChain)
 
   fun cookieHandler(cookieHandler: CookieHandler)
 
@@ -157,8 +161,16 @@ private class ClientFactorySpec(private val builder: Methanol.Builder = Methanol
     builder.cache(Cache(block))
   }
 
+  override fun cache(cache: Cache) {
+    builder.cache(cache)
+  }
+
   override fun cacheChain(block: CacheChainSpec.() -> Unit) {
     builder.cacheChain(CacheChain(block))
+  }
+
+  override fun cacheChain(cacheChain: CacheChain) {
+    builder.cacheChain(cacheChain)
   }
 
   override fun cookieHandler(cookieHandler: CookieHandler) {
@@ -271,6 +283,22 @@ internal suspend fun <T> Client.fetch(
   typeRef
 ).await()
 
+@PublishedApi
+internal suspend fun <T> Client.fetch(
+  method: String,
+  uri: String,
+  bodyHandler: BodyHandler<T>,
+  block: RequestWithKnownMethodSpec.() -> Unit = {}
+): Response<T> = sendAsync(
+  createRequestWithCoroutineScope(
+    uri,
+    coroutineContext,
+    RequestWithKnownMethodFactorySpec(method),
+    block
+  ),
+  bodyHandler
+).await()
+
 /** Fetches the response to sending the given request, mapping the response body into [T]. */
 suspend inline fun <reified T> Client.fetch(request: Request): Response<T> {
   var finalRequest = request
@@ -282,6 +310,16 @@ suspend inline fun <reified T> Client.fetch(request: Request): Response<T> {
   }
   return send(finalRequest, TypeRef<T>())
 }
+
+/**
+ * Fetches the response to sending a request to the given URI, mapping the response body into [T].
+ * The request has a GET method by default. A spec block can be optionally passed to
+ * customize the request.
+ */
+suspend inline fun <reified T> Client.fetch(
+  uri: String,
+  noinline block: RequestSpec.() -> Unit = {}
+) = fetch(uri, TypeRef<T>(), block)
 
 /**
  * Fetches the response sending a request to the given URI, mapping the response body with the given
@@ -302,16 +340,6 @@ suspend fun <T> Client.fetch(
 ).await()
 
 /**
- * Fetches the response to sending a request to the given URI, mapping the response body into [T].
- * The request has a GET method by default. A spec block can be optionally passed to
- * customize the request.
- */
-suspend inline fun <reified T> Client.fetch(
-  uri: String,
-  noinline block: RequestSpec.() -> Unit = {}
-) = fetch(uri, TypeRef<T>(), block)
-
-/**
  * Fetches the response to sending a GET request to the given URI, mapping the response body into
  * [T]. A spec block can be optionally passed to customize the request.
  */
@@ -319,6 +347,16 @@ suspend inline fun <reified T> Client.get(
   uri: String,
   noinline block: BaseRequestSpec.() -> Unit = {}
 ) = fetch("GET", uri, TypeRef<T>(), block)
+
+/**
+ * Fetches the response to sending a GET request to the given URI, mapping the response body with
+ * the given [BodyHandler]. A spec block can be optionally passed to customize the request.
+ */
+suspend fun <T> Client.get(
+  uri: String,
+  bodyHandler: BodyHandler<T>,
+  block: BaseRequestSpec.() -> Unit = {}
+) = fetch<T>("GET", uri, bodyHandler, block)
 
 /**
  * Fetches the response to sending a DELETE request to the given URI, mapping the response body into
@@ -330,6 +368,16 @@ suspend inline fun <reified T> Client.delete(
 ) = fetch("DELETE", uri, TypeRef<T>(), block)
 
 /**
+ * Fetches the response to sending a DELETE request to the given URI, mapping the response body with
+ * the given [BodyHandler]. A spec block can be optionally passed to customize the request.
+ */
+suspend fun <T> Client.delete(
+  uri: String,
+  bodyHandler: BodyHandler<T>,
+  block: BaseRequestSpec.() -> Unit = {}
+) = fetch("DELETE", uri, bodyHandler, block)
+
+/**
  * Fetches the response to sending a POST request to the given URI, mapping the response body into
  * [T]. A spec block can be optionally passed to customize the request.
  */
@@ -337,6 +385,16 @@ suspend inline fun <reified T> Client.post(
   uri: String,
   noinline block: RequestWithKnownMethodSpec.() -> Unit = {}
 ) = fetch("POST", uri, TypeRef<T>(), block)
+
+/**
+ * Fetches the response to sending a POST request to the given URI, mapping the response body with
+ * the given [BodyHandler]. A spec block can be optionally passed to customize the request.
+ */
+suspend fun <T> Client.post(
+  uri: String,
+  bodyHandler: BodyHandler<T>,
+  block: RequestWithKnownMethodSpec.() -> Unit = {}
+) = fetch("POST", uri, bodyHandler, block)
 
 /**
  * Fetches the response to sending a PUT request to the given URI, mapping the response body into
@@ -348,6 +406,16 @@ suspend inline fun <reified T> Client.put(
 ) = fetch("PUT", uri, TypeRef<T>(), block)
 
 /**
+ * Fetches the response to sending a PUT request to the given URI, mapping the response body with
+ * the given [BodyHandler]. A spec block can be optionally passed to customize the request.
+ */
+suspend fun <T> Client.put(
+  uri: String,
+  bodyHandler: BodyHandler<T>,
+  block: RequestWithKnownMethodSpec.() -> Unit = {}
+) = fetch("PUT", uri, bodyHandler, block)
+
+/**
  * Fetches the response to sending a PATCH request to the given URI, mapping the response body into
  * [T]. A spec block can be optionally passed to customize the request.
  */
@@ -355,3 +423,13 @@ suspend inline fun <reified T> Client.patch(
   uri: String,
   noinline block: RequestWithKnownMethodSpec.() -> Unit = {}
 ) = fetch("PATCH", uri, TypeRef<T>(), block)
+
+/**
+ * Fetches the response to sending a PATCH request to the given URI, mapping the response body with
+ * the given [BodyHandler]. A spec block can be optionally passed to customize the request.
+ */
+suspend fun <T> Client.patch(
+  uri: String,
+  bodyHandler: BodyHandler<T>,
+  block: RequestWithKnownMethodSpec.() -> Unit = {}
+) = fetch("PATCH", uri, bodyHandler, block)

@@ -34,7 +34,7 @@ suspend inline fun <reified T> ResponsePayload.to(): T {
 }
 
 /** Converts this payload to [T] using the given body handler. */
-suspend fun <T> ResponsePayload.with(bodyHandler: BodyHandler<T>): T {
+suspend fun <T> ResponsePayload.getWith(bodyHandler: BodyHandler<T>): T {
   return handleWithAsync(bodyHandler).await()
 }
 

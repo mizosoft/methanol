@@ -56,6 +56,22 @@ class FetchTest(private val server: MockWebServer) {
   }
 
   @Test
+  fun fetchGetWithBodyHandler() {
+    val client = Client {
+      adapterCodec {
+        basic()
+      }
+    }
+    server.enqueue(MockResponse().setBody("Pikachu"))
+    val response = runBlocking {
+      client.get(serverUri, BodyHandlers.ofString())
+    }
+    verifyThat(response).hasCode(200).hasBody("Pikachu")
+    assertThat(server.takeRequest().method).isEqualTo("GET")
+  }
+
+
+  @Test
   fun fetchGetWithFetch() {
     val client = Client {
       adapterCodec {
@@ -120,6 +136,21 @@ class FetchTest(private val server: MockWebServer) {
   }
 
   @Test
+  fun fetchDeleteWithBodyHandler() {
+    val client = Client {
+      adapterCodec {
+        basic()
+      }
+    }
+    server.enqueue(MockResponse())
+    val response = runBlocking {
+      client.delete(serverUri, BodyHandlers.replacing(Unit))
+    }
+    verifyThat(response).hasCode(200).hasBody(Unit)
+    assertThat(server.takeRequest().method).isEqualTo("DELETE")
+  }
+
+  @Test
   fun fetchDeleteWithFetch() {
     val client = Client {
       adapterCodec {
@@ -147,6 +178,23 @@ class FetchTest(private val server: MockWebServer) {
     val response = runBlocking {
       client.post<String>(serverUri) {
         body("Ditto", MediaType.TEXT_PLAIN)
+      }
+    }
+    verifyThat(response).hasCode(200).hasBody("Pikachu")
+    assertThat(server.takeRequest()).given {
+      assertThat(it.method).isEqualTo("POST")
+      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
+      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+    }
+  }
+
+  @Test
+  fun fetchPostWithBodyPublisherAndBodyHandler() {
+    val client = Client {}
+    server.enqueue(MockResponse().setBody("Pikachu"))
+    val response = runBlocking {
+      client.post(serverUri, BodyHandlers.ofString()) {
+        body(BodyPublishers.ofString("Ditto"), MediaType.TEXT_PLAIN)
       }
     }
     verifyThat(response).hasCode(200).hasBody("Pikachu")
@@ -201,6 +249,24 @@ class FetchTest(private val server: MockWebServer) {
     }
   }
 
+
+  @Test
+  fun fetchPutWithBodyPublisherAndBodyHandler() {
+    val client = Client {}
+    server.enqueue(MockResponse().setBody("Pikachu"))
+    val response = runBlocking {
+      client.put(serverUri, BodyHandlers.ofString()) {
+        body(BodyPublishers.ofString("Ditto"), MediaType.TEXT_PLAIN)
+      }
+    }
+    verifyThat(response).hasCode(200).hasBody("Pikachu")
+    assertThat(server.takeRequest()).given {
+      assertThat(it.method).isEqualTo("PUT")
+      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
+      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+    }
+  }
+
   @Test
   fun fetchPutWithFetch() {
     val client = Client {
@@ -235,6 +301,23 @@ class FetchTest(private val server: MockWebServer) {
     val response = runBlocking {
       client.patch<String>(serverUri) {
         body("Ditto", MediaType.TEXT_PLAIN)
+      }
+    }
+    verifyThat(response).hasCode(200).hasBody("Pikachu")
+    assertThat(server.takeRequest()).given {
+      assertThat(it.method).isEqualTo("PATCH")
+      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
+      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+    }
+  }
+
+  @Test
+  fun fetchPatchWithBodyPublisherAndBodyHandler() {
+    val client = Client {}
+    server.enqueue(MockResponse().setBody("Pikachu"))
+    val response = runBlocking {
+      client.patch(serverUri, BodyHandlers.ofString()) {
+        body(BodyPublishers.ofString("Ditto"), MediaType.TEXT_PLAIN)
       }
     }
     verifyThat(response).hasCode(200).hasBody("Pikachu")
