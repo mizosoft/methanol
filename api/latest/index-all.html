@@ -690,7 +690,7 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheStrategy.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.cache">CacheStrategy</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
 <dd>
 <div class="block">A strategy for determining whether a stored response is fresh enough for the cache to serve
- without contacting the origin, based on the caching rules imposed by the server <span class="invalid-tag">invalid input: '&amp;'</span> client.</div>
+ without contacting the origin, based on the caching rules imposed by the server and client.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheWritingPublisher.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
 <dd>
@@ -704,6 +704,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheWritingPublisher.html#%3Cinit%3E(java.util.concurrent.Flow.Publisher,com.github.mizosoft.methanol.internal.cache.Store.Editor,java.nio.ByteBuffer,java.util.concurrent.Executor,com.github.mizosoft.methanol.internal.cache.CacheWritingPublisher.Listener,boolean)" class="member-name-link">CacheWritingPublisher(Flow.Publisher&lt;List&lt;ByteBuffer&gt;&gt;, Store.Editor, ByteBuffer, Executor, CacheWritingPublisher.Listener, boolean)</a> - Constructor for class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheWritingPublisher.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheWritingPublisher.Listener.html" class="type-name-link" title="interface in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher.Listener</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/internal/cache/package-summary.html">com.github.mizosoft.methanol.internal.cache</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#%3Cinit%3E(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler,java.net.http.HttpResponse.PushPromiseHandler)" class="member-name-link">Call(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;, HttpResponse.PushPromiseHandler&lt;T&gt;)</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#cancel()" class="member-name-link">cancel()</a> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractSubscription</a></dt>
 <dd>&nbsp;</dd>
@@ -969,11 +971,13 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittableSubscription.html#complete()" class="member-name-link">complete()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittableSubscription.html" title="class in com.github.mizosoft.methanol.testing">SubmittableSubscription</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#complete(java.net.http.HttpResponse.ResponseInfo,java.nio.ByteBuffer)" class="member-name-link">complete(HttpResponse.ResponseInfo, ByteBuffer)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#complete(java.net.http.HttpResponse)" class="member-name-link">complete(HttpResponse&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#complete(java.nio.ByteBuffer)" class="member-name-link">complete(ByteBuffer)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#complete(java.util.function.Consumer)" class="member-name-link">complete(Consumer&lt;? super ResponseBuilder&lt;T&gt;&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#complete(T)" class="member-name-link">complete(T)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodySubscriberVerifier.html#completedBody()" class="member-name-link">completedBody()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodySubscriberVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">DecoderVerifier.BodySubscriberVerifier</a></dt>
 <dd>&nbsp;</dd>
@@ -2383,7 +2387,7 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MediaType.html#hasWildcard()" class="member-name-link">hasWildcard()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></dt>
 <dd>
-<div class="block">Return <code>true</code> if this media type is <code>*</code><code>/*</code> or if it has a wildcard subtype.</div>
+<div class="block">Returns <code>true</code> if this media type is <code>*</code><code>/*</code> or if it has a wildcard subtype.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#HEAD()" class="member-name-link">HEAD()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
@@ -2598,6 +2602,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ImmutableResponseInfo.html#%3Cinit%3E(int,java.net.http.HttpHeaders,java.net.http.HttpClient.Version)" class="member-name-link">ImmutableResponseInfo(int, HttpHeaders, HttpClient.Version)</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ImmutableResponseInfo.html" title="class in com.github.mizosoft.methanol.testing">ImmutableResponseInfo</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ImmutableResponseInfo.html#%3Cinit%3E(java.net.http.HttpHeaders)" class="member-name-link">ImmutableResponseInfo(HttpHeaders)</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ImmutableResponseInfo.html" title="class in com.github.mizosoft.methanol.testing">ImmutableResponseInfo</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingFileChannel.html#implCloseChannel()" class="member-name-link">implCloseChannel()</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingFileChannel.html" title="class in com.github.mizosoft.methanol.testing.file">ForwardingFileChannel</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/decoder/Decode.BufferSizeOption.html#IN_MANY_OUT_MANY" class="member-name-link">IN_MANY_OUT_MANY</a> - Enum constant in enum class com.github.mizosoft.methanol.testing.decoder.<a href="methanol.testing/com/github/mizosoft/methanol/testing/decoder/Decode.BufferSizeOption.html" title="enum class in com.github.mizosoft.methanol.testing.decoder">Decode.BufferSizeOption</a></dt>
@@ -2705,6 +2711,14 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/text/CharMatcher.html#is(int)" class="member-name-link">is(int)</a> - Static method in interface com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html#is(com.github.mizosoft.methanol.MediaType)" class="member-name-link">is(MediaType)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></dt>
+<dd>
+<div class="block">Returns true if this payload has the given media type.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html#isAnyOf(com.github.mizosoft.methanol.MediaType...)" class="member-name-link">isAnyOf(MediaType...)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" title="interface in com.github.mizosoft.methanol">ResponsePayload</a></dt>
+<dd>
+<div class="block">Returns true if this payload has any of the given media types.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/DebugUtils.html#isAssertionsEnabled()" class="member-name-link">isAssertionsEnabled()</a> - Static method in class com.github.mizosoft.methanol.internal.<a href="methanol/com/github/mizosoft/methanol/internal/DebugUtils.html" title="class in com.github.mizosoft.methanol.internal">DebugUtils</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisClusterStoreContext.html#isAvailable()" class="member-name-link">isAvailable()</a> - Static method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisClusterStoreContext.html" title="class in com.github.mizosoft.methanol.testing.store">RedisClusterStoreContext</a></dt>
@@ -3587,9 +3601,9 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a <code>BodyPublisher</code> that reads what's written to the <code>WritableByteChannel</code>
  received by the given task.</div>
 </dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html#okResponseOf(java.net.http.HttpRequest,java.nio.ByteBuffer,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">okResponseOf(HttpRequest, ByteBuffer, HttpResponse.BodyHandler&lt;T&gt;)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html" title="class in com.github.mizosoft.methanol.testing">TestUtils</a></dt>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#okHandledResponse(java.net.http.HttpResponse.ResponseInfo,java.nio.ByteBuffer)" class="member-name-link">okHandledResponse(HttpResponse.ResponseInfo, ByteBuffer)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html#okResponseOf(java.net.http.HttpRequest,T)" class="member-name-link">okResponseOf(HttpRequest, T)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html" title="class in com.github.mizosoft.methanol.testing">TestUtils</a></dt>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#okResponse(java.net.http.HttpResponse.ResponseInfo,T)" class="member-name-link">okResponse(HttpResponse.ResponseInfo, T)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html#onComplete()" class="member-name-link">onComplete()</a> - Method in class com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html" title="class in com.github.mizosoft.methanol.decoder">AsyncBodyDecoder</a></dt>
 <dd>&nbsp;</dd>

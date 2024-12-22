@@ -1086,12 +1086,12 @@ that treats your objects as first-citizen HTTP bodies.</p>
 Adapters for the most popular serialization libraries are provided by separate modules.</p>
 <ul>
 <li><a href="gson/"><code>methanol-gson</code></a>: JSON with Gson</li>
-<li><a href="jackson/"><code>methanol-jackson</code></a>: JSON with Jackson (but also XML, protocol buffers and other formats support by Jackson)</li>
+<li><a href="jackson/"><code>methanol-jackson</code></a>: JSON with Jackson (but also XML, Protocol Buffers, and other formats support by Jackson)</li>
 <li><a href="jackson_flux/"><code>methanol-jackson-flux</code></a>: Streaming JSON with Jackson and Reactor</li>
 <li><a href="jaxb/"><code>methanol-jaxb</code></a>: XML with JAXB</li>
 <li><a href="jaxb/"><code>methanol-jaxb-jakarta</code></a>: XML with JAXB (Jakarta version)</li>
-<li><a href="protobuf/"><code>methanol-protobuf</code></a>: Google's Protocol Buffers</li>
-<li><a href="moshi/"><code>methanol-moshi</code></a>: JSON with Moshi, mainly for Kotlin</li>
+<li><a href="protobuf/"><code>methanol-protobuf</code></a>: Protocol Buffers</li>
+<li><a href="moshi/"><code>methanol-moshi</code></a>: JSON with Moshi, intended for Kotlin</li>
 </ul>
 <p>We'll pick <code>methanol-jackson</code> for the examples presented here, which interact with GitHub's REST API.</p>
 <div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">mapper</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">JsonMapper</span><span class="p">();</span>
@@ -1110,7 +1110,8 @@ Adapters for the most popular serialization libraries are provided by separate m
 </code></pre></div>
 <p>An <code>AdapterCodec</code> groups together one or more adapters, possibly targeting different mapping schemes. It helps <code>Methanol</code>
 to select the correct adapter based on the request's or response's <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MediaType.html"><code>MediaType</code></a>.</p>
-<p>The <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basic()"><code>basic()</code></a> calls adds the basic adapter, which encodes &amp; decodes basic types like <code>String</code> &amp; <code>InputStream</code>.</p>
+<p><a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basic()"><code>basic()</code></a> adds the basic adapter, which encodes &amp; decodes basic types like <code>String</code> &amp; <code>InputStream</code>.
+Trace through the Javadoc for all supported basic types.</p>
 <h2 id="receiving-objects">Receiving Objects<a class="headerlink" href="#receiving-objects" title="Permanent link">&para;</a></h2>
 <p>To get an <code>HttpResponse&lt;T&gt;</code>, give <code>Methanol::send</code> a <code>T.class</code>.</p>
 <div class="highlight"><pre><span></span><code><span class="w"> </span><span class="nd">@JsonIgnoreProperties</span><span class="p">(</span><span class="n">ignoreUnknown</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span><span class="w"> </span><span class="c1">// We&#39;ll ignore most fields for brevity.</span>
@@ -1147,7 +1148,7 @@ When the request is sent, the payload will be resolved with the client's <code>A
 An <code>Encoder</code> creates <code>BodyPublisher</code> instances that stream a given object's serialized form.
 Similarly, a <code>Decoder</code> creates <code>BodySubscriber&lt;T&gt;</code> instances that convert the response body into <code>T</code>.
 Encoders &amp; decoders are given <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html"><code>Hints</code></a> to customize their behavior.
-One notable hint is the <code>MediaType</code>, which can be used to further describe the desired mapping format (e.g. specify a character set).</p>
+One notable hint is the <code>MediaType</code>, which can be used to further describe the desired mapping format (e.g. specify a charset).</p>
 <h3 id="example-an-html-adapter">Example - An HTML Adapter<a class="headerlink" href="#example-an-html-adapter" title="Permanent link">&para;</a></h3>
 <p>Here's an adapter that uses <a href="https://jsoup.org/">Jsoup</a> to convert HTML bodies to <code>Document</code> objects and vise versa.
 When you're writing adapters, it's a good idea to extend from <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html"><code>AbstractBodyAdapter</code></a>.</p>
@@ -1185,7 +1186,7 @@ When you're writing adapters, it's a good idea to extend from <a href="https://m
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 </div>
-<p>Make sure your encoders call <code>AbstractBodyAdapter::attachMediaType</code> so the created <code>BodyPublisher</code> can be converted to a <code>MimeBodyPublisher</code>.
+<p>Make sure your encoders call <code>AbstractBodyAdapter::attachMediaType</code>, so the created <code>BodyPublisher</code> can be converted to a <code>MimeBodyPublisher</code>.
 That way, requests get the correct <code>Content-Type</code> header added by <code>Methanol</code>.</p>
 <h2 id="buffering-vs-streaming">Buffering vs Streaming<a class="headerlink" href="#buffering-vs-streaming" title="Permanent link">&para;</a></h2>
 <p>Decoders typically load the whole response body into memory before deserialization. If your responses tend to have large bodies,

@@ -246,7 +246,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#hasWildcard()" class="member-name-link">hasWildcard</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Return <code>true</code> if this media type is <code>*</code><code>/*</code> or if it has a wildcard subtype.</div>
+<div class="block">Returns <code>true</code> if this media type is <code>*</code><code>/*</code> or if it has a wildcard subtype.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code>boolean</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#includes(com.github.mizosoft.methanol.MediaType)" class="member-name-link">includes</a><wbr>(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;other)</code></div>
@@ -502,8 +502,6 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns either the value of the charset parameter or the given default charset if no such
  parameter exists or if the charset has no support in this JVM.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>defaultCharset</code> - the charset to fall back to</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/IllegalCharsetNameException.html" title="class or interface in java.nio.charset" class="external-link">IllegalCharsetNameException</a></code> - if a charset parameter exists the value of which is invalid</dd>
 </dl>
@@ -520,7 +518,7 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="hasWildcard()">
 <h3>hasWildcard</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">hasWildcard</span>()</div>
-<div class="block">Return <code>true</code> if this media type is <code>*</code><code>/*</code> or if it has a wildcard subtype.</div>
+<div class="block">Returns <code>true</code> if this media type is <code>*</code><code>/*</code> or if it has a wildcard subtype.</div>
 </section>
 </li>
 <li>
@@ -530,10 +528,6 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns whether this media type includes the given one. A media type includes the other if the
  former's parameters is a subset of the latter's and either the former is a <a href="#hasWildcard()"><code>wildcard type</code></a> that includes the latter or both have equal concrete type and
  subtype.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>other</code> - the other media type</dd>
-</dl>
 </section>
 </li>
 <li>
@@ -542,10 +536,6 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">isCompatibleWith</span><wbr><span class="parameters">(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;other)</span></div>
 <div class="block">Returns whether this media type is compatible with the given one. Two media types are
  compatible if either of them <a href="#includes(com.github.mizosoft.methanol.MediaType)"><code>includes</code></a> the other.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>other</code> - the other media type</dd>
-</dl>
 </section>
 </li>
 <li>
@@ -554,10 +544,6 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></span>&nbsp;<span class="element-name">withCharset</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/Charset.html" title="class or interface in java.nio.charset" class="external-link">Charset</a>&nbsp;charset)</span></div>
 <div class="block">Returns a new <code>MediaType</code> with this instance's type, subtype and parameters but with the
  name of the given charset as the value of the charset parameter.</div>
-<dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>charset</code> - the new type's charset</dd>
-</dl>
 </section>
 </li>
 <li>
@@ -568,9 +554,6 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a new <code>MediaType</code> with this instance's type, subtype and parameters but with the
  value of the parameter specified by the given name set to the given value.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>name</code> - the parameter's name</dd>
-<dd><code>value</code> - the parameter's value</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the given name or value is invalid</dd>
 </dl>
@@ -583,8 +566,6 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a new <code>MediaType</code> with this instance's type, subtype and parameters but with each
  of the given parameters' names set to their corresponding values.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>parameters</code> - the parameters to add or replace</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if any of the given parameters is invalid</dd>
 </dl>
@@ -595,7 +576,7 @@ loadScripts(document, 'script');</script>
 <h3>equals</h3>
 <div class="member-signature"><span class="modifiers">public</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">equals</span><wbr><span class="parameters">(@Nullable <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>&nbsp;obj)</span></div>
 <div class="block">Tests the given object for equality with this instance. <code>true</code> is returned if the given
- object is a <code>MediaType</code> and both instances's type, subtype and parameters are equal.</div>
+ object is a <code>MediaType</code> and both instances' type, subtype and parameters are equal.</div>
 <dl class="notes">
 <dt>Overrides:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" title="class or interface in java.lang" class="external-link">equals</a></code>&nbsp;in class&nbsp;<code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></code></dd>
@@ -634,9 +615,6 @@ loadScripts(document, 'script');</script>
  <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;subtype)</span></div>
 <div class="block">Returns a new <code>MediaType</code> with the given type and subtype.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>type</code> - the general type</dd>
-<dd><code>subtype</code> - the subtype</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the given type or subtype is invalid</dd>
 </dl>
@@ -650,10 +628,6 @@ loadScripts(document, 'script');</script>
  <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Map.html" title="class or interface in java.util" class="external-link">Map</a>&lt;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>,<wbr><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&gt;&nbsp;parameters)</span></div>
 <div class="block">Returns a new <code>MediaType</code> with the given type, subtype and parameters.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>type</code> - the general type</dd>
-<dd><code>subtype</code> - the subtype</dd>
-<dd><code>parameters</code> - the parameters</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the given type, subtype or any of the given parameters is
      invalid</dd>
@@ -666,8 +640,6 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="modifiers">public static</span>&nbsp;<span class="return-type"><a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></span>&nbsp;<span class="element-name">parse</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;value)</span></div>
 <div class="block">Parses the given string into a <code>MediaType</code> instance.</div>
 <dl class="notes">
-<dt>Parameters:</dt>
-<dd><code>value</code> - the media type string</dd>
 <dt>Throws:</dt>
 <dd><code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/IllegalArgumentException.html" title="class or interface in java.lang" class="external-link">IllegalArgumentException</a></code> - if the given string is an invalid media type</dd>
 </dl>

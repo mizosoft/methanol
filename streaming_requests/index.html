@@ -902,7 +902,7 @@
 
 <h1 id="streaming-requests">Streaming Requests<a class="headerlink" href="#streaming-requests" title="Permanent link">&para;</a></h1>
 <p><code>MoreBodyPublishers</code> provides publishers for asynchronously streaming the request body into an <code>OutputStream</code> or a <code>WritableByteChannel</code>.</p>
-<p>Let's say your sever supports compressed requests. If you're sending a large file, you'd want to send it compressed.</p>
+<p>Let's say your sever supports compressed requests. If you're sending a large file, you'd want to send it in gzip.</p>
 <div class="highlight"><pre><span></span><code><span class="kd">final</span><span class="w"> </span><span class="n">Methanol</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Methanol</span><span class="p">.</span><span class="na">create</span><span class="p">();</span>
 <span class="kd">final</span><span class="w"> </span><span class="n">Executor</span><span class="w"> </span><span class="n">executor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Executors</span><span class="p">.</span><span class="na">newVirtualThreadPerTaskExecutor</span><span class="p">();</span>
 
@@ -917,7 +917,7 @@
 <span class="p">}</span>
 </code></pre></div>
 <p><code>MoreBodyPublishers::ofOutputStream</code> accepts a callback that takes the <code>OutputStream</code> to stream to.
-The callback is executed on the given executor. The stream may buffer content temporarily in case the consumer can't keep up with the producer, or till an inner buffer becomes full.
+The callback is invoked on the given executor. The stream may buffer content temporarily in case the consumer can't keep up with the producer, or till an inner buffer becomes full.
 You can use <code>OutputStream::flush</code>to make any buffered content available for consumption. The stream is closed automatically after the callback.
 If the callback fails, the request is completed exceptionally.</p>
 <p>As of 1.8.0, this is the recommended way for streaming requests rather than using <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html"><code>WritableBodyPublisher</code></a> directly.</p>

@@ -149,6 +149,16 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
 <div class="block">Asynchronously converts this payload using the given body handler.</div>
 </div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>boolean</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#is(com.github.mizosoft.methanol.MediaType)" class="member-name-link">is</a><wbr>(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
+<div class="block">Returns true if this payload has the given media type.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code>default boolean</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#isAnyOf(com.github.mizosoft.methanol.MediaType...)" class="member-name-link">isAnyOf</a><wbr>(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;mediaTypes)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5">
+<div class="block">Returns true if this payload has any of the given media types.</div>
+</div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code>&lt;T&gt;&nbsp;T</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3"><code><a href="#to(com.github.mizosoft.methanol.TypeRef)" class="member-name-link">to</a><wbr>(<a href="TypeRef.html" title="class in com.github.mizosoft.methanol">TypeRef</a>&lt;T&gt;&nbsp;typeRef)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab3">
@@ -183,6 +193,20 @@ extends <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/ja
 <section class="method-details" id="method-detail">
 <h2>Method Details</h2>
 <ul class="member-list">
+<li>
+<section class="detail" id="is(com.github.mizosoft.methanol.MediaType)">
+<h3>is</h3>
+<div class="member-signature"><span class="return-type">boolean</span>&nbsp;<span class="element-name">is</span><wbr><span class="parameters">(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>&nbsp;mediaType)</span></div>
+<div class="block">Returns true if this payload has the given media type.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="isAnyOf(com.github.mizosoft.methanol.MediaType...)">
+<h3>isAnyOf</h3>
+<div class="member-signature"><span class="modifiers">default</span>&nbsp;<span class="return-type">boolean</span>&nbsp;<span class="element-name">isAnyOf</span><wbr><span class="parameters">(<a href="MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a>...&nbsp;mediaTypes)</span></div>
+<div class="block">Returns true if this payload has any of the given media types.</div>
+</section>
+</li>
 <li>
 <section class="detail" id="to(java.lang.Class)">
 <h3>to</h3>
