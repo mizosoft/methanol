@@ -49,7 +49,7 @@ runs:
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
       shell: bash
-      run: ./gradlew ${{ inputs.gradle-args }}
+      run: ./gradlew -PjavaVersion=${{ inputs.java }} ${{ inputs.gradle-args }}
 
     - name: Run command
       if: inputs.cmd != ''

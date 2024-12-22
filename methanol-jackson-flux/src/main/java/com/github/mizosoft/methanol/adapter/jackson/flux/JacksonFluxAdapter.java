@@ -81,6 +81,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
           || supportsPublisherSupertype(typeRef, Flow.Publisher.class);
     }
 
+    @SuppressWarnings("deprecation")
     private boolean supportsPublisherSupertype(TypeRef<?> typeRef, Class<?> publisherSupertype) {
       return publisherSupertype.isAssignableFrom(typeRef.rawType())
           && firstSpecifiedTypeArgument(typeRef, publisherSupertype)
@@ -192,6 +193,7 @@ abstract class JacksonFluxAdapter extends AbstractBodyAdapter {
       super(mapper);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public boolean supportsType(TypeRef<?> typeRef) {
       var rawType = typeRef.rawType();
