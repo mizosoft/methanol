@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,7 @@
 package com.github.mizosoft.methanol.kotlin
 
 import com.github.mizosoft.methanol.AdapterCodec
-import com.github.mizosoft.methanol.BodyAdapter.Decoder
-import com.github.mizosoft.methanol.BodyAdapter.Encoder
-import com.github.mizosoft.methanol.BodyAdapter.Hints
+import com.github.mizosoft.methanol.BodyAdapter.*
 import com.github.mizosoft.methanol.TypeRef
 import com.github.mizosoft.methanol.adapter.ForwardingDecoder
 
