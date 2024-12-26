@@ -20,7 +20,10 @@
  * SOFTWARE.
  */
 
-/** Kotlin DSL for Methanol. */
+/**
+ * Kotlin DSL for Methanol. KDocs can be found <a
+ * href="https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/">here.</a>
+ */
 module methanol.kotlin {
   requires transitive methanol;
   requires kotlin.stdlib;
