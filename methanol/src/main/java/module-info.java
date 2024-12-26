@@ -45,10 +45,6 @@ module methanol {
   exports com.github.mizosoft.methanol.internal.extensions to
       methanol.adapter.jackson,
       methanol.adapter.jackson.flux;
-  exports com.github.mizosoft.methanol.internal.concurrent to
-      methanol.adapter.jackson,
-      methanol.redis,
-      methanol.testing;
   exports com.github.mizosoft.methanol.internal.cache to
       methanol.redis,
       methanol.testing;
@@ -59,6 +55,10 @@ module methanol {
       methanol.testing,
       methanol.adapter.jaxb.jakarta,
       methanol.adapter.jaxb;
+  exports com.github.mizosoft.methanol.internal.concurrent to
+      methanol.adapter.jackson,
+      methanol.redis,
+      methanol.testing;
 
   uses com.github.mizosoft.methanol.BodyDecoder.Factory;
   uses com.github.mizosoft.methanol.BodyAdapter.Encoder;

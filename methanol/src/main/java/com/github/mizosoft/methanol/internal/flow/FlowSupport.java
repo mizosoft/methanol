@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,6 +48,8 @@ public class FlowSupport {
   private static final int PREFETCH = loadPrefetch();
   private static final int PREFETCH_THRESHOLD = (int) (PREFETCH * (loadPrefetchFactor() / 100f));
 
+  private static final int DROPPED_EXCEPTION_STACK_TRACE_LIMIT = 10;
+
   /** A subscription that does nothing. */
   public static final Flow.Subscription NOOP_SUBSCRIPTION =
       new Flow.Subscription() {
@@ -80,6 +82,11 @@ public class FlowSupport {
     @Override
     public void execute(Runnable command) {
       command.run();
+    }
+
+    @Override
+    public String toString() {
+      return SyncExecutor.class.getSimpleName();
     }
   }
 
@@ -170,6 +177,7 @@ public class FlowSupport {
                       .walk(
                           frames ->
                               frames
+                                  .limit(DROPPED_EXCEPTION_STACK_TRACE_LIMIT)
                                   .map(StackWalker.StackFrame::toString)
                                   .collect(Collectors.joining(System.lineSeparator() + "\tat "))),
           exception);

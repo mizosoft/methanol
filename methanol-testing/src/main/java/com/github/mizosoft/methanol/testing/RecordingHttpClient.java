@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -238,8 +238,8 @@ public class RecordingHttpClient extends HttpClient {
       return okResponse(responseInfo, decodeBody(responseInfo, responseBody));
     }
 
-    public HttpResponse<T> okResponse(ResponseInfo responseInfo, T body) {
-      return ResponseBuilder.<T>create()
+    public <U> HttpResponse<U> okResponse(ResponseInfo responseInfo, U body) {
+      return ResponseBuilder.<U>create()
           .statusCode(responseInfo.statusCode())
           .headers(responseInfo.headers())
           .version(responseInfo.version())

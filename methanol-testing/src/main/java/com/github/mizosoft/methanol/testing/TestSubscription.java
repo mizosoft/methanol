@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestSubscription implements Subscription {
-  private static final int TIMEOUT_SECONDS = 2;
+  private static final int TIMEOUT_SECONDS = TestUtils.TIMEOUT_SECONDS;
 
   private final BlockingQueue<Long> requests = new LinkedBlockingQueue<>();
   private final CountDownLatch cancellationLatch = new CountDownLatch(1);
