@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ import static com.github.mizosoft.methanol.MutableRequest.GET;
 import static com.github.mizosoft.methanol.MutableRequest.POST;
 import static com.github.mizosoft.methanol.testing.TestUtils.headers;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.from;
@@ -33,15 +34,17 @@ import static org.assertj.core.api.Assertions.from;
 import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.Methanol.Interceptor;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
-import com.github.mizosoft.methanol.internal.extensions.ForwardingBodySubscriber;
+import com.github.mizosoft.methanol.internal.adapter.BodyDiscardTimeoutHint;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.testing.HttpClientStub;
 import com.github.mizosoft.methanol.testing.HttpResponseStub;
 import com.github.mizosoft.methanol.testing.ImmutableResponseInfo;
+import com.github.mizosoft.methanol.testing.MockClock;
+import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient.Call;
+import com.github.mizosoft.methanol.testing.TestSubscription;
 import com.github.mizosoft.methanol.testing.TestUtils;
-import java.io.IOException;
 import java.net.Authenticator;
 import java.net.CookieManager;
 import java.net.InetSocketAddress;
@@ -62,10 +65,13 @@ import java.net.http.HttpResponse.PushPromiseHandler;
 import java.net.http.HttpResponse.ResponseInfo;
 import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -536,50 +542,128 @@ class MethanolTest {
   }
 
   @Test
-  void responsePayloadClosure() throws Exception {
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  void responsePayloadClosureWithHttp2() throws Exception {
+    var subscriberRef = new AtomicReference<BodySubscriber<?>>();
     var backend =
-        new RecordingHttpClient().handleCalls(call -> call.complete(ByteBuffer.allocate(1)));
-    var subscriberCompletion = new CompletableFuture<>();
+        new RecordingHttpClient()
+            .handleCalls(
+                call -> {
+                  var responseInfo = new ImmutableResponseInfo(HTTP_OK, headers(), Version.HTTP_2);
+                  var subscriber = call.bodyHandler().apply(responseInfo);
+                  subscriberRef.set(subscriber);
+                  subscriber
+                      .getBody()
+                      .whenComplete(
+                          (result, ex) -> {
+                            if (result != null) {
+                              call.complete((HttpResponse) call.okResponse(responseInfo, result));
+                            }
+                          });
+                });
     var client =
         Methanol.newBuilder(backend)
             .adapterCodec(AdapterCodec.newBuilder().basic().build())
-            .interceptor(
-                new Interceptor() {
-                  @Override
-                  public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
-                      throws IOException, InterruptedException {
-                    return chain
-                        .with(
-                            bodyHandler ->
-                                responseInfo ->
-                                    new ForwardingBodySubscriber<>(
-                                        bodyHandler.apply(responseInfo)) {
-
-                                      @Override
-                                      public void onError(Throwable throwable) {
-                                        super.onError(throwable);
-                                        subscriberCompletion.completeExceptionally(throwable);
-                                      }
-
-                                      @Override
-                                      public void onComplete() {
-                                        super.onComplete();
-                                        subscriberCompletion.complete(null);
-                                      }
-                                    })
-                        .forward(request);
-                  }
-
-                  @Override
-                  public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-                      HttpRequest request, Chain<T> chain) {
-                    throw new UnsupportedOperationException("Unexpected");
-                  }
-                })
             .build();
-    var response = client.send(MutableRequest.GET("https://examples.com"), ResponsePayload.class);
-    response.body().close();
-    assertThat(subscriberCompletion).succeedsWithin(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS));
+    var responseFuture =
+        client.sendAsync(MutableRequest.GET("https://examples.com"), ResponsePayload.class);
+    var subscription = new TestSubscription();
+    var subscriber = subscriberRef.get();
+    assertThat(subscriber).isNotNull();
+    subscriber.onSubscribe(subscription);
+    responseFuture.get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body().close();
+    subscription.awaitCancellation();
+  }
+
+  @Test
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  void responsePayloadClosureWithHttp1NoTimeout() throws Exception {
+    var clock = new MockClock();
+    var delayer = new MockDelayer(clock);
+    var subscriberRef = new AtomicReference<BodySubscriber<?>>();
+    var backend =
+        new RecordingHttpClient()
+            .handleCalls(
+                call -> {
+                  var responseInfo =
+                      new ImmutableResponseInfo(HTTP_OK, headers(), Version.HTTP_1_1);
+                  var subscriber = call.bodyHandler().apply(responseInfo);
+                  subscriberRef.set(subscriber);
+                  subscriber
+                      .getBody()
+                      .whenComplete(
+                          (result, ex) -> {
+                            if (result != null) {
+                              call.complete((HttpResponse) call.okResponse(responseInfo, result));
+                            }
+                          });
+                });
+    var client =
+        Methanol.newBuilder(backend)
+            .adapterCodec(AdapterCodec.newBuilder().basic().build())
+            .build();
+    var responseFuture =
+        client.sendAsync(
+            MutableRequest.GET("https://examples.com")
+                .hint(
+                    BodyDiscardTimeoutHint.class,
+                    new BodyDiscardTimeoutHint(
+                        new com.github.mizosoft.methanol.internal.concurrent.Timeout(
+                            Duration.ofSeconds(1), delayer))),
+            ResponsePayload.class);
+    var subscription = new TestSubscription();
+    var subscriber = subscriberRef.get();
+    assertThat(subscriber).isNotNull();
+    subscriber.onSubscribe(subscription);
+    responseFuture.get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body().close();
+    subscription.awaitRequest();
+  }
+
+  @Test
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  void responsePayloadClosureWithHttp1OnTimeout() throws Exception {
+    var clock = new MockClock();
+    var delayer = new MockDelayer(clock);
+    var subscriberRef = new AtomicReference<BodySubscriber<?>>();
+    var backend =
+        new RecordingHttpClient()
+            .handleCalls(
+                call -> {
+                  var responseInfo =
+                      new ImmutableResponseInfo(HTTP_OK, headers(), Version.HTTP_1_1);
+                  var subscriber = call.bodyHandler().apply(responseInfo);
+                  subscriberRef.set(subscriber);
+                  subscriber
+                      .getBody()
+                      .whenComplete(
+                          (result, ex) -> {
+                            if (result != null) {
+                              call.complete((HttpResponse) call.okResponse(responseInfo, result));
+                            }
+                          });
+                });
+    var client =
+        Methanol.newBuilder(backend)
+            .adapterCodec(AdapterCodec.newBuilder().basic().build())
+            .build();
+    var responseFuture =
+        client.sendAsync(
+            MutableRequest.GET("https://examples.com")
+                .hint(
+                    BodyDiscardTimeoutHint.class,
+                    new BodyDiscardTimeoutHint(
+                        new com.github.mizosoft.methanol.internal.concurrent.Timeout(
+                            Duration.ofSeconds(1), delayer))),
+            ResponsePayload.class);
+    var subscription = new TestSubscription();
+    var subscriber = subscriberRef.get();
+    assertThat(subscriberRef).doesNotHaveNullValue();
+    subscriber.onSubscribe(subscription);
+    responseFuture.get(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS).body().close();
+    subscriber.onNext(List.of(ByteBuffer.allocate(1)));
+    clock.advanceSeconds(1); // Trigger timeout to cancel subscription.
+    subscriber.onComplete();
+    subscription.awaitCancellation();
   }
 
   @Test
