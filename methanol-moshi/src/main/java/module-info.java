@@ -27,7 +27,7 @@ import com.github.mizosoft.methanol.BodyAdapter;
  * adapter is mainly targeted for Kotlin, although it can be used with Java without problems.
  *
  * <p>KDocs can be found <a
- * href="https://mizosoft.github.io/methanol/api/latest/methanol.adapters.moshi/">here.</a>
+ * href="https://mizosoft.github.io/methanol/api/latest/methanol.adapter.moshi/">here.</a>
  */
 module methanol.adapter.moshi {
   requires transitive methanol;
