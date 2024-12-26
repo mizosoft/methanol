@@ -443,6 +443,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Utility class for finding decoder factories.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/BodyDiscardTimeoutHint.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.adapter">BodyDiscardTimeoutHint</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/adapter/package-summary.html">com.github.mizosoft.methanol.internal.adapter</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/BodyDiscardTimeoutHint.html#%3Cinit%3E(com.github.mizosoft.methanol.internal.concurrent.Timeout)" class="member-name-link">BodyDiscardTimeoutHint(Timeout)</a> - Constructor for class com.github.mizosoft.methanol.internal.adapter.<a href="methanol/com/github/mizosoft/methanol/internal/adapter/BodyDiscardTimeoutHint.html" title="class in com.github.mizosoft.methanol.internal.adapter">BodyDiscardTimeoutHint</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/PublisherBodySubscriber.html#bodyHandler()" class="member-name-link">bodyHandler()</a> - Static method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/PublisherBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">PublisherBodySubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html#bodyHandler()" class="member-name-link">bodyHandler()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a></dt>
@@ -3603,7 +3607,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#okHandledResponse(java.net.http.HttpResponse.ResponseInfo,java.nio.ByteBuffer)" class="member-name-link">okHandledResponse(HttpResponse.ResponseInfo, ByteBuffer)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#okResponse(java.net.http.HttpResponse.ResponseInfo,T)" class="member-name-link">okResponse(HttpResponse.ResponseInfo, T)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#okResponse(java.net.http.HttpResponse.ResponseInfo,U)" class="member-name-link">okResponse(HttpResponse.ResponseInfo, U)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html#onComplete()" class="member-name-link">onComplete()</a> - Method in class com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html" title="class in com.github.mizosoft.methanol.decoder">AsyncBodyDecoder</a></dt>
 <dd>&nbsp;</dd>
@@ -3713,6 +3717,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#onSubscribe(java.util.concurrent.Flow.Subscription)" class="member-name-link">onSubscribe(Flow.Subscription)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockClock.html#onTick(java.util.function.BiConsumer)" class="member-name-link">onTick(BiConsumer&lt;Instant, Duration&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockClock.html" title="class in com.github.mizosoft.methanol.testing">MockClock</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Timeout.html#onTimeout(java.lang.Runnable,java.util.concurrent.Executor)" class="member-name-link">onTimeout(Runnable, Executor)</a> - Method in class com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Timeout.html" title="class in com.github.mizosoft.methanol.internal.concurrent">Timeout</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheWritingPublisher.Listener.html#onWriteFailure(java.lang.Throwable)" class="member-name-link">onWriteFailure(Throwable)</a> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheWritingPublisher.Listener.html" title="interface in com.github.mizosoft.methanol.internal.cache">CacheWritingPublisher.Listener</a></dt>
 <dd>&nbsp;</dd>
@@ -5084,11 +5090,17 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#throwOnSubscribeAndOnNext(boolean)" class="member-name-link">throwOnSubscribeAndOnNext(boolean)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/adapter/BodyDiscardTimeoutHint.html#timeout()" class="member-name-link">timeout()</a> - Method in class com.github.mizosoft.methanol.internal.adapter.<a href="methanol/com/github/mizosoft/methanol/internal/adapter/BodyDiscardTimeoutHint.html" title="class in com.github.mizosoft.methanol.internal.adapter">BodyDiscardTimeoutHint</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#timeout()" class="member-name-link">timeout()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#timeout(java.time.Duration)" class="member-name-link">timeout(Duration)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#timeout(java.time.Duration)" class="member-name-link">timeout(Duration)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Timeout.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.concurrent">Timeout</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/concurrent/package-summary.html">com.github.mizosoft.methanol.internal.concurrent</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Timeout.html#%3Cinit%3E(java.time.Duration,com.github.mizosoft.methanol.internal.concurrent.Delayer)" class="member-name-link">Timeout(Duration, Delayer)</a> - Constructor for class com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Timeout.html" title="class in com.github.mizosoft.methanol.internal.concurrent">Timeout</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html#TIMEOUT_SECONDS" class="member-name-link">TIMEOUT_SECONDS</a> - Static variable in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html" title="class in com.github.mizosoft.methanol.testing">TestUtils</a></dt>
 <dd>&nbsp;</dd>
