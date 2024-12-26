@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -589,7 +589,7 @@ public class Methanol extends HttpClient {
     }
   }
 
-  /** An object that intercepts requests being sent over a {@code Methanol} client. */
+  /** An object that intercepts requests before being sent and responses before being returned. */
   public interface Interceptor {
 
     /**

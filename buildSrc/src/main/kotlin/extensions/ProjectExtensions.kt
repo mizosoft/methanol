@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2024 Moataz Hussein
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package extensions
 
 import com.github.javaparser.JavaParser
@@ -8,6 +30,9 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.the
+
+const val JAVADOC_JDK_VERSION = 11
+const val JAVADOC_URL = "https://mizosoft.github.io/methanol/api/latest"
 
 private const val MODULE_NAME_EXTENSIONS_NAME = "javaModuleName"
 
@@ -33,32 +58,44 @@ val Project.javaModuleName: String
 fun Project.projectOrNull(name: String) = findProject(name)
 
 val Project.isIncludedInCoverageReport
-  get() = project !in setOf(
-    project(":methanol-testing"),
-    project(":methanol-benchmarks"),
-    project(":methanol-samples"),
-    project(":methanol-samples:crawler"),
-    project(":methanol-samples:download-progress"),
-    project(":methanol-samples:upload-progress"),
+  get() = project in setOf(
+    project(":methanol"),
     project(":methanol-blackbox"),
+    project(":methanol-brotli"),
+    project(":methanol-gson"),
+    project(":methanol-jackson"),
+    project(":methanol-jackson-flux"),
+    project(":methanol-jaxb"),
+    project(":methanol-jaxb-jakarta"),
+    project(":methanol-kotlin"),
+    project(":methanol-moshi"),
+    project(":methanol-protobuf"),
+    project(":methanol-redis"),
+    projectOrNull(":quarkus-native-test"), // Optionally included in build.
+    projectOrNull(":native-image-test"), // Optionally included in build.
     project(":spring-boot-test"),
-    projectOrNull(":methanol-brotli:brotli-jni"), // Optionally included.
-    projectOrNull(":quarkus-native-test"), // Optionally included.
-    projectOrNull(":native-image-test") // Optionally included.
   )
 
 val Project.isIncludedInAggregateJavadoc
-  get() = project !in setOf(
-    project(":methanol-benchmarks"),
-    project(":methanol-samples"),
-    project(":methanol-samples:crawler"),
-    project(":methanol-samples:download-progress"),
-    project(":methanol-samples:upload-progress"),
-    project(":methanol-blackbox"),
-    project(":spring-boot-test"),
-    projectOrNull(":methanol-brotli:brotli-jni"), // Optionally included.
-    projectOrNull(":quarkus-native-test"), // Optionally included.
-    projectOrNull(":native-image-test") // Optionally included.
+  get() = project in setOf(
+    project(":methanol"),
+    project(":methanol-brotli"),
+    project(":methanol-gson"),
+    project(":methanol-jackson"),
+    project(":methanol-jackson-flux"),
+    project(":methanol-jaxb"),
+    project(":methanol-jaxb-jakarta"),
+    project(":methanol-kotlin"),
+    project(":methanol-moshi"),
+    project(":methanol-protobuf"),
+    project(":methanol-redis"),
+    project(":methanol-testing"),
+  )
+
+val Project.isIncludedInAggregateDokka
+  get() = project in setOf(
+    project(":methanol-kotlin"),
+    project(":methanol-moshi"),
   )
 
 val Project.artifactId
@@ -67,14 +104,14 @@ val Project.artifactId
 val Project.libs
   get() = the<LibrariesForLibs>()
 
-val Project.javaVersion: String?
+val Project.javaVersion
   get() = project.findProperty("javaVersion")?.toString()
 
-val Project.javaVendor: String?
+val Project.javaVendor
   get() = project.findProperty("javaVendor")?.toString()
 
-val Project.enableErrorprone: Boolean
+val Project.enableErrorprone
   get() = project.hasProperty("enableErrorprone")
 
-val Project.enableCheckerframework: Boolean
+val Project.enableCheckerframework
   get() = project.hasProperty("enableCheckerframework")

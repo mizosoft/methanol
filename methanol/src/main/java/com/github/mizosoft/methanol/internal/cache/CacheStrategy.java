@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@ import java.util.Optional;
 
 /**
  * A strategy for determining whether a stored response is fresh enough for the cache to serve
- * without contacting the origin, based on the caching rules imposed by the server & client.
+ * without contacting the origin, based on the caching rules imposed by the server and client.
  */
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 public final class CacheStrategy {

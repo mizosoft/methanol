@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,24 +28,23 @@ import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import com.google.protobuf.ExtensionRegistryLite;
 
 /**
- * Providers {@link BodyAdapter} for Google's <a
- * href="https://developers.google.com/protocol-buffers">Protocol Buffers</a> format. The adapters
- * support any subtype of {@link com.google.protobuf.MessageLite}.
+ * Contains static factory methods for <a href="https://github.com/google/gson">Protocol Buffers</a>
+ * {@link BodyAdapter adapters}.
  */
 public class ProtobufAdapterFactory {
   private ProtobufAdapterFactory() {} // Non-instantiable.
 
-  /** Returns a new {@link Encoder}. */
+  /** Creates an encoder. */
   public static Encoder createEncoder() {
     return new ProtobufAdapter.Encoder();
   }
 
-  /** Returns a new {@link Decoder} with an empty extension registry. */
+  /** Creates a decoder with an empty {@link ExtensionRegistryLite extension registry}. */
   public static Decoder createDecoder() {
     return createDecoder(ExtensionRegistryLite.getEmptyRegistry());
   }
 
-  /** Returns a new {@link Decoder} that uses the given extension registry. */
+  /** Creates a decoder with the given {@link ExtensionRegistryLite extension registry}. */
   public static Decoder createDecoder(ExtensionRegistryLite registry) {
     return new ProtobufAdapter.Decoder(registry);
   }

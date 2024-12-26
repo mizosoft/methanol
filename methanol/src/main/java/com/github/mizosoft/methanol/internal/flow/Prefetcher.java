@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,8 +31,8 @@ import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
  * number of requested but not fulfilled items remains between two values, namely {@code
  * prefetchThreshold} and {@code prefetch}.
  *
- * <p>This class is not thread-safe. Caller must ensure that {@link #initialize(Upstream)} & {@link
- * #update(Upstream)} are not interleaved and are properly synchronized.
+ * <p>This class is not thread-safe. Caller must ensure that {@link #initialize(Upstream)} {@code &}
+ * {@link #update(Upstream)} are not interleaved and are properly synchronized.
  */
 public final class Prefetcher {
   private final int prefetch;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,11 @@
  * SOFTWARE.
  */
 
+import com.github.mizosoft.methanol.StorageExtension;
+
+/**
+ * Contains <a href="https://redis.io/">Redis</a>-backed {@link StorageExtension} implementations.
+ */
 module methanol.redis {
   requires methanol;
   requires lettuce.core;

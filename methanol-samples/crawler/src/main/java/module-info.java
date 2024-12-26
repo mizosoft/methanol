@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,8 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.BodyAdapter;
-import com.github.mizosoft.methanol.samples.crawler.JsoupDecoderProvider;
-
 module methanol.samples.crawler {
   requires methanol;
   requires org.jsoup;
   requires static org.checkerframework.checker.qual;
-
-  provides BodyAdapter.Decoder with
-      JsoupDecoderProvider;
 }

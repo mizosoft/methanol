@@ -50,6 +50,7 @@ errorprone-plugin = "4.1.0"
 nullaway-plugin = "1.5.0"
 graalvm-plugin = "0.10.1"
 kotlin-serialization-plugin = "2.1.0"
+dokka-plugin = "1.9.20"
 
 [libraries]
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
@@ -112,6 +113,7 @@ errorprone-plugin = { module = "net.ltgt.gradle:gradle-errorprone-plugin", versi
 nullaway-plugin = { module = "net.ltgt.gradle:gradle-nullaway-plugin", version.ref = "nullaway-plugin" }
 coveralls-plugin = { module = "gradle.plugin.org.kt3k.gradle.plugin:coveralls-gradle-plugin", version.ref = "coveralls-plugin" }
 kotlin-jvm-plugin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin", version.ref = "kotlin" }
+dokka-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka-plugin" }
 
 [plugins]
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions-plugin" }
@@ -124,3 +126,4 @@ javafx = { id = "org.openjfx.javafxplugin", version.ref = "javafx-plugin" }
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
 graalvm = { id = "org.graalvm.buildtools.native", version.ref = "graalvm-plugin" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka-plugin" }

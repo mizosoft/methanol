@@ -17,4 +17,5 @@ dependencies {
   implementation(libs.nullaway.plugin)
   implementation(libs.coveralls.plugin)
   implementation(libs.kotlin.jvm.plugin)
+  implementation(libs.dokka.plugin)
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,25 +45,22 @@ import java.util.concurrent.Executor;
  * read-only {@code ByteBuffers}, which up on being passed, are no longer referenced by the decoder.
  *
  * <p>Optionally, a {@code BodyDecoder} can have an {@code Executor}. If present, the executor is
- * used to deliver downstream signals (that is, downstream's onXXXX methods are dispatched to the
- * executor). This can lead to overlapped processing between the two subscribers. If an executor is
- * not present, the decoder processes and supplies downstream items in the same thread, which is
- * normally the upstream thread supplying the compressed {@code ByteBuffers}.
+ * used to deliver downstream signals. This can lead to overlapped processing between the two
+ * subscribers. If an executor is not present, the decoder processes and supplies downstream items
+ * in the same thread, which is normally the upstream thread supplying the compressed {@code
+ * ByteBuffers}.
  *
  * @param <T> the subscriber's body type
  */
 public interface BodyDecoder<T> extends BodySubscriber<T> {
 
   /**
-   * Returns the encoding used by this decoder. Normally, this corresponds to the value of the
-   * {@code Content-Type} header.
+   * Returns the encoding used by this decoder. This corresponds to the value of the {@code
+   * Content-Type} header.
    */
   String encoding();
 
-  /**
-   * Returns an {@code Optional} containing this decoder's executor. An empty optional is returned
-   * if the decoder is in "synchronous" mode.
-   */
+  /** Returns this decoder's executor if one is specified. */
   Optional<Executor> executor();
 
   /** Returns this decoder's downstream. */
@@ -72,8 +69,8 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
   /**
    * Returns the body's {@code CompletionStage}.
    *
-   * <p>Since this subscriber only acts as a processing stage, the default implementation simply
-   * returns the body completion stage of the downstream.
+   * @implSpec Since this subscriber only acts as a processing stage, the default implementation
+   *     returns the body completion stage of the downstream.
    */
   @Override
   default CompletionStage<T> getBody() {
@@ -81,30 +78,19 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
   }
 
   /**
-   * A factory of {@code BodyDecoders} for some defined encoding. {@code BodyDecoder.Factory}
-   * implementations are normally registered as service-providers by means described in the {@link
-   * java.util.ServiceLoader} class.
+   * A factory of {@link BodyDecoder} instances for some defined encoding. {@code
+   * BodyDecoder.Factory} implementations are registered as service-providers by means described in
+   * the {@link java.util.ServiceLoader} class.
    */
   interface Factory {
 
     /** Returns the encoding used by {@code BodyDecoders} created by this factory. */
     String encoding();
 
-    /**
-     * Creates and returns a {@code BodyDecoder} with the given downstream.
-     *
-     * @param downstream the downstream subscriber
-     * @param <T> the body type
-     */
+    /** Creates a {@code BodyDecoder} with the given downstream. */
     <T> BodyDecoder<T> create(BodySubscriber<T> downstream);
 
-    /**
-     * Creates and returns a {@code BodyDecoder} with the given downstream and executor.
-     *
-     * @param downstream the downstream subscriber
-     * @param executor the decoder's executor
-     * @param <T> the body type
-     */
+    /** Creates a {@code BodyDecoder} with the given downstream and executor. */
     <T> BodyDecoder<T> create(BodySubscriber<T> downstream, Executor executor);
 
     /**
@@ -121,21 +107,15 @@ public interface BodyDecoder<T> extends BodySubscriber<T> {
      * Returns an immutable map that case-insensitively maps encodings to their corresponding
      * registered factories. If more than one factory is registered for a given encoding, it is
      * unspecified which one ends up being in the map. However, decoders provided by this module are
-     * overridable.
+     * guaranteed to be overridden by ones registered by other modules for the same encoding.
      */
     static Map<String, Factory> installedBindings() {
       return BodyDecoderFactoryProviders.bindings();
     }
 
-    /**
-     * Returns an {@code Optional} containing the factory registered for the given encoding. An
-     * empty optional is returned if no such factory exists.
-     *
-     * @param encoding the factory's encoding
-     */
+    /** Returns the factory registered for the given encoding, if any. */
     static Optional<Factory> getFactory(String encoding) {
-      requireNonNull(encoding);
-      return Optional.ofNullable(installedBindings().get(encoding));
+      return Optional.ofNullable(installedBindings().get(requireNonNull(encoding)));
     }
   }
 }

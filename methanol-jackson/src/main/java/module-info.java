@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,12 +20,10 @@
  * SOFTWARE.
  */
 
+import com.github.mizosoft.methanol.BodyAdapter;
+
 /**
- * Provides {@link com.github.mizosoft.methanol.BodyAdapter.Encoder} and {@link
- * com.github.mizosoft.methanol.BodyAdapter.Decoder} implementations for the Jackson library. Note
- * that, for the sake of configurability, the adapters are not service-provided by default. You will
- * need to explicitly declare service-providers that delegate to the instances created by {@link
- * JacksonAdapterFactory}.
+ * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@link BodyAdapter adapters}.
  */
 module methanol.adapter.jackson {
   requires transitive methanol;

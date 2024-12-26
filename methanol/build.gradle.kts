@@ -30,15 +30,13 @@ import java.util.concurrent.atomic.AtomicReference
 
 plugins {
   id("conventions.java-library")
+  id("conventions.java-testing")
   id("conventions.static-analysis")
-  id("conventions.testing")
   id("conventions.coverage")
   id("conventions.publishing")
 }
 
 dependencies {
-  testImplementation(project(":methanol-testing"))
-  testImplementation(libs.junit.params)
   testImplementation(libs.mockwebserver)
   testImplementation(libs.reactivestreams)
   testImplementation(libs.jimfs)

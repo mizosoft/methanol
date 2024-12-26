@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,7 +62,7 @@ public interface BodyAdapter {
   /** Returns {@code true} if this adapter supports the given type. */
   boolean supportsType(TypeRef<?> typeRef);
 
-  /** A {@code BodyAdapter} that encodes objects into request bodies. */
+  /** A {@link BodyAdapter} that encodes objects into request bodies. */
   interface Encoder extends BodyAdapter {
 
     /**
@@ -100,8 +100,9 @@ public interface BodyAdapter {
     }
 
     /**
-     * Returns the encoder that supports the given object type and media type. If the given media
-     * type is {@code null}, any encoder supporting the given object type is returned.
+     * Returns a registered encoder that supports the given object type and media type, if any. If
+     * the given media type is {@code null}, any encoder supporting the given object type is
+     * returned.
      */
     static Optional<Encoder> getEncoder(TypeRef<?> typeRef, @Nullable MediaType mediaType) {
       return AdapterCodec.installed().lookupEncoder(typeRef, Utils.hintsOf(mediaType));
@@ -126,7 +127,7 @@ public interface BodyAdapter {
     }
   }
 
-  /** A {@code BodyAdapter} that decodes response bodies into objects. */
+  /** A {@link BodyAdapter} that decodes response bodies into objects. */
   interface Decoder extends BodyAdapter {
 
     /**
@@ -192,8 +193,9 @@ public interface BodyAdapter {
     }
 
     /**
-     * Returns a decoder that supports the given object type and media type. If the given media type
-     * is {@code null}, any decoder supporting the given object type is returned.
+     * Returns a registered decoder that supports the given object type and media type, if any. If
+     * the given media type is {@code null}, any decoder supporting the given object type is
+     * returned.
      */
     static Optional<Decoder> getDecoder(TypeRef<?> typeRef, @Nullable MediaType mediaType) {
       return AdapterCodec.installed().lookupDecoder(typeRef, Utils.hintsOf(mediaType));
@@ -229,10 +231,11 @@ public interface BodyAdapter {
    * encoding/decoding behavior. Typically, an adapter receives a {@code Hints} object that contains
    * the {@link MediaType} of the intended format as advertised by the request or response.
    * Additionally, an encoder receives a {@code Hints} objects containing the {@link #request()},
-   * and a decoder receives one that contains the {@link #responseInfo()}. Hints, however, are
-   * optional, and adapters should exhibit default behavior in the absence thereof (for instance, a
-   * JSON adapter should use UTF-8 in the absence of a {@code MediaType} containing a charset
-   * parameter).
+   * and a decoder receives one that contains the {@link #responseInfo()}. Some hints are optional,
+   * and adapters substitute with default values in the absence thereof (for instance, a JSON
+   * adapter may use UTF-8 in the absence of a {@code MediaType} containing a charset parameter). If
+   * a hint is required by the adapter, it throws an {@code UnsupportedOperationException} in the
+   * absence of such.
    */
   interface Hints {
 

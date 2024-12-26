@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,11 +23,10 @@
 /** Miscellaneous test utilities used internally. */
 module methanol.testing {
   requires transitive methanol;
+  requires transitive org.junit.jupiter.params;
+  requires transitive org.assertj.core;
   requires okhttp3.tls;
   requires java.logging;
-  requires org.assertj.core;
-  requires org.junit.jupiter.api;
-  requires org.junit.jupiter.params;
   requires mockwebserver3;
   requires lettuce.core;
   requires methanol.redis;

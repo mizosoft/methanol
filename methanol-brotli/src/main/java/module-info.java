@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@
  */
 
 /**
- * Provides brotli decompression for Methanol.
+ * Provides <a href="https://github.com/google/brotli">Brotli</a> decompression for Methanol.
  *
  * @provides com.github.mizosoft.methanol.BodyDecoder.Factory
  */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,8 +51,8 @@ public interface RedisStorageExtension extends InternalStorageExtension {
 
   /** A builder of {@code RedisStorageExtension}. */
   final class Builder {
-    private static final int DEFAULT_EDITOR_LOCK_INACTIVE_TTL_SECONDS = 8;
-    private static final int DEFAULT_STALE_ENTRY_INACTIVE_TTL_SECONDS = 4;
+    private static final int DEFAULT_EDITOR_LOCK_INACTIVE_TTL_SECONDS = 5;
+    private static final int DEFAULT_STALE_ENTRY_INACTIVE_TTL_SECONDS = 3;
 
     private @MonotonicNonNull RedisStorageExtensionFactory factory;
     private int editorLockInactiveTtlSeconds = DEFAULT_EDITOR_LOCK_INACTIVE_TTL_SECONDS;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,37 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.samples.crawler;
+package com.github.mizosoft.methanol.samples.kotlin
 
-import com.github.mizosoft.methanol.BodyAdapter;
+import com.github.mizosoft.methanol.CacheAwareResponse
+import com.github.mizosoft.methanol.kotlin.BodyHandlers
+import com.github.mizosoft.methanol.kotlin.Client
+import com.github.mizosoft.methanol.kotlin.close
+import com.github.mizosoft.methanol.kotlin.get
+import java.nio.file.Path
+import kotlin.time.Duration.Companion.seconds
 
-public class JsoupDecoderProvider {
-  private JsoupDecoderProvider() {}
+object CachingClient {
+  val client = Client {
+    userAgent("Chuck Norris")
+    cache {
+      onDisk(Path.of(".cache"), 500 * 1024 * 1024) // Occupy at most 500Mb on disk.
+    }
+  }
 
-  public static BodyAdapter.Decoder provider() {
-    return new JsoupDecoder();
+  suspend fun run() {
+    val response =
+      client.get("https://i.imgur.com/V79ulbT.gif", BodyHandlers.ofFile(Path.of("images/popcat.gif"))) {
+        cacheControl {
+          maxAge(5.seconds) // Override server's max-age.
+        }
+      } as CacheAwareResponse<Path>
+    println(
+      "$response - ${response.cacheStatus()} (Cached for ${response.headers()["Age"].firstOrNull() ?: -1} seconds)"
+    )
+  }
+
+  fun closeCache() {
+    client.caches().close()
   }
 }

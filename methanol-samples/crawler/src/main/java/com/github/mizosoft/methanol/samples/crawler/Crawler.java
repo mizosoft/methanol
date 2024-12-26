@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,24 +24,27 @@ package com.github.mizosoft.methanol.samples.crawler;
 
 import static com.github.mizosoft.methanol.MediaType.TEXT_HTML;
 
+import com.github.mizosoft.methanol.AdapterCodec;
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.Methanol;
-import com.github.mizosoft.methanol.MoreBodySubscribers;
 import com.github.mizosoft.methanol.MutableRequest;
+import com.github.mizosoft.methanol.ResponsePayload;
 import com.github.mizosoft.methanol.TypeRef;
+import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient.Redirect;
+import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.BodySubscribers;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 public class Crawler {
-
   private final URI inceptionUri;
   private final int maxVisits;
 
@@ -49,6 +52,7 @@ public class Crawler {
       Methanol.newBuilder()
           .defaultHeader("Accept", TEXT_HTML.toString())
           .followRedirects(Redirect.NORMAL)
+          .adapterCodec(AdapterCodec.newBuilder().basic().decoder(new JsoupDecoder()).build())
           .build();
 
   private final Set<URI> visited = new HashSet<>();
@@ -80,32 +84,19 @@ public class Crawler {
 
   boolean visit(URI uri) throws IOException, InterruptedException {
     if (uri == null
-        || !("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+        || !(uri.getScheme().equalsIgnoreCase("http") || uri.getScheme().equalsIgnoreCase("https"))
         || !visited.add(uri)) {
       return false;
     }
 
-    var response =
-        client.send(
-            MutableRequest.GET(uri),
-            info ->
-                info.headers()
-                    .firstValue("Content-Type")
-                    .map(MediaType::parse)
-                    .filter(TEXT_HTML::isCompatibleWith)
-                    .map(type -> MoreBodySubscribers.ofObject(TypeRef.of(Document.class), type))
-                    .orElseGet(
-                        () -> BodySubscribers.replacing(null))); // Ignore if not an HTML page.
-
-    var document = response.body();
-    if (document != null) { // Received an HTML page
+    var response = client.send(MutableRequest.GET(uri), ResponsePayload.class);
+    try (var payload = response.body()) {
+      var document = payload.to(Document.class);
       onPageReceived(uri, response.statusCode(), document);
-
       for (var element : document.select("a[href]")) {
         toVisit.add(withoutFragment(response.uri().resolve(element.attr("href").trim())));
       }
     }
-
     return true;
   }
 
@@ -124,5 +115,26 @@ public class Crawler {
 
   public static void main(String[] args) {
     new Crawler(URI.create("https://en.wikipedia.org/wiki/Bohemian_Rhapsody"), 100).drain();
+  }
+
+  private static final class JsoupDecoder extends AbstractBodyAdapter
+      implements AbstractBodyAdapter.BaseDecoder {
+    JsoupDecoder() {
+      super(MediaType.TEXT_HTML);
+    }
+
+    @Override
+    public boolean supportsType(TypeRef<?> type) {
+      return type.rawType() == Document.class;
+    }
+
+    @Override
+    public <T> BodySubscriber<T> toObject(TypeRef<T> typeRef, Hints hints) {
+      requireSupport(typeRef, hints);
+      var charset = hints.mediaTypeOrAny().charsetOrUtf8();
+      var subscriber = BodySubscribers.mapping(BodySubscribers.ofString(charset), Jsoup::parse);
+      return BodySubscribers.mapping(
+          subscriber, typeRef.exactRawType()::cast); // Safely cast Document to T.
+    }
   }
 }

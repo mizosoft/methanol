@@ -25,8 +25,8 @@ Compare Methanol's non-blocking decoders with available `InputStream` ones:
 | Brotli `BodyDecoder`  | thrpt | 5   | 4186.791 | 213.283 | ops/s |
 | `BrotliInputStream`   | thrpt | 5   | 2631.312 | 136.291 | ops/s |
 
-Results show that `BodyDecoder` implementations are on par with available `InputStream` based
-decoders. Note that the brotli benchmark is biased as it also compares native C vs pure Java implementations.
+Results show that `BodyDecoder` implementations are on par with available `InputStream` based decoders.
+Note that the brotli benchmark is biased as it also compares native C vs pure Java implementations.
 
 [jmh]: https://openjdk.java.net/projects/code-tools/jmh/
 [benchmarks_maven]: https://mvnrepository.com/artifact/com.github.mizosoft.methanol/benchmarks/

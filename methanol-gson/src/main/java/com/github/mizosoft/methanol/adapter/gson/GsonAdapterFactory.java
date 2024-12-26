@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Abdelnasser
+ * Copyright (c) 2024 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,28 +28,28 @@ import com.github.mizosoft.methanol.BodyAdapter.Encoder;
 import com.google.gson.Gson;
 
 /**
- * Provides {@link BodyAdapter} implementations for JSON using the <a
- * href="https://github.com/google/gson">Gson library</a>.
+ * Contains static factory methods for <a href="https://github.com/google/gson">Gson</a> {@link
+ * BodyAdapter adapters}.
  */
 public class GsonAdapterFactory {
-  private GsonAdapterFactory() {} // Non-instantiable.
+  private GsonAdapterFactory() {}
 
-  /** Returns a {@link Encoder} that uses a default {@code Gson} instance. */
+  /** Creates an encoder that uses a default {@code Gson} instance. */
   public static Encoder createEncoder() {
     return createEncoder(new Gson());
   }
 
-  /** Returns a {@link Encoder} that uses the given {@code Gson} instance. */
+  /** Creates an encoder that uses the given {@code Gson} instance. */
   public static Encoder createEncoder(Gson gson) {
     return new GsonAdapter.Encoder(gson);
   }
 
-  /** Returns a {@link Decoder} that uses a default {@code Gson} instance. */
+  /** Creates a decoder that uses a default {@code Gson} instance. */
   public static Decoder createDecoder() {
     return createDecoder(new Gson());
   }
 
-  /** Returns a {@link Decoder} that uses the given {@code Gson} instance. */
+  /** Creates a decoder that uses the given {@code Gson} instance. */
   public static Decoder createDecoder(Gson gson) {
     return new GsonAdapter.Decoder(gson);
   }

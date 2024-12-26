@@ -4,15 +4,15 @@ Methanol has special `BodyPublisher` implementations for multipart uploads & for
 
 ## Multipart Bodies
 
-`MultipartBodyPublisher` implements the flexible multipart format. A multipart body has one or more
-parts. Each part has a `BodyPublisher` for its content and `HttpHeaders` that describe it.
-`MultipartBodyPublisher.Builder`defaults to `multipart/form-data` if a multipart `MediaType` isn't
-explicitly specified. There're special methods for adding parts with a `Content-Disposition: form-data`
-header generated from a field name and an optional file name. These are referred to as form parts. 
+`MultipartBodyPublisher` implements the multipart format. A multipart body has one or more parts.
+Each part has a `BodyPublisher` for its content and `HttpHeaders` that describe it.
+`MultipartBodyPublisher.Builder`defaults to `multipart/form-data` if a multipart `MediaType` isn't explicitly specified.
+There are special methods for adding parts with a `Content-Disposition: form-data` header generated from a field name and an optional file name.
+These are referred to as form parts.
 
 ```java
 // Substitute with your client ID. Visit https://api.imgur.com/oauth2/addclient to get one.
-static final String CLIENT_ID = System.getenv("IMGUR_CLIENT_ID"); 
+static final String CLIENT_ID = System.getenv("imgur.client.id"); 
 
 final Methanol client = Methanol.create();
 
@@ -21,10 +21,10 @@ HttpResponse<String> uploadGif() throws IOException, InterruptedException {
       .textPart("title", "Dancing stick bug")
       .filePart("image", Path.of("dancing-stick-bug.gif"), MediaType.IMAGE_GIF)
       .build();
-  var request = MutableRequest.POST("https://api.imgur.com/3/image", multipartBody)
-      .header("Authorization", "Client-ID " + CLIENT_ID); 
-      
-  return client.send(request, BodyHandlers.ofString());
+  return client.send(
+      MutableRequest.POST("https://api.imgur.com/3/image", multipartBody)
+          .header("Authorization", "Client-ID " + CLIENT_ID), 
+      BodyHandlers.ofString());
 }
 ```
 
@@ -36,34 +36,26 @@ back to `application/octet-stream` if that doesn't work.
 
 ### Generic Form Parts
 
-Use builder's `formPart` method to add a form part from an arbitrary `BodyPublisher`. It takes a field
-name and an optional file name.
+Use builder's `formPart` to add a form part from an arbitrary `BodyPublisher`. It takes a field name and an optional file name.
 
 ```java
-// Substitute with your client ID. Visit https://api.imgur.com/oauth2/addclient to get one
-static final String CLIENT_ID = System.getenv("IMGUR_CLIENT_ID"); 
+// Substitute with your client ID. Visit https://api.imgur.com/oauth2/addclient to get one.
+static final String CLIENT_ID = System.getenv("imgur.client.id");
 
 final Methanol client = Methanol.create();
 
-HttpResponse<String> uploadPng(String title, InputStream pngImageInputStream)
-    throws IOException, InterruptedException {
-  var imagePart = MoreBodyPublishers.ofMediaType(
-      BodyPublishers.ofInputStream(() -> pngImageInputStream), MediaType.IMAGE_PNG);
+HttpResponse<String> uploadGif() throws IOException, InterruptedException {
   var multipartBody = MultipartBodyPublisher.newBuilder()
-     .textPart("title", title)
-     .formPart(
-         "image", title + ".png", MoreBodyPublishers.ofMediaType(imagePart, MediaType.IMAGE_PNG))
-     .build();
-  var request = MutableRequest.POST("https://api.imgur.com/3/image", multipartBody)
-      .header("Authorization", "Client-ID " + CLIENT_ID); 
-        
-  return client.send(request, BodyHandlers.ofString());
+      .textPart("title", "Dancing stick bug")
+      .formPart(
+          "image", title + ".png", MoreBodyPublishers.ofMediaType(imagePart, MediaType.IMAGE_PNG))
+      .build();
+  return client.send(
+      MutableRequest.POST("https://api.imgur.com/3/image", multipartBody)
+          .header("Authorization", "Client-ID " + CLIENT_ID),
+      BodyHandlers.ofString());
 }
 ```
-
-!!! tip
-    You can use `formPart` to add a file part from something that's not a `Path` (e.g. `InputStream`) or
-    to override the part's `filename` property, which is not possible with `filePart`.
 
 !!! tip
     Use `MoreBodyPublishers::ofMediaType` to pair an arbitrary `BodyPublisher` with its proper `MediaType`
@@ -71,8 +63,7 @@ HttpResponse<String> uploadPng(String title, InputStream pngImageInputStream)
 
 ## Form Bodies
 
-Use `FormBodyPublisher` to send form data as a set of URL-encoded queries. Data is added as string
-name-value pairs.
+Use `FormBodyPublisher` to send form data as a set of URL-encoded queries. Data is added as string name-value pairs.
 
 ```java
 final Methanol client = Methanol.create();
@@ -81,11 +72,7 @@ HttpResponse<String> sendQueries(String url, Map<String, String> queries)
     throws IOException, InterruptedException {
   var builder = FormBodyPublisher.newBuilder();
   queries.forEach(builder::query);
-  
-  var formBody = builder.build();
-  var request = MutableRequest.POST(url, formBody);
-
-  return client.send(request, BodyHandlers.ofString());
+  return client.send(MutableRequest.POST(url, builder.build()), BodyHandlers.ofString());
 }
 ```
 
