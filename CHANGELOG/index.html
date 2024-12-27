@@ -1156,6 +1156,7 @@
 <li>New <code>HttpClient</code> APIs for closure &amp; for setting a local socket address have been implemented.</li>
 <li>As of Java 16, <code>sendAsync(...).cancel(true)</code>, or an interruption for the thread calling <code>send</code> can cancel the underlying
   exchange. This is made sure to continue being the case even after the Methanol seasoning.</li>
+<li>Made <code>ResponseBuilder</code> part of public API.</li>
 </ul>
 <p>There are other incremental improvements here and there that I may have missed. I promise though your code won't break after the update. If that happens, please file an issue.</p>
 <p>Later!</p>
