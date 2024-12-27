@@ -1,7 +1,5 @@
 # methanol-kotlin
 
-*note: coming soon!*
-
 Kotlin extensions for Methanol, which include:
 
 - A DSL for HTTP requests.

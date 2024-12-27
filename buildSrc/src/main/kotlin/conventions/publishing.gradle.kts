@@ -22,6 +22,7 @@ publishing {
       pom {
         name = project.name
         description = project.description
+        url = "https://mizosoft.github.io/methanol"
         inceptionYear = "2019"
 
         scm {

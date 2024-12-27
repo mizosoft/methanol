@@ -22,8 +22,8 @@ With the exception of `Mono`, any subtype of `org.reactivestreams.Publisher` or
 
 ### Gradle
 
-```gradle
-implementation("com.github.mizosoft.methanol:methanol-jackson-flux:1.7.0")
+```kotlin
+implementation("com.github.mizosoft.methanol:methanol-jackson-flux:1.8.0")
 ```
 
 ### Maven
@@ -32,7 +32,7 @@ implementation("com.github.mizosoft.methanol:methanol-jackson-flux:1.7.0")
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
    <artifactId>methanol-jackson-flux</artifactId>
-   <version>1.7.0</version>
+   <version>1.8.0</version>
 </dependency>
 ```
 

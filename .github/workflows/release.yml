@@ -2,7 +2,8 @@ name: Release
 
 on:
   release:
-    types: [ created ]
+    types: [ published ]
+  workflow_dispatch:
 
 env:
   BASE_JAVA: 11
@@ -15,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Publish release artifacts
-        uses: ./github/actions/gradle
+        uses: ./.github/actions/gradle
         env:
           ORG_GRADLE_PROJECT_nexusUsername: ${{ secrets.NEXUS_USERNAME }}
           ORG_GRADLE_PROJECT_nexusPassword: ${{ secrets.NEXUS_PASSWORD }}

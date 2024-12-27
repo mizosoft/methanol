@@ -1,5 +1,3 @@
-*note: documentation may contain updates for 1.8.0, which is not yet released*
-
 # Methanol
 
 [![CI status](https://img.shields.io/github/actions/workflow/status/mizosoft/methanol/build.yml?branch=master&logo=github&style=flat-square)](https://github.com/mizosoft/methanol/actions)
@@ -14,14 +12,14 @@ You can say it's an `HttpClient` wrapper, but you'll see it almost seamlessly in
 Methanol isn't invasive. The core library has zero runtime dependencies. However, special attention
 is given to object mapping, so integration with libraries like Jackson or Gson becomes a breeze.
 
-[//]: # (There's also a nice DSL for Kotlin lovers!)
+There's also a Kotlin DSL!
 
 ## Installation
 
 ### Gradle
 
-```gradle
-implementation 'com.github.mizosoft.methanol:methanol:1.7.0'
+```kotlin
+implementation("com.github.mizosoft.methanol:methanol:1.8.0")
 ```
 
 ### Maven
@@ -31,7 +29,7 @@ implementation 'com.github.mizosoft.methanol:methanol:1.7.0'
 <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol</artifactId>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
 </dependency>
 ```
 

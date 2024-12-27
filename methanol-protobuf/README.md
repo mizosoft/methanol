@@ -11,8 +11,8 @@ Any subtype of `MessageLite` is supported by encoders & decoders. Decoders can o
 
 ### Gradle
 
-```gradle
-implementation("com.github.mizosoft.methanol:methanol-protobuf:1.7.0")
+```kotlin
+implementation("com.github.mizosoft.methanol:methanol-protobuf:1.8.0")
 ```
 
 ### Maven
@@ -21,7 +21,7 @@ implementation("com.github.mizosoft.methanol:methanol-protobuf:1.7.0")
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
    <artifactId>methanol-protobuf</artifactId>
-   <version>1.7.0</version>
+   <version>1.8.0</version>
 </dependency>
 ```
 

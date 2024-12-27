@@ -7,7 +7,7 @@ Adapters for JSON using [moshi](https://github.com/square/moshi).
 ### Gradle
 
 ```gradle
-implementation("com.github.mizosoft.methanol:methanol-moshi:1.7.0")
+implementation("com.github.mizosoft.methanol:methanol-moshi:1.8.0")
 ```
 
 ### Maven
@@ -16,7 +16,7 @@ implementation("com.github.mizosoft.methanol:methanol-moshi:1.7.0")
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
    <artifactId>methanol-moshi</artifactId>
-   <version>1.7.0</version>
+   <version>1.8.0</version>
 </dependency>
 ```
 

@@ -1,5 +1,56 @@
 # Change Log
 
+## Version 1.8.0
+
+Ok, here we go. That took a while.
+
+There's been a number of unreleased features brewing in the last two and a half years (!). Guess I could say I've been cooking some Meth—anol, and now it's ready to serve. What's—my—name? Please don't say [Heisenbug](https://en.wikipedia.org/wiki/Heisenbug#:~:text=In%20computer%20programming%20jargon%2C%20a,one%20attempts%20to%20study%20it.).
+
+Anyhow, here's what's new:
+
+* Added a [Redis storage backend](https://mizosoft.github.io/methanol/redis/) for the HTTP cache, which supports Standalone & Cluster setups.
+* Added the ability to chain caches with different storage backends, expectedly in the order of decreasing locality.
+  This will work well with the Redis cache. Consider the case where you have multiple instances of your service all sharing
+  a Redis setup, you can have a chain of (JVM memory -> Redis) or even (JVM memory -> disk -> Redis) caches, so each node can have a local cache to consult first, and the shared Redis cache after.
+* The object mapping mechanism has been reworked to stay away from `ServiceLoader` & static state. 
+  We now have an `AdapterCodec` that is registered per-client.
+  ```java
+  var mapper = new JsonMapper();
+  var adapterCodec =
+      AdapterCodec.newBuilder()
+          .encoder(JacksonAdapterFactory.createJsonEncoder(mapper))
+          .decoder(JacksonAdapterFactory.createJsonDecoder(mapper))
+          .build();
+  var client =
+      Methanol.newBuilder()
+          .adapterCodec(adapterCodec)
+          .build();
+  
+  record Person(String name) {}
+  
+  HttpResponse<Person> response = client.send(
+        MutableRequest.GET(".../echo", new Person("Jack Reacher"), MediaType.APPLICATION_JSON),
+        Person.class);
+  ```
+* Added hip Kotlin extensions. These were enjoyable to work on. [Check them out!](https://mizosoft.github.io/methanol/kotlin/).
+* Added adapters for [Moshi](https://github.com/square/moshi). This is mainly intended for Kotlin.
+* Added hints API for adapters. This allows carrying arbitrary parameters to customize encoders & decoders. Currently, supported
+  adapters expose no customization. If you think there's a useful, generalizable customization that can be passed to any of the supported adapters, feel free to create an issue.
+* Added `MoreBodyPublishers::ofOutputStream` & `MoreBodyPublishers::ofByteChannel` to be used in favor of `WritableBodyPublisher`.
+* Added adapters for [basic](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basic()) types in the core module.
+* Added the ability to conditionally handle responses with [`ResponsePayload`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/ResponsePayload.html) using the basic adapter.
+* Disk cache writes became considerably faster by avoiding `fsync` on entry writes/updates, which was used to provide durability in a manner that later turned out
+  to be unnecessary for caches. Now CRC checks are used. Reads however became slightly slower.
+* Added adapters for JAXB Jakarta. They're practically the same as JAXB JavaEE, but use the newer namespaces.
+* New `HttpClient` APIs for closure & for setting a local socket address have been implemented.
+* As of Java 16, `sendAsync(...).cancel(true)`, or an interruption for the thread calling `send` can cancel the underlying
+  exchange. This is made sure to continue being the case even after the Methanol seasoning.
+* Made `ResponseBuilder` part of public API.
+
+There are other incremental improvements here and there that I may have missed. I promise though your code won't break after the update. If that happens, please file an issue.
+
+Later!
+
 ## Version 1.7.0
 
 *9-5-2022*
