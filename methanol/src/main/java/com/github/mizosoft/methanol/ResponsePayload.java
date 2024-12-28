@@ -40,13 +40,13 @@ import java.util.concurrent.CompletableFuture;
  * var client =
  *     Methanol.newBuilder()
  *         .adapterCodec(AdapterCodec.newBuilder().basic().build()) // Install basic adapters.
- *         .build()
- * var response = client.send(MutableRequest.GET("https://example.com"));
+ *         .build();
+ * var response = client.send(MutableRequest.GET("https://example.com"), ResponsePayload.class);
  * try(var body = response.body()) {
  *   if (HttpStatus.isSuccessful(response) {
- *     System.out.println(body.as(SuccessType.class));
+ *     System.out.println(body.to(SuccessType.class));
  *   } else if (HttpStatus.isClientError(response)) {
- *     System.out.println(body.as(ErrorType.class));
+ *     System.out.println(body.to(ErrorType.class));
  *   } else {
  *     // Discard body.
  *   }
