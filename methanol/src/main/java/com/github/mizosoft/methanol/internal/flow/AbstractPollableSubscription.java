@@ -26,7 +26,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** A subscription that emits items from a pollable source. */
+/**
+ * A subscription that emits items from a pollable source. This class's abstract methods are called
+ * serially, and implementations may assume they're being called from a single thread.
+ */
 public abstract class AbstractPollableSubscription<T> extends AbstractSubscription<T> {
   protected AbstractPollableSubscription(Subscriber<? super T> downstream, Executor executor) {
     super(downstream, executor);
