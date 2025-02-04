@@ -152,7 +152,10 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       return;
     }
 
-    subscription().submit(sink.slice(false));
+    var decodedBuffers = sink.slice(false);
+    if (!decodedBuffers.isEmpty()) {
+      subscription().submit(decodedBuffers);
+    }
   }
 
   @Override
@@ -301,16 +304,16 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       if (next != null) {
         prefetcher.update(upstream);
       }
-      return next != null && !next.isEmpty() ? next : null;
+      return next;
     }
 
     @Override
-    public void submit(List<ByteBuffer> item) {
+    protected void submit(List<ByteBuffer> item) {
       super.submit(item);
     }
 
     @Override
-    public void submitAndComplete(List<ByteBuffer> lastItem) {
+    protected void submitAndComplete(List<ByteBuffer> lastItem) {
       super.submitAndComplete(lastItem);
     }
 
