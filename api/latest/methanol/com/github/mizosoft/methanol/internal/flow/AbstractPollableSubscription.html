@@ -104,7 +104,8 @@ loadScripts(document, 'script');</script>
 <hr>
 <div class="type-signature"><span class="modifiers">public abstract class </span><span class="element-name type-name-label">AbstractPollableSubscription&lt;T&gt;</span>
 <span class="extends-implements">extends <a href="AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractSubscription</a>&lt;T&gt;</span></div>
-<div class="block">A subscription that emits items from a pollable source.</div>
+<div class="block">A subscription that emits items from a pollable source. This class's abstract methods are called
+ serially, and implementations may assume they're being called from a single thread.</div>
 </section>
 <section class="summary">
 <ul class="summary-list">
