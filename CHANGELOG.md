@@ -2,7 +2,7 @@
 
 ## Version 1.8.1 
 
-Fixed (#177)[https://github.com/mizosoft/methanol/issues/117], where the decompressing the response could potentially hang.
+Fixed (#117)[https://github.com/mizosoft/methanol/issues/117], where decompressing the response could potentially hang.
 
 ## Version 1.8.0
 
