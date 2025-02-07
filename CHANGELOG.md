@@ -1,5 +1,9 @@
 # Change Log
 
+## Version 1.8.1 
+
+Fixed (#177)[https://github.com/mizosoft/methanol/issues/117], where the decompressing the response could potentially hang.
+
 ## Version 1.8.0
 
 Ok, here we go. That took a while.

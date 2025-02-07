@@ -85,7 +85,7 @@ String markdownToHtml(String text, String contextRepo) throws IOException, Inter
 
 A payload must be given along with a `MediaType` specifying the format with which it will be resolved.
 
-## Adapters
+## Adapter API
 
 An adapter provides an [`Encoder`][encoder_javadoc] and/or a [`Decoder`][decoder_javadoc] implementation.
 An `Encoder` creates `BodyPublisher` instances that stream a given object's serialized form.
