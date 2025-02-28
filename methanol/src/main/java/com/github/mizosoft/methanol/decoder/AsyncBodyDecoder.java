@@ -152,10 +152,9 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
       return;
     }
 
-    var decodedBuffers = sink.slice(false);
-    if (!decodedBuffers.isEmpty()) {
-      subscription().submit(decodedBuffers);
-    }
+    // If sink::slice results in an empty list, we'd still want to push it to the queue so that poll() knows we received
+    // a corresponding item & updates the prefetch policy correctly.
+    subscription().submit(sink.slice(false));
   }
 
   @Override
@@ -276,15 +275,15 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
         return List.of();
       }
 
-      // If last buffer is incomplete, it is only submitted if finished is true provided it has some
-      // bytes.
+      // If the last buffer is incomplete, it is only submitted if finished is true provided it has
+      // some bytes.
       int size = sinkBuffers.size();
-      int snapshotSize = size;
+      int sliceSize = size;
       var last = sinkBuffers.get(size - 1);
       if (last.hasRemaining() && (!finished || last.position() == 0)) {
-        snapshotSize--; // Do not submit.
+        sliceSize--; // Do not submit.
       }
-      var slice = sinkBuffers.subList(0, snapshotSize);
+      var slice = sinkBuffers.subList(0, sliceSize);
       var snapshot =
           slice.stream().map(ByteBuffer::asReadOnlyBuffer).collect(Collectors.toUnmodifiableList());
       snapshot.forEach(ByteBuffer::flip); // Flip for downstream to read.
@@ -300,11 +299,14 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
 
     @Override
     protected @Nullable List<ByteBuffer> poll() {
-      var next = super.poll();
-      if (next != null) {
+      List<ByteBuffer> next;
+      while ((next = super.poll()) != null) {
         prefetcher.update(upstream);
+        if (!next.isEmpty()) {
+          return next;
+        }
       }
-      return next;
+      return null;
     }
 
     @Override
