@@ -62,17 +62,17 @@ public class AbstractQueueSubscription<T> extends AbstractPollableSubscription<T
   }
 
   protected void submit(T item) {
-    queue.offer(item);
+    queue.add(item);
     fireOrKeepAliveOnNext();
   }
 
   protected void submitSilently(T item) {
-    queue.offer(item);
+    queue.add(item);
   }
 
   protected void submitAndComplete(T lastItem) {
-    queue.offer(lastItem);
-    queue.offer(sentinel);
+    queue.add(lastItem);
+    queue.add(sentinel);
     fireOrKeepAlive();
   }
 
@@ -94,7 +94,7 @@ public class AbstractQueueSubscription<T> extends AbstractPollableSubscription<T
   }
 
   protected void complete() {
-    queue.offer(sentinel);
+    queue.add(sentinel);
     fireOrKeepAlive();
   }
 }

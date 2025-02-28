@@ -584,7 +584,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
 
     @Override
     public void onNext(ByteBuffer item) {
-      buffers.offer(item);
+      buffers.add(item);
       downstream.fireOrKeepAliveOnNext();
     }
 
@@ -598,7 +598,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
     @Override
     public void onComplete() {
       abort(false);
-      buffers.offer(END_OF_PART);
+      buffers.add(END_OF_PART);
       downstream.fireOrKeepAlive();
     }
 
