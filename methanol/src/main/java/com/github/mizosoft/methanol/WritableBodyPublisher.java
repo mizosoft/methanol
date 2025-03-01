@@ -285,7 +285,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     var buffer = sinkBuffer;
     if (buffer != null && buffer.position() > 0) {
       sinkBuffer = null;
-      pipe.offer(buffer.flip().asReadOnlyBuffer());
+      pipe.add(buffer.flip().asReadOnlyBuffer());
       return true;
     }
     return false;
@@ -298,7 +298,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         if (!submittedSentinel) {
           submittedSentinel = true;
           flushBuffer();
-          pipe.offer(CLOSED_SENTINEL);
+          pipe.add(CLOSED_SENTINEL);
         }
       } finally {
         writeLock.unlock();
@@ -340,7 +340,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
           }
           written += Utils.copyRemaining(src, buffer);
           if (!buffer.hasRemaining()) {
-            pipe.offer(buffer.flip().asReadOnlyBuffer());
+            pipe.add(buffer.flip().asReadOnlyBuffer());
             signalsAvailable = true;
             buffer = null;
           }
