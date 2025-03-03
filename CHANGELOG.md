@@ -1,8 +1,12 @@
 # Change Log
 
+## Version 1.8.2 
+
+Fix regression caused by [#118](https://github.com/mizosoft/methanol/pull/118).
+
 ## Version 1.8.1 
 
-Fixed (#117)[https://github.com/mizosoft/methanol/issues/117], where decompressing the response could potentially hang.
+Fixed [#117](https://github.com/mizosoft/methanol/issues/117), where decompressing the response could potentially hang.
 
 ## Version 1.8.0
 

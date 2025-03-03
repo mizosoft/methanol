@@ -7,7 +7,7 @@ Adapters for XML using Jakarta EE's [JAXB][jaxb].
 ### Gradle
 
 ```kotlin
-implementation("com.github.mizosoft.methanol:methanol-jaxb-jakarta:1.8.1")
+implementation("com.github.mizosoft.methanol:methanol-jaxb-jakarta:1.8.2")
 ```
 
 ### Maven
@@ -16,7 +16,7 @@ implementation("com.github.mizosoft.methanol:methanol-jaxb-jakarta:1.8.1")
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
    <artifactId>methanol-jaxb-jakarta</artifactId>
-   <version>1.8.1</version>
+   <version>1.8.2</version>
 </dependency>
 ```
 
