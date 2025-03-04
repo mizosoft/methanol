@@ -19,7 +19,7 @@ There's also a Kotlin DSL!
 ### Gradle
 
 ```kotlin
-implementation("com.github.mizosoft.methanol:methanol:1.8.1")
+implementation("com.github.mizosoft.methanol:methanol:1.8.2")
 ```
 
 ### Maven
@@ -29,7 +29,7 @@ implementation("com.github.mizosoft.methanol:methanol:1.8.1")
 <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol</artifactId>
-    <version>1.8.1</version>
+    <version>1.8.2</version>
 </dependency>
 ```
 
