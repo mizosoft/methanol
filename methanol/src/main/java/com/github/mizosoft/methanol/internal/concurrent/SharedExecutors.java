@@ -22,23 +22,40 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
-import java.time.Duration;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
-/** Delays the execution of a given task. */
-public interface Delayer {
+/**
+ * Provides default executors that are used across the library when no executor is supplied by the
+ * user.
+ */
+public class SharedExecutors {
+  private static final AtomicInteger nextThreadId = new AtomicInteger();
+  private static final ThreadFactory threadFactory =
+      r -> {
+        var thread = new Thread(r);
+        thread.setName("methanol-thread-" + nextThreadId.getAndIncrement());
+        return thread;
+      };
 
-  /** Arranges for the task to be submitted to the given executor after the delay is evaluated. */
-  Future<Void> delay(Runnable task, Duration delay, Executor executor);
+  private static final Lazy<ExecutorService> lazyExecutor =
+      Lazy.of(() -> Executors.newCachedThreadPool(threadFactory));
 
-  /** A Delayer that uses a library-wide scheduler. */
-  static Delayer defaultDelayer() {
-    return DefaultDelayer.INSTANCE;
+  private static final int SCHEDULER_CORE_POOL_SIZE =
+      Math.min(4, Runtime.getRuntime().availableProcessors());
+  private static final Lazy<ScheduledExecutorService> lazyScheduler =
+      Lazy.of(() -> Executors.newScheduledThreadPool(SCHEDULER_CORE_POOL_SIZE, threadFactory));
+
+  private SharedExecutors() {}
+
+  public static ExecutorService executor() {
+    return lazyExecutor.get();
   }
 
-  static Delayer of(ScheduledExecutorService scheduler) {
-    return new ScheduledExecutorServiceDelayer(scheduler);
+  public static ScheduledExecutorService scheduler() {
+    return lazyScheduler.get();
   }
 }

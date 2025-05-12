@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@ import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.adapter.PayloadHandlerExecutor;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
-import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutorProvider;
+import com.github.mizosoft.methanol.internal.concurrent.SharedExecutors;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
@@ -204,7 +204,7 @@ public class Methanol extends HttpClient {
     if (!caches.isEmpty()) {
       mergedInterceptors.add(
           new RedirectingInterceptor(
-              redirectPolicy, backend.executor().orElseGet(FallbackExecutorProvider::get)));
+              redirectPolicy, backend.executor().orElseGet(SharedExecutors::executor)));
     }
     caches.forEach(
         cache -> mergedInterceptors.add(cache.interceptor(implicitHeaderPredicateOf(backend))));
@@ -788,7 +788,7 @@ public class Methanol extends HttpClient {
      */
     @CanIgnoreReturnValue
     public B headersTimeout(Duration headersTimeout) {
-      return headersTimeout(headersTimeout, Delayer.systemDelayer());
+      return headersTimeout(headersTimeout, Delayer.defaultDelayer());
     }
 
     /**
@@ -813,7 +813,7 @@ public class Methanol extends HttpClient {
      */
     @CanIgnoreReturnValue
     public B readTimeout(Duration readTimeout) {
-      return readTimeout(readTimeout, Delayer.systemDelayer());
+      return readTimeout(readTimeout, Delayer.defaultDelayer());
     }
 
     /**

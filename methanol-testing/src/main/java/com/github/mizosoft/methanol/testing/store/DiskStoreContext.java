@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -99,7 +99,7 @@ public final class DiskStoreContext extends StoreContext {
       delayer = new MockDelayer(mockClock, config().dispatchEagerly());
     } else {
       clock = Clock.systemUTC();
-      delayer = Delayer.systemDelayer();
+      delayer = Delayer.defaultDelayer();
     }
     var builder =
         DiskStore.newBuilder()
