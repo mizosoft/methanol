@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -69,7 +69,7 @@ public class MoreBodyHandlers {
    * MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration)}.
    */
   public static <T> BodyHandler<T> withReadTimeout(BodyHandler<T> delegate, Duration timeout) {
-    return withReadTimeout(delegate, timeout, Delayer.systemDelayer());
+    return withReadTimeout(delegate, timeout, Delayer.defaultDelayer());
   }
 
   /**

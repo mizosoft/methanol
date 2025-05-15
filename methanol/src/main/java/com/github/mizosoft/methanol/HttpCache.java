@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,7 @@ import com.github.mizosoft.methanol.internal.cache.LocalCache;
 import com.github.mizosoft.methanol.internal.cache.NetworkResponse;
 import com.github.mizosoft.methanol.internal.cache.Store;
 import com.github.mizosoft.methanol.internal.cache.Store.Viewer;
-import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutorProvider;
+import com.github.mizosoft.methanol.internal.concurrent.SharedExecutors;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -1145,7 +1145,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
       if (executor != null) {
         isDefaultExecutor = false;
       } else {
-        executor = FallbackExecutorProvider.get();
+        executor = SharedExecutors.executor();
         isDefaultExecutor = true;
       }
       var store = storageExtension().createStore(executor, CACHE_VERSION);

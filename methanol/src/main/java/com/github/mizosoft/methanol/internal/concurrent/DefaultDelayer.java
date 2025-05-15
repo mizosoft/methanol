@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,37 +19,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
 package com.github.mizosoft.methanol.internal.concurrent;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
+class DefaultDelayer extends ScheduledExecutorServiceDelayer {
+  static final DefaultDelayer INSTANCE = new DefaultDelayer();
 
-/**
- * Provides an executor that is used across the library when no executor is supplied by the user.
- */
-public class FallbackExecutorProvider {
-  private static final Lazy<Executor> lazyExecutor =
-      Lazy.of(
-          () -> {
-            var threadNumber = new AtomicInteger();
-            return Executors.newCachedThreadPool(
-                r -> {
-                  var t = new Thread(r);
-                  t.setDaemon(true);
-                  t.setName(
-                      "methanol-"
-                          + FallbackExecutorProvider.class.getSimpleName()
-                          + "-thread-"
-                          + threadNumber.getAndIncrement());
-                  return t;
-                });
-          });
-
-  private FallbackExecutorProvider() {}
-
-  public static Executor get() {
-    return lazyExecutor.get();
+  private DefaultDelayer() {
+    super(SharedExecutors.scheduler());
   }
 }

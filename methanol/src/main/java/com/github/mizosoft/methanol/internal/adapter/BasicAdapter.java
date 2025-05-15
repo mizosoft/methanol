@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@ import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
-import com.github.mizosoft.methanol.internal.concurrent.FallbackExecutorProvider;
+import com.github.mizosoft.methanol.internal.concurrent.SharedExecutors;
 import com.github.mizosoft.methanol.internal.concurrent.Timeout;
 import com.github.mizosoft.methanol.internal.extensions.ByteBufferBodyPublisher;
 import com.github.mizosoft.methanol.internal.extensions.Handlers;
@@ -226,7 +226,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
                               hints
                                   .get(PayloadHandlerExecutor.class)
                                   .map(PayloadHandlerExecutor::get)
-                                  .orElseGet(FallbackExecutorProvider::get),
+                                  .orElseGet(SharedExecutors::executor),
                           hints.get(AdapterCodec.class).orElseGet(AdapterCodec::installed),
                           hints)));
       putDecoder(
@@ -274,7 +274,7 @@ public abstract class BasicAdapter extends AbstractBodyAdapter {
 
   private static final class ResponsePayloadImpl implements ResponsePayload {
     private static final Timeout DEFAULT_BODY_DISCARD_TIMEOUT =
-        new Timeout(Duration.ofMillis(500), Delayer.systemDelayer());
+        new Timeout(Duration.ofMillis(500), Delayer.defaultDelayer());
 
     private final Publisher<List<ByteBuffer>> publisher;
     private final ResponseInfo responseInfo;
