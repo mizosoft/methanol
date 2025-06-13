@@ -141,7 +141,7 @@ public class Utils {
     } else if (clonedCause instanceof InterruptedException) {
       throw (InterruptedException) clonedCause;
     } else {
-      throw new IOException(clonedCause);
+      throw new IOException(exception.getCause());
     }
   }
 
