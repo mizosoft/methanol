@@ -43,11 +43,8 @@ public class SharedExecutors {
 
   private static final Lazy<ExecutorService> lazyExecutor =
       Lazy.of(() -> Executors.newCachedThreadPool(threadFactory));
-
-  private static final int SCHEDULER_CORE_POOL_SIZE =
-      Math.min(4, Runtime.getRuntime().availableProcessors());
   private static final Lazy<ScheduledExecutorService> lazyScheduler =
-      Lazy.of(() -> Executors.newScheduledThreadPool(SCHEDULER_CORE_POOL_SIZE, threadFactory));
+      Lazy.of(() -> Executors.newScheduledThreadPool(1, threadFactory));
 
   private SharedExecutors() {}
 
