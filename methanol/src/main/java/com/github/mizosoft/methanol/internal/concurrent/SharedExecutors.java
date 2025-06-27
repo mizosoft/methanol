@@ -38,6 +38,7 @@ public class SharedExecutors {
       r -> {
         var thread = new Thread(r);
         thread.setName("methanol-thread-" + nextThreadId.getAndIncrement());
+        thread.setDaemon(true);
         return thread;
       };
 
