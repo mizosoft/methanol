@@ -7,7 +7,7 @@
 Benchmarks are available as a runnable Jar in [Maven][benchmarks_maven]. You run them as following:
 
 ```bsh
-java -jar benchmarks-1.8.2-all.jar
+java -jar benchmarks-1.8.3-all.jar
 ```
 
 ## Results

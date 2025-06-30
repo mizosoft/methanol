@@ -1,5 +1,16 @@
 # Change Log
 
+## Version 1.8.3
+
+* Fixed [#121](https://github.com/mizosoft/methanol/issues/121), where the response body was retained throughout the
+  entire read timeout, resulting in a "timed" memory leak. This happened as the previously used JVM-wide scheduler
+  retained
+  references to timeout tasks (which retained references to the response body through a reference chain starting from
+  `TimeoutBodySubscriber`).
+  Methanol now uses a library-wide scheduler that loses references to timeout tasks when invalidated.
+
+* Fixed [#125](https://github.com/mizosoft/methanol/issues/125), where exception causes where swallowed in sync calls.
+
 ## Version 1.8.2 
 
 Fix regression caused by [#118](https://github.com/mizosoft/methanol/pull/118).

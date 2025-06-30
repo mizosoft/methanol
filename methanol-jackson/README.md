@@ -7,7 +7,7 @@ Adapters for [Jackson][jackson].
 ### Gradle
 
 ```kotlin
-implementation("com.github.mizosoft.methanol:methanol-jackson:1.8.2")
+implementation("com.github.mizosoft.methanol:methanol-jackson:1.8.3")
 ```
 
 ### Maven
@@ -16,7 +16,7 @@ implementation("com.github.mizosoft.methanol:methanol-jackson:1.8.2")
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
    <artifactId>methanol-jackson</artifactId>
-   <version>1.8.2</version>
+    <version>1.8.3</version>
 </dependency>
 ```
 
