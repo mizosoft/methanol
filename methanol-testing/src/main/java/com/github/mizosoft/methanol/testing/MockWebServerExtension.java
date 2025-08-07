@@ -130,7 +130,7 @@ public final class MockWebServerExtension
       return contexts.computeIfAbsent(key, __ -> new Context());
     }
 
-    void shutdownAll() throws IOException {
+    void shutdownAll() {
       for (var context : contexts.values()) {
         context.shutdownServers();
       }
@@ -138,7 +138,7 @@ public final class MockWebServerExtension
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
       shutdownAll();
     }
 

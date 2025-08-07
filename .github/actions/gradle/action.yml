@@ -16,14 +16,21 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup Java ${{ inputs.java }}
-      if: inputs.java != 'GraalVM'
+    - name: Setup Java 21 for Gradle
+      id: setup-gradle-jdk
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: temurin
+
+    - name: Setup Test Java ${{ inputs.java }}
+      if: inputs.java != 'GraalVM' && inputs.java != '21'
       uses: actions/setup-java@v4
       with:
         java-version: ${{ inputs.java }}
         distribution: temurin
 
-    - name: Setup Java ${{ inputs.java }}
+    - name: Setup Test Java ${{ inputs.java }}
       if: inputs.java == 'GraalVM'
       uses: graalvm/setup-graalvm@v1
       with:
