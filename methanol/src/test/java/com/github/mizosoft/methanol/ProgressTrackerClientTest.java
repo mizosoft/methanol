@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,7 +62,7 @@ class ProgressTrackerClientTest {
 
   @Test
   void trackSmallDownload(TestSubscriber<List<ByteBuffer>> subscriber) throws Exception {
-    server.enqueue(new MockResponse().setBody("Pikachu"));
+    server.enqueue(new MockResponse.Builder().body("Pikachu").build());
 
     var progressEvents = new CopyOnWriteArrayList<Progress>();
     client.send(

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -55,6 +55,6 @@ class ScopedDispatcher extends Dispatcher {
   @Override
   public MockResponse dispatch(@NotNull RecordedRequest recordedRequest)
       throws InterruptedException {
-    return get(recordedRequest.getRequestUrl().encodedPath()).dispatch(recordedRequest);
+    return get(recordedRequest.getUrl().encodedPath()).dispatch(recordedRequest);
   }
 }

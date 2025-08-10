@@ -15,6 +15,7 @@ dependencies {
   testImplementation(libs.assertj)
   testImplementation(libs.awaitility)
   testImplementation(libs.hamcrest)
+  testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.test {

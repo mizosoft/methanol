@@ -22,8 +22,6 @@
 
 package com.github.mizosoft.methanol.quarkus.nativeimage.test;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.MoreBodyHandlers;
@@ -34,6 +32,7 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import java.io.IOException;
 import java.net.URI;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -44,18 +43,21 @@ import mockwebserver3.RecordedRequest;
 public class PointResource {
   private final Methanol client = Methanol.create();
   private final MockWebServer server = new MockWebServer();
-  private final URI serverUri = server.url("/").uri();
+  private final URI serverUri;
 
-  public PointResource() {
+  public PointResource() throws IOException {
+    server.start();
+    serverUri = server.url("/").uri();
     server.setDispatcher(
         new Dispatcher() {
           @Override
           public MockResponse dispatch(RecordedRequest recordedRequest) {
-            return new MockResponse()
-                .setBody(
+            return new MockResponse.Builder()
+                .body(
                     new okio.Buffer()
-                        .write(TestUtils.gzip(recordedRequest.getBody().readString(UTF_8))))
-                .setHeader("Content-Encoding", "gzip");
+                        .write(TestUtils.gzip(recordedRequest.getBody() != null ? recordedRequest.getBody().utf8() : "")))
+                .setHeader("Content-Encoding", "gzip")
+                .build();
           }
         });
   }

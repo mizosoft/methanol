@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,6 @@
 
 package com.github.mizosoft.methanol.jdk;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.github.mizosoft.methanol.Methanol;
@@ -196,7 +195,7 @@ class RedirectMethodChange {
     httpTestServer.setDispatcher(httpTestServerDispatcher);
     httpURI = httpTestServer.url("/http1/test/rmt").toString();
 
-    httpsTestServer.useHttps(sslContext.getSocketFactory(), false);
+    httpsTestServer.useHttps(sslContext.getSocketFactory());
     this.httpsTestServer = httpsTestServer;
     targetURI = httpsTestServer.url("/https1/redirect/rmt").toString();
     var httpsTestServerDispatcher = new ScopedDispatcher();
@@ -211,7 +210,7 @@ class RedirectMethodChange {
     http2TestServer.setDispatcher(http2TestServerDispatcher);
     http2URI = http2TestServer.url("/http2/test/rmt").toString();
 
-    https2TestServer.useHttps(sslContext.getSocketFactory(), false);
+    https2TestServer.useHttps(sslContext.getSocketFactory());
     this.https2TestServer = https2TestServer;
     targetURI = https2TestServer.url("/https2/redirect/rmt").toString();
     var https2TestServerDispatcher = new ScopedDispatcher();
@@ -240,15 +239,15 @@ class RedirectMethodChange {
       this.targetURL = targetURL;
     }
 
-    boolean readAndCheckBody(RecordedRequest e, MockResponse mockResponse) {
+    boolean readAndCheckBody(RecordedRequest e, MockResponse.Builder builder) {
       String method = e.getMethod();
-      String requestBody = e.getBody().readString(US_ASCII);
+      String requestBody = e.getBody() != null ? e.getBody().utf8() : "";
       if ((method.equals("POST") || method.equals("PUT")) && !requestBody.equals(POST_BODY)) {
         Throwable ex =
             new RuntimeException(
                 "Unexpected request body for " + method + ": [" + requestBody + "]");
         ex.printStackTrace();
-        mockResponse.setResponseCode(503);
+        builder.code(503);
         return false;
       }
       return true;
@@ -257,54 +256,48 @@ class RedirectMethodChange {
     @NotNull
     @Override
     public MockResponse dispatch(@NotNull RecordedRequest he) {
-      boolean newtest = he.getRequestUrl().encodedPath().endsWith("/test/rmt");
+      boolean newtest = he.getUrl().encodedPath().endsWith("/test/rmt");
       if ((newtest && inTest) || (!newtest && !inTest)) {
         Throwable ex =
             new RuntimeException(
-                "Unexpected newtest:"
-                    + newtest
-                    + ", inTest:"
-                    + inTest
-                    + ", for "
-                    + he.getRequestUrl());
+                "Unexpected newtest:" + newtest + ", inTest:" + inTest + ", for " + he.getUrl());
         ex.printStackTrace();
-        return new MockResponse().setResponseCode(500);
+        return new MockResponse.Builder().code(500).build();
       }
 
-      var mockResponse = new MockResponse();
+      var builder = new MockResponse.Builder();
       if (newtest) {
         Headers hdrs = he.getHeaders();
         String value = hdrs.get("X-Redirect-Code");
         int redirectCode = Integer.parseInt(value);
         expectedMethod = hdrs.get("X-Expect-Method");
-        if (!readAndCheckBody(he, mockResponse)) {
-          return mockResponse;
+        if (!readAndCheckBody(he, builder)) {
+          return builder.build();
         }
-        mockResponse.addHeader("Location", targetURL);
-        mockResponse.setResponseCode(redirectCode);
+        builder.addHeader("Location", targetURL);
+        builder.code(redirectCode);
         inTest = true;
       } else {
         // should be the redirect
-        if (!he.getRequestUrl().encodedPath().endsWith("/redirect/rmt")) {
-          Throwable ex =
-              new RuntimeException("Unexpected redirected request, got:" + he.getRequestUrl());
+        if (!he.getUrl().encodedPath().endsWith("/redirect/rmt")) {
+          Throwable ex = new RuntimeException("Unexpected redirected request, got:" + he.getUrl());
           ex.printStackTrace();
-          mockResponse.setResponseCode(501);
+          builder.code(501);
         } else if (!he.getMethod().equals(expectedMethod)) {
           Throwable ex =
               new RuntimeException("Expected: " + expectedMethod + " Got: " + he.getMethod());
           ex.printStackTrace();
-          mockResponse.setResponseCode(504);
+          builder.code(504);
         } else {
-          if (!readAndCheckBody(he, mockResponse)) {
-            return mockResponse;
+          if (!readAndCheckBody(he, builder)) {
+            return builder.build();
           }
-          mockResponse.setResponseCode(200);
-          mockResponse.setBody(RESPONSE);
+          builder.code(200);
+          builder.body(RESPONSE);
         }
         inTest = false;
       }
-      return mockResponse;
+      return builder.build();
     }
   }
 }

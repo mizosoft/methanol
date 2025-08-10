@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,6 @@ package com.github.mizosoft.methanol.testing;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
-import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
@@ -57,7 +56,7 @@ public final class TestSubscriberExtension implements ParameterResolver {
     return type.equals(TestSubscriber.class) ? subscribers.createSubscriber() : subscribers.context;
   }
 
-  private static final class ManagedSubscribers implements CloseableResource {
+  private static final class ManagedSubscribers implements AutoCloseable {
     final TestSubscriberContext context = new TestSubscriberContext();
 
     private ManagedSubscribers() {}

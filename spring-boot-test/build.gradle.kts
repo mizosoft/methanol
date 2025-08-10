@@ -4,8 +4,9 @@ plugins {
   id("conventions.static-analysis")
   id("conventions.coverage")
   alias(libs.plugins.spring.boot)
-  alias(libs.plugins.spring.dependency.management)
 }
+
+apply(plugin = libs.plugins.spring.dependency.management.get().pluginId)
 
 dependencies {
   implementation(project(":methanol"))
@@ -21,12 +22,28 @@ dependencies {
   annotationProcessor(libs.autoservice.annprocess)
 }
 
+// Override the Java release version for Spring Boot compatibility.
+tasks.compileJava {
+  options.release = 17
+}
+
 tasks.test {
+  // Only run if we have Java 17+ available.
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
+  }
+
   dependsOn(tasks.bootJar)
   doFirst {
     systemProperty(
       "com.github.mizosoft.methanol.springboot.test.bootJarPath",
       tasks.bootJar.flatMap { it.archiveFile }.get()
     )
+  }
+}
+
+tasks.bootJar {
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
   }
 }

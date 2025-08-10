@@ -11,7 +11,7 @@ dependencies {
   api(platform(libs.junit.bom))
   api(libs.junit.params)
   api(libs.assertj)
-  implementation(libs.mockwebserver)
   implementation(project(":methanol-redis"))
+  implementation(libs.mockwebserver)
   implementation(libs.okhttp.tls)
 }

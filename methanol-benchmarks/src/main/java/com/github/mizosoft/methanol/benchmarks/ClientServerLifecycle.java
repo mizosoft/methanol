@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,6 @@ import org.openjdk.jmh.annotations.TearDown;
 
 @State(Scope.Benchmark)
 public class ClientServerLifecycle {
-
   public @MonotonicNonNull MockWebServer server;
   public @MonotonicNonNull HttpClient client;
   public @MonotonicNonNull HttpRequest defaultGet;
@@ -58,8 +57,8 @@ public class ClientServerLifecycle {
   }
 
   @TearDown
-  public void tearDownClientServer() throws IOException {
-    server.shutdown();
+  public void tearDownClientServer() {
+    server.close();
     client.executor().ifPresent(TestUtils::shutdown);
   }
 

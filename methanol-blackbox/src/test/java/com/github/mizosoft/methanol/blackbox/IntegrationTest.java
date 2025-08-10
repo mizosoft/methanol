@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -239,13 +239,16 @@ class IntegrationTest {
 
   @AfterEach
   void tearDownLifecycle() throws IOException {
-    server.shutdown();
+    server.close();
     TestUtils.shutdown(executor, scheduler);
   }
 
   private void assertDecodes(String encoding, String expected, byte[] compressed) throws Exception {
     server.enqueue(
-        new MockResponse().setBody(okBuffer(compressed)).setHeader("Content-Encoding", encoding));
+        new MockResponse.Builder()
+            .body(okBuffer(compressed))
+            .setHeader("Content-Encoding", encoding)
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofString()));
     assertLinesMatch(lines(expected), lines(response.body()));
@@ -303,7 +306,8 @@ class IntegrationTest {
             .build()
             .toByteArray();
     var buffer = new Buffer().write(firstMember).write(secondMember).write(thirdMember);
-    server.enqueue(new MockResponse().setBody(buffer).setHeader("Content-Encoding", "gzip"));
+    server.enqueue(
+        new MockResponse.Builder().body(buffer).setHeader("Content-Encoding", "gzip").build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofString()));
     assertLinesMatch(lines(lotsOfText + POEM + lotsOfText), lines(response.body()));
@@ -319,7 +323,8 @@ class IntegrationTest {
             .build()
             .toByteArray();
     var buffer = new Buffer().write(firstMember).write(secondMember);
-    server.enqueue(new MockResponse().setHeader("Content-Encoding", "gzip").setBody(buffer));
+    server.enqueue(
+        new MockResponse.Builder().setHeader("Content-Encoding", "gzip").body(buffer).build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var ex = assertThrows(IOException.class, () -> client.send(request, decoding(ofString())));
     // If a concat member has a corrupt header, it is considered trailing garbage (end of gzip
@@ -338,7 +343,7 @@ class IntegrationTest {
 
   @Test
   void decoding_unsupported() {
-    server.enqueue(new MockResponse().setHeader("Content-Encoding", "alienzip"));
+    server.enqueue(new MockResponse.Builder().setHeader("Content-Encoding", "alienzip").build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var ioe = assertThrows(IOException.class, () -> client.send(request, decoding(ofString())));
     assertTrue(ioe.getCause() instanceof UnsupportedOperationException, ioe.toString());
@@ -347,9 +352,10 @@ class IntegrationTest {
   @Test
   void decoding_nestedHandlerGetsNoLengthOrEncoding() throws Exception {
     server.enqueue(
-        new MockResponse()
-            .setBody(okBuffer(BASE64_DECODER.decode(poemEncodings.get("gzip"))))
-            .setHeader("Content-Encoding", "gzip"));
+        new MockResponse.Builder()
+            .body(okBuffer(BASE64_DECODER.decode(poemEncodings.get("gzip"))))
+            .setHeader("Content-Encoding", "gzip")
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var headers = new AtomicReference<HttpHeaders>();
     var response =
@@ -368,7 +374,7 @@ class IntegrationTest {
 
   @Test
   void decoding_noEncoding() throws Exception {
-    server.enqueue(new MockResponse().setBody(POEM));
+    server.enqueue(new MockResponse.Builder().body(POEM).build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofString()));
     assertEquals(POEM, response.body());
@@ -377,10 +383,11 @@ class IntegrationTest {
   @Test
   void ofByteChannel_throttledGzippedWithExecutor() throws Exception {
     server.enqueue(
-        new MockResponse()
-            .setBody(okBuffer(lotsOfTextEncodings.get("gzip")))
+        new MockResponse.Builder()
+            .body(okBuffer(lotsOfTextEncodings.get("gzip")))
             .setHeader("Content-Encoding", "gzip")
-            .throttleBody(16 * 1024, 100, TimeUnit.MILLISECONDS)); // 100 MS every 16 KB
+            .throttleBody(16 * 1024, 100, TimeUnit.MILLISECONDS)
+            .build()); // 100 MS every 16 KB
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofByteChannel(), executor));
     try (var responseReader = new BufferedReader(Channels.newReader(response.body(), US_ASCII))) {
@@ -398,9 +405,10 @@ class IntegrationTest {
   void ofByteChannel_interruptThrottled() throws Exception {
     var amountToRead = 128;
     server.enqueue(
-        new MockResponse()
-            .setBody(lotsOfText)
-            .throttleBody(amountToRead, Long.MAX_VALUE, TimeUnit.MILLISECONDS));
+        new MockResponse.Builder()
+            .body(lotsOfText)
+            .throttleBody(amountToRead, Long.MAX_VALUE, TimeUnit.MILLISECONDS)
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var throwableFuture = new CompletableFuture<Throwable>();
     client
@@ -426,9 +434,10 @@ class IntegrationTest {
   @Test
   void ofReader_gzipped() throws Exception {
     server.enqueue(
-        new MockResponse()
-            .setBody(okBuffer(lotsOfTextEncodings.get("gzip")))
-            .setHeader("Content-Encoding", "gzip"));
+        new MockResponse.Builder()
+            .body(okBuffer(lotsOfTextEncodings.get("gzip")))
+            .setHeader("Content-Encoding", "gzip")
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofReader()));
     try (var responseReader = new BufferedReader(response.body())) {
@@ -444,9 +453,10 @@ class IntegrationTest {
   @Test
   void ofObject_protobuf() throws Exception {
     server.enqueue(
-        new MockResponse()
-            .setBody(okBuffer(people.toByteArray()))
-            .addHeader("Content-Type", "application/x-protobuf"));
+        new MockResponse.Builder()
+            .body(okBuffer(people.toByteArray()))
+            .addHeader("Content-Type", "application/x-protobuf")
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, ofObject(People.class));
     assertEquals(people, response.body());
@@ -455,10 +465,11 @@ class IntegrationTest {
   @Test
   void ofObject_gzippedDeferredProtobuf() throws Exception {
     server.enqueue(
-        new MockResponse()
-            .setBody(okBuffer(gzip(people.toByteArray())))
+        new MockResponse.Builder()
+            .body(okBuffer(gzip(people.toByteArray())))
             .addHeader("Content-Encoding", "gzip")
-            .addHeader("Content-Type", "application/octet-stream"));
+            .addHeader("Content-Type", "application/octet-stream")
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofDeferredObject(People.class)));
     assertEquals(people, response.body().get());
@@ -467,10 +478,11 @@ class IntegrationTest {
   @Test
   void ofObject_gzippedJsonWithExecutor() throws Exception {
     server.enqueue(
-        new MockResponse()
-            .setBody(okBuffer(gzip(lotsOfJson.getBytes(US_ASCII))))
+        new MockResponse.Builder()
+            .body(okBuffer(gzip(lotsOfJson.getBytes(US_ASCII))))
             .addHeader("Content-Encoding", "gzip")
-            .addHeader("Content-Type", "application/json"));
+            .addHeader("Content-Type", "application/json")
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var type = new TypeRef<List<Map<String, Object>>>() {};
     var response = client.send(request, decoding(ofObject(type), executor));
@@ -480,7 +492,10 @@ class IntegrationTest {
   @Test
   void ofObject_deferredJson() throws Exception {
     server.enqueue(
-        new MockResponse().setBody(lotsOfJson).addHeader("Content-Type", "application/json"));
+        new MockResponse.Builder()
+            .body(lotsOfJson)
+            .addHeader("Content-Type", "application/json")
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var type = new TypeRef<List<Map<String, Object>>>() {};
     var response = client.send(request, ofObject(type));
@@ -490,9 +505,10 @@ class IntegrationTest {
   @Test
   void ofObject_unsupported() {
     server.enqueue(
-        new MockResponse()
-            .setBody("What's up")
-            .setHeader("Content-Type", "application/x-greeting"));
+        new MockResponse.Builder()
+            .body("What's up")
+            .setHeader("Content-Type", "application/x-greeting")
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var ioe = assertThrows(IOException.class, () -> client.send(request, ofObject(String.class)));
     assertTrue(ioe.getCause() instanceof UnsupportedOperationException, ioe.toString());
@@ -500,7 +516,8 @@ class IntegrationTest {
 
   @Test
   void ofObject_stringDecoder() throws Exception {
-    server.enqueue(new MockResponse().setBody(POEM).addHeader("Content-Type", "text/plain"));
+    server.enqueue(
+        new MockResponse.Builder().body(POEM).addHeader("Content-Type", "text/plain").build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, ofObject(String.class));
     assertEquals(POEM, response.body());
@@ -509,11 +526,12 @@ class IntegrationTest {
   @Test
   void ofObject_jsonFlux() throws Exception {
     server.enqueue(
-        new MockResponse()
-            .setBody(okBuffer(gzip(lotsOfJson.getBytes(UTF_8))))
+        new MockResponse.Builder()
+            .body(okBuffer(gzip(lotsOfJson.getBytes(UTF_8))))
             .addHeader("Content-Encoding", "gzip")
             .addHeader("Content-Type", "application/json")
-            .throttleBody(8 * 1024, 100, TimeUnit.MILLISECONDS));
+            .throttleBody(8 * 1024, 100, TimeUnit.MILLISECONDS)
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response =
         client.send(request, decoding(ofObject(new TypeRef<Flux<Map<String, Object>>>() {})));
@@ -523,7 +541,7 @@ class IntegrationTest {
 
   @Test
   void ofObject_uploadFlux() throws Exception {
-    server.enqueue(new MockResponse());
+    server.enqueue(new MockResponse.Builder().build());
     var flux = Flux.fromIterable(lotsOfJsonDecoded);
     var request =
         MutableRequest.POST(
@@ -531,7 +549,7 @@ class IntegrationTest {
     client.sendAsync(request, discarding());
 
     var recordedRequest = server.takeRequest();
-    var uploaded = recordedRequest.getBody().readUtf8();
+    var uploaded = recordedRequest.getBody() != null ? recordedRequest.getBody().utf8() : "";
     var expected = JacksonMapper.get().writeValueAsString(lotsOfJsonDecoded);
     assertEquals(expected, uploaded);
   }
@@ -539,10 +557,11 @@ class IntegrationTest {
   @Test
   void ofObject_downloadXml() throws Exception {
     server.enqueue(
-        new MockResponse()
-            .setBody(okBuffer(gzip(EPIC_ART_COURSE_JAVAX_XML_UTF_8.getBytes(UTF_8))))
+        new MockResponse.Builder()
+            .body(okBuffer(gzip(EPIC_ART_COURSE_JAVAX_XML_UTF_8.getBytes(UTF_8))))
             .addHeader("Content-Encoding", "gzip")
-            .addHeader("Content-Type", "application/xml"));
+            .addHeader("Content-Type", "application/xml")
+            .build());
     var request = MutableRequest.GET(server.url("/").uri());
     var response = client.send(request, decoding(ofObject(new TypeRef<CourseJavax>() {})));
     assertEquals(EPIC_ART_COURSE_JAVAX, response.body());
@@ -551,10 +570,11 @@ class IntegrationTest {
   @Test
   void ofObject_downloadXmlJakarta() throws Exception {
     server.enqueue(
-        new MockResponse()
-            .setBody(okBuffer(gzip(EPIC_ART_COURSE_JAKARTA_XML_UTF_8.getBytes(UTF_8))))
+        new MockResponse.Builder()
+            .body(okBuffer(gzip(EPIC_ART_COURSE_JAKARTA_XML_UTF_8.getBytes(UTF_8))))
             .addHeader("Content-Encoding", "gzip")
-            .addHeader("Content-Type", "application/xml"));
+            .addHeader("Content-Type", "application/xml")
+            .build());
     var request = MutableRequest.GET(server.url("/").uri());
     var response = client.send(request, decoding(ofObject(new TypeRef<CourseJakarta>() {})));
     assertEquals(EPIC_ART_COURSE_JAKARTA, response.body());
@@ -562,7 +582,7 @@ class IntegrationTest {
 
   @Test
   void ofObject_uploadXml() throws Exception {
-    server.enqueue(new MockResponse());
+    server.enqueue(new MockResponse.Builder().build());
     var request =
         MutableRequest.POST(
             server.url("/").uri(),
@@ -571,13 +591,13 @@ class IntegrationTest {
     client.sendAsync(request, discarding());
 
     var recordedRequest = server.takeRequest();
-    var uploaded = recordedRequest.getBody().readUtf8();
+    var uploaded = recordedRequest.getBody() != null ? recordedRequest.getBody().utf8() : "";
     assertEquals(EPIC_ART_COURSE_JAVAX_XML_UTF_8, uploaded);
   }
 
   @Test
   void ofObject_uploadXmlJakarta() throws Exception {
-    server.enqueue(new MockResponse());
+    server.enqueue(new MockResponse.Builder().build());
     var request =
         MutableRequest.POST(
             server.url("/").uri(),
@@ -586,13 +606,13 @@ class IntegrationTest {
     client.sendAsync(request, discarding());
 
     var recordedRequest = server.takeRequest();
-    var uploaded = recordedRequest.getBody().readUtf8();
+    var uploaded = recordedRequest.getBody() != null ? recordedRequest.getBody().utf8() : "";
     assertEquals(EPIC_ART_COURSE_JAKARTA_XML_UTF_8, uploaded);
   }
 
   @Test
   void fromAsyncSubscriber_uncompletedToCompletedBody() throws Exception {
-    server.enqueue(new MockResponse().setBody(okBuffer(new byte[] {1})));
+    server.enqueue(new MockResponse.Builder().body(okBuffer(new byte[] {1})).build());
     var request =
         HttpRequest.newBuilder(server.url("/").uri())
             .timeout(Duration.ofSeconds(TestUtils.TIMEOUT_SECONDS))
@@ -629,9 +649,10 @@ class IntegrationTest {
   void withReadTimeout_readThroughByteChannel() throws Exception {
     var timeoutMillis = 50L;
     server.enqueue(
-        new MockResponse()
-            .setBody(POEM)
-            .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS));
+        new MockResponse.Builder()
+            .body(POEM)
+            .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS)
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response =
         client.send(request, withReadTimeout(ofByteChannel(), Duration.ofMillis(timeoutMillis)));
@@ -644,10 +665,11 @@ class IntegrationTest {
   void withReadTimeout_readThroughByteChannel_customScheduler() throws Exception {
     var timeoutMillis = 50L;
     server.enqueue(
-        new MockResponse()
-            .setBody(poemEncodings.get("gzip"))
+        new MockResponse.Builder()
+            .body(poemEncodings.get("gzip"))
             .setHeader("Content-Encoding", "gzip")
-            .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS));
+            .throttleBody(0, timeoutMillis * 10, TimeUnit.MILLISECONDS)
+            .build());
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response =
         client.send(
@@ -683,7 +705,8 @@ class IntegrationTest {
     client.sendAsync(request, discarding());
     var sentRequest = server.takeRequest();
     assertEquals(
-        "multipart/form-data; boundary=my_awesome_boundary", sentRequest.getHeader("Content-Type"));
+        "multipart/form-data; boundary=my_awesome_boundary",
+        sentRequest.getHeaders().get("Content-Type"));
     var expectedBody =
         "--my_awesome_boundary\r\n"
             + "Content-Disposition: form-data; name=\"action\"\r\n"
@@ -700,7 +723,7 @@ class IntegrationTest {
             + "\r\n"
             + "Time is relative bro\r\n"
             + "--my_awesome_boundary--\r\n";
-    assertEquals(expectedBody, sentRequest.getBody().readUtf8());
+    assertEquals(expectedBody, sentRequest.getBody() != null ? sentRequest.getBody().utf8() : "");
   }
 
   @Test
@@ -769,12 +792,13 @@ class IntegrationTest {
     var sentRequest = server.takeRequest();
     assertEquals(
         "multipart/mixed; boundary=no_boundary_is_like_my_boundary",
-        sentRequest.getHeader("Content-Type"));
+        sentRequest.getHeaders().get("Content-Type"));
     assertEquals(
-        sentRequest.getHeader("Content-Length"), Long.toString(multipartMixed.contentLength()));
+        sentRequest.getHeaders().get("Content-Length"),
+        Long.toString(multipartMixed.contentLength()));
     assertEquals(
         String.format(expected_template, loadUtf8(getClass(), "/payload/alice.txt")),
-        sentRequest.getBody().readUtf8());
+        sentRequest.getBody() != null ? sentRequest.getBody().utf8() : "");
   }
 
   @Test
@@ -794,7 +818,14 @@ class IntegrationTest {
         executor);
 
     var recordedRequest = server.takeRequest();
-    assertEquals(lotsOfText, new String(gunzip(recordedRequest.getBody().readByteArray()), UTF_8));
+    assertEquals(
+        lotsOfText,
+        new String(
+            gunzip(
+                recordedRequest.getBody() != null
+                    ? recordedRequest.getBody().toByteArray()
+                    : new byte[0]),
+            UTF_8));
   }
 
   private static void assertReadTimeout(ReadableByteChannel channel) {

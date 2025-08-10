@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,6 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @OutputTimeUnit(TimeUnit.SECONDS)
 @BenchmarkMode(Mode.Throughput)
 public class DeflateDecoderBenchmark extends ClientServerLifecycle {
-
   @Benchmark
   public byte[] readBytesInflaterInputStream() throws Exception {
     return client
@@ -89,9 +88,10 @@ public class DeflateDecoderBenchmark extends ClientServerLifecycle {
           @NotNull
           @Override
           public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
-            return new MockResponse()
+            return new MockResponse.Builder()
                 .addHeader("Content-Encoding", "deflate")
-                .setBody(body.clone());
+                .body(body.clone())
+                .build();
           }
         });
   }
