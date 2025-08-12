@@ -43,6 +43,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -84,8 +85,8 @@ public final class StoreExtension
             Unchecked.consumer(
                 __ ->
                     ManagedStores.get(context)
-                        .allContexts(context.getRequiredTestMethod())
-                        .forEach(StoreContext::logDebugInfo)));
+                        .lastContext(context.getRequiredTestMethod())
+                        .ifPresent(StoreContext::logDebugInfo)));
   }
 
   @Override
@@ -138,7 +139,7 @@ public final class StoreExtension
                 config ->
                     resolveArguments(
                         List.of(parameterContext.getParameter().getType()),
-                        stores.getOrCreateContext(executable, config))))
+                        stores.createContext(executable, config))))
         .flatMap(args -> Stream.of(args.get()).findFirst())
         .orElseThrow(UnsupportedOperationException::new);
   }
@@ -321,20 +322,9 @@ public final class StoreExtension
       return context;
     }
 
-    List<StoreContext> allContexts(Object key) {
-      return contexts.getOrDefault(key, List.of());
-    }
-
-    /**
-     * Gets the first available context or creates a new one if none is available. Used by
-     * resolveParameters to associated provided params with the same context.
-     */
-    StoreContext getOrCreateContext(Object key, StoreConfig config) throws IOException {
-      var contexts = this.contexts.computeIfAbsent(key, __ -> new ArrayList<>());
-      if (contexts.isEmpty()) {
-        contexts.add(StoreContext.of(config));
-      }
-      return contexts.get(0);
+    Optional<StoreContext> lastContext(Object key) {
+      var list = contexts.getOrDefault(key, List.of());
+      return list.isEmpty() ? Optional.empty() : Optional.of(list.get(list.size() - 1));
     }
 
     @Override
@@ -355,7 +345,7 @@ public final class StoreExtension
         throw exceptions.get(0);
       } else if (exceptions.size() > 1) {
         var compositeException =
-            new IOException("encountered one or more exceptions while closing stores");
+            new IOException("Encountered one or more exceptions while closing stores");
         exceptions.forEach(compositeException::addSuppressed);
         throw compositeException;
       }
