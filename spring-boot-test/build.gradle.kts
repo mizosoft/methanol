@@ -22,28 +22,33 @@ dependencies {
   annotationProcessor(libs.autoservice.annprocess)
 }
 
-// Override the Java release version for Spring Boot compatibility.
-tasks.compileJava {
-  options.release = 17
-}
+// Make sure we only run this in Java 17+ setups.
 
-tasks.test {
-  // Only run if we have Java 17+ available.
+tasks.withType<JavaCompile>().configureEach {
   onlyIf {
     java.toolchain.languageVersion.get().asInt() >= 17
   }
+  options.release = 17 // Override to look for the correct dependencies.
+}
 
-  dependsOn(tasks.bootJar)
-  doFirst {
-    systemProperty(
-      "com.github.mizosoft.methanol.springboot.test.bootJarPath",
-      tasks.bootJar.flatMap { it.archiveFile }.get()
-    )
+tasks.withType<Test>().configureEach {
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
   }
 }
 
 tasks.bootJar {
   onlyIf {
     java.toolchain.languageVersion.get().asInt() >= 17
+  }
+}
+
+tasks.test {
+  dependsOn(tasks.bootJar)
+  doFirst {
+    systemProperty(
+      "com.github.mizosoft.methanol.springboot.test.bootJarPath",
+      tasks.bootJar.flatMap { it.archiveFile }.get()
+    )
   }
 }
