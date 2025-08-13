@@ -1,23 +1,22 @@
 package conventions
 
-import extensions.JAVADOC_JDK_VERSION
-import extensions.javaVendor
-import extensions.javaVersion
-import extensions.standardOptions
+import extensions.*
 import java.nio.charset.StandardCharsets
 
 plugins {
   `java-library`
 }
 
-// Specify a tool chain matching project's javaVersion property if specified.
+// Specify a toolchain matching project's javaVersion property if specified.
 java {
   toolchain {
     languageVersion =
       JavaLanguageVersion.of(project.javaVersion ?: JavaVersion.current().toString())
     project.javaVendor?.let {
-      vendor = JvmVendorSpec.matching(it)
+      @Suppress("UnstableApiUsage")
+      vendor = JvmVendorSpec.of(it)
     }
+    nativeImageCapable = project.javaNativeImageCapable
   }
 }
 

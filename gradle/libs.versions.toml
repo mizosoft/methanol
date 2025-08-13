@@ -39,7 +39,6 @@ kotlin = "2.1.0"
 moshi = "1.15.2"
 versions-plugin = "0.52.0"
 nexus-publish = "2.0.0"
-coveralls-plugin = "2.12.2"
 protobuf-plugin = "0.9.5"
 shadow-plugin = "8.1.1"
 extraJavaModuleInfo-plugin = "1.13"
@@ -110,7 +109,6 @@ moshi = { module = "com.squareup.moshi:moshi", version.ref = "moshi" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
 errorprone-plugin = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorprone-plugin" }
 nullaway-plugin = { module = "net.ltgt.gradle:gradle-nullaway-plugin", version.ref = "nullaway-plugin" }
-coveralls-plugin = { module = "gradle.plugin.org.kt3k.gradle.plugin:coveralls-gradle-plugin", version.ref = "coveralls-plugin" }
 kotlin-jvm-plugin = { module = "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin", version.ref = "kotlin" }
 dokka-plugin = { module = "org.jetbrains.dokka:dokka-gradle-plugin", version.ref = "dokka-plugin" }
 

@@ -3,7 +3,7 @@ name: Build
 on: [ push, pull_request, workflow_dispatch ]
 
 env:
-  BASE_JAVA: 11
+  BASE_JAVA: 21
 
 jobs:
   tests:
@@ -15,7 +15,7 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macos-latest
-        java: [ 11, 21 ]
+        java: [ 11, 21, 24 ]
     steps:
       - uses: actions/checkout@v4
 
@@ -33,26 +33,19 @@ jobs:
             ./install-redis-ubuntu.sh
           fi
 
-      - name: Compile Java
+      - name: Compile
         uses: ./.github/actions/gradle
         with:
-          java: 23
+          java-version: 21
           gradle-args: compileJava -PenableErrorprone
 
       - name: Run tests
         uses: ./.github/actions/gradle
-        if: "!startsWith(matrix.os, 'macos')"
         with:
-          java: ${{ matrix.java }}
-          gradle-args: check
+          java-version: ${{ matrix.java }}
 
-        # Brotli is not currently supported on macOS so related tests are excluded there.
-      - name: Run tests
-        uses: ./.github/actions/gradle
-        if: startsWith(matrix.os, 'macos')
-        with:
-          java: ${{ matrix.java }}
-          gradle-args: check -x :methanol-brotli:test
+          # Brotli is not currently supported on macOS so related tests are excluded there.
+          gradle-args: check ${{ (startsWith(matrix.os, 'macos') && '-x :methanol-brotli:test') || '' }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -64,50 +57,39 @@ jobs:
             **/build/**/*.exec
 
   native-tests:
-    name: Test on GraalVM
+    name: Run native tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run tests
+      - name: Build Quarkus native app
         uses: ./.github/actions/gradle
         with:
-          java: GraalVM
-          cmd: |
-            # For some reason, testing quarkus never works with one command either by just running 
-            # `build` or running `quarkusBuild` & `test` on one run.
-            ./gradlew :quarkus-native-test:quarkusBuild -PincludeNativeTests
-            ./gradlew :quarkus-native-test:test -PincludeNativeTests
-            ./gradlew :native-test:build -PincludeNativeTests
+          java-version: 21
+          java-native: yes
+          gradle-args: :quarkus-native-test:quarkusBuild -PincludeNativeTests
+
+      - name: Run Quarkus native tests
+        uses: ./.github/actions/gradle
+        with:
+          java-version: 21
+          gradle-args: :quarkus-native-test:test -PincludeNativeTests
+
+      - name: Run GraalVM native tests
+        uses: ./.github/actions/gradle
+        with:
+          java-version: 21
+          java-native: yes
+          gradle-args: :native-test:build -PincludeNativeTests
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ubuntu-java-native-test-results
+          name: ubuntu-native-test-results
           path: |
             **/build/test-results/
             **/build/**/*.exec
-
-  coverage:
-    name: Upload coverage report
-    needs: tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download test results
-        uses: actions/download-artifact@v4
-        with:
-          name: ubuntu-latest-java-${{ env.BASE_JAVA }}-test-results
-
-      - name: Generate coverage report
-        uses: ./.github/actions/gradle
-        env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-        with:
-          java: ${{ env.BASE_JAVA }}
-          gradle-args: coveralls
 
   snapshot-release:
     name: Release snapshot
@@ -128,5 +110,5 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.SIGNING_PASSWORD }}
         with:
-          java: ${{ env.BASE_JAVA }}
+          java-version: ${{ env.BASE_JAVA }}
           gradle-args: publishToSonatype
