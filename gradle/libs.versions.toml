@@ -48,7 +48,7 @@ errorprone-plugin = "4.1.0"
 nullaway-plugin = "1.5.0"
 graalvm-plugin = "0.10.1"
 kotlin-serialization-plugin = "2.1.0"
-dokka-plugin = "2.0.0"
+dokka-plugin = "1.9.20"
 
 [libraries]
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
