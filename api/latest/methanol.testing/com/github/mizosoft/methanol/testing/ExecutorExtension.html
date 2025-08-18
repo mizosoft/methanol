@@ -93,7 +93,7 @@ loadScripts(document, 'script');</script>
 <section class="class-description" id="class-description">
 <dl class="notes">
 <dt>All Implemented Interfaces:</dt>
-<dd><code>org.junit.jupiter.api.extension.Extension</code>, <code>org.junit.jupiter.api.extension.ParameterResolver</code>, <code>org.junit.jupiter.params.provider.ArgumentsProvider</code></dd>
+<dd><code>org.junit.jupiter.api.extension.Extension</code>, <code>org.junit.jupiter.api.extension.ParameterResolver</code>, <code>org.junit.jupiter.api.extension.TestInstantiationAwareExtension</code>, <code>org.junit.jupiter.params.provider.ArgumentsProvider</code></dd>
 </dl>
 <hr>
 <div class="type-signature"><span class="modifiers">public final class </span><span class="element-name type-name-label">ExecutorExtension</span>
@@ -125,6 +125,9 @@ implements org.junit.jupiter.params.provider.ArgumentsProvider, org.junit.jupite
 <div class="col-second odd-row-color"><code><a href="ExecutorExtension.ExecutorType.html" class="type-name-link" title="enum class in com.github.mizosoft.methanol.testing">ExecutorExtension.ExecutorType</a></code></div>
 <div class="col-last odd-row-color">&nbsp;</div>
 </div>
+<div class="inherited-list">
+<h2 id="nested-classes-inherited-from-class-org.junit.jupiter.api.extension.TestInstantiationAwareExtension">Nested classes/interfaces inherited from interface&nbsp;org.junit.jupiter.api.extension.TestInstantiationAwareExtension</h2>
+<code>org.junit.jupiter.api.extension.TestInstantiationAwareExtension.ExtensionContextScope</code></div>
 </section>
 </li>
 <!-- ======== CONSTRUCTOR SUMMARY ======== -->
@@ -168,6 +171,12 @@ implements org.junit.jupiter.params.provider.ArgumentsProvider, org.junit.jupite
 <div class="inherited-list">
 <h3 id="methods-inherited-from-class-java.lang.Object">Methods inherited from class&nbsp;java.lang.<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a></h3>
 <code><a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#clone()" title="class or interface in java.lang" class="external-link">clone</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" title="class or interface in java.lang" class="external-link">equals</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#finalize()" title="class or interface in java.lang" class="external-link">finalize</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#getClass()" title="class or interface in java.lang" class="external-link">getClass</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#hashCode()" title="class or interface in java.lang" class="external-link">hashCode</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#notify()" title="class or interface in java.lang" class="external-link">notify</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#notifyAll()" title="class or interface in java.lang" class="external-link">notifyAll</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#toString()" title="class or interface in java.lang" class="external-link">toString</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#wait()" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#wait(long)" title="class or interface in java.lang" class="external-link">wait</a>, <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#wait(long,int)" title="class or interface in java.lang" class="external-link">wait</a></code></div>
+<div class="inherited-list">
+<h3 id="methods-inherited-from-class-org.junit.jupiter.params.provider.ArgumentsProvider">Methods inherited from interface&nbsp;org.junit.jupiter.params.provider.ArgumentsProvider</h3>
+<code>provideArguments</code></div>
+<div class="inherited-list">
+<h3 id="methods-inherited-from-class-org.junit.jupiter.api.extension.TestInstantiationAwareExtension">Methods inherited from interface&nbsp;org.junit.jupiter.api.extension.TestInstantiationAwareExtension</h3>
+<code>getTestInstantiationExtensionContextScope</code></div>
 </section>
 </li>
 </ul>
