@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,6 @@ import kotlinx.serialization.json.Json
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.jupiter.api.extension.ExtendWith
-import java.nio.charset.StandardCharsets.UTF_8
 import kotlin.test.Test
 
 @ExtendWith(MockWebServerExtension::class)
@@ -47,7 +46,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.get<String>(serverUri)
     }
@@ -62,7 +61,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.get(serverUri, BodyHandlers.ofString())
     }
@@ -78,7 +77,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.fetch<String>(serverUri) {
         GET()
@@ -95,7 +94,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.fetch<String>(serverUri)
     }
@@ -110,7 +109,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.fetch<String>(serverUri) {
         GET()
@@ -127,7 +126,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse())
+    server.enqueue(MockResponse.Builder().build())
     val response = runBlocking {
       client.delete<Unit>(serverUri)
     }
@@ -142,7 +141,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse())
+    server.enqueue(MockResponse.Builder().build())
     val response = runBlocking {
       client.delete(serverUri, BodyHandlers.replacing(Unit))
     }
@@ -157,7 +156,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse())
+    server.enqueue(MockResponse.Builder().build())
     val response = runBlocking {
       client.fetch<Unit>(serverUri) {
         DELETE()
@@ -174,7 +173,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.post<String>(serverUri) {
         body("Ditto", MediaType.TEXT_PLAIN)
@@ -183,15 +182,15 @@ class FetchTest(private val server: MockWebServer) {
     verifyThat(response).hasCode(200).hasBody("Pikachu")
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("POST")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
-      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+      assertThat(it.headers["Content-Type"]).isEqualTo("text/plain")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("Ditto")
     }
   }
 
   @Test
   fun fetchPostWithBodyPublisherAndBodyHandler() {
     val client = Client {}
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.post(serverUri, BodyHandlers.ofString()) {
         body(BodyPublishers.ofString("Ditto"), MediaType.TEXT_PLAIN)
@@ -200,8 +199,8 @@ class FetchTest(private val server: MockWebServer) {
     verifyThat(response).hasCode(200).hasBody("Pikachu")
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("POST")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
-      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+      assertThat(it.headers["Content-Type"]).isEqualTo("text/plain")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("Ditto")
     }
   }
 
@@ -212,7 +211,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.fetch<String>(serverUri) {
         POST {
@@ -223,8 +222,8 @@ class FetchTest(private val server: MockWebServer) {
     verifyThat(response).hasCode(200).hasBody("Pikachu")
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("POST")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
-      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+      assertThat(it.headers["Content-Type"]).isEqualTo("text/plain")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("Ditto")
     }
   }
 
@@ -235,7 +234,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.put<String>(serverUri) {
         body("Ditto", MediaType.TEXT_PLAIN)
@@ -244,8 +243,8 @@ class FetchTest(private val server: MockWebServer) {
     verifyThat(response).hasCode(200).hasBody("Pikachu")
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("PUT")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
-      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+      assertThat(it.headers["Content-Type"]).isEqualTo("text/plain")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("Ditto")
     }
   }
 
@@ -253,7 +252,7 @@ class FetchTest(private val server: MockWebServer) {
   @Test
   fun fetchPutWithBodyPublisherAndBodyHandler() {
     val client = Client {}
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.put(serverUri, BodyHandlers.ofString()) {
         body(BodyPublishers.ofString("Ditto"), MediaType.TEXT_PLAIN)
@@ -262,8 +261,8 @@ class FetchTest(private val server: MockWebServer) {
     verifyThat(response).hasCode(200).hasBody("Pikachu")
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("PUT")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
-      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+      assertThat(it.headers["Content-Type"]).isEqualTo("text/plain")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("Ditto")
     }
   }
 
@@ -274,7 +273,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.fetch<String>(serverUri) {
         PUT {
@@ -285,8 +284,8 @@ class FetchTest(private val server: MockWebServer) {
     verifyThat(response).hasCode(200).hasBody("Pikachu")
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("PUT")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
-      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+      assertThat(it.headers["Content-Type"]).isEqualTo("text/plain")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("Ditto")
     }
   }
 
@@ -297,7 +296,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.patch<String>(serverUri) {
         body("Ditto", MediaType.TEXT_PLAIN)
@@ -306,15 +305,15 @@ class FetchTest(private val server: MockWebServer) {
     verifyThat(response).hasCode(200).hasBody("Pikachu")
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("PATCH")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
-      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+      assertThat(it.headers["Content-Type"]).isEqualTo("text/plain")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("Ditto")
     }
   }
 
   @Test
   fun fetchPatchWithBodyPublisherAndBodyHandler() {
     val client = Client {}
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.patch(serverUri, BodyHandlers.ofString()) {
         body(BodyPublishers.ofString("Ditto"), MediaType.TEXT_PLAIN)
@@ -323,8 +322,8 @@ class FetchTest(private val server: MockWebServer) {
     verifyThat(response).hasCode(200).hasBody("Pikachu")
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("PATCH")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
-      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+      assertThat(it.headers["Content-Type"]).isEqualTo("text/plain")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("Ditto")
     }
   }
 
@@ -335,7 +334,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.fetch<String>(serverUri) {
         PATCH {
@@ -346,8 +345,8 @@ class FetchTest(private val server: MockWebServer) {
     verifyThat(response).hasCode(200).hasBody("Pikachu")
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("PATCH")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("text/plain")
-      assertThat(it.body.readString(UTF_8)).isEqualTo("Ditto")
+      assertThat(it.headers["Content-Type"]).isEqualTo("text/plain")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("Ditto")
     }
   }
 
@@ -358,7 +357,7 @@ class FetchTest(private val server: MockWebServer) {
         basic()
       }
     }
-    server.enqueue(MockResponse().setBody("Pikachu"))
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
     val response = runBlocking {
       client.fetch<String>(Request {
         uri(serverUri)
@@ -373,17 +372,17 @@ class FetchTest(private val server: MockWebServer) {
     assertThat(server.takeRequest()).given {
       assertThat(it.method).isEqualTo("POST")
       assertThat(
-        it.getHeader("Content-Type")?.toMediaType()
+        it.headers["Content-Type"]?.toMediaType()
       ).isEqualTo(MediaType.APPLICATION_FORM_URLENCODED)
-      assertThat(it.body.readString(UTF_8)).isEqualTo("x=a")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("x=a")
     }
   }
 
   @Test
   fun fetchBodyWithBodyHandler() {
     val client = Client {}
-    server.enqueue(MockResponse().setBody("Pikachu"))
-    var response = runBlocking {
+    server.enqueue(MockResponse.Builder().body("Pikachu").build())
+    val response = runBlocking {
       client.fetch(serverUri, BodyHandlers.ofString())
     }
     assertThat(response.body()).isEqualTo("Pikachu")
@@ -401,8 +400,10 @@ class FetchTest(private val server: MockWebServer) {
     }
 
     server.enqueue(
-      MockResponse().setBody("""{"name": "Tony Stark"}""")
+      MockResponse.Builder()
+        .body("""{"name": "Tony Stark"}""")
         .setHeader("Content-Type", "application/json")
+        .build()
     )
     val response = runBlocking {
       client.get<Person>(serverUri)
@@ -419,15 +420,15 @@ class FetchTest(private val server: MockWebServer) {
       }
     }
 
-    server.enqueue(MockResponse())
+    server.enqueue(MockResponse.Builder().build())
     runBlocking {
       client.post<Unit>(serverUri) {
         body(Person("Tony Stark"), MediaType.APPLICATION_JSON)
       }
     }
     assertThat(server.takeRequest()).given {
-      assertThat(it.body.readString(UTF_8)).isEqualTo("""{"name":"Tony Stark"}""")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("application/json")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("""{"name":"Tony Stark"}""")
+      assertThat(it.headers["Content-Type"]).isEqualTo("application/json")
     }
   }
 
@@ -441,8 +442,10 @@ class FetchTest(private val server: MockWebServer) {
     }
 
     server.enqueue(
-      MockResponse().setBody("""{"name":"Tony Stark"}""")
+      MockResponse.Builder()
+        .body("""{"name":"Tony Stark"}""")
         .setHeader("Content-Type", "application/json")
+        .build()
     )
     val response = runBlocking {
       client.post<Person>(serverUri) {
@@ -451,8 +454,8 @@ class FetchTest(private val server: MockWebServer) {
     }
     assertThat(response.body()).isEqualTo(Person("Tony Stark"))
     assertThat(server.takeRequest()).given {
-      assertThat(it.body.readString(UTF_8)).isEqualTo("""{"name":"Tony Stark"}""")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("application/json")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("""{"name":"Tony Stark"}""")
+      assertThat(it.headers["Content-Type"]).isEqualTo("application/json")
     }
   }
 
@@ -466,8 +469,10 @@ class FetchTest(private val server: MockWebServer) {
     }
 
     server.enqueue(
-      MockResponse().setBody("""[{"name":"Tony Stark"},{"name":"Steve Rogers"}]""")
+      MockResponse.Builder()
+        .body("""[{"name":"Tony Stark"},{"name":"Steve Rogers"}]""")
         .setHeader("Content-Type", "application/json")
+        .build()
     )
     val response = runBlocking {
       client.post<List<Person>>(serverUri) {
@@ -479,8 +484,8 @@ class FetchTest(private val server: MockWebServer) {
     }
     assertThat(response.body()).isEqualTo(listOf(Person("Tony Stark"), Person("Steve Rogers")))
     assertThat(server.takeRequest()).given {
-      assertThat(it.body.readString(UTF_8)).isEqualTo("""[{"name":"Tony Stark"},{"name":"Steve Rogers"}]""")
-      assertThat(it.getHeader("Content-Type")).isEqualTo("application/json")
+      assertThat(it.body?.utf8() ?: "").isEqualTo("""[{"name":"Tony Stark"},{"name":"Steve Rogers"}]""")
+      assertThat(it.headers["Content-Type"]).isEqualTo("application/json")
     }
   }
 }

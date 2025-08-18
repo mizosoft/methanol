@@ -5,7 +5,7 @@ on:
     branches: [ master, doc-updates ]
 
 env:
-  BASE_JAVA: 11
+  BASE_JAVA: 21 # Javadoc generation needs Java >= 12.
 
 jobs:
   publish-site:
@@ -23,7 +23,7 @@ jobs:
       - name: Setup Gradle
         uses: ./.github/actions/gradle
         with:
-          java: 21 # Javadoc generation needs Java >= 12.
+          java-version: ${{ env.BASE_JAVA }}
 
       - name: Generate docs
         run: chmod +x ./generate-docs.sh && ./generate-docs.sh

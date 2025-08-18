@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,7 +62,6 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @BenchmarkMode(Mode.Throughput)
 @SuppressWarnings("unused")
 public class Utf8CoercionBenchmark extends ClientServerLifecycle {
-
   @Param({"ASYNC_PARSER", "BYTE_ARRAY_PARSER"})
   private @MonotonicNonNull JsonHandler handler;
 
@@ -87,7 +86,7 @@ public class Utf8CoercionBenchmark extends ClientServerLifecycle {
           @NotNull
           @Override
           public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
-            return new MockResponse().setBody(body.clone());
+            return new MockResponse.Builder().body(body.clone()).build();
           }
         });
   }

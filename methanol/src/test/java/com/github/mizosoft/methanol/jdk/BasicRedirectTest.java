@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -235,7 +235,7 @@ class BasicRedirectTest {
     httpTestServerDispatcher.put("/http1/same/", new BasicHttpRedirectDispatcher());
     httpTestServer.setDispatcher(httpTestServerDispatcher);
     httpURI = httpTestServer.url("/http1/same/redirect").toString();
-    httpsTestServer.useHttps(sslContext.getSocketFactory(), false);
+    httpsTestServer.useHttps(sslContext.getSocketFactory());
     this.httpsTestServer = httpsTestServer;
     var httpsTestServerDispatcher = new ScopedDispatcher();
     httpsTestServerDispatcher.put("/https1/same/", new BasicHttpRedirectDispatcher());
@@ -247,7 +247,7 @@ class BasicRedirectTest {
     http2TestServerDispatcher.put("/http2/same/", new BasicHttpRedirectDispatcher());
     http2TestServer.setDispatcher(http2TestServerDispatcher);
     http2URI = http2TestServer.url("/http2/same/redirect").toString();
-    https2TestServer.useHttps(sslContext.getSocketFactory(), false);
+    https2TestServer.useHttps(sslContext.getSocketFactory());
     this.https2TestServer = https2TestServer;
     var https2TestServerDispatcher = new ScopedDispatcher();
     https2TestServerDispatcher.put("/https2/same/", new BasicHttpRedirectDispatcher());
@@ -281,17 +281,17 @@ class BasicRedirectTest {
     public MockResponse dispatch(@NotNull RecordedRequest t) {
       //      System.out.println("BasicHttpRedirectHandler for: " + t.getRequestURI());
 
-      var mockResponse = new MockResponse();
-      if (t.getRequestUrl().encodedPath().endsWith("redirect")) {
-        String url = t.getRequestUrl().resolve("message").toString();
-        mockResponse.setHeader("Location", url);
-        mockResponse.setResponseCode(302);
+      var builder = new MockResponse.Builder();
+      if (t.getUrl().encodedPath().endsWith("redirect")) {
+        var url = t.getUrl().resolve("message").toString();
+        builder.setHeader("Location", url);
+        builder.code(302);
         // stuffing some response body
-        mockResponse.setBody("XY");
+        builder.body("XY");
       } else {
-        mockResponse.setBody(MESSAGE);
+        builder.body(MESSAGE);
       }
-      return mockResponse;
+      return builder.build();
     }
   }
 
@@ -308,18 +308,18 @@ class BasicRedirectTest {
     public MockResponse dispatch(@NotNull RecordedRequest t) {
       //      System.out.println("ToSecureHttpRedirectHandler for: " + t.getRequestURI());
 
-      MockResponse response = new MockResponse();
-      if (t.getRequestUrl().encodedPath().endsWith("redirect")) {
-        response.setHeader("Location", targetURL);
+      var builder = new MockResponse.Builder();
+      if (t.getUrl().encodedPath().endsWith("redirect")) {
+        builder.setHeader("Location", targetURL);
         //        System.out.println("ToSecureHttpRedirectHandler redirecting to: " + targetURL);
-        response.setResponseCode(302);
-        response.setBody("XY");
+        builder.code(302);
+        builder.body("XY");
       } else {
         Throwable ex = new RuntimeException("Unexpected request");
         ex.printStackTrace();
-        response.setResponseCode(500);
+        builder.code(500);
       }
-      return response;
+      return builder.build();
     }
   }
 
@@ -338,22 +338,22 @@ class BasicRedirectTest {
     public MockResponse dispatch(@NotNull RecordedRequest t) {
       //      System.out.println("ToLessSecureRedirectHandler for: " + t.getRequestURI());
 
-      MockResponse response = new MockResponse();
-      if (t.getRequestUrl().encodedPath().endsWith("redirect")) {
-        response.setHeader("Location", targetURL);
+      var builder = new MockResponse.Builder();
+      if (t.getUrl().encodedPath().endsWith("redirect")) {
+        builder.setHeader("Location", targetURL);
         //        System.out.println("ToLessSecureRedirectHandler redirecting to: " + targetURL);
-        response.setResponseCode(302);
+        builder.code(302);
         if (chunked) {
-          response.setChunkedBody("XY", 1); // chunked/variable
+          builder.chunkedBody("XY", 1); // chunked/variable
         } else {
-          response.setBody("XY");
+          builder.body("XY");
         }
       } else {
         Throwable ex = new RuntimeException("Unexpected request");
         ex.printStackTrace();
-        response.setResponseCode(500);
+        builder.code(500);
       }
-      return response;
+      return builder.build();
     }
   }
 }

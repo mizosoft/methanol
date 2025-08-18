@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,6 @@ import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
-import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
@@ -114,7 +113,7 @@ public final class MockWebServerExtension
    * Creates {@code MockWebServers} and {@code Methanol.Builder} possibly sharing the same {@code
    * SSLContext}.
    */
-  private static final class ManagedServers implements CloseableResource {
+  private static final class ManagedServers implements AutoCloseable {
     private final Map<Object, Context> contexts = new HashMap<>();
 
     ManagedServers() {}
@@ -131,7 +130,7 @@ public final class MockWebServerExtension
       return contexts.computeIfAbsent(key, __ -> new Context());
     }
 
-    void shutdownAll() throws IOException {
+    void shutdownAll() {
       for (var context : contexts.values()) {
         context.shutdownServers();
       }
@@ -139,7 +138,7 @@ public final class MockWebServerExtension
     }
 
     @Override
-    public void close() throws Throwable {
+    public void close() {
       shutdownAll();
     }
 
@@ -156,7 +155,7 @@ public final class MockWebServerExtension
       MockWebServer newServer(boolean useHttps) throws IOException {
         var server = new MockWebServer();
         if (useHttps) {
-          server.useHttps(sslContext.getSocketFactory(), false);
+          server.useHttps(sslContext.getSocketFactory());
         }
         server.start();
         servers.add(server);
@@ -173,9 +172,9 @@ public final class MockWebServerExtension
                 });
       }
 
-      void shutdownServers() throws IOException {
+      void shutdownServers() {
         for (var server : servers) {
-          server.shutdown();
+          server.close();
         }
         servers.clear();
       }

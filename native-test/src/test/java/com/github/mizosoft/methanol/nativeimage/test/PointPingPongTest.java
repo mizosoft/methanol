@@ -46,11 +46,12 @@ class PointPingPongTest {
           @NotNull
           @Override
           public MockResponse dispatch(@NotNull RecordedRequest recordedRequest) {
-            var contentType = recordedRequest.getHeader("Content-Type");
+            var contentType = recordedRequest.getHeaders().get("Content-Type");
             assertThat(contentType).isNotNull();
-            return new MockResponse()
+            return new MockResponse.Builder()
                 .setHeader("Content-Type", contentType)
-                .setBody(recordedRequest.getBody());
+                .body(recordedRequest.getBody() != null ? recordedRequest.getBody().utf8() : "")
+                .build();
           }
         });
 

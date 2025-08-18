@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,12 +23,12 @@
 package com.github.mizosoft.methanol.springboot.test;
 
 import static com.github.mizosoft.methanol.testing.TestUtils.gzip;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.github.mizosoft.methanol.MediaType;
 import com.github.mizosoft.methanol.Methanol;
 import com.github.mizosoft.methanol.MoreBodyHandlers;
 import com.github.mizosoft.methanol.MutableRequest;
+import java.io.IOException;
 import java.net.URI;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -42,16 +42,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class Controller {
   private final Methanol client = Methanol.create();
   private final MockWebServer server = new MockWebServer();
-  private final URI serverUri = server.url("/").uri();
+  private final URI serverUri;
 
-  public Controller() {
+  public Controller() throws IOException {
+    server.start();
+    serverUri = server.url("/").uri();
     server.setDispatcher(
         new Dispatcher() {
           @Override
           public MockResponse dispatch(RecordedRequest recordedRequest) {
-            return new MockResponse()
-                .setBody(new okio.Buffer().write(gzip(recordedRequest.getBody().readString(UTF_8))))
-                .setHeader("Content-Encoding", "gzip");
+            var requestBody =
+                recordedRequest.getBody() != null ? recordedRequest.getBody().utf8() : "";
+            return new MockResponse.Builder()
+                .body(new okio.Buffer().write(gzip(requestBody)))
+                .setHeader("Content-Encoding", "gzip")
+                .build();
           }
         });
   }

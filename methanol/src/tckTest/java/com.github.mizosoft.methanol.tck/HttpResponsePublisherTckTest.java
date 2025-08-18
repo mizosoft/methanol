@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -71,14 +71,14 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
     var sslContext = localhostSslContext();
     client = HttpClient.newBuilder().sslContext(sslContext).version(Version.HTTP_2).build();
     server = new MockWebServer();
-    server.useHttps(sslContext.getSocketFactory(), false);
+    server.useHttps(sslContext.getSocketFactory());
     server.start();
   }
 
   @AfterMethod
   public void tearMeDown() throws Exception {
     executorContext.close();
-    server.shutdown();
+    server.close();
   }
 
   @Override
@@ -110,14 +110,14 @@ public class HttpResponsePublisherTckTest extends FlowPublisherVerification<Resp
   }
 
   private static MockResponse buildMockResponseWithPushPromises(int pushPromiseCount) {
-    var response = new MockResponse().setBody("A");
+    var builder = new MockResponse.Builder().body("A");
     for (int i = 0; i < pushPromiseCount; i++) {
-      var pushedResponse = new MockResponse().setBody("B-" + i);
+      var pushedResponse = new MockResponse.Builder().body("B-" + i).build();
       var pushPromise =
           new PushPromise("GET", "/push" + i, Headers.of(":scheme", "https"), pushedResponse);
-      response.withPush(pushPromise);
+      builder.addPush(pushPromise);
     }
-    return response;
+    return builder.build();
   }
 
   @DataProvider

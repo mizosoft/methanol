@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -78,7 +78,8 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
 
   @Test
   void cacheHit() throws Exception {
-    server.enqueue(new MockResponse().setHeader("Cache-Control", "max-age=1").setBody("Pikachu"));
+    server.enqueue(
+        new MockResponse.Builder().setHeader("Cache-Control", "max-age=1").body("Pikachu").build());
     verifyThat(send()) // Memory cache response.
         .isCacheMiss()
         .hasBody("Pikachu")
@@ -96,17 +97,18 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   @Test
   void conditionalCacheHit() throws Exception {
     server.enqueue(
-        new MockResponse()
+        new MockResponse.Builder()
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("ETag", "\"1\"")
             .setHeader("X-Version", "1")
-            .setBody("Pikachu"));
+            .body("Pikachu")
+            .build());
     verifyThat(send()).isCacheMiss().hasBody("Pikachu");
 
     clock.advanceSeconds(2);
 
     server.enqueue(
-        new MockResponse().setHeader("X-Version", "2").setResponseCode(HTTP_NOT_MODIFIED));
+        new MockResponse.Builder().setHeader("X-Version", "2").code(HTTP_NOT_MODIFIED).build());
     verifyThat(send())
         .isConditionalCacheMiss()
         .containsHeader("X-Version", "2")
@@ -135,19 +137,21 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   @Test
   void conditionalCacheMiss() throws Exception {
     server.enqueue(
-        new MockResponse()
+        new MockResponse.Builder()
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("ETag", "\"1\"")
-            .setBody("Pikachu"));
+            .body("Pikachu")
+            .build());
     verifyThat(send()).isCacheMiss().hasBody("Pikachu");
 
     clock.advanceSeconds(2);
 
     server.enqueue(
-        new MockResponse()
+        new MockResponse.Builder()
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("ETag", "\"2\"")
-            .setBody("Mew"));
+            .body("Mew")
+            .build());
     verifyThat(send())
         .isConditionalCacheMiss()
         .containsHeader("ETag", "\"2\"")
@@ -176,18 +180,19 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   @Test
   void conditionalCacheHitServedBySecondCacheWithEtag() throws Exception {
     server.enqueue(
-        new MockResponse()
+        new MockResponse.Builder()
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("ETag", "\"1\"")
             .setHeader("X-Version", "1")
-            .setBody("Pikachu"));
+            .body("Pikachu")
+            .build());
     verifyThat(send()).isCacheMiss().hasBody("Pikachu");
 
     clock.advanceSeconds(2);
 
     // Update the disk cache.
     server.enqueue(
-        new MockResponse().setResponseCode(HTTP_NOT_MODIFIED).setHeader("X-Version", "2"));
+        new MockResponse.Builder().code(HTTP_NOT_MODIFIED).setHeader("X-Version", "2").build());
     verifyThat(send(diskCacheSetup.client))
         .isConditionalCacheHit()
         .containsHeader("X-Version", "2")
@@ -209,18 +214,19 @@ class MultiLevelHttpCacheTest extends AbstractHttpCacheTest {
   void conditionalCacheHitServedBySecondCacheWithIfModifiedSince() throws Exception {
     var lastModified = toUtcDateTime(clock.instant()).minusSeconds(1);
     server.enqueue(
-        new MockResponse()
+        new MockResponse.Builder()
             .setHeader("Cache-Control", "max-age=1")
             .setHeader("Last-Modified", formatHttpDate(lastModified))
             .setHeader("X-Version", "1")
-            .setBody("Pikachu"));
+            .body("Pikachu")
+            .build());
     verifyThat(send()).isCacheMiss().hasBody("Pikachu");
 
     clock.advanceSeconds(2);
 
     // Update the disk cache.
     server.enqueue(
-        new MockResponse().setResponseCode(HTTP_NOT_MODIFIED).setHeader("X-Version", "2"));
+        new MockResponse.Builder().code(HTTP_NOT_MODIFIED).setHeader("X-Version", "2").build());
     verifyThat(send(diskCacheSetup.client))
         .isConditionalCacheHit()
         .containsHeader("X-Version", "2")

@@ -4,8 +4,9 @@ plugins {
   id("conventions.static-analysis")
   id("conventions.coverage")
   alias(libs.plugins.spring.boot)
-  alias(libs.plugins.spring.dependency.management)
 }
+
+apply(plugin = libs.plugins.spring.dependency.management.get().pluginId)
 
 dependencies {
   implementation(project(":methanol"))
@@ -19,6 +20,27 @@ dependencies {
   implementation(libs.spring.boot.starter.web)
   implementation(libs.autoservice.annotations)
   annotationProcessor(libs.autoservice.annprocess)
+}
+
+// Make sure we only run this in Java 17+ setups.
+
+tasks.withType<JavaCompile>().configureEach {
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
+  }
+  options.release = 17 // Override to look for the correct dependencies.
+}
+
+tasks.withType<Test>().configureEach {
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
+  }
+}
+
+tasks.bootJar {
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
+  }
 }
 
 tasks.test {

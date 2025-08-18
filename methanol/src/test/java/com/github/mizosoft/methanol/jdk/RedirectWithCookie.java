@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -18,23 +18,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- */
-
-/*
- * @test
- * @summary Test for cookie handling when redirecting
- * @modules java.base/sun.net.www.http
- *          java.net.http/jdk.internal.net.http.common
- *          java.net.http/jdk.internal.net.http.frame
- *          java.net.http/jdk.internal.net.http.hpack
- *          java.logging
- *          jdk.httpserver
- * @library /test/lib http2/server
- * @build Http2TestServer
- * @build jdk.test.lib.net.SimpleSSLContext
- * @run testng/othervm
- *       -Djdk.httpclient.HttpClient.log=trace,headers,requests
- *       RedirectWithCookie
  */
 
 package com.github.mizosoft.methanol.jdk;
@@ -180,7 +163,7 @@ class RedirectWithCookie {
     httpTestServerDispatcher.put("/http1/cookie/", new CookieRedirectDispatcher());
     httpTestServer.setDispatcher(httpTestServerDispatcher);
     httpURI = httpTestServer.url("/http1/cookie/redirect").toString();
-    httpsTestServer.useHttps(sslContext.getSocketFactory(), false);
+    httpsTestServer.useHttps(sslContext.getSocketFactory());
     this.httpsTestServer = httpsTestServer;
     var httpsTestServerDispatcher = new ScopedDispatcher();
     httpsTestServerDispatcher.put("/https1/cookie/", new CookieRedirectDispatcher());
@@ -192,7 +175,7 @@ class RedirectWithCookie {
     http2TestServerDispatcher.put("/http2/cookie/", new CookieRedirectDispatcher());
     http2TestServer.setDispatcher(http2TestServerDispatcher);
     http2URI = http2TestServer.url("/http2/cookie/redirect").toString();
-    https2TestServer.useHttps(sslContext.getSocketFactory(), false);
+    https2TestServer.useHttps(sslContext.getSocketFactory());
     this.https2TestServer = https2TestServer;
     var https2TestServerDispatcher = new ScopedDispatcher();
     https2TestServerDispatcher.put("/https2/cookie/", new CookieRedirectDispatcher());
@@ -214,12 +197,13 @@ class RedirectWithCookie {
       // recordedRequest.getRequestUrl());
 
       // redirecting
-      if (recordedRequest.getRequestUrl().encodedPath().endsWith("redirect")) {
-        String url = recordedRequest.getRequestUrl().resolve("message").toString();
-        return new MockResponse()
+      if (recordedRequest.getUrl().encodedPath().endsWith("redirect")) {
+        String url = recordedRequest.getUrl().resolve("message").toString();
+        return new MockResponse.Builder()
             .addHeader("Location", url)
             .addHeader("Set-Cookie", "CUSTOMER=WILE_E_COYOTE")
-            .setResponseCode(302);
+            .code(302)
+            .build();
       }
 
       // not redirecting
@@ -228,15 +212,15 @@ class RedirectWithCookie {
       if (cookie == null || cookie.size() == 0) {
         String msg = "No cookie header present";
         (new RuntimeException(msg)).printStackTrace();
-        return new MockResponse().setResponseCode(500).setBody(msg);
+        return new MockResponse.Builder().code(500).body(msg).build();
       } else if (!cookie.get(0).equals("CUSTOMER=WILE_E_COYOTE")) {
         String msg = "Incorrect cookie header value:[" + cookie.get(0) + "]";
         (new RuntimeException(msg)).printStackTrace();
-        return new MockResponse().setResponseCode(500).setBody(msg);
+        return new MockResponse.Builder().code(500).body(msg).build();
       } else {
         assert cookie.get(0).equals("CUSTOMER=WILE_E_COYOTE");
         byte[] bytes = MESSAGE.getBytes(UTF_8);
-        return new MockResponse().setBody(new okio.Buffer().write(bytes));
+        return new MockResponse.Builder().body(new okio.Buffer().write(bytes)).build();
       }
     }
   }

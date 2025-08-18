@@ -3,9 +3,12 @@ name: Setup & run Gradle
 description: Setup Java & Gradle & optionally run a Gradle command
 
 inputs:
-  java:
+  java-version:
     default: '21'
-    description: Java version. Set to 'GraalVM' for a GraalVM setup.
+    description: Java version. Default is 21.
+  java-native:
+    default: 'no'
+    description: If the Java toolchain should be native-image capable.
   gradle-args:
     required: false
     description: Arguments to Gradle command (optional).
@@ -16,28 +19,52 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup Java ${{ inputs.java }}
-      if: inputs.java != 'GraalVM'
+    - name: Setup Java 21 for Gradle
+      id: setup-gradle-jdk
       uses: actions/setup-java@v4
       with:
-        java-version: ${{ inputs.java }}
+        java-version: 21
         distribution: temurin
 
-    - name: Setup Java ${{ inputs.java }}
-      if: inputs.java == 'GraalVM'
-      uses: graalvm/setup-graalvm@v1
+    - name: Figure out Java distribution
+      shell: bash
+      id: get-java-dist
+      run: |
+        java_native_lower=$(echo "$JAVA_NATIVE" | tr '[:upper:]' '[:lower:]')
+        if [[ "$java_native_lower" == "yes" ]]; then
+          echo "distribution=graalvm" >> $GITHUB_OUTPUT
+        else
+          echo "distribution=temurin" >> $GITHUB_OUTPUT
+        fi
+      env:
+        JAVA_NATIVE: ${{ inputs.java-native }}
+
+    - name: Setup Java ${{ inputs.java-version }} (${{ inputs.java-distribution }}) toolchain
+      id: setup-toolchain-jdk
+      uses: actions/setup-java@v4
       with:
-        java-version: '21'
-        distribution: graalvm-community
-        github-token: ${{ github.token }}
+        java-version: ${{ inputs.java-version }}
+        distribution: ${{ steps.get-java-dist.outputs.distribution }}
 
     - name: Verify GraalVM installation
-      if: inputs.java == 'GraalVM'
+      if: ${{ steps.get-java-dist.outputs.distribution == 'graalvm' }}
       shell: bash
       run: native-image --version
 
+    - name: Set GRAALVM_HOME
+      if: ${{ steps.get-java-dist.outputs.distribution == 'graalvm' }}
+      shell: bash
+      run: echo "GRAALVM_HOME=${{ steps.setup-toolchain-jdk.outputs.path }}" >> $GITHUB_ENV
+
+    - name: Check if GRAALVM_HOME is set
+      if: ${{ steps.get-java-dist.outputs.distribution == 'graalvm' }}
+      shell: bash
+      run: echo $GRAALVM_HOME
+
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
+      uses: gradle/actions/setup-gradle@v4
+      env:
+        JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
 
     - name: Make gradlew executable
       if: inputs.gradle-args != '' && (runner.os == 'linux' || runner.os == 'macOS')
@@ -49,7 +76,9 @@ runs:
       env:
         JAVA_HOME: ${{ steps.setup-gradle-jdk.outputs.path }}
       shell: bash
-      run: ./gradlew -PjavaVersion=${{ inputs.java }} ${{ inputs.gradle-args }}
+      run: ./gradlew -PjavaVersion=${{ inputs.java-version }}
+        -PjavaNativeCapable=${{ (inputs.setps.get-java-dist.outputs.distribution == 'graalvm' && 'true') || 'false' }}
+        ${{ inputs.gradle-args }}
 
     - name: Run command
       if: inputs.cmd != ''

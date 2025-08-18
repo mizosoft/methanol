@@ -110,6 +110,9 @@ val Project.javaVersion
 val Project.javaVendor
   get() = project.findProperty("javaVendor")?.toString()
 
+val Project.javaNativeImageCapable
+  get() = project.findProperty("javaNativeImageCapable")?.toString()?.toBoolean() ?: false
+
 val Project.enableErrorprone
   get() = project.hasProperty("enableErrorprone")
 

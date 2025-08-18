@@ -26,8 +26,8 @@ val archAttribute = Attribute.of("org.gradle.native.architecture", MachineArchit
 
 val jniConfigPrefix = "jniRuntime"
 val getJniConfigName = { target: TargetMachine ->
-  jniConfigPrefix + target.operatingSystemFamily.toString().capitalize() +
-      target.architecture.toString().capitalize()
+  jniConfigPrefix + target.operatingSystemFamily.toString().replaceFirstChar { it.uppercase() } +
+      target.architecture.toString().replaceFirstChar { it.uppercase() }
 }
 val getJniConfigs = { configs: ConfigurationContainer ->
   configs.filter { config -> config.name.startsWith(jniConfigPrefix) }
@@ -68,8 +68,8 @@ val installBrotli by tasks.registering(Copy::class) {
         // Attach os/arch path segments to copied artifacts.
         eachFile(closureOf<FileCopyDetails> {
           relativePath = relativePath.prepend(
-            config.attributes.getAttribute(osAttribute).toString().toLowerCase(),
-            config.attributes.getAttribute(archAttribute).toString().toLowerCase()
+            config.attributes.getAttribute(osAttribute).toString().lowercase(),
+            config.attributes.getAttribute(archAttribute).toString().lowercase()
           )
         })
       }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,8 @@ abstract class GsonAdapter extends AbstractBodyAdapter {
   @Override
   public boolean supportsType(TypeRef<?> typeRef) {
     try {
-      gson.getAdapter(TypeToken.get(typeRef.type()));
+      @SuppressWarnings("unused")
+      var unused = gson.getAdapter(TypeToken.get(typeRef.type()));
       return true;
     } catch (IllegalArgumentException ignored) {
       // Gson::getAdapter throws IAE if it can't de/serialize the type.

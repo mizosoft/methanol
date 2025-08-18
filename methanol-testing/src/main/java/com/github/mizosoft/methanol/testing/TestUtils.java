@@ -212,6 +212,7 @@ public class TestUtils {
     var heldCertificate =
         new HeldCertificate.Builder()
             .addSubjectAlternativeName(InetAddress.getLoopbackAddress().getCanonicalHostName())
+            .addSubjectAlternativeName("localhost")
             .build();
     return new HandshakeCertificates.Builder()
         .heldCertificate(heldCertificate)

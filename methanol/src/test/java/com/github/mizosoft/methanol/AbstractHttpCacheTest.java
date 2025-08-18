@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -88,7 +88,7 @@ abstract class AbstractHttpCacheTest {
     this.clock = new MockClock();
     this.clientBuilderFactory = builderFactory;
     ((QueueDispatcher) server.getDispatcher())
-        .setFailFast(new MockResponse().setResponseCode(HTTP_UNAVAILABLE));
+        .setFailFast(new MockResponse.Builder().code(HTTP_UNAVAILABLE).build());
   }
 
   Methanol.Builder resetClientBuilder() {

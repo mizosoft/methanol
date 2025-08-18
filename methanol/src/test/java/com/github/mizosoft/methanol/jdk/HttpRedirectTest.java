@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,7 +68,6 @@ import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
 import mockwebserver3.MockWebServer;
 import mockwebserver3.RecordedRequest;
-import mockwebserver3.SocketPolicy;
 import okhttp3.Headers;
 import okhttp3.Protocol;
 import org.jetbrains.annotations.NotNull;
@@ -199,7 +198,7 @@ class HttpRedirectTest {
     http1URI = http1Server.url("/HttpRedirectTest/http1/").uri();
 
     // HTTPS/1.1
-    https1Server.useHttps(context.getSocketFactory(), false);
+    https1Server.useHttps(context.getSocketFactory());
     this.https1Server = https1Server;
     var https1ServerDispatcher = new ScopedDispatcher();
     https1ServerDispatcher.put(
@@ -219,7 +218,7 @@ class HttpRedirectTest {
 
     // HTTPS/2.0
     this.https2Server = https2Server;
-    https2Server.useHttps(context.getSocketFactory(), false);
+    https2Server.useHttps(context.getSocketFactory());
     var https2ServerDispatcher = new ScopedDispatcher();
     https2ServerDispatcher.put(
         "/HttpRedirectTest/https2/", new HttpTestRedirectDispatcher("https", https2Server));
@@ -228,9 +227,9 @@ class HttpRedirectTest {
     https2URI = https2Server.url("/HttpRedirectTest/https2/").uri();
 
     this.proxy = proxy;
-    proxy.useHttps(context.getSocketFactory(), true);
+    proxy.useHttps(context.getSocketFactory());
     proxy.setDispatcher(new TunnellingProxyDispatcher(clientexec));
-    proxyAddress = (InetSocketAddress) proxy.toProxyAddress().address();
+    proxyAddress = (InetSocketAddress) proxy.getProxyAddress().address();
     proxySelector = new HttpProxySelector(proxyAddress);
     client = newHttpClient(proxySelector);
     //    System.out.println("Setup: done");
@@ -391,10 +390,10 @@ class HttpRedirectTest {
     @NotNull
     @Override
     public MockResponse dispatch(@NotNull RecordedRequest t) {
-      var mockResponse = new MockResponse();
+      var builder = new MockResponse.Builder();
       try {
-        byte[] bytes = t.getBody().readByteArray();
-        URI u = t.getRequestUrl().uri();
+        byte[] bytes = t.getBody() != null ? t.getBody().toByteArray() : new byte[0];
+        URI u = t.getUrl().uri();
         long responseID = Long.parseLong(u.getQuery().substring(2));
         String path = u.getPath();
         int i = path.lastIndexOf('/');
@@ -430,7 +429,7 @@ class HttpRedirectTest {
                     parent + "/bar",
                     u.getQuery(),
                     null);
-            mockResponse.addHeader("Location", reloc.toASCIIString());
+            builder.addHeader("Location", reloc.toASCIIString());
             if (code != 304) {
               response = "Code: " + code;
             } else response = null;
@@ -445,10 +444,10 @@ class HttpRedirectTest {
         //        System.out.println("Server " + t.getRequestUrl() + " sending response " +
         // responseID);
         //        System.out.println("code: " + code + " body: " + response);
-        mockResponse.setResponseCode(code);
+        builder.code(code);
         if (code != 304) {
           bytes = response.getBytes(StandardCharsets.UTF_8);
-          mockResponse.setBody(new okio.Buffer().write(bytes));
+          builder.body(new okio.Buffer().write(bytes));
         } else {
           bytes = new byte[0];
         }
@@ -459,7 +458,7 @@ class HttpRedirectTest {
         e.printStackTrace(System.out);
         throw new RuntimeException(e);
       }
-      return mockResponse;
+      return builder.build();
     }
   }
 
@@ -498,39 +497,35 @@ class HttpRedirectTest {
         targetHost = targetHostAndPort.substring(0, delimiterIndex);
         targetPort = Integer.parseInt(targetHostAndPort.substring(delimiterIndex + 1));
         //        System.out.println("Tunnelling to: " + targetHostAndPort);
-
-        return new MockResponse();
+        return new MockResponse.Builder().inTunnel().build();
       } else {
         // Forward the request to target without changing its semantics
         requireState(targetHost != null, "tunnelling proxy not connected");
         var targetUri =
-            recordedRequest
-                .getRequestUrl()
-                .newBuilder()
-                .host(targetHost)
-                .port(targetPort)
-                .build()
-                .uri();
+            recordedRequest.getUrl().newBuilder().host(targetHost).port(targetPort).build().uri();
         var request =
             MutableRequest.create(targetUri)
                 .method(
                     recordedRequest.getMethod(),
-                    BodyPublishers.ofByteArray(recordedRequest.getBody().readByteArray()))
+                    BodyPublishers.ofByteArray(
+                        recordedRequest.getBody() != null
+                            ? recordedRequest.getBody().toByteArray()
+                            : new byte[0]))
                 .version(
                     "HTTP/1.1".equalsIgnoreCase(requestLine[2]) ? Version.HTTP_1_1 : Version.HTTP_2)
                 .headers(
                     HttpHeaders.of(
                         recordedRequest.getHeaders().toMultimap(),
-                        (n, v) -> Utils.isValidToken(n) && !DISALLOWED_HEADERS.contains(n)));
+                        (n, __) -> Utils.isValidToken(n) && !DISALLOWED_HEADERS.contains(n)));
         try {
           var response = client.send(request, BodyHandlers.ofByteArray());
-          var mockResponse =
-              new MockResponse()
-                  .setResponseCode(response.statusCode())
-                  .setBody(new okio.Buffer().write(response.body()));
+          var builder =
+              new MockResponse.Builder()
+                  .code(response.statusCode())
+                  .body(new okio.Buffer().write(response.body()));
           var headers = new Headers.Builder();
           response.headers().map().forEach((n, vs) -> vs.forEach(v -> headers.add(n, v)));
-          return mockResponse.setHeaders(headers.build());
+          return builder.headers(headers.build()).build();
         } catch (IOException | InterruptedException e) {
           throw new RuntimeException(e);
         }
@@ -540,7 +535,11 @@ class HttpRedirectTest {
     @NotNull
     @Override
     public MockResponse peek() {
-      return new MockResponse().setSocketPolicy(SocketPolicy.UPGRADE_TO_SSL_AT_END);
+      var builder = new MockResponse.Builder();
+      if (targetHost == null) {
+        builder.inTunnel();
+      }
+      return builder.build();
     }
   }
 }

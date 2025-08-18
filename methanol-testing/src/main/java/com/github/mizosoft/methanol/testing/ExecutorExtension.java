@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,6 @@ import java.util.concurrent.*;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
-import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
@@ -174,7 +173,7 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
     }
   }
 
-  private static final class ManagedExecutors implements CloseableResource {
+  private static final class ManagedExecutors implements AutoCloseable {
     final ExecutorContext context = new ExecutorContext();
 
     private ManagedExecutors() {}
@@ -184,7 +183,7 @@ public final class ExecutorExtension implements ArgumentsProvider, ParameterReso
     }
 
     @Override
-    public void close() throws Throwable {
+    public void close() throws Exception {
       context.close();
     }
 
