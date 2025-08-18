@@ -65,20 +65,20 @@ jobs:
       - name: Build Quarkus native app
         uses: ./.github/actions/gradle
         with:
-          java-version: 21
+          java-version: ${{ env.BASE_JAVA }}
           java-native: yes
           gradle-args: :quarkus-native-test:quarkusBuild -PincludeNativeTests
 
       - name: Run Quarkus native tests
         uses: ./.github/actions/gradle
         with:
-          java-version: 21
+          java-version: ${{ env.BASE_JAVA }}
           gradle-args: :quarkus-native-test:test -PincludeNativeTests
 
       - name: Run GraalVM native tests
         uses: ./.github/actions/gradle
         with:
-          java-version: 21
+          java-version: ${{ env.BASE_JAVA }}
           java-native: yes
           gradle-args: :native-test:build -PincludeNativeTests
 
@@ -86,10 +86,30 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ubuntu-native-test-results
+          name: ubuntu-latest-java-${{ env.BASE_JAVA }}-native-test-results
           path: |
             **/build/test-results/
             **/build/**/*.exec
+
+  coverage:
+    name: Upload coverage report
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-latest-java-${{ env.BASE_JAVA }}-test-results
+
+      - name: Generate coverage report
+        uses: ./.github/actions/gradle
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        with:
+          java-version: ${{ env.BASE_JAVA }}
+          gradle-args: coverallsJacoco
 
   snapshot-release:
     name: Release snapshot
