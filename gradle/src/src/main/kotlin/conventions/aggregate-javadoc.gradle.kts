@@ -7,8 +7,10 @@ plugins {
 }
 
 val aggregateJavadoc by tasks.registering(Javadoc::class) {
+  group = "Documentation"
+  description = "Generates an aggregate Javadoc for published modules."
+
   title = "Methanol $version API"
-  description = "Generates an aggregate Javadoc for all published modules (except benchmarks)."
 
   setDestinationDir(layout.buildDirectory.get().file("docs/aggregateJavadoc").asFile)
 

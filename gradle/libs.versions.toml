@@ -49,6 +49,7 @@ nullaway-plugin = "1.5.0"
 graalvm-plugin = "0.10.1"
 kotlin-serialization-plugin = "2.1.0"
 dokka-plugin = "1.9.20"
+coveralls-jacoco-plugin = "1.2.20"
 
 [libraries]
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
@@ -123,3 +124,4 @@ errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-plugin" }
 nullaway = { id = "net.ltgt.nullaway", version.ref = "nullaway-plugin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 checkerframework = { id = "org.checkerframework", version.ref = "checkerframework-plugin" }
+coveralls-jacoco = { id = "com.github.nbaztec.coveralls-jacoco", version.ref = "coveralls-jacoco-plugin" }

@@ -18,6 +18,7 @@ dependencies {
   implementation(plugin(libs.plugins.nullaway))
   implementation(plugin(libs.plugins.kotlin.jvm))
   implementation(plugin(libs.plugins.dokka))
+  implementation(plugin(libs.plugins.coveralls.jacoco))
 }
 
 fun plugin(plugin: Provider<PluginDependency>): Provider<String> {
