@@ -3,6 +3,7 @@ import java.util.*
 
 rootProject.name = "methanol-parent"
 
+includeBuild("gradle/src")
 include("methanol")
 include("methanol-testing")
 include("methanol-gson")

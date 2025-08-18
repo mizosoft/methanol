@@ -1,10 +1,6 @@
 package conventions
 
-import extensions.JAVADOC_JDK_VERSION
-import extensions.classpath
-import extensions.isIncludedInAggregateJavadoc
-import extensions.javaModuleName
-import extensions.standardOptions
+import extensions.*
 
 plugins {
   `java-library`

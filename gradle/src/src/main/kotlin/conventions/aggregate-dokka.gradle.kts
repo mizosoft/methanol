@@ -1,10 +1,6 @@
 package conventions
 
-import extensions.JAVADOC_JDK_VERSION
-import extensions.JAVADOC_URL
-import extensions.isIncludedInAggregateDokka
-import extensions.isIncludedInAggregateJavadoc
-import extensions.javaModuleName
+import extensions.*
 import org.jetbrains.dokka.gradle.DokkaMultiModuleFileLayout
 import org.jetbrains.dokka.gradle.DokkaMultiModuleTask
 import org.jetbrains.dokka.gradle.DokkaTaskPartial
